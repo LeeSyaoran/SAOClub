@@ -1,0 +1,10 @@
+# Chặn thư viện và file build của Front-end
+**/saoclub-frontend/.next/
+**/saoclub-frontend/node_modules/
+**/saoclub-frontend/out/
+
+# Chặn file rác của IDE và Hệ điều hành
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
