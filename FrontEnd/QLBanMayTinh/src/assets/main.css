@@ -1,0 +1,18 @@
+@import "./base.css";
+
+#app {
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+input {
+  outline: none;
+}
+
+a {
+  color: inherit;
+}

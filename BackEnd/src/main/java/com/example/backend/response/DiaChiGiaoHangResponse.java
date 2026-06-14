@@ -1,0 +1,24 @@
+package com.example.backend.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+public class DiaChiGiaoHangResponse {
+    private Integer id;
+    private Integer khachHangId;
+    private String hoTenNguoiNhan;
+    private String soDienThoai;
+    private String diaChi;
+    private String thanhPho;
+    private String tinh;
+    private Boolean laMacDinh;
+    private LocalDateTime ngayTao;
+}
