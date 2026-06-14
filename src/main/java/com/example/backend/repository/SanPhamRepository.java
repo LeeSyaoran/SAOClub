@@ -1,0 +1,53 @@
+package com.example.backend.repository;
+
+import com.example.backend.entity.SanPham;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import com.example.backend.response.SanPhamResponse;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
+
+@Repository
+public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
+    @Query("""
+    SELECT new com.example.backend.response.SanPhamResponse(
+        sp.sanPhamId,
+        sp.tenSanPham,
+        dm.id,
+        dm.tenDanhMuc,
+        th.thuongHieuId,
+        th.tenThuongHieu,
+        ncc.tenNhaCungCap,
+        ncc.nhaCungCapId,
+        sp.loaiSanPham,
+        bt.maSku,
+        cpu.tenCpu,
+        ram.dungLuong,
+        oCung.loaiOcung,
+        gpu.tenGpu,
+        bt.kichThuocManHinh,
+        bt.heDieuHanh,
+        bt.pin,
+        bt.trongLuongKg,
+        bt.mauSac,
+        bt.giaBan,
+        bt.giaNhap,
+        bt.baoHanhThang,
+        sp.moTa,
+        sp.hinhAnhChinh,
+        sp.trangThai,
+        sp.ngayTao
+    )
+    FROM BienTheSanPham bt
+    JOIN bt.sanPham sp
+    LEFT JOIN sp.danhMuc dm
+    LEFT JOIN sp.thuongHieu th
+    LEFT JOIN sp.nhaCungCap ncc
+    LEFT JOIN bt.cpu cpu
+    LEFT JOIN bt.ram ram
+    LEFT JOIN bt.oCung oCung
+    LEFT JOIN bt.gpu gpu
+    """)
+    List<SanPhamResponse> hienThiSanPham();
+}
