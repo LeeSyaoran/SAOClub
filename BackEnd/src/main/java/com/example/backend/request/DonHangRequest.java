@@ -17,22 +17,19 @@ public class DonHangRequest {
     @NotNull(message = "Khách hàng không được để trống")
     private Integer khachHangId;
 
-    @NotNull(message = "Nhân viên không được để trống")
     private Integer nhanVienId;
 
-    @NotNull(message = "Khuyến mãi không được để trống")
     private Integer khuyenMaiId;
 
-    @NotNull(message = "Địa chỉ giao hàng không được để trống")
     private Integer diaChiGiaoHangId;
 
-    @NotBlank(message = "Địa chỉ giao hàng text không được để trống")
     private String diaChiGiaoHangText;
 
     @NotBlank(message = "Người nhận không được để trống")
     private String nguoiNhan;
 
     @NotBlank(message = "Số điện thoại người nhận không được để trống")
+    @Size(max = 20, message = "Số điện thoại không vượt quá 20 ký tự")
     private String sdtNguoiNhan;
 
     @NotNull(message = "Tổng tiền không được để trống")
@@ -54,10 +51,8 @@ public class DonHangRequest {
     @NotNull(message = "Ngày đặt không được để trống")
     private LocalDateTime ngayDat;
 
-    @NotNull(message = "Ngày giao dự kiến không được để trống")
     private LocalDateTime ngayGiaoDuKien;
 
-    @NotNull(message = "Ngày giao thực tế không được để trống")
     private LocalDateTime ngayGiaoThucTe;
 
     @NotBlank(message = "Trạng thái đơn hàng không được để trống")
@@ -66,9 +61,7 @@ public class DonHangRequest {
     @NotBlank(message = "Trạng thái thanh toán không được để trống")
     private String trangThaiThanhToan;
 
-    @NotBlank(message = "Kênh bán không được để trống")
     private String kenhBan;
 
-    @NotBlank(message = "Ghi chú không được để trống")
     private String ghiChu;
 }

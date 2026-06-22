@@ -55,11 +55,11 @@
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!--        Lombok-->
+        <!--        Lombok 1.18.36 — phiên bản hỗ trợ JDK 17/21/22/23 (1.18.24 lỗi TypeTag::UNKNOWN trên JDK 21+)-->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.24</version>
+            <version>1.18.36</version>
             <scope>provided</scope>
         </dependency>
         <!--        JPA-->

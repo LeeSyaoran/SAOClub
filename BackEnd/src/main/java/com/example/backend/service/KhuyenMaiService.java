@@ -1,0 +1,50 @@
+package com.example.backend.service;
+
+import com.example.backend.entity.KhuyenMai;
+import com.example.backend.repository.KhuyenMaiRepository;
+import com.example.backend.request.KhuyenMaiRequest;
+import com.example.backend.response.KhuyenMaiResponse;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class KhuyenMaiService {
+
+    @Autowired
+    private KhuyenMaiRepository khuyenMaiRepository;
+
+    public List<KhuyenMaiResponse> hienThiKhuyenMai() {
+        return khuyenMaiRepository.hienThiKhuyenMai();
+    }
+
+    public KhuyenMai getById(Integer id) {
+        return khuyenMaiRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Khuyến mãi không tồn tại với id: " + id));
+    }
+
+    public KhuyenMai create(KhuyenMaiRequest request) {
+        KhuyenMai entity = new KhuyenMai();
+        // BeanUtils copies: maKhuyenMai, tenKhuyenMai, loai, giaTri, giaTriToiDa,
+        //                   donHangToiThieu, ngayBatDau, ngayKetThuc, soLuongToiDa, trangThai
+        BeanUtils.copyProperties(request, entity);
+        entity.setNgayTao(LocalDateTime.now());
+        entity.setSoLanDaDung(0); // khởi tạo số lần đã dùng = 0
+        return khuyenMaiRepository.save(entity);
+    }
+
+    public KhuyenMai update(Integer id, KhuyenMaiRequest request) {
+        KhuyenMai entity = getById(id);
+        BeanUtils.copyProperties(request, entity, "khuyenMaiId", "ngayTao", "soLanDaDung");
+        return khuyenMaiRepository.save(entity);
+    }
+
+    public void delete(Integer id) {
+        if (!khuyenMaiRepository.existsById(id))
+            throw new IllegalArgumentException("Khuyến mãi không tồn tại với id: " + id);
+        khuyenMaiRepository.deleteById(id);
+    }
+}

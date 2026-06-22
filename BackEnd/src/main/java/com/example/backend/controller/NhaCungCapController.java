@@ -1,43 +1,47 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.NhaCungCap;
-import com.example.backend.repository.NhaCungCapRepository;
+import com.example.backend.response.NhaCungCapResponse;
+import com.example.backend.service.NhaCungCapService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/nha-cung-cap")
 public class NhaCungCapController {
 
     @Autowired
-    private NhaCungCapRepository repository;
+    private NhaCungCapService nhaCungCapService;
 
     @GetMapping
-    public List<NhaCungCap> getAll() {
-        return repository.findAll();
+    public List<NhaCungCapResponse> getAll() {
+        return nhaCungCapService.hienThiNhaCungCap();
     }
 
     @GetMapping("/{id}")
     public NhaCungCap getById(@PathVariable Integer id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Nhà cung cấp không tồn tại với id: " + id));
+        return nhaCungCapService.getById(id);
     }
 
     @PostMapping
-    public NhaCungCap create(@RequestBody NhaCungCap item) {
-        return repository.save(item);
+    public ResponseEntity<NhaCungCap> create(@RequestBody NhaCungCap item) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(nhaCungCapService.create(item));
     }
 
     @PutMapping("update/{id}")
-    public NhaCungCap update(@PathVariable Integer id, @RequestBody NhaCungCap item) {
-        item.setNhaCungCapId(id);
-        return repository.save(item);
+    public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody NhaCungCap item) {
+        nhaCungCapService.update(id, item);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
-        repository.deleteById(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        nhaCungCapService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

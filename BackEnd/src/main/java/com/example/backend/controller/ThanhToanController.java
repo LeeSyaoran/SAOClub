@@ -1,43 +1,51 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.ThanhToan;
-import com.example.backend.repository.ThanhToanRepository;
+import com.example.backend.request.ThanhToanRequest;
+import com.example.backend.response.ThanhToanResponse;
+import com.example.backend.service.ThanhToanService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/thanh-toan")
 public class ThanhToanController {
 
     @Autowired
-    private ThanhToanRepository repository;
+    private ThanhToanService thanhToanService;
 
     @GetMapping
-    public List<ThanhToan> getAll() {
-        return repository.findAll();
+    public List<ThanhToanResponse> getAll() {
+        return thanhToanService.hienThiThanhToan();
     }
 
     @GetMapping("/{id}")
     public ThanhToan getById(@PathVariable Integer id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Thanh toán không tồn tại với id: " + id));
+        return thanhToanService.getById(id);
     }
 
+    // POST — service xử lý FK donHang
     @PostMapping
-    public ThanhToan create(@RequestBody ThanhToan item) {
-        return repository.save(item);
+    public ResponseEntity<ThanhToan> create(@Valid @RequestBody ThanhToanRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(thanhToanService.create(request));
     }
 
     @PutMapping("update/{id}")
-    public ThanhToan update(@PathVariable Integer id, @RequestBody ThanhToan item) {
-        item.setThanhToanId(id);
-        return repository.save(item);
+    public ResponseEntity<Void> update(@PathVariable Integer id,
+                                       @Valid @RequestBody ThanhToanRequest request) {
+        thanhToanService.update(id, request);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
-        repository.deleteById(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        thanhToanService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

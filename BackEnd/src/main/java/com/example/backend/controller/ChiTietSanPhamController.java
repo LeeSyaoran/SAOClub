@@ -1,43 +1,50 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.ChiTietSanPham;
-import com.example.backend.repository.ChiTietSanPhamRepository;
+import com.example.backend.request.ChiTietSanPhamRequest;
+import com.example.backend.response.ChiTietSanPhamResponse;
+import com.example.backend.service.ChiTietSanPhamService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/chi-tiet-san-pham")
 public class ChiTietSanPhamController {
 
     @Autowired
-    private ChiTietSanPhamRepository repository;
+    private ChiTietSanPhamService chiTietSanPhamService;
 
     @GetMapping
-    public List<ChiTietSanPham> getAll() {
-        return repository.findAll();
+    public List<ChiTietSanPhamResponse> getAll() {
+        return chiTietSanPhamService.hienThiChiTietSanPham();
     }
 
     @GetMapping("/{id}")
     public ChiTietSanPham getById(@PathVariable Integer id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Chi tiết sản phẩm không tồn tại với id: " + id));
+        return chiTietSanPhamService.getById(id);
     }
 
     @PostMapping
-    public ChiTietSanPham create(@RequestBody ChiTietSanPham item) {
-        return repository.save(item);
+    public ResponseEntity<ChiTietSanPham> create(@Valid @RequestBody ChiTietSanPhamRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(chiTietSanPhamService.create(request));
     }
 
     @PutMapping("update/{id}")
-    public ChiTietSanPham update(@PathVariable Integer id, @RequestBody ChiTietSanPham item) {
-        item.setChiTietId(id);
-        return repository.save(item);
+    public ResponseEntity<Void> update(@PathVariable Integer id,
+                                       @Valid @RequestBody ChiTietSanPhamRequest request) {
+        chiTietSanPhamService.update(id, request);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
-        repository.deleteById(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        chiTietSanPhamService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

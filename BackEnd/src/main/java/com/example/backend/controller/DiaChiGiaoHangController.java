@@ -1,43 +1,50 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.DiaChiGiaoHang;
-import com.example.backend.repository.DiaChiGiaoHangRepository;
+import com.example.backend.request.DiaChiGiaoHangRequest;
+import com.example.backend.response.DiaChiGiaoHangResponse;
+import com.example.backend.service.DiaChiGiaoHangService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/dia-chi-giao-hang")
 public class DiaChiGiaoHangController {
 
     @Autowired
-    private DiaChiGiaoHangRepository repository;
+    private DiaChiGiaoHangService diaChiGiaoHangService;
 
     @GetMapping
-    public List<DiaChiGiaoHang> getAll() {
-        return repository.findAll();
+    public List<DiaChiGiaoHangResponse> getAll() {
+        return diaChiGiaoHangService.hienThiDiaChiGiaoHang();
     }
 
     @GetMapping("/{id}")
     public DiaChiGiaoHang getById(@PathVariable Integer id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Địa chỉ giao hàng không tồn tại với id: " + id));
+        return diaChiGiaoHangService.getById(id);
     }
 
     @PostMapping
-    public DiaChiGiaoHang create(@RequestBody DiaChiGiaoHang item) {
-        return repository.save(item);
+    public ResponseEntity<DiaChiGiaoHang> create(@Valid @RequestBody DiaChiGiaoHangRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(diaChiGiaoHangService.create(request));
     }
 
     @PutMapping("update/{id}")
-    public DiaChiGiaoHang update(@PathVariable Integer id, @RequestBody DiaChiGiaoHang item) {
-        item.setId(id);
-        return repository.save(item);
+    public ResponseEntity<Void> update(@PathVariable Integer id,
+                                       @Valid @RequestBody DiaChiGiaoHangRequest request) {
+        diaChiGiaoHangService.update(id, request);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
-        repository.deleteById(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        diaChiGiaoHangService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

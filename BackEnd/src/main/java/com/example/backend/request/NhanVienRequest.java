@@ -30,7 +30,6 @@ public class NhanVienRequest {
     @NotBlank(message = "Username không được để trống")
     private String username;
 
-    @NotBlank(message = "Mật khẩu hash không được để trống")
     private String matKhauHash;
 
     @NotNull(message = "Lương cơ bản không được để trống")

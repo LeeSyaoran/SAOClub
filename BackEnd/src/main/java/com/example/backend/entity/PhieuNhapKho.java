@@ -20,7 +20,7 @@ public class PhieuNhapKho {
     @Column(name = "phieu_nhap_id")
     private Integer phieuNhapId;
 
-    @Column(name = "ma_phieu_nhap", length = 30, unique = true)
+    @Column(name = "ma_phieu_nhap", length = 30, unique = true, insertable = false, updatable = false)
     private String maPhieuNhap;
 
     @ManyToOne

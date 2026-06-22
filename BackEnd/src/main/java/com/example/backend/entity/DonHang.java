@@ -20,7 +20,7 @@ public class DonHang {
     @Column(name = "don_hang_id")
     private Integer id;
 
-    @Column(name = "ma_don_hang", length = 30)
+    @Column(name = "ma_don_hang", length = 30, insertable = false, updatable = false)
     private String maDonHang;
 
     @ManyToOne

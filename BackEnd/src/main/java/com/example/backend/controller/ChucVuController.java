@@ -1,43 +1,48 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.ChucVu;
-import com.example.backend.repository.ChucVuRepository;
+import com.example.backend.response.ChucVuResponse;
+import com.example.backend.service.ChucVuService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/chuc-vu")
 public class ChucVuController {
 
     @Autowired
-    private ChucVuRepository repository;
+    private ChucVuService chucVuService;
 
     @GetMapping
-    public List<ChucVu> getAll() {
-        return repository.findAll();
+    public List<ChucVuResponse> getAll() {
+        return chucVuService.hienThiChucVu();
     }
 
     @GetMapping("/{id}")
     public ChucVu getById(@PathVariable Integer id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Chức vụ không tồn tại với id: " + id));
+        return chucVuService.getById(id);
     }
 
     @PostMapping
-    public ChucVu create(@RequestBody ChucVu item) {
-        return repository.save(item);
+    public ResponseEntity<ChucVu> create(@RequestBody ChucVu item) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(chucVuService.create(item));
     }
 
+    // ChucVu dùng field "id" (không phải chucVuId) — xem entity ChucVu
     @PutMapping("update/{id}")
-    public ChucVu update(@PathVariable Integer id, @RequestBody ChucVu item) {
-        item.setId(id);
-        return repository.save(item);
+    public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody ChucVu item) {
+        chucVuService.update(id, item);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
-        repository.deleteById(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        chucVuService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

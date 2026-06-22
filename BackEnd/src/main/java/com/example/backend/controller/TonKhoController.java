@@ -1,43 +1,52 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.TonKho;
-import com.example.backend.repository.TonKhoRepository;
+import com.example.backend.service.TonKhoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/ton-kho")
 public class TonKhoController {
 
     @Autowired
-    private TonKhoRepository repository;
+    private TonKhoService tonKhoService;
 
     @GetMapping
     public List<TonKho> getAll() {
-        return repository.findAll();
+        return tonKhoService.getAll();
     }
 
     @GetMapping("/{id}")
     public TonKho getById(@PathVariable Integer id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Tồn kho không tồn tại với id: " + id));
+        return tonKhoService.getById(id);
+    }
+
+    // GET theo bienTheId — dùng để kiểm tra số lượng tồn trước khi tạo đơn hàng
+    @GetMapping("/bien-the/{bienTheId}")
+    public TonKho getByBienTheId(@PathVariable Integer bienTheId) {
+        return tonKhoService.getByBienTheId(bienTheId);
     }
 
     @PostMapping
-    public TonKho create(@RequestBody TonKho item) {
-        return repository.save(item);
+    public ResponseEntity<TonKho> create(@RequestBody TonKho item) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(tonKhoService.create(item));
     }
 
     @PutMapping("update/{id}")
-    public TonKho update(@PathVariable Integer id, @RequestBody TonKho item) {
-        item.setTonKhoId(id);
-        return repository.save(item);
+    public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody TonKho item) {
+        tonKhoService.update(id, item);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
-        repository.deleteById(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        tonKhoService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

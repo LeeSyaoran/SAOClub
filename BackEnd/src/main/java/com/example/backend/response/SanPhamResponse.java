@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Setter
 public class SanPhamResponse {
     private Integer sanPhamId;
+    private Integer bienTheId;
     private String tenSanPham;
     private Integer danhMucId;
     private String tenDanhMuc;

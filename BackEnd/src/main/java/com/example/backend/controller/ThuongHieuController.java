@@ -1,43 +1,47 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.ThuongHieu;
-import com.example.backend.repository.ThuongHieuRepository;
+import com.example.backend.response.ThuongHieuResponse;
+import com.example.backend.service.ThuongHieuService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/thuong-hieu")
 public class ThuongHieuController {
 
     @Autowired
-    private ThuongHieuRepository repository;
+    private ThuongHieuService thuongHieuService;
 
     @GetMapping
-    public List<ThuongHieu> getAll() {
-        return repository.findAll();
+    public List<ThuongHieuResponse> getAll() {
+        return thuongHieuService.hienThiThuongHieu();
     }
 
     @GetMapping("/{id}")
     public ThuongHieu getById(@PathVariable Integer id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Thương hiệu không tồn tại với id: " + id));
+        return thuongHieuService.getById(id);
     }
 
     @PostMapping
-    public ThuongHieu create(@RequestBody ThuongHieu item) {
-        return repository.save(item);
+    public ResponseEntity<ThuongHieu> create(@RequestBody ThuongHieu item) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(thuongHieuService.create(item));
     }
 
     @PutMapping("update/{id}")
-    public ThuongHieu update(@PathVariable Integer id, @RequestBody ThuongHieu item) {
-        item.setThuongHieuId(id);
-        return repository.save(item);
+    public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody ThuongHieu item) {
+        thuongHieuService.update(id, item);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
-        repository.deleteById(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        thuongHieuService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

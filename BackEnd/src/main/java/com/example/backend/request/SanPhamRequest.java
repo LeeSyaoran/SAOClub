@@ -14,6 +14,10 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class SanPhamRequest {
+
+    // Dùng cho update — null khi tạo mới
+    private Integer bienTheId;
+
     @NotBlank(message = "Tên sản phẩm không được để trống")
     private String tenSanPham;
 
@@ -23,38 +27,27 @@ public class SanPhamRequest {
     @NotNull(message = "Danh mục không được để trống")
     private Integer danhMucId;
 
-    @NotNull(message = "Nhà cung cấp không được để trống")
     private Integer nhaCungCapId;
+
+    @NotBlank(message = "Loại sản phẩm không được để trống")
+    private String loaiSanPham;
 
     @NotBlank(message = "Mã SKU không được để trống")
     private String maSku;
 
-    @NotBlank(message = "CPU không được để trống")
-    private String cpu;
+    // FK IDs cho các bảng danh mục linh kiện (nullable — điện thoại không có CPU/GPU laptop)
+    private Integer cpuId;
+    private Integer ramId;
+    private Integer oCungId;
+    private Integer gpuId;
 
-    @NotBlank(message = "RAM không được để trống")
-    private String ram;
-
-    @NotBlank(message = "Ổ cứng không được để trống")
-    private String oCung;
-
-    @NotBlank(message = "GPU không được để trống")
-    private String gpu;
-
-    @NotBlank(message = "Kích thước màn hình không được để trống")
     private String kichThuocManHinh;
-
-    @NotBlank(message = "Hệ điều hành không được để trống")
     private String heDieuHanh;
-
-    @NotBlank(message = "Pin không được để trống")
     private String pin;
 
-    @NotNull(message = "Trọng lượng không được để trống")
     @PositiveOrZero(message = "Trọng lượng phải lớn hơn hoặc bằng 0")
     private BigDecimal trongLuongKg;
 
-    @NotBlank(message = "Màu sắc không được để trống")
     private String mauSac;
 
     @NotNull(message = "Giá bán không được để trống")
@@ -69,15 +62,21 @@ public class SanPhamRequest {
     @PositiveOrZero(message = "Bảo hành tháng phải lớn hơn hoặc bằng 0")
     private Integer baoHanhThang;
 
-    @NotBlank(message = "Mô tả không được để trống")
     private String moTa;
-
-    @NotBlank(message = "Hình ảnh chính không được để trống")
     private String hinhAnhChinh;
 
     @NotBlank(message = "Trạng thái không được để trống")
     private String trangThai;
 
-    @NotNull(message = "Ngày tạo không được để trống")
     private LocalDateTime ngayTao;
+
+    // Fields bổ sung cho điện thoại
+    private String manHinhDt;
+    private String cameraSau;
+    private String cameraTruoc;
+    private String dungLuongPinDt;
+    private String boNhoTrongDt;
+    private String chipXuLyDt;
+    private String soSim;
+    private String hinhAnhBienThe;
 }

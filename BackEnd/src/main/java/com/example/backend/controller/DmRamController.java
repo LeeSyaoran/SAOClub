@@ -3,9 +3,13 @@ package com.example.backend.controller;
 import com.example.backend.entity.DmRam;
 import com.example.backend.repository.DmRamRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+// Danh mục RAM — dữ liệu tham chiếu đơn giản, không cần service riêng
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/dm-ram")
@@ -26,18 +30,22 @@ public class DmRamController {
     }
 
     @PostMapping
-    public DmRam create(@RequestBody DmRam item) {
-        return repository.save(item);
+    public ResponseEntity<DmRam> create(@RequestBody DmRam item) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(item));
     }
 
     @PutMapping("update/{id}")
-    public DmRam update(@PathVariable Integer id, @RequestBody DmRam item) {
+    public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody DmRam item) {
         item.setRamId(id);
-        return repository.save(item);
+        repository.save(item);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        if (!repository.existsById(id))
+            throw new IllegalArgumentException("RAM không tồn tại với id: " + id);
         repository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }

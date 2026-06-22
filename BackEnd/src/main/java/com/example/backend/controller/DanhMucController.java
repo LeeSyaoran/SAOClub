@@ -1,43 +1,48 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.DanhMuc;
-import com.example.backend.repository.DanhMucRepository;
+import com.example.backend.response.DanhMucResponse;
+import com.example.backend.service.DanhMucService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/danh-muc")
 public class DanhMucController {
 
     @Autowired
-    private DanhMucRepository repository;
+    private DanhMucService danhMucService;
 
     @GetMapping
-    public List<DanhMuc> getAll() {
-        return repository.findAll();
+    public List<DanhMucResponse> getAll() {
+        return danhMucService.hienThiDanhMuc();
     }
 
     @GetMapping("/{id}")
     public DanhMuc getById(@PathVariable Integer id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại với id: " + id));
+        return danhMucService.getById(id);
     }
 
     @PostMapping
-    public DanhMuc create(@RequestBody DanhMuc item) {
-        return repository.save(item);
+    public ResponseEntity<DanhMuc> create(@RequestBody DanhMuc item) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(danhMucService.create(item));
     }
 
+    // DanhMuc dùng field "id" (không phải danhMucId) — xem entity DanhMuc
     @PutMapping("update/{id}")
-    public DanhMuc update(@PathVariable Integer id, @RequestBody DanhMuc item) {
-        item.setId(id);
-        return repository.save(item);
+    public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody DanhMuc item) {
+        danhMucService.update(id, item);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
-        repository.deleteById(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        danhMucService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

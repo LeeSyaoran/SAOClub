@@ -28,10 +28,8 @@ public class KhachHangRequest {
     @NotBlank(message = "Loại khách không được để trống")
     private String loaiKhach;
 
-    @NotBlank(message = "Tên công ty không được để trống")
     private String tenCongTy;
 
-    @NotBlank(message = "Mã số thuế không được để trống")
     private String maSoThue;
 
     @NotNull(message = "Điểm tích lũy không được để trống")

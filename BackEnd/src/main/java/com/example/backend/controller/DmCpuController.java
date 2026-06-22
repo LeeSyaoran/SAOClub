@@ -3,9 +3,13 @@ package com.example.backend.controller;
 import com.example.backend.entity.DmCpu;
 import com.example.backend.repository.DmCpuRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+// Danh mục CPU — dữ liệu tham chiếu đơn giản, không cần service riêng
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/dm-cpu")
@@ -26,18 +30,22 @@ public class DmCpuController {
     }
 
     @PostMapping
-    public DmCpu create(@RequestBody DmCpu item) {
-        return repository.save(item);
+    public ResponseEntity<DmCpu> create(@RequestBody DmCpu item) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(item));
     }
 
     @PutMapping("update/{id}")
-    public DmCpu update(@PathVariable Integer id, @RequestBody DmCpu item) {
+    public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody DmCpu item) {
         item.setCpuId(id);
-        return repository.save(item);
+        repository.save(item);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        if (!repository.existsById(id))
+            throw new IllegalArgumentException("CPU không tồn tại với id: " + id);
         repository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }

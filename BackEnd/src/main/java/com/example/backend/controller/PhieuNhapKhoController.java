@@ -1,43 +1,51 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.PhieuNhapKho;
-import com.example.backend.repository.PhieuNhapKhoRepository;
+import com.example.backend.request.PhieuNhapKhoRequest;
+import com.example.backend.response.PhieuNhapKhoResponse;
+import com.example.backend.service.PhieuNhapKhoService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/phieu-nhap-kho")
 public class PhieuNhapKhoController {
 
     @Autowired
-    private PhieuNhapKhoRepository repository;
+    private PhieuNhapKhoService phieuNhapKhoService;
 
     @GetMapping
-    public List<PhieuNhapKho> getAll() {
-        return repository.findAll();
+    public List<PhieuNhapKhoResponse> getAll() {
+        return phieuNhapKhoService.hienThiPhieuNhapKho();
     }
 
     @GetMapping("/{id}")
     public PhieuNhapKho getById(@PathVariable Integer id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Phiếu nhập kho không tồn tại với id: " + id));
+        return phieuNhapKhoService.getById(id);
     }
 
+    // POST — service xử lý FK nhaCungCap, nhanVien
     @PostMapping
-    public PhieuNhapKho create(@RequestBody PhieuNhapKho item) {
-        return repository.save(item);
+    public ResponseEntity<PhieuNhapKho> create(@Valid @RequestBody PhieuNhapKhoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(phieuNhapKhoService.create(request));
     }
 
     @PutMapping("update/{id}")
-    public PhieuNhapKho update(@PathVariable Integer id, @RequestBody PhieuNhapKho item) {
-        item.setPhieuNhapId(id);
-        return repository.save(item);
+    public ResponseEntity<Void> update(@PathVariable Integer id,
+                                       @Valid @RequestBody PhieuNhapKhoRequest request) {
+        phieuNhapKhoService.update(id, request);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("delete/{id}")
-    public void delete(@PathVariable Integer id) {
-        repository.deleteById(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        phieuNhapKhoService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }
