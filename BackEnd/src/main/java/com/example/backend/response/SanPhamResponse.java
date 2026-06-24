@@ -40,4 +40,6 @@ public class SanPhamResponse {
     private String hinhAnhChinh;
     private String trangThai;
     private LocalDateTime ngayTao;
+    private String phanLoaiTags;
+    private String phanLoaiTen;
 }

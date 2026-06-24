@@ -1,5 +1,13 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from "vue";
+import * as SanPhamService   from "../Service/SanPhamService.js";
+import * as KhachHangService from "../Service/KhachHangService.js";
+import * as NhanVienService  from "../Service/NhanVienService.js";
+import * as DonHangService   from "../Service/DonHangService.js";
+import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
+import * as TonKhoService    from "../Service/TonKhoService.js";
+import * as DanhMucService   from "../Service/DanhMucService.js";
+import * as DmService        from "../Service/DmService.js";
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentRole = ref("admin");
@@ -127,18 +135,9 @@ const lowStockItems = computed(() =>
 );
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
-const safeFetch = async (url) => {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return [];
-    return await res.json();
-  } catch {
-    return [];
-  }
-};
-
 const fetchAll = async () => {
   loading.value = true;
+  const safe = (p) => p.catch(() => []);
   [
     products.value,
     orders.value,
@@ -155,20 +154,20 @@ const fetchAll = async () => {
     oCungList.value,
     gpuList.value,
   ] = await Promise.all([
-    safeFetch("/api/san-pham/hien-thi"),
-    safeFetch("/api/don-hang"),
-    safeFetch("/api/khach-hang"),
-    safeFetch("/api/nhan-vien"),
-    safeFetch("/api/khuyen-mai"),
-    safeFetch("/api/ton-kho"),
-    safeFetch("/api/danh-muc"),
-    safeFetch("/api/thuong-hieu"),
-    safeFetch("/api/nha-cung-cap"),
-    safeFetch("/api/chuc-vu"),
-    safeFetch("/api/dm-cpu"),
-    safeFetch("/api/dm-ram"),
-    safeFetch("/api/dm-o-cung"),
-    safeFetch("/api/dm-gpu"),
+    safe(SanPhamService.getAll()),
+    safe(DonHangService.getAll()),
+    safe(KhachHangService.getAll()),
+    safe(NhanVienService.getAll()),
+    safe(KhuyenMaiService.getAll()),
+    safe(TonKhoService.getAll()),
+    safe(DanhMucService.getAll()),
+    safe(DmService.getThuongHieu()),
+    safe(DmService.getNhaCungCap()),
+    safe(DmService.getChucVu()),
+    safe(DmService.getCpu()),
+    safe(DmService.getRam()),
+    safe(DmService.getOCung()),
+    safe(DmService.getGpu()),
   ]);
   loading.value = false;
 };
@@ -201,6 +200,8 @@ const emptyForm = () => ({
   moTa: "",
   hinhAnhChinh: "",
   trangThai: "active",
+  phanLoaiTags: "",
+  phanLoaiTen: "",
 });
 const form = reactive(emptyForm());
 
@@ -235,6 +236,8 @@ const openEdit = (p) => {
     moTa: p.moTa,
     hinhAnhChinh: p.hinhAnhChinh,
     trangThai: p.trangThai,
+    phanLoaiTags: p.phanLoaiTags ?? "",
+    phanLoaiTen: p.phanLoaiTen ?? "",
   });
   editingId.value = p.sanPhamId;
   formError.value = "";
@@ -255,36 +258,25 @@ const saveProduct = async () => {
     giaNhap: Number(form.giaNhap),
     trongLuongKg: form.trongLuongKg ? Number(form.trongLuongKg) : null,
     baoHanhThang: Number(form.baoHanhThang),
-    ngayTao: new Date().toISOString().slice(0, 19),
+    ...(editingId.value ? {} : { ngayTao: new Date().toISOString().slice(0, 19) }),
   };
   try {
-    const url = editingId.value
-      ? `/api/san-pham/update/${editingId.value}`
-      : "/api/san-pham";
-    const method = editingId.value ? "PUT" : "POST";
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await SanPhamService.save(editingId.value, body);
     if (!res.ok) {
       formError.value = `Loi: ${res.status} ${await res.text()}`;
       return;
     }
     showProductModal.value = false;
-    products.value = await safeFetch("/api/san-pham/hien-thi");
+    products.value = await SanPhamService.getAll().catch(() => []);
   } catch (e) {
     formError.value = e.message;
   }
 };
 const deleteProduct = async (id) => {
   if (!confirm("Ban co chac muon xoa san pham nay?")) return;
-  const res = await fetch(`/api/san-pham/delete/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    alert(`Xoa that bai: ${res.status}`);
-    return;
-  }
-  products.value = await safeFetch("/api/san-pham/hien-thi");
+  const res = await SanPhamService.remove(id);
+  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  products.value = await SanPhamService.getAll().catch(() => []);
 };
 
 // ── Customers CRUD ────────────────────────────────────────────────────────────
@@ -333,33 +325,22 @@ const saveCustomer = async () => {
     diemTichLuy: Number(customerForm.diemTichLuy),
   };
   try {
-    const url = editingCustomerId.value
-      ? `/api/khach-hang/update/${editingCustomerId.value}`
-      : "/api/khach-hang";
-    const method = editingCustomerId.value ? "PUT" : "POST";
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await KhachHangService.save(editingCustomerId.value, body);
     if (!res.ok) {
       customerFormError.value = `Loi ${res.status}: ${await res.text()}`;
       return;
     }
     showCustomerModal.value = false;
-    customers.value = await safeFetch("/api/khach-hang");
+    customers.value = await KhachHangService.getAll().catch(() => []);
   } catch (e) {
     customerFormError.value = e.message;
   }
 };
 const deleteCustomer = async (id) => {
   if (!confirm("Xoa khach hang nay?")) return;
-  const res = await fetch(`/api/khach-hang/delete/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    alert(`Xoa that bai: ${res.status}`);
-    return;
-  }
-  customers.value = await safeFetch("/api/khach-hang");
+  const res = await KhachHangService.remove(id);
+  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  customers.value = await KhachHangService.getAll().catch(() => []);
 };
 
 // ── Staff CRUD ────────────────────────────────────────────────────────────────
@@ -407,33 +388,22 @@ const saveStaff = async () => {
     luongCoBan: Number(staffForm.luongCoBan),
   };
   try {
-    const url = editingStaffId.value
-      ? `/api/nhan-vien/update/${editingStaffId.value}`
-      : "/api/nhan-vien";
-    const method = editingStaffId.value ? "PUT" : "POST";
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await NhanVienService.save(editingStaffId.value, body);
     if (!res.ok) {
       staffFormError.value = `Loi ${res.status}: ${await res.text()}`;
       return;
     }
     showStaffModal.value = false;
-    staff.value = await safeFetch("/api/nhan-vien");
+    staff.value = await NhanVienService.getAll().catch(() => []);
   } catch (e) {
     staffFormError.value = e.message;
   }
 };
 const deleteStaff = async (id) => {
   if (!confirm("Xoa nhan vien nay?")) return;
-  const res = await fetch(`/api/nhan-vien/delete/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    alert(`Xoa that bai: ${res.status}`);
-    return;
-  }
-  staff.value = await safeFetch("/api/nhan-vien");
+  const res = await NhanVienService.remove(id);
+  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  staff.value = await NhanVienService.getAll().catch(() => []);
 };
 
 // ── Promotions CRUD ───────────────────────────────────────────────────────────
@@ -494,33 +464,22 @@ const savePromo = async () => {
     ngayKetThuc: toLocalDT(promoForm.ngayKetThuc),
   };
   try {
-    const url = editingPromoId.value
-      ? `/api/khuyen-mai/update/${editingPromoId.value}`
-      : "/api/khuyen-mai";
-    const method = editingPromoId.value ? "PUT" : "POST";
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await KhuyenMaiService.save(editingPromoId.value, body);
     if (!res.ok) {
       promoFormError.value = `Loi ${res.status}: ${await res.text()}`;
       return;
     }
     showPromoModal.value = false;
-    promotions.value = await safeFetch("/api/khuyen-mai");
+    promotions.value = await KhuyenMaiService.getAll().catch(() => []);
   } catch (e) {
     promoFormError.value = e.message;
   }
 };
 const deletePromo = async (id) => {
   if (!confirm("Xoa khuyen mai nay?")) return;
-  const res = await fetch(`/api/khuyen-mai/delete/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    alert(`Xoa that bai: ${res.status}`);
-    return;
-  }
-  promotions.value = await safeFetch("/api/khuyen-mai");
+  const res = await KhuyenMaiService.remove(id);
+  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  promotions.value = await KhuyenMaiService.getAll().catch(() => []);
 };
 
 // ── Orders status update ──────────────────────────────────────────────────────
@@ -566,17 +525,13 @@ const saveOrderStatus = async () => {
     ghiChu: o.ghiChu ?? null,
   };
   try {
-    const res = await fetch(`/api/don-hang/update/${o.donHangId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await DonHangService.update(o.donHangId, body);
     if (!res.ok) {
       orderStatusError.value = `Loi ${res.status}: ${await res.text()}`;
       return;
     }
     showOrderModal.value = false;
-    orders.value = await safeFetch("/api/don-hang");
+    orders.value = await DonHangService.getAll().catch(() => []);
   } catch (e) {
     orderStatusError.value = e.message;
   }
@@ -602,17 +557,10 @@ const saveStock = async () => {
     tonKhoToiThieu: Number(stockForm.tonKhoToiThieu),
   };
   try {
-    const res = await fetch(`/api/ton-kho/update/${item.tonKhoId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      alert(`Loi: ${res.status}`);
-      return;
-    }
+    const res = await TonKhoService.update(item.tonKhoId, body);
+    if (!res.ok) { alert(`Loi: ${res.status}`); return; }
     showStockModal.value = false;
-    inventory.value = await safeFetch("/api/ton-kho");
+    inventory.value = await TonKhoService.getAll().catch(() => []);
   } catch (e) {
     alert(e.message);
   }
@@ -683,47 +631,37 @@ const posPlaceOrder = async () => {
     let khachHangId = posFoundCust.value?.khachHangId;
     if (!khachHangId) {
       const name = posNewName.value.trim() || posPhone.value.trim();
-      const kRes = await fetch("/api/khach-hang", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hoTen: name, soDienThoai: posPhone.value.trim(),
-          email: "", diaChi: "Tai cua hang",
-          loaiKhach: "ca_nhan", diemTichLuy: 0, trangThai: "active",
-        }),
+      const kRes = await KhachHangService.save(null, {
+        hoTen: name, soDienThoai: posPhone.value.trim(),
+        email: "", diaChi: "Tai cua hang",
+        loaiKhach: "ca_nhan", diemTichLuy: 0, trangThai: "active",
       });
       if (!kRes.ok) throw new Error(`Loi tao khach hang: ${await kRes.text()}`);
       const kh = await kRes.json();
       khachHangId = kh.khachHangId;
-      customers.value = await safeFetch("/api/khach-hang");
+      customers.value = await KhachHangService.getAll().catch(() => []);
     }
     const nguoiNhan = posFoundCust.value?.hoTen ?? (posNewName.value.trim() || posPhone.value.trim());
-    const orderRes = await fetch("/api/don-hang", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        khachHangId, nguoiNhan, sdtNguoiNhan: posPhone.value.trim(),
-        diaChiGiaoHangText: posFoundCust.value?.diaChi ?? "Tai cua hang",
-        tongTien: posCartTotal.value, giamGia: 0,
-        phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
-        ngayDat: new Date().toISOString().slice(0, 19),
-        trangThaiDonHang: "confirmed", trangThaiThanhToan: "paid", kenhBan: "in_store",
-      }),
+    const orderRes = await DonHangService.create({
+      khachHangId, nguoiNhan, sdtNguoiNhan: posPhone.value.trim(),
+      diaChiGiaoHangText: posFoundCust.value?.diaChi ?? "Tai cua hang",
+      tongTien: posCartTotal.value, giamGia: 0,
+      phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
+      ngayDat: new Date().toISOString().slice(0, 19),
+      trangThaiDonHang: "confirmed", trangThaiThanhToan: "paid", kenhBan: "in_store",
     });
     if (!orderRes.ok) throw new Error(`Loi tao don hang: ${await orderRes.text()}`);
     const created = await orderRes.json();
     const donHangId = created.id ?? created.donHangId;
     for (const item of posCart.value) {
-      const ctRes = await fetch("/api/chi-tiet-don-hang", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ donHangId, bienTheId: item.bienTheId, soLuong: item.soLuong, donGia: item.giaBan, giamGiaDong: 0 }),
+      const ctRes = await DonHangService.addChiTiet({
+        donHangId, bienTheId: item.bienTheId, soLuong: item.soLuong, donGia: item.giaBan, giamGiaDong: 0,
       });
       if (!ctRes.ok) throw new Error(`Loi them san pham: ${await ctRes.text()}`);
     }
     posSuccess.value = true;
     posCart.value = []; posPhone.value = ""; posFoundCust.value = null; posNewName.value = "";
-    orders.value = await safeFetch("/api/don-hang");
+    orders.value = await DonHangService.getAll().catch(() => []);
   } catch (e) {
     posError.value = e.message;
   }
@@ -1315,6 +1253,15 @@ onMounted(fetchAll);
           <div class="col-6"><label class="form-label small text-secondary">Bao hanh (thang) *</label><input v-model="form.baoHanhThang" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
           <div class="col-6"><label class="form-label small text-secondary">Hinh anh chinh (URL)</label><input v-model="form.hinhAnhChinh" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="https://..." /></div>
           <div class="col-12"><label class="form-label small text-secondary">Mo ta</label><textarea v-model="form.moTa" rows="3" class="form-control form-control-sm bg-dark text-light border-secondary"></textarea></div>
+          <div class="col-12">
+            <label class="form-label small text-secondary">Phan loai Tags <span class="text-warning">(dùng để lọc)</span></label>
+            <input v-model="form.phanLoaiTags" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="gaming,do_hoa  |  van_phong,sinh_vien  |  macbook,apple" />
+            <div class="text-secondary mt-1" style="font-size:10px;">Các tag cách nhau bằng dấu phẩy. Tags hợp lệ: gaming · do_hoa · ky_thuat · van_phong · sinh_vien · macbook · apple · cu · gia_re · linh_kien · ram · ssd</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label small text-secondary">Phan loai Ten <span class="text-muted">(tên hiển thị)</span></label>
+            <input v-model="form.phanLoaiTen" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Gaming, Đồ họa" />
+          </div>
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">

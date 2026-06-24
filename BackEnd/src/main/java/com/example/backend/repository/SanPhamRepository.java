@@ -38,8 +38,10 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
         bt.baoHanhThang,
         sp.moTa,
         sp.hinhAnhChinh,
-        sp.trangThai,
-        sp.ngayTao
+        bt.trangThai,
+        sp.ngayTao,
+        bt.phanLoaiTags,
+        bt.phanLoaiTen
     )
     FROM BienTheSanPham bt
     JOIN bt.sanPham sp

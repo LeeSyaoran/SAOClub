@@ -120,7 +120,7 @@ CREATE TABLE san_pham (
     mo_ta           NVARCHAR(MAX)   NULL,
     hinh_anh_chinh  NVARCHAR(500)   NULL,
     loai_san_pham   VARCHAR(20)     NOT NULL
-        CONSTRAINT CK_sp_loaisanpham CHECK (loai_san_pham IN ('LAPTOP', 'PHU_KIEN')),
+        CONSTRAINT CK_sp_loaisanpham CHECK (loai_san_pham IN ('LAPTOP', 'PHU_KIEN', 'DIEN_THOAI')),
     trang_thai      NVARCHAR(20)    NOT NULL DEFAULT N'active'
         CONSTRAINT CK_san_pham_trangthai CHECK (trang_thai IN (N'active', N'inactive', N'ngung_kinh_doanh')),
     ngay_tao        DATETIME        NOT NULL DEFAULT GETDATE(),
@@ -172,6 +172,11 @@ CREATE TABLE bien_the_san_pham (
     he_dieu_hanh        NVARCHAR(100)   NULL,
     pin                 NVARCHAR(50)    NULL,
     trong_luong_kg      DECIMAL(5,2)    NULL,
+
+    -- Phân loại theo mục đích sử dụng — cache từ san_pham_phan_loai để filter nhanh
+    -- VD: 'gaming,do_hoa' | 'van_phong,sinh_vien'
+    phan_loai_tags      NVARCHAR(200)   NULL,
+    phan_loai_ten       NVARCHAR(200)   NULL,
 
     CONSTRAINT FK_bien_the_san_pham FOREIGN KEY (san_pham_id) REFERENCES san_pham(san_pham_id) ON DELETE CASCADE,
     CONSTRAINT FK_bien_the_cpu      FOREIGN KEY (cpu_id)      REFERENCES dm_cpu(cpu_id),
@@ -546,6 +551,38 @@ BEGIN
 END;
 GO
 
+-- Trigger 4: Tự động sync phan_loai_tags vào bien_the_san_pham khi junction thay đổi
+CREATE TRIGGER trg_SyncPhanLoaiTags
+ON san_pham_phan_loai
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Lấy tất cả san_pham_id bị ảnh hưởng
+    DECLARE @AffectedIds TABLE (san_pham_id INT);
+    INSERT INTO @AffectedIds SELECT DISTINCT san_pham_id FROM inserted;
+    INSERT INTO @AffectedIds SELECT DISTINCT san_pham_id FROM deleted;
+
+    UPDATE bt
+    SET
+        bt.phan_loai_tags = (
+            SELECT STRING_AGG(pl.ma_phan_loai, ',') WITHIN GROUP (ORDER BY pl.thu_tu)
+            FROM san_pham_phan_loai sppl
+            JOIN phan_loai pl ON sppl.phan_loai_id = pl.phan_loai_id
+            WHERE sppl.san_pham_id = bt.san_pham_id AND pl.trang_thai = N'active'
+        ),
+        bt.phan_loai_ten = (
+            SELECT STRING_AGG(pl.ten_phan_loai, ', ') WITHIN GROUP (ORDER BY pl.thu_tu)
+            FROM san_pham_phan_loai sppl
+            JOIN phan_loai pl ON sppl.phan_loai_id = pl.phan_loai_id
+            WHERE sppl.san_pham_id = bt.san_pham_id AND pl.trang_thai = N'active'
+        )
+    FROM bien_the_san_pham bt
+    WHERE bt.san_pham_id IN (SELECT san_pham_id FROM @AffectedIds);
+END;
+GO
+
 -- ============================================================
 --  11. INDEX TỐI ƯU HÓA TRUY VẤN
 -- ============================================================
@@ -728,12 +765,12 @@ INSERT INTO phan_loai (ma_phan_loai, ten_phan_loai, mo_ta, thu_tu) VALUES
 -- phan_loai: van_phong=1, sinh_vien=2, gaming=3, do_hoa=4, ky_thuat=5, macbook=6, laptop_cu=7
 
 -- Sản phẩm (chỉ LAPTOP)
-INSERT INTO san_pham (ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta) VALUES
-(N'Dell Inspiron 15 3520',    1, 1, 1, 'LAPTOP', N'Laptop văn phòng phổ thông 15.6" FHD, pin 54Wh, trọng lượng 1.7kg'),
-(N'Asus Vivobook 15 X1504VA', 3, 1, 2, 'LAPTOP', N'Mỏng nhẹ văn phòng, màn 15.6" FHD 60Hz, pin 50Wh cả ngày'),
-(N'Lenovo IdeaPad 5 Pro 16',  4, 1, 2, 'LAPTOP', N'Màn 2.5K 16" 120Hz, AMD Ryzen mạnh, vỏ nhôm bền'),
-(N'HP Envy x360 16 2024',     5, 1, 1, 'LAPTOP', N'2-in-1 cao cấp, màn OLED 2.8K cảm ứng, chip Intel Gen 13'),
-(N'MSI Stealth 15M B12U',     6, 1, 3, 'LAPTOP', N'Gaming mỏng nhẹ RTX 4050, màn 144Hz, trọng lượng chỉ 1.7kg');
+INSERT INTO san_pham (ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
+(N'Dell Inspiron 15 3520',    1, 1, 1, 'LAPTOP', N'Laptop văn phòng phổ thông 15.6" FHD, pin 54Wh, trọng lượng 1.7kg',   N'/images/Dell Inspiron 15 3520.webp'),
+(N'Asus Vivobook 15 X1504VA', 3, 1, 2, 'LAPTOP', N'Mỏng nhẹ văn phòng, màn 15.6" FHD 60Hz, pin 50Wh cả ngày',          N'/images/Asus Vivobook 15 X1504VA.webp'),
+(N'Lenovo IdeaPad 5 Pro 16',  4, 1, 2, 'LAPTOP', N'Màn 2.5K 16" 120Hz, AMD Ryzen mạnh, vỏ nhôm bền',                   N'/images/Lenovo IdeaPad 5 Pro 16.webp'),
+(N'HP Envy x360 16 2024',     5, 1, 1, 'LAPTOP', N'2-in-1 cao cấp, màn OLED 2.8K cảm ứng, chip Intel Gen 13',          N'/images/HP Envy x360 16 2024.webp'),
+(N'MSI Stealth 15M B12U',     6, 1, 3, 'LAPTOP', N'Gaming mỏng nhẹ RTX 4050, màn 144Hz, trọng lượng chỉ 1.7kg',        N'/images/MSI Stealth 15M B12U.webp');
 -- san_pham: Dell=1, Asus=2, Lenovo=3, HP=4, MSI=5
 
 -- Biến thể sản phẩm
@@ -895,9 +932,228 @@ INSERT INTO san_pham_phan_loai (san_pham_id, phan_loai_id) VALUES
 (5, 3), (5, 4);
 GO
 
+-- Sync cột phan_loai_tags / phan_loai_ten trong bien_the_san_pham từ junction table
+-- Chạy sau mỗi lần thay đổi san_pham_phan_loai (hoặc dùng trigger bên dưới)
+UPDATE bt
+SET
+    bt.phan_loai_tags = (
+        SELECT STRING_AGG(pl.ma_phan_loai, ',') WITHIN GROUP (ORDER BY pl.thu_tu)
+        FROM san_pham_phan_loai sppl
+        JOIN phan_loai pl ON sppl.phan_loai_id = pl.phan_loai_id
+        WHERE sppl.san_pham_id = bt.san_pham_id
+          AND pl.trang_thai = N'active'
+    ),
+    bt.phan_loai_ten = (
+        SELECT STRING_AGG(pl.ten_phan_loai, ', ') WITHIN GROUP (ORDER BY pl.thu_tu)
+        FROM san_pham_phan_loai sppl
+        JOIN phan_loai pl ON sppl.phan_loai_id = pl.phan_loai_id
+        WHERE sppl.san_pham_id = bt.san_pham_id
+          AND pl.trang_thai = N'active'
+    )
+FROM bien_the_san_pham bt;
+GO
+
 -- Lịch sử xuất kho
 INSERT INTO lich_su_ton_kho (bien_the_id, loai_bien_dong, so_luong_thay_doi, don_hang_id, nhan_vien_id, ghi_chu) VALUES
 (1, N'xuat_ban', -1, 1, 1, N'Xuất bán DH1 - Dell Inspiron i5'),
 (8, N'xuat_ban', -1, 2, NULL, N'Xuất bán DH2 - HP Envy i9/32GB'),
 (6, N'xuat_ban', -1, 3, 2, N'Xuất bán DH3 - Lenovo R7/16GB');
+GO
+
+-- ============================================================
+-- 13.B. DỮ LIỆU BỔ SUNG — Thêm sản phẩm mới + màu sắc
+-- ============================================================
+
+-- ── Sản phẩm mới (sp 6-11) ───────────────────────────────────────────────────
+-- thuong_hieu: Dell=1,Apple=2,Asus=3,Lenovo=4,HP=5,MSI=6,Acer=7
+-- nha_cung_cap: Digiworld=1, FPT=2, Synnex=3
+INSERT INTO san_pham (ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
+(N'Acer Aspire 5 A515-58',   7, 1, 3, N'LAPTOP', N'Laptop học tập văn phòng phổ thông 15.6" FHD, pin 48Wh cả ngày, giá hợp lý',                 NULL),
+(N'Asus ROG Strix G16 G614', 3, 1, 2, N'LAPTOP', N'Gaming cao cấp RTX 40 series, màn 16" 165Hz, tản nhiệt triple fan, RGB Aura Sync',            NULL),
+(N'Lenovo Legion 5 Pro 16',  4, 1, 2, N'LAPTOP', N'Gaming-đồ họa chuyên nghiệp, màn WQXGA 165Hz, AMD Ryzen + NVIDIA RTX, vỏ nhôm',              NULL),
+(N'HP Pavilion 15',          5, 1, 1, N'LAPTOP', N'Laptop gia đình phổ thông 15.6" FHD 144Hz, màu sắc đa dạng, giá cạnh tranh',                  NULL),
+(N'Dell XPS 15 9530',        1, 1, 1, N'LAPTOP', N'Màn OLED 3.5K siêu nét, thiết kế siêu mỏng, lý tưởng cho sáng tạo nội dung chuyên nghiệp',  NULL),
+(N'Acer Nitro V 15',         7, 1, 3, N'LAPTOP', N'Gaming tầm trung RTX 40 series, màn 144Hz, tản nhiệt mạnh, giá tốt nhất phân khúc',           NULL);
+-- san_pham: Acer_Aspire5=6, ROG_Strix=7, Legion5Pro=8, Pavilion15=9, XPS15=10, NitroV=11
+GO
+
+-- ── Biến thể bổ sung: thêm màu cho sp hiện có (1-5) ─────────────────────────
+-- dm_cpu: i5-1235U=1,i7-13620H=2,i5-13420H=3,i9-13900H=4,R5-7530U=5,R7-7745H=6,i7-13700H=7
+-- dm_ram: 8GB DDR4=1,16GB DDR5=2,32GB DDR5=3,8GB LPDDR5=4,16GB LPDDR5=5
+-- dm_o_cung: 256GB=1,512GB=2,1TB=3,2TB=4  |  dm_gpu: IrisXe=1,RTX4050=2,RTX4060=3,RTX4070=4,Radeon780M=5
+INSERT INTO bien_the_san_pham
+    (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
+     cpu_id, ram_id, o_cung_id, gpu_id,
+     kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
+VALUES
+-- Dell Inspiron 15 3520 (sp=1): Đen cho cấu hình i5
+(1,'DELL-3520-I5-8G-BLK',  13000000, 15490000, 24, 1,1,2,1, N'15.6" FHD 60Hz',      N'Windows 11 Home', N'54Wh', 1.70, N'Đen'),
+-- Asus Vivobook 15 (sp=2): Đen cho cả i5 & i7
+(2,'ASUS-X1504-I5-8G-BLK', 12500000, 14990000, 24, 3,1,2,5, N'15.6" FHD 60Hz',      N'Windows 11 Home', N'50Wh', 1.70, N'Đen'),
+(2,'ASUS-X1504-I7-16G-BLK',16000000, 19490000, 24, 7,2,2,5, N'15.6" FHD 60Hz',      N'Windows 11 Home', N'50Wh', 1.70, N'Đen'),
+-- Lenovo IdeaPad 5 Pro (sp=3): Xanh Dương cho R5 & R7
+(3,'LENO-IP5P-R5-8G-BLU',  14500000, 17490000, 24, 5,1,2,5, N'16" 2.5K 120Hz',      N'Windows 11 Home', N'75Wh', 1.85, N'Xanh Dương'),
+(3,'LENO-IP5P-R7-16G-BLU', 18000000, 22490000, 24, 6,2,3,5, N'16" 2.5K 120Hz',      N'Windows 11 Home', N'75Wh', 1.85, N'Xanh Dương'),
+-- HP Envy x360 (sp=4): Vàng Citrus cho i7, Đen Midnight cho i9
+(4,'HP-ENVY-I7-16G-GLD',   22000000, 27490000, 24, 7,2,2,2, N'16" 2.8K OLED 120Hz', N'Windows 11 Home', N'86Wh', 2.10, N'Vàng Citrus'),
+(4,'HP-ENVY-I9-32G-BLK',   28000000, 34990000, 24, 4,3,3,3, N'16" 2.8K OLED 120Hz', N'Windows 11 Home', N'86Wh', 2.10, N'Đen Midnight'),
+-- MSI Stealth 15M (sp=5): Bạc cho RTX4050
+(5,'MSI-STL15-RTX4050-SLV',22500000, 27990000, 24, 7,2,2,2, N'15.6" FHD 144Hz',     N'Windows 11 Home', N'52Wh', 1.70, N'Bạc');
+-- bien_the 11-18
+GO
+
+-- ── Acer Aspire 5 A515-58 (sp=6) — 2 cấu hình × 2 màu ───────────────────────
+INSERT INTO bien_the_san_pham
+    (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
+     cpu_id, ram_id, o_cung_id, gpu_id,
+     kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
+VALUES
+(6,'ACER-A515-I5-8G-SLV', 11000000, 13490000, 12, 1,1,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'48Wh', 1.76, N'Bạc'),
+(6,'ACER-A515-I5-8G-BLU', 11000000, 13490000, 12, 1,1,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'48Wh', 1.76, N'Xanh Dương'),
+(6,'ACER-A515-I7-16G-SLV',14000000, 16990000, 12, 2,2,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'48Wh', 1.76, N'Bạc'),
+(6,'ACER-A515-I7-16G-BLK',14000000, 16990000, 12, 2,2,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'48Wh', 1.76, N'Đen');
+-- bien_the 19-22
+GO
+
+-- ── Asus ROG Strix G16 G614 (sp=7) — 2 cấu hình, 3 biến thể ─────────────────
+INSERT INTO bien_the_san_pham
+    (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
+     cpu_id, ram_id, o_cung_id, gpu_id,
+     kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
+VALUES
+(7,'ROG-G614-I7-16G-BLK', 26000000, 32490000, 24, 7,2,2,3, N'16" FHD 165Hz',  N'Windows 11 Home', N'90Wh', 2.50, N'Đen'),
+(7,'ROG-G614-I7-16G-GRY', 26000000, 32490000, 24, 7,2,2,3, N'16" FHD 165Hz',  N'Windows 11 Home', N'90Wh', 2.50, N'Xám Eclipse'),
+(7,'ROG-G614-I9-32G-BLK', 35000000, 42990000, 24, 4,3,3,4, N'16" QHD 240Hz',  N'Windows 11 Home', N'90Wh', 2.50, N'Đen');
+-- bien_the 23-25
+GO
+
+-- ── Lenovo Legion 5 Pro 16 (sp=8) — 2 cấu hình × 2 màu ──────────────────────
+INSERT INTO bien_the_san_pham
+    (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
+     cpu_id, ram_id, o_cung_id, gpu_id,
+     kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
+VALUES
+(8,'LEGI-5P-R7-16G-GRY', 23000000, 28490000, 24, 6,2,2,3, N'16" WQXGA 165Hz', N'Windows 11 Home', N'80Wh', 2.49, N'Xám'),
+(8,'LEGI-5P-R7-16G-WHT', 23000000, 28490000, 24, 6,2,2,3, N'16" WQXGA 165Hz', N'Windows 11 Home', N'80Wh', 2.49, N'Trắng'),
+(8,'LEGI-5P-R7-32G-GRY', 30000000, 36990000, 24, 6,3,3,4, N'16" WQXGA 165Hz', N'Windows 11 Home', N'80Wh', 2.49, N'Xám'),
+(8,'LEGI-5P-R7-32G-BLK', 30000000, 36990000, 24, 6,3,3,4, N'16" WQXGA 165Hz', N'Windows 11 Home', N'80Wh', 2.49, N'Đen');
+-- bien_the 26-29
+GO
+
+-- ── HP Pavilion 15 (sp=9) — i5 có 3 màu, i7 có 2 màu ────────────────────────
+INSERT INTO bien_the_san_pham
+    (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
+     cpu_id, ram_id, o_cung_id, gpu_id,
+     kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
+VALUES
+(9,'HP-PAV15-I5-8G-SLV', 10000000, 12490000, 12, 1,1,1,1, N'15.6" FHD 144Hz', N'Windows 11 Home', N'41Wh', 1.75, N'Bạc'),
+(9,'HP-PAV15-I5-8G-PNK', 10000000, 12490000, 12, 1,1,1,1, N'15.6" FHD 144Hz', N'Windows 11 Home', N'41Wh', 1.75, N'Hồng'),
+(9,'HP-PAV15-I5-8G-BLU', 10000000, 12490000, 12, 1,1,1,1, N'15.6" FHD 144Hz', N'Windows 11 Home', N'41Wh', 1.75, N'Xanh Dương'),
+(9,'HP-PAV15-I7-16G-SLV',13000000, 15990000, 12, 2,2,2,1, N'15.6" FHD 144Hz', N'Windows 11 Home', N'41Wh', 1.75, N'Bạc'),
+(9,'HP-PAV15-I7-16G-BLK',13000000, 15990000, 12, 2,2,2,1, N'15.6" FHD 144Hz', N'Windows 11 Home', N'41Wh', 1.75, N'Đen');
+-- bien_the 30-34
+GO
+
+-- ── Dell XPS 15 9530 (sp=10) — i7 2 màu, i9 1 màu ───────────────────────────
+INSERT INTO bien_the_san_pham
+    (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
+     cpu_id, ram_id, o_cung_id, gpu_id,
+     kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
+VALUES
+(10,'DELL-XPS15-I7-16G-PLT',35000000, 42990000, 24, 7,5,2,3, N'15.6" OLED 3.5K 60Hz', N'Windows 11 Pro', N'86Wh', 1.86, N'Bạc Bạch Kim'),
+(10,'DELL-XPS15-I7-16G-BLK',35000000, 42990000, 24, 7,5,2,3, N'15.6" OLED 3.5K 60Hz', N'Windows 11 Pro', N'86Wh', 1.86, N'Đen Graphite'),
+(10,'DELL-XPS15-I9-32G-PLT',48000000, 57990000, 24, 4,3,3,4, N'15.6" OLED 3.5K 60Hz', N'Windows 11 Pro', N'86Wh', 1.86, N'Bạc Bạch Kim');
+-- bien_the 35-37
+GO
+
+-- ── Acer Nitro V 15 (sp=11) — 2 cấu hình × 2 màu ────────────────────────────
+INSERT INTO bien_the_san_pham
+    (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
+     cpu_id, ram_id, o_cung_id, gpu_id,
+     kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
+VALUES
+(11,'ACER-NV15-I5-8G-BLK', 18000000, 22490000, 12, 3,1,2,2, N'15.6" FHD 144Hz', N'Windows 11 Home', N'57Wh', 2.10, N'Đen'),
+(11,'ACER-NV15-I5-8G-RED', 18000000, 22490000, 12, 3,1,2,2, N'15.6" FHD 144Hz', N'Windows 11 Home', N'57Wh', 2.10, N'Đỏ Đen'),
+(11,'ACER-NV15-I7-16G-BLK',24000000, 29990000, 12, 2,2,2,3, N'15.6" FHD 144Hz', N'Windows 11 Home', N'57Wh', 2.10, N'Đen'),
+(11,'ACER-NV15-I7-16G-WHT',24000000, 29990000, 12, 2,2,2,3, N'15.6" FHD 144Hz', N'Windows 11 Home', N'57Wh', 2.10, N'Trắng');
+-- bien_the 38-41
+GO
+
+-- ── Tồn kho cho tất cả biến thể mới (bien_the 11-41) ─────────────────────────
+INSERT INTO ton_kho (bien_the_id, so_luong_ton_thuc_te, so_luong_giu, ton_kho_toi_thieu) VALUES
+-- Extra màu sp 1-5 (bien_the 11-18)
+(11,  8, 0, 3),  -- Dell i5 Đen
+(12,  6, 0, 3),  -- Asus i5 Đen
+(13,  4, 0, 2),  -- Asus i7 Đen
+(14,  5, 0, 3),  -- Lenovo R5 Xanh Dương
+(15,  3, 0, 2),  -- Lenovo R7 Xanh Dương
+(16,  4, 0, 2),  -- HP Envy i7 Vàng Citrus
+(17,  2, 0, 1),  -- HP Envy i9 Đen Midnight
+(18,  3, 0, 2),  -- MSI RTX4050 Bạc
+-- Acer Aspire 5 (bien_the 19-22)
+(19,  8, 0, 3),  -- i5 Bạc
+(20,  6, 0, 3),  -- i5 Xanh Dương
+(21,  5, 0, 2),  -- i7 Bạc
+(22,  4, 0, 2),  -- i7 Đen
+-- ROG Strix G16 (bien_the 23-25)
+(23,  5, 0, 2),  -- i7 RTX4060 Đen
+(24,  3, 0, 2),  -- i7 RTX4060 Xám Eclipse
+(25,  2, 0, 1),  -- i9 RTX4070 Đen
+-- Lenovo Legion 5 Pro (bien_the 26-29)
+(26,  6, 0, 3),  -- R7 RTX4060 Xám
+(27,  4, 0, 2),  -- R7 RTX4060 Trắng
+(28,  3, 0, 2),  -- R7 RTX4070 Xám
+(29,  2, 0, 1),  -- R7 RTX4070 Đen
+-- HP Pavilion 15 (bien_the 30-34)
+(30, 10, 0, 5),  -- i5 Bạc
+(31,  8, 0, 4),  -- i5 Hồng
+(32,  7, 0, 4),  -- i5 Xanh Dương
+(33,  6, 0, 3),  -- i7 Bạc
+(34,  5, 0, 3),  -- i7 Đen
+-- Dell XPS 15 9530 (bien_the 35-37)
+(35,  4, 0, 2),  -- i7 Bạc Bạch Kim
+(36,  3, 0, 2),  -- i7 Đen Graphite
+(37,  2, 0, 1),  -- i9 Bạc Bạch Kim
+-- Acer Nitro V 15 (bien_the 38-41)
+(38,  7, 0, 3),  -- i5 RTX4050 Đen
+(39,  5, 0, 3),  -- i5 RTX4050 Đỏ Đen
+(40,  4, 0, 2),  -- i7 RTX4060 Đen
+(41,  3, 0, 2);  -- i7 RTX4060 Trắng
+GO
+
+-- ── Phân loại cho sản phẩm mới (sp 6-11) ────────────────────────────────────
+-- phan_loai: van_phong=1,sinh_vien=2,gaming=3,do_hoa=4,ky_thuat=5,macbook=6,laptop_cu=7
+INSERT INTO san_pham_phan_loai (san_pham_id, phan_loai_id) VALUES
+-- Acer Aspire 5: văn phòng + sinh viên (phổ thông giá rẻ)
+(6, 1), (6, 2),
+-- ROG Strix G16: gaming + đồ họa (RTX 40, màn cao tần)
+(7, 3), (7, 4),
+-- Legion 5 Pro: gaming (AMD Ryzen + RTX, màn WQXGA)
+(8, 3),
+-- HP Pavilion 15: văn phòng + sinh viên (đa màu, giá phải chăng)
+(9, 1), (9, 2),
+-- Dell XPS 15: đồ họa + kỹ thuật (OLED 3.5K, thiết kế cao cấp)
+(10, 4), (10, 5),
+-- Acer Nitro V: gaming (RTX 40 tầm trung, tản nhiệt tốt)
+(11, 3);
+GO
+
+-- Sync phan_loai_tags / phan_loai_ten cho sp mới (trigger đã xử lý khi INSERT,
+-- block này sync thủ công phòng trường hợp trigger chưa active)
+UPDATE bt
+SET
+    bt.phan_loai_tags = (
+        SELECT STRING_AGG(pl.ma_phan_loai, ',') WITHIN GROUP (ORDER BY pl.thu_tu)
+        FROM san_pham_phan_loai sppl
+        JOIN phan_loai pl ON sppl.phan_loai_id = pl.phan_loai_id
+        WHERE sppl.san_pham_id = bt.san_pham_id AND pl.trang_thai = N'active'
+    ),
+    bt.phan_loai_ten = (
+        SELECT STRING_AGG(pl.ten_phan_loai, ', ') WITHIN GROUP (ORDER BY pl.thu_tu)
+        FROM san_pham_phan_loai sppl
+        JOIN phan_loai pl ON sppl.phan_loai_id = pl.phan_loai_id
+        WHERE sppl.san_pham_id = bt.san_pham_id AND pl.trang_thai = N'active'
+    )
+FROM bien_the_san_pham bt
+WHERE bt.san_pham_id IN (6, 7, 8, 9, 10, 11);
 GO

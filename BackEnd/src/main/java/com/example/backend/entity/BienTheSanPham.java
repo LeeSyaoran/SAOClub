@@ -92,4 +92,10 @@ public class BienTheSanPham {
 
     @Column(name = "so_sim", length = 30)
     private String soSim;
+
+    @Column(name = "phan_loai_tags", length = 200)
+    private String phanLoaiTags;
+
+    @Column(name = "phan_loai_ten", length = 200)
+    private String phanLoaiTen;
 }

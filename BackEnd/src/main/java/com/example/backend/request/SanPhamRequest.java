@@ -79,4 +79,6 @@ public class SanPhamRequest {
     private String chipXuLyDt;
     private String soSim;
     private String hinhAnhBienThe;
+    private String phanLoaiTags;
+    private String phanLoaiTen;
 }

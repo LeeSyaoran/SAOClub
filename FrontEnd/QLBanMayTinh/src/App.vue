@@ -5,10 +5,19 @@ import { ref, computed, reactive, onMounted, onBeforeUnmount } from "vue";
 // Import store xác thực (isAdmin: true/false)
 import { AuthStore } from "./stores/index.js";
 
+// Import services
+import * as SanPhamService  from "./Service/SanPhamService.js";
+import * as DanhMucService  from "./Service/DanhMucService.js";
+import * as KhachHangService from "./Service/KhachHangService.js";
+import * as KhuyenMaiService from "./Service/KhuyenMaiService.js";
+import * as DonHangService  from "./Service/DonHangService.js";
+
 // Import các component trang
-import AdminPage from "./pages/AdminPage.vue";
-import NavBar    from "./components/layout/NavBar.vue";
-import AppFooter from "./components/layout/Footer.vue";
+import AdminPage     from "./pages/AdminPage.vue";
+import NavBar        from "./components/layout/NavBar.vue";
+import AppFooter     from "./components/layout/Footer.vue";
+import ProductFilter from "./components/product/ProductFilter.vue";
+import ProductDetail from "./components/product/ProductDetail.vue";
 
 // ── State & Store ─────────────────────────────────────────────────────────────
 
@@ -26,18 +35,46 @@ const isAdminHash = computed(() => currentHash.value === "#admin");
 const products      = ref([]);   // Danh sách toàn bộ sản phẩm từ API
 const loading       = ref(false);// Đang tải dữ liệu hay không
 const error         = ref(null); // Thông báo lỗi nếu có
-const searchQuery   = ref("");   // Từ khoá tìm kiếm hiện tại
-const selectedSort  = ref("default"); // Giá trị sắp xếp hiện tại
+const searchQuery   = ref("");
+const selectedSort  = ref("default");
+
+// ── Lọc nâng cao (ProductFilter) ──────────────────────────────────────────────
+const showAdvFilter = ref(false);
+const advFilter     = reactive({ brands: [], priceMin: null, priceMax: null, category: null });
+
+// Danh mục thực từ API — dùng để map chip → danhMucId chính xác
+const apiCats = ref([]);
+const fetchApiCats = async () => {
+  apiCats.value = await DanhMucService.getAll().catch(() => []);
+};
+
+// Danh sách thương hiệu duy nhất từ data sản phẩm đã load
+const allBrands = computed(() =>
+  [...new Set(products.value.map(p => p.tenThuongHieu).filter(Boolean))]
+);
+
+// Danh sách danh mục duy nhất từ data sản phẩm đã load
+const allCategories = computed(() => {
+  const seen = new Set();
+  return products.value
+    .filter(p => p.danhMucId && p.tenDanhMuc && !seen.has(p.danhMucId) && seen.add(p.danhMucId))
+    .map(p => ({ id: p.danhMucId, tenDanhMuc: p.tenDanhMuc }));
+});
+
+const onAdvFilterChange = (f) => {
+  advFilter.brands   = f.brands;
+  advFilter.priceMin = f.priceMin;
+  advFilter.priceMax = f.priceMax;
+  advFilter.category = f.category;
+};
 
 // ── Deal section state ────────────────────────────────────────────────────────
 
-// Tab đang active trong khu vực deal (deal | hot | new)
-const activeTab = ref("deal");
+const activeTab        = ref("deal");
+const activeFilter     = ref("Tất cả"); // chip đang active
+const activeCatId      = ref(null);     // danhMucId từ sidebar
+const activeSidebarCat = ref(null);     // full object sidebar cat (có keywords cho fallback)
 
-// Filter chip đang được chọn
-const activeFilter = ref("Tất cả");
-
-// Danh sách các chip filter
 const dealFilters = [
   "Tất cả",
   "Laptop Gaming",
@@ -46,35 +83,113 @@ const dealFilters = [
   "Đồ họa kỹ thuật - AI"
 ];
 
-// Danh sách danh mục sidebar bên trái trang chủ
-const sidebarCats = [
-  { icon: "💻", name: "Laptop Văn Phòng / Sinh Viên" },
-  { icon: "🎮", name: "Laptop Gaming Cấu Hình Cao" },
-  { icon: "⚡", name: "Laptop Đồ Họa - Kỹ Thuật" },
-  { icon: "🍎", name: "MacBook / Apple Silicon" },
-  { icon: "⭐", name: "Laptop Cũ Giá Rẻ Chính Hãng" },
-  { icon: "🔧", name: "Linh Kiện & Nâng Cấp RAM/SSD" },
+// Sidebar: keywords dùng cả cho apiCats lookup VÀ phanLoaiTags fallback
+const sidebarCatsBase = [
+  { icon: "💻", name: "Laptop Văn Phòng / Sinh Viên",  keywords: ["van_phong", "sinh_vien", "văn phòng", "sinh viên"] },
+  { icon: "🎮", name: "Laptop Gaming Cấu Hình Cao",    keywords: ["gaming"] },
+  { icon: "⚡", name: "Laptop Đồ Họa - Kỹ Thuật",     keywords: ["do_hoa", "ky_thuat", "đồ họa", "kỹ thuật"] },
+  { icon: "🍎", name: "MacBook / Apple Silicon",        keywords: ["macbook", "apple"] },
+  { icon: "⭐", name: "Laptop Cũ Giá Rẻ Chính Hãng",  keywords: ["cu", "gia_re", "cũ", "rẻ"] },
+  { icon: "🔧", name: "Linh Kiện & Nâng Cấp RAM/SSD", keywords: ["linh_kien", "ram", "ssd", "linh kiện"] },
 ];
 
-// ── Computed: Lọc + sắp xếp sản phẩm ────────────────────────────────────────
+// Map mỗi sidebar item → catId thực từ apiCats (null nếu chưa có trong DB)
+const sidebarCats = computed(() =>
+  sidebarCatsBase.map(sc => {
+    const matched = apiCats.value.find(c =>
+      sc.keywords.some(kw => c.tenDanhMuc?.toLowerCase().includes(kw))
+    );
+    return { ...sc, catId: matched?.id ?? null };
+  })
+);
+
+// Click sidebar → lưu cả object (cần keywords cho fallback), xóa chip filter, scroll
+const selectSidebarCat = (cat) => {
+  activeSidebarCat.value = cat;
+  activeCatId.value      = cat.catId;
+  activeFilter.value     = "Tất cả";
+  advFilter.brands   = [];
+  advFilter.priceMin = null;
+  advFilter.priceMax = null;
+  advFilter.category = null;
+  const el = document.getElementById("deal-section");
+  if (el) el.scrollIntoView({ behavior: "smooth" });
+};
+
+// Click chip → lọc theo chip, xóa sidebar filter
+const selectChip = (f) => {
+  activeFilter.value     = f;
+  activeCatId.value      = null;
+  activeSidebarCat.value = null;
+};
+
+// Mapping chip → keywords (bao gồm cả phan_loai_tags slug VÀ text tiếng Việt)
+const CHIP_KEYWORDS = {
+  "Laptop Gaming":         ["gaming"],
+  "Văn phòng - Học tập":  ["van_phong", "sinh_vien", "văn phòng", "sinh viên"],
+  "MacBook - Cao cấp":    ["macbook", "apple"],
+  "Đồ họa kỹ thuật - AI": ["do_hoa", "ky_thuat", "đồ họa", "kỹ thuật"],
+};
+
+// Map sanPhamId → số lượng biến thể (để card biết hiển thị "Từ X.XXXđ" hay không)
+const variantCountMap = computed(() => {
+  const map = new Map();
+  products.value.forEach(p => map.set(p.sanPhamId, (map.get(p.sanPhamId) || 0) + 1));
+  return map;
+});
+
+// ── Computed: Lọc + deduplicate (1 card/sản phẩm) + sắp xếp ─────────────────
 const filteredProducts = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
-  return products.value
-    .filter((product) => {
-      // Nếu không có từ khoá thì hiển thị tất cả
-      if (!query) return true;
-      const title = product.tenSanPham?.toLowerCase()   || "";
-      const brand = product.tenThuongHieu?.toLowerCase() || "";
-      const desc  = product.moTa?.toLowerCase()          || "";
-      return title.includes(query) || brand.includes(query) || desc.includes(query);
-    })
-    .sort((a, b) => {
-      // Sắp xếp theo giá nếu người dùng chọn
-      if (selectedSort.value === "price-asc")  return (a.giaBan || 0) - (b.giaBan || 0);
-      if (selectedSort.value === "price-desc") return (b.giaBan || 0) - (a.giaBan || 0);
-      return 0; // Mặc định giữ nguyên thứ tự
-    });
+
+  const filtered = products.value.filter((product) => {
+    const name  = product.tenSanPham?.toLowerCase()    || "";
+    const brand = product.tenThuongHieu?.toLowerCase() || "";
+    const cat   = product.tenDanhMuc?.toLowerCase()    || "";
+    const desc  = product.moTa?.toLowerCase()          || "";
+    const tags  = (product.phanLoaiTags || "").split(",").map(t => t.trim()).filter(Boolean);
+
+    const matchesKw = (keywords) =>
+      keywords.some(kw => tags.includes(kw) || cat.includes(kw) || brand.includes(kw) || name.includes(kw));
+
+    if (query && !name.includes(query) && !brand.includes(query) && !desc.includes(query)) return false;
+
+    if (activeSidebarCat.value !== null) {
+      if (!matchesKw(activeSidebarCat.value.keywords)) return false;
+    } else if (activeFilter.value !== "Tất cả") {
+      const keywords = CHIP_KEYWORDS[activeFilter.value] || [];
+      if (!matchesKw(keywords)) return false;
+    }
+
+    if (advFilter.brands.length > 0 && !advFilter.brands.includes(product.tenThuongHieu)) return false;
+
+    const price = Number(product.giaBan) || 0;
+    if (advFilter.priceMin !== null && price < advFilter.priceMin) return false;
+    if (advFilter.priceMax !== null && advFilter.priceMax !== Infinity && price > advFilter.priceMax) return false;
+
+    if (advFilter.category !== null && product.danhMucId !== advFilter.category) return false;
+
+    return true;
+  });
+
+  // Deduplicate: 1 card / sanPhamId — lấy biến thể giá thấp nhất làm đại diện
+  const deduped = [...filtered.reduce((map, p) => {
+    const ex = map.get(p.sanPhamId);
+    if (!ex || Number(p.giaBan) < Number(ex.giaBan)) map.set(p.sanPhamId, p);
+    return map;
+  }, new Map()).values()];
+
+  return deduped.sort((a, b) => {
+    if (selectedSort.value === "price-asc")  return (Number(a.giaBan) || 0) - (Number(b.giaBan) || 0);
+    if (selectedSort.value === "price-desc") return (Number(b.giaBan) || 0) - (Number(a.giaBan) || 0);
+    return 0;
+  });
 });
+
+// ── Chi tiết sản phẩm ────────────────────────────────────────────────────────
+const selectedProduct = ref(null);
+const openProduct  = (p)  => { selectedProduct.value = p; };
+const closeProduct = ()   => { selectedProduct.value = null; };
 
 // ── Giỏ hàng ─────────────────────────────────────────────────────────────────
 
@@ -97,9 +212,9 @@ const toggleCart = () => { showCart.value = !showCart.value; };
 // Nhận từ khoá tìm kiếm từ NavBar emit lên
 const handleSearch = (q) => { searchQuery.value = q; };
 
-// Xoá 1 sản phẩm khỏi giỏ theo ID
-const removeFromCart = (productId) => {
-  cart.value = cart.value.filter((item) => item.sanPhamId !== productId);
+// Xoá 1 sản phẩm khỏi giỏ theo bienTheId
+const removeFromCart = (bienTheId) => {
+  cart.value = cart.value.filter((item) => item.bienTheId !== bienTheId);
 };
 
 // Định dạng tiền tệ VND
@@ -113,12 +228,7 @@ const fetchProducts = async () => {
   loading.value = true;
   error.value   = null;
   try {
-    const res = await fetch("/api/san-pham/hien-thi");
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Lỗi API: ${res.status} - ${body}`);
-    }
-    products.value = await res.json();
+    products.value = await SanPhamService.getAll();
   } catch (err) {
     error.value = err?.message || "Không thể tải dữ liệu sản phẩm";
   } finally {
@@ -126,9 +236,9 @@ const fetchProducts = async () => {
   }
 };
 
-// Thêm sản phẩm vào giỏ (nếu đã có thì tăng số lượng)
+// Thêm sản phẩm vào giỏ — dùng bienTheId để phân biệt đúng biến thể
 const addToCart = (product) => {
-  const existing = cart.value.find((item) => item.sanPhamId === product.sanPhamId);
+  const existing = cart.value.find((item) => item.bienTheId === product.bienTheId);
   if (existing) {
     existing.quantity += 1;
   } else {
@@ -181,12 +291,6 @@ const checkoutTotal = computed(() =>
   Math.max(0, cartTotal.value + phiVanChuyen.value - checkoutGiamGia.value)
 );
 
-// Hàm fetch an toàn, trả về [] nếu lỗi
-const safeFetch = async (url) => {
-  try { const r = await fetch(url); return r.ok ? r.json() : []; }
-  catch { return []; }
-};
-
 // Mở modal thanh toán và load dữ liệu cần thiết
 const openCheckout = async () => {
   if (cart.value.length === 0) return; // Không mở nếu giỏ trống
@@ -200,8 +304,8 @@ const openCheckout = async () => {
   // Nếu chưa có cache khách hàng và khuyến mãi thì fetch
   if (!allCustomers.value.length) {
     [allCustomers.value, allPromos.value] = await Promise.all([
-      safeFetch('/api/khach-hang'),
-      safeFetch('/api/khuyen-mai'),
+      KhachHangService.getAll().catch(() => []),
+      KhuyenMaiService.getAll().catch(() => []),
     ]);
   }
   showCart.value     = false; // Đóng giỏ hàng trước khi mở modal
@@ -258,16 +362,11 @@ const placeOrder = async () => {
         diemTichLuy:  0,
         trangThai:    'active',
       };
-      const r = await fetch('/api/khach-hang', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(custBody),
-      });
+      const r = await KhachHangService.save(null, custBody);
       if (!r.ok) throw new Error(`Lỗi tạo khách hàng: ${r.status} ${await r.text()}`);
       const newC  = await r.json();
       khachHangId = newC.khachHangId;
-      // Cập nhật cache khách hàng
-      allCustomers.value = await safeFetch('/api/khach-hang');
+      allCustomers.value = await KhachHangService.getAll().catch(() => []);
     }
 
     // Tạo đơn hàng chính
@@ -286,11 +385,7 @@ const placeOrder = async () => {
       trangThaiThanhToan: 'unpaid',
       kenhBan:            'online',
     };
-    const orderRes = await fetch('/api/don-hang', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderBody),
-    });
+    const orderRes = await DonHangService.create(orderBody);
     if (!orderRes.ok)
       throw new Error(`Lỗi đặt hàng: ${orderRes.status} ${await orderRes.text()}`);
     const createdOrder = await orderRes.json();
@@ -298,16 +393,12 @@ const placeOrder = async () => {
 
     // Thêm từng sản phẩm vào chi tiết đơn hàng
     for (const item of cart.value) {
-      const itemRes = await fetch('/api/chi-tiet-don-hang', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          donHangId,
-          bienTheId:  item.bienTheId,
-          soLuong:    item.quantity,
-          donGia:     item.giaBan,
-          giamGiaDong: 0,
-        }),
+      const itemRes = await DonHangService.addChiTiet({
+        donHangId,
+        bienTheId:   item.bienTheId,
+        soLuong:     item.quantity,
+        donGia:      item.giaBan,
+        giamGiaDong: 0,
       });
       if (!itemRes.ok)
         throw new Error(`Lỗi chi tiết đơn hàng: ${itemRes.status}`);
@@ -337,8 +428,9 @@ function goAdmin() { window.location.hash = "#admin"; }
 
 // ── Lifecycle hooks ───────────────────────────────────────────────────────────
 onMounted(() => {
-  window.addEventListener("hashchange", onHashChange); // Lắng nghe thay đổi URL
-  fetchProducts(); // Tải sản phẩm khi app khởi động
+  window.addEventListener("hashchange", onHashChange);
+  fetchProducts();
+  fetchApiCats();
 });
 onBeforeUnmount(() => {
   window.removeEventListener("hashchange", onHashChange); // Dọn dẹp listener
@@ -407,10 +499,18 @@ onBeforeUnmount(() => {
               <a v-for="cat in sidebarCats"
                  :key="cat.name"
                  href="#"
-                 class="d-flex align-items-center justify-content-between px-3 py-2 rounded-2 text-decoration-none small fw-bold text-secondary"
+                 class="d-flex align-items-center justify-content-between px-3 py-2 rounded-2 text-decoration-none small fw-bold"
                  style="font-size:12px; transition:all 0.15s;"
+                 :style="activeSidebarCat && activeSidebarCat.name === cat.name
+                   ? 'background:#252525; color:#facc15;'
+                   : 'color:#6b7280;'"
                  @mouseenter="e => { e.currentTarget.style.background='#252525'; e.currentTarget.style.color='#facc15'; }"
-                 @mouseleave="e => { e.currentTarget.style.background=''; e.currentTarget.style.color=''; }">
+                 @mouseleave="e => {
+                   const isActive = activeSidebarCat && activeSidebarCat.name === cat.name;
+                   e.currentTarget.style.background = isActive ? '#252525' : '';
+                   e.currentTarget.style.color      = isActive ? '#facc15' : '';
+                 }"
+                 @click.prevent="selectSidebarCat(cat)">
                 <span class="d-flex align-items-center gap-2">
                   <span style="font-size:13px;">{{ cat.icon }}</span>
                   {{ cat.name }}
@@ -520,7 +620,7 @@ onBeforeUnmount(() => {
         </div><!-- /hero-grid row -->
 
         <!-- ── Deal Section: tabs + filter + danh sách sản phẩm ── -->
-        <section class="mt-3">
+        <section id="deal-section" class="mt-3">
 
           <!-- Tabs: DEAL SỐC | HOT TREND | MÁY MỚI -->
           <div class="d-flex gap-2 mb-3 border-bottom pb-0"
@@ -543,29 +643,54 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Thanh filter + sắp xếp -->
-          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
             <!-- Chip filter theo loại laptop -->
             <div class="d-flex flex-wrap gap-2">
               <button
                 v-for="f in dealFilters" :key="f"
                 class="btn btn-sm fw-bold"
                 style="font-size:11px; border-radius:999px;"
-                :class="activeFilter === f
+                :class="activeFilter === f && activeCatId === null
                   ? 'btn-warning text-dark'
                   : 'btn-outline-secondary text-secondary'"
-                @click="activeFilter = f">
+                @click="selectChip(f)">
                 {{ f }}
               </button>
             </div>
-            <!-- Select sắp xếp theo giá -->
-            <select v-model="selectedSort"
-                    class="form-select form-select-sm"
-                    style="width:auto; background:#1f1f1f; border-color:#3f3f3f; color:#e5e7eb; font-size:12px;"
-                    aria-label="Sắp xếp">
-              <option value="default">Mặc định</option>
-              <option value="price-asc">Giá thấp → cao</option>
-              <option value="price-desc">Giá cao → thấp</option>
-            </select>
+            <!-- Nút lọc nâng cao + select sắp xếp -->
+            <div class="d-flex align-items-center gap-2">
+              <button
+                class="btn btn-sm fw-bold"
+                style="font-size:11px; border-radius:999px;"
+                :class="showAdvFilter ? 'btn-warning text-dark' : 'btn-outline-secondary text-secondary'"
+                @click="showAdvFilter = !showAdvFilter">
+                🔍 Lọc nâng cao
+                <span v-if="advFilter.brands.length || advFilter.priceMin || advFilter.category"
+                      class="badge bg-danger ms-1"
+                      style="font-size:9px;">
+                  {{ advFilter.brands.length + (advFilter.priceMin ? 1 : 0) + (advFilter.category ? 1 : 0) }}
+                </span>
+              </button>
+              <select v-model="selectedSort"
+                      class="form-select form-select-sm"
+                      style="width:auto; background:#1f1f1f; border-color:#3f3f3f; color:#e5e7eb; font-size:12px;"
+                      aria-label="Sắp xếp">
+                <option value="default">Mặc định</option>
+                <option value="price-asc">Giá thấp → cao</option>
+                <option value="price-desc">Giá cao → thấp</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Panel lọc nâng cao (thương hiệu, khoảng giá, danh mục) -->
+          <div v-show="showAdvFilter"
+               class="p-3 mb-3 rounded-3"
+               style="background:#1a1a1a; border:1px solid #2a2a2a;">
+            <ProductFilter
+              :brands="allBrands"
+              :categories="allCategories"
+              @change="onAdvFilterChange"
+            />
           </div>
 
           <!-- Trạng thái loading / lỗi / trống -->
@@ -585,9 +710,10 @@ onBeforeUnmount(() => {
               class="col-6 col-md-4 col-lg-3 col-xl-2">
               <!-- Thẻ sản phẩm -->
               <div class="card h-100 border-secondary"
-                   style="background:#1a1a1a; border-radius:14px; overflow:hidden; transition:transform 0.15s, box-shadow 0.15s;"
+                   style="background:#1a1a1a; border-radius:14px; overflow:hidden; transition:transform 0.15s, box-shadow 0.15s; cursor:pointer;"
                    @mouseenter="e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,0.4)'; }"
-                   @mouseleave="e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }">
+                   @mouseleave="e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }"
+                   @click="openProduct(product)">
 
                 <!-- Ảnh sản phẩm -->
                 <div class="position-relative" style="background:#111; height:160px;">
@@ -623,16 +749,26 @@ onBeforeUnmount(() => {
                     {{ product.tenThuongHieu || product.tenDanhMuc }}
                   </p>
                   <p class="mb-0 text-warning fw-black" style="font-size:13px;">
-                    {{ formatPrice(product.giaBan) }}
+                    <span v-if="variantCountMap.get(product.sanPhamId) > 1" class="text-secondary fw-normal" style="font-size:9px;">Từ </span>{{ formatPrice(product.giaBan) }}
                   </p>
                   <p class="mb-0 text-secondary" style="font-size:10px;">🚚 Giao nhanh 2H</p>
+                  <!-- Tags phân loại — hiển thị tên tiếng Việt từ phanLoaiTen -->
+                  <div v-if="product.phanLoaiTen" class="d-flex flex-wrap gap-1 mt-1">
+                    <span
+                      v-for="tag in product.phanLoaiTen.split(',')"
+                      :key="tag"
+                      class="badge"
+                      style="font-size:9px; background:#2a2200; color:#facc15; border:1px solid #3d3000;">
+                      {{ tag.trim() }}
+                    </span>
+                  </div>
                   <!-- Nút thêm vào giỏ — disabled nếu hết hàng -->
                   <button
                     class="btn btn-sm w-100 fw-bold mt-1"
                     style="font-size:11px; border-radius:8px;"
                     :class="product.trangThai === 'active' ? 'btn-warning text-dark' : 'btn-secondary'"
                     :disabled="product.trangThai !== 'active'"
-                    @click="addToCart(product)">
+                    @click.stop="addToCart(product)">
                     🛒 Thêm vào giỏ
                   </button>
                 </div>
@@ -681,7 +817,7 @@ onBeforeUnmount(() => {
               <!-- Nút xoá khỏi giỏ -->
               <button class="btn btn-sm btn-outline-danger flex-shrink-0"
                       style="font-size:10px; padding:2px 8px;"
-                      @click="removeFromCart(item.sanPhamId)">Xóa</button>
+                      @click="removeFromCart(item.bienTheId)">Xóa</button>
             </div>
 
             <!-- Tổng tạm tính -->
@@ -893,6 +1029,24 @@ onBeforeUnmount(() => {
     </div><!-- /modal box -->
   </div><!-- /checkout overlay -->
 
+  <!-- ── Trang chi tiết sản phẩm (full-screen overlay) ── -->
+  <Transition name="slide-up">
+    <ProductDetail
+      v-if="selectedProduct"
+      :key="selectedProduct.bienTheId"
+      :product="selectedProduct"
+      :products="products"
+      @close="closeProduct"
+      @add-to-cart="p => { addToCart(p); closeProduct(); }"
+      @open-product="openProduct"
+    />
+  </Transition>
+
 </template>
+
+<style>
+.slide-up-enter-active, .slide-up-leave-active { transition: transform 0.28s ease, opacity 0.2s ease; }
+.slide-up-enter-from, .slide-up-leave-to       { transform: translateY(30px); opacity: 0; }
+</style>
 
 <!-- Không còn CSS scoped — toàn bộ dùng Bootstrap utility classes + inline style tối thiểu -->
