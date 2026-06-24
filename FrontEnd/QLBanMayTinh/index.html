@@ -1,13 +1,24 @@
 <!doctype html>
-<html lang="vi">
+<!-- Khai báo ngôn ngữ tiếng Việt, bật dark mode của Bootstrap 5.3 -->
+<html lang="vi" data-bs-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" />
+    <!-- Responsive cho mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SAOPhone Dashboard</title>
+    <title>SAOPhone - Hệ thống bán lẻ Laptop</title>
+    <!-- Font Inter từ Google Fonts - font chính của toàn bộ dự án -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
+    <!-- Vue 3 sẽ mount vào đây -->
     <div id="app"></div>
+    <!-- Entry point của Vite -->
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

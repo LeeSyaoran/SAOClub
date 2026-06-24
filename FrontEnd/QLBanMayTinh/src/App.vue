@@ -1,76 +1,117 @@
 <script setup>
+// ── Import các thư viện Vue 3 cần thiết ──────────────────────────────────────
 import { ref, computed, reactive, onMounted, onBeforeUnmount } from "vue";
-import { AuthStore } from "./stores/index.js";
-import AdminPage from "./pages/AdminPage.vue";
 
+// Import store xác thực (isAdmin: true/false)
+import { AuthStore } from "./stores/index.js";
+
+// Import các component trang
+import AdminPage from "./pages/AdminPage.vue";
+import NavBar    from "./components/layout/NavBar.vue";
+import AppFooter from "./components/layout/Footer.vue";
+
+// ── State & Store ─────────────────────────────────────────────────────────────
+
+// Lấy object auth từ store (reactive)
 const auth = AuthStore;
+
+// Theo dõi fragment URL hiện tại (ví dụ: "#admin")
 const currentHash = ref(window.location.hash);
+
+// Computed: kiểm tra có đang ở route admin không
 const isAdminHash = computed(() => currentHash.value === "#admin");
 
-const products = ref([]);
-const loading = ref(false);
-const error = ref(null);
-const searchQuery = ref("");
-const selectedSort = ref("default");
-const cart = ref([]);
+// ── Dữ liệu sản phẩm ─────────────────────────────────────────────────────────
 
+const products      = ref([]);   // Danh sách toàn bộ sản phẩm từ API
+const loading       = ref(false);// Đang tải dữ liệu hay không
+const error         = ref(null); // Thông báo lỗi nếu có
+const searchQuery   = ref("");   // Từ khoá tìm kiếm hiện tại
+const selectedSort  = ref("default"); // Giá trị sắp xếp hiện tại
+
+// ── Deal section state ────────────────────────────────────────────────────────
+
+// Tab đang active trong khu vực deal (deal | hot | new)
+const activeTab = ref("deal");
+
+// Filter chip đang được chọn
+const activeFilter = ref("Tất cả");
+
+// Danh sách các chip filter
+const dealFilters = [
+  "Tất cả",
+  "Laptop Gaming",
+  "Văn phòng - Học tập",
+  "MacBook - Cao cấp",
+  "Đồ họa kỹ thuật - AI"
+];
+
+// Danh sách danh mục sidebar bên trái trang chủ
+const sidebarCats = [
+  { icon: "💻", name: "Laptop Văn Phòng / Sinh Viên" },
+  { icon: "🎮", name: "Laptop Gaming Cấu Hình Cao" },
+  { icon: "⚡", name: "Laptop Đồ Họa - Kỹ Thuật" },
+  { icon: "🍎", name: "MacBook / Apple Silicon" },
+  { icon: "⭐", name: "Laptop Cũ Giá Rẻ Chính Hãng" },
+  { icon: "🔧", name: "Linh Kiện & Nâng Cấp RAM/SSD" },
+];
+
+// ── Computed: Lọc + sắp xếp sản phẩm ────────────────────────────────────────
 const filteredProducts = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
   return products.value
     .filter((product) => {
+      // Nếu không có từ khoá thì hiển thị tất cả
       if (!query) return true;
-      const term = query;
-      const title = product.tenSanPham?.toLowerCase() || "";
+      const title = product.tenSanPham?.toLowerCase()   || "";
       const brand = product.tenThuongHieu?.toLowerCase() || "";
-      const desc = product.moTa?.toLowerCase() || "";
-      return (
-        title.includes(term) || brand.includes(term) || desc.includes(term)
-      );
+      const desc  = product.moTa?.toLowerCase()          || "";
+      return title.includes(query) || brand.includes(query) || desc.includes(query);
     })
     .sort((a, b) => {
-      if (selectedSort.value === "price-asc") {
-        return (a.giaBan || 0) - (b.giaBan || 0);
-      }
-      if (selectedSort.value === "price-desc") {
-        return (b.giaBan || 0) - (a.giaBan || 0);
-      }
-      return 0;
+      // Sắp xếp theo giá nếu người dùng chọn
+      if (selectedSort.value === "price-asc")  return (a.giaBan || 0) - (b.giaBan || 0);
+      if (selectedSort.value === "price-desc") return (b.giaBan || 0) - (a.giaBan || 0);
+      return 0; // Mặc định giữ nguyên thứ tự
     });
 });
 
-const showCart = ref(false);
+// ── Giỏ hàng ─────────────────────────────────────────────────────────────────
 
-const cartCount = computed(() => {
-  return cart.value.reduce((total, item) => total + item.quantity, 0);
-});
+const cart     = ref([]);          // Mảng sản phẩm trong giỏ
+const showCart = ref(false);       // Hiển thị/ẩn panel giỏ hàng
 
-const cartTotal = computed(() => {
-  return cart.value.reduce(
-    (total, item) => total + (item.quantity || 0) * (item.giaBan || 0),
-    0,
-  );
-});
+// Tổng số lượng sản phẩm trong giỏ
+const cartCount = computed(() =>
+  cart.value.reduce((total, item) => total + item.quantity, 0)
+);
 
-const toggleCart = () => {
-  showCart.value = !showCart.value;
-};
+// Tổng tiền tạm tính
+const cartTotal = computed(() =>
+  cart.value.reduce((total, item) => total + (item.quantity || 0) * (item.giaBan || 0), 0)
+);
 
+// Bật/tắt hiển thị giỏ hàng
+const toggleCart = () => { showCart.value = !showCart.value; };
+
+// Nhận từ khoá tìm kiếm từ NavBar emit lên
+const handleSearch = (q) => { searchQuery.value = q; };
+
+// Xoá 1 sản phẩm khỏi giỏ theo ID
 const removeFromCart = (productId) => {
   cart.value = cart.value.filter((item) => item.sanPhamId !== productId);
 };
 
+// Định dạng tiền tệ VND
 const formatPrice = (value) => {
   if (value == null) return "Liên hệ";
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(value);
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 };
 
+// ── API: Lấy danh sách sản phẩm ──────────────────────────────────────────────
 const fetchProducts = async () => {
   loading.value = true;
-  error.value = null;
-
+  error.value   = null;
   try {
     const res = await fetch("/api/san-pham/hien-thi");
     if (!res.ok) {
@@ -78,19 +119,16 @@ const fetchProducts = async () => {
       throw new Error(`Lỗi API: ${res.status} - ${body}`);
     }
     products.value = await res.json();
-    console.log("Loaded products", products.value);
   } catch (err) {
     error.value = err?.message || "Không thể tải dữ liệu sản phẩm";
-    console.error("Fetch product error:", err);
   } finally {
     loading.value = false;
   }
 };
 
+// Thêm sản phẩm vào giỏ (nếu đã có thì tăng số lượng)
 const addToCart = (product) => {
-  const existing = cart.value.find(
-    (item) => item.sanPhamId === product.sanPhamId,
-  );
+  const existing = cart.value.find((item) => item.sanPhamId === product.sanPhamId);
   if (existing) {
     existing.quantity += 1;
   } else {
@@ -98,67 +136,86 @@ const addToCart = (product) => {
   }
 };
 
-// ── Checkout ──────────────────────────────────────────────────────────────────
-const showCheckout    = ref(false);
-const checkoutSuccess = ref(false);
-const checkoutLoading = ref(false);
-const checkoutError   = ref('');
-const checkoutOrderId = ref(null);
-const allCustomers    = ref([]);
-const allPromos       = ref([]);
-const foundCustomer   = ref(null);
-const appliedPromo    = ref(null);
-const promoMsg        = ref('');
+// ── Checkout (Thanh toán) ─────────────────────────────────────────────────────
 
+const showCheckout    = ref(false); // Hiển thị modal thanh toán
+const checkoutSuccess = ref(false); // Đặt hàng thành công chưa
+const checkoutLoading = ref(false); // Đang xử lý API
+const checkoutError   = ref('');    // Thông báo lỗi khi checkout
+const checkoutOrderId = ref(null);  // ID đơn hàng sau khi đặt xong
+const allCustomers    = ref([]);    // Cache danh sách khách hàng
+const allPromos       = ref([]);    // Cache danh sách khuyến mãi
+const foundCustomer   = ref(null);  // Khách hàng tìm thấy qua SĐT
+const appliedPromo    = ref(null);  // Khuyến mãi đã áp dụng
+const promoMsg        = ref('');    // Thông báo kết quả áp dụng mã
+
+// Form thông tin đặt hàng (reactive để Vue theo dõi thay đổi)
 const checkoutForm = reactive({
-  soDienThoai: '', hoTen: '', email: '',
-  nguoiNhan: '', sdtNguoiNhan: '', diaChiGiaoHangText: '',
-  maKhuyenMai: '',
+  soDienThoai:          '', // SĐT tìm kiếm khách hàng
+  hoTen:                '', // Họ tên khách hàng
+  email:                '', // Email
+  nguoiNhan:            '', // Tên người nhận hàng
+  sdtNguoiNhan:         '', // SĐT người nhận
+  diaChiGiaoHangText:   '', // Địa chỉ giao hàng
+  maKhuyenMai:          '', // Mã khuyến mãi nhập vào
 });
 
-const phiVanChuyen    = computed(() => cartTotal.value >= 300000 ? 0 : 30000);
+// Phí vận chuyển: miễn phí nếu đơn từ 300k
+const phiVanChuyen = computed(() => cartTotal.value >= 300000 ? 0 : 30000);
+
+// Tính giảm giá từ mã khuyến mãi
 const checkoutGiamGia = computed(() => {
   const p = appliedPromo.value;
   if (!p) return 0;
   if (p.loai === 'percent') {
+    // Giảm theo % nhưng không vượt quá giaTriToiDa
     let d = cartTotal.value * Number(p.giaTri) / 100;
     if (p.giaTriToiDa) d = Math.min(d, Number(p.giaTriToiDa));
     return d;
   }
-  return Number(p.giaTri) || 0;
+  return Number(p.giaTri) || 0; // Giảm theo số tiền cố định
 });
+
+// Tổng tiền thanh toán cuối cùng
 const checkoutTotal = computed(() =>
   Math.max(0, cartTotal.value + phiVanChuyen.value - checkoutGiamGia.value)
 );
 
+// Hàm fetch an toàn, trả về [] nếu lỗi
 const safeFetch = async (url) => {
   try { const r = await fetch(url); return r.ok ? r.json() : []; }
   catch { return []; }
 };
 
+// Mở modal thanh toán và load dữ liệu cần thiết
 const openCheckout = async () => {
-  if (cart.value.length === 0) return;
+  if (cart.value.length === 0) return; // Không mở nếu giỏ trống
   checkoutSuccess.value = false;
   checkoutError.value   = '';
   promoMsg.value        = '';
   appliedPromo.value    = null;
   foundCustomer.value   = null;
+  // Reset toàn bộ form
   Object.keys(checkoutForm).forEach(k => { checkoutForm[k] = ''; });
+  // Nếu chưa có cache khách hàng và khuyến mãi thì fetch
   if (!allCustomers.value.length) {
     [allCustomers.value, allPromos.value] = await Promise.all([
-      safeFetch('/api/khach-hang'), safeFetch('/api/khuyen-mai'),
+      safeFetch('/api/khach-hang'),
+      safeFetch('/api/khuyen-mai'),
     ]);
   }
-  showCart.value    = false;
+  showCart.value     = false; // Đóng giỏ hàng trước khi mở modal
   showCheckout.value = true;
 };
 
+// Tìm khách hàng theo số điện thoại
 const lookupCustomer = () => {
   const c = allCustomers.value.find(
     (x) => x.soDienThoai === checkoutForm.soDienThoai.trim()
   );
   foundCustomer.value = c || null;
   if (c) {
+    // Tự điền thông tin nếu tìm thấy khách hàng
     checkoutForm.hoTen              = c.hoTen;
     checkoutForm.email              = c.email || '';
     checkoutForm.nguoiNhan          = c.hoTen;
@@ -167,6 +224,7 @@ const lookupCustomer = () => {
   }
 };
 
+// Kiểm tra và áp dụng mã khuyến mãi
 const applyPromo = () => {
   const code = checkoutForm.maKhuyenMai.trim().toUpperCase();
   if (!code) { appliedPromo.value = null; promoMsg.value = ''; return; }
@@ -175,41 +233,44 @@ const applyPromo = () => {
   );
   if (p) {
     appliedPromo.value = p;
-    promoMsg.value     = `Ap dung thanh cong: ${p.tenKhuyenMai}`;
+    promoMsg.value     = `Áp dụng thành công: ${p.tenKhuyenMai}`;
   } else {
     appliedPromo.value = null;
-    promoMsg.value     = 'Ma khuyen mai khong hop le hoac het han';
+    promoMsg.value     = 'Mã khuyến mãi không hợp lệ hoặc hết hạn';
   }
 };
 
+// Gửi đơn hàng lên API
 const placeOrder = async () => {
   checkoutError.value   = '';
   checkoutLoading.value = true;
   try {
-    // 1. Tra cuu hoac tao khach hang
     let khachHangId = foundCustomer.value?.khachHangId;
+
+    // Nếu không tìm thấy khách hàng → tạo mới
     if (!khachHangId) {
       const custBody = {
-        hoTen:       checkoutForm.hoTen,
-        soDienThoai: checkoutForm.soDienThoai,
-        email:       checkoutForm.email,
-        diaChi:      checkoutForm.diaChiGiaoHangText || 'Chua cap nhat',
-        loaiKhach:   'ca_nhan',
-        diemTichLuy: 0,
-        trangThai:   'active',
+        hoTen:        checkoutForm.hoTen,
+        soDienThoai:  checkoutForm.soDienThoai,
+        email:        checkoutForm.email,
+        diaChi:       checkoutForm.diaChiGiaoHangText || 'Chua cap nhat',
+        loaiKhach:    'ca_nhan',
+        diemTichLuy:  0,
+        trangThai:    'active',
       };
       const r = await fetch('/api/khach-hang', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(custBody),
       });
-      if (!r.ok) throw new Error(`Loi tao khach hang: ${r.status} ${await r.text()}`);
+      if (!r.ok) throw new Error(`Lỗi tạo khách hàng: ${r.status} ${await r.text()}`);
       const newC  = await r.json();
       khachHangId = newC.khachHangId;
+      // Cập nhật cache khách hàng
       allCustomers.value = await safeFetch('/api/khach-hang');
     }
 
-    // 2. Tao don hang
+    // Tạo đơn hàng chính
     const orderBody = {
       khachHangId,
       nguoiNhan:          checkoutForm.nguoiNhan,
@@ -230,27 +291,29 @@ const placeOrder = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(orderBody),
     });
-    if (!orderRes.ok) throw new Error(`Loi dat hang: ${orderRes.status} ${await orderRes.text()}`);
+    if (!orderRes.ok)
+      throw new Error(`Lỗi đặt hàng: ${orderRes.status} ${await orderRes.text()}`);
     const createdOrder = await orderRes.json();
     const donHangId    = createdOrder.id;
 
-    // 3. Tao chi tiet don hang
+    // Thêm từng sản phẩm vào chi tiết đơn hàng
     for (const item of cart.value) {
-      const itemBody = {
-        donHangId,
-        bienTheId:   item.bienTheId,
-        soLuong:     item.quantity,
-        donGia:      item.giaBan,
-        giamGiaDong: 0,
-      };
       const itemRes = await fetch('/api/chi-tiet-don-hang', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(itemBody),
+        body: JSON.stringify({
+          donHangId,
+          bienTheId:  item.bienTheId,
+          soLuong:    item.quantity,
+          donGia:     item.giaBan,
+          giamGiaDong: 0,
+        }),
       });
-      if (!itemRes.ok) throw new Error(`Loi chi tiet don hang: ${itemRes.status}`);
+      if (!itemRes.ok)
+        throw new Error(`Lỗi chi tiết đơn hàng: ${itemRes.status}`);
     }
 
+    // Đặt hàng thành công: lưu mã đơn, xoá giỏ
     checkoutOrderId.value = donHangId;
     checkoutSuccess.value = true;
     cart.value = [];
@@ -261,1054 +324,575 @@ const placeOrder = async () => {
   }
 };
 
-function onHashChange() {
-  currentHash.value = window.location.hash;
-}
+// ── Routing bằng hash URL ─────────────────────────────────────────────────────
 
-function goHome() {
-  window.location.hash = "";
-}
+// Cập nhật currentHash khi URL fragment thay đổi
+function onHashChange() { currentHash.value = window.location.hash; }
 
+// Quay về trang chủ
+function goHome() { window.location.hash = ""; }
+
+// Chuyển sang trang admin
+function goAdmin() { window.location.hash = "#admin"; }
+
+// ── Lifecycle hooks ───────────────────────────────────────────────────────────
 onMounted(() => {
-  window.addEventListener("hashchange", onHashChange);
-  fetchProducts();
+  window.addEventListener("hashchange", onHashChange); // Lắng nghe thay đổi URL
+  fetchProducts(); // Tải sản phẩm khi app khởi động
 });
-
 onBeforeUnmount(() => {
-  window.removeEventListener("hashchange", onHashChange);
+  window.removeEventListener("hashchange", onHashChange); // Dọn dẹp listener
 });
 </script>
 
 <template>
+  <!-- Root div — toàn bộ ứng dụng -->
   <div>
+
+    <!-- ══════════════════════════════════════════════════════
+        TRANG ADMIN — chỉ hiển thị khi URL có #admin VÀ là admin
+    ══════════════════════════════════════════════════════ -->
     <AdminPage v-if="isAdminHash && auth.isAdmin" />
-    <section
-      v-else-if="isAdminHash && !auth.isAdmin"
-      class="unauthorized-page py-5"
-    >
-      <div class="container text-center">
-        <div class="mb-4">
-          <span class="display-1">🔒</span>
-        </div>
-        <h2 class="mb-3">Quyền truy cập bị từ chối</h2>
-        <p class="text-muted mb-4">
-          Bạn cần đăng nhập với tài khoản admin để xem trang quản trị.
-        </p>
-        <button class="btn btn-primary rounded-pill px-4" @click="goHome">
+
+    <!-- Thông báo từ chối quyền truy cập -->
+    <section v-else-if="isAdminHash && !auth.isAdmin"
+             class="d-flex align-items-center justify-content-center"
+             style="min-height:100vh; background:#171717;">
+      <div class="text-center text-light d-flex flex-column align-items-center gap-3">
+        <div style="font-size:3rem;">🔒</div>
+        <h2 class="fw-black mb-0" style="font-size:1.5rem;">Quyền truy cập bị từ chối</h2>
+        <p class="text-secondary mb-0">Bạn cần đăng nhập với tài khoản admin để xem trang quản trị.</p>
+        <!-- Nút quay về trang chủ -->
+        <button class="btn btn-warning fw-bold rounded-pill px-4 py-2" @click="goHome">
           Quay về trang chủ
         </button>
       </div>
     </section>
-    <div v-else class="page-shell">
-      <div class="topbar">
-        <div class="brand-block">
-          <div class="brand-mark">SAO</div>
-          <div>
-            <div class="brand-name">SAOPhone</div>
-            <div class="brand-sub">Hệ thống công nghệ Đen & Vàng</div>
-          </div>
-        </div>
 
-        <div class="top-actions">
-          <button class="menu-button">Danh mục</button>
-          <a href="#" class="top-link">Xem giá tại Hà Nội</a>
-          <div class="search-bar">
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Bạn muốn mua gì hôm nay...?"
-            />
-            <button type="button">🔎</button>
-          </div>
-          <select
-            v-model="selectedSort"
-            class="sort-select"
-            aria-label="Sắp xếp"
-          >
-            <option value="default">Mặc định</option>
-            <option value="price-asc">Giá thấp đến cao</option>
-            <option value="price-desc">Giá cao đến thấp</option>
-          </select>
-          <button
-            class="btn btn-primary cart-button"
-            @click="toggleCart"
-            type="button"
-          >
-            Giỏ hàng <span class="cart-badge">{{ cartCount }}</span>
-          </button>
-          <button class="btn btn-secondary">Đăng nhập</button>
+    <!-- ══════════════════════════════════════════════════════
+        TRANG KHÁCH HÀNG — hiển thị khi không có #admin
+    ══════════════════════════════════════════════════════ -->
+    <div v-else style="min-height:100vh; background:#171717; color:#e5e7eb; font-family:'Inter','Segoe UI',sans-serif;">
+
+      <!-- Header / NavBar — nhận cartCount và xử lý các sự kiện -->
+      <NavBar
+        :cart-count="cartCount"
+        @toggle-cart="toggleCart"
+        @search="handleSearch"
+        @open-admin="goAdmin"
+      />
+
+      <!-- Dải ticker chạy ngang (thông báo khuyến mãi) -->
+      <div class="overflow-x-auto" style="background:#0f0f0f; border-bottom:1px solid #1f1f1f; padding:8px 16px;">
+        <div class="d-flex gap-4 small fw-bold text-secondary" style="white-space:nowrap; width:max-content;">
+          <span class="text-warning text-uppercase" style="letter-spacing:0.05em;">
+            🔥 TUẦN LỄ LAPTOP GAMING &amp; ĐỒ HỌA
+          </span>
+          <span>MACBOOK PRO M4 - Thiết lập chuẩn mực AI mới</span>
+          <span>SẮM LAPTOP LENOVO AI - Nhận bộ quà tặng Cực High</span>
+          <span>ASUS ROG STRIX SCAR - Giảm giá sốc cho sinh viên</span>
         </div>
       </div>
 
-      <section class="hero-topline">
-        <span>Chính hãng - Xuất VAT đầy đủ</span>
-        <span>Giao nhanh Miễn phí từ 300k</span>
-        <span>Thu cũ giá cao</span>
-        <span>1800.9999</span>
-      </section>
+      <!-- ── Nội dung trang chính ── -->
+      <div class="container-xl py-3">
 
-      <div class="hero-grid">
-        <aside class="category-panel">
-          <div class="panel-header">Danh mục sản phẩm</div>
-          <nav class="category-list">
-            <a href="#">Laptop</a>
-          </nav>
-        </aside>
+        <!-- ── Hero Grid: Sidebar | Banner | Info Panel ── -->
+        <div class="row g-3 mb-3">
 
-        <section class="hero-card">
-          <div class="hero-image">
-            <div class="hero-image-fake"></div>
-            <div class="hero-badge">HUAWEI MATEPAD SE 11"</div>
-            <div class="hero-copy">
-              <h1>HUAWEI MATEPAD SE 11"</h1>
-              <p>
-                Mở bán từ 01.06 - 01.07 | Giảm ngay 1.000K + Tặng bút cảm ứng
-              </p>
+          <!-- Sidebar danh mục (chỉ hiện trên màn lớn) -->
+          <div class="col-xl-2 d-none d-xl-block">
+            <div class="rounded-3 p-1 d-flex flex-column gap-1 h-100"
+                 style="background:#1a1a1a; border:1px solid #2a2a2a;">
+              <a v-for="cat in sidebarCats"
+                 :key="cat.name"
+                 href="#"
+                 class="d-flex align-items-center justify-content-between px-3 py-2 rounded-2 text-decoration-none small fw-bold text-secondary"
+                 style="font-size:12px; transition:all 0.15s;"
+                 @mouseenter="e => { e.currentTarget.style.background='#252525'; e.currentTarget.style.color='#facc15'; }"
+                 @mouseleave="e => { e.currentTarget.style.background=''; e.currentTarget.style.color=''; }">
+                <span class="d-flex align-items-center gap-2">
+                  <span style="font-size:13px;">{{ cat.icon }}</span>
+                  {{ cat.name }}
+                </span>
+                <span style="color:#4b5563;">›</span>
+              </a>
             </div>
           </div>
 
-          <div class="hero-highlights">
-            <template v-if="loading">
-              <div class="highlight-card highlight-loading">
-                Đang tải sản phẩm...
-              </div>
-            </template>
-            <template v-else-if="error">
-              <div class="highlight-card highlight-error">{{ error }}</div>
-            </template>
-            <template v-else-if="products.length">
-              <div
-                v-for="product in products.slice(0, 3)"
-                :key="product.sanPhamId"
-                class="highlight-card"
-              >
-                <strong>{{ product.tenSanPham }}</strong>
-                <span>{{ formatPrice(product.giaBan) }}</span>
-              </div>
-            </template>
-            <template v-else>
-              <div class="highlight-card">Chưa có sản phẩm để hiển thị</div>
-            </template>
-          </div>
-        </section>
-
-        <aside class="info-panel">
-          <div class="info-top">Chào mừng bạn đến với SAOPhone</div>
-          <div class="info-sub">Hệ thống công nghệ Đen & Vàng</div>
-          <ul class="info-list">
-            <li>Ưu đãi độc quyền học sinh sinh viên</li>
-            <li>Deal sốc linh kiện máy tính đồ họa</li>
-            <li>Laptop Gaming cấu hình cực mạnh</li>
-            <li>Thu cũ đổi mới trợ giá lên tới 3 triệu</li>
-          </ul>
-          <button class="btn btn-primary btn-block">
-            Mùa thi cử - Giảm giá đến 50%
-          </button>
-          <a href="#" class="support-link">Liên hệ hỗ trợ</a>
-        </aside>
-      </div>
-
-      <section class="product-list-section">
-        <div class="section-header">
-          <h2>Tất cả sản phẩm</h2>
-          <span>{{ filteredProducts.length }} sản phẩm</span>
-        </div>
-
-        <div v-if="loading" class="product-message">Đang tải dữ liệu...</div>
-        <div v-else-if="error" class="product-message error">{{ error }}</div>
-        <div v-else-if="products.length === 0" class="product-message">
-          Chưa có sản phẩm nào.
-        </div>
-
-        <div v-else class="product-list">
-          <article
-            v-for="product in filteredProducts"
-            :key="product.sanPhamId"
-            class="product-card"
-          >
-            <div class="product-image">
+          <!-- Banner trung tâm + 3 sản phẩm nổi bật -->
+          <div class="col-12 col-xl-7">
+            <!-- Banner ảnh chính -->
+            <div class="position-relative rounded-3 overflow-hidden mb-2" style="height:280px;">
               <img
-                v-if="product.hinhAnhChinh"
-                :src="product.hinhAnhChinh"
-                :alt="product.tenSanPham"
+                src="https://images.unsplash.com/photo-1603302576837-37561b2e2302?q=80&w=800"
+                alt="Laptop Premium Promotion"
+                class="w-100 h-100"
+                style="object-fit:cover;"
               />
-              <div v-else class="product-image-fallback">No image</div>
+              <!-- Overlay chữ nổi trên banner -->
+              <div class="position-absolute bottom-0 start-0 p-4 w-100"
+                   style="background:linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);">
+                <h2 class="text-white fw-black mb-1" style="font-size:1.3rem; text-shadow:0 2px 8px rgba(0,0,0,0.8);">
+                  LAPTOP AI NEXT-GEN 2026
+                </h2>
+                <p class="text-warning small fw-bold mb-0">
+                  Ưu đãi mùa tựu trường | Trả góp 0% + Tặng Balo Gaming cao cấp
+                </p>
+              </div>
             </div>
-            <div class="product-info">
-              <h3>{{ product.tenSanPham }}</h3>
-              <p class="product-brand">
-                {{ product.tenThuongHieu || product.tenDanhMuc }}
-              </p>
-              <p class="product-price">{{ formatPrice(product.giaBan) }}</p>
-              <p class="product-desc">
-                {{ product.moTa || "Không có mô tả." }}
-              </p>
-              <button
-                class="btn btn-primary add-to-cart"
-                @click="addToCart(product)"
-              >
-                Thêm vào giỏ
-              </button>
-            </div>
-          </article>
-        </div>
 
-        <aside v-if="showCart" class="cart-panel">
-          <div class="cart-header">
-            <h3>Giỏ hàng</h3>
-            <button class="btn btn-secondary" type="button" @click="toggleCart">
-              Đóng
-            </button>
+            <!-- 3 thẻ sản phẩm nổi bật nhỏ bên dưới banner -->
+            <div class="row g-2">
+              <template v-if="loading">
+                <div class="col-4">
+                  <div class="p-3 rounded-2 text-secondary small text-center"
+                       style="background:#1a1a1a; border:1px solid #2a2a2a;">
+                    Đang tải...
+                  </div>
+                </div>
+              </template>
+              <template v-else-if="products.length">
+                <div v-for="p in products.slice(0, 3)" :key="p.sanPhamId" class="col-4">
+                  <div class="p-2 rounded-2 small"
+                       style="background:#1a1a1a; border:1px solid #2a2a2a;">
+                    <p class="fw-bold mb-1 text-light"
+                       style="font-size:11px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical;">
+                      {{ p.tenSanPham }}
+                    </p>
+                    <p class="text-warning fw-black mb-0" style="font-size:12px;">
+                      {{ formatPrice(p.giaBan) }}
+                    </p>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <div class="col-12">
+                  <div class="p-2 rounded-2 text-secondary small text-center"
+                       style="background:#1a1a1a; border:1px solid #2a2a2a;">
+                    Chưa có sản phẩm để hiển thị
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
-          <div v-if="cartCount === 0" class="cart-empty">
-            Chưa có sản phẩm nào trong giỏ.
-          </div>
-          <div v-else class="cart-items">
-            <div v-for="item in cart" :key="item.sanPhamId" class="cart-item">
-              <div>
-                <strong>{{ item.tenSanPham }}</strong>
-                <div class="cart-item-meta">
-                  <span
-                    >{{ item.quantity }} x {{ formatPrice(item.giaBan) }}</span
-                  >
-                  <span class="cart-line-total">{{
-                    formatPrice(item.quantity * item.giaBan)
-                  }}</span>
+
+          <!-- Info panel bên phải -->
+          <div class="col-12 col-xl-3">
+            <div class="rounded-3 p-3 h-100 d-flex flex-column gap-3"
+                 style="background:#1a1a1a; border:1px solid #2a2a2a;">
+              <!-- Logo thương hiệu -->
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
+                     style="width:44px; height:44px; background:#facc15; color:#111; font-size:0.8rem;">
+                  SAO
+                </div>
+                <div>
+                  <h4 class="fw-black mb-0 text-white" style="font-size:0.82rem; line-height:1.3;">
+                    Hệ thống phân phối LAPTOP SAOPHONE
+                  </h4>
+                  <p class="mb-0 text-secondary" style="font-size:10px;">Hệ thống công nghệ Đen &amp; Vàng</p>
                 </div>
               </div>
+              <!-- Các liên kết ưu đãi -->
+              <div class="d-flex flex-column gap-1">
+                <a v-for="link in [
+                  '🎓 Ưu đãi độc quyền học sinh sinh viên',
+                  '🔥 Deal sốc linh kiện máy tính đồ họa',
+                  '💻 Laptop Gaming cấu hình cực mạnh',
+                  '🔄 Thu cũ đổi mới trợ giá lên tới 3 triệu',
+                ]" :key="link" href="#"
+                   class="d-block text-decoration-none fw-semibold text-secondary p-2 rounded-2 small"
+                   style="font-size:11px; transition:background 0.15s;"
+                   @mouseenter="e => { e.target.style.background='#252525'; e.target.style.color='#facc15'; }"
+                   @mouseleave="e => { e.target.style.background=''; e.target.style.color=''; }">
+                  {{ link }}
+                </a>
+              </div>
+              <!-- Banner CTA -->
+              <div class="mt-auto text-center fw-black py-2 rounded-2 small"
+                   style="background:linear-gradient(135deg,#facc15,#f59e0b); color:#111; font-size:11px; letter-spacing:0.06em;">
+                MÙA THI CỬ - GIẢM GIÁ ĐẾN 50%
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /hero-grid row -->
+
+        <!-- ── Deal Section: tabs + filter + danh sách sản phẩm ── -->
+        <section class="mt-3">
+
+          <!-- Tabs: DEAL SỐC | HOT TREND | MÁY MỚI -->
+          <div class="d-flex gap-2 mb-3 border-bottom pb-0"
+               style="border-color:#2a2a2a!important;">
+            <button
+              v-for="tab in [
+                { id:'deal', label:'🔥 DEAL SỐC LAPTOP' },
+                { id:'hot',  label:'LAPTOP HOT TREND 2026' },
+                { id:'new',  label:'MÁY MỚI CẬP BẾN' },
+              ]" :key="tab.id"
+              class="btn btn-sm fw-black px-3 pb-2 rounded-0 border-0"
+              style="font-size:12px; letter-spacing:0.04em; border-bottom:3px solid transparent!important;"
+              :class="activeTab === tab.id ? 'text-warning' : 'text-secondary'"
+              :style="activeTab === tab.id
+                ? 'border-bottom:3px solid #facc15!important;'
+                : ''"
+              @click="activeTab = tab.id">
+              {{ tab.label }}
+            </button>
+          </div>
+
+          <!-- Thanh filter + sắp xếp -->
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <!-- Chip filter theo loại laptop -->
+            <div class="d-flex flex-wrap gap-2">
               <button
-                class="btn btn-secondary cart-remove"
-                type="button"
-                @click="removeFromCart(item.sanPhamId)"
-              >
-                Xóa
+                v-for="f in dealFilters" :key="f"
+                class="btn btn-sm fw-bold"
+                style="font-size:11px; border-radius:999px;"
+                :class="activeFilter === f
+                  ? 'btn-warning text-dark'
+                  : 'btn-outline-secondary text-secondary'"
+                @click="activeFilter = f">
+                {{ f }}
               </button>
             </div>
-            <div class="cart-total">
-              <span>Tổng tạm tính</span>
-              <strong>{{ formatPrice(cartTotal) }}</strong>
+            <!-- Select sắp xếp theo giá -->
+            <select v-model="selectedSort"
+                    class="form-select form-select-sm"
+                    style="width:auto; background:#1f1f1f; border-color:#3f3f3f; color:#e5e7eb; font-size:12px;"
+                    aria-label="Sắp xếp">
+              <option value="default">Mặc định</option>
+              <option value="price-asc">Giá thấp → cao</option>
+              <option value="price-desc">Giá cao → thấp</option>
+            </select>
+          </div>
+
+          <!-- Trạng thái loading / lỗi / trống -->
+          <div v-if="loading" class="text-secondary text-center py-4 small">
+            Đang tải dữ liệu sản phẩm...
+          </div>
+          <div v-else-if="error" class="alert alert-danger small py-2">{{ error }}</div>
+          <div v-else-if="filteredProducts.length === 0" class="text-secondary text-center py-4 small">
+            Không có sản phẩm nào phù hợp.
+          </div>
+
+          <!-- Lưới sản phẩm -->
+          <div v-else class="row g-3">
+            <article
+              v-for="product in filteredProducts"
+              :key="product.sanPhamId"
+              class="col-6 col-md-4 col-lg-3 col-xl-2">
+              <!-- Thẻ sản phẩm -->
+              <div class="card h-100 border-secondary"
+                   style="background:#1a1a1a; border-radius:14px; overflow:hidden; transition:transform 0.15s, box-shadow 0.15s;"
+                   @mouseenter="e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,0.4)'; }"
+                   @mouseleave="e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }">
+
+                <!-- Ảnh sản phẩm -->
+                <div class="position-relative" style="background:#111; height:160px;">
+                  <img
+                    v-if="product.hinhAnhChinh"
+                    :src="product.hinhAnhChinh"
+                    :alt="product.tenSanPham"
+                    class="w-100 h-100"
+                    style="object-fit:contain; padding:8px;"
+                  />
+                  <!-- Placeholder nếu không có ảnh -->
+                  <div v-else
+                       class="w-100 h-100 d-flex align-items-center justify-content-center"
+                       style="font-size:2.5rem;">
+                    💻
+                  </div>
+                  <!-- Badge trạng thái: Còn hàng / Hết hàng -->
+                  <span
+                    class="badge position-absolute top-0 start-0 m-2"
+                    style="font-size:10px;"
+                    :class="product.trangThai === 'active' ? 'bg-success' : 'bg-secondary'">
+                    {{ product.trangThai === 'active' ? 'Còn hàng' : 'Hết hàng' }}
+                  </span>
+                </div>
+
+                <!-- Thông tin sản phẩm -->
+                <div class="card-body p-2 d-flex flex-column gap-1">
+                  <h3 class="fw-bold text-light mb-0"
+                      style="font-size:11px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical;">
+                    {{ product.tenSanPham }}
+                  </h3>
+                  <p class="mb-0 text-secondary" style="font-size:10px;">
+                    {{ product.tenThuongHieu || product.tenDanhMuc }}
+                  </p>
+                  <p class="mb-0 text-warning fw-black" style="font-size:13px;">
+                    {{ formatPrice(product.giaBan) }}
+                  </p>
+                  <p class="mb-0 text-secondary" style="font-size:10px;">🚚 Giao nhanh 2H</p>
+                  <!-- Nút thêm vào giỏ — disabled nếu hết hàng -->
+                  <button
+                    class="btn btn-sm w-100 fw-bold mt-1"
+                    style="font-size:11px; border-radius:8px;"
+                    :class="product.trangThai === 'active' ? 'btn-warning text-dark' : 'btn-secondary'"
+                    :disabled="product.trangThai !== 'active'"
+                    @click="addToCart(product)">
+                    🛒 Thêm vào giỏ
+                  </button>
+                </div>
+
+              </div><!-- /card -->
+            </article>
+          </div><!-- /product grid -->
+
+        </section><!-- /deal section -->
+
+        <!-- ── Panel giỏ hàng (slide-in từ phải) ── -->
+        <div v-if="showCart"
+             class="position-fixed top-0 end-0 h-100 d-flex flex-column"
+             style="width:360px; background:#111; border-left:1px solid #2a2a2a; z-index:500; box-shadow:-8px 0 32px rgba(0,0,0,0.5);">
+
+          <!-- Header giỏ hàng -->
+          <div class="d-flex justify-content-between align-items-center p-3"
+               style="border-bottom:1px solid #2a2a2a;">
+            <h3 class="mb-0 fw-bold text-white" style="font-size:1rem;">Giỏ hàng</h3>
+            <!-- Nút đóng giỏ hàng -->
+            <button class="btn btn-sm btn-outline-secondary rounded-circle"
+                    style="width:32px; height:32px; padding:0;"
+                    @click="toggleCart">✕</button>
+          </div>
+
+          <!-- Nội dung giỏ hàng -->
+          <div v-if="cartCount === 0"
+               class="flex-grow-1 d-flex align-items-center justify-content-center text-secondary small">
+            Chưa có sản phẩm nào trong giỏ.
+          </div>
+          <div v-else class="flex-grow-1 d-flex flex-column p-3 overflow-y-auto gap-2">
+
+            <!-- Từng sản phẩm trong giỏ -->
+            <div v-for="item in cart" :key="item.sanPhamId"
+                 class="d-flex justify-content-between align-items-start gap-2 p-2 rounded-2"
+                 style="background:#1a1a1a; border:1px solid #2a2a2a;">
+              <div class="flex-grow-1 min-width-0">
+                <div class="fw-bold text-light small">{{ item.tenSanPham }}</div>
+                <div class="text-secondary" style="font-size:11px;">
+                  {{ item.quantity }} × {{ formatPrice(item.giaBan) }}
+                </div>
+                <div class="text-warning fw-bold" style="font-size:12px;">
+                  {{ formatPrice(item.quantity * item.giaBan) }}
+                </div>
+              </div>
+              <!-- Nút xoá khỏi giỏ -->
+              <button class="btn btn-sm btn-outline-danger flex-shrink-0"
+                      style="font-size:10px; padding:2px 8px;"
+                      @click="removeFromCart(item.sanPhamId)">Xóa</button>
             </div>
-            <button class="btn btn-primary checkout-btn" @click="openCheckout">
+
+            <!-- Tổng tạm tính -->
+            <div class="d-flex justify-content-between align-items-center pt-2 mt-1"
+                 style="border-top:1px solid #2a2a2a;">
+              <span class="text-secondary small">Tổng tạm tính</span>
+              <strong class="text-warning">{{ formatPrice(cartTotal) }}</strong>
+            </div>
+
+            <!-- Nút thanh toán -->
+            <button class="btn btn-warning btn-sm fw-black w-100 mt-1"
+                    style="border-radius:10px;"
+                    @click="openCheckout">
               Thanh toán →
             </button>
           </div>
-        </aside>
-      </section>
-    </div>
-  </div>
 
-  <!-- ── Checkout Modal ── -->
-  <div v-if="showCheckout" class="co-overlay" @click.self="showCheckout = false">
-    <div class="co-modal">
+        </div><!-- /cart panel -->
 
-      <!-- Success screen -->
+      </div><!-- /container-xl -->
+
+      <!-- Footer -->
+      <AppFooter />
+
+    </div><!-- /trang khách hàng -->
+
+  </div><!-- /root -->
+
+  <!-- ══════════════════════════════════════════════════════
+      CHECKOUT MODAL — Hiển thị form đặt hàng
+  ══════════════════════════════════════════════════════ -->
+  <div v-if="showCheckout"
+       class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+       style="background:rgba(0,0,0,0.7); z-index:1050;"
+       @click.self="showCheckout = false">
+
+    <div class="rounded-4 d-flex flex-column"
+         style="background:#181818; border:1px solid rgba(255,255,255,0.1); width:620px; max-width:95vw; max-height:90vh;">
+
+      <!-- ── Màn hình thành công ── -->
       <template v-if="checkoutSuccess">
-        <div class="co-success">
-          <div class="co-success-icon">✓</div>
-          <h2>Đặt hàng thành công!</h2>
-          <p>Mã đơn hàng của bạn: <strong>#{{ checkoutOrderId }}</strong></p>
-          <p class="co-success-sub">Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất.</p>
-          <button class="btn btn-primary co-close-btn" @click="showCheckout = false">Đóng</button>
+        <div class="d-flex flex-column align-items-center justify-content-center gap-3 p-5 text-center">
+          <!-- Icon tick xanh -->
+          <div class="d-flex align-items-center justify-content-center rounded-circle"
+               style="width:64px; height:64px; background:rgba(72,199,142,0.15); color:#48c78e; font-size:1.8rem;">
+            ✓
+          </div>
+          <h2 class="fw-black text-white mb-0">Đặt hàng thành công!</h2>
+          <p class="text-secondary mb-0">
+            Mã đơn hàng của bạn: <strong class="text-warning">#{{ checkoutOrderId }}</strong>
+          </p>
+          <p class="text-secondary small mb-0">Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất.</p>
+          <button class="btn btn-warning fw-bold px-4 rounded-pill" @click="showCheckout = false">Đóng</button>
         </div>
       </template>
 
-      <!-- Checkout form -->
+      <!-- ── Form đặt hàng ── -->
       <template v-else>
-        <div class="co-header">
+        <!-- Header modal -->
+        <div class="d-flex justify-content-between align-items-center p-3 fw-bold text-white"
+             style="border-bottom:1px solid rgba(255,255,255,0.07); font-size:0.95rem;">
           <span>Xác nhận đặt hàng</span>
-          <button class="co-x" @click="showCheckout = false">✕</button>
+          <button class="btn-close btn-close-white btn-sm" @click="showCheckout = false"></button>
         </div>
 
-        <div class="co-body">
-          <!-- Error -->
-          <div v-if="checkoutError" class="co-error">{{ checkoutError }}</div>
+        <!-- Body modal (scroll được) -->
+        <div class="p-4 overflow-y-auto flex-grow-1 d-flex flex-column gap-3">
 
-          <!-- Cart summary -->
-          <div class="co-section-title">Giỏ hàng ({{ cart.length }} sản phẩm)</div>
-          <div class="co-cart-list">
-            <div v-for="item in cart" :key="item.bienTheId" class="co-cart-item">
-              <span class="co-item-name">{{ item.tenSanPham }}</span>
-              <span class="co-item-qty">x{{ item.quantity }}</span>
-              <span class="co-item-price">{{ formatPrice(item.giaBan * item.quantity) }}</span>
+          <!-- Thông báo lỗi -->
+          <div v-if="checkoutError" class="alert alert-danger small py-2 mb-0">{{ checkoutError }}</div>
+
+          <!-- Danh sách sản phẩm trong đơn -->
+          <div>
+            <div class="fw-bold text-secondary small mb-2 text-uppercase" style="letter-spacing:0.04em;">
+              Giỏ hàng ({{ cart.length }} sản phẩm)
+            </div>
+            <div class="d-flex flex-column gap-1">
+              <div v-for="item in cart" :key="item.bienTheId"
+                   class="d-flex justify-content-between align-items-center small p-2 rounded-2"
+                   style="background:rgba(255,255,255,0.04);">
+                <span class="text-light fw-medium">{{ item.tenSanPham }}</span>
+                <span class="text-secondary mx-2">×{{ item.quantity }}</span>
+                <span class="text-warning fw-bold">{{ formatPrice(item.giaBan * item.quantity) }}</span>
+              </div>
             </div>
           </div>
 
-          <!-- Customer lookup -->
-          <div class="co-section-title" style="margin-top:18px">Thông tin khách hàng</div>
-          <div class="co-row">
-            <input v-model="checkoutForm.soDienThoai" class="co-input" placeholder="Số điện thoại *" />
-            <button class="btn btn-secondary co-lookup-btn" @click="lookupCustomer">Tìm</button>
-          </div>
-          <div v-if="foundCustomer" class="co-found">
-            ✓ Khách hàng: <strong>{{ foundCustomer.hoTen }}</strong>
-          </div>
-          <div v-else-if="checkoutForm.soDienThoai" class="co-not-found">
-            Số điện thoại chưa có trong hệ thống — sẽ tạo khách hàng mới.
-          </div>
-          <div class="co-grid">
-            <input v-model="checkoutForm.hoTen"  class="co-input" placeholder="Họ tên *" />
-            <input v-model="checkoutForm.email"   class="co-input" placeholder="Email *" />
+          <!-- Thông tin khách hàng -->
+          <div>
+            <div class="fw-bold text-secondary small mb-2 text-uppercase" style="letter-spacing:0.04em;">
+              Thông tin khách hàng
+            </div>
+            <!-- Tìm theo SĐT -->
+            <div class="d-flex gap-2 mb-2">
+              <input v-model="checkoutForm.soDienThoai"
+                     class="form-control form-control-sm"
+                     style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                     placeholder="Số điện thoại *" />
+              <button class="btn btn-sm btn-outline-warning flex-shrink-0" @click="lookupCustomer">Tìm</button>
+            </div>
+            <!-- Kết quả tìm kiếm khách hàng -->
+            <div v-if="foundCustomer"
+                 class="small p-2 rounded-2 mb-2"
+                 style="background:rgba(72,199,142,0.1); color:#48c78e;">
+              ✓ Khách hàng: <strong>{{ foundCustomer.hoTen }}</strong>
+            </div>
+            <div v-else-if="checkoutForm.soDienThoai"
+                 class="small p-2 rounded-2 mb-2 text-secondary"
+                 style="background:rgba(255,255,255,0.04);">
+              Số điện thoại chưa có trong hệ thống — sẽ tạo khách hàng mới.
+            </div>
+            <!-- Họ tên + Email -->
+            <div class="row g-2">
+              <div class="col-6">
+                <input v-model="checkoutForm.hoTen"
+                       class="form-control form-control-sm"
+                       style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                       placeholder="Họ tên *" />
+              </div>
+              <div class="col-6">
+                <input v-model="checkoutForm.email"
+                       class="form-control form-control-sm"
+                       style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                       placeholder="Email *" />
+              </div>
+            </div>
           </div>
 
-          <!-- Delivery info -->
-          <div class="co-section-title" style="margin-top:18px">Thông tin giao hàng</div>
-          <div class="co-grid">
-            <input v-model="checkoutForm.nguoiNhan"    class="co-input" placeholder="Người nhận *" />
-            <input v-model="checkoutForm.sdtNguoiNhan" class="co-input" placeholder="SĐT người nhận *" />
+          <!-- Thông tin giao hàng -->
+          <div>
+            <div class="fw-bold text-secondary small mb-2 text-uppercase" style="letter-spacing:0.04em;">
+              Thông tin giao hàng
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <input v-model="checkoutForm.nguoiNhan"
+                       class="form-control form-control-sm"
+                       style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                       placeholder="Người nhận *" />
+              </div>
+              <div class="col-6">
+                <input v-model="checkoutForm.sdtNguoiNhan"
+                       class="form-control form-control-sm"
+                       style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                       placeholder="SĐT người nhận *" />
+              </div>
+            </div>
+            <input v-model="checkoutForm.diaChiGiaoHangText"
+                   class="form-control form-control-sm"
+                   style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                   placeholder="Địa chỉ giao hàng *" />
           </div>
-          <input v-model="checkoutForm.diaChiGiaoHangText" class="co-input co-input-full" placeholder="Địa chỉ giao hàng *" style="margin-top:10px" />
 
-          <!-- Promo code -->
-          <div class="co-section-title" style="margin-top:18px">Mã khuyến mãi</div>
-          <div class="co-row">
-            <input v-model="checkoutForm.maKhuyenMai" class="co-input" placeholder="Nhập mã (nếu có)" />
-            <button class="btn btn-secondary co-lookup-btn" @click="applyPromo">Áp dụng</button>
-          </div>
-          <div v-if="promoMsg" class="co-promo-msg" :class="appliedPromo ? 'co-promo-ok' : 'co-promo-err'">
-            {{ promoMsg }}
+          <!-- Mã khuyến mãi -->
+          <div>
+            <div class="fw-bold text-secondary small mb-2 text-uppercase" style="letter-spacing:0.04em;">
+              Mã khuyến mãi
+            </div>
+            <div class="d-flex gap-2 mb-1">
+              <input v-model="checkoutForm.maKhuyenMai"
+                     class="form-control form-control-sm"
+                     style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                     placeholder="Nhập mã (nếu có)" />
+              <button class="btn btn-sm btn-outline-warning flex-shrink-0" @click="applyPromo">Áp dụng</button>
+            </div>
+            <!-- Kết quả áp dụng mã -->
+            <div v-if="promoMsg" class="small"
+                 :class="appliedPromo ? 'text-success' : 'text-danger'">
+              {{ promoMsg }}
+            </div>
           </div>
 
-          <!-- Order total -->
-          <div class="co-total-box">
-            <div class="co-total-row">
+          <!-- Bảng tổng kết tiền -->
+          <div class="p-3 rounded-2 d-flex flex-column gap-1"
+               style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);">
+            <div class="d-flex justify-content-between small text-secondary">
               <span>Tạm tính</span><span>{{ formatPrice(cartTotal) }}</span>
             </div>
-            <div class="co-total-row">
+            <div class="d-flex justify-content-between small text-secondary">
               <span>Phí vận chuyển</span>
               <span>{{ phiVanChuyen === 0 ? 'Miễn phí' : formatPrice(phiVanChuyen) }}</span>
             </div>
-            <div v-if="checkoutGiamGia > 0" class="co-total-row co-discount">
+            <div v-if="checkoutGiamGia > 0"
+                 class="d-flex justify-content-between small text-success">
               <span>Giảm giá</span><span>- {{ formatPrice(checkoutGiamGia) }}</span>
             </div>
-            <div class="co-total-row co-grand">
-              <span>Thành tiền</span><strong>{{ formatPrice(checkoutTotal) }}</strong>
+            <!-- Tổng thanh toán -->
+            <div class="d-flex justify-content-between fw-bold pt-2 mt-1"
+                 style="border-top:1px solid rgba(255,255,255,0.07);">
+              <span class="text-white">Thành tiền</span>
+              <strong class="text-warning" style="font-size:1rem;">{{ formatPrice(checkoutTotal) }}</strong>
             </div>
           </div>
-        </div>
 
-        <div class="co-footer">
-          <button class="btn btn-secondary" @click="showCheckout = false">Hủy</button>
-          <button class="btn btn-primary co-submit" :disabled="checkoutLoading" @click="placeOrder">
+        </div><!-- /modal body -->
+
+        <!-- Footer modal: nút Hủy và Đặt hàng -->
+        <div class="d-flex justify-content-end gap-2 p-3"
+             style="border-top:1px solid rgba(255,255,255,0.07);">
+          <button class="btn btn-sm btn-outline-secondary" @click="showCheckout = false">Hủy</button>
+          <button class="btn btn-sm btn-warning fw-bold px-4"
+                  :disabled="checkoutLoading"
+                  @click="placeOrder">
             {{ checkoutLoading ? 'Đang xử lý...' : 'Đặt hàng' }}
           </button>
         </div>
+
       </template>
-    </div>
-  </div>
+    </div><!-- /modal box -->
+  </div><!-- /checkout overlay -->
+
 </template>
 
-<style scoped>
-.page-shell {
-  min-height: 100vh;
-  background: radial-gradient(circle at top left, #222, #090909 38%);
-  color: #f5f5f5;
-  padding: 24px;
-  font-family: "Inter", sans-serif;
-}
-
-.topbar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-}
-
-.brand-block {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.brand-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #f4c200;
-  color: #111;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-}
-
-.brand-name {
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
-.brand-sub {
-  color: #bfbfbd;
-  font-size: 0.9rem;
-}
-
-.top-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.top-link {
-  color: #f5f5f5;
-  text-decoration: none;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.menu-button,
-.btn {
-  border: none;
-  border-radius: 999px;
-  padding: 10px 18px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.menu-button {
-  background: rgba(255, 255, 255, 0.06);
-  color: #f5f5f5;
-}
-
-.btn-primary {
-  background: #ffb400;
-  color: #111;
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
-  color: #f5f5f5;
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  min-width: 320px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.search-bar input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  color: #f5f5f5;
-  padding: 10px 14px;
-}
-
-.search-bar button {
-  border: none;
-  background: rgba(255, 255, 255, 0.08);
-  color: #f5f5f5;
-  width: 48px;
-  cursor: pointer;
-}
-
-.sort-select {
-  border: none;
-  border-radius: 999px;
-  padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #f5f5f5;
-  cursor: pointer;
-}
-
-.cart-badge {
-  display: inline-block;
-  min-width: 22px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
-  padding: 2px 8px;
-  margin-left: 8px;
-  color: #111;
-  font-weight: 700;
-}
-
-.add-to-cart {
-  width: fit-content;
-  padding: 10px 14px;
-}
-
-.cart-panel {
-  margin-top: 24px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 24px;
-  padding: 18px;
-}
-
-.cart-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.cart-items {
-  display: grid;
-  gap: 14px;
-}
-
-.cart-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 18px;
-}
-
-.cart-item-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  color: #d1d1d1;
-  font-size: 0.92rem;
-}
-
-.cart-line-total {
-  font-weight: 700;
-  color: #ffb400;
-}
-
-.cart-remove {
-  min-width: 72px;
-  padding: 10px 12px;
-}
-
-.cart-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.08);
-  margin-top: 12px;
-}
-
-.hero-topline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 24px 0 20px;
-  color: #d5d5d5;
-  font-size: 0.95rem;
-}
-
-.hero-topline span {
-  background: rgba(255, 255, 255, 0.04);
-  padding: 10px 14px;
-  border-radius: 999px;
-}
-
-.hero-grid {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: minmax(240px, 280px) minmax(420px, 1fr) minmax(
-      240px,
-      300px
-    );
-}
-
-.category-panel,
-.info-panel,
-.hero-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  padding: 24px;
-}
-
-.panel-header {
-  font-size: 1rem;
-  font-weight: 700;
-  margin-bottom: 18px;
-  letter-spacing: 0.02em;
-}
-
-.category-list {
-  display: grid;
-  gap: 12px;
-}
-
-.category-list a {
-  display: block;
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #f5f5f5;
-  text-decoration: none;
-}
-
-.category-list a:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.hero-image {
-  position: relative;
-  min-height: 420px;
-  overflow: hidden;
-  border-radius: 28px;
-  background: linear-gradient(135deg, #171717 0%, #111 45%, #252525 100%);
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
-}
-
-.hero-image-fake {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 45% 30%, rgba(250, 185, 0, 0.2), transparent 32%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
-}
-
-.hero-image::before {
-  content: "";
-  position: absolute;
-  left: 12%;
-  top: 8%;
-  width: 76%;
-  height: 72%;
-  border-radius: 32px;
-  background: linear-gradient(180deg, #202020 0%, #0d0d0d 100%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.hero-badge {
-  position: absolute;
-  left: 28px;
-  top: 24px;
-  display: inline-flex;
-  padding: 10px 16px;
-  background: rgba(255, 180, 0, 0.14);
-  border-radius: 999px;
-  color: #ffd766;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-}
-
-.hero-copy {
-  position: absolute;
-  left: 28px;
-  bottom: 36px;
-  z-index: 1;
-  max-width: 66%;
-}
-
-.hero-copy h1 {
-  margin: 0 0 10px;
-  font-size: clamp(2.1rem, 4vw, 3.2rem);
-  line-height: 1.02;
-}
-
-.hero-copy p {
-  margin: 0;
-  color: #d4d4d4;
-  font-size: 1rem;
-}
-
-.hero-highlights {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 22px;
-}
-
-.highlight-loading,
-.highlight-error {
-  grid-column: 1 / -1;
-}
-
-.highlight-card {
-  padding: 16px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  min-height: 80px;
-}
-
-.highlight-card strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 0.98rem;
-}
-
-.highlight-card span {
-  color: #bdbdbd;
-  font-size: 0.92rem;
-}
-
-.info-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.info-top {
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.info-sub {
-  color: #c7c7c7;
-}
-
-.info-list {
-  display: grid;
-  gap: 12px;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.info-list li {
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.btn-block {
-  width: 100%;
-}
-
-.support-link {
-  display: inline-flex;
-  justify-content: center;
-  padding: 12px 16px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.product-list-section {
-  margin-top: 28px;
-  padding: 24px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.section-header h2 {
-  font-size: 1.25rem;
-}
-
-.section-header span {
-  color: #d1d1d1;
-}
-
-.product-message {
-  color: #d1d1d1;
-  padding: 14px 0;
-}
-
-.product-message.error {
-  color: #ffcccc;
-}
-
-.product-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.product-card {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.product-image {
-  min-height: 170px;
-  background: rgba(255, 255, 255, 0.04);
-  display: grid;
-  place-items: center;
-}
-
-.product-image img {
-  max-width: 100%;
-  max-height: 170px;
-  object-fit: contain;
-}
-
-.product-image-fallback {
-  color: #b3b3b3;
-  font-size: 0.95rem;
-}
-
-.product-info {
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.product-info h3 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.product-brand {
-  color: #d1d1d1;
-  font-size: 0.9rem;
-}
-
-.product-price {
-  color: #ffb400;
-  font-weight: 700;
-}
-
-.product-desc {
-  margin: 0;
-  color: #c8c8c8;
-  font-size: 0.95rem;
-}
-
-@media (max-width: 1120px) {
-  .hero-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 820px) {
-  .topbar,
-  .hero-grid {
-    flex-direction: column;
-  }
-
-  .top-actions {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .search-bar {
-    min-width: 0;
-    width: 100%;
-  }
-}
-
-/* ── Checkout button ── */
-.checkout-btn {
-  width: 100%;
-  margin-top: 12px;
-  padding: 12px;
-  font-size: 1rem;
-  border-radius: 16px;
-}
-
-/* ── Checkout modal ── */
-.co-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  padding: 16px;
-}
-
-.co-modal {
-  background: #181818;
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 20px;
-  width: 100%;
-  max-width: 600px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  color: #f0f0f0;
-  font-family: 'Inter', sans-serif;
-}
-
-.co-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 22px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-.co-x {
-  background: transparent;
-  border: none;
-  color: #888;
-  font-size: 1.1rem;
-  cursor: pointer;
-  line-height: 1;
-}
-.co-x:hover { color: #f0f0f0; }
-
-.co-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 22px;
-}
-
-.co-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 22px;
-  border-top: 1px solid rgba(255,255,255,.08);
-}
-
-.co-error {
-  background: rgba(220,53,69,.15);
-  border: 1px solid rgba(220,53,69,.3);
-  border-radius: 8px;
-  padding: 10px 14px;
-  color: #e05252;
-  font-size: .85rem;
-  margin-bottom: 14px;
-}
-
-.co-section-title {
-  font-size: .78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: #888;
-  margin-bottom: 10px;
-}
-
-.co-cart-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.co-cart-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(255,255,255,.04);
-  border-radius: 10px;
-  font-size: .88rem;
-}
-
-.co-item-name { flex: 1; }
-.co-item-qty  { color: #888; min-width: 32px; text-align: center; }
-.co-item-price { font-weight: 600; color: #ffb400; min-width: 100px; text-align: right; }
-
-.co-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.co-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.co-input {
-  flex: 1;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 10px;
-  padding: 9px 12px;
-  color: #f0f0f0;
-  font-size: .88rem;
-  outline: none;
-  font-family: inherit;
-}
-.co-input:focus { border-color: #ffb400; }
-.co-input-full { width: 100%; box-sizing: border-box; }
-
-.co-lookup-btn {
-  padding: 9px 16px;
-  border-radius: 10px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.co-found     { font-size: .83rem; color: #48c78e; margin-bottom: 10px; }
-.co-not-found { font-size: .83rem; color: #f4c200; margin-bottom: 10px; }
-
-.co-promo-msg { font-size: .83rem; margin-top: 6px; }
-.co-promo-ok  { color: #48c78e; }
-.co-promo-err { color: #e05252; }
-
-.co-total-box {
-  margin-top: 18px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 14px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.co-total-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: .88rem;
-  color: #ccc;
-}
-
-.co-discount { color: #48c78e; }
-
-.co-grand {
-  border-top: 1px solid rgba(255,255,255,.08);
-  padding-top: 10px;
-  margin-top: 4px;
-  font-size: 1rem;
-  color: #f0f0f0;
-}
-
-.co-grand strong { color: #ffb400; font-size: 1.1rem; }
-
-.co-submit { padding: 10px 24px; }
-.co-submit:disabled { opacity: .6; cursor: not-allowed; }
-
-/* Success screen */
-.co-success {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 32px;
-  text-align: center;
-  gap: 12px;
-}
-
-.co-success-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(72,199,142,.2);
-  border: 2px solid #48c78e;
-  display: grid;
-  place-items: center;
-  font-size: 1.8rem;
-  color: #48c78e;
-}
-
-.co-success h2  { margin: 0; font-size: 1.3rem; }
-.co-success p   { margin: 0; color: #ccc; }
-.co-success-sub { font-size: .85rem; color: #888 !important; }
-.co-close-btn   { margin-top: 12px; padding: 10px 32px; border-radius: 12px; }
-</style>
+<!-- Không còn CSS scoped — toàn bộ dùng Bootstrap utility classes + inline style tối thiểu -->
