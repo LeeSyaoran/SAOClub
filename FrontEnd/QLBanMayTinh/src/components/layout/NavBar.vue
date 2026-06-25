@@ -6,6 +6,7 @@
   ======================================================== -->
 
   <!-- Topbar: dải thông báo nhỏ chạy ở trên cùng -->
+
   <div style="background:#111; border-bottom:1px solid #2a2a2a;">
     <div class="container-xl d-flex justify-content-between align-items-center py-1 overflow-hidden">
       <!-- Tên thương hiệu bên trái -->
@@ -126,13 +127,13 @@
           class="form-control form-control-sm"
           style="background:#1f1f1f; border-color:#3f3f3f; color:#e5e7eb; border-radius:12px 0 0 12px; font-size:12px; font-weight:600;"
           placeholder="Nhập tên laptop, hãng hoặc nhu cầu cần tìm...?"
-          @keyup.enter="$emit('search', searchValue)"
+          @keyup.enter="emit('search', searchValue)"
         />
         <!-- Nút kính lúp trigger tìm kiếm -->
         <button
           class="btn btn-sm"
           style="background:#1f1f1f; border-color:#3f3f3f; border-left:none; color:#9ca3af; border-radius:0 12px 12px 0;"
-          @click="$emit('search', searchValue)">
+          @click="emit('search', searchValue)">
           🔎
         </button>
       </div>
@@ -149,7 +150,7 @@
         <!-- Nút giỏ hàng: phát ra sự kiện toggle-cart khi click -->
         <button class="btn btn-sm d-flex align-items-center gap-1 fw-bold"
                 style="background:#1f1f1f; border:1px solid #3f3f3f; border-radius:12px; color:#e5e7eb; font-size:12px; white-space:nowrap;"
-                @click="$emit('toggle-cart')">
+                @click="emit('toggle-cart')">
           🛒 Giỏ hàng
           <!-- Badge hiển thị số lượng sản phẩm trong giỏ -->
           <span class="badge text-dark fw-black"
@@ -159,18 +160,58 @@
         </button>
 
         <!-- Nút đăng nhập: phát ra sự kiện open-admin -->
-        <button class="btn btn-sm fw-black"
-                style="background:#facc15; color:#111; border:none; border-radius:12px; font-size:12px; white-space:nowrap;"
-                @click="$emit('open-admin')">
-          👤 Đăng nhập
+        <button
+            class="btn btn-warning"
+            @click="openLogin"
+        >
+          Đăng nhập
         </button>
       </div>
 
     </div><!-- /container-xl -->
   </header>
+  <LoginForm
+      v-if="showLogin"
+      @submit="handleLogin"
+      @close="showLogin=false"
+      @open-register="openRegister"
+  />
+
+  <RegisterForm
+      v-if="showRegister"
+      @close="showRegister = false"
+      @open-login="openLogin"
+  />
 </template>
 
 <script setup>
+
+import LoginForm from "../auth/LoginForm.vue";
+import RegisterForm from "../auth/RegisterForm.vue";
+
+const showLogin = ref(false);
+const showRegister = ref(false);
+
+const openLogin = () => {
+  showRegister.value = false;
+  showLogin.value = true;
+};
+
+const openRegister = () => {
+  showLogin.value = false;
+  showRegister.value = true;
+};
+const handleLogin = (data) => {
+  console.log(data);
+  // Gọi API login ở đây
+}
+const emit = defineEmits([
+  "toggle-cart",
+  "search",
+  "open-admin",
+  "open-login"
+]);
+
 // ── Import ──────────────────────────────────────────────────
 import { ref } from 'vue';
 
@@ -180,7 +221,7 @@ defineProps({
 });
 
 // Khai báo các sự kiện có thể emit lên component cha
-defineEmits(['toggle-cart', 'open-admin', 'search']);
+
 
 // Trạng thái mở/đóng menu danh mục
 const isMenuOpen = ref(false);

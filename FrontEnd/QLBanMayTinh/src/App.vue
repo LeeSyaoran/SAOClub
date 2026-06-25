@@ -1,4 +1,5 @@
 <script setup>
+import LoginForm from "./components/auth/LoginForm.vue";
 // ── Import các thư viện Vue 3 cần thiết ──────────────────────────────────────
 import { ref, computed, reactive, onMounted, onBeforeUnmount } from "vue";
 
@@ -46,6 +47,15 @@ const advFilter     = reactive({ brands: [], priceMin: null, priceMax: null, cat
 const apiCats = ref([]);
 const fetchApiCats = async () => {
   apiCats.value = await DanhMucService.getAll().catch(() => []);
+};
+const showLogin = ref(false);
+
+const openLogin = () => {
+  showLogin.value = true;
+};
+
+const closeLogin = () => {
+  showLogin.value = false;
 };
 
 // Danh sách thương hiệu duy nhất từ data sản phẩm đã load
@@ -468,10 +478,11 @@ onBeforeUnmount(() => {
 
       <!-- Header / NavBar — nhận cartCount và xử lý các sự kiện -->
       <NavBar
-        :cart-count="cartCount"
-        @toggle-cart="toggleCart"
-        @search="handleSearch"
-        @open-admin="goAdmin"
+          :cart-count="cartCount"
+          @toggle-cart="toggleCart"
+          @search="handleSearch"
+          @open-admin="goAdmin"
+          @open-login="openLogin"
       />
 
       <!-- Dải ticker chạy ngang (thông báo khuyến mãi) -->
@@ -1041,8 +1052,25 @@ onBeforeUnmount(() => {
       @open-product="openProduct"
     />
   </Transition>
+  <div
+      v-if="showLogin"
+      class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+      style="background:rgba(0,0,0,.7);z-index:9999"
+      @click.self="closeLogin"
+  >
 
+    <div
+        class="bg-white rounded-4 p-4"
+        style="width:450px;max-width:95%"
+    >
+
+      <LoginForm />
+
+    </div>
+
+  </div>
 </template>
+
 
 <style>
 .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.28s ease, opacity 0.2s ease; }

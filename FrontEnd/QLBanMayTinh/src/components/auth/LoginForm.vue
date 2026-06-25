@@ -44,8 +44,11 @@
     <!-- Chuyển sang đăng ký -->
     <div class="text-center mt-4 pt-3 border-top border-secondary small text-secondary">
       Chưa có tài khoản?
-      <button class="btn btn-link btn-sm text-warning fw-bold p-0 text-decoration-none"
-              @click="$emit('register-click')">
+      <button
+          type="button"
+          class="btn btn-link btn-sm text-warning fw-bold p-0 text-decoration-none"
+          @click="emit('open-register')"
+      >
         Đăng ký ngay
       </button>
     </div>
@@ -56,11 +59,15 @@
 import { reactive, ref } from 'vue';
 
 // Emit: submit (trả về { username, password }), register-click (chuyển tab đăng ký)
-const emit = defineEmits(['submit', 'register-click']);
+const emit = defineEmits([
+  "submit",
+  "login-success",
+  "close",
+  "open-register"
+]);
 
 const form = reactive({ username: '', password: '' });
 const error = ref('');
-
 const handleSubmit = () => {
   error.value = '';
   if (!form.username || !form.password) {
