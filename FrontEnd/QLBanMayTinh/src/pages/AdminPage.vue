@@ -5,9 +5,10 @@ import * as KhachHangService from "../Service/KhachHangService.js";
 import * as NhanVienService  from "../Service/NhanVienService.js";
 import * as DonHangService   from "../Service/DonHangService.js";
 import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
-import * as TonKhoService    from "../Service/TonKhoService.js";
-import * as DanhMucService   from "../Service/DanhMucService.js";
-import * as DmService        from "../Service/DmService.js";
+import * as TonKhoService          from "../Service/TonKhoService.js";
+import * as DanhMucService         from "../Service/DanhMucService.js";
+import * as DmService              from "../Service/DmService.js";
+import * as ChiTietSanPhamService  from "../Service/ChiTietSanPhamService.js";
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentRole = ref("admin");
@@ -172,10 +173,111 @@ const fetchAll = async () => {
   loading.value = false;
 };
 
+// ── Products: gộp theo sanPhamId cho bảng ─────────────────────────────────────
+const groupedProducts = computed(() => {
+  const map = new Map();
+  products.value.forEach(p => {
+    if (!map.has(p.sanPhamId)) {
+      map.set(p.sanPhamId, { ...p, variantCount: 1, minPrice: Number(p.giaBan) });
+    } else {
+      const ex = map.get(p.sanPhamId);
+      ex.variantCount++;
+      if (Number(p.giaBan) < ex.minPrice) ex.minPrice = Number(p.giaBan);
+    }
+  });
+  return [...map.values()];
+});
+
+// ── Variant detail modal ───────────────────────────────────────────────────────
+const showVariantModal   = ref(false);
+const variantModalName   = ref('');
+const variantModalList   = ref([]);
+const variantSerialMap   = ref({});   // bienTheId → serial[]
+const variantSerialLoad  = ref(false);
+const serialInputs       = ref({});   // bienTheId → { soSerial, soImei, saving }
+
+const showDetailModal  = ref(false);
+const detailModalName  = ref('');
+const detailModalList  = ref([]);
+const detailSerialMap  = ref({});  // bienTheId → serial[]
+
+const openDetail = async (sanPhamId, name) => {
+  detailModalName.value = name;
+  detailModalList.value = products.value.filter(p => p.sanPhamId === sanPhamId);
+  detailSerialMap.value = {};
+  showDetailModal.value = true;
+  try {
+    const allSerials = await ChiTietSanPhamService.getAll().catch(() => []);
+    const map = {};
+    allSerials.forEach(s => {
+      if (!map[s.bienTheId]) map[s.bienTheId] = [];
+      map[s.bienTheId].push(s);
+    });
+    detailSerialMap.value = map;
+  } catch { /* giữ nguyên {} nếu lỗi */ }
+};
+
+const openVariants = async (sanPhamId, name) => {
+  variantModalName.value = name;
+  const list = products.value.filter(p => p.sanPhamId === sanPhamId);
+  variantModalList.value = list;
+  variantSerialMap.value = {};
+  const inputs = {};
+  list.forEach(v => { inputs[v.bienTheId] = { soSerial: '', soImei: '', saving: false }; });
+  serialInputs.value = inputs;
+  showVariantModal.value = true;
+
+  variantSerialLoad.value = true;
+  try {
+    const allSerials = await ChiTietSanPhamService.getAll().catch(() => []);
+    const map = {};
+    allSerials.forEach(s => {
+      if (!map[s.bienTheId]) map[s.bienTheId] = [];
+      map[s.bienTheId].push(s);
+    });
+    variantSerialMap.value = map;
+  } finally {
+    variantSerialLoad.value = false;
+  }
+};
+
+const addSerial = async (bienTheId) => {
+  const inp = serialInputs.value[bienTheId];
+  if (!inp?.soSerial?.trim()) return;
+  inp.saving = true;
+  try {
+    const res = await ChiTietSanPhamService.create({
+      bienTheId,
+      soSerial: inp.soSerial.trim(),
+      soImei: inp.soImei?.trim() || null,
+      trangThai: 'trong_kho',
+      ngayNhapKho: new Date().toISOString().slice(0, 19),
+    });
+    if (!res.ok) throw new Error('Lỗi thêm serial');
+    const allSerials = await ChiTietSanPhamService.getAll().catch(() => []);
+    const map = {};
+    allSerials.forEach(s => {
+      if (!map[s.bienTheId]) map[s.bienTheId] = [];
+      map[s.bienTheId].push(s);
+    });
+    variantSerialMap.value = map;
+    inp.soSerial = '';
+    inp.soImei = '';
+  } finally {
+    inp.saving = false;
+  }
+};
+
 // ── Products CRUD ─────────────────────────────────────────────────────────────
 const showProductModal = ref(false);
 const editingId = ref(null);
 const formError = ref("");
+
+// Serial number cho lần tạo mới
+const soSerialMoi = ref('');
+// Preview ảnh + file thực tế chờ upload
+const imagePreview  = ref('');
+const imageFilePending = ref(null);
 
 const emptyForm = () => ({
   bienTheId: null,
@@ -205,10 +307,17 @@ const emptyForm = () => ({
 });
 const form = reactive(emptyForm());
 
+const resetImageState = () => {
+  imagePreview.value = '';
+  imageFilePending.value = null;
+};
+
 const openAdd = () => {
   Object.assign(form, emptyForm());
   editingId.value = null;
   formError.value = "";
+  soSerialMoi.value = '';
+  resetImageState();
   showProductModal.value = true;
 };
 const openEdit = (p) => {
@@ -241,10 +350,40 @@ const openEdit = (p) => {
   });
   editingId.value = p.sanPhamId;
   formError.value = "";
+  imagePreview.value = p.hinhAnhChinh || '';
+  imageFilePending.value = null;
   showProductModal.value = true;
 };
+
+const handleImageFile = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  imageFilePending.value = file;
+  imagePreview.value = URL.createObjectURL(file);
+};
+
 const saveProduct = async () => {
   formError.value = "";
+
+  // Upload ảnh trước nếu có file mới chọn
+  if (imageFilePending.value) {
+    const fd = new FormData();
+    fd.append('file', imageFilePending.value);
+    try {
+      const upRes = await fetch('/api/upload/image', { method: 'POST', body: fd });
+      if (upRes.ok) {
+        const upData = await upRes.json();
+        form.hinhAnhChinh = upData.url;
+      } else {
+        formError.value = `Upload anh that bai: ${upRes.status}`;
+        return;
+      }
+    } catch (e) {
+      formError.value = `Upload anh loi: ${e.message}`;
+      return;
+    }
+  }
+
   const body = {
     ...form,
     thuongHieuId: Number(form.thuongHieuId),
@@ -266,7 +405,23 @@ const saveProduct = async () => {
       formError.value = `Loi: ${res.status} ${await res.text()}`;
       return;
     }
+
+    // Nếu tạo mới + có serial → tìm bienTheId vừa tạo rồi POST chi_tiet
+    if (!editingId.value && soSerialMoi.value.trim()) {
+      const newList = await SanPhamService.getAll().catch(() => []);
+      const newVariant = [...newList].reverse().find(p => p.maSku === form.maSku);
+      if (newVariant) {
+        await ChiTietSanPhamService.create({
+          bienTheId: newVariant.bienTheId,
+          soSerial: soSerialMoi.value.trim(),
+          trangThai: 'trong_kho',
+          ngayNhapKho: new Date().toISOString().slice(0, 19),
+        }).catch(() => {});
+      }
+    }
+
     showProductModal.value = false;
+    resetImageState();
     products.value = await SanPhamService.getAll().catch(() => []);
   } catch (e) {
     formError.value = e.message;
@@ -882,23 +1037,29 @@ onMounted(fetchAll);
           <div v-if="loading" class="text-secondary small">Dang tai...</div>
           <div v-else class="table-responsive">
             <table class="table table-dark table-hover table-sm align-middle">
-              <thead><tr><th>Ten san pham</th><th>SKU</th><th>Thuong hieu</th><th>Danh muc</th><th>Gia ban</th><th>Trang thai</th><th>Thao tac</th></tr></thead>
+              <thead><tr>
+                <th>Ten san pham</th><th>Thuong hieu</th><th>Danh muc</th>
+                <th>Bien the</th><th>Gia tu</th><th>Trang thai</th><th>Thao tac</th>
+              </tr></thead>
               <tbody>
-                <tr v-for="p in products" :key="p.sanPhamId">
+                <tr v-for="p in groupedProducts" :key="p.sanPhamId">
                   <td>{{ p.tenSanPham }}</td>
-                  <td class="text-secondary">{{ p.maSku }}</td>
                   <td>{{ p.tenThuongHieu }}</td>
                   <td>{{ p.tenDanhMuc }}</td>
-                  <td>{{ formatPrice(p.giaBan) }}</td>
+                  <td class="text-center">
+                    <span class="badge bg-secondary">{{ p.variantCount }}</span>
+                  </td>
+                  <td>{{ formatPrice(p.minPrice) }}</td>
                   <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(p.trangThai) }}</span></td>
                   <td>
                     <div class="d-flex gap-1">
+                      <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem; padding:2px 8px;" @click="openDetail(p.sanPhamId, p.tenSanPham)">Chi tiet</button>
                       <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEdit(p)">Sua</button>
                       <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteProduct(p.sanPhamId)">Xoa</button>
                     </div>
                   </td>
                 </tr>
-                <tr v-if="products.length===0"><td colspan="7" class="text-center text-secondary">Chua co san pham</td></tr>
+                <tr v-if="groupedProducts.length===0"><td colspan="7" class="text-center text-secondary">Chua co san pham</td></tr>
               </tbody>
             </table>
           </div>
@@ -1251,12 +1412,35 @@ onMounted(fetchAll);
           <div class="col-6"><label class="form-label small text-secondary">Gia ban (VND) *</label><input v-model="form.giaBan" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
           <div class="col-6"><label class="form-label small text-secondary">Gia nhap (VND) *</label><input v-model="form.giaNhap" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
           <div class="col-6"><label class="form-label small text-secondary">Bao hanh (thang) *</label><input v-model="form.baoHanhThang" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Hinh anh chinh (URL)</label><input v-model="form.hinhAnhChinh" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="https://..." /></div>
+          <!-- Hinh anh: file picker -->
+          <div class="col-12">
+            <label class="form-label small text-secondary">Hinh anh chinh</label>
+            <div class="d-flex align-items-start gap-3">
+              <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:120px;height:100px;cursor:pointer;flex-shrink:0;overflow:hidden;background:#111;">
+                <img v-if="imagePreview" :src="imagePreview" style="width:120px;height:100px;object-fit:contain;" />
+                <template v-else>
+                  <span style="font-size:1.5rem;">&#128247;</span>
+                  <span style="font-size:0.72rem;margin-top:4px;">Click de chon</span>
+                </template>
+                <input type="file" accept="image/*" class="d-none" @change="handleImageFile" />
+              </label>
+              <div class="flex-grow-1">
+                <div v-if="imageFilePending" class="text-warning" style="font-size:0.75rem;">
+                  Da chon: {{ imageFilePending.name }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Serial number (chi hien khi them moi) -->
+          <div v-if="!editingId" class="col-12">
+            <label class="form-label small text-secondary">So Serial <span class="text-danger">*</span></label>
+            <input v-model="soSerialMoi" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="VD: SN2024DELL001" />
+            <div class="text-secondary mt-1" style="font-size:0.72rem;">Bat buoc khi them san pham moi (dung de quan ly kho)</div>
+          </div>
           <div class="col-12"><label class="form-label small text-secondary">Mo ta</label><textarea v-model="form.moTa" rows="3" class="form-control form-control-sm bg-dark text-light border-secondary"></textarea></div>
           <div class="col-12">
             <label class="form-label small text-secondary">Phan loai Tags <span class="text-warning">(dùng để lọc)</span></label>
             <input v-model="form.phanLoaiTags" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="gaming,do_hoa  |  van_phong,sinh_vien  |  macbook,apple" />
-            <div class="text-secondary mt-1" style="font-size:10px;">Các tag cách nhau bằng dấu phẩy. Tags hợp lệ: gaming · do_hoa · ky_thuat · van_phong · sinh_vien · macbook · apple · cu · gia_re · linh_kien · ram · ssd</div>
           </div>
           <div class="col-12">
             <label class="form-label small text-secondary">Phan loai Ten <span class="text-muted">(tên hiển thị)</span></label>
@@ -1267,6 +1451,191 @@ onMounted(fetchAll);
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
         <button class="btn btn-sm btn-outline-secondary" @click="showProductModal=false">Huy</button>
         <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveProduct">{{ editingId?'Cap nhat':'Them moi' }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL BIEN THE SAN PHAM ══ -->
+  <div v-if="showVariantModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.72);z-index:1050;" @click.self="showVariantModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.12);width:960px;max-width:96vw;max-height:90vh;">
+      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+        <span>Bien the: {{ variantModalName }}</span>
+        <button class="btn-close btn-close-white btn-sm" @click="showVariantModal=false"></button>
+      </div>
+      <div class="overflow-y-auto p-3">
+        <!-- moi bien the la 1 card -->
+        <div v-for="v in variantModalList" :key="v.bienTheId" class="mb-3 rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
+          <!-- header bien the -->
+          <div class="d-flex align-items-center gap-3 px-3 py-2 justify-content-between" style="background:#222;">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+              <span class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</span>
+              <span class="badge rounded-pill" style="font-size:0.72rem;background:#333;color:#eee;">{{ v.mauSac }}</span>
+              <span class="text-light" style="font-size:0.82rem;">{{ v.cpu }} · {{ v.ram }} · {{ v.oCung }}</span>
+              <span class="text-secondary" style="font-size:0.8rem;">{{ v.kichThuocManHinh }}</span>
+              <span class="fw-bold text-warning" style="font-size:0.88rem;">{{ formatPrice(v.giaBan) }}</span>
+              <span class="badge" :class="v.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.7rem;">{{ statusLabel(v.trangThai) }}</span>
+            </div>
+            <button class="btn btn-sm btn-outline-warning flex-shrink-0" style="font-size:0.75rem;padding:2px 8px;" @click="showVariantModal=false; openEdit(v)">Sua</button>
+          </div>
+
+          <!-- bang serial -->
+          <div style="background:#161616;">
+            <div class="px-3 py-1" style="font-size:0.68rem;font-weight:700;letter-spacing:0.07em;color:#60a5fa;text-transform:uppercase;border-bottom:1px solid #222;">
+              So Serial
+            </div>
+            <div v-if="variantSerialLoad" class="px-3 py-2 text-secondary small">Dang tai...</div>
+            <div v-else-if="!variantSerialMap[v.bienTheId] || variantSerialMap[v.bienTheId].length === 0"
+                 class="px-3 py-2 text-secondary" style="font-size:0.78rem;">
+              Chua co serial nao
+            </div>
+            <table v-else class="w-100 mb-0" style="border-collapse:collapse;">
+              <thead>
+                <tr style="background:#1a1a1a;">
+                  <th class="px-3 py-1 text-secondary" style="font-size:0.7rem;font-weight:600;width:30%;">So Serial</th>
+                  <th class="px-3 py-1 text-secondary" style="font-size:0.7rem;font-weight:600;width:25%;">IMEI</th>
+                  <th class="px-3 py-1 text-secondary" style="font-size:0.7rem;font-weight:600;width:20%;">Trang thai</th>
+                  <th class="px-3 py-1 text-secondary" style="font-size:0.7rem;font-weight:600;width:25%;">Ngay nhap kho</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in variantSerialMap[v.bienTheId]" :key="s.chiTietId" style="border-top:1px solid #222;">
+                  <td class="px-3 py-1 text-light fw-semibold" style="font-size:0.8rem;font-family:monospace;">{{ s.soSerial }}</td>
+                  <td class="px-3 py-1 text-secondary" style="font-size:0.78rem;font-family:monospace;">{{ s.soImei || '—' }}</td>
+                  <td class="px-3 py-1">
+                    <span class="badge" style="font-size:0.68rem;"
+                      :style="s.trangThai==='trong_kho'?'background:#166534;color:#bbf7d0;':s.trangThai==='da_ban'?'background:#7f1d1d;color:#fecaca;':'background:#374151;color:#d1d5db;'">
+                      {{ s.trangThai==='trong_kho'?'Trong kho':s.trangThai==='da_ban'?'Da ban':s.trangThai||'—' }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-1 text-secondary" style="font-size:0.75rem;">
+                    {{ s.ngayNhapKho ? new Date(s.ngayNhapKho).toLocaleDateString('vi-VN') : '—' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!-- Form them serial moi -->
+            <div class="d-flex gap-2 px-3 py-2" style="border-top:1px solid #222;background:#131313;">
+              <input
+                v-if="serialInputs[v.bienTheId]"
+                v-model="serialInputs[v.bienTheId].soSerial"
+                class="form-control form-control-sm bg-dark text-light border-secondary"
+                style="font-family:monospace;font-size:0.78rem;max-width:200px;"
+                placeholder="So Serial..."
+                @keyup.enter="addSerial(v.bienTheId)"
+              />
+              <input
+                v-if="serialInputs[v.bienTheId]"
+                v-model="serialInputs[v.bienTheId].soImei"
+                class="form-control form-control-sm bg-dark text-light border-secondary"
+                style="font-family:monospace;font-size:0.78rem;max-width:180px;"
+                placeholder="IMEI (tuy chon)"
+              />
+              <button
+                class="btn btn-sm btn-outline-success flex-shrink-0"
+                style="font-size:0.78rem;"
+                :disabled="serialInputs[v.bienTheId]?.saving || !serialInputs[v.bienTheId]?.soSerial?.trim()"
+                @click="addSerial(v.bienTheId)"
+              >+ Them serial</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CHI TIET SAN PHAM ══ -->
+  <div v-if="showDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.75);z-index:1060;" @click.self="showDetailModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.12);width:1100px;max-width:97vw;max-height:92vh;">
+      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+        <span>Chi tiet: {{ detailModalName }}</span>
+        <button class="btn-close btn-close-white btn-sm" @click="showDetailModal=false"></button>
+      </div>
+      <div class="overflow-y-auto p-3">
+        <div v-for="v in detailModalList" :key="v.bienTheId" class="mb-4 rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
+          <!-- Header bien the -->
+          <div class="d-flex align-items-center gap-3 p-3" style="background:#222;">
+            <img v-if="v.hinhAnhChinh" :src="v.hinhAnhChinh" style="width:72px;height:54px;object-fit:contain;background:#111;border-radius:6px;padding:4px;" />
+            <span v-else style="font-size:2rem;width:72px;text-align:center;">💻</span>
+            <div>
+              <div class="fw-bold text-light" style="font-size:0.95rem;">{{ v.tenSanPham }}</div>
+              <div class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</div>
+            </div>
+          </div>
+          <!-- Bang thong tin 4 cot (label | value | label | value) -->
+          <table class="w-100 mb-0" style="border-collapse:collapse;font-size:0.8rem;">
+            <tbody>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Thuong hieu</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.tenThuongHieu }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Danh muc</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.tenDanhMuc }}</td>
+              </tr>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Nha cung cap</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.tenNhaCungCap }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Loai san pham</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.loaiSanPham }}</td>
+              </tr>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Gia ban</td>
+                <td class="px-3 py-1 fw-bold" style="background:#1a1a1a;color:#facc15;">{{ formatPrice(v.giaBan) }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Gia nhap</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ formatPrice(v.giaNhap) }}</td>
+              </tr>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Bao hanh</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.baoHanhThang ? v.baoHanhThang + ' thang' : '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Mau sac</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.mauSac }}</td>
+              </tr>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Trang thai</td>
+                <td class="px-3 py-1" style="background:#1a1a1a;">
+                  <span class="badge" :class="v.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.7rem;">{{ statusLabel(v.trangThai) }}</span>
+                </td>
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">CPU</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.cpu || '—' }}</td>
+              </tr>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">RAM</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.ram || '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">O cung</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.oCung || '—' }}</td>
+              </tr>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">GPU</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.gpu || '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Man hinh</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.kichThuocManHinh || '—' }}</td>
+              </tr>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">He dieu hanh</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.heDieuHanh || '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Pin</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.pin || '—' }}</td>
+              </tr>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Trong luong</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.trongLuongKg ? v.trongLuongKg + ' kg' : '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Phan loai</td>
+                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.phanLoaiTen || '—' }}</td>
+              </tr>
+              <tr style="border-top:1px solid #222;">
+                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">So serial</td>
+                <td class="px-3 py-1" style="background:#1a1a1a;" colspan="3">
+                  <span v-if="!detailSerialMap[v.bienTheId] || detailSerialMap[v.bienTheId].length === 0" class="text-secondary">Chua co serial</span>
+                  <span v-else class="d-flex flex-wrap gap-1">
+                    <span v-for="s in detailSerialMap[v.bienTheId]" :key="s.chiTietId"
+                          class="badge"
+                          :style="s.trangThai==='trong_kho'?'background:#166534;color:#bbf7d0;font-family:monospace;font-size:0.72rem;':s.trangThai==='da_ban'?'background:#7f1d1d;color:#fecaca;font-family:monospace;font-size:0.72rem;':'background:#374151;color:#d1d5db;font-family:monospace;font-size:0.72rem;'">
+                      {{ s.soSerial }}
+                    </span>
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

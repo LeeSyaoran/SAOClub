@@ -20,6 +20,7 @@ public class DonHang {
     @Column(name = "don_hang_id")
     private Integer id;
 
+    // Sinh tự động bởi trigger DB (format: DH-YYYYMMDD-XXXX) → chỉ đọc, không ghi qua JPA
     @Column(name = "ma_don_hang", length = 30, insertable = false, updatable = false)
     private String maDonHang;
 
@@ -57,7 +58,8 @@ public class DonHang {
     @Column(name = "phi_van_chuyen", precision = 18, scale = 2)
     private BigDecimal phiVanChuyen;
 
-    @Column(name = "thanh_tien", precision = 18, scale = 2)
+    // Computed column trong DB: tong_tien - giam_gia + phi_van_chuyen → chỉ đọc
+    @Column(name = "thanh_tien", precision = 18, scale = 2, insertable = false, updatable = false)
     private BigDecimal thanhTien;
 
     @Column(name = "ngay_dat")
@@ -69,12 +71,15 @@ public class DonHang {
     @Column(name = "ngay_giao_thuc_te")
     private LocalDateTime ngayGiaoThucTe;
 
+    // Giá trị: "pending" | "processing" | "shipping" | "delivered" | "cancelled"
     @Column(name = "trang_thai_don_hang", length = 30)
     private String trangThaiDonHang;
 
+    // Giá trị: "chua_thanh_toan" | "da_thanh_toan" | "hoan_tien"
     @Column(name = "trang_thai_thanh_toan", length = 30)
     private String trangThaiThanhToan;
 
+    // Giá trị: "online" | "offline" (POS tại quầy)
     @Column(name = "kenh_ban", length = 50)
     private String kenhBan;
 

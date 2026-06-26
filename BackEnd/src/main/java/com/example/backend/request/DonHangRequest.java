@@ -44,7 +44,7 @@ public class DonHangRequest {
     @PositiveOrZero(message = "Phí vận chuyển phải lớn hơn hoặc bằng 0")
     private BigDecimal phiVanChuyen;
 
-    @NotNull(message = "Thành tiền không được để trống")
+    // thanhTien là computed column trong DB (tong_tien - giam_gia + phi_van_chuyen) — không validate, không INSERT
     @PositiveOrZero(message = "Thành tiền phải lớn hơn hoặc bằng 0")
     private BigDecimal thanhTien;
 

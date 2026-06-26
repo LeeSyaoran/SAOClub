@@ -11,6 +11,9 @@ import java.util.List;
 @Repository
 public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
 
+    // Trả về 1 dòng/biến thể, gộp đủ thông tin sản phẩm + biến thể vào SanPhamResponse.
+    // Dùng LEFT JOIN toàn bộ để sản phẩm thiếu danh mục / thương hiệu vẫn hiển thị.
+    // Kết quả mới nhất lên đầu (ORDER BY ngayTao DESC).
     @Query("""
     SELECT new com.example.backend.response.SanPhamResponse(
         sp.sanPhamId,
