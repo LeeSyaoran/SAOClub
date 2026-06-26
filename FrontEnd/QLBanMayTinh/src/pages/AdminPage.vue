@@ -21,9 +21,9 @@ const switchRole = (role) => {
 };
 const PAGE_META = {
   dashboard: { title: "Dashboard", sub: "Tong quan he thong" },
-  products: { title: "San pham", sub: "Quan ly danh sach san pham" },
-  orders: { title: "Don hang", sub: "Quan ly don hang" },
-  customers: { title: "Khach hang", sub: "Quan ly khach hang" },
+  products: { title: "Sản phẩm", sub: "Quan ly danh sach san pham" },
+  orders: { title: "Đơn hàng", sub: "Quan ly don hang" },
+  customers: { title: "Khách hàng", sub: "Quan ly khach hang" },
   inventory: { title: "Kho hang", sub: "Quan ly ton kho" },
   promotions: { title: "Khuyen mai", sub: "Quan ly chuong trinh khuyen mai" },
   staff: { title: "Nhan vien", sub: "Quan ly nhan vien" },

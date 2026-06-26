@@ -160,51 +160,41 @@
         </button>
 
         <!-- Nút đăng nhập: phát ra sự kiện open-admin -->
-        <button
-            class="btn btn-warning"
-            @click="openLogin"
-        >
-          Đăng nhập
-        </button>
+        <template v-if="!user">
+          <button
+              class="btn btn-warning"
+              @click="emit('open-login')">
+            Đăng nhập
+          </button>
+        </template>
+        <template v-else>
+          <div class="dropdown">
+            <button
+                class="btn btn-warning dropdown-toggle"
+                data-bs-toggle="dropdown">
+              Xin chào {{ user.hoTen }}
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <button
+                    class="dropdown-item"
+                    @click="logout">
+                  Đăng xuất
+                </button>
+              </li>
+            </ul>
+          </div>
+        </template>
       </div>
 
     </div><!-- /container-xl -->
   </header>
-  <LoginForm
-      v-if="showLogin"
-      @submit="handleLogin"
-      @close="showLogin=false"
-      @open-register="openRegister"
-  />
 
-  <RegisterForm
-      v-if="showRegister"
-      @close="showRegister = false"
-      @open-login="openLogin"
-  />
 </template>
 
 <script setup>
 
-import LoginForm from "../auth/LoginForm.vue";
-import RegisterForm from "../auth/RegisterForm.vue";
-
-const showLogin = ref(false);
-const showRegister = ref(false);
-
-const openLogin = () => {
-  showRegister.value = false;
-  showLogin.value = true;
-};
-
-const openRegister = () => {
-  showLogin.value = false;
-  showRegister.value = true;
-};
-const handleLogin = (data) => {
-  console.log(data);
   // Gọi API login ở đây
-}
 const emit = defineEmits([
   "toggle-cart",
   "search",
@@ -214,6 +204,9 @@ const emit = defineEmits([
 
 // ── Import ──────────────────────────────────────────────────
 import { ref } from 'vue';
+  const user = ref(
+      JSON.parse(localStorage.getItem("user"))
+  );
 
 // Nhận prop cartCount từ App.vue
 defineProps({
@@ -226,6 +219,11 @@ defineProps({
 // Trạng thái mở/đóng menu danh mục
 const isMenuOpen = ref(false);
 
+  const logout = () => {
+    localStorage.removeItem("user");
+    user.value = null;
+    location.reload();
+  }
 // Danh mục đang được hover trong mega menu
 const activeCategory = ref('all-laptop');
 

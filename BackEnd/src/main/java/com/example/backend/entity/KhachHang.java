@@ -28,6 +28,12 @@ public class KhachHang {
     @Column(name = "email", length = 100)
     private String email;
 
+    @Column(name = "username", length = 50, unique = true)
+    private String username;
+
+    @Column(name = "mat_khau", length = 255)
+    private String matKhau;
+
     @Column(name = "dia_chi", length = 255)
     private String diaChi;
 

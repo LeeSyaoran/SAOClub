@@ -1,11 +1,8 @@
 <template>
-
   <div class="register-overlay">
-
     <div class="register-card">
 
-      <!-- Đóng -->
-
+      <!-- Nút đóng -->
       <button
           class="close-btn"
           @click="emit('close')"
@@ -14,356 +11,202 @@
       </button>
 
       <!-- Logo -->
-
       <div class="logo">
-
         SAO<span>PHONE</span>
-
       </div>
 
-      <h2>
-
-        Đăng ký tài khoản
-
-      </h2>
+      <h2>Đăng ký tài khoản</h2>
 
       <p class="sub-title">
-
-        Đăng ký thành viên để nhận nhiều ưu đãi, tích điểm và khuyến mãi.
-
+        Tạo tài khoản để mua sắm, theo dõi đơn hàng và nhận nhiều ưu đãi hấp dẫn.
       </p>
 
+      <!-- Form -->
       <form
           class="register-form"
-          @submit.prevent="register"
+          @submit.prevent="registerUser"
       >
 
         <!-- Họ tên -->
-
         <div class="form-item">
-
-          <label>
-
-            Họ và tên
-
-          </label>
+          <label>Họ và tên</label>
 
           <div class="input-box">
-
-                    <span class="icon">
-
-                        👤
-
-                    </span>
+            <span class="icon">👤</span>
 
             <input
-
                 v-model="form.hoTen"
-
-                placeholder="Nhập họ và tên"
-
                 type="text"
-
-            >
-
+                placeholder="Nhập họ và tên"
+            />
           </div>
-
         </div>
 
-        <!-- Điện thoại -->
-
+        <!-- SĐT -->
         <div class="form-item">
-
-          <label>
-
-            Số điện thoại
-
-          </label>
+          <label>Số điện thoại</label>
 
           <div class="input-box">
-
-                    <span class="icon">
-
-                        📱
-
-                    </span>
+            <span class="icon">📱</span>
 
             <input
-
                 v-model="form.soDienThoai"
-
-                placeholder="Nhập số điện thoại"
-
                 type="text"
-
-            >
-
+                placeholder="Nhập số điện thoại"
+            />
           </div>
-
         </div>
 
         <!-- Email -->
-
         <div class="form-item">
-
-          <label>
-
-            Email
-
-          </label>
+          <label>Email</label>
 
           <div class="input-box">
-
-                    <span class="icon">
-
-                        ✉
-
-                    </span>
+            <span class="icon">✉️</span>
 
             <input
-
                 v-model="form.email"
-
-                placeholder="example@gmail.com"
-
                 type="email"
-
-            >
-
+                placeholder="example@gmail.com"
+            />
           </div>
-
         </div>
 
         <!-- Username -->
-
         <div class="form-item">
-
-          <label>
-
-            Tên đăng nhập
-
-          </label>
+          <label>Tên đăng nhập</label>
 
           <div class="input-box">
-
-                    <span class="icon">
-
-                        👨
-
-                    </span>
+            <span class="icon">👨</span>
 
             <input
-
                 v-model="form.username"
-
-                placeholder="Tên đăng nhập"
-
                 type="text"
-
-            >
-
+                placeholder="Nhập tên đăng nhập"
+            />
           </div>
-
         </div>
 
         <!-- Password -->
-
         <div class="form-item">
-
-          <label>
-
-            Mật khẩu
-
-          </label>
+          <label>Mật khẩu</label>
 
           <div class="input-box">
-
-                    <span class="icon">
-
-                        🔒
-
-                    </span>
+            <span class="icon">🔒</span>
 
             <input
-
-                :type="showPassword ? 'text':'password'"
-
+                :type="showPassword ? 'text' : 'password'"
                 v-model="form.password"
-
-                placeholder="********"
-
-            >
+                placeholder="Nhập mật khẩu"
+            />
 
             <span
-
                 class="eye"
-
-                @click="showPassword=!showPassword"
-
+                @click="showPassword = !showPassword"
             >
-
-                        {{showPassword ? "🙈":"👁"}}
-
-                    </span>
-
+              {{ showPassword ? "🙈" : "👁" }}
+            </span>
           </div>
-
         </div>
 
         <!-- Confirm -->
-
         <div class="form-item">
-
-          <label>
-
-            Xác nhận mật khẩu
-
-          </label>
+          <label>Xác nhận mật khẩu</label>
 
           <div class="input-box">
-
-                    <span class="icon">
-
-                        🔒
-
-                    </span>
+            <span class="icon">🔒</span>
 
             <input
-
-                :type="showConfirm ? 'text':'password'"
-
+                :type="showConfirm ? 'text' : 'password'"
                 v-model="confirmPassword"
-
-                placeholder="********"
-
-            >
+                placeholder="Nhập lại mật khẩu"
+            />
 
             <span
-
                 class="eye"
-
-                @click="showConfirm=!showConfirm"
-
+                @click="showConfirm = !showConfirm"
             >
-
-                        {{showConfirm ? "🙈":"👁"}}
-
-                    </span>
-
+              {{ showConfirm ? "🙈" : "👁" }}
+            </span>
           </div>
-
         </div>
 
-        <!-- Agree -->
-
+        <!-- Điều khoản -->
         <label class="agree">
-
           <input
-
               type="checkbox"
-
               v-model="agree"
-
-          >
+          />
 
           <span>
-
-                    Tôi đồng ý với Điều khoản sử dụng và Chính sách bảo mật.
-
-                </span>
-
+            Tôi đồng ý với Điều khoản sử dụng và Chính sách bảo mật của SAOPhone.
+          </span>
         </label>
-
+        <div v-if="error" class="error-message">
+          {{ error }}
+        </div>
+        <!-- Button -->
         <button
-
+            type="submit"
             class="register-btn"
-
             :disabled="loading"
-
         >
-
-          {{loading ? "ĐANG ĐĂNG KÝ..." : "ĐĂNG KÝ NGAY"}}
-
+          {{ loading ? "ĐANG ĐĂNG KÝ..." : "ĐĂNG KÝ NGAY" }}
         </button>
 
       </form>
 
+      <!-- Divider -->
       <div class="line">
-
-            <span>
-
-                Hoặc
-
-            </span>
-
+        <span>Hoặc</span>
       </div>
 
+      <!-- Social -->
       <div class="social">
 
-        <button class="google">
-
-          Google
-
-        </button>
-
-        <button class="facebook">
-
-          Facebook
-
-        </button>
-
       </div>
-
+      <!-- Chuyển sang đăng nhập -->
       <div class="login">
-
         Đã có tài khoản?
 
         <a
-
             href="#"
-
             @click.prevent="emit('open-login')"
-
         >
-
-          Đăng nhập
-
+          Đăng nhập ngay
         </a>
-
       </div>
 
     </div>
-
   </div>
-
 </template>
 <script setup>
 import { reactive, ref } from "vue";
+import { register as registerAPI } from "@/service/AuthService";
 
-// Emit sự kiện cho component cha
+// Emit
 const emit = defineEmits([
-  "register",
   "close",
-  "open-login",
+  "open-login"
 ]);
 
-// Form dữ liệu
+// Form
 const form = reactive({
   hoTen: "",
   soDienThoai: "",
   email: "",
   username: "",
-  password: "",
+  password: ""
 });
 
 // Xác nhận mật khẩu
 const confirmPassword = ref("");
 
-// Hiển thị mật khẩu
+// Hiện / ẩn mật khẩu
 const showPassword = ref(false);
 const showConfirm = ref(false);
 
-// Checkbox điều khoản
+// Đồng ý điều khoản
 const agree = ref(false);
 
 // Loading
@@ -373,10 +216,18 @@ const loading = ref(false);
 const error = ref("");
 
 // Đăng ký
-const register = async () => {
+const registerUser = async () => {
+  console.log("REGISTER CLICK");
+  console.log("hoTen =", form.hoTen);
+  console.log("soDienThoai =", form.soDienThoai);
+  console.log("email =", form.email);
+  console.log("username =", form.username);
+  console.log("password =", form.password);
+  console.log("confirm =", confirmPassword.value);
+  console.log("agree =", agree.value);
   error.value = "";
 
-  // Kiểm tra dữ liệu
+  // Kiểm tra rỗng
   if (
       !form.hoTen ||
       !form.soDienThoai ||
@@ -384,7 +235,7 @@ const register = async () => {
       !form.username ||
       !form.password
   ) {
-    alert("Vui lòng nhập đầy đủ thông tin.");
+    error.value = "Vui lòng nhập đầy đủ thông tin.";
     return;
   }
 
@@ -393,46 +244,55 @@ const register = async () => {
       /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
   if (!emailRegex.test(form.email)) {
-    alert("Email không hợp lệ.");
+    error.value = "Email không hợp lệ.";
     return;
   }
 
-  // SĐT
+  // Số điện thoại
   const phoneRegex = /^[0-9]{10}$/;
 
   if (!phoneRegex.test(form.soDienThoai)) {
-    alert("Số điện thoại phải gồm 10 số.");
+    error.value = "Số điện thoại phải gồm đúng 10 số.";
     return;
   }
 
-  // Mật khẩu
+  // Username
+  if (form.username.length < 4) {
+    error.value = "Tên đăng nhập phải từ 4 ký tự.";
+    return;
+  }
+
+  // Password
   if (form.password.length < 6) {
-    alert("Mật khẩu tối thiểu 6 ký tự.");
+    error.value = "Mật khẩu phải từ 6 ký tự.";
     return;
   }
 
   // Xác nhận mật khẩu
   if (form.password !== confirmPassword.value) {
-    alert("Mật khẩu xác nhận không khớp.");
+    error.value = "Mật khẩu xác nhận không khớp.";
     return;
   }
 
   // Điều khoản
   if (!agree.value) {
-    alert("Bạn phải đồng ý với điều khoản.");
+    error.value = "Bạn phải đồng ý điều khoản.";
     return;
   }
 
   loading.value = true;
 
   try {
-    // Sau này thay bằng gọi API
-
-    emit("register", {
-      ...form,
+    console.log("CALL API", form);
+    const res = await registerAPI({
+      hoTen: form.hoTen,
+      soDienThoai: form.soDienThoai,
+      email: form.email,
+      username: form.username,
+      password: form.password
     });
 
-    alert("Đăng ký thành công!");
+    alert(res.data.message);
 
     // Reset form
     form.hoTen = "";
@@ -440,58 +300,78 @@ const register = async () => {
     form.email = "";
     form.username = "";
     form.password = "";
+
     confirmPassword.value = "";
+
     agree.value = false;
+
+    error.value = "";
 
     // Chuyển về form đăng nhập
     emit("open-login");
+
   } catch (e) {
-    alert("Đăng ký thất bại.");
+
+    error.value =
+        e.response?.data?.message ||
+        "Đăng ký thất bại.";
+
   } finally {
+
     loading.value = false;
+
   }
+
 };
 </script>
 <style scoped>
 
-/* ===========================
+/* =======================
    Overlay
-=========================== */
-
+======================= */
+.error-message{
+  margin-bottom:15px;
+  padding:12px;
+  border-radius:8px;
+  background:#ffe5e5;
+  color:#d32f2f;
+  font-size:14px;
+  font-weight:600;
+  border:1px solid #ffb3b3;
+}
 .register-overlay{
   position:fixed;
   inset:0;
-
   display:flex;
   justify-content:center;
   align-items:center;
-  padding:20px;
   background:rgba(0,0,0,.75);
   backdrop-filter:blur(5px);
   z-index:9999;
+  padding:20px;
 }
 
-/* ===========================
+/* =======================
    Card
-=========================== */
+======================= */
 
 .register-card{
   width:100%;
-  max-width:520px;
+  max-width:500px;
   max-height:90vh;
-
   overflow-y:auto;
 
   background:#181818;
+
   border-radius:18px;
 
-  padding:28px;
+  padding:30px;
 
   border:1px solid rgba(255,255,255,.08);
 
-  box-shadow:0 20px 60px rgba(0,0,0,.55);
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
 
-  animation:show .3s ease;
+  animation:show .25s ease;
 
   position:relative;
 }
@@ -500,7 +380,7 @@ const register = async () => {
 
   from{
     opacity:0;
-    transform:translateY(20px);
+    transform:translateY(15px);
   }
 
   to{
@@ -510,27 +390,31 @@ const register = async () => {
 
 }
 
-/* ===========================
+/* =======================
    Close
-=========================== */
+======================= */
 
 .close-btn{
 
   position:absolute;
-  top:18px;
+
   right:18px;
 
+  top:18px;
+
   width:36px;
+
   height:36px;
 
   border:none;
+
   border-radius:50%;
 
-  background:#2a2a2a;
+  cursor:pointer;
+
+  background:#2b2b2b;
 
   color:white;
-
-  cursor:pointer;
 
   transition:.25s;
 
@@ -540,13 +424,13 @@ const register = async () => {
 
   background:#facc15;
 
-  color:black;
+  color:#000;
 
 }
 
-/* ===========================
+/* =======================
    Logo
-=========================== */
+======================= */
 
 .logo{
 
@@ -560,8 +444,6 @@ const register = async () => {
 
   margin-bottom:8px;
 
-  letter-spacing:1px;
-
 }
 
 .logo span{
@@ -570,21 +452,17 @@ const register = async () => {
 
 }
 
-/* ===========================
-   Title
-=========================== */
-
 h2{
 
   text-align:center;
 
   color:white;
 
-  margin:0;
-
   font-size:28px;
 
   font-weight:800;
+
+  margin-bottom:10px;
 
 }
 
@@ -592,23 +470,30 @@ h2{
 
   text-align:center;
 
-  color:#999;
-
-  margin-top:8px;
-
-  margin-bottom:28px;
+  color:#888;
 
   font-size:14px;
 
+  margin-bottom:30px;
+
 }
 
-/* ===========================
+/* =======================
    Form
-=========================== */
+======================= */
+
+.register-form{
+
+  width:100%;
+
+}
 
 .form-item{
+
   width:100%;
+
   margin-bottom:18px;
+
 }
 
 .form-item label{
@@ -619,33 +504,47 @@ h2{
 
   margin-bottom:8px;
 
-  font-size:14px;
-
   font-weight:600;
+
+  font-size:14px;
 
 }
 
-/* ===========================
+/* =======================
    Input
-=========================== */
+======================= */
 
 .input-box{
-  width:100%;
+
   position:relative;
+
+  width:100%;
+
 }
 
 .input-box input{
 
   width:100%;
-  height:48px;
-  padding:0 45px;
-  background:#121212;
+
+  height:50px;
+
   border:1px solid #333;
+
   border-radius:12px;
-  color:#fff;
+
+  background:#111;
+
+  color:white;
+
   font-size:15px;
 
+  padding-left:45px;
+
+  padding-right:45px;
+
   box-sizing:border-box;
+
+  transition:.25s;
 
 }
 
@@ -665,9 +564,9 @@ h2{
 
 }
 
-/* ===========================
+/* =======================
    Icon
-=========================== */
+======================= */
 
 .icon{
 
@@ -679,21 +578,19 @@ h2{
 
   transform:translateY(-50%);
 
-  font-size:18px;
-
   color:#888;
 
 }
 
-/* ===========================
+/* =======================
    Eye
-=========================== */
+======================= */
 
 .eye{
 
   position:absolute;
 
-  right:16px;
+  right:15px;
 
   top:50%;
 
@@ -701,21 +598,13 @@ h2{
 
   cursor:pointer;
 
-  color:#888;
-
-  transition:.25s;
+  user-select:none;
 
 }
 
-.eye:hover{
-
-  color:#facc15;
-
-}
-
-/* ===========================
+/* =======================
    Checkbox
-=========================== */
+======================= */
 
 .agree{
 
@@ -725,35 +614,31 @@ h2{
 
   gap:10px;
 
-  width:100%;
-
-  margin:18px 0;
-
   color:#bbb;
 
   font-size:14px;
+
+  margin:20px 0;
 
 }
 
 .agree input{
 
-  width:18px;
-
-  height:18px;
+  margin-top:3px;
 
   accent-color:#facc15;
 
 }
 
-/* ===========================
+/* =======================
    Button
-=========================== */
+======================= */
 
 .register-btn{
 
   width:100%;
 
-  height:48px;
+  height:50px;
 
   border:none;
 
@@ -761,11 +646,15 @@ h2{
 
   background:#facc15;
 
-  color:#000;
+  color:black;
 
-  font-size:17px;
+  font-size:16px;
 
-  font-weight:700;
+  font-weight:800;
+
+  cursor:pointer;
+
+  transition:.25s;
 
 }
 
@@ -774,8 +663,6 @@ h2{
   background:#ffd84d;
 
   transform:translateY(-2px);
-
-  box-shadow:0 8px 18px rgba(250,204,21,.3);
 
 }
 
@@ -787,9 +674,9 @@ h2{
 
 }
 
-/* ===========================
+/* =======================
    Divider
-=========================== */
+======================= */
 
 .line{
 
@@ -818,21 +705,19 @@ h2{
 
   padding:0 15px;
 
-  color:#777;
-
-  font-size:13px;
+  color:#888;
 
 }
 
-/* ===========================
+/* =======================
    Social
-=========================== */
+======================= */
 
 .social{
 
   display:flex;
 
-  gap:12px;
+  gap:10px;
 
 }
 
@@ -840,7 +725,7 @@ h2{
 
   flex:1;
 
-  height:46px;
+  height:45px;
 
   border-radius:10px;
 
@@ -860,25 +745,13 @@ h2{
 
 .social button:hover{
 
-  background:#2d2d2d;
+  background:#333;
 
 }
 
-.google:hover{
-
-  border-color:#db4437;
-
-}
-
-.facebook:hover{
-
-  border-color:#1877f2;
-
-}
-
-/* ===========================
+/* =======================
    Login
-=========================== */
+======================= */
 
 .login{
 
@@ -887,8 +760,6 @@ h2{
   text-align:center;
 
   color:#aaa;
-
-  font-size:14px;
 
 }
 
@@ -908,27 +779,21 @@ h2{
 
 }
 
-/* ===========================
-   Mobile
-=========================== */
+/* =======================
+   Responsive
+======================= */
 
 @media (max-width:768px){
 
   .register-card{
 
-    width:95%;
+    width:100%;
+
+    max-width:100%;
 
     padding:22px;
 
     max-height:95vh;
-
-  }
-
-}
-
-  .logo{
-
-    font-size:28px;
 
   }
 
@@ -938,23 +803,12 @@ h2{
 
   }
 
-  .sub-title{
+  .logo{
 
-    font-size:13px;
-
-  }
-
-  .input-box input{
-
-    height:45px;
+    font-size:30px;
 
   }
 
-  .register-btn{
-
-    height:46px;
-
-  }
-
+}
 
 </style>

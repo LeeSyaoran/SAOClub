@@ -36,8 +36,12 @@
       <div v-if="error" class="alert alert-danger small py-2 mb-0">{{ error }}</div>
 
       <!-- Nút đăng nhập -->
-      <button type="submit" class="btn btn-warning text-dark fw-black w-100">
-        ĐĂNG NHẬP HỆ THỐNG
+      <button
+          type="submit"
+          class="btn btn-warning text-dark fw-black w-100"
+          :disabled="loading"
+      >
+        {{ loading ? "ĐANG ĐĂNG NHẬP..." : "ĐĂNG NHẬP HỆ THỐNG" }}
       </button>
     </form>
 
@@ -56,24 +60,68 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref } from "vue";
+import { login } from "@/Service/AuthService";
 
-// Emit: submit (trả về { username, password }), register-click (chuyển tab đăng ký)
 const emit = defineEmits([
-  "submit",
   "login-success",
   "close",
   "open-register"
 ]);
 
-const form = reactive({ username: '', password: '' });
-const error = ref('');
-const handleSubmit = () => {
-  error.value = '';
+const form = reactive({
+  username: "",
+  password: ""
+});
+
+const loading = ref(false);
+const error = ref("");
+
+const handleSubmit = async () => {
+
+  error.value = "";
+
   if (!form.username || !form.password) {
-    error.value = 'Vui lòng điền đầy đủ thông tin.';
+    error.value = "Vui lòng nhập đầy đủ thông tin.";
     return;
   }
-  emit('submit', { username: form.username, password: form.password });
+
+  loading.value = true;
+
+  try {
+
+    const res = await login({
+      username: form.username,
+      password: form.password
+    });
+
+    // Lưu người dùng
+    localStorage.setItem(
+        "user",
+        JSON.stringify(res.data.data)
+    );
+
+    alert("Đăng nhập thành công!");
+
+    emit("login-success", res.data.data);
+
+// Reset form
+    form.username = "";
+    form.password = "";
+
+    emit("close");
+
+  } catch (e) {
+
+    error.value =
+        e.response?.data?.message ||
+        "Sai tài khoản hoặc mật khẩu.";
+
+  } finally {
+
+    loading.value = false;
+
+  }
+
 };
 </script>

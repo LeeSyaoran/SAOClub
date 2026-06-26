@@ -1,5 +1,6 @@
 <script setup>
 import LoginForm from "./components/auth/LoginForm.vue";
+import RegisterForm from "./components/auth/RegisterForm.vue";
 // ── Import các thư viện Vue 3 cần thiết ──────────────────────────────────────
 import { ref, computed, reactive, onMounted, onBeforeUnmount } from "vue";
 
@@ -19,6 +20,26 @@ import NavBar        from "./components/layout/NavBar.vue";
 import AppFooter     from "./components/layout/Footer.vue";
 import ProductFilter from "./components/product/ProductFilter.vue";
 import ProductDetail from "./components/product/ProductDetail.vue";
+
+const showLogin = ref(false);
+const showRegister = ref(false);
+
+const openLogin = () => {
+  showRegister.value = false;
+  showLogin.value = true;
+};
+
+const closeLogin = () => {
+  showLogin.value = false;
+};
+
+const openRegister = () => {
+  showLogin.value = false;
+  showRegister.value = true;
+};
+const closeRegister = () => {
+  showRegister.value = false;
+};
 
 // ── State & Store ─────────────────────────────────────────────────────────────
 
@@ -48,15 +69,16 @@ const apiCats = ref([]);
 const fetchApiCats = async () => {
   apiCats.value = await DanhMucService.getAll().catch(() => []);
 };
-const showLogin = ref(false);
 
-const openLogin = () => {
-  showLogin.value = true;
-};
 
-const closeLogin = () => {
+const loginSuccess = (user) => {
+  localStorage.setItem(
+      "user",
+      JSON.stringify(user)
+  );
   showLogin.value = false;
-};
+  location.reload();
+}
 
 // Danh sách thương hiệu duy nhất từ data sản phẩm đã load
 const allBrands = computed(() =>
@@ -1041,17 +1063,24 @@ onBeforeUnmount(() => {
   </div><!-- /checkout overlay -->
 
   <!-- ── Trang chi tiết sản phẩm (full-screen overlay) ── -->
+  <!-- Chi tiết sản phẩm -->
   <Transition name="slide-up">
     <ProductDetail
-      v-if="selectedProduct"
-      :key="selectedProduct.bienTheId"
-      :product="selectedProduct"
-      :products="products"
-      @close="closeProduct"
-      @add-to-cart="p => { addToCart(p); closeProduct(); }"
-      @open-product="openProduct"
+        v-if="selectedProduct"
+        :key="selectedProduct.bienTheId"
+        :product="selectedProduct"
+        :products="products"
+        @close="closeProduct"
+        @add-to-cart="p => {
+        addToCart(p);
+        closeProduct();
+      }"
+        @open-product="openProduct"
     />
   </Transition>
+
+  <!-- ================= LOGIN ================= -->
+
   <div
       v-if="showLogin"
       class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
@@ -1064,17 +1093,48 @@ onBeforeUnmount(() => {
         style="width:450px;max-width:95%"
     >
 
-      <LoginForm />
+      <LoginForm
+          @close="closeLogin"
+          @login-success="loginSuccess"
+          @open-register="openRegister"
+      />
+
+    </div>
+
+  </div>
+
+  <!-- ================= REGISTER ================= -->
+
+  <div
+      v-if="showRegister"
+      class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+      style="background:rgba(0,0,0,.7);z-index:9999"
+      @click.self="closeRegister"
+  >
+
+    <div
+        class="bg-white rounded-4 p-4"
+        style="width:560px;max-width:95%"
+    >
+
+      <RegisterForm
+          @close="closeRegister"
+          @open-login="openLogin"
+      />
 
     </div>
 
   </div>
 </template>
+  <style>
+    .slide-up-enter-active,
+    .slide-up-leave-active{
+      transition:.3s;
+    }
 
-
-<style>
-.slide-up-enter-active, .slide-up-leave-active { transition: transform 0.28s ease, opacity 0.2s ease; }
-.slide-up-enter-from, .slide-up-leave-to       { transform: translateY(30px); opacity: 0; }
-</style>
-
-<!-- Không còn CSS scoped — toàn bộ dùng Bootstrap utility classes + inline style tối thiểu -->
+    .slide-up-enter-from,
+    .slide-up-leave-to{
+      opacity:0;
+      transform:translateY(30px);
+    }
+  </style>
