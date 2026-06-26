@@ -35,7 +35,6 @@ public class SanPhamRequest {
     @NotBlank(message = "Mã SKU không được để trống")
     private String maSku;
 
-    // FK IDs cho các bảng danh mục linh kiện (nullable — điện thoại không có CPU/GPU laptop)
     private Integer cpuId;
     private Integer ramId;
     private Integer oCungId;
@@ -70,14 +69,6 @@ public class SanPhamRequest {
 
     private LocalDateTime ngayTao;
 
-    // Fields bổ sung cho điện thoại
-    private String manHinhDt;
-    private String cameraSau;
-    private String cameraTruoc;
-    private String dungLuongPinDt;
-    private String boNhoTrongDt;
-    private String chipXuLyDt;
-    private String soSim;
     private String hinhAnhBienThe;
     private String phanLoaiTags;
     private String phanLoaiTen;

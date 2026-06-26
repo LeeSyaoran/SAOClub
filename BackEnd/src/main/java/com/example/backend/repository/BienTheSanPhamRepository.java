@@ -21,9 +21,7 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
         ram.ramId, ram.dungLuong,
         oCung.oCungId, oCung.loaiOcung,
         gpu.gpuId, gpu.tenGpu,
-        bt.kichThuocManHinh, bt.heDieuHanh, bt.pin, bt.trongLuongKg,
-        bt.manHinhDt, bt.cameraSau, bt.cameraTruoc, bt.dungLuongPinDt,
-        bt.boNhoTrongDt, bt.chipXuLyDt, bt.soSim
+        bt.kichThuocManHinh, bt.heDieuHanh, bt.pin, bt.trongLuongKg
     )
     FROM BienTheSanPham bt
     JOIN bt.sanPham sp

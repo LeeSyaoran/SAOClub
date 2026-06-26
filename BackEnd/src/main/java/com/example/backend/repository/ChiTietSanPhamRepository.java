@@ -11,9 +11,9 @@ import java.util.List;
 
 @Repository
 public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, Integer> {
-    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, c.bienThe.maSku, c.soSerial, c.soImei, c.trangThai, c.ngayNhapKho) FROM ChiTietSanPham c")
+    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho) FROM ChiTietSanPham c")
     List<ChiTietSanPhamResponse> hienThiChiTietSanPham();
 
-    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, c.bienThe.maSku, c.soSerial, c.soImei, c.trangThai, c.ngayNhapKho) FROM ChiTietSanPham c WHERE c.bienThe.bienTheId = :bienTheId")
+    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho) FROM ChiTietSanPham c WHERE c.bienThe.bienTheId = :bienTheId")
     List<ChiTietSanPhamResponse> findByBienTheId(@Param("bienTheId") Integer bienTheId);
 }

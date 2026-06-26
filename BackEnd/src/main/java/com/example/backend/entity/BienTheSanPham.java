@@ -77,28 +77,6 @@ public class BienTheSanPham {
     @Column(name = "trong_luong_kg", precision = 5, scale = 2)
     private BigDecimal trongLuongKg;
 
-    // Các trường dưới đây dành cho điện thoại — hiện chưa dùng, để sẵn cho mở rộng
-    @Column(name = "man_hinh_dt", length = 100)
-    private String manHinhDt;
-
-    @Column(name = "camera_sau", length = 100)
-    private String cameraSau;
-
-    @Column(name = "camera_truoc", length = 100)
-    private String cameraTruoc;
-
-    @Column(name = "dung_luong_pin_dt", length = 50)
-    private String dungLuongPinDt;
-
-    @Column(name = "bo_nho_trong_dt", length = 50)
-    private String boNhoTrongDt;
-
-    @Column(name = "chip_xu_ly_dt", length = 100)
-    private String chipXuLyDt;
-
-    @Column(name = "so_sim", length = 30)
-    private String soSim;
-
     // Tags lọc phía frontend (vd: "gaming,do_hoa"); phan_loai_ten là nhãn hiển thị tương ứng
     @Column(name = "phan_loai_tags", length = 200)
     private String phanLoaiTags;

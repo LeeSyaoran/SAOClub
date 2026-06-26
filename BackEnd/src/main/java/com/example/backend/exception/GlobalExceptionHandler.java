@@ -8,38 +8,37 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
-
-// @RestControllerAdvice = bắt exception từ TẤT CẢ controller, tự động trả JSON thay vì HTML error page
-// Không cần try-catch trong từng controller — exception tự "nổi" lên đây
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    // custom  cac loai loi o day => hien thi ra message than thien vs ng dung
+    // loi 1 => @valid
 
-    // IllegalArgumentException: dùng khi không tìm thấy entity (findById().orElseThrow)
-    // → trả 404 Not Found thay vì 500 Internal Server Error
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(IllegalArgumentException ex) {
-        Map<String, String> body = new HashMap<>();
-        body.put("error", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
-    }
-
-    // MethodArgumentNotValidException: do @Valid trong controller gặp vi phạm validation annotation
-    // (@NotBlank, @NotNull, @PositiveOrZero trong Request DTO)
-    // → trả 400 Bad Request, body là map { "fieldName": "thông báo lỗi" }
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors()
-                .forEach(err -> errors.put(err.getField(), err.getDefaultMessage()));
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+    public ResponseEntity<?> handlerValidateErrors(MethodArgumentNotValidException e){
+        // custom loi hien thi than thien voi nguoi dung
+        Map<String,String> errorMap = new HashMap<>();
+        e.getBindingResult().getFieldErrors()
+                .forEach(s -> errorMap.put(s.getField(),s.getDefaultMessage()));
+        return new  ResponseEntity<>(errorMap, HttpStatus.BAD_REQUEST);
     }
 
-    // Exception tổng quát: bắt mọi lỗi chưa được xử lý ở trên
-    // → trả 500 Internal Server Error, tránh lộ stack trace ra client
+    // loi 2 => 400 nhung do minh tu tao(APIException)
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<?> handlerAll(ApiException e){
+        Map<String,String> errorMap = new HashMap<>();
+        errorMap.put("status","FAIL");
+        errorMap.put("code",e.getCode());
+        errorMap.put("message",e.getMessage());
+        return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    // loi 3 => 500 cac loi khac
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleGeneral(Exception ex) {
-        Map<String, String> body = new HashMap<>();
-        body.put("error", "Lỗi hệ thống: " + ex.getMessage());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    public ResponseEntity<?> handlerValidateApiException(Exception e){
+        Map<String,String> errorMap = new HashMap<>();
+        errorMap.put("status","FAIL");
+        errorMap.put("code","INTERNAL_SERVER_ERROR");
+        errorMap.put("message",e.getMessage());
+        return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

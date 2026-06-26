@@ -33,9 +33,9 @@ public class PhieuBaoHanhService {
 
     public PhieuBaoHanh create(PhieuBaoHanhRequest request) {
         PhieuBaoHanh entity = new PhieuBaoHanh();
-        // BeanUtils copies: serialNumber, ngayMua, ngayHetBh, ngayTiepNhan, ngayTraKhach,
+        // BeanUtils copies: ngayMua, ngayHetBh, ngayTiepNhan, ngayTraKhach,
         //                   moTaLoi, ketQuaXuLy, trangThai, chiPhiPhatSinh, ghiChu
-        // Bỏ qua: donHangId, sanPhamId (dùng làm bienTheId), khachHangId
+        // Bỏ qua: donHangId, sanPhamId (dùng làm bienTheId), khachHangId, serialNumber (không có trong entity)
         BeanUtils.copyProperties(request, entity, "donHangId", "sanPhamId", "khachHangId");
         entity.setDonHang(donHangRepository.getReferenceById(request.getDonHangId()));
         // Request dùng sanPhamId nhưng entity cần bienThe (bienTheId)

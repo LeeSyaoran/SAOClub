@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, reactive } from "vue";
+import { ref, computed, onMounted, onUnmounted, reactive } from "vue";
 import * as SanPhamService   from "../Service/SanPhamService.js";
 import * as KhachHangService from "../Service/KhachHangService.js";
 import * as NhanVienService  from "../Service/NhanVienService.js";
@@ -9,6 +9,7 @@ import * as TonKhoService          from "../Service/TonKhoService.js";
 import * as DanhMucService         from "../Service/DanhMucService.js";
 import * as DmService              from "../Service/DmService.js";
 import * as ChiTietSanPhamService  from "../Service/ChiTietSanPhamService.js";
+import * as ChiTietDonHangService  from "../Service/ChiTietDonHangService.js";
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentRole = ref("admin");
@@ -128,12 +129,42 @@ const activePromos = computed(() => {
 });
 const lowStockItems = computed(() =>
   inventory.value.filter(
-    (t) =>
-      t.soLuongTon != null &&
-      t.tonKhoToiThieu != null &&
-      t.soLuongTon <= t.tonKhoToiThieu,
+    (t) => t.soLuongTon != null && t.tonKhoToiThieu != null && t.soLuongTon <= t.tonKhoToiThieu,
   ),
 );
+const outOfStockItems = computed(() =>
+  inventory.value.filter(t => (t.soLuongTon ?? 0) === 0),
+);
+
+// ── Inventory grouped by product ──────────────────────────────────────────────
+const inventorySearch = ref('');
+const expandedGroups = ref({});
+const toggleGroup = (name) => { expandedGroups.value[name] = !expandedGroups.value[name]; };
+
+const inventoryGrouped = computed(() => {
+  const groups = {};
+  for (const item of inventory.value) {
+    const name = item.bienThe?.sanPham?.tenSanPham || '—';
+    if (!groups[name]) groups[name] = [];
+    groups[name].push(item);
+  }
+  return Object.entries(groups)
+    .filter(([name]) => !inventorySearch.value || name.toLowerCase().includes(inventorySearch.value.toLowerCase()))
+    .map(([name, items]) => {
+      const p = products.value.find(p => p.tenSanPham === name);
+      const totalTon = items.reduce((s, i) => s + (i.soLuongTon || 0), 0);
+      const outCount = items.filter(i => (i.soLuongTon ?? 0) === 0).length;
+      const lowCount = items.filter(i => i.soLuongTon != null && i.tonKhoToiThieu != null && i.soLuongTon > 0 && i.soLuongTon <= i.tonKhoToiThieu).length;
+      return { name, items, hinhAnh: p?.hinhAnhChinh, thuongHieu: p?.thuongHieu, totalTon, outCount, lowCount };
+    });
+});
+
+const getVariantInfo = (item) => products.value.find(p => p.bienTheId === item.bienThe?.bienTheId);
+const stockClass = (item) => {
+  if ((item.soLuongTon ?? 0) === 0) return 'text-danger';
+  if (item.soLuongTon != null && item.tonKhoToiThieu != null && item.soLuongTon <= item.tonKhoToiThieu) return 'text-warning';
+  return 'text-success';
+};
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 const fetchAll = async () => {
@@ -171,6 +202,26 @@ const fetchAll = async () => {
     safe(DmService.getGpu()),
   ]);
   loading.value = false;
+  await autoMergeAllDuplicates();
+};
+
+// Tự động gộp tất cả đơn cùng khách + cùng ngày khi tải trang
+const autoMergeAllDuplicates = async () => {
+  const groups = {};
+  for (const o of orders.value) {
+    const key = `${o.khachHangId}_${o.ngayDat?.slice(0, 10)}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(o);
+  }
+  const toMerge = Object.values(groups).filter(g => g.length > 1);
+  if (toMerge.length === 0) return;
+  for (const group of toMerge) {
+    group.sort((a, b) => a.donHangId - b.donHangId);
+    const targetId = group[0].donHangId;
+    const sourceIds = group.slice(1).map(o => o.donHangId);
+    await DonHangService.merge(targetId, sourceIds);
+  }
+  orders.value = await DonHangService.getAll().catch(() => []);
 };
 
 // ── Products: gộp theo sanPhamId cho bảng ─────────────────────────────────────
@@ -194,27 +245,30 @@ const variantModalName   = ref('');
 const variantModalList   = ref([]);
 const variantSerialMap   = ref({});   // bienTheId → serial[]
 const variantSerialLoad  = ref(false);
-const serialInputs       = ref({});   // bienTheId → { soSerial, soImei, saving }
+const serialInputs       = ref({});   // bienTheId → { soSerial, saving }
 
 const showDetailModal  = ref(false);
 const detailModalName  = ref('');
 const detailModalList  = ref([]);
 const detailSerialMap  = ref({});  // bienTheId → serial[]
 
+// Helper: fetch serial của nhiều bienTheId song song → { bienTheId: serial[] }
+const fetchSerialMap = async (bienTheIds) => {
+  const results = await Promise.all(
+    bienTheIds.map(id => ChiTietSanPhamService.getByBienThe(id).catch(() => []))
+  );
+  const map = {};
+  bienTheIds.forEach((id, i) => { map[id] = results[i]; });
+  return map;
+};
+
 const openDetail = async (sanPhamId, name) => {
   detailModalName.value = name;
-  detailModalList.value = products.value.filter(p => p.sanPhamId === sanPhamId);
+  const list = products.value.filter(p => p.sanPhamId === sanPhamId);
+  detailModalList.value = list;
   detailSerialMap.value = {};
   showDetailModal.value = true;
-  try {
-    const allSerials = await ChiTietSanPhamService.getAll().catch(() => []);
-    const map = {};
-    allSerials.forEach(s => {
-      if (!map[s.bienTheId]) map[s.bienTheId] = [];
-      map[s.bienTheId].push(s);
-    });
-    detailSerialMap.value = map;
-  } catch { /* giữ nguyên {} nếu lỗi */ }
+  detailSerialMap.value = await fetchSerialMap(list.map(v => v.bienTheId));
 };
 
 const openVariants = async (sanPhamId, name) => {
@@ -223,22 +277,13 @@ const openVariants = async (sanPhamId, name) => {
   variantModalList.value = list;
   variantSerialMap.value = {};
   const inputs = {};
-  list.forEach(v => { inputs[v.bienTheId] = { soSerial: '', soImei: '', saving: false }; });
+  list.forEach(v => { inputs[v.bienTheId] = { soSerial: '', saving: false }; });
   serialInputs.value = inputs;
   showVariantModal.value = true;
 
   variantSerialLoad.value = true;
-  try {
-    const allSerials = await ChiTietSanPhamService.getAll().catch(() => []);
-    const map = {};
-    allSerials.forEach(s => {
-      if (!map[s.bienTheId]) map[s.bienTheId] = [];
-      map[s.bienTheId].push(s);
-    });
-    variantSerialMap.value = map;
-  } finally {
-    variantSerialLoad.value = false;
-  }
+  variantSerialMap.value = await fetchSerialMap(list.map(v => v.bienTheId));
+  variantSerialLoad.value = false;
 };
 
 const addSerial = async (bienTheId) => {
@@ -249,20 +294,14 @@ const addSerial = async (bienTheId) => {
     const res = await ChiTietSanPhamService.create({
       bienTheId,
       soSerial: inp.soSerial.trim(),
-      soImei: inp.soImei?.trim() || null,
       trangThai: 'trong_kho',
       ngayNhapKho: new Date().toISOString().slice(0, 19),
     });
     if (!res.ok) throw new Error('Lỗi thêm serial');
-    const allSerials = await ChiTietSanPhamService.getAll().catch(() => []);
-    const map = {};
-    allSerials.forEach(s => {
-      if (!map[s.bienTheId]) map[s.bienTheId] = [];
-      map[s.bienTheId].push(s);
-    });
-    variantSerialMap.value = map;
+    // Chỉ refresh serial của biến thể vừa thêm
+    const updated = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
+    variantSerialMap.value = { ...variantSerialMap.value, [bienTheId]: updated };
     inp.soSerial = '';
-    inp.soImei = '';
   } finally {
     inp.saving = false;
   }
@@ -637,6 +676,246 @@ const deletePromo = async (id) => {
   promotions.value = await KhuyenMaiService.getAll().catch(() => []);
 };
 
+// ── Orders CRUD ───────────────────────────────────────────────────────────────
+const deleteOrder = async (id) => {
+  if (!confirm('Ban co chac muon xoa don hang nay? Hanh dong nay khong the hoan tac.')) return;
+  const res = await DonHangService.remove(id);
+  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  orders.value = await DonHangService.getAll().catch(() => []);
+};
+
+// ── Order detail modal (xem san pham trong don) ───────────────────────────────
+const showOrderDetailModal = ref(false);
+const orderDetailData      = ref(null);   // don hang dang xem
+const orderDetailItems     = ref([]);     // ChiTietDonHangResponse[]
+const orderDetailLoading   = ref(false);
+
+const openOrderDetail = async (o) => {
+  orderDetailData.value  = o;
+  orderDetailItems.value = [];
+  showOrderDetailModal.value = true;
+  orderDetailLoading.value = true;
+  try {
+    orderDetailItems.value = await ChiTietDonHangService.getByDonHang(o.donHangId).catch(() => []);
+  } finally {
+    orderDetailLoading.value = false;
+  }
+};
+
+// Tim ten san pham tu bienTheId trong danh sach products da load
+const productByBienThe = (bienTheId) => products.value.find(p => p.bienTheId === bienTheId);
+
+// ── Them san pham vao don ─────────────────────────────────────────────────────
+const addItemMode           = ref(false);
+const addItemBienTheId      = ref('');
+const addItemQty            = ref(1);
+const addItemLoading        = ref(false);
+const addItemSearch         = ref('');
+const addItemSelectedSpId   = ref(null);  // sanPhamId dang mo xem bien the
+
+// Modal chi tiet san pham (khi click vao card)
+const showAddItemDetailModal  = ref(false);
+const addItemDetailGroup      = ref(null);   // group dang xem { sanPhamId, tenSanPham, ... variants[] }
+const addItemSelectedConfig   = ref(null);   // cpu+ram+oCung key
+const addItemSelectedColor    = ref(null);   // mauSac
+
+// Cac phien ban doc nhat (cpu + ram + oCung) cho san pham dang xem
+const addItemConfigs = computed(() => {
+  if (!addItemDetailGroup.value) return [];
+  const seen = new Set();
+  const result = [];
+  for (const v of addItemDetailGroup.value.variants) {
+    const key = [v.cpu, v.ram, v.oCung].filter(Boolean).join('|');
+    if (!seen.has(key)) { seen.add(key); result.push({ key, cpu: v.cpu, ram: v.ram, oCung: v.oCung }); }
+  }
+  return result;
+});
+
+// Cac mau sac trong phien ban dang chon
+const addItemColorsForConfig = computed(() => {
+  if (!addItemDetailGroup.value || !addItemSelectedConfig.value) return [];
+  const [cpu, ram, oCung] = addItemSelectedConfig.value.split('|');
+  return addItemDetailGroup.value.variants.filter(v =>
+    (v.cpu || '') === (cpu || '') &&
+    (v.ram || '') === (ram || '') &&
+    (v.oCung || '') === (oCung || '')
+  );
+});
+
+// Bien the hien tai dua vao config + mau sac dang chon
+const addItemCurrentVariant = computed(() =>
+  addItemColorsForConfig.value.find(v => v.mauSac === addItemSelectedColor.value) ||
+  addItemColorsForConfig.value[0] || null
+);
+
+const openAddItemDetail = (group) => {
+  addItemDetailGroup.value = group;
+  addItemSelectedConfig.value = addItemConfigs.value[0]?.key ?? null;
+  addItemSelectedColor.value  = addItemColorsForConfig.value[0]?.mauSac ?? null;
+  showAddItemDetailModal.value = true;
+};
+
+// Khi chon config moi → reset color ve first of that config
+const selectConfig = (key) => {
+  addItemSelectedConfig.value = key;
+  const [cpu, ram, oCung] = key.split('|');
+  const first = addItemDetailGroup.value?.variants.find(v =>
+    (v.cpu || '') === (cpu || '') && (v.ram || '') === (ram || '') && (v.oCung || '') === (oCung || '')
+  );
+  addItemSelectedColor.value = first?.mauSac ?? null;
+};
+
+const confirmAddFromDetail = async () => {
+  const v = addItemCurrentVariant.value;
+  if (!v) return;
+  addItemLoading.value = true;
+  showAddItemDetailModal.value = false;
+  try {
+    const res = await DonHangService.addChiTiet({
+      donHangId:   orderDetailData.value.donHangId,
+      bienTheId:   v.bienTheId,
+      soLuong:     addItemQty.value,
+      donGia:      v.giaBan,
+      giamGiaDong: 0,
+    });
+    if (!res.ok) { alert(`Them that bai: ${res.status}`); return; }
+    await DonHangService.recalculate(orderDetailData.value.donHangId);
+    await refreshOrderDetail();
+    addItemQty.value = 1;
+  } finally {
+    addItemLoading.value = false;
+  }
+};
+
+// Nhom products theo sanPhamId, lay gia thap nhat, loc theo search
+const addItemProductGroups = computed(() => {
+  const q = addItemSearch.value.toLowerCase().trim();
+  const map = {};
+  for (const p of products.value) {
+    if (!map[p.sanPhamId]) {
+      map[p.sanPhamId] = { sanPhamId: p.sanPhamId, tenSanPham: p.tenSanPham,
+        tenThuongHieu: p.tenThuongHieu, hinhAnhChinh: p.hinhAnhChinh,
+        phanLoaiTen: p.phanLoaiTen, variants: [] };
+    }
+    map[p.sanPhamId].variants.push(p);
+  }
+  let groups = Object.values(map);
+  if (q) groups = groups.filter(g =>
+    g.tenSanPham.toLowerCase().includes(q) || g.tenThuongHieu?.toLowerCase().includes(q)
+  );
+  groups.forEach(g => {
+    g.minPrice = Math.min(...g.variants.map(v => Number(v.giaBan) || 0));
+  });
+  return groups.sort((a, b) => a.tenSanPham.localeCompare(b.tenSanPham));
+});
+
+const refreshOrderDetail = async () => {
+  orders.value = await DonHangService.getAll().catch(() => []);
+  const updated = orders.value.find(o => o.donHangId === orderDetailData.value?.donHangId);
+  if (updated) orderDetailData.value = updated;
+  orderDetailItems.value = await ChiTietDonHangService.getByDonHang(orderDetailData.value.donHangId).catch(() => []);
+};
+
+const addItemToOrder = async () => {
+  if (!addItemBienTheId.value || addItemQty.value < 1) return;
+  const v = productByBienThe(Number(addItemBienTheId.value));
+  if (!v) return;
+  addItemLoading.value = true;
+  try {
+    const res = await DonHangService.addChiTiet({
+      donHangId:    orderDetailData.value.donHangId,
+      bienTheId:    v.bienTheId,
+      soLuong:      addItemQty.value,
+      donGia:       v.giaBan,
+      giamGiaDong:  0,
+    });
+    if (!res.ok) { alert(`Them that bai: ${res.status}`); return; }
+    await DonHangService.recalculate(orderDetailData.value.donHangId);
+    await refreshOrderDetail();
+    addItemBienTheId.value = '';
+    addItemQty.value = 1;
+    addItemMode.value = false;
+  } finally {
+    addItemLoading.value = false;
+  }
+};
+
+const removeItemFromOrder = async (chiTietId) => {
+  if (!confirm('Xoa san pham nay khoi don hang?')) return;
+  const res = await fetch(`/api/chi-tiet-don-hang/delete/${chiTietId}`, { method: 'DELETE' });
+  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  await DonHangService.recalculate(orderDetailData.value.donHangId);
+  await refreshOrderDetail();
+};
+
+// ── Gop don hang ─────────────────────────────────────────────────────────────
+const mergeLoading = ref(false);
+
+// Don hang cung khach, cung ngay dat (khong tinh gio), khac don hien tai
+const mergeCandidates = computed(() => {
+  if (!orderDetailData.value) return [];
+  const curDate = orderDetailData.value.ngayDat?.slice(0, 10);
+  return orders.value.filter(o =>
+    o.khachHangId === orderDetailData.value.khachHangId &&
+    o.donHangId   !== orderDetailData.value.donHangId &&
+    o.ngayDat?.slice(0, 10) === curDate
+  );
+});
+
+// Gop tat ca don cung ngay cung khach vao don hien tai (khong can chon thu cong)
+const autoMergeOrders = async () => {
+  if (mergeCandidates.value.length === 0) return;
+  if (!confirm(`Gop ${mergeCandidates.value.length} don hang cung ngay vao don #${orderDetailData.value.donHangId}?`)) return;
+  mergeLoading.value = true;
+  try {
+    const res = await DonHangService.merge(
+      orderDetailData.value.donHangId,
+      mergeCandidates.value.map(o => o.donHangId)
+    );
+    if (!res.ok) { alert(`Gop that bai: ${res.status}`); return; }
+    await refreshOrderDetail();
+  } finally {
+    mergeLoading.value = false;
+  }
+};
+
+// Mo chi tiet 1 bien the cu the (khong load tat ca bien the cung san pham)
+const openVariantDetail = (bienTheId) => {
+  const v = productByBienThe(bienTheId);
+  if (!v) return;
+  detailModalName.value = v.tenSanPham;
+  detailModalList.value = [v];
+  detailSerialMap.value = {};
+  showDetailModal.value = true;
+  ChiTietSanPhamService.getByBienThe(bienTheId)
+    .catch(() => [])
+    .then(serials => { detailSerialMap.value = { [bienTheId]: serials }; });
+};
+
+// ── Order status helpers ──────────────────────────────────────────────────────
+const orderStatusLabel = (s) => {
+  const m = {
+    pending:    'Cho xac nhan',
+    confirmed:  'Da xac nhan',
+    processing: 'Dang xu ly',
+    shipping:   'Dang van chuyen',
+    delivered:  'Da giao',
+    cancelled:  'Da huy',
+    returned:   'Da tra hang',
+  };
+  return m[s] || s;
+};
+const orderStatusColor = (s) => {
+  if (s === 'pending')    return { bg: 'rgba(148,163,184,0.15)', text: '#94a3b8' };
+  if (s === 'confirmed')  return { bg: 'rgba(59,130,246,0.15)',  text: '#60a5fa' };
+  if (s === 'processing') return { bg: 'rgba(250,204,21,0.15)',  text: '#facc15' };
+  if (s === 'shipping')   return { bg: 'rgba(139,92,246,0.15)',  text: '#a78bfa' };
+  if (s === 'delivered')  return { bg: 'rgba(34,197,94,0.15)',   text: '#22c55e' };
+  if (s === 'cancelled')  return { bg: 'rgba(239,68,68,0.15)',   text: '#f87171' };
+  if (s === 'returned')   return { bg: 'rgba(251,146,60,0.15)',  text: '#fb923c' };
+  return { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af' };
+};
+
 // ── Orders status update ──────────────────────────────────────────────────────
 const showOrderModal = ref(false);
 const editingOrder = ref(null);
@@ -719,6 +998,66 @@ const saveStock = async () => {
   } catch (e) {
     alert(e.message);
   }
+};
+
+// ── Stock Detail Modal (serial numbers) ──────────────────────────────────────
+const showStockDetailModal = ref(false);
+const stockDetailItem      = ref(null);   // tonKho item
+const stockDetailSerials   = ref([]);
+const stockDetailLoading   = ref(false);
+const stockDetailNewSerial = ref('');
+const stockDetailSaving    = ref(false);
+
+const openStockDetail = async (item) => {
+  stockDetailItem.value    = item;
+  stockDetailSerials.value = [];
+  stockDetailNewSerial.value = '';
+  showStockDetailModal.value = true;
+  stockDetailLoading.value   = true;
+  const bienTheId = item.bienThe?.bienTheId;
+  if (bienTheId) {
+    stockDetailSerials.value = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
+  }
+  stockDetailLoading.value = false;
+};
+
+const addStockSerial = async () => {
+  if (!stockDetailNewSerial.value.trim()) return;
+  const bienTheId = stockDetailItem.value?.bienThe?.bienTheId;
+  if (!bienTheId) return;
+  stockDetailSaving.value = true;
+  try {
+    const res = await ChiTietSanPhamService.create({
+      bienTheId,
+      soSerial: stockDetailNewSerial.value.trim(),
+      trangThai: 'trong_kho',
+      ngayNhapKho: new Date().toISOString().slice(0, 19),
+    });
+    if (!res.ok) throw new Error('Loi them serial');
+    stockDetailSerials.value = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
+    inventory.value = await TonKhoService.getAll().catch(() => []);
+    stockDetailNewSerial.value = '';
+  } catch(e) { alert(e.message); }
+  finally { stockDetailSaving.value = false; }
+};
+
+const stockDetailStatusLabel = (s) => {
+  const m = {
+    trong_kho:    'Trong kho',
+    giu_hang:     'Dang dat hang',
+    da_ban:       'Da ban',
+    loi_bao_hanh: 'Bao hanh',
+    da_tra_hang:  'Da tra hang',
+  };
+  return m[s] || s;
+};
+const stockDetailStatusColor = (s) => {
+  if (s === 'trong_kho')    return '#22c55e';
+  if (s === 'giu_hang')     return '#facc15';
+  if (s === 'da_ban')       return '#94a3b8';
+  if (s === 'loi_bao_hanh') return '#fb923c';
+  if (s === 'da_tra_hang')  return '#38bdf8';
+  return '#6b7280';
 };
 
 // ── POS / Ban hang ───────────────────────────────────────────────────────────
@@ -822,7 +1161,20 @@ const posPlaceOrder = async () => {
   }
 };
 
-onMounted(fetchAll);
+let orderSse = null;
+
+onMounted(async () => {
+  await fetchAll();
+  orderSse = new EventSource('/api/don-hang/events');
+  orderSse.addEventListener('new-order', async () => {
+    orders.value = await DonHangService.getAll().catch(() => []);
+    await autoMergeAllDuplicates();
+  });
+});
+
+onUnmounted(() => {
+  if (orderSse) orderSse.close();
+});
 </script>
 
 <template>
@@ -1054,7 +1406,6 @@ onMounted(fetchAll);
                   <td>
                     <div class="d-flex gap-1">
                       <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem; padding:2px 8px;" @click="openDetail(p.sanPhamId, p.tenSanPham)">Chi tiet</button>
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEdit(p)">Sua</button>
                       <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteProduct(p.sanPhamId)">Xoa</button>
                     </div>
                   </td>
@@ -1079,12 +1430,22 @@ onMounted(fetchAll);
                   <td class="text-secondary">#{{ o.donHangId }}</td>
                   <td>{{ customerName(o.khachHangId) }}</td>
                   <td>{{ formatPrice(o.thanhTien) }}</td>
-                  <td><span class="badge bg-primary bg-opacity-25 text-primary">{{ o.trangThaiDonHang||'—' }}</span></td>
+                  <td>
+                    <span class="badge" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                      {{ orderStatusLabel(o.trangThaiDonHang) }}
+                    </span>
+                  </td>
                   <td><span class="badge" :class="o.trangThaiThanhToan==='paid'?'bg-success':'bg-secondary'">{{ o.trangThaiThanhToan||'—' }}</span></td>
                   <td>{{ formatDate(o.ngayDat) }}</td>
-                  <td><button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openOrderStatus(o)">Cap nhat</button></td>
+                  <td>
+                    <div class="d-flex gap-1">
+                      <button class="btn btn-sm btn-outline-info"    style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">Chi tiet</button>
+                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">Cap nhat</button>
+                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">Xoa</button>
+                    </div>
+                  </td>
                 </tr>
-                <tr v-if="orders.length===0"><td colspan="7" class="text-center text-secondary">Chua co don hang</td></tr>
+                <tr v-if="orders.length===0"><td colspan="8" class="text-center text-secondary">Chua co don hang</td></tr>
               </tbody>
             </table>
           </div>
@@ -1123,28 +1484,95 @@ onMounted(fetchAll);
 
         <!-- ── Kho hang ── -->
         <section v-show="currentPage === 'inventory'">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-secondary small">{{ inventory.length }} bien the</span>
-            <span v-if="lowStockItems.length" class="text-danger small fw-bold">&#9888; {{ lowStockItems.length }} sap het hang</span>
+          <!-- Summary + Search -->
+          <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <span class="text-secondary small">{{ inventoryGrouped.length }} san pham · {{ inventory.length }} SKU</span>
+            <span v-if="outOfStockItems.length" class="badge bg-danger">● {{ outOfStockItems.length }} het hang</span>
+            <span v-if="lowStockItems.length" class="badge bg-warning text-dark">⚠ {{ lowStockItems.length }} sap het</span>
+            <div class="ms-auto" style="min-width:200px;">
+              <input v-model="inventorySearch" class="form-control form-control-sm"
+                     placeholder="Tim san pham..."
+                     style="background:#1a1a1a;border-color:#333;color:#e0e0e0;font-size:0.82rem;" />
+            </div>
           </div>
-          <div v-if="loading" class="text-secondary small">Dang tai...</div>
-          <div v-else class="table-responsive">
-            <table class="table table-dark table-hover table-sm align-middle">
-              <thead><tr><th>San pham</th><th>SKU</th><th>Ton kho</th><th>Dang giu</th><th>Ton toi thieu</th><th>Cap nhat</th><th>Thao tac</th></tr></thead>
-              <tbody>
-                <tr v-for="item in inventory" :key="item.tonKhoId"
-                    :class="item.soLuongTon!=null&&item.tonKhoToiThieu!=null&&item.soLuongTon<=item.tonKhoToiThieu ? 'row-warn' : ''">
-                  <td>{{ item.bienThe?.sanPham?.tenSanPham??'—' }}</td>
-                  <td class="text-secondary">{{ item.bienThe?.maSku??'—' }}</td>
-                  <td><strong>{{ item.soLuongTon??'—' }}</strong></td>
-                  <td>{{ item.soLuongGiu??0 }}</td>
-                  <td>{{ item.tonKhoToiThieu??'—' }}</td>
-                  <td class="text-secondary">{{ formatDate(item.ngayCapNhat) }}</td>
-                  <td><button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditStock(item)">Cap nhat</button></td>
-                </tr>
-                <tr v-if="inventory.length===0"><td colspan="7" class="text-center text-secondary">Chua co du lieu ton kho</td></tr>
-              </tbody>
-            </table>
+
+          <div v-if="loading" class="text-secondary small py-4 text-center">Dang tai...</div>
+          <div v-else class="d-flex flex-column gap-2">
+
+            <div v-for="group in inventoryGrouped" :key="group.name"
+                 class="rounded-3 overflow-hidden"
+                 style="background:#1a1a1a;border:1px solid #2a2a2a;">
+
+              <!-- Product header -->
+              <div class="d-flex align-items-center px-3 py-2 gap-3"
+                   style="cursor:pointer;transition:background 0.15s;"
+                   @mouseenter="$event.currentTarget.style.background='#202020'"
+                   @mouseleave="$event.currentTarget.style.background=''"
+                   @click="toggleGroup(group.name)">
+                <img v-if="group.hinhAnh" :src="group.hinhAnh"
+                     style="width:44px;height:36px;object-fit:contain;border-radius:4px;background:#111;flex-shrink:0;" />
+                <div v-else style="width:44px;height:36px;background:#222;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;">💻</div>
+                <div class="flex-grow-1 min-width-0">
+                  <div class="text-white fw-semibold" style="font-size:0.88rem;">{{ group.name }}</div>
+                  <div class="text-secondary" style="font-size:0.72rem;">
+                    {{ group.thuongHieu ? group.thuongHieu + ' · ' : '' }}{{ group.items.length }} bien the · Tong ton: <strong :class="group.totalTon===0?'text-danger':group.totalTon<5?'text-warning':'text-success'">{{ group.totalTon }}</strong>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span v-if="group.outCount" class="badge bg-danger" style="font-size:0.7rem;">{{ group.outCount }} het hang</span>
+                  <span v-else-if="group.lowCount" class="badge bg-warning text-dark" style="font-size:0.7rem;">{{ group.lowCount }} sap het</span>
+                  <span v-else class="badge bg-success" style="font-size:0.7rem;">OK</span>
+                  <span class="text-secondary" style="font-size:0.75rem;width:12px;text-align:center;">{{ expandedGroups[group.name] ? '▲' : '▼' }}</span>
+                </div>
+              </div>
+
+              <!-- Variant detail table -->
+              <div v-if="expandedGroups[group.name]" style="border-top:1px solid #252525;">
+                <table class="w-100" style="border-collapse:collapse;font-size:0.8rem;">
+                  <thead>
+                    <tr style="background:#1e1e1e;">
+                      <th class="px-3 py-2 text-secondary" style="font-weight:500;width:22%;">SKU</th>
+                      <th class="px-3 py-2 text-secondary" style="font-weight:500;">Cau hinh</th>
+                      <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">Ton</th>
+                      <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:70px;">Giu</th>
+                      <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">Toi thieu</th>
+                      <th class="px-3 py-2 text-secondary" style="font-weight:500;width:90px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in group.items" :key="item.tonKhoId"
+                        style="border-top:1px solid #222;">
+                      <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.73rem;">{{ item.bienThe?.maSku || '—' }}</td>
+                      <td class="px-3 py-2">
+                        <div class="d-flex gap-1 flex-wrap">
+                          <span v-if="getVariantInfo(item)?.cpu" class="badge" style="background:#2a2a3a;color:#aab;font-size:0.68rem;">{{ getVariantInfo(item).cpu }}</span>
+                          <span v-if="getVariantInfo(item)?.ram" class="badge" style="background:#2a3a2a;color:#aba;font-size:0.68rem;">{{ getVariantInfo(item).ram }}</span>
+                          <span v-if="getVariantInfo(item)?.oCung" class="badge" style="background:#3a2a2a;color:#baa;font-size:0.68rem;">{{ getVariantInfo(item).oCung }}</span>
+                          <span v-if="getVariantInfo(item)?.mauSac" class="badge" style="background:#2a2a2a;color:#999;font-size:0.68rem;">{{ getVariantInfo(item).mauSac }}</span>
+                        </div>
+                      </td>
+                      <td class="px-3 py-2 text-center">
+                        <span :class="stockClass(item)" class="fw-bold" style="font-size:0.88rem;">{{ item.soLuongTon ?? '—' }}</span>
+                      </td>
+                      <td class="px-3 py-2 text-center text-secondary">{{ item.soLuongGiu ?? 0 }}</td>
+                      <td class="px-3 py-2 text-center text-secondary">{{ item.tonKhoToiThieu ?? '—' }}</td>
+                      <td class="px-3 py-2">
+                        <div class="d-flex gap-1">
+                          <button class="btn btn-sm btn-outline-info"
+                                  style="font-size:0.72rem;padding:2px 8px;"
+                                  @click.stop="openStockDetail(item)">Chi tiet</button>
+                          <button class="btn btn-sm btn-outline-warning"
+                                  style="font-size:0.72rem;padding:2px 8px;"
+                                  @click.stop="openEditStock(item)">Cap nhat</button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div v-if="inventoryGrouped.length === 0" class="text-secondary small text-center py-5">Khong co du lieu</div>
           </div>
         </section>
 
@@ -1384,73 +1812,197 @@ onMounted(fetchAll);
   </div><!-- /dashboard-shell -->
 
   <!-- ══ MODAL SAN PHAM ══ -->
-  <div v-if="showProductModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.65);z-index:1000;" @click.self="showProductModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.1);width:780px;max-width:95vw;max-height:90vh;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ editingId?'Cap nhat san pham':'Them san pham moi' }}</span>
+  <div v-if="showProductModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.7);z-index:1000;" @click.self="showProductModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.1);width:860px;max-width:96vw;max-height:92vh;">
+
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid #2a2a2a;">
+        <div>
+          <div class="fw-bold text-light" style="font-size:1rem;">{{ editingId ? 'Cap nhat san pham' : 'Them san pham moi' }}</div>
+          <div v-if="editingId" class="text-secondary" style="font-size:0.72rem;margin-top:2px;">ID: {{ editingId }}</div>
+        </div>
         <button class="btn-close btn-close-white btn-sm" @click="showProductModal=false"></button>
       </div>
-      <div class="overflow-y-auto p-4">
+
+      <!-- Body -->
+      <div class="overflow-y-auto px-4 py-3" style="gap:0;">
         <div v-if="formError" class="alert alert-danger small py-2 mb-3">{{ formError }}</div>
-        <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">Ten san pham *</label><input v-model="form.tenSanPham" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Ten san pham" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Ma SKU *</label><input v-model="form.maSku" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="SKU-001" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Loai san pham *</label><select v-model="form.loaiSanPham" class="form-select form-select-sm bg-dark text-light border-secondary"><option value="" disabled>-- Chon loai --</option><option value="LAPTOP">Laptop</option><option value="DIEN_THOAI">Dien thoai</option><option value="PHU_KIEN">Phu kien</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">Trang thai *</label><select v-model="form.trangThai" class="form-select form-select-sm bg-dark text-light border-secondary"><option value="active">Hoat dong</option><option value="inactive">Ngung ban</option><option value="ngung_kin_doanh">Ngung kinh doanh</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">Thuong hieu *</label><select v-model="form.thuongHieuId" class="form-select form-select-sm bg-dark text-light border-secondary"><option :value="null" disabled>-- Chon thuong hieu --</option><option v-for="b in brands" :key="b.thuongHieuId" :value="b.thuongHieuId">{{ b.tenThuongHieu }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">Danh muc *</label><select v-model="form.danhMucId" class="form-select form-select-sm bg-dark text-light border-secondary"><option :value="null" disabled>-- Chon danh muc --</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.tenDanhMuc }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">Nha cung cap</label><select v-model="form.nhaCungCapId" class="form-select form-select-sm bg-dark text-light border-secondary"><option :value="null">-- Khong co --</option><option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">{{ s.tenNhaCungCap }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">Mau sac *</label><input v-model="form.mauSac" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Den" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">CPU</label><select v-model="form.cpuId" class="form-select form-select-sm bg-dark text-light border-secondary"><option :value="null">-- Khong co --</option><option v-for="c in cpuList" :key="c.cpuId" :value="c.cpuId">{{ c.tenCpu }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">RAM</label><select v-model="form.ramId" class="form-select form-select-sm bg-dark text-light border-secondary"><option :value="null">-- Khong co --</option><option v-for="r in ramList" :key="r.ramId" :value="r.ramId">{{ r.dungLuong }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">O cung</label><select v-model="form.oCungId" class="form-select form-select-sm bg-dark text-light border-secondary"><option :value="null">-- Khong co --</option><option v-for="o in oCungList" :key="o.oCungId" :value="o.oCungId">{{ o.loaiOcung }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">GPU</label><select v-model="form.gpuId" class="form-select form-select-sm bg-dark text-light border-secondary"><option :value="null">-- Khong co --</option><option v-for="g in gpuList" :key="g.gpuId" :value="g.gpuId">{{ g.tenGpu }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">Man hinh</label><input v-model="form.kichThuocManHinh" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder='15.6" FHD' /></div>
-          <div class="col-6"><label class="form-label small text-secondary">He dieu hanh</label><input v-model="form.heDieuHanh" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Windows 11" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Pin</label><input v-model="form.pin" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="72Wh" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Trong luong (kg)</label><input v-model="form.trongLuongKg" type="number" step="0.1" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Gia ban (VND) *</label><input v-model="form.giaBan" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Gia nhap (VND) *</label><input v-model="form.giaNhap" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Bao hanh (thang) *</label><input v-model="form.baoHanhThang" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <!-- Hinh anh: file picker -->
-          <div class="col-12">
-            <label class="form-label small text-secondary">Hinh anh chinh</label>
-            <div class="d-flex align-items-start gap-3">
-              <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:120px;height:100px;cursor:pointer;flex-shrink:0;overflow:hidden;background:#111;">
-                <img v-if="imagePreview" :src="imagePreview" style="width:120px;height:100px;object-fit:contain;" />
-                <template v-else>
-                  <span style="font-size:1.5rem;">&#128247;</span>
-                  <span style="font-size:0.72rem;margin-top:4px;">Click de chon</span>
-                </template>
-                <input type="file" accept="image/*" class="d-none" @change="handleImageFile" />
-              </label>
-              <div class="flex-grow-1">
-                <div v-if="imageFilePending" class="text-warning" style="font-size:0.75rem;">
-                  Da chon: {{ imageFilePending.name }}
-                </div>
-              </div>
+
+        <!-- ── Thong tin co ban ── -->
+        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">Thong tin co ban</div>
+        <div class="rounded-3 p-3 mb-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
+          <div class="row g-3">
+            <div class="col-8">
+              <label class="form-label small text-secondary mb-1">Ten san pham *</label>
+              <input v-model="form.tenSanPham" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Ten san pham" />
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">Ma SKU *</label>
+              <input v-model="form.maSku" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="SKU-001" style="font-family:monospace;" />
+            </div>
+            <div class="col-3">
+              <label class="form-label small text-secondary mb-1">Loai san pham *</label>
+              <select v-model="form.loaiSanPham" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <option value="" disabled>-- Chon --</option>
+                <option value="LAPTOP">Laptop</option>
+                <option value="PHU_KIEN">Phu kien</option>
+              </select>
+            </div>
+            <div class="col-3">
+              <label class="form-label small text-secondary mb-1">Trang thai *</label>
+              <select v-model="form.trangThai" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <option value="active">Hoat dong</option>
+                <option value="inactive">Ngung ban</option>
+                <option value="ngung_kin_doanh">Ngung kinh doanh</option>
+              </select>
+            </div>
+            <div class="col-3">
+              <label class="form-label small text-secondary mb-1">Mau sac *</label>
+              <input v-model="form.mauSac" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Den, Bac..." />
+            </div>
+            <div class="col-3">
+              <label class="form-label small text-secondary mb-1">Bao hanh (thang) *</label>
+              <input v-model="form.baoHanhThang" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" />
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">Thuong hieu *</label>
+              <select v-model="form.thuongHieuId" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <option :value="null" disabled>-- Chon --</option>
+                <option v-for="b in brands" :key="b.thuongHieuId" :value="b.thuongHieuId">{{ b.tenThuongHieu }}</option>
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">Danh muc *</label>
+              <select v-model="form.danhMucId" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <option :value="null" disabled>-- Chon --</option>
+                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.tenDanhMuc }}</option>
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">Nha cung cap</label>
+              <select v-model="form.nhaCungCapId" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <option :value="null">-- Khong co --</option>
+                <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">{{ s.tenNhaCungCap }}</option>
+              </select>
             </div>
           </div>
-          <!-- Serial number (chi hien khi them moi) -->
-          <div v-if="!editingId" class="col-12">
-            <label class="form-label small text-secondary">So Serial <span class="text-danger">*</span></label>
-            <input v-model="soSerialMoi" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="VD: SN2024DELL001" />
-            <div class="text-secondary mt-1" style="font-size:0.72rem;">Bat buoc khi them san pham moi (dung de quan ly kho)</div>
+        </div>
+
+        <!-- ── Cau hinh ky thuat ── -->
+        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">Cau hinh ky thuat</div>
+        <div class="rounded-3 p-3 mb-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label small text-secondary mb-1">CPU</label>
+              <select v-model="form.cpuId" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <option :value="null">-- Khong co --</option>
+                <option v-for="c in cpuList" :key="c.cpuId" :value="c.cpuId">{{ c.tenCpu }}</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small text-secondary mb-1">GPU</label>
+              <select v-model="form.gpuId" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <option :value="null">-- Khong co --</option>
+                <option v-for="g in gpuList" :key="g.gpuId" :value="g.gpuId">{{ g.tenGpu }}</option>
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">RAM</label>
+              <select v-model="form.ramId" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <option :value="null">-- Khong co --</option>
+                <option v-for="r in ramList" :key="r.ramId" :value="r.ramId">{{ r.dungLuong }}</option>
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">O cung</label>
+              <select v-model="form.oCungId" class="form-select form-select-sm bg-dark text-light border-secondary">
+                <option :value="null">-- Khong co --</option>
+                <option v-for="o in oCungList" :key="o.oCungId" :value="o.oCungId">{{ o.loaiOcung }}</option>
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">Man hinh</label>
+              <input v-model="form.kichThuocManHinh" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder='15.6" FHD' />
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">He dieu hanh</label>
+              <input v-model="form.heDieuHanh" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Windows 11" />
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">Pin</label>
+              <input v-model="form.pin" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="72Wh" />
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">Trong luong (kg)</label>
+              <input v-model="form.trongLuongKg" type="number" step="0.1" class="form-control form-control-sm bg-dark text-light border-secondary" />
+            </div>
           </div>
-          <div class="col-12"><label class="form-label small text-secondary">Mo ta</label><textarea v-model="form.moTa" rows="3" class="form-control form-control-sm bg-dark text-light border-secondary"></textarea></div>
-          <div class="col-12">
-            <label class="form-label small text-secondary">Phan loai Tags <span class="text-warning">(dùng để lọc)</span></label>
-            <input v-model="form.phanLoaiTags" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="gaming,do_hoa  |  van_phong,sinh_vien  |  macbook,apple" />
+        </div>
+
+        <!-- ── Gia ca ── -->
+        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">Gia ca</div>
+        <div class="rounded-3 p-3 mb-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label small text-secondary mb-1">Gia ban (VND) *</label>
+              <input v-model="form.giaBan" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" />
+            </div>
+            <div class="col-6">
+              <label class="form-label small text-secondary mb-1">Gia nhap (VND) *</label>
+              <input v-model="form.giaNhap" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" />
+            </div>
           </div>
-          <div class="col-12">
-            <label class="form-label small text-secondary">Phan loai Ten <span class="text-muted">(tên hiển thị)</span></label>
-            <input v-model="form.phanLoaiTen" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Gaming, Đồ họa" />
+        </div>
+
+        <!-- ── Hinh anh, mo ta, phan loai ── -->
+        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">Hinh anh & Mo ta</div>
+        <div class="rounded-3 p-3 mb-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label small text-secondary mb-1">Hinh anh chinh</label>
+              <div class="d-flex align-items-center gap-3">
+                <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:110px;height:88px;cursor:pointer;flex-shrink:0;overflow:hidden;background:#111;">
+                  <img v-if="imagePreview" :src="imagePreview" style="width:110px;height:88px;object-fit:contain;" />
+                  <template v-else>
+                    <span style="font-size:1.4rem;">&#128247;</span>
+                    <span style="font-size:0.68rem;margin-top:4px;">Click de chon</span>
+                  </template>
+                  <input type="file" accept="image/*" class="d-none" @change="handleImageFile" />
+                </label>
+                <div v-if="imageFilePending" class="text-warning" style="font-size:0.75rem;">{{ imageFilePending.name }}</div>
+                <div v-else class="text-secondary" style="font-size:0.75rem;">JPG, PNG, WEBP</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label small text-secondary mb-1">Mo ta</label>
+              <textarea v-model="form.moTa" rows="3" class="form-control form-control-sm bg-dark text-light border-secondary"></textarea>
+            </div>
+            <div class="col-6">
+              <label class="form-label small text-secondary mb-1">Phan loai Tags <span class="text-warning small">(de loc)</span></label>
+              <input v-model="form.phanLoaiTags" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="gaming,do_hoa  hoac  van_phong,sinh_vien" />
+            </div>
+            <div class="col-6">
+              <label class="form-label small text-secondary mb-1">Phan loai Ten <span class="text-muted small">(ten hien thi)</span></label>
+              <input v-model="form.phanLoaiTen" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Gaming, Do hoa" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Serial (chi khi them moi) ── -->
+        <div v-if="!editingId">
+          <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#facc15;">Serial dau tien</div>
+          <div class="rounded-3 p-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
+            <label class="form-label small text-secondary mb-1">So Serial <span class="text-danger">*</span></label>
+            <input v-model="soSerialMoi" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="VD: SN2024DELL001" style="font-family:monospace;" />
+            <div class="text-secondary mt-1" style="font-size:0.72rem;">Bat buoc khi them moi — dung de quan ly kho</div>
           </div>
         </div>
       </div>
-      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showProductModal=false">Huy</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveProduct">{{ editingId?'Cap nhat':'Them moi' }}</button>
+
+      <!-- Footer -->
+      <div class="d-flex justify-content-end gap-2 px-4 py-3" style="border-top:1px solid #2a2a2a;">
+        <button class="btn btn-sm btn-outline-secondary px-3" @click="showProductModal=false">Huy</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold px-4" @click="saveProduct">{{ editingId ? 'Cap nhat' : 'Them moi' }}</button>
       </div>
     </div>
   </div>
@@ -1478,66 +2030,6 @@ onMounted(fetchAll);
             <button class="btn btn-sm btn-outline-warning flex-shrink-0" style="font-size:0.75rem;padding:2px 8px;" @click="showVariantModal=false; openEdit(v)">Sua</button>
           </div>
 
-          <!-- bang serial -->
-          <div style="background:#161616;">
-            <div class="px-3 py-1" style="font-size:0.68rem;font-weight:700;letter-spacing:0.07em;color:#60a5fa;text-transform:uppercase;border-bottom:1px solid #222;">
-              So Serial
-            </div>
-            <div v-if="variantSerialLoad" class="px-3 py-2 text-secondary small">Dang tai...</div>
-            <div v-else-if="!variantSerialMap[v.bienTheId] || variantSerialMap[v.bienTheId].length === 0"
-                 class="px-3 py-2 text-secondary" style="font-size:0.78rem;">
-              Chua co serial nao
-            </div>
-            <table v-else class="w-100 mb-0" style="border-collapse:collapse;">
-              <thead>
-                <tr style="background:#1a1a1a;">
-                  <th class="px-3 py-1 text-secondary" style="font-size:0.7rem;font-weight:600;width:30%;">So Serial</th>
-                  <th class="px-3 py-1 text-secondary" style="font-size:0.7rem;font-weight:600;width:25%;">IMEI</th>
-                  <th class="px-3 py-1 text-secondary" style="font-size:0.7rem;font-weight:600;width:20%;">Trang thai</th>
-                  <th class="px-3 py-1 text-secondary" style="font-size:0.7rem;font-weight:600;width:25%;">Ngay nhap kho</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="s in variantSerialMap[v.bienTheId]" :key="s.chiTietId" style="border-top:1px solid #222;">
-                  <td class="px-3 py-1 text-light fw-semibold" style="font-size:0.8rem;font-family:monospace;">{{ s.soSerial }}</td>
-                  <td class="px-3 py-1 text-secondary" style="font-size:0.78rem;font-family:monospace;">{{ s.soImei || '—' }}</td>
-                  <td class="px-3 py-1">
-                    <span class="badge" style="font-size:0.68rem;"
-                      :style="s.trangThai==='trong_kho'?'background:#166534;color:#bbf7d0;':s.trangThai==='da_ban'?'background:#7f1d1d;color:#fecaca;':'background:#374151;color:#d1d5db;'">
-                      {{ s.trangThai==='trong_kho'?'Trong kho':s.trangThai==='da_ban'?'Da ban':s.trangThai||'—' }}
-                    </span>
-                  </td>
-                  <td class="px-3 py-1 text-secondary" style="font-size:0.75rem;">
-                    {{ s.ngayNhapKho ? new Date(s.ngayNhapKho).toLocaleDateString('vi-VN') : '—' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <!-- Form them serial moi -->
-            <div class="d-flex gap-2 px-3 py-2" style="border-top:1px solid #222;background:#131313;">
-              <input
-                v-if="serialInputs[v.bienTheId]"
-                v-model="serialInputs[v.bienTheId].soSerial"
-                class="form-control form-control-sm bg-dark text-light border-secondary"
-                style="font-family:monospace;font-size:0.78rem;max-width:200px;"
-                placeholder="So Serial..."
-                @keyup.enter="addSerial(v.bienTheId)"
-              />
-              <input
-                v-if="serialInputs[v.bienTheId]"
-                v-model="serialInputs[v.bienTheId].soImei"
-                class="form-control form-control-sm bg-dark text-light border-secondary"
-                style="font-family:monospace;font-size:0.78rem;max-width:180px;"
-                placeholder="IMEI (tuy chon)"
-              />
-              <button
-                class="btn btn-sm btn-outline-success flex-shrink-0"
-                style="font-size:0.78rem;"
-                :disabled="serialInputs[v.bienTheId]?.saving || !serialInputs[v.bienTheId]?.soSerial?.trim()"
-                @click="addSerial(v.bienTheId)"
-              >+ Them serial</button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -1553,13 +2045,16 @@ onMounted(fetchAll);
       <div class="overflow-y-auto p-3">
         <div v-for="v in detailModalList" :key="v.bienTheId" class="mb-4 rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
           <!-- Header bien the -->
-          <div class="d-flex align-items-center gap-3 p-3" style="background:#222;">
-            <img v-if="v.hinhAnhChinh" :src="v.hinhAnhChinh" style="width:72px;height:54px;object-fit:contain;background:#111;border-radius:6px;padding:4px;" />
-            <span v-else style="font-size:2rem;width:72px;text-align:center;">💻</span>
-            <div>
-              <div class="fw-bold text-light" style="font-size:0.95rem;">{{ v.tenSanPham }}</div>
-              <div class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</div>
+          <div class="d-flex align-items-center justify-content-between gap-3 p-3" style="background:#222;">
+            <div class="d-flex align-items-center gap-3">
+              <img v-if="v.hinhAnhChinh" :src="v.hinhAnhChinh" style="width:72px;height:54px;object-fit:contain;background:#111;border-radius:6px;padding:4px;" />
+              <span v-else style="font-size:2rem;width:72px;text-align:center;">💻</span>
+              <div>
+                <div class="fw-bold text-light" style="font-size:0.95rem;">{{ v.tenSanPham }}</div>
+                <div class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</div>
+              </div>
             </div>
+            <button class="btn btn-sm btn-outline-warning flex-shrink-0" style="font-size:0.75rem;padding:3px 12px;" @click="showDetailModal=false; openEdit(v)">Sua</button>
           </div>
           <!-- Bang thong tin 4 cot (label | value | label | value) -->
           <table class="w-100 mb-0" style="border-collapse:collapse;font-size:0.8rem;">
@@ -1619,19 +2114,6 @@ onMounted(fetchAll);
                 <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.trongLuongKg ? v.trongLuongKg + ' kg' : '—' }}</td>
                 <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Phan loai</td>
                 <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.phanLoaiTen || '—' }}</td>
-              </tr>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">So serial</td>
-                <td class="px-3 py-1" style="background:#1a1a1a;" colspan="3">
-                  <span v-if="!detailSerialMap[v.bienTheId] || detailSerialMap[v.bienTheId].length === 0" class="text-secondary">Chua co serial</span>
-                  <span v-else class="d-flex flex-wrap gap-1">
-                    <span v-for="s in detailSerialMap[v.bienTheId]" :key="s.chiTietId"
-                          class="badge"
-                          :style="s.trangThai==='trong_kho'?'background:#166534;color:#bbf7d0;font-family:monospace;font-size:0.72rem;':s.trangThai==='da_ban'?'background:#7f1d1d;color:#fecaca;font-family:monospace;font-size:0.72rem;':'background:#374151;color:#d1d5db;font-family:monospace;font-size:0.72rem;'">
-                      {{ s.soSerial }}
-                    </span>
-                  </span>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -1724,6 +2206,301 @@ onMounted(fetchAll);
     </div>
   </div>
 
+  <!-- ══ MODAL THEM SAN PHAM CHI TIET ══ -->
+  <div v-if="showAddItemDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+       style="background:rgba(0,0,0,0.85);z-index:1070;" @click.self="showAddItemDetailModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:#111;border:1px solid rgba(255,255,255,0.1);width:960px;max-width:97vw;max-height:93vh;">
+
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid #1e1e1e;">
+        <span class="text-secondary" style="font-size:0.8rem;">Chon san pham de them vao don hang</span>
+        <button class="btn-close btn-close-white btn-sm" @click="showAddItemDetailModal=false"></button>
+      </div>
+
+      <!-- Body -->
+      <div class="overflow-y-auto flex-grow-1 p-0" v-if="addItemDetailGroup">
+        <div class="d-flex" style="min-height:400px;">
+
+          <!-- Left: Anh san pham -->
+          <div class="d-flex flex-column align-items-center justify-content-center p-4"
+               style="width:42%;background:#0d0d0d;border-right:1px solid #1e1e1e;flex-shrink:0;">
+            <div style="width:100%;max-width:320px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:#141414;border-radius:12px;overflow:hidden;padding:16px;">
+              <img v-if="(addItemCurrentVariant || addItemDetailGroup.variants[0])?.hinhAnhChinh"
+                   :src="(addItemCurrentVariant || addItemDetailGroup.variants[0]).hinhAnhChinh"
+                   style="max-width:100%;max-height:100%;object-fit:contain;" />
+              <span v-else style="font-size:4rem;">💻</span>
+            </div>
+            <div class="mt-3 d-flex gap-1 flex-wrap justify-content-center">
+              <span v-for="tag in (addItemDetailGroup.variants[0]?.phanLoaiTen||'').split(',').filter(Boolean)"
+                    :key="tag" class="badge" style="background:#2a2a00;color:#facc15;font-size:0.7rem;">{{ tag.trim() }}</span>
+            </div>
+          </div>
+
+          <!-- Right: Thong tin + chon bien the -->
+          <div class="d-flex flex-column p-4 overflow-y-auto flex-grow-1">
+            <!-- Ten + thuong hieu -->
+            <div class="text-secondary mb-1" style="font-size:0.78rem;">
+              {{ addItemDetailGroup.variants[0]?.tenThuongHieu }} · {{ addItemDetailGroup.variants[0]?.tenDanhMuc }}
+            </div>
+            <h5 class="fw-bold text-light mb-2">{{ addItemDetailGroup.tenSanPham }}</h5>
+            <div class="mb-3" style="font-size:1.4rem;font-weight:700;color:#facc15;">
+              {{ addItemCurrentVariant ? formatPrice(addItemCurrentVariant.giaBan) : formatPrice(addItemDetailGroup.minPrice) }}
+              <span class="text-secondary ms-2" style="font-size:0.8rem;font-weight:400;">🚚 Giao nhanh 2H · Mien phi tu 300K</span>
+            </div>
+
+            <!-- Chon phien ban (CPU + RAM + Storage) -->
+            <div v-if="addItemConfigs.length > 1" class="mb-3">
+              <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">
+                PHIEN BAN ({{ addItemConfigs.length }} CAU HINH)
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                <button v-for="cfg in addItemConfigs" :key="cfg.key"
+                        @click="selectConfig(cfg.key)"
+                        class="btn btn-sm text-start"
+                        style="padding:8px 12px;border-radius:8px;min-width:140px;"
+                        :style="addItemSelectedConfig === cfg.key
+                          ? 'background:#1e1a00;border:2px solid #facc15;color:#facc15;'
+                          : 'background:#1a1a1a;border:1px solid #333;color:#aaa;'">
+                  <div style="font-size:0.78rem;font-weight:600;">{{ cfg.cpu || 'Tieu chuan' }}</div>
+                  <div style="font-size:0.68rem;">{{ [cfg.ram, cfg.oCung].filter(Boolean).join(' · ') }}</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Chon mau sac -->
+            <div v-if="addItemColorsForConfig.length > 0" class="mb-3">
+              <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">MAU SAC</div>
+              <div class="d-flex flex-wrap gap-2">
+                <button v-for="v in addItemColorsForConfig" :key="v.bienTheId"
+                        @click="addItemSelectedColor = v.mauSac"
+                        class="btn btn-sm"
+                        style="padding:6px 14px;border-radius:8px;"
+                        :style="addItemSelectedColor === v.mauSac
+                          ? 'background:#1e1a00;border:2px solid #facc15;color:#facc15;'
+                          : 'background:#1a1a1a;border:1px solid #333;color:#ccc;'">
+                  <div style="font-size:0.78rem;font-weight:600;">{{ v.mauSac }}</div>
+                  <div style="font-size:0.7rem;color:#facc15;">{{ formatPrice(v.giaBan) }}</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Thong tin chon -->
+            <div v-if="addItemCurrentVariant" class="mb-3 py-2 px-3 rounded-3" style="background:#1a1a1a;font-size:0.8rem;">
+              <span class="text-secondary">Mau: </span>
+              <strong class="text-light">{{ addItemCurrentVariant.mauSac }}</strong>
+              <span class="mx-2 text-secondary">·</span>
+              <span class="text-secondary">Bao hanh: </span>
+              <strong class="text-light">{{ addItemCurrentVariant.baoHanhThang ? addItemCurrentVariant.baoHanhThang + ' thang' : '—' }}</strong>
+              <span class="mx-2 text-secondary">·</span>
+              <span class="text-secondary">SKU: </span>
+              <span class="text-light" style="font-family:monospace;font-size:0.75rem;">{{ addItemCurrentVariant.maSku }}</span>
+            </div>
+
+            <!-- Thong so ky thuat -->
+            <div v-if="addItemCurrentVariant" class="mb-3">
+              <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">THONG SO KY THUAT</div>
+              <table style="width:100%;font-size:0.78rem;border-collapse:collapse;">
+                <tr v-for="([label, val]) in [
+                  ['Bo xu ly (CPU)', addItemCurrentVariant.cpu],
+                  ['RAM', addItemCurrentVariant.ram],
+                  ['O cung', addItemCurrentVariant.oCung],
+                  ['Card do hoa', addItemCurrentVariant.gpu],
+                  ['Man hinh', addItemCurrentVariant.kichThuocManHinh],
+                  ['He dieu hanh', addItemCurrentVariant.heDieuHanh],
+                  ['Pin', addItemCurrentVariant.pin],
+                  ['Trong luong', addItemCurrentVariant.trongLuongKg ? addItemCurrentVariant.trongLuongKg + ' kg' : null],
+                ].filter(([,v]) => v)" :key="label" style="border-top:1px solid #1e1e1e;">
+                  <td class="py-1 text-secondary" style="padding-left:0;width:44%;">{{ label }}</td>
+                  <td class="py-1 text-light fw-semibold">{{ val }}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer: so luong + them -->
+      <div class="px-4 py-3 d-flex align-items-center gap-3" style="border-top:1px solid #1e1e1e;background:#0d0d0d;">
+        <span class="text-secondary" style="font-size:0.85rem;">So luong:</span>
+        <input v-model.number="addItemQty" type="number" min="1" max="99"
+               class="form-control form-control-sm"
+               style="width:80px;background:#1e1e1e;color:#e0e0e0;border-color:#444;" />
+        <button class="btn btn-warning flex-grow-1 fw-bold" style="font-size:0.9rem;"
+                :disabled="!addItemCurrentVariant || addItemQty < 1 || addItemLoading"
+                @click="confirmAddFromDetail">
+          {{ addItemLoading ? 'Dang them...' : 'Them vao don hang' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CHI TIET DON HANG ══ -->
+  <div v-if="showOrderDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.75);z-index:1050;" @click.self="showOrderDetailModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.12);width:720px;max-width:96vw;max-height:90vh;">
+
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid #252525;">
+        <div>
+          <div class="fw-bold text-white" style="font-size:0.95rem;">
+            Don hang #{{ orderDetailData?.donHangId }}
+            <span v-if="orderDetailData?.maDonHang" class="text-secondary ms-2" style="font-size:0.8rem;font-family:monospace;">{{ orderDetailData.maDonHang }}</span>
+          </div>
+          <div class="text-secondary" style="font-size:0.78rem;">
+            {{ customerName(orderDetailData?.khachHangId) }} · {{ formatDate(orderDetailData?.ngayDat) }}
+          </div>
+        </div>
+        <button class="btn-close btn-close-white btn-sm" @click="showOrderDetailModal=false"></button>
+      </div>
+
+      <!-- Toan bo body scroll cung nhau -->
+      <div class="overflow-y-auto flex-grow-1">
+      <!-- Danh sach san pham trong don -->
+      <div class="p-3">
+        <div v-if="orderDetailLoading" class="text-secondary small text-center py-4">Dang tai...</div>
+        <div v-else-if="orderDetailItems.length === 0" class="text-secondary small text-center py-4">Khong co san pham nao</div>
+        <table v-else class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
+          <thead>
+            <tr style="background:#222;">
+              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:38%;">San pham</th>
+              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:16%;font-family:monospace;">SKU</th>
+              <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:8%;">SL</th>
+              <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">Don gia</th>
+              <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">Thanh tien</th>
+              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:10%;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in orderDetailItems" :key="item.id" style="border-top:1px solid #252525;">
+              <td class="px-3 py-2">
+                <div class="d-flex align-items-center gap-2">
+                  <img v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
+                       :src="productByBienThe(item.bienTheId).hinhAnhChinh"
+                       style="width:36px;height:28px;object-fit:contain;border-radius:4px;background:#111;flex-shrink:0;" />
+                  <span v-else style="font-size:1.2rem;flex-shrink:0;">💻</span>
+                  <span class="text-light">{{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}</span>
+                </div>
+              </td>
+              <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.75rem;">{{ item.maSku }}</td>
+              <td class="px-3 py-2 text-center text-white fw-bold">{{ item.soLuong }}</td>
+              <td class="px-3 py-2 text-end text-secondary">{{ formatPrice(item.donGia) }}</td>
+              <td class="px-3 py-2 text-end text-warning fw-semibold">{{ formatPrice(item.thanhTien) }}</td>
+              <td class="px-3 py-2">
+                <div class="d-flex gap-1 justify-content-center">
+                  <button v-if="productByBienThe(item.bienTheId)"
+                          class="btn btn-sm btn-outline-secondary"
+                          style="font-size:0.72rem;padding:2px 6px;"
+                          @click="openVariantDetail(item.bienTheId)">
+                    Chi tiet
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger"
+                          style="font-size:0.72rem;padding:2px 6px;"
+                          @click="removeItemFromOrder(item.id)">
+                    Xoa
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer: tong ket -->
+      <div v-if="orderDetailData" class="px-4 py-3 d-flex flex-column gap-1" style="border-top:1px solid #252525;background:#141414;">
+        <div class="d-flex justify-content-between small text-secondary">
+          <span>Tam tinh</span><span>{{ formatPrice(orderDetailData.tongTien) }}</span>
+        </div>
+        <div v-if="orderDetailData.giamGia > 0" class="d-flex justify-content-between small text-success">
+          <span>Giam gia</span><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
+        </div>
+        <div class="d-flex justify-content-between small text-secondary">
+          <span>Phi van chuyen</span>
+          <span :class="orderDetailData.phiVanChuyen === 0 ? 'text-success' : ''">
+            {{ orderDetailData.phiVanChuyen === 0 ? 'Mien phi' : formatPrice(orderDetailData.phiVanChuyen) }}
+          </span>
+        </div>
+        <div class="d-flex justify-content-between fw-bold pt-2 mt-1" style="border-top:1px solid #2a2a2a;">
+          <span class="text-white">Thanh tien</span>
+          <span class="text-warning" style="font-size:1rem;">{{ formatPrice(orderDetailData.thanhTien) }}</span>
+        </div>
+        <div class="d-flex justify-content-between small mt-2 pt-2" style="border-top:1px solid #1e1e1e;">
+          <span class="text-secondary">Trang thai don</span>
+          <span class="badge" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
+            {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
+          </span>
+        </div>
+        <div class="d-flex justify-content-between small">
+          <span class="text-secondary">Thanh toan</span>
+          <span class="badge" :class="orderDetailData.trangThaiThanhToan==='paid'?'bg-success':'bg-secondary'">
+            {{ orderDetailData.trangThaiThanhToan }}
+          </span>
+        </div>
+
+        <!-- Them san pham moi vao don -->
+        <div class="mt-3 pt-2" style="border-top:1px solid #222;">
+          <div class="d-flex align-items-center justify-content-between mb-2" style="cursor:pointer;"
+               @click="addItemMode = !addItemMode; addItemBienTheId = ''; addItemSelectedSpId = null; addItemSearch = ''">
+            <span class="fw-semibold" style="font-size:0.85rem;color:#e0e0e0;">Them san pham moi</span>
+            <span style="color:#888;font-size:0.75rem;">{{ addItemMode ? '▲' : '▼' }}</span>
+          </div>
+
+          <div v-if="addItemMode">
+            <!-- Tim kiem -->
+            <input v-model="addItemSearch" type="text" placeholder="Tim san pham..."
+                   class="form-control form-control-sm mb-3"
+                   style="background:#1e1e1e;color:#e0e0e0;border-color:#444;font-size:0.8rem;" />
+
+            <!-- Grid san pham -->
+            <div class="d-grid gap-2 mb-2" style="grid-template-columns:repeat(3,1fr);max-height:280px;overflow-y:auto;">
+              <div v-for="g in addItemProductGroups" :key="g.sanPhamId"
+                   @click="openAddItemDetail(g)"
+                   class="rounded-3 overflow-hidden"
+                   style="cursor:pointer;border:1px solid #2a2a2a;background:#1a1a1a;transition:border-color .15s;"
+                   @mouseenter="$event.currentTarget.style.borderColor='#facc15'"
+                   @mouseleave="$event.currentTarget.style.borderColor='#2a2a2a'">
+                <div style="background:#111;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                  <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh"
+                       style="max-height:76px;max-width:100%;object-fit:contain;" />
+                  <span v-else style="font-size:1.8rem;">💻</span>
+                </div>
+                <div class="px-2 py-1">
+                  <div class="fw-semibold text-light" style="font-size:0.72rem;line-height:1.3;
+                       display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                    {{ g.tenSanPham }}
+                  </div>
+                  <div class="text-secondary" style="font-size:0.65rem;">{{ g.tenThuongHieu }}</div>
+                  <div style="font-size:0.72rem;color:#facc15;font-weight:600;margin-top:2px;">
+                    Tu {{ formatPrice(g.minPrice) }}
+                  </div>
+                  <div v-if="g.phanLoaiTen" class="mt-1">
+                    <span v-for="tag in (g.phanLoaiTen||'').split(',').filter(Boolean)" :key="tag"
+                          class="badge bg-secondary me-1" style="font-size:0.58rem;">{{ tag.trim() }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-secondary text-center py-1" style="font-size:0.75rem;">Nhan vao san pham de chon phien ban</div>
+          </div>
+        </div>
+
+        <!-- Canh bao gop don: chi 1 nut, tu dong gop tat ca don cung ngay -->
+        <div v-if="mergeCandidates.length > 0" class="mt-2 pt-2 d-flex align-items-center justify-content-between gap-2"
+             style="border-top:1px solid #222;background:#1a1500;border-radius:6px;padding:8px 12px;">
+          <span style="font-size:0.78rem;color:#fbbf24;">
+            Co {{ mergeCandidates.length }} don hang cung ngay cua khach nay
+            <span class="text-secondary ms-1">(#{{ mergeCandidates.map(o => o.donHangId).join(', #') }})</span>
+          </span>
+          <button class="btn btn-sm btn-warning flex-shrink-0" style="font-size:0.78rem;padding:3px 10px;"
+                  :disabled="mergeLoading"
+                  @click="autoMergeOrders">
+            {{ mergeLoading ? '...' : 'Gop tat ca' }}
+          </button>
+        </div>
+      </div>
+      </div><!-- end outer scroll wrapper -->
+    </div>
+  </div>
+
   <!-- ══ MODAL TRANG THAI DON HANG ══ -->
   <div v-if="showOrderModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.65);z-index:1000;" @click.self="showOrderModal=false">
     <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.1);width:460px;max-width:95vw;max-height:90vh;">
@@ -1769,6 +2546,87 @@ onMounted(fetchAll);
         <button class="btn btn-sm btn-outline-secondary" @click="showStockModal=false">Huy</button>
         <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveStock">Luu</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CHI TIET SERIAL ══ -->
+  <div v-if="showStockDetailModal"
+       class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+       style="background:rgba(0,0,0,0.7);z-index:1060;"
+       @click.self="showStockDetailModal=false">
+    <div class="rounded-4 d-flex flex-column"
+         style="background:#181818;border:1px solid rgba(255,255,255,0.12);width:760px;max-width:96vw;max-height:88vh;">
+
+      <!-- Header -->
+      <div class="d-flex align-items-start justify-content-between px-4 py-3" style="border-bottom:1px solid #252525;">
+        <div>
+          <div class="fw-bold text-white" style="font-size:0.95rem;">
+            Chi tiet serial — {{ stockDetailItem?.bienThe?.maSku || '—' }}
+          </div>
+          <div class="d-flex gap-1 mt-1 flex-wrap">
+            <span v-if="getVariantInfo(stockDetailItem)?.cpu" class="badge" style="background:#2a2a3a;color:#aab;font-size:0.7rem;">{{ getVariantInfo(stockDetailItem).cpu }}</span>
+            <span v-if="getVariantInfo(stockDetailItem)?.ram" class="badge" style="background:#2a3a2a;color:#aba;font-size:0.7rem;">{{ getVariantInfo(stockDetailItem).ram }}</span>
+            <span v-if="getVariantInfo(stockDetailItem)?.oCung" class="badge" style="background:#3a2a2a;color:#baa;font-size:0.7rem;">{{ getVariantInfo(stockDetailItem).oCung }}</span>
+            <span v-if="getVariantInfo(stockDetailItem)?.mauSac" class="badge" style="background:#2a2a2a;color:#999;font-size:0.7rem;">{{ getVariantInfo(stockDetailItem).mauSac }}</span>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <div class="text-center">
+            <div class="d-flex align-items-center justify-content-center gap-1">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
+              <span class="fw-bold text-white" style="font-size:1.2rem;">{{ stockDetailSerials.filter(s=>s.trangThai==='trong_kho').length }}</span>
+            </div>
+            <div class="text-secondary" style="font-size:0.7rem;">Trong kho</div>
+          </div>
+          <div class="text-center">
+            <div class="d-flex align-items-center justify-content-center gap-1">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0;"></span>
+              <span class="fw-bold text-white" style="font-size:1.2rem;">{{ stockDetailSerials.filter(s=>s.trangThai==='da_ban').length }}</span>
+            </div>
+            <div class="text-secondary" style="font-size:0.7rem;">Da ban</div>
+          </div>
+          <div class="text-center">
+            <div class="d-flex align-items-center justify-content-center gap-1">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fb923c;flex-shrink:0;"></span>
+              <span class="fw-bold text-white" style="font-size:1.2rem;">{{ stockDetailSerials.filter(s=>s.trangThai==='loi_bao_hanh').length }}</span>
+            </div>
+            <div class="text-secondary" style="font-size:0.7rem;">Dang bao hanh</div>
+          </div>
+          <button class="btn-close btn-close-white btn-sm ms-2" @click="showStockDetailModal=false"></button>
+        </div>
+      </div>
+
+      <!-- Serial list -->
+      <div class="overflow-y-auto flex-grow-1">
+        <div v-if="stockDetailLoading" class="text-secondary small text-center py-5">Dang tai...</div>
+        <div v-else-if="stockDetailSerials.length === 0" class="text-secondary small text-center py-5">Chua co serial nao</div>
+        <table v-else class="w-100" style="border-collapse:collapse;font-size:0.82rem;">
+          <thead>
+            <tr style="background:#1e1e1e;position:sticky;top:0;">
+              <th class="px-4 py-2 text-secondary" style="font-weight:500;width:40px;">#</th>
+              <th class="px-4 py-2 text-secondary" style="font-weight:500;">So serial</th>
+              <th class="px-4 py-2 text-secondary" style="font-weight:500;">Ngay nhap</th>
+              <th class="px-4 py-2 text-secondary" style="font-weight:500;">Trang thai</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(s, idx) in stockDetailSerials" :key="s.chiTietId"
+                style="border-top:1px solid #222;">
+              <td class="px-4 py-2 text-secondary">{{ idx + 1 }}</td>
+              <td class="px-4 py-2 text-white fw-semibold" style="font-family:monospace;">{{ s.soSerial }}</td>
+              <td class="px-4 py-2 text-secondary">{{ formatDate(s.ngayNhapKho) }}</td>
+              <td class="px-4 py-2">
+                <span
+                  style="display:inline-block;width:10px;height:10px;border-radius:50%;"
+                  :style="{ background: stockDetailStatusColor(s.trangThai) }"
+                  :title="stockDetailStatusLabel(s.trangThai)"
+                ></span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
     </div>
   </div>
 </template>

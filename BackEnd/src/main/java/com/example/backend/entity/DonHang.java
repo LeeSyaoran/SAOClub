@@ -75,7 +75,7 @@ public class DonHang {
     @Column(name = "trang_thai_don_hang", length = 30)
     private String trangThaiDonHang;
 
-    // Giá trị: "chua_thanh_toan" | "da_thanh_toan" | "hoan_tien"
+    // Giá trị: "unpaid" | "paid" | "partial" | "refunded"
     @Column(name = "trang_thai_thanh_toan", length = 30)
     private String trangThaiThanhToan;
 

@@ -37,10 +37,6 @@ public class BienTheSanPhamService {
 
     public BienTheSanPham create(BienTheSanPhamRequest request) {
         BienTheSanPham entity = new BienTheSanPham();
-        // BeanUtils copies: maSku, giaNhap, giaBan, baoHanhThang, hinhAnhBienThe, trangThai, mauSac,
-        //                   kichThuocManHinh, heDieuHanh, pin, trongLuongKg,
-        //                   manHinhDt, cameraSau, cameraTruoc, dungLuongPinDt,
-        //                   boNhoTrongDt, chipXuLyDt, soSim
         // Bỏ qua: sanPhamId, cpuId, ramId, oCungId, gpuId (khác tên với entity)
         BeanUtils.copyProperties(request, entity, "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId");
 

@@ -1157,3 +1157,261 @@ SET
 FROM bien_the_san_pham bt
 WHERE bt.san_pham_id IN (6, 7, 8, 9, 10, 11);
 GO
+
+-- ── Serial numbers cho tất cả biến thể (bt 3-41) ─────────────────────────────
+-- Format: N{năm}{brand}{bt_id:02d}{seq:04d}  (10 ký tự, giống serial laptop thật)
+-- Trước khi INSERT: reset ton_kho về 0 để trigger tính lại đúng
+UPDATE ton_kho SET so_luong_ton_thuc_te = 0, so_luong_giu = 0 WHERE bien_the_id BETWEEN 3 AND 41;
+GO
+
+-- ── Asus Vivobook 15 X1504VA ──────────────────────────────────────────────────
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=3  ASUS-X1504-I5-8G Bạc: 11 trong_kho + 3 đã bán + 1 bảo hành
+(3,'N24A030001',N'trong_kho','2024-06-16'),(3,'N24A030002',N'trong_kho','2024-06-16'),
+(3,'N24A030003',N'trong_kho','2024-06-16'),(3,'N24A030004',N'trong_kho','2024-06-16'),
+(3,'N24A030005',N'trong_kho','2024-06-16'),(3,'N24A030006',N'trong_kho','2024-06-16'),
+(3,'N24A030007',N'trong_kho','2024-06-16'),(3,'N24A030008',N'trong_kho','2024-06-16'),
+(3,'N24A030009',N'trong_kho','2024-06-16'),(3,'N24A030010',N'trong_kho','2024-06-16'),
+(3,'N24A030011',N'trong_kho','2024-06-16'),
+(3,'N24A030012',N'da_ban',   '2024-06-16'),(3,'N24A030013',N'da_ban',   '2024-06-16'),
+(3,'N24A030014',N'da_ban',   '2024-06-16'),(3,'N24A030015',N'loi_bao_hanh', '2024-06-16'),
+-- bt=4  ASUS-X1504-I7-16G Bạc: 8 trong_kho + 2 đã bán + 1 bảo hành
+(4,'N24A040001',N'trong_kho','2024-06-16'),(4,'N24A040002',N'trong_kho','2024-06-16'),
+(4,'N24A040003',N'trong_kho','2024-06-16'),(4,'N24A040004',N'trong_kho','2024-06-16'),
+(4,'N24A040005',N'trong_kho','2024-06-16'),(4,'N24A040006',N'trong_kho','2024-06-16'),
+(4,'N24A040007',N'trong_kho','2024-06-16'),(4,'N24A040008',N'trong_kho','2024-06-16'),
+(4,'N24A040009',N'da_ban',   '2024-06-16'),(4,'N24A040010',N'da_ban',   '2024-06-16'),
+(4,'N24A040011',N'loi_bao_hanh', '2024-06-16');
+GO
+
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=5  LENO-IP5P-R5-8G Xám Bão: 13 trong_kho + 4 đã bán + 1 bảo hành
+(5,'N24L050001',N'trong_kho','2024-06-16'),(5,'N24L050002',N'trong_kho','2024-06-16'),
+(5,'N24L050003',N'trong_kho','2024-06-16'),(5,'N24L050004',N'trong_kho','2024-06-16'),
+(5,'N24L050005',N'trong_kho','2024-06-16'),(5,'N24L050006',N'trong_kho','2024-06-16'),
+(5,'N24L050007',N'trong_kho','2024-06-16'),(5,'N24L050008',N'trong_kho','2024-06-16'),
+(5,'N24L050009',N'trong_kho','2024-06-16'),(5,'N24L050010',N'trong_kho','2024-06-16'),
+(5,'N24L050011',N'trong_kho','2024-06-16'),(5,'N24L050012',N'trong_kho','2024-06-16'),
+(5,'N24L050013',N'trong_kho','2024-06-16'),
+(5,'N24L050014',N'da_ban',   '2024-06-16'),(5,'N24L050015',N'da_ban',   '2024-06-16'),
+(5,'N24L050016',N'da_ban',   '2024-06-16'),(5,'N24L050017',N'da_ban',   '2024-06-16'),
+(5,'N24L050018',N'loi_bao_hanh', '2024-06-16'),
+-- bt=6  LENO-IP5P-R7-16G Xám Bão: 5 trong_kho + 2 đã bán + 1 bảo hành
+(6,'N24L060001',N'trong_kho','2024-06-16'),(6,'N24L060002',N'trong_kho','2024-06-16'),
+(6,'N24L060003',N'trong_kho','2024-06-16'),(6,'N24L060004',N'trong_kho','2024-06-16'),
+(6,'N24L060005',N'trong_kho','2024-06-16'),
+(6,'N24L060006',N'da_ban',   '2024-06-16'),(6,'N24L060007',N'da_ban',   '2024-06-16'),
+(6,'N24L060008',N'loi_bao_hanh', '2024-06-16');
+GO
+
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=7  HP-ENVY-I7-16G Bạc Tự Nhiên: 9 trong_kho + 3 đã bán
+(7,'N24H070001',N'trong_kho','2024-06-16'),(7,'N24H070002',N'trong_kho','2024-06-16'),
+(7,'N24H070003',N'trong_kho','2024-06-16'),(7,'N24H070004',N'trong_kho','2024-06-16'),
+(7,'N24H070005',N'trong_kho','2024-06-16'),(7,'N24H070006',N'trong_kho','2024-06-16'),
+(7,'N24H070007',N'trong_kho','2024-06-16'),(7,'N24H070008',N'trong_kho','2024-06-16'),
+(7,'N24H070009',N'trong_kho','2024-06-16'),
+(7,'N24H070010',N'da_ban',   '2024-06-16'),(7,'N24H070011',N'da_ban',   '2024-06-16'),
+(7,'N24H070012',N'da_ban',   '2024-06-16'),
+-- bt=8  HP-ENVY-I9-32G Bạc Tự Nhiên: 3 trong_kho + 2 đã bán + 1 bảo hành
+(8,'N24H080001',N'trong_kho','2024-06-16'),(8,'N24H080002',N'trong_kho','2024-06-16'),
+(8,'N24H080003',N'trong_kho','2024-06-16'),
+(8,'N24H080004',N'da_ban',   '2024-06-16'),(8,'N24H080005',N'da_ban',   '2024-06-16'),
+(8,'N24H080006',N'loi_bao_hanh', '2024-06-16');
+GO
+
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=9  MSI-STL15-RTX4050 Đen: 7 trong_kho + 3 đã bán + 1 bảo hành
+(9,'N24M090001',N'trong_kho','2024-06-16'),(9,'N24M090002',N'trong_kho','2024-06-16'),
+(9,'N24M090003',N'trong_kho','2024-06-16'),(9,'N24M090004',N'trong_kho','2024-06-16'),
+(9,'N24M090005',N'trong_kho','2024-06-16'),(9,'N24M090006',N'trong_kho','2024-06-16'),
+(9,'N24M090007',N'trong_kho','2024-06-16'),
+(9,'N24M090008',N'da_ban',   '2024-06-16'),(9,'N24M090009',N'da_ban',   '2024-06-16'),
+(9,'N24M090010',N'da_ban',   '2024-06-16'),(9,'N24M090011',N'loi_bao_hanh', '2024-06-16'),
+-- bt=10 MSI-STL15-RTX4070 Đen: 5 trong_kho + 2 đã bán
+(10,'N24M100001',N'trong_kho','2024-06-16'),(10,'N24M100002',N'trong_kho','2024-06-16'),
+(10,'N24M100003',N'trong_kho','2024-06-16'),(10,'N24M100004',N'trong_kho','2024-06-16'),
+(10,'N24M100005',N'trong_kho','2024-06-16'),
+(10,'N24M100006',N'da_ban',   '2024-06-16'),(10,'N24M100007',N'da_ban',   '2024-06-16');
+GO
+
+-- ── Extra màu sp 1-5 (bien_the 11-18) ────────────────────────────────────────
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=11 DELL-3520-I5-8G-BLK Đen: 8 trong_kho + 3 đã bán
+(11,'N24D110001',N'trong_kho','2024-10-01'),(11,'N24D110002',N'trong_kho','2024-10-01'),
+(11,'N24D110003',N'trong_kho','2024-10-01'),(11,'N24D110004',N'trong_kho','2024-10-01'),
+(11,'N24D110005',N'trong_kho','2024-10-01'),(11,'N24D110006',N'trong_kho','2024-10-01'),
+(11,'N24D110007',N'trong_kho','2024-10-01'),(11,'N24D110008',N'trong_kho','2024-10-01'),
+(11,'N24D110009',N'da_ban',   '2024-10-01'),(11,'N24D110010',N'da_ban',   '2024-10-01'),
+(11,'N24D110011',N'da_ban',   '2024-10-01'),
+-- bt=12 ASUS-X1504-I5-8G-BLK Đen: 6 trong_kho + 2 đã bán
+(12,'N24A120001',N'trong_kho','2024-10-01'),(12,'N24A120002',N'trong_kho','2024-10-01'),
+(12,'N24A120003',N'trong_kho','2024-10-01'),(12,'N24A120004',N'trong_kho','2024-10-01'),
+(12,'N24A120005',N'trong_kho','2024-10-01'),(12,'N24A120006',N'trong_kho','2024-10-01'),
+(12,'N24A120007',N'da_ban',   '2024-10-01'),(12,'N24A120008',N'da_ban',   '2024-10-01'),
+-- bt=13 ASUS-X1504-I7-16G-BLK Đen: 4 trong_kho + 1 đã bán + 1 bảo hành
+(13,'N24A130001',N'trong_kho','2024-10-01'),(13,'N24A130002',N'trong_kho','2024-10-01'),
+(13,'N24A130003',N'trong_kho','2024-10-01'),(13,'N24A130004',N'trong_kho','2024-10-01'),
+(13,'N24A130005',N'da_ban',   '2024-10-01'),(13,'N24A130006',N'loi_bao_hanh', '2024-10-01');
+GO
+
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=14 LENO-IP5P-R5-8G-BLU Xanh Dương: 5 trong_kho + 2 đã bán
+(14,'N24L140001',N'trong_kho','2024-10-01'),(14,'N24L140002',N'trong_kho','2024-10-01'),
+(14,'N24L140003',N'trong_kho','2024-10-01'),(14,'N24L140004',N'trong_kho','2024-10-01'),
+(14,'N24L140005',N'trong_kho','2024-10-01'),
+(14,'N24L140006',N'da_ban',   '2024-10-01'),(14,'N24L140007',N'da_ban',   '2024-10-01'),
+-- bt=15 LENO-IP5P-R7-16G-BLU Xanh Dương: 3 trong_kho + 1 đã bán
+(15,'N24L150001',N'trong_kho','2024-10-01'),(15,'N24L150002',N'trong_kho','2024-10-01'),
+(15,'N24L150003',N'trong_kho','2024-10-01'),(15,'N24L150004',N'da_ban',   '2024-10-01'),
+-- bt=16 HP-ENVY-I7-16G-GLD Vàng Citrus: 4 trong_kho + 1 đã bán
+(16,'N24H160001',N'trong_kho','2024-10-01'),(16,'N24H160002',N'trong_kho','2024-10-01'),
+(16,'N24H160003',N'trong_kho','2024-10-01'),(16,'N24H160004',N'trong_kho','2024-10-01'),
+(16,'N24H160005',N'da_ban',   '2024-10-01'),
+-- bt=17 HP-ENVY-I9-32G-BLK Đen Midnight: 2 trong_kho + 1 đã bán
+(17,'N24H170001',N'trong_kho','2024-10-01'),(17,'N24H170002',N'trong_kho','2024-10-01'),
+(17,'N24H170003',N'da_ban',   '2024-10-01'),
+-- bt=18 MSI-STL15-RTX4050-SLV Bạc: 3 trong_kho + 1 đã bán
+(18,'N24M180001',N'trong_kho','2024-10-01'),(18,'N24M180002',N'trong_kho','2024-10-01'),
+(18,'N24M180003',N'trong_kho','2024-10-01'),(18,'N24M180004',N'da_ban',   '2024-10-01');
+GO
+
+-- ── Acer Aspire 5 A515-58 (bien_the 19-22) ───────────────────────────────────
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=19 ACER-A515-I5-8G-SLV Bạc: 8 trong_kho + 2 đã bán
+(19,'N24C190001',N'trong_kho','2024-11-01'),(19,'N24C190002',N'trong_kho','2024-11-01'),
+(19,'N24C190003',N'trong_kho','2024-11-01'),(19,'N24C190004',N'trong_kho','2024-11-01'),
+(19,'N24C190005',N'trong_kho','2024-11-01'),(19,'N24C190006',N'trong_kho','2024-11-01'),
+(19,'N24C190007',N'trong_kho','2024-11-01'),(19,'N24C190008',N'trong_kho','2024-11-01'),
+(19,'N24C190009',N'da_ban',   '2024-11-01'),(19,'N24C190010',N'da_ban',   '2024-11-01'),
+-- bt=20 ACER-A515-I5-8G-BLU Xanh Dương: 6 trong_kho + 2 đã bán
+(20,'N24C200001',N'trong_kho','2024-11-01'),(20,'N24C200002',N'trong_kho','2024-11-01'),
+(20,'N24C200003',N'trong_kho','2024-11-01'),(20,'N24C200004',N'trong_kho','2024-11-01'),
+(20,'N24C200005',N'trong_kho','2024-11-01'),(20,'N24C200006',N'trong_kho','2024-11-01'),
+(20,'N24C200007',N'da_ban',   '2024-11-01'),(20,'N24C200008',N'da_ban',   '2024-11-01'),
+-- bt=21 ACER-A515-I7-16G-SLV Bạc: 5 trong_kho + 2 đã bán + 1 bảo hành
+(21,'N24C210001',N'trong_kho','2024-11-01'),(21,'N24C210002',N'trong_kho','2024-11-01'),
+(21,'N24C210003',N'trong_kho','2024-11-01'),(21,'N24C210004',N'trong_kho','2024-11-01'),
+(21,'N24C210005',N'trong_kho','2024-11-01'),
+(21,'N24C210006',N'da_ban',   '2024-11-01'),(21,'N24C210007',N'da_ban',   '2024-11-01'),
+(21,'N24C210008',N'loi_bao_hanh', '2024-11-01'),
+-- bt=22 ACER-A515-I7-16G-BLK Đen: 4 trong_kho + 1 đã bán
+(22,'N24C220001',N'trong_kho','2024-11-01'),(22,'N24C220002',N'trong_kho','2024-11-01'),
+(22,'N24C220003',N'trong_kho','2024-11-01'),(22,'N24C220004',N'trong_kho','2024-11-01'),
+(22,'N24C220005',N'da_ban',   '2024-11-01');
+GO
+
+-- ── Asus ROG Strix G16 G614 (bien_the 23-25) ─────────────────────────────────
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=23 ROG-G614-I7-16G-BLK Đen: 5 trong_kho + 2 đã bán
+(23,'N24R230001',N'trong_kho','2024-11-15'),(23,'N24R230002',N'trong_kho','2024-11-15'),
+(23,'N24R230003',N'trong_kho','2024-11-15'),(23,'N24R230004',N'trong_kho','2024-11-15'),
+(23,'N24R230005',N'trong_kho','2024-11-15'),
+(23,'N24R230006',N'da_ban',   '2024-11-15'),(23,'N24R230007',N'da_ban',   '2024-11-15'),
+-- bt=24 ROG-G614-I7-16G-GRY Xám Eclipse: 3 trong_kho + 1 đã bán + 1 bảo hành
+(24,'N24R240001',N'trong_kho','2024-11-15'),(24,'N24R240002',N'trong_kho','2024-11-15'),
+(24,'N24R240003',N'trong_kho','2024-11-15'),
+(24,'N24R240004',N'da_ban',   '2024-11-15'),(24,'N24R240005',N'loi_bao_hanh', '2024-11-15'),
+-- bt=25 ROG-G614-I9-32G-BLK Đen: 2 trong_kho + 1 đã bán
+(25,'N24R250001',N'trong_kho','2024-11-15'),(25,'N24R250002',N'trong_kho','2024-11-15'),
+(25,'N24R250003',N'da_ban',   '2024-11-15');
+GO
+
+-- ── Lenovo Legion 5 Pro 16 (bien_the 26-29) ──────────────────────────────────
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=26 LEGI-5P-R7-16G-GRY Xám: 6 trong_kho + 2 đã bán
+(26,'N24G260001',N'trong_kho','2024-11-15'),(26,'N24G260002',N'trong_kho','2024-11-15'),
+(26,'N24G260003',N'trong_kho','2024-11-15'),(26,'N24G260004',N'trong_kho','2024-11-15'),
+(26,'N24G260005',N'trong_kho','2024-11-15'),(26,'N24G260006',N'trong_kho','2024-11-15'),
+(26,'N24G260007',N'da_ban',   '2024-11-15'),(26,'N24G260008',N'da_ban',   '2024-11-15'),
+-- bt=27 LEGI-5P-R7-16G-WHT Trắng: 4 trong_kho + 2 đã bán + 1 bảo hành
+(27,'N24G270001',N'trong_kho','2024-11-15'),(27,'N24G270002',N'trong_kho','2024-11-15'),
+(27,'N24G270003',N'trong_kho','2024-11-15'),(27,'N24G270004',N'trong_kho','2024-11-15'),
+(27,'N24G270005',N'da_ban',   '2024-11-15'),(27,'N24G270006',N'da_ban',   '2024-11-15'),
+(27,'N24G270007',N'loi_bao_hanh', '2024-11-15'),
+-- bt=28 LEGI-5P-R7-32G-GRY Xám: 3 trong_kho + 1 đã bán
+(28,'N24G280001',N'trong_kho','2024-11-15'),(28,'N24G280002',N'trong_kho','2024-11-15'),
+(28,'N24G280003',N'trong_kho','2024-11-15'),(28,'N24G280004',N'da_ban',   '2024-11-15'),
+-- bt=29 LEGI-5P-R7-32G-BLK Đen: 2 trong_kho + 1 đã bán
+(29,'N24G290001',N'trong_kho','2024-11-15'),(29,'N24G290002',N'trong_kho','2024-11-15'),
+(29,'N24G290003',N'da_ban',   '2024-11-15');
+GO
+
+-- ── HP Pavilion 15 (bien_the 30-34) ──────────────────────────────────────────
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=30 HP-PAV15-I5-8G-SLV Bạc: 10 trong_kho + 3 đã bán + 1 bảo hành
+(30,'N24H300001',N'trong_kho','2024-12-01'),(30,'N24H300002',N'trong_kho','2024-12-01'),
+(30,'N24H300003',N'trong_kho','2024-12-01'),(30,'N24H300004',N'trong_kho','2024-12-01'),
+(30,'N24H300005',N'trong_kho','2024-12-01'),(30,'N24H300006',N'trong_kho','2024-12-01'),
+(30,'N24H300007',N'trong_kho','2024-12-01'),(30,'N24H300008',N'trong_kho','2024-12-01'),
+(30,'N24H300009',N'trong_kho','2024-12-01'),(30,'N24H300010',N'trong_kho','2024-12-01'),
+(30,'N24H300011',N'da_ban',   '2024-12-01'),(30,'N24H300012',N'da_ban',   '2024-12-01'),
+(30,'N24H300013',N'da_ban',   '2024-12-01'),(30,'N24H300014',N'loi_bao_hanh', '2024-12-01'),
+-- bt=31 HP-PAV15-I5-8G-PNK Hồng: 8 trong_kho + 3 đã bán
+(31,'N24H310001',N'trong_kho','2024-12-01'),(31,'N24H310002',N'trong_kho','2024-12-01'),
+(31,'N24H310003',N'trong_kho','2024-12-01'),(31,'N24H310004',N'trong_kho','2024-12-01'),
+(31,'N24H310005',N'trong_kho','2024-12-01'),(31,'N24H310006',N'trong_kho','2024-12-01'),
+(31,'N24H310007',N'trong_kho','2024-12-01'),(31,'N24H310008',N'trong_kho','2024-12-01'),
+(31,'N24H310009',N'da_ban',   '2024-12-01'),(31,'N24H310010',N'da_ban',   '2024-12-01'),
+(31,'N24H310011',N'da_ban',   '2024-12-01');
+GO
+
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=32 HP-PAV15-I5-8G-BLU Xanh Dương: 7 trong_kho + 2 đã bán
+(32,'N24H320001',N'trong_kho','2024-12-01'),(32,'N24H320002',N'trong_kho','2024-12-01'),
+(32,'N24H320003',N'trong_kho','2024-12-01'),(32,'N24H320004',N'trong_kho','2024-12-01'),
+(32,'N24H320005',N'trong_kho','2024-12-01'),(32,'N24H320006',N'trong_kho','2024-12-01'),
+(32,'N24H320007',N'trong_kho','2024-12-01'),
+(32,'N24H320008',N'da_ban',   '2024-12-01'),(32,'N24H320009',N'da_ban',   '2024-12-01'),
+-- bt=33 HP-PAV15-I7-16G-SLV Bạc: 6 trong_kho + 2 đã bán + 1 bảo hành
+(33,'N24H330001',N'trong_kho','2024-12-01'),(33,'N24H330002',N'trong_kho','2024-12-01'),
+(33,'N24H330003',N'trong_kho','2024-12-01'),(33,'N24H330004',N'trong_kho','2024-12-01'),
+(33,'N24H330005',N'trong_kho','2024-12-01'),(33,'N24H330006',N'trong_kho','2024-12-01'),
+(33,'N24H330007',N'da_ban',   '2024-12-01'),(33,'N24H330008',N'da_ban',   '2024-12-01'),
+(33,'N24H330009',N'loi_bao_hanh', '2024-12-01'),
+-- bt=34 HP-PAV15-I7-16G-BLK Đen: 5 trong_kho + 2 đã bán
+(34,'N24H340001',N'trong_kho','2024-12-01'),(34,'N24H340002',N'trong_kho','2024-12-01'),
+(34,'N24H340003',N'trong_kho','2024-12-01'),(34,'N24H340004',N'trong_kho','2024-12-01'),
+(34,'N24H340005',N'trong_kho','2024-12-01'),
+(34,'N24H340006',N'da_ban',   '2024-12-01'),(34,'N24H340007',N'da_ban',   '2024-12-01');
+GO
+
+-- ── Dell XPS 15 9530 (bien_the 35-37) ────────────────────────────────────────
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=35 XPS-9530-I7-16G Bạc Bạch Kim: 4 trong_kho + 2 đã bán
+(35,'N24D350001',N'trong_kho','2024-12-15'),(35,'N24D350002',N'trong_kho','2024-12-15'),
+(35,'N24D350003',N'trong_kho','2024-12-15'),(35,'N24D350004',N'trong_kho','2024-12-15'),
+(35,'N24D350005',N'da_ban',   '2024-12-15'),(35,'N24D350006',N'da_ban',   '2024-12-15'),
+-- bt=36 XPS-9530-I7-16G Đen Graphite: 3 trong_kho + 1 đã bán + 1 bảo hành
+(36,'N24D360001',N'trong_kho','2024-12-15'),(36,'N24D360002',N'trong_kho','2024-12-15'),
+(36,'N24D360003',N'trong_kho','2024-12-15'),
+(36,'N24D360004',N'da_ban',   '2024-12-15'),(36,'N24D360005',N'loi_bao_hanh', '2024-12-15'),
+-- bt=37 XPS-9530-I9-32G Bạc Bạch Kim: 2 trong_kho + 1 đã bán
+(37,'N24D370001',N'trong_kho','2024-12-15'),(37,'N24D370002',N'trong_kho','2024-12-15'),
+(37,'N24D370003',N'da_ban',   '2024-12-15');
+GO
+
+-- ── Acer Nitro V 15 (bien_the 38-41) ─────────────────────────────────────────
+INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+-- bt=38 NTV15-I5-RTX4050 Đen: 7 trong_kho + 3 đã bán + 1 bảo hành
+(38,'N25C380001',N'trong_kho','2025-01-10'),(38,'N25C380002',N'trong_kho','2025-01-10'),
+(38,'N25C380003',N'trong_kho','2025-01-10'),(38,'N25C380004',N'trong_kho','2025-01-10'),
+(38,'N25C380005',N'trong_kho','2025-01-10'),(38,'N25C380006',N'trong_kho','2025-01-10'),
+(38,'N25C380007',N'trong_kho','2025-01-10'),
+(38,'N25C380008',N'da_ban',   '2025-01-10'),(38,'N25C380009',N'da_ban',   '2025-01-10'),
+(38,'N25C380010',N'da_ban',   '2025-01-10'),(38,'N25C380011',N'loi_bao_hanh', '2025-01-10'),
+-- bt=39 NTV15-I5-RTX4050 Đỏ Đen: 5 trong_kho + 2 đã bán
+(39,'N25C390001',N'trong_kho','2025-01-10'),(39,'N25C390002',N'trong_kho','2025-01-10'),
+(39,'N25C390003',N'trong_kho','2025-01-10'),(39,'N25C390004',N'trong_kho','2025-01-10'),
+(39,'N25C390005',N'trong_kho','2025-01-10'),
+(39,'N25C390006',N'da_ban',   '2025-01-10'),(39,'N25C390007',N'da_ban',   '2025-01-10'),
+-- bt=40 NTV15-I7-RTX4060 Đen: 4 trong_kho + 2 đã bán + 1 bảo hành
+(40,'N25C400001',N'trong_kho','2025-01-10'),(40,'N25C400002',N'trong_kho','2025-01-10'),
+(40,'N25C400003',N'trong_kho','2025-01-10'),(40,'N25C400004',N'trong_kho','2025-01-10'),
+(40,'N25C400005',N'da_ban',   '2025-01-10'),(40,'N25C400006',N'da_ban',   '2025-01-10'),
+(40,'N25C400007',N'loi_bao_hanh', '2025-01-10'),
+-- bt=41 NTV15-I7-RTX4060 Trắng: 3 trong_kho + 1 đã bán
+(41,'N25C410001',N'trong_kho','2025-01-10'),(41,'N25C410002',N'trong_kho','2025-01-10'),
+(41,'N25C410003',N'trong_kho','2025-01-10'),(41,'N25C410004',N'da_ban',   '2025-01-10');
+GO
+-- Tổng: ~280 serial cho 39 biến thể | Trigger tự cập nhật ton_kho

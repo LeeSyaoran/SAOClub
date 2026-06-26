@@ -33,11 +33,4 @@ public class BienTheSanPhamResponse {
     private String heDieuHanh;
     private String pin;
     private BigDecimal trongLuongKg;
-    private String manHinhDt;
-    private String cameraSau;
-    private String cameraTruoc;
-    private String dungLuongPinDt;
-    private String boNhoTrongDt;
-    private String chipXuLyDt;
-    private String soSim;
 }

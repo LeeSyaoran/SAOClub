@@ -23,11 +23,8 @@ public class ChiTietSanPham {
     @JoinColumn(name = "bien_the_id", nullable = false)
     private BienTheSanPham bienThe;
 
-    @Column(name = "so_serial", length = 50, unique = true)
+    @Column(name = "so_serial", length = 100, unique = true)
     private String soSerial;
-
-    @Column(name = "so_imei", length = 20)
-    private String soImei;
 
     @Column(name = "trang_thai", length = 30)
     private String trangThai;

@@ -30,9 +30,15 @@ public class ChiTietDonHangController {
         return chiTietDonHangService.getById(id);
     }
 
+    @GetMapping("/don-hang/{donHangId}")
+    public List<ChiTietDonHangResponse> getByDonHang(@PathVariable Integer donHangId) {
+        return chiTietDonHangService.getByDonHangId(donHangId);
+    }
+
     @PostMapping
-    public ResponseEntity<ChiTietDonHang> create(@Valid @RequestBody ChiTietDonHangRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(chiTietDonHangService.create(request));
+    public ResponseEntity<Void> create(@Valid @RequestBody ChiTietDonHangRequest request) {
+        chiTietDonHangService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PutMapping("update/{id}")
