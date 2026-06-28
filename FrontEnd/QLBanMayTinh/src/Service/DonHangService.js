@@ -16,3 +16,4 @@ export const merge = (targetId, sourceIds) =>
   post('/api/don-hang/merge', { targetId, sourceIds });
 
 export const addChiTiet = (body) => post('/api/chi-tiet-don-hang', body);
+export const getByKhachHang = (khachHangId) => get(`/api/don-hang/khach-hang/${khachHangId}`);

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAOClub Member | SAOPHONE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --bg: #0f0f0f; --card: #1a1a1a; --gold: #facc15; --text: #e0e0e0; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, sans-serif; }
+        
+        /* Header */
+        .navbar-saoclub { background: #000; border-bottom: 2px solid var(--gold); padding: 15px 0; }
+        
+        /* Cards */
+        .custom-card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        /* Sidebar */
+        .sidebar-item { padding: 12px 15px; cursor: pointer; border-radius: 8px; transition: 0.3s; color: #aaa; }
+        .sidebar-item:hover, .sidebar-item.active { background: #222; color: var(--gold); }
+        
+        /* Order Items */
+        .order-row { background: #252525; border-radius: 8px; padding: 20px; margin-bottom: 15px; border-left: 4px solid var(--gold); }
+        
+        .btn-gold { background: var(--gold); color: #000; font-weight: bold; border-radius: 6px; }
+        .text-gold { color: var(--gold); }
+
+        .sidebar-item.active {
+        background: #252525 !important;
+        color: var(--gold) !important;
+        border-left: 4px solid var(--gold);
+        border-radius: 0 !important;
+    }
+
+    </style>
+
+<style>
+    /* Ép buộc nền đen cho card chứa bảng */
+    .custom-card {
+        background-color: #1a1a1a !important; /* Thay màu trắng thành đen */
+        color: white !important;
+    }
+
+    /* Ép buộc nền đen cho table */
+    .table {
+        background-color: #1a1a1a !important;
+        color: white !important;
+    }
+
+    /* Đảm bảo các hàng trong bảng cũng nhận nền đen */
+    .table tbody tr {
+        background-color: #1a1a1a !important;
+        color: white !important;
+    }
+
+    /* Tùy chỉnh màu chữ tiêu đề bảng */
+    .table thead th {
+        color: #adb5bd !important; /* Màu xám nhạt cho tiêu đề */
+    }
+</style>
+  
+</head>
+
+<script type="module">
+    import * as khachHangService from './src/Service/KhachHangService.js';
+    import * as donHangService from './src/Service/DonHangService.js';
+let myOrders = [];
+let myOrdersHitory = [];
+
+
+    async function init() {
+        
+        const sessionData = localStorage.getItem('saophone_session');
+        if (!sessionData) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        const userSession = JSON.parse(sessionData);
+        const customerId = userSession.id;
+
+        try {
+            // 2. Lấy thông tin khách hàng
+            const users = await khachHangService.getAll();
+            const user = users.find(u => u.khachHangId == customerId); 
+            
+            if (user) {
+                document.getElementById('userName').innerText = user.hoTen;
+                document.getElementById('userPhone').innerText = user.soDienThoai;
+                document.getElementById('userAvatar').innerText = user.hoTen.charAt(0).toUpperCase();
+            } else {
+                document.getElementById('userName').innerText = userSession.name;
+                document.getElementById('userPhone').innerText = userSession.phone;
+                document.getElementById('userAvatar').innerText = userSession.name.charAt(0).toUpperCase();
+            }
+
+            // 3. Lấy và hiển thị danh sách đơn hàng
+            const orders = await donHangService.getAll();
+            const myOrders = orders.filter(o => o.khachHangId == customerId); 
+
+            document.getElementById('orderCount').innerText = myOrders.length;
+            const total = myOrders.reduce((sum, o) => sum + (Number(o.thanhTien) || 0), 0);
+            document.getElementById('totalSpent').innerText = total.toLocaleString('vi-VN') + 'đ';
+
+            const orderList = document.getElementById('orderList');
+            if (orderList) {
+                if (myOrders.length === 0) {
+                    orderList.innerHTML = '<tr><td colspan="4" class="text-center text-secondary">Bạn chưa có đơn hàng nào.</td></tr>';
+                } else {
+                    orderList.innerHTML = myOrders.map(o => `
+                        <tr>
+                            <td>#${o.maDonHang || 'N/A'}</td>
+                            <td>${o.ngayDat ? new Date(o.ngayDat).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                            <td>${Number(o.thanhTien || 0).toLocaleString('vi-VN')}đ</td>
+                            <td>${o.trangThaiDonHang || 'Đang xử lý'}</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        } catch (e) {
+            console.error("Lỗi tải dữ liệu:", e);
+        }
+    }
+
+    // Hàm switchTab đã sửa ID khớp với HTML
+    window.switchTab = (tabName) => {
+        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+        
+        const tongQuan = document.getElementById('tong-quan-content');
+        const lichSu = document.getElementById('orderHistoryTab'); // Khớp với HTML của bạn
+
+        if (tabName === 'Tổng quan') {
+            document.getElementById('tab-tong-quan')?.classList.add('active');
+            if (tongQuan) tongQuan.style.display = 'block';
+            if (lichSu) lichSu.style.display = 'none';
+        } 
+        else if (tabName === 'Lịch sử mua hàng') {
+            document.getElementById('tab-lich-su')?.classList.add('active');
+            if (tongQuan) tongQuan.style.display = 'none';
+            if (lichSu) lichSu.style.display = 'block';
+        }
+    };
+
+  // Hiển thị danh sách đơn hàng trong bảng
+const orderList = document.getElementById('orderList');
+if (orderList) {
+    if (myOrders.length === 0) {
+        orderList.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">Bạn chưa có đơn hàng nào.</td></tr>';
+    } else {
+        orderList.innerHTML = myOrders.slice(0, 6).map(o => `
+            <tr>
+                <td>
+                    <!-- PHẦN HÌNH ẢNH Ở ĐÂY -->
+                    <img src="${o.hinhAnhSanPham || 'https://via.placeholder.com/50'}" 
+                         alt="Sản phẩm" 
+                         style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd;">
+                </td>
+                <td>
+                    <!-- Mã đơn hàng -->
+                    <a href="chitietdonhang.html?id=${o.donHangId || ''}" class="text-decoration-none fw-bold text-dark">
+                        ${o.maDonHang || 'N/A'}
+                    </a>
+                </td>
+                <td>${o.ngayDat ? new Date(o.ngayDat).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                <td>${Number(o.thanhTien || 0).toLocaleString('vi-VN')}đ</td>
+                <td>
+                    <span class="badge bg-light text-dark border">
+                        ${o.trangThaiDonHang || 'pending'}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+
+
+
+
+  // Hiển thị danh sách đơn hàng trong bảng
+const orderListHistory = document.getElementById('orderListHistory');
+if (orderListHistory) {
+    if (myOrdersHitory.length === 0) {
+        orderList.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">Bạn chưa có đơn hàng nào.</td></tr>';
+    } else {
+        orderList.innerHTML = myOrdersHitory.slice(0, 6).map(o => `
+            <tr>
+                <td>
+                    <!-- PHẦN HÌNH ẢNH Ở ĐÂY -->
+                    <img src="${o.hinhAnhSanPham || 'https://via.placeholder.com/50'}" 
+                         alt="Sản phẩm" 
+                         style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd;">
+                </td>
+                <td>
+                    <!-- Mã đơn hàng -->
+                    <a href="chitietdonhang.html?id=${o.donHangId || ''}" class="text-decoration-none fw-bold text-dark">
+                        ${o.maDonHang || 'N/A'}
+                    </a>
+                </td>
+                <td>${o.ngayDat ? new Date(o.ngayDat).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                <td>${Number(o.thanhTien || 0).toLocaleString('vi-VN')}đ</td>
+                <td>
+                    <span class="badge bg-light text-dark border">
+                        ${o.trangThaiDonHang || 'pending'}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+
+// Hàm hiển thị giỏ hàng (thay cho toggle-cart của Vue)
+function toggleCart() {
+    // Nếu bạn có một sidebar giỏ hàng, hãy thêm code hiện nó ở đây
+    const cartSidebar = document.getElementById('cartSidebar'); // Giả sử ID của sidebar giỏ hàng là thế này
+    if (cartSidebar) {
+        cartSidebar.style.display = cartSidebar.style.display === 'none' ? 'block' : 'none';
+    } else {
+        console.log("Giỏ hàng đã được click!");
+    }
+}
+
+// Hàm cập nhật số lượng (gọi hàm này mỗi khi thêm/xóa sản phẩm)
+function updateCartCount(count) {
+    const badge = document.getElementById('cartCountBadge');
+    if (badge) {
+        badge.innerText = count;
+    }
+}
+
+// Thêm hàm này vào file JS của trang Cá nhân
+function loadCartCount() {
+    const cart = JSON.parse(localStorage.getItem('myCart')) || [];
+    const badge = document.getElementById('cartCountBadge');
+    if (badge) {
+        badge.innerText = cart.length; // Hiển thị số lượng
+    }
+}
+
+// Gọi hàm này ngay khi trang load
+document.addEventListener('DOMContentLoaded', loadCartCount);
+
+
+    window.logout = () => {
+        localStorage.removeItem('saophone_session');
+        window.location.href = '/login.html';
+    };
+
+    init();
+</script>
+
+<body>
+
+    <header class="navbar-saoclub">
+        <div class="container d-flex justify-content-between align-items-center">
+            <h2 class="text-gold m-0 fw-bold">SAOCLUB</h2>
+            <input type="text" class="form-control" placeholder="🔍 Tìm kiếm đơn hàng..." 
+       style="background: #1a1a1a; 
+              border: 1px solid #444; 
+              color: #ffffff; 
+              font-weight: 600;
+              padding: 8px 20px; 
+              border-radius: 25px; 
+              max-width: 350px;
+              margin: 0 auto;
+              transition: 0.3s;
+              display: block;">
+          <!-- Thay phần div cũ bằng đoạn này -->
+<div class="d-flex align-items-center gap-3">
+    <a href="#" class="btn btn-sm text-gold" style="border: 1px solid #facc15; border-radius: 20px; padding: 5px 15px; text-decoration: none; transition: 0.3s;">
+        🏠 Cửa hàng
+    </a>
+    <a href="#" class="btn btn-sm text-gold" style="border: 1px solid #facc15; border-radius: 20px; padding: 5px 15px; text-decoration: none; transition: 0.3s;">
+        📞 1800 9999
+    </a>
+    <button class="btn btn-sm d-flex align-items-center gap-1 fw-bold"
+        style="background:#1f1f1f; border:1px solid #3f3f3f; border-radius:12px; color:#e5e7eb; font-size:12px; white-space:nowrap;"
+        onclick="toggleCart()"> <!-- Đổi @click thành onclick -->
+    🛒 Giỏ hàng
+    <!-- Đặt ID cho badge để JS có thể tìm và cập nhật số lượng -->
+    <span id="cartCountBadge" class="badge text-dark fw-black"
+          style="background:#facc15; border-radius:999px; font-size:11px;">
+        0
+    </span>
+</button>
+</div>
+        </div>
+    </header>
+
+    <main class="container py-4">
+       <!-- Profile Banner  -->
+
+      
+    
+  <!-- Profile Banner -->
+<div class="custom-card d-flex align-items-center justify-content-between p-4 mb-4" style="border-radius: 16px;">
+    
+  <!-- 1. Thông tin cá nhân -->
+<div class="d-flex align-items-center" style="border-right: 1px solid #444; padding-right: 30px;">
+    <!-- Avatar: ID userAvatar sẽ hiển thị chữ cái đầu tên khách -->
+    <div id="userAvatar" class="rounded-circle d-flex align-items-center justify-content-center" 
+         style="width: 60px; height: 60px; background: #facc15; color: #000; font-weight: 900; font-size: 24px;">?</div>
+    
+    <div class="ms-3">
+        <!-- Tên khách hàng -->
+        <h5 id="userName" class="text-white mb-0" style="font-weight: 600;">Đang tải...</h5>
+        <!-- Số điện thoại -->
+        <small id="userPhone" class="text-secondary" style="display: block;">...</small>
+        
+        <div class="badge mt-1" style="background: #333; color: #facc15; font-size: 10px;">S-NULL</div>
+        <div class="text-secondary" style="font-size: 11px;">🕒 Cập nhật lại sau 01/01/2027</div>
+    </div>
+</div>
+    <!-- 2. Thống kê -->
+    <div class="d-flex align-items-center flex-grow-1 px-4">
+        <div class="text-center px-4" style="border-right: 1px solid #444;">
+            <h4 id="orderCount" class="text-white mb-0">0</h4>
+            <small class="text-secondary">Tổng số đơn hàng</small>
+        </div>
+        <div class="text-center px-4">
+            <h4 id="totalSpent" class="text-white mb-0">0đ</h4>
+            <small class="text-secondary">Tổng tiền tích lũy</small>
+        </div>
+    </div>
+
+    <!-- 3. Kênh thành viên -->
+    <div class="text-end">
+        <small class="text-secondary">Bạn đang ở kênh thành viên</small>
+        <select class="form-select form-select-sm mt-1" style="background: #222; color: #fff; border: 1px solid #444;">
+            <option>SAOCLUB</option>
+        </select>
+        <a href="#" class="text-gold" style="font-size: 12px; text-decoration: none;">saoclub.com.vn 🔗</a>
+    </div>
+</div>
+
+<!-- Thanh điều hướng phụ -->
+<div class="custom-card d-flex justify-content-between align-items-center py-3 px-4 mb-4" style="border-radius: 16px;">
+    <!-- Các mục này có thể thêm link vào thẻ div hoặc bao quanh bằng thẻ <a> -->
+    <div class="d-flex align-items-center gap-2"><div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background: #222; color: var(--gold);">💎</div><span class="fw-semibold">Hạng thành viên</span></div>
+    <div class="d-flex align-items-center gap-2"><div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background: #222; color: var(--gold);">🏷️</div><span class="fw-semibold">Mã giảm giá</span></div>
+    <div class="d-flex align-items-center gap-2"><div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background: #222; color: var(--gold);">📜</div><span class="fw-semibold">Lịch sử mua</span></div>
+    <div class="d-flex align-items-center gap-2"><div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background: #222; color: var(--gold);">📍</div><span class="fw-semibold">Sổ địa chỉ</span></div>
+    <div class="d-flex align-items-center gap-2"><div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background: #222; color: var(--gold);">🎓</div><span class="fw-semibold">S-Student</span></div>
+    <div class="d-flex align-items-center gap-2"><div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background: #222; color: var(--gold);">🔗</div><span class="fw-semibold">Liên kết</span></div>
+</div>
+       
+           <div class="row">
+           <div class="col-md-3">
+    <div class="custom-card p-0" style="overflow: hidden;">
+
+
+      <!-- Dùng onclick thay cho @click -->
+<!-- Dùng class thường thay cho :class -->
+<div class="sidebar-item" 
+     id="tab-tong-quan"
+     onclick="switchTab('Tổng quan')">🏠 Tổng quan</div>
+
+<div class="sidebar-item" 
+     id="tab-lich-su"
+     onclick="switchTab('Lịch sử mua hàng')">📦 Lịch sử mua hàng</div>
+
+
+        <div class="sidebar-item">🛡️ Tra cứu bảo hành</div>
+        <div class="sidebar-item">🔄 Lịch sử thu cũ</div>
+        <hr class="border-secondary mx-3">
+        <div class="sidebar-item">💎 Hạng thành viên & ưu đãi</div>
+        <div class="sidebar-item">💼 Ưu đãi S-Business</div>
+        <div class="sidebar-item">🎓 Ưu đãi S-Student</div>
+        <hr class="border-secondary mx-3">
+        <div class="sidebar-item">🔒 Thông tin tài khoản</div>
+        <div class="sidebar-item">📍 Tìm kiếm cửa hàng</div>
+        <div class="sidebar-item">📄 Chính sách bảo hành</div>
+        <div class="sidebar-item">✉️ Góp ý - Phản hồi</div>
+        <div class="sidebar-item">📜 Điều khoản sử dụng</div>
+        <hr class="border-secondary mx-3">
+        <div class="sidebar-item text-danger" onclick="window.close()">🚪 Đăng xuất</div>
+
+        <!-- Phần Footer của Sidebar -->
+        <div class="p-3 text-secondary small" style="font-size: 11px;">
+            Mua sắm dễ dàng - Ưu đãi ngập tràn cùng app SAOCLUB
+            <div class="d-flex mt-2 gap-2">
+                <div style="width: 60px; height: 60px; background: #fff; border-radius: 4px;"></div> <!-- Chỗ để QR -->
+                <div class="d-flex flex-column gap-1">
+                    <div style="width: 80px; height: 25px; background: #333; border-radius: 4px;"></div> <!-- Google Play -->
+                    <div style="width: 80px; height: 25px; background: #333; border-radius: 4px;"></div> <!-- App Store -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="col-md-9">
+    <!-- Nội dung Tab Tổng quan -->
+    <div id="tong-quan-content" style="display: block;">
+        <div class="row">
+            <!-- Đơn hàng -->
+            <div class="col-md-8">
+                <div class="custom-card">
+                    <h5 class="fw-bold mb-3 text-white">Đơn hàng gần đây</h5>
+                    <table class="table table-hover table-borderless align-middle">
+                        <thead>
+                            <tr class="text-secondary small">
+                                <th>Mã đơn</th>
+                                <th>Ngày đặt</th>
+                                <th>Thành tiền</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderList"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Ưu đãi -->
+            <div class="col-md-4">
+                <div class="custom-card text-center h-100">
+                    <h5 class="fw-bold mb-3 text-start text-white">Ưu đãi của bạn</h5>
+                    <div class="my-3 text-secondary" style="font-size: 3rem;">🎁</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="custom-card text-center py-5">
+                    <h5 class="fw-bold mb-3 text-start text-white">Sản phẩm yêu thích</h5>
+                    <div class="mb-3 text-secondary" style="font-size: 4rem;">❤️</div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- Đóng div tong-quan-content -->
+
+    <!-- Nội dung Tab Lịch sử -->
+    <div id="orderHistoryTab" class="custom-card" style="display: none; background: #1a1a1a;">
+        <h3 class="text-white mb-3">Lịch sử mua hàng</h3>
+        <table class="table table-dark table-hover table-borderless align-middle">
+            <thead>
+                <tr class="text-secondary small">
+                    <th>Mã đơn</th>
+                    <th>Ngày đặt</th>
+                    <th>Thành tiền</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody id="orderListHistory"></tbody>
+        </table>
+    </div> 
+</div> <!-- Đóng div col-md-9 -->
+</div> <!-- Đóng div row (cái này bị thiếu ở code gốc của bạn) -->
+
+           
+       
+    </main>
+
+    <footer class="text-center py-4 text-secondary small">
+        © 2026 SAOPHONE - Hệ thống bán lẻ Laptop chính hãng
+    </footer>
+
+</body>
+</html>

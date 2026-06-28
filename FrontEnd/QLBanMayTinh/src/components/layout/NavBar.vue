@@ -159,19 +159,47 @@
           </span>
         </button>
 
-        <!-- Đã đăng nhập: hiển thị tên + nút đăng xuất -->
-        <template v-if="user">
-          <div class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-semibold"
-               style="background:#1f1f1f; border:1px solid #3a3a3a; color:#facc15; font-size:12px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis;">
-            <span style="font-size:10px;">●</span>
-            {{ user.hoTen || user.username }}
-          </div>
-          <button class="btn btn-sm fw-bold"
-                  style="background:#1f1f1f; border:1px solid #7f1d1d; border-radius:12px; color:#f87171; font-size:12px; white-space:nowrap;"
-                  @click="emit('logout')">
-            Đăng xuất
-          </button>
-        </template>
+       <!-- Đã đăng nhập: hiển thị Avatar + Menu -->
+<template v-if="user">
+  <div class="user-menu-container" style="position: relative;">
+    
+    <!-- Nút Avatar: thêm .stop để tránh đóng ngay lập tức -->
+    <div class="avatar-trigger" @click.stop="showMenu = !showMenu" 
+         style="cursor: pointer; display: flex; align-items: center; justify-content: center; 
+                width: 36px; height: 36px; background: #facc15; border-radius: 50%; 
+                font-weight: 800; color: #000; font-size: 14px;">
+      {{ user.hoTen ? user.hoTen.charAt(0).toUpperCase() : 'U' }}
+    </div>
+
+    <!-- Menu Dropdown: đổi tên class để tránh xung đột Bootstrap -->
+    <div v-if="showMenu" class="saoclub-menu" 
+         style="position: absolute; top: 100%; right: 0; margin-top: 12px; width: 300px; 
+                background: #1a1a1a; border: 1px solid #333; border-radius: 12px; 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 9999; overflow: hidden;">
+      
+      <!-- Header -->
+     <!-- Dùng một thẻ div có sự kiện click để điều hướng -->
+<div style="padding: 16px; border-bottom: 1px solid #333; display: flex; 
+            align-items: center; justify-content: space-between; cursor: pointer;" 
+     @click="goToProfile">
+  <span style="color: #fff; font-weight: 600; font-size: 14px;">Truy cập SAOClub Member</span>
+  <span style="color: #facc15; font-weight: bold;">&gt;</span>
+</div>
+
+      <!-- Nội dung -->
+      <div style="padding: 24px 16px; color: #6b7280; font-size: 13px; text-align: center;">
+        Không có thông báo mới
+      </div>
+
+      <!-- Footer Đăng xuất -->
+      <button @click="logout" 
+              style="width: 100%; padding: 12px; border: none; background: #222; 
+                     color: #facc15; font-weight: bold; cursor: pointer; border-top: 1px solid #333; font-size: 13px;">
+        Đăng xuất
+      </button>
+    </div>
+  </div>
+</template>
 
         <!-- Chưa đăng nhập: nút đăng nhập -->
         <button v-else class="btn btn-warning fw-bold" style="font-size:13px;" @click="emit('open-login')">
@@ -184,8 +212,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
 
+import { ref, onMounted, onUnmounted } from 'vue';
 const emit = defineEmits(["toggle-cart", "search", "open-admin", "open-login", "logout"]);
 
 defineProps({
@@ -194,6 +222,33 @@ defineProps({
 });
 
 // Khai báo các sự kiện có thể emit lên component cha
+const showMenu = ref(false);
+
+// Hàm xử lý đóng menu khi click ra ngoài
+const closeMenu = (e) => {
+  // Chỉ đóng nếu click không thuộc vùng menu
+  if (!e.target.closest('.user-menu-container')) {
+    showMenu.value = false;
+  }
+};
+const goToProfile = () => {
+  showMenu.value = false; // Đóng menu
+  // Mở tab mới với file khachhang.html
+  window.open('/khachhang.html', '_blank'); 
+};
+const logout = () => {
+  localStorage.removeItem('saophone_session');
+  showMenu.value = false;
+  emit('logout'); // Emit sự kiện logout để cha cập nhật UI
+};
+
+onMounted(() => {
+  document.addEventListener('click', closeMenu);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeMenu);
+});
 
 
 // Trạng thái mở/đóng menu danh mục

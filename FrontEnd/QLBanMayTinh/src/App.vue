@@ -287,14 +287,22 @@ const fetchProducts = async () => {
   }
 };
 
-// Thêm sản phẩm vào giỏ — dùng bienTheId để phân biệt đúng biến thể
+
+
 const addToCart = (product) => {
   const existing = cart.value.find((item) => item.bienTheId === product.bienTheId);
+  
   if (existing) {
     existing.quantity += 1;
   } else {
     cart.value.push({ ...product, quantity: 1 });
   }
+
+  // Đồng bộ vào localStorage
+  localStorage.setItem('myCart', JSON.stringify(cart.value));
+
+  // Gọi thông báo chuyên nghiệp
+  showToast('Đã thêm vào giỏ hàng thành công!', 'success');
 };
 
 // ── Giỏ hàng: tăng/giảm số lượng ────────────────────────────────────────────
@@ -305,6 +313,8 @@ const updateQty = (bienTheId, delta) => {
   if (newQty <= 0) cart.value = cart.value.filter(i => i.bienTheId !== bienTheId);
   else item.quantity = newQty;
 };
+
+
 
 // ── Checkout (Thanh toán) ─────────────────────────────────────────────────────
 
@@ -439,6 +449,41 @@ const placeOrder = async () => {
       const newC  = await r.json();
       khachHangId = newC.khachHangId;
       allCustomers.value = await KhachHangService.getAll().catch(() => []);
+
+      // ... (đoạn tạo khách hàng của bạn)
+// sau khi đã có khachHangId:
+
+// 1. Tạo đơn hàng (DonHang)
+const donHangBody = {
+    khachHangId: khachHangId, // ID vừa lấy được hoặc vừa tạo
+    ngayDat: new Date().toISOString(),
+    trangThaiDonHang: 'CHO_XAC_NHAN',
+    tongTien: cartTotal.value, // Lấy từ cartStore
+    ghiChu: checkoutForm.ghiChu
+};
+
+const rDonHang = await DonHangService.create(donHangBody);
+if (!rDonHang.ok) throw new Error("Lỗi tạo đơn hàng");
+const newDonHang = await rDonHang.json();
+
+// 2. Tạo chi tiết đơn hàng (ChiTietDonHang) cho từng sản phẩm trong giỏ
+for (const item of cartStore.items) {
+    const chiTietBody = {
+        donHangId: newDonHang.donHangId, // Lấy ID từ đơn hàng vừa tạo
+        bienTheId: item.bienTheId,
+        soLuong: item.soLuong,
+        donGia: item.giaBan,
+        thanhTien: item.soLuong * item.giaBan
+    };
+    
+    // Gọi hàm addChiTiet mà bạn đã khai báo trong service
+    await DonHangService.addChiTiet(chiTietBody);
+}
+
+// 3. Xóa giỏ hàng và thông báo thành công
+clearCart();
+alert("Đặt hàng thành công!");
+checkoutLoading.value = false;
     }
 
     // Tạo đơn hàng chính
@@ -519,6 +564,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("hashchange", onHashChange); // Dọn dẹp listener
 });
+
+
+
 </script>
 
 <template>
@@ -863,6 +911,9 @@ onBeforeUnmount(() => {
               </div><!-- /card -->
             </article>
           </div><!-- /product grid -->
+
+
+          
 
         </section><!-- /deal section -->
 
@@ -1316,6 +1367,8 @@ onBeforeUnmount(() => {
       @open-product="openProduct"
     />
   </Transition>
+
+  
 </template>
 
 
@@ -1338,3 +1391,23 @@ onBeforeUnmount(() => {
 </style>
 
 <!-- Không còn CSS scoped — toàn bộ dùng Bootstrap utility classes + inline style tối thiểu -->
+<style scoped>
+.toast-success {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #28a745; /* Màu xanh lá chuyên nghiệp */
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 9999;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+</style>
