@@ -1,10 +1,9 @@
 <script setup>
-import LoginForm from "./components/auth/LoginForm.vue";
 // ── Import các thư viện Vue 3 cần thiết ──────────────────────────────────────
 import { ref, computed, reactive, onMounted, onBeforeUnmount } from "vue";
 
-// Import store xác thực (isAdmin: true/false)
-import { AuthStore } from "./stores/index.js";
+// Import store xác thực
+import { AuthStore, setSession, clearSession } from "./stores/index.js";
 
 // Import services
 import * as SanPhamService  from "./Service/SanPhamService.js";
@@ -15,6 +14,7 @@ import * as DonHangService  from "./Service/DonHangService.js";
 
 // Import các component trang
 import AdminPage     from "./pages/AdminPage.vue";
+import LoginForm     from "./components/auth/LoginForm.vue";
 import NavBar        from "./components/layout/NavBar.vue";
 import AppFooter     from "./components/layout/Footer.vue";
 import ProductFilter from "./components/product/ProductFilter.vue";
@@ -48,14 +48,55 @@ const apiCats = ref([]);
 const fetchApiCats = async () => {
   apiCats.value = await DanhMucService.getAll().catch(() => []);
 };
-const showLogin = ref(false);
-
-const openLogin = () => {
-  showLogin.value = true;
+// ── Toast notification ────────────────────────────────────────────────────────
+const toast = reactive({ show: false, msg: '', type: 'success' });
+let toastTimer = null;
+const showToast = (msg, type = 'success') => {
+  clearTimeout(toastTimer);
+  toast.msg  = msg;
+  toast.type = type;
+  toast.show = true;
+  toastTimer = setTimeout(() => { toast.show = false; }, 3500);
 };
 
-const closeLogin = () => {
-  showLogin.value = false;
+// ── Login modal ───────────────────────────────────────────────────────────────
+const showLoginModal = ref(false);
+const loginModalErr  = ref('');
+
+const openLogin = () => {
+  loginModalErr.value  = '';
+  showLoginModal.value = true;
+};
+
+const handleModalLogin = async ({ username, password }) => {
+  loginModalErr.value = '';
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      loginModalErr.value = msg;
+      showToast(msg || 'Đăng nhập thất bại.', 'error');
+      return;
+    }
+    const user = await res.json();
+    showLoginModal.value = false;
+    showToast(`Xin chào, ${user.hoTen}!`, 'success');
+    onLoginSuccess(user);
+  } catch {
+    loginModalErr.value = 'Không thể kết nối đến máy chủ.';
+    showToast('Không thể kết nối đến máy chủ.', 'error');
+  }
+};
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+const onLogout = () => {
+  clearSession();
+  showToast('Đã đăng xuất thành công.', 'info');
+  window.location.hash = '';
 };
 
 // Danh sách thương hiệu duy nhất từ data sản phẩm đã load
@@ -458,6 +499,17 @@ function goHome() { window.location.hash = ""; }
 // Chuyển sang trang admin
 function goAdmin() { window.location.hash = "#admin"; }
 
+// Xử lý sau khi đăng nhập thành công — phân quyền theo role
+function onLoginSuccess(user) {
+  setSession(user);
+  const staffRoles = ["admin", "nhan_vien", "quan_kho"];
+  if (staffRoles.includes(user.role)) {
+    window.location.hash = "#admin";
+  } else {
+    window.location.hash = "";
+  }
+}
+
 // ── Lifecycle hooks ───────────────────────────────────────────────────────────
 onMounted(() => {
   window.addEventListener("hashchange", onHashChange);
@@ -501,10 +553,12 @@ onBeforeUnmount(() => {
       <!-- Header / NavBar — nhận cartCount và xử lý các sự kiện -->
       <NavBar
           :cart-count="cartCount"
+          :user="auth.user"
           @toggle-cart="toggleCart"
           @search="handleSearch"
           @open-admin="goAdmin"
           @open-login="openLogin"
+          @logout="onLogout"
       />
 
       <!-- Dải ticker chạy ngang (thông báo khuyến mãi) -->
@@ -903,6 +957,47 @@ onBeforeUnmount(() => {
   </div><!-- /root -->
 
   <!-- ══════════════════════════════════════════════════════
+      TOAST NOTIFICATION
+  ══════════════════════════════════════════════════════ -->
+  <Transition name="toast-slide">
+    <div v-if="toast.show"
+         class="position-fixed d-flex align-items-center gap-2 px-4 py-3 rounded-3 fw-semibold small shadow-lg"
+         style="top:80px; right:24px; z-index:9999; min-width:260px; max-width:380px; pointer-events:none;"
+         :style="toast.type === 'success'
+           ? 'background:#16a34a; color:#fff;'
+           : toast.type === 'error'
+           ? 'background:#dc2626; color:#fff;'
+           : 'background:#2563eb; color:#fff;'">
+      <span style="font-size:1.1rem; flex-shrink:0;">
+        {{ toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ' }}
+      </span>
+      {{ toast.msg }}
+    </div>
+  </Transition>
+
+  <!-- ══════════════════════════════════════════════════════
+      LOGIN MODAL — overlay trên trang khách hàng
+  ══════════════════════════════════════════════════════ -->
+  <div v-if="showLoginModal"
+       class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+       style="background:rgba(0,0,0,0.75); z-index:1050; backdrop-filter:blur(4px);"
+       @click.self="showLoginModal = false">
+    <div class="rounded-4 p-4 position-relative"
+         style="background:#141414; border:1px solid #252525; width:460px; max-width:94vw; box-shadow:0 24px 80px rgba(0,0,0,0.7);">
+      <button class="btn-close btn-close-white position-absolute"
+              style="top:16px; right:16px; font-size:0.75rem;"
+              @click="showLoginModal = false"></button>
+      <LoginForm
+          @submit="handleModalLogin"
+          @open-register="showLoginModal = false; window.location.hash = '#login'" />
+      <div v-if="loginModalErr"
+           class="alert alert-danger small py-2 mt-2 mb-0 rounded-3">
+        {{ loginModalErr }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
       CHECKOUT MODAL — 2 bước: Thông tin → Thanh toán
   ══════════════════════════════════════════════════════ -->
   <div v-if="showCheckout"
@@ -1221,23 +1316,6 @@ onBeforeUnmount(() => {
       @open-product="openProduct"
     />
   </Transition>
-  <div
-      v-if="showLogin"
-      class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-      style="background:rgba(0,0,0,.7);z-index:9999"
-      @click.self="closeLogin"
-  >
-
-    <div
-        class="bg-white rounded-4 p-4"
-        style="width:450px;max-width:95%"
-    >
-
-      <LoginForm />
-
-    </div>
-
-  </div>
 </template>
 
 
@@ -1253,6 +1331,10 @@ onBeforeUnmount(() => {
 /* QR / bank info fade */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
 .fade-enter-from, .fade-leave-to       { opacity: 0; transform: translateY(8px); }
+
+/* Toast slide-in từ phải */
+.toast-slide-enter-active, .toast-slide-leave-active { transition: transform 0.3s ease, opacity 0.25s ease; }
+.toast-slide-enter-from, .toast-slide-leave-to       { transform: translateX(110%); opacity: 0; }
 </style>
 
 <!-- Không còn CSS scoped — toàn bộ dùng Bootstrap utility classes + inline style tối thiểu -->

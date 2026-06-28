@@ -48,4 +48,5 @@ public class KhachHang {
 
     @Column(name = "ngay_tao", nullable = false)
     private LocalDateTime ngayTao;
+
 }

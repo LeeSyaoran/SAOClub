@@ -2,6 +2,7 @@ package com.example.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -49,17 +50,17 @@ public class DonHang {
     @Column(name = "sdt_nguoi_nhan", length = 20)
     private String sdtNguoiNhan;
 
-    @Column(name = "tong_tien", precision = 18, scale = 2)
+    @Column(name = "tong_tien", precision = 18, scale = 0)
     private BigDecimal tongTien;
 
-    @Column(name = "giam_gia", precision = 18, scale = 2)
+    @Column(name = "giam_gia", precision = 18, scale = 0)
     private BigDecimal giamGia;
 
-    @Column(name = "phi_van_chuyen", precision = 18, scale = 2)
+    @Column(name = "phi_van_chuyen", precision = 18, scale = 0)
     private BigDecimal phiVanChuyen;
 
     // Computed column trong DB: tong_tien - giam_gia + phi_van_chuyen → chỉ đọc
-    @Column(name = "thanh_tien", precision = 18, scale = 2, insertable = false, updatable = false)
+    @Formula("(tong_tien - giam_gia + phi_van_chuyen)")
     private BigDecimal thanhTien;
 
     @Column(name = "ngay_dat")

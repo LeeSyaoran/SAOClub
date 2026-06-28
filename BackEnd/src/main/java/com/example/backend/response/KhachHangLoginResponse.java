@@ -5,21 +5,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-public class NhanVienResponse {
-    private Integer nhanVienId;
+public class KhachHangLoginResponse {
+    private Integer khachHangId;
     private String hoTen;
+    private String username;
     private String soDienThoai;
     private String email;
-    private Integer chucVuId;
-    private BigDecimal luongCoBan;
+    private Integer diemTichLuy;
     private String trangThai;
-    private LocalDateTime ngayTao;
 }

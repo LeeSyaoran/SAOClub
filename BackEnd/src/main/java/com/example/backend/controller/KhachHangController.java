@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.KhachHang;
+import com.example.backend.request.KhachHangRegisterRequest;
 import com.example.backend.request.KhachHangRequest;
 import com.example.backend.response.KhachHangResponse;
 import com.example.backend.service.KhachHangService;
@@ -49,4 +50,14 @@ public class KhachHangController {
         khachHangService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@Valid @RequestBody KhachHangRegisterRequest request) {
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(khachHangService.register(request));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }

@@ -12,4 +12,6 @@ import java.util.List;
 public interface ChucVuRepository extends JpaRepository<ChucVu, Integer> {
     @Query("SELECT new com.example.backend.response.ChucVuResponse(c.id, c.tenChucVu, c.moTa) FROM ChucVu c")
     List<ChucVuResponse> hienThiChucVu();
+
+    java.util.Optional<ChucVu> findByMaChucVu(String maChucVu);
 }

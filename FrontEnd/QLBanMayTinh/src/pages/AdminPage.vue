@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, reactive } from "vue";
+import { AuthStore, clearSession } from "../stores/index.js";
 import * as SanPhamService   from "../Service/SanPhamService.js";
 import * as KhachHangService from "../Service/KhachHangService.js";
 import * as NhanVienService  from "../Service/NhanVienService.js";
@@ -44,13 +45,20 @@ const topbarTitle = computed(
 const topbarSub = computed(() => PAGE_META[currentPage.value]?.sub ?? "");
 
 // ── User ─────────────────────────────────────────────────────────────────────
-const userDisplayName = ref("Admin");
-const userAvatar = computed(() =>
-  userDisplayName.value.charAt(0).toUpperCase(),
-);
-const userDisplayRole = computed(() =>
-  currentRole.value === "admin" ? "Quan tri vien" : "Nguoi dung",
-);
+const userDisplayName = computed(() => AuthStore.user?.hoTen ?? AuthStore.user?.username ?? "Admin");
+const userAvatar = computed(() => userDisplayName.value.charAt(0).toUpperCase());
+const userDisplayRole = computed(() => {
+  const role = AuthStore.user?.role;
+  if (role === "admin")     return "Quản trị viên";
+  if (role === "nhan_vien") return "Nhân viên";
+  if (role === "quan_kho")  return "Quản lý kho";
+  return "Người dùng";
+});
+
+const logout = () => {
+  clearSession();
+  window.location.hash = '';
+};
 
 // ── Data refs ─────────────────────────────────────────────────────────────────
 const products = ref([]);
@@ -1281,16 +1289,21 @@ onUnmounted(() => {
         </div>
       </nav>
 
-      <!-- Footer sidebar: thong tin user -->
+      <!-- Footer sidebar: thong tin user + logout -->
       <div class="p-3 border-top" style="border-color:rgba(255,255,255,0.06)!important;">
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 mb-2">
           <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
                style="width:34px;height:34px;background:#f4c200;color:#111;font-size:0.9rem;">{{ userAvatar }}</div>
-          <div>
-            <div class="fw-semibold" style="font-size:0.85rem;">{{ userDisplayName }}</div>
+          <div class="flex-grow-1" style="min-width:0;">
+            <div class="fw-semibold text-truncate" style="font-size:0.85rem;">{{ userDisplayName }}</div>
             <div style="font-size:0.72rem;color:#888;">{{ userDisplayRole }}</div>
           </div>
         </div>
+        <button class="btn btn-sm w-100 fw-semibold"
+                style="background:#1a1a1a; border:1px solid #7f1d1d; border-radius:8px; color:#f87171; font-size:0.78rem;"
+                @click="logout">
+          Dang xuat
+        </button>
       </div>
     </aside><!-- /sidebar -->
 

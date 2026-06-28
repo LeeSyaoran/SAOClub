@@ -2,6 +2,7 @@ package com.example.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 
 import java.math.BigDecimal;
 
@@ -34,13 +35,13 @@ public class ChiTietDonHang {
     @Column(name = "so_luong")
     private Integer soLuong;
 
-    @Column(name = "don_gia", precision = 18, scale = 2)
+    @Column(name = "don_gia", precision = 18, scale = 0)
     private BigDecimal donGia;
 
-    @Column(name = "giam_gia_dong", precision = 18, scale = 2)
+    @Column(name = "giam_gia_dong", precision = 18, scale = 0)
     private BigDecimal giamGiaDong;
 
-    @Column(name = "thanh_tien", precision = 18, scale = 2, insertable = false, updatable = false)
+    @Formula("(so_luong * don_gia - giam_gia_dong)")
     private BigDecimal thanhTien;
 
     @Column(name = "ghi_chu", length = 255)

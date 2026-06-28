@@ -23,7 +23,7 @@ public interface NhanVienRepository extends JpaRepository<NhanVien, Integer> {
     SELECT new com.example.backend.response.NhanVienResponse(
         n.nhanVienId, n.hoTen, n.soDienThoai, n.email,
         cv.id,
-        n.username, n.luongCoBan, n.trangThai, n.ngayTao
+        n.luongCoBan, n.trangThai, n.ngayTao
     )
     FROM NhanVien n
     LEFT JOIN n.chucVu cv

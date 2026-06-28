@@ -8,8 +8,8 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class LoginRequest {
-    @NotBlank(message = "Tài khoản không được để trống")
+public class KhachHangLoginRequest {
+    @NotBlank(message = "Username không được để trống")
     private String username;
 
     @NotBlank(message = "Mật khẩu không được để trống")

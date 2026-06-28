@@ -85,10 +85,10 @@ CREATE TABLE khach_hang (
 
 CREATE TABLE chuc_vu (
     chuc_vu_id   INT            IDENTITY(1,1) PRIMARY KEY,
+    ma_chuc_vu   VARCHAR(30)    NOT NULL UNIQUE,  -- role code dùng cho Spring Security
     ten_chuc_vu  NVARCHAR(100)  NOT NULL UNIQUE,
-    cap_do       INT            NOT NULL DEFAULT 1 CONSTRAINT CK_cv_capdo CHECK (cap_do BETWEEN 1 AND 9),
+    cap_do       INT            NOT NULL DEFAULT 1 CONSTRAINT CK_cv_capdo CHECK (cap_do BETWEEN 0 AND 9),
     mo_ta        NVARCHAR(255)  NULL
-    -- cap_do: 1=Nhân viên bán hàng, 2=Thủ kho/KTV, 3=Quản lý, 9=Admin
 );
 
 CREATE TABLE nhan_vien (
@@ -97,14 +97,27 @@ CREATE TABLE nhan_vien (
     so_dien_thoai  VARCHAR(20)    NULL UNIQUE,
     email          VARCHAR(100)   NULL UNIQUE,
     chuc_vu_id     INT            NULL,
-    username       VARCHAR(50)    NOT NULL UNIQUE,
-    mat_khau_hash  VARCHAR(255)   NOT NULL,
     luong_co_ban   DECIMAL(18,0)  NOT NULL DEFAULT 0 CONSTRAINT CK_nv_luong CHECK (luong_co_ban >= 0),
     trang_thai     NVARCHAR(20)   NOT NULL DEFAULT N'active'
         CONSTRAINT CK_nhan_vien_trangthai CHECK (trang_thai IN (N'active', N'inactive', N'nghi_viec')),
     ngay_tao       DATETIME       NOT NULL DEFAULT GETDATE(),
     ngay_cap_nhat  DATETIME       NOT NULL DEFAULT GETDATE(),
     CONSTRAINT FK_nhan_vien_chuc_vu FOREIGN KEY (chuc_vu_id) REFERENCES chuc_vu(chuc_vu_id)
+);
+
+CREATE TABLE tai_khoan (
+    tai_khoan_id  INT            IDENTITY(1,1) PRIMARY KEY,
+    username      VARCHAR(50)    NOT NULL UNIQUE,
+    mat_khau_hash VARCHAR(255)   NOT NULL,
+    chuc_vu_id    INT            NOT NULL,
+    nhan_vien_id  INT            NULL,
+    khach_hang_id INT            NULL,
+    trang_thai    NVARCHAR(20)   NOT NULL DEFAULT N'active'
+        CONSTRAINT CK_tk_trangthai CHECK (trang_thai IN (N'active', N'inactive', N'blocked')),
+    ngay_tao      DATETIME       NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_tk_chuc_vu    FOREIGN KEY (chuc_vu_id)    REFERENCES chuc_vu(chuc_vu_id),
+    CONSTRAINT FK_tk_nhan_vien  FOREIGN KEY (nhan_vien_id)  REFERENCES nhan_vien(nhan_vien_id),
+    CONSTRAINT FK_tk_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id)
 );
 GO
 
@@ -685,20 +698,21 @@ GO
 --  13. DỮ LIỆU MẪU
 -- ============================================================
 
-INSERT INTO chuc_vu (ten_chuc_vu, cap_do, mo_ta) VALUES
-(N'Quản lý',            3, N'Quản lý cửa hàng, duyệt đơn, xem báo cáo'),
-(N'Nhân viên bán hàng', 1, N'Tạo đơn hàng, tư vấn sản phẩm'),
-(N'Thủ kho',            2, N'Nhập kho, xuất kho, kiểm kê tồn kho'),
-(N'Kỹ thuật viên',      2, N'Bảo hành và sửa chữa thiết bị'),
-(N'Kế toán',            2, N'Quản lý tài chính, kế toán nội bộ');
--- chuc_vu: Quan_ly=1, NVBH=2, Thu_kho=3, KTV=4, Ke_toan=5
+INSERT INTO chuc_vu (ma_chuc_vu, ten_chuc_vu, cap_do, mo_ta) VALUES
+('admin',      N'Admin',       9, N'Toàn quyền hệ thống'),
+('nhan_vien',  N'Nhân viên',   1, N'Bán hàng, tư vấn sản phẩm'),
+('quan_kho',   N'Quản kho',    2, N'Nhập kho, xuất kho, kiểm kê'),
+('khach_hang', N'Khách hàng',  0, N'Khách hàng mua sắm');
+-- chuc_vu: admin=1, nhan_vien=2, quan_kho=3, khach_hang=4
 
-INSERT INTO nhan_vien (ho_ten, so_dien_thoai, email, chuc_vu_id, username, mat_khau_hash, luong_co_ban) VALUES
-(N'Nguyễn Văn An',   '0987654321', 'nhanvienan@sao.vn',   2, 'nhanvienan', '$2b$10$placeholder_hash_nv_a', 8000000),
-(N'Trần Thị Bảo',   '0978112233', 'nhanvienbao@sao.vn',  2, 'nhanvienbao','$2b$10$placeholder_hash_nv_b', 7500000),
-(N'Lê Văn Cường',   '0967223344', 'nhanviencuong@sao.vn',3, 'nhanviencuong','$2b$10$placeholder_hash_nv_c',6500000),
-(N'Phạm Quốc Dũng', '0956334455', 'nhanviendung@sao.vn', 4, 'nhanviendung','$2b$10$placeholder_hash_nv_d',9000000);
--- nhan_vien: An=1, Bao=2, Cuong=3, Dung=4
+-- nhan_vien: chuc_vu admin=1, nhan_vien=2, quan_kho=3, khach_hang=4
+INSERT INTO nhan_vien (ho_ten, so_dien_thoai, email, chuc_vu_id, luong_co_ban) VALUES
+(N'Quản trị viên',   '0900000001', 'admin@saoclub.vn',       1,       0),
+(N'Nguyễn Văn An',   '0987654321', 'nhanvienan@sao.vn',      2, 8000000),
+(N'Trần Thị Bảo',    '0978112233', 'nhanvienbao@sao.vn',     2, 7500000),
+(N'Lê Văn Cường',    '0967223344', 'nhanviencuong@sao.vn',   3, 6500000),
+(N'Phạm Quốc Dũng',  '0956334455', 'nhanviendung@sao.vn',    2, 9000000);
+-- nhan_vien: Admin=1, An=2, Bao=3, Cuong=4, Dung=5
 
 INSERT INTO thuong_hieu (ten_thuong_hieu, quoc_gia, mo_ta) VALUES
 (N'Dell',    N'Mỹ',         N'Laptop cá nhân và doanh nghiệp, nổi tiếng với dòng XPS, Inspiron, Latitude'),
@@ -727,8 +741,22 @@ INSERT INTO khach_hang (ho_ten, so_dien_thoai, email, dia_chi, loai_khach, diem_
 (N'Lê Hoàng Cường',    '0912345000',  'cuong.le@gmail.com',    N'78 Đinh Tiên Hoàng, Quận 1, TP.HCM',  N'ca_nhan',     250),
 (N'Phạm Thị Duyên',    '0934567890',  'duyen.pham@gmail.com',  N'12 Trần Phú, Hải Châu, Đà Nẵng',      N'ca_nhan',      50),
 (N'Nguyễn Minh Đức',   '0956789012',  'duc.nguyen@gmail.com',  N'34 Hoàng Diệu, Hải Châu, Đà Nẵng',    N'ca_nhan',       0),
-(N'Cty Minh Anh Tech', '02838901234', 'purchase@minhanh.vn',   N'50 Lê Lợi, Quận 1, TP.HCM',           N'doanh_nghiep', 800);
--- khach_hang: VietAnh=1, Binh=2, Cuong=3, Duyen=4, Duc=5, MinhAnh=6
+(N'Cty Minh Anh Tech', '02838901234', 'purchase@minhanh.vn',   N'50 Lê Lợi, Quận 1, TP.HCM',           N'doanh_nghiep', 800),
+(N'Khách Hàng Demo',   '0900000002',  'demo@saoclub.vn',        N'123 Đường Demo, TP.HCM',              N'ca_nhan',       0);
+-- khach_hang: VietAnh=1, Binh=2, Cuong=3, Duyen=4, Duc=5, MinhAnh=6, Demo=7
+
+-- ── Tài khoản đăng nhập ───────────────────────────────────────────────────────
+-- Mật khẩu tất cả: 123456  (BCrypt $2a$10$)
+-- chuc_vu : admin=1, nhan_vien=2, quan_kho=3, khach_hang=4
+-- nhan_vien: Admin=1, An=2, Bao=3, Cuong=4, Dung=5
+-- khach_hang: ..., Demo=7
+INSERT INTO tai_khoan (username, mat_khau_hash, chuc_vu_id, nhan_vien_id, khach_hang_id) VALUES
+('admin',        '$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 1, 1, NULL),
+('nhanvienan',   '$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 2, 2, NULL),
+('nhanvienbao',  '$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 2, 3, NULL),
+('nhanviencuong','$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 3, 4, NULL),
+('khachhang',    '$2a$10$iLnae2KuCuZ.BOPeLXRzde8wEWsgkze93MIooTzcqYkN/hZJkojFu', 4, NULL, 7);
+-- tai_khoan: admin=1, nhanvienan=2, nhanvienbao=3, nhanviencuong=4, khachhang=5
 
 INSERT INTO dm_cpu (ten_cpu) VALUES
 (N'Intel Core i5-1235U'),
@@ -852,8 +880,8 @@ GO
 -- P1: 5×13M + 3×15.5M = 65M + 46.5M = 111.500.000
 -- P2: 10×12.5M+7×16M+12×14.5M+5×18M+8×22M+3×28M+6×22.5M+4×30M = 1.016.000.000
 INSERT INTO phieu_nhap_kho (nha_cung_cap_id, nhan_vien_id, ngay_nhap, tong_tien, trang_thai, ghi_chu) VALUES
-(1, 3, N'2024-05-01',  111500000, N'hoan_thanh', N'Nhập hàng đợt 1 - Dell Inspiron 15 từ Digiworld'),
-(2, 3, N'2024-06-15', 1016000000, N'hoan_thanh', N'Nhập hàng đợt 2 - Asus, Lenovo, HP, MSI từ FPT Trading');
+(1, 4, N'2024-05-01',  111500000, N'hoan_thanh', N'Nhập hàng đợt 1 - Dell Inspiron 15 từ Digiworld'),
+(2, 4, N'2024-06-15', 1016000000, N'hoan_thanh', N'Nhập hàng đợt 2 - Asus, Lenovo, HP, MSI từ FPT Trading');
 -- phieu_nhap: P1=1, P2=2
 
 INSERT INTO chi_tiet_phieu_nhap (phieu_nhap_id, bien_the_id, so_luong, don_gia_nhap) VALUES
@@ -875,7 +903,7 @@ INSERT INTO don_hang
      ngay_dat, ngay_giao_thuc_te, trang_thai_don_hang, trang_thai_thanh_toan, kenh_ban)
 VALUES
 -- DH1: KH1 mua Dell i5 — đã giao, đã thanh toán, bán online
-(1, 1, NULL,
+(1, 2, NULL,
  N'Nghiêm Việt Anh', '0912345678', N'123 Phố Huế, Hoàn Kiếm, HN',
  15490000, 0, 30000,
  N'2024-06-10 10:30:00', N'2024-06-12 15:00:00', N'delivered', N'paid', N'online'),
@@ -887,7 +915,7 @@ VALUES
  N'2024-07-05 14:20:00', NULL, N'processing', N'partial', N'online'),
 
 -- DH3: KH6 (doanh nghiệp) mua Lenovo R7 — km VIP500, đang giao, đã thanh toán
-(6, 2, 4,
+(6, 3, 4,
  N'Cty Minh Anh Tech', '02838901234', N'50 Lê Lợi, Q1, TP.HCM',
  22490000, 500000, 0,
  N'2024-07-10 08:30:00', NULL, N'shipping', N'paid', N'online'),
@@ -955,9 +983,9 @@ GO
 
 -- Lịch sử xuất kho
 INSERT INTO lich_su_ton_kho (bien_the_id, loai_bien_dong, so_luong_thay_doi, don_hang_id, nhan_vien_id, ghi_chu) VALUES
-(1, N'xuat_ban', -1, 1, 1, N'Xuất bán DH1 - Dell Inspiron i5'),
+(1, N'xuat_ban', -1, 1, 2, N'Xuất bán DH1 - Dell Inspiron i5'),
 (8, N'xuat_ban', -1, 2, NULL, N'Xuất bán DH2 - HP Envy i9/32GB'),
-(6, N'xuat_ban', -1, 3, 2, N'Xuất bán DH3 - Lenovo R7/16GB');
+(6, N'xuat_ban', -1, 3, 3, N'Xuất bán DH3 - Lenovo R7/16GB');
 GO
 
 -- ============================================================

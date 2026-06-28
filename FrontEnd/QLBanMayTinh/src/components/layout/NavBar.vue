@@ -159,65 +159,38 @@
           </span>
         </button>
 
-        <!-- Nút đăng nhập: phát ra sự kiện open-admin -->
-        <button
-            class="btn btn-warning"
-            @click="openLogin"
-        >
+        <!-- Đã đăng nhập: hiển thị tên + nút đăng xuất -->
+        <template v-if="user">
+          <div class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-semibold"
+               style="background:#1f1f1f; border:1px solid #3a3a3a; color:#facc15; font-size:12px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis;">
+            <span style="font-size:10px;">●</span>
+            {{ user.hoTen || user.username }}
+          </div>
+          <button class="btn btn-sm fw-bold"
+                  style="background:#1f1f1f; border:1px solid #7f1d1d; border-radius:12px; color:#f87171; font-size:12px; white-space:nowrap;"
+                  @click="emit('logout')">
+            Đăng xuất
+          </button>
+        </template>
+
+        <!-- Chưa đăng nhập: nút đăng nhập -->
+        <button v-else class="btn btn-warning fw-bold" style="font-size:13px;" @click="emit('open-login')">
           Đăng nhập
         </button>
       </div>
 
     </div><!-- /container-xl -->
   </header>
-  <LoginForm
-      v-if="showLogin"
-      @submit="handleLogin"
-      @close="showLogin=false"
-      @open-register="openRegister"
-  />
-
-  <RegisterForm
-      v-if="showRegister"
-      @close="showRegister = false"
-      @open-login="openLogin"
-  />
 </template>
 
 <script setup>
-
-import LoginForm from "../auth/LoginForm.vue";
-import RegisterForm from "../auth/RegisterForm.vue";
-
-const showLogin = ref(false);
-const showRegister = ref(false);
-
-const openLogin = () => {
-  showRegister.value = false;
-  showLogin.value = true;
-};
-
-const openRegister = () => {
-  showLogin.value = false;
-  showRegister.value = true;
-};
-const handleLogin = (data) => {
-  console.log(data);
-  // Gọi API login ở đây
-}
-const emit = defineEmits([
-  "toggle-cart",
-  "search",
-  "open-admin",
-  "open-login"
-]);
-
-// ── Import ──────────────────────────────────────────────────
 import { ref } from 'vue';
 
-// Nhận prop cartCount từ App.vue
+const emit = defineEmits(["toggle-cart", "search", "open-admin", "open-login", "logout"]);
+
 defineProps({
-  cartCount: { type: Number, default: 0 }
+  cartCount: { type: Number, default: 0 },
+  user:      { type: Object, default: null },
 });
 
 // Khai báo các sự kiện có thể emit lên component cha
