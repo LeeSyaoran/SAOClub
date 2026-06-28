@@ -36,9 +36,6 @@ public class PhieuBaoHanh {
     @JoinColumn(name = "khach_hang_id", nullable = false)
     private KhachHang khachHang;
 
-    @Column(name = "serial_number", length = 100)
-    private String serialNumber;
-
     @Column(name = "ngay_mua", nullable = false)
     private LocalDateTime ngayMua;
 

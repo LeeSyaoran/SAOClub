@@ -1,11 +1,9 @@
 <script setup>
-import LoginForm from "./components/auth/LoginForm.vue";
-import RegisterForm from "./components/auth/RegisterForm.vue";
 // ── Import các thư viện Vue 3 cần thiết ──────────────────────────────────────
 import { ref, computed, reactive, onMounted, onBeforeUnmount } from "vue";
 
-// Import store xác thực (isAdmin: true/false)
-import { AuthStore } from "./stores/index.js";
+// Import store xác thực
+import { AuthStore, setSession, clearSession } from "./stores/index.js";
 
 // Import services
 import * as SanPhamService  from "./Service/SanPhamService.js";
@@ -16,30 +14,11 @@ import * as DonHangService  from "./Service/DonHangService.js";
 
 // Import các component trang
 import AdminPage     from "./pages/AdminPage.vue";
+import LoginForm     from "./components/auth/LoginForm.vue";
 import NavBar        from "./components/layout/NavBar.vue";
 import AppFooter     from "./components/layout/Footer.vue";
 import ProductFilter from "./components/product/ProductFilter.vue";
 import ProductDetail from "./components/product/ProductDetail.vue";
-
-const showLogin = ref(false);
-const showRegister = ref(false);
-
-const openLogin = () => {
-  showRegister.value = false;
-  showLogin.value = true;
-};
-
-const closeLogin = () => {
-  showLogin.value = false;
-};
-
-const openRegister = () => {
-  showLogin.value = false;
-  showRegister.value = true;
-};
-const closeRegister = () => {
-  showRegister.value = false;
-};
 
 // ── State & Store ─────────────────────────────────────────────────────────────
 
@@ -48,6 +27,7 @@ const auth = AuthStore;
 
 // Theo dõi fragment URL hiện tại (ví dụ: "#admin")
 const currentHash = ref(window.location.hash);
+
 
 // Computed: kiểm tra có đang ở route admin không
 const isAdminHash = computed(() => currentHash.value === "#admin");
@@ -69,16 +49,56 @@ const apiCats = ref([]);
 const fetchApiCats = async () => {
   apiCats.value = await DanhMucService.getAll().catch(() => []);
 };
+// ── Toast notification ────────────────────────────────────────────────────────
+const toast = reactive({ show: false, msg: '', type: 'success' });
+let toastTimer = null;
+const showToast = (msg, type = 'success') => {
+  clearTimeout(toastTimer);
+  toast.msg  = msg;
+  toast.type = type;
+  toast.show = true;
+  toastTimer = setTimeout(() => { toast.show = false; }, 3500);
+};
 
+// ── Login modal ───────────────────────────────────────────────────────────────
+const showLoginModal = ref(false);
+const loginModalErr  = ref('');
 
-const loginSuccess = (user) => {
-  localStorage.setItem(
-      "user",
-      JSON.stringify(user)
-  );
-  showLogin.value = false;
-  location.reload();
-}
+const openLogin = () => {
+  loginModalErr.value  = '';
+  showLoginModal.value = true;
+};
+
+const handleModalLogin = async ({ username, password }) => {
+  loginModalErr.value = '';
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      loginModalErr.value = msg;
+      showToast(msg || 'Đăng nhập thất bại.', 'error');
+      return;
+    }
+    const user = await res.json();
+    showLoginModal.value = false;
+    showToast(`Xin chào, ${user.hoTen}!`, 'success');
+    onLoginSuccess(user);
+  } catch {
+    loginModalErr.value = 'Không thể kết nối đến máy chủ.';
+    showToast('Không thể kết nối đến máy chủ.', 'error');
+  }
+};
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+const onLogout = () => {
+  clearSession();
+  showToast('Đã đăng xuất thành công.', 'info');
+  window.location.hash = '';
+};
 
 // Danh sách thương hiệu duy nhất từ data sản phẩm đã load
 const allBrands = computed(() =>
@@ -278,18 +298,39 @@ const addToCart = (product) => {
   }
 };
 
+// ── Giỏ hàng: tăng/giảm số lượng ────────────────────────────────────────────
+const updateQty = (bienTheId, delta) => {
+  const item = cart.value.find(i => i.bienTheId === bienTheId);
+  if (!item) return;
+  const newQty = item.quantity + delta;
+  if (newQty <= 0) cart.value = cart.value.filter(i => i.bienTheId !== bienTheId);
+  else item.quantity = newQty;
+};
+
 // ── Checkout (Thanh toán) ─────────────────────────────────────────────────────
 
 const showCheckout    = ref(false); // Hiển thị modal thanh toán
+const checkoutStep    = ref(1);     // 1 = thông tin giao hàng, 2 = phương thức thanh toán
 const checkoutSuccess = ref(false); // Đặt hàng thành công chưa
 const checkoutLoading = ref(false); // Đang xử lý API
 const checkoutError   = ref('');    // Thông báo lỗi khi checkout
-const checkoutOrderId = ref(null);  // ID đơn hàng sau khi đặt xong
+const checkoutOrderId    = ref(null);  // ID đơn hàng sau khi đặt xong
+const checkoutFinalTotal = ref(0);     // Tổng tiền lúc đặt hàng (lưu trước khi xóa giỏ)
 const allCustomers    = ref([]);    // Cache danh sách khách hàng
 const allPromos       = ref([]);    // Cache danh sách khuyến mãi
 const foundCustomer   = ref(null);  // Khách hàng tìm thấy qua SĐT
 const appliedPromo    = ref(null);  // Khuyến mãi đã áp dụng
 const promoMsg        = ref('');    // Thông báo kết quả áp dụng mã
+const selectedPayment = ref('tien_mat'); // 'tien_mat' | 'qr' | 'chuyen_khoan'
+
+// VietQR — tạo QR code thật từ API vietqr.io
+const qrImageUrl = computed(() => {
+  const bank    = 'VCB';
+  const account = '9876543210';
+  const info    = encodeURIComponent('Thanh toan SAO LAPTOP');
+  const name    = encodeURIComponent('SAO LAPTOP');
+  return `https://img.vietqr.io/image/${bank}-${account}-compact2.png?amount=${checkoutTotal.value}&addInfo=${info}&accountName=${name}`;
+});
 
 // Form thông tin đặt hàng (reactive để Vue theo dõi thay đổi)
 const checkoutForm = reactive({
@@ -325,22 +366,22 @@ const checkoutTotal = computed(() =>
 
 // Mở modal thanh toán và load dữ liệu cần thiết
 const openCheckout = async () => {
-  if (cart.value.length === 0) return; // Không mở nếu giỏ trống
+  if (cart.value.length === 0) return;
+  checkoutStep.value    = 1;
   checkoutSuccess.value = false;
   checkoutError.value   = '';
   promoMsg.value        = '';
   appliedPromo.value    = null;
   foundCustomer.value   = null;
-  // Reset toàn bộ form
+  selectedPayment.value = 'tien_mat';
   Object.keys(checkoutForm).forEach(k => { checkoutForm[k] = ''; });
-  // Nếu chưa có cache khách hàng và khuyến mãi thì fetch
   if (!allCustomers.value.length) {
     [allCustomers.value, allPromos.value] = await Promise.all([
       KhachHangService.getAll().catch(() => []),
       KhuyenMaiService.getAll().catch(() => []),
     ]);
   }
-  showCart.value     = false; // Đóng giỏ hàng trước khi mở modal
+  showCart.value     = false;
   showCheckout.value = true;
 };
 
@@ -411,7 +452,7 @@ const placeOrder = async () => {
       tongTien:           cartTotal.value,
       giamGia:            checkoutGiamGia.value,
       phiVanChuyen:       phiVanChuyen.value,
-      thanhTien:          checkoutTotal.value,
+      // thanhTien bỏ qua — computed column trong DB (tong_tien - giam_gia + phi_van_chuyen)
       ngayDat:            new Date().toISOString().slice(0, 19),
       trangThaiDonHang:   'pending',
       trangThaiThanhToan: 'unpaid',
@@ -436,10 +477,11 @@ const placeOrder = async () => {
         throw new Error(`Lỗi chi tiết đơn hàng: ${itemRes.status}`);
     }
 
-    // Đặt hàng thành công: lưu mã đơn, xoá giỏ
-    checkoutOrderId.value = donHangId;
-    checkoutSuccess.value = true;
-    cart.value = [];
+    // Lưu tổng tiền trước khi xóa giỏ (checkoutTotal sẽ về 0 sau khi cart rỗng)
+    checkoutFinalTotal.value = checkoutTotal.value;
+    checkoutOrderId.value    = donHangId;
+    checkoutSuccess.value    = true;
+    cart.value               = [];
   } catch (e) {
     checkoutError.value = e.message;
   } finally {
@@ -457,6 +499,17 @@ function goHome() { window.location.hash = ""; }
 
 // Chuyển sang trang admin
 function goAdmin() { window.location.hash = "#admin"; }
+
+// Xử lý sau khi đăng nhập thành công — phân quyền theo role
+function onLoginSuccess(user) {
+  setSession(user);
+  const staffRoles = ["admin", "nhan_vien", "quan_kho"];
+  if (staffRoles.includes(user.role)) {
+    window.location.hash = "#admin";
+  } else {
+    window.location.hash = "";
+  }
+}
 
 // ── Lifecycle hooks ───────────────────────────────────────────────────────────
 onMounted(() => {
@@ -501,10 +554,12 @@ onBeforeUnmount(() => {
       <!-- Header / NavBar — nhận cartCount và xử lý các sự kiện -->
       <NavBar
           :cart-count="cartCount"
+          :user="auth.user"
           @toggle-cart="toggleCart"
           @search="handleSearch"
           @open-admin="goAdmin"
           @open-login="openLogin"
+          @logout="onLogout"
       />
 
       <!-- Dải ticker chạy ngang (thông báo khuyến mãi) -->
@@ -813,62 +868,85 @@ onBeforeUnmount(() => {
         </section><!-- /deal section -->
 
         <!-- ── Panel giỏ hàng (slide-in từ phải) ── -->
+        <Transition name="cart-slide">
         <div v-if="showCart"
              class="position-fixed top-0 end-0 h-100 d-flex flex-column"
-             style="width:360px; background:#111; border-left:1px solid #2a2a2a; z-index:500; box-shadow:-8px 0 32px rgba(0,0,0,0.5);">
+             style="width:390px; background:#0f0f0f; border-left:1px solid #1e1e1e; z-index:500; box-shadow:-12px 0 48px rgba(0,0,0,0.7);">
 
           <!-- Header giỏ hàng -->
-          <div class="d-flex justify-content-between align-items-center p-3"
-               style="border-bottom:1px solid #2a2a2a;">
-            <h3 class="mb-0 fw-bold text-white" style="font-size:1rem;">Giỏ hàng</h3>
-            <!-- Nút đóng giỏ hàng -->
-            <button class="btn btn-sm btn-outline-secondary rounded-circle"
-                    style="width:32px; height:32px; padding:0;"
+          <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid #1e1e1e;">
+            <div class="d-flex align-items-center gap-2">
+              <span style="font-size:1.1rem;">🛒</span>
+              <span class="fw-bold text-white" style="font-size:0.95rem;">Giỏ hàng</span>
+              <span v-if="cartCount > 0" class="badge bg-warning text-dark fw-bold rounded-pill" style="font-size:10px;">{{ cartCount }}</span>
+            </div>
+            <button class="btn btn-sm d-flex align-items-center justify-content-center rounded-circle"
+                    style="width:30px;height:30px;padding:0;background:#222;color:#999;border:none;font-size:14px;"
                     @click="toggleCart">✕</button>
           </div>
 
-          <!-- Nội dung giỏ hàng -->
-          <div v-if="cartCount === 0"
-               class="flex-grow-1 d-flex align-items-center justify-content-center text-secondary small">
-            Chưa có sản phẩm nào trong giỏ.
+          <!-- Empty state -->
+          <div v-if="cartCount === 0" class="flex-grow-1 d-flex flex-column align-items-center justify-content-center gap-3 text-center px-4">
+            <div style="font-size:3rem; opacity:0.2;">🛍️</div>
+            <p class="text-secondary small mb-0">Giỏ hàng của bạn đang trống</p>
+            <button class="btn btn-sm btn-outline-warning rounded-pill px-4" @click="toggleCart">Tiếp tục mua sắm</button>
           </div>
-          <div v-else class="flex-grow-1 d-flex flex-column p-3 overflow-y-auto gap-2">
 
-            <!-- Từng sản phẩm trong giỏ -->
-            <div v-for="item in cart" :key="item.sanPhamId"
-                 class="d-flex justify-content-between align-items-start gap-2 p-2 rounded-2"
-                 style="background:#1a1a1a; border:1px solid #2a2a2a;">
+          <!-- Danh sách sản phẩm -->
+          <div v-else class="flex-grow-1 overflow-y-auto px-3 py-2 d-flex flex-column gap-2">
+            <div v-for="item in cart" :key="item.bienTheId"
+                 class="d-flex gap-3 p-3 rounded-3"
+                 style="background:#171717; border:1px solid #242424;">
+
+              <!-- Ảnh sản phẩm -->
+              <div class="flex-shrink-0" style="width:64px;height:64px;">
+                <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham"
+                     style="width:64px;height:64px;object-fit:contain;border-radius:10px;background:#111;" />
+                <div v-else class="d-flex align-items-center justify-content-center rounded-3"
+                     style="width:64px;height:64px;background:#1e1e1e;font-size:1.6rem;">💻</div>
+              </div>
+
+              <!-- Thông tin -->
               <div class="flex-grow-1 min-width-0">
-                <div class="fw-bold text-light small">{{ item.tenSanPham }}</div>
-                <div class="text-secondary" style="font-size:11px;">
-                  {{ item.quantity }} × {{ formatPrice(item.giaBan) }}
+                <div class="fw-semibold text-light" style="font-size:12px; line-height:1.4; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical;">{{ item.tenSanPham }}</div>
+                <div class="text-secondary mt-1" style="font-size:10px;">
+                  <span v-if="item.mauSac">{{ item.mauSac }}</span>
+                  <span v-if="item.mauSac && item.cpu"> · </span>
+                  <span v-if="item.cpu">{{ item.cpu }}</span>
                 </div>
-                <div class="text-warning fw-bold" style="font-size:12px;">
-                  {{ formatPrice(item.quantity * item.giaBan) }}
+                <!-- Số lượng + giá -->
+                <div class="d-flex align-items-center justify-content-between mt-2">
+                  <div class="d-flex align-items-center gap-1">
+                    <button class="d-flex align-items-center justify-content-center"
+                            style="width:26px;height:26px;padding:0;background:#252525;color:#ccc;border:none;border-radius:7px;font-size:15px;cursor:pointer;line-height:1;"
+                            @click="updateQty(item.bienTheId, -1)">−</button>
+                    <span class="text-white fw-bold" style="font-size:13px;min-width:22px;text-align:center;">{{ item.quantity }}</span>
+                    <button class="d-flex align-items-center justify-content-center"
+                            style="width:26px;height:26px;padding:0;background:#252525;color:#ccc;border:none;border-radius:7px;font-size:15px;cursor:pointer;line-height:1;"
+                            @click="updateQty(item.bienTheId, 1)">+</button>
+                  </div>
+                  <span class="text-warning fw-bold" style="font-size:13px;">{{ formatPrice(item.giaBan * item.quantity) }}</span>
                 </div>
               </div>
-              <!-- Nút xoá khỏi giỏ -->
-              <button class="btn btn-sm btn-outline-danger flex-shrink-0"
-                      style="font-size:10px; padding:2px 8px;"
-                      @click="removeFromCart(item.bienTheId)">Xóa</button>
             </div>
+          </div>
 
-            <!-- Tổng tạm tính -->
-            <div class="d-flex justify-content-between align-items-center pt-2 mt-1"
-                 style="border-top:1px solid #2a2a2a;">
-              <span class="text-secondary small">Tổng tạm tính</span>
-              <strong class="text-warning">{{ formatPrice(cartTotal) }}</strong>
+          <!-- Footer: tổng + checkout -->
+          <div v-if="cartCount > 0" class="px-4 py-3 d-flex flex-column gap-2" style="border-top:1px solid #1e1e1e; background:#0f0f0f;">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-secondary small">Tạm tính ({{ cartCount }} sản phẩm)</span>
+              <strong class="text-white">{{ formatPrice(cartTotal) }}</strong>
             </div>
-
-            <!-- Nút thanh toán -->
-            <button class="btn btn-warning btn-sm fw-black w-100 mt-1"
-                    style="border-radius:10px;"
+            <div class="text-secondary" style="font-size:10px;">🚚 Miễn phí vận chuyển cho đơn từ 300.000đ</div>
+            <button class="btn btn-warning fw-bold w-100 py-2 mt-1"
+                    style="border-radius:12px; font-size:0.9rem; letter-spacing:0.01em;"
                     @click="openCheckout">
-              Thanh toán →
+              Thanh toán &nbsp;·&nbsp; {{ formatPrice(cartTotal) }}
             </button>
           </div>
 
-        </div><!-- /cart panel -->
+        </div>
+        </Transition><!-- /cart panel -->
 
       </div><!-- /container-xl -->
 
@@ -880,181 +958,346 @@ onBeforeUnmount(() => {
   </div><!-- /root -->
 
   <!-- ══════════════════════════════════════════════════════
-      CHECKOUT MODAL — Hiển thị form đặt hàng
+      TOAST NOTIFICATION
+  ══════════════════════════════════════════════════════ -->
+  <Transition name="toast-slide">
+    <div v-if="toast.show"
+         class="position-fixed d-flex align-items-center gap-2 px-4 py-3 rounded-3 fw-semibold small shadow-lg"
+         style="top:80px; right:24px; z-index:9999; min-width:260px; max-width:380px; pointer-events:none;"
+         :style="toast.type === 'success'
+           ? 'background:#16a34a; color:#fff;'
+           : toast.type === 'error'
+           ? 'background:#dc2626; color:#fff;'
+           : 'background:#2563eb; color:#fff;'">
+      <span style="font-size:1.1rem; flex-shrink:0;">
+        {{ toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ' }}
+      </span>
+      {{ toast.msg }}
+    </div>
+  </Transition>
+
+  <!-- ══════════════════════════════════════════════════════
+      LOGIN MODAL — overlay trên trang khách hàng
+  ══════════════════════════════════════════════════════ -->
+  <div v-if="showLoginModal"
+       class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+       style="background:rgba(0,0,0,0.75); z-index:1050; backdrop-filter:blur(4px);"
+       @click.self="showLoginModal = false">
+    <div class="rounded-4 p-4 position-relative"
+         style="background:#141414; border:1px solid #252525; width:460px; max-width:94vw; box-shadow:0 24px 80px rgba(0,0,0,0.7);">
+      <button class="btn-close btn-close-white position-absolute"
+              style="top:16px; right:16px; font-size:0.75rem;"
+              @click="showLoginModal = false"></button>
+      <LoginForm
+          @submit="handleModalLogin"
+          @open-register="showLoginModal = false; window.location.hash = '#login'" />
+      <div v-if="loginModalErr"
+           class="alert alert-danger small py-2 mt-2 mb-0 rounded-3">
+        {{ loginModalErr }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+      CHECKOUT MODAL — 2 bước: Thông tin → Thanh toán
   ══════════════════════════════════════════════════════ -->
   <div v-if="showCheckout"
        class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-       style="background:rgba(0,0,0,0.7); z-index:1050;"
+       style="background:rgba(0,0,0,0.8); z-index:1050; backdrop-filter:blur(4px);"
        @click.self="showCheckout = false">
 
     <div class="rounded-4 d-flex flex-column"
-         style="background:#181818; border:1px solid rgba(255,255,255,0.1); width:620px; max-width:95vw; max-height:90vh;">
+         style="background:#141414; border:1px solid #252525; width:660px; max-width:96vw; max-height:92vh; box-shadow:0 24px 80px rgba(0,0,0,0.7);">
 
-      <!-- ── Màn hình thành công ── -->
+      <!-- ══ Màn hình thành công ══ -->
       <template v-if="checkoutSuccess">
-        <div class="d-flex flex-column align-items-center justify-content-center gap-3 p-5 text-center">
-          <!-- Icon tick xanh -->
+        <div class="d-flex flex-column align-items-center justify-content-center gap-4 p-5 text-center">
           <div class="d-flex align-items-center justify-content-center rounded-circle"
-               style="width:64px; height:64px; background:rgba(72,199,142,0.15); color:#48c78e; font-size:1.8rem;">
-            ✓
+               style="width:72px;height:72px;background:rgba(72,199,142,0.15);color:#48c78e;font-size:2rem;">✓</div>
+          <div>
+            <h2 class="fw-black text-white mb-1" style="font-size:1.4rem;">Đặt hàng thành công!</h2>
+            <p class="text-secondary mb-0" style="font-size:0.9rem;">
+              Mã đơn hàng: <strong class="text-warning">#{{ checkoutOrderId }}</strong>
+            </p>
           </div>
-          <h2 class="fw-black text-white mb-0">Đặt hàng thành công!</h2>
-          <p class="text-secondary mb-0">
-            Mã đơn hàng của bạn: <strong class="text-warning">#{{ checkoutOrderId }}</strong>
-          </p>
-          <p class="text-secondary small mb-0">Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất.</p>
-          <button class="btn btn-warning fw-bold px-4 rounded-pill" @click="showCheckout = false">Đóng</button>
+          <!-- Hướng dẫn thanh toán theo phương thức đã chọn -->
+          <div v-if="selectedPayment === 'tien_mat'"
+               class="p-3 rounded-3 text-center small"
+               style="background:#1e2a1e; color:#6ee7b7; border:1px solid #2a3d2a; max-width:360px;">
+            💵 Vui lòng chuẩn bị tiền mặt <strong>{{ formatPrice(checkoutFinalTotal) }}</strong> khi nhân viên giao hàng đến.
+          </div>
+          <div v-else-if="selectedPayment === 'qr'"
+               class="p-3 rounded-3 text-center small"
+               style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;">
+            ✅ Cảm ơn! Chúng tôi sẽ xác nhận thanh toán sau khi nhận được chuyển khoản.
+          </div>
+          <div v-else
+               class="p-3 rounded-3 text-center small"
+               style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;">
+            🏦 Vui lòng chuyển khoản <strong>{{ formatPrice(checkoutFinalTotal) }}</strong> theo thông tin đã cung cấp.
+          </div>
+          <button class="btn btn-warning fw-bold px-5 rounded-pill" style="font-size:0.9rem;" @click="showCheckout = false">Đóng</button>
         </div>
       </template>
 
-      <!-- ── Form đặt hàng ── -->
+      <!-- ══ Form đặt hàng ══ -->
       <template v-else>
-        <!-- Header modal -->
-        <div class="d-flex justify-content-between align-items-center p-3 fw-bold text-white"
-             style="border-bottom:1px solid rgba(255,255,255,0.07); font-size:0.95rem;">
-          <span>Xác nhận đặt hàng</span>
-          <button class="btn-close btn-close-white btn-sm" @click="showCheckout = false"></button>
+
+        <!-- Header + step indicator -->
+        <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid #222;">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="fw-black text-white mb-1" style="font-size:1rem;">
+                {{ checkoutStep === 1 ? 'Thông tin đặt hàng' : 'Phương thức thanh toán' }}
+              </h5>
+              <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                       style="width:20px;height:20px;font-size:10px;"
+                       :style="checkoutStep >= 1 ? 'background:#facc15;color:#000;' : 'background:#333;color:#666;'">1</div>
+                  <span class="small" :class="checkoutStep >= 1 ? 'text-warning' : 'text-secondary'" style="font-size:11px;">Thông tin</span>
+                </div>
+                <div class="text-secondary" style="font-size:10px;">───</div>
+                <div class="d-flex align-items-center gap-1">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                       style="width:20px;height:20px;font-size:10px;"
+                       :style="checkoutStep >= 2 ? 'background:#facc15;color:#000;' : 'background:#333;color:#666;'">2</div>
+                  <span class="small" :class="checkoutStep >= 2 ? 'text-warning' : 'text-secondary'" style="font-size:11px;">Thanh toán</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn-close btn-close-white mt-1" style="font-size:0.7rem;" @click="showCheckout = false"></button>
+          </div>
         </div>
 
-        <!-- Body modal (scroll được) -->
-        <div class="p-4 overflow-y-auto flex-grow-1 d-flex flex-column gap-3">
+        <!-- Thông báo lỗi -->
+        <div v-if="checkoutError" class="mx-4 mt-3">
+          <div class="alert alert-danger small py-2 mb-0 rounded-3">{{ checkoutError }}</div>
+        </div>
 
-          <!-- Thông báo lỗi -->
-          <div v-if="checkoutError" class="alert alert-danger small py-2 mb-0">{{ checkoutError }}</div>
+        <!-- ── BƯỚC 1: Thông tin giao hàng ── -->
+        <div v-if="checkoutStep === 1" class="overflow-y-auto flex-grow-1 px-4 py-3 d-flex flex-column gap-4">
 
-          <!-- Danh sách sản phẩm trong đơn -->
+          <!-- Giỏ hàng tóm tắt -->
           <div>
-            <div class="fw-bold text-secondary small mb-2 text-uppercase" style="letter-spacing:0.04em;">
-              Giỏ hàng ({{ cart.length }} sản phẩm)
-            </div>
-            <div class="d-flex flex-column gap-1">
+            <div class="text-secondary fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase;">Đơn hàng · {{ cart.length }} sản phẩm</div>
+            <div class="d-flex flex-column gap-1 rounded-3 p-2" style="background:#1a1a1a;">
               <div v-for="item in cart" :key="item.bienTheId"
-                   class="d-flex justify-content-between align-items-center small p-2 rounded-2"
-                   style="background:rgba(255,255,255,0.04);">
-                <span class="text-light fw-medium">{{ item.tenSanPham }}</span>
-                <span class="text-secondary mx-2">×{{ item.quantity }}</span>
-                <span class="text-warning fw-bold">{{ formatPrice(item.giaBan * item.quantity) }}</span>
+                   class="d-flex align-items-center gap-3 px-2 py-1">
+                <div style="width:36px;height:36px;flex-shrink:0;">
+                  <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham" style="width:36px;height:36px;object-fit:contain;border-radius:6px;" />
+                  <div v-else class="d-flex align-items-center justify-content-center rounded-2" style="width:36px;height:36px;background:#222;font-size:1rem;">💻</div>
+                </div>
+                <span class="text-light flex-grow-1 small text-truncate">{{ item.tenSanPham }}</span>
+                <span class="text-secondary small flex-shrink-0">×{{ item.quantity }}</span>
+                <span class="text-warning fw-semibold small flex-shrink-0">{{ formatPrice(item.giaBan * item.quantity) }}</span>
               </div>
             </div>
           </div>
 
           <!-- Thông tin khách hàng -->
           <div>
-            <div class="fw-bold text-secondary small mb-2 text-uppercase" style="letter-spacing:0.04em;">
-              Thông tin khách hàng
-            </div>
-            <!-- Tìm theo SĐT -->
+            <div class="text-secondary fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase;">Khách hàng</div>
             <div class="d-flex gap-2 mb-2">
               <input v-model="checkoutForm.soDienThoai"
                      class="form-control form-control-sm"
-                     style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
-                     placeholder="Số điện thoại *" />
-              <button class="btn btn-sm btn-outline-warning flex-shrink-0" @click="lookupCustomer">Tìm</button>
+                     style="background:#1e1e1e;border-color:#333;color:#f0f0f0;border-radius:10px;"
+                     placeholder="Số điện thoại *" @keyup.enter="lookupCustomer" />
+              <button class="btn btn-sm btn-outline-warning flex-shrink-0 px-3" style="border-radius:10px;" @click="lookupCustomer">Tìm</button>
             </div>
-            <!-- Kết quả tìm kiếm khách hàng -->
-            <div v-if="foundCustomer"
-                 class="small p-2 rounded-2 mb-2"
-                 style="background:rgba(72,199,142,0.1); color:#48c78e;">
-              ✓ Khách hàng: <strong>{{ foundCustomer.hoTen }}</strong>
+            <div v-if="foundCustomer" class="small p-2 rounded-3 mb-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
+              ✓ Đã tìm thấy: <strong>{{ foundCustomer.hoTen }}</strong>
             </div>
-            <div v-else-if="checkoutForm.soDienThoai"
-                 class="small p-2 rounded-2 mb-2 text-secondary"
-                 style="background:rgba(255,255,255,0.04);">
-              Số điện thoại chưa có trong hệ thống — sẽ tạo khách hàng mới.
+            <div v-else-if="checkoutForm.soDienThoai" class="small p-2 rounded-3 mb-2 text-secondary" style="background:#1a1a1a;">
+              Số mới — sẽ tạo tài khoản khách hàng.
             </div>
-            <!-- Họ tên + Email -->
             <div class="row g-2">
               <div class="col-6">
-                <input v-model="checkoutForm.hoTen"
-                       class="form-control form-control-sm"
-                       style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                <input v-model="checkoutForm.hoTen" class="form-control form-control-sm"
+                       style="background:#1e1e1e;border-color:#333;color:#f0f0f0;border-radius:10px;"
                        placeholder="Họ tên *" />
               </div>
               <div class="col-6">
-                <input v-model="checkoutForm.email"
-                       class="form-control form-control-sm"
-                       style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
-                       placeholder="Email *" />
+                <input v-model="checkoutForm.email" class="form-control form-control-sm"
+                       style="background:#1e1e1e;border-color:#333;color:#f0f0f0;border-radius:10px;"
+                       placeholder="Email" />
               </div>
             </div>
           </div>
 
           <!-- Thông tin giao hàng -->
           <div>
-            <div class="fw-bold text-secondary small mb-2 text-uppercase" style="letter-spacing:0.04em;">
-              Thông tin giao hàng
-            </div>
+            <div class="text-secondary fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase;">Giao hàng</div>
             <div class="row g-2 mb-2">
               <div class="col-6">
-                <input v-model="checkoutForm.nguoiNhan"
-                       class="form-control form-control-sm"
-                       style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                <input v-model="checkoutForm.nguoiNhan" class="form-control form-control-sm"
+                       style="background:#1e1e1e;border-color:#333;color:#f0f0f0;border-radius:10px;"
                        placeholder="Người nhận *" />
               </div>
               <div class="col-6">
-                <input v-model="checkoutForm.sdtNguoiNhan"
-                       class="form-control form-control-sm"
-                       style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+                <input v-model="checkoutForm.sdtNguoiNhan" class="form-control form-control-sm"
+                       style="background:#1e1e1e;border-color:#333;color:#f0f0f0;border-radius:10px;"
                        placeholder="SĐT người nhận *" />
               </div>
             </div>
-            <input v-model="checkoutForm.diaChiGiaoHangText"
-                   class="form-control form-control-sm"
-                   style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
+            <input v-model="checkoutForm.diaChiGiaoHangText" class="form-control form-control-sm"
+                   style="background:#1e1e1e;border-color:#333;color:#f0f0f0;border-radius:10px;"
                    placeholder="Địa chỉ giao hàng *" />
           </div>
 
           <!-- Mã khuyến mãi -->
           <div>
-            <div class="fw-bold text-secondary small mb-2 text-uppercase" style="letter-spacing:0.04em;">
-              Mã khuyến mãi
+            <div class="text-secondary fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase;">Mã khuyến mãi</div>
+            <div class="d-flex gap-2">
+              <input v-model="checkoutForm.maKhuyenMai" class="form-control form-control-sm"
+                     style="background:#1e1e1e;border-color:#333;color:#f0f0f0;border-radius:10px;"
+                     placeholder="Nhập mã giảm giá (nếu có)" @keyup.enter="applyPromo" />
+              <button class="btn btn-sm btn-outline-warning flex-shrink-0 px-3" style="border-radius:10px;" @click="applyPromo">Áp dụng</button>
             </div>
-            <div class="d-flex gap-2 mb-1">
-              <input v-model="checkoutForm.maKhuyenMai"
-                     class="form-control form-control-sm"
-                     style="background:#1f1f1f; border-color:#3f3f3f; color:#f0f0f0;"
-                     placeholder="Nhập mã (nếu có)" />
-              <button class="btn btn-sm btn-outline-warning flex-shrink-0" @click="applyPromo">Áp dụng</button>
-            </div>
-            <!-- Kết quả áp dụng mã -->
-            <div v-if="promoMsg" class="small"
-                 :class="appliedPromo ? 'text-success' : 'text-danger'">
-              {{ promoMsg }}
-            </div>
+            <div v-if="promoMsg" class="small mt-2 px-1" :class="appliedPromo ? 'text-success' : 'text-danger'">{{ promoMsg }}</div>
           </div>
 
-          <!-- Bảng tổng kết tiền -->
-          <div class="p-3 rounded-2 d-flex flex-column gap-1"
-               style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);">
+          <!-- Tổng tiền -->
+          <div class="p-3 rounded-3 d-flex flex-column gap-2" style="background:#1a1a1a;border:1px solid #252525;">
             <div class="d-flex justify-content-between small text-secondary">
               <span>Tạm tính</span><span>{{ formatPrice(cartTotal) }}</span>
             </div>
             <div class="d-flex justify-content-between small text-secondary">
               <span>Phí vận chuyển</span>
-              <span>{{ phiVanChuyen === 0 ? 'Miễn phí' : formatPrice(phiVanChuyen) }}</span>
+              <span :class="phiVanChuyen === 0 ? 'text-success' : ''">{{ phiVanChuyen === 0 ? 'Miễn phí' : formatPrice(phiVanChuyen) }}</span>
             </div>
-            <div v-if="checkoutGiamGia > 0"
-                 class="d-flex justify-content-between small text-success">
-              <span>Giảm giá</span><span>- {{ formatPrice(checkoutGiamGia) }}</span>
+            <div v-if="checkoutGiamGia > 0" class="d-flex justify-content-between small text-success">
+              <span>Giảm giá</span><span>− {{ formatPrice(checkoutGiamGia) }}</span>
             </div>
-            <!-- Tổng thanh toán -->
-            <div class="d-flex justify-content-between fw-bold pt-2 mt-1"
-                 style="border-top:1px solid rgba(255,255,255,0.07);">
+            <div class="d-flex justify-content-between fw-bold pt-2" style="border-top:1px solid #2a2a2a;">
               <span class="text-white">Thành tiền</span>
-              <strong class="text-warning" style="font-size:1rem;">{{ formatPrice(checkoutTotal) }}</strong>
+              <strong class="text-warning" style="font-size:1.05rem;">{{ formatPrice(checkoutTotal) }}</strong>
             </div>
           </div>
 
-        </div><!-- /modal body -->
+        </div><!-- /bước 1 -->
 
-        <!-- Footer modal: nút Hủy và Đặt hàng -->
-        <div class="d-flex justify-content-end gap-2 p-3"
-             style="border-top:1px solid rgba(255,255,255,0.07);">
-          <button class="btn btn-sm btn-outline-secondary" @click="showCheckout = false">Hủy</button>
-          <button class="btn btn-sm btn-warning fw-bold px-4"
+        <!-- ── BƯỚC 2: Phương thức thanh toán ── -->
+        <div v-else class="overflow-y-auto flex-grow-1 px-4 py-3 d-flex flex-column gap-4">
+
+          <!-- Số tiền cần thanh toán -->
+          <div class="text-center py-2">
+            <div class="text-secondary small mb-1">Tổng cần thanh toán</div>
+            <div class="fw-black text-warning" style="font-size:2rem;">{{ formatPrice(checkoutTotal) }}</div>
+          </div>
+
+          <!-- Chọn phương thức -->
+          <div>
+            <div class="text-secondary fw-semibold mb-3" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase;">Chọn phương thức</div>
+            <div class="d-flex flex-column gap-2">
+
+              <!-- Tiền mặt -->
+              <label class="d-flex align-items-center gap-3 p-3 rounded-3 cursor-pointer"
+                     style="border:2px solid; cursor:pointer;"
+                     :style="selectedPayment==='tien_mat' ? 'border-color:#facc15;background:rgba(250,204,21,0.06);' : 'border-color:#252525;background:#1a1a1a;'"
+                     @click="selectedPayment='tien_mat'">
+                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                     style="width:42px;height:42px;background:#2a2000;font-size:1.3rem;">💵</div>
+                <div class="flex-grow-1">
+                  <div class="fw-bold text-white" style="font-size:0.9rem;">Tiền mặt khi nhận hàng</div>
+                  <div class="text-secondary" style="font-size:11px;">Thanh toán cho nhân viên giao hàng</div>
+                </div>
+                <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:20px;height:20px;"
+                     :style="selectedPayment==='tien_mat' ? 'border-color:#facc15;background:#facc15;' : 'border-color:#444;background:transparent;'">
+                  <div v-if="selectedPayment==='tien_mat'" style="width:8px;height:8px;border-radius:50%;background:#000;"></div>
+                </div>
+              </label>
+
+              <!-- QR Code -->
+              <label class="d-flex align-items-center gap-3 p-3 rounded-3"
+                     style="border:2px solid; cursor:pointer;"
+                     :style="selectedPayment==='qr' ? 'border-color:#facc15;background:rgba(250,204,21,0.06);' : 'border-color:#252525;background:#1a1a1a;'"
+                     @click="selectedPayment='qr'">
+                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                     style="width:42px;height:42px;background:#0a1a2a;font-size:1.3rem;">📱</div>
+                <div class="flex-grow-1">
+                  <div class="fw-bold text-white" style="font-size:0.9rem;">Quét mã QR</div>
+                  <div class="text-secondary" style="font-size:11px;">VietQR · Mọi ngân hàng hỗ trợ</div>
+                </div>
+                <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:20px;height:20px;"
+                     :style="selectedPayment==='qr' ? 'border-color:#facc15;background:#facc15;' : 'border-color:#444;background:transparent;'">
+                  <div v-if="selectedPayment==='qr'" style="width:8px;height:8px;border-radius:50%;background:#000;"></div>
+                </div>
+              </label>
+
+              <!-- Chuyển khoản -->
+              <label class="d-flex align-items-center gap-3 p-3 rounded-3"
+                     style="border:2px solid; cursor:pointer;"
+                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:#facc15;background:rgba(250,204,21,0.06);' : 'border-color:#252525;background:#1a1a1a;'"
+                     @click="selectedPayment='chuyen_khoan'">
+                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                     style="width:42px;height:42px;background:#0a1a0a;font-size:1.3rem;">🏦</div>
+                <div class="flex-grow-1">
+                  <div class="fw-bold text-white" style="font-size:0.9rem;">Chuyển khoản ngân hàng</div>
+                  <div class="text-secondary" style="font-size:11px;">Nhập số tài khoản thủ công</div>
+                </div>
+                <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:20px;height:20px;"
+                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:#facc15;background:#facc15;' : 'border-color:#444;background:transparent;'">
+                  <div v-if="selectedPayment==='chuyen_khoan'" style="width:8px;height:8px;border-radius:50%;background:#000;"></div>
+                </div>
+              </label>
+
+            </div>
+          </div>
+
+          <!-- QR Code hiển thị khi chọn QR -->
+          <Transition name="fade">
+          <div v-if="selectedPayment === 'qr'" class="d-flex flex-column align-items-center gap-3 p-4 rounded-3" style="background:#111;border:1px solid #252525;">
+            <div class="text-white fw-bold small">Quét QR bằng ứng dụng ngân hàng</div>
+            <img :src="qrImageUrl" alt="VietQR" style="width:220px;height:220px;border-radius:12px;background:#fff;padding:6px;" />
+            <div class="text-center small text-secondary" style="line-height:1.8;">
+              Ngân hàng: <strong class="text-white">Vietcombank (VCB)</strong><br />
+              Số tài khoản: <strong class="text-warning">9876543210</strong><br />
+              Chủ TK: <strong class="text-white">CÔNG TY SAO LAPTOP</strong><br />
+              Số tiền: <strong class="text-warning">{{ formatPrice(checkoutTotal) }}</strong><br />
+              Nội dung: <strong class="text-white">Thanh toan SAO LAPTOP</strong>
+            </div>
+          </div>
+          </Transition>
+
+          <!-- Thông tin chuyển khoản thủ công -->
+          <Transition name="fade">
+          <div v-if="selectedPayment === 'chuyen_khoan'" class="p-4 rounded-3 small" style="background:#111;border:1px solid #252525;line-height:2;">
+            <div class="fw-bold text-white mb-2">Thông tin chuyển khoản</div>
+            <div class="text-secondary">
+              Ngân hàng: <strong class="text-white">Vietcombank (VCB)</strong><br />
+              Số tài khoản: <strong class="text-warning">9876543210</strong><br />
+              Chủ tài khoản: <strong class="text-white">CÔNG TY SAO LAPTOP</strong><br />
+              Số tiền: <strong class="text-warning">{{ formatPrice(checkoutTotal) }}</strong><br />
+              Nội dung CK: <strong class="text-white">Thanh toan SAO LAPTOP</strong>
+            </div>
+          </div>
+          </Transition>
+
+        </div><!-- /bước 2 -->
+
+        <!-- Footer: nút điều hướng bước -->
+        <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top:1px solid #222;">
+          <button v-if="checkoutStep === 1"
+                  class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
+                  @click="showCheckout = false">Hủy</button>
+          <button v-else
+                  class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
+                  @click="checkoutStep = 1">← Quay lại</button>
+
+          <button v-if="checkoutStep === 1"
+                  class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
+                  @click="checkoutStep = 2">
+            Tiếp tục →
+          </button>
+          <button v-else
+                  class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
                   :disabled="checkoutLoading"
                   @click="placeOrder">
-            {{ checkoutLoading ? 'Đang xử lý...' : 'Đặt hàng' }}
+            {{ checkoutLoading ? 'Đang xử lý...' : 'Xác nhận đặt hàng' }}
           </button>
         </div>
 
@@ -1063,78 +1306,36 @@ onBeforeUnmount(() => {
   </div><!-- /checkout overlay -->
 
   <!-- ── Trang chi tiết sản phẩm (full-screen overlay) ── -->
-  <!-- Chi tiết sản phẩm -->
   <Transition name="slide-up">
     <ProductDetail
-        v-if="selectedProduct"
-        :key="selectedProduct.bienTheId"
-        :product="selectedProduct"
-        :products="products"
-        @close="closeProduct"
-        @add-to-cart="p => {
-        addToCart(p);
-        closeProduct();
-      }"
-        @open-product="openProduct"
+      v-if="selectedProduct"
+      :key="selectedProduct.bienTheId"
+      :product="selectedProduct"
+      :products="products"
+      @close="closeProduct"
+      @add-to-cart="p => { addToCart(p); closeProduct(); }"
+      @open-product="openProduct"
     />
   </Transition>
-
-  <!-- ================= LOGIN ================= -->
-
-  <div
-      v-if="showLogin"
-      class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-      style="background:rgba(0,0,0,.7);z-index:9999"
-      @click.self="closeLogin"
-  >
-
-    <div
-        class="bg-white rounded-4 p-4"
-        style="width:450px;max-width:95%"
-    >
-
-      <LoginForm
-          @close="closeLogin"
-          @login-success="loginSuccess"
-          @open-register="openRegister"
-      />
-
-    </div>
-
-  </div>
-
-  <!-- ================= REGISTER ================= -->
-
-  <div
-      v-if="showRegister"
-      class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-      style="background:rgba(0,0,0,.7);z-index:9999"
-      @click.self="closeRegister"
-  >
-
-    <div
-        class="bg-white rounded-4 p-4"
-        style="width:560px;max-width:95%"
-    >
-
-      <RegisterForm
-          @close="closeRegister"
-          @open-login="openLogin"
-      />
-
-    </div>
-
-  </div>
 </template>
-  <style>
-    .slide-up-enter-active,
-    .slide-up-leave-active{
-      transition:.3s;
-    }
 
-    .slide-up-enter-from,
-    .slide-up-leave-to{
-      opacity:0;
-      transform:translateY(30px);
-    }
-  </style>
+
+<style>
+/* ProductDetail overlay */
+.slide-up-enter-active, .slide-up-leave-active { transition: transform 0.28s ease, opacity 0.2s ease; }
+.slide-up-enter-from, .slide-up-leave-to       { transform: translateY(30px); opacity: 0; }
+
+/* Cart panel slide-in từ phải */
+.cart-slide-enter-active, .cart-slide-leave-active { transition: transform 0.25s ease, opacity 0.2s ease; }
+.cart-slide-enter-from, .cart-slide-leave-to       { transform: translateX(100%); opacity: 0; }
+
+/* QR / bank info fade */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.fade-enter-from, .fade-leave-to       { opacity: 0; transform: translateY(8px); }
+
+/* Toast slide-in từ phải */
+.toast-slide-enter-active, .toast-slide-leave-active { transition: transform 0.3s ease, opacity 0.25s ease; }
+.toast-slide-enter-from, .toast-slide-leave-to       { transform: translateX(110%); opacity: 0; }
+</style>
+
+<!-- Không còn CSS scoped — toàn bộ dùng Bootstrap utility classes + inline style tối thiểu -->

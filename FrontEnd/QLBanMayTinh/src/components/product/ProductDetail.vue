@@ -122,29 +122,76 @@
           <!-- Meta: màu sắc, SKU, bảo hành -->
           <div class="d-flex flex-wrap gap-3 small text-secondary">
             <span v-if="activeVariant.mauSac">🎨 Màu: <strong class="text-light">{{ activeVariant.mauSac }}</strong></span>
-            <span v-if="activeVariant.maSku">🏷️ SKU: <strong class="text-light">{{ activeVariant.maSku }}</strong></span>
             <span v-if="activeVariant.baoHanhThang">🛡️ Bảo hành: <strong class="text-light">{{ activeVariant.baoHanhThang }} tháng</strong></span>
           </div>
 
-          <!-- Thông số kỹ thuật -->
-          <div v-if="specs.length">
+          <!-- ── Thông số kỹ thuật (nhóm) ── -->
+          <div v-if="specGroups.phancung.length || specGroups.manha.length || specGroups.hethong.length || specGroups.sanpham.length">
             <div class="text-secondary fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">
               Thông số kỹ thuật
             </div>
-            <div class="rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
-              <table class="w-100 mb-0" style="border-collapse:collapse;">
-                <tbody>
-                  <tr v-for="spec in specs" :key="spec.label" style="border-bottom:1px solid #1f1f1f;">
-                    <td class="px-3 py-2 text-secondary small fw-semibold"
-                        style="width:40%; background:#161616; white-space:nowrap;">
-                      {{ spec.label }}
-                    </td>
-                    <td class="px-3 py-2 text-light small" style="background:#1a1a1a;">
-                      {{ spec.value }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="d-flex flex-column gap-3">
+
+              <!-- Phần cứng -->
+              <div v-if="specGroups.phancung.length" class="rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
+                <div class="px-3 py-1" style="background:#1f1f1f; font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#facc15; text-transform:uppercase;">
+                  Phần cứng
+                </div>
+                <table class="w-100 mb-0" style="border-collapse:collapse;">
+                  <tbody>
+                    <tr v-for="s in specGroups.phancung" :key="s.label" style="border-top:1px solid #1f1f1f;">
+                      <td class="px-3 py-2 text-secondary" style="width:42%; background:#161616; font-size:0.8rem; font-weight:600; white-space:nowrap;">{{ s.label }}</td>
+                      <td class="px-3 py-2 text-light" style="background:#1a1a1a; font-size:0.82rem;">{{ s.value }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Màn hình & Thiết kế -->
+              <div v-if="specGroups.manha.length" class="rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
+                <div class="px-3 py-1" style="background:#1f1f1f; font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#60a5fa; text-transform:uppercase;">
+                  Màn hình &amp; Thiết kế
+                </div>
+                <table class="w-100 mb-0" style="border-collapse:collapse;">
+                  <tbody>
+                    <tr v-for="s in specGroups.manha" :key="s.label" style="border-top:1px solid #1f1f1f;">
+                      <td class="px-3 py-2 text-secondary" style="width:42%; background:#161616; font-size:0.8rem; font-weight:600; white-space:nowrap;">{{ s.label }}</td>
+                      <td class="px-3 py-2 text-light" style="background:#1a1a1a; font-size:0.82rem;">{{ s.value }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Hệ thống -->
+              <div v-if="specGroups.hethong.length" class="rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
+                <div class="px-3 py-1" style="background:#1f1f1f; font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#34d399; text-transform:uppercase;">
+                  Hệ thống
+                </div>
+                <table class="w-100 mb-0" style="border-collapse:collapse;">
+                  <tbody>
+                    <tr v-for="s in specGroups.hethong" :key="s.label" style="border-top:1px solid #1f1f1f;">
+                      <td class="px-3 py-2 text-secondary" style="width:42%; background:#161616; font-size:0.8rem; font-weight:600; white-space:nowrap;">{{ s.label }}</td>
+                      <td class="px-3 py-2 text-light" style="background:#1a1a1a; font-size:0.82rem;">{{ s.value }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Thông tin sản phẩm -->
+              <div v-if="specGroups.sanpham.length" class="rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
+                <div class="px-3 py-1" style="background:#1f1f1f; font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#a78bfa; text-transform:uppercase;">
+                  Thông tin sản phẩm
+                </div>
+                <table class="w-100 mb-0" style="border-collapse:collapse;">
+                  <tbody>
+                    <tr v-for="s in specGroups.sanpham" :key="s.label" style="border-top:1px solid #1f1f1f;">
+                      <td class="px-3 py-2 text-secondary" style="width:42%; background:#161616; font-size:0.8rem; font-weight:600; white-space:nowrap;">{{ s.label }}</td>
+                      <td class="px-3 py-2 text-light" style="background:#1a1a1a; font-size:0.82rem;">{{ s.value }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
             </div>
           </div>
 
@@ -331,18 +378,33 @@ const formatPrice = (v) =>
   v == null ? 'Liên hệ'
   : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
-const specs = computed(() => [
-  { label: 'Bộ xử lý (CPU)',  value: activeVariant.value.cpu },
-  { label: 'RAM',             value: activeVariant.value.ram },
-  { label: 'Ổ cứng',         value: activeVariant.value.oCung },
-  { label: 'Card đồ họa',    value: activeVariant.value.gpu },
-  { label: 'Màn hình',       value: activeVariant.value.kichThuocManHinh },
-  { label: 'Hệ điều hành',   value: activeVariant.value.heDieuHanh },
-  { label: 'Pin',            value: activeVariant.value.pin },
-  { label: 'Trọng lượng',    value: activeVariant.value.trongLuongKg ? `${activeVariant.value.trongLuongKg} kg` : null },
-  { label: 'Màu sắc',        value: activeVariant.value.mauSac },
-  { label: 'Thương hiệu',    value: activeVariant.value.tenThuongHieu },
-  { label: 'Danh mục',       value: activeVariant.value.tenDanhMuc },
-  { label: 'Nhà cung cấp',   value: activeVariant.value.tenNhaCungCap },
-].filter(s => s.value));
+const row = (label, value) => (value ? { label, value } : null);
+const specGroups = computed(() => {
+  const v = activeVariant.value ?? {};
+  const f = (arr) => arr.filter(Boolean);
+  return {
+    phancung: f([
+      row('Bộ xử lý (CPU)',  v.cpu),
+      row('RAM',             v.ram),
+      row('Ổ cứng',         v.oCung),
+      row('Card đồ họa',    v.gpu),
+    ]),
+    manha: f([
+      row('Kích thước màn hình', v.kichThuocManHinh),
+      row('Màu sắc',             v.mauSac),
+      row('Trọng lượng',         v.trongLuongKg ? `${v.trongLuongKg} kg` : null),
+    ]),
+    hethong: f([
+      row('Hệ điều hành', v.heDieuHanh),
+      row('Pin',          v.pin),
+      row('Bảo hành',     v.baoHanhThang ? `${v.baoHanhThang} tháng` : null),
+    ]),
+    sanpham: f([
+      row('Thương hiệu',   v.tenThuongHieu),
+      row('Danh mục',      v.tenDanhMuc),
+      row('Nhà cung cấp',  v.tenNhaCungCap),
+      row('Loại sản phẩm', v.loaiSanPham),
+    ]),
+  };
+});
 </script>

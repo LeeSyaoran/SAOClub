@@ -16,7 +16,6 @@ public class ChiTietSanPhamResponse {
     private Integer bienTheId;
     private String maSku;
     private String soSerial;
-    private String soImei;
     private String trangThai;
     private LocalDateTime ngayNhapKho;
 }

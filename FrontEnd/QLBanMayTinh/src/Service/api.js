@@ -1,6 +1,10 @@
 const H = { 'Content-Type': 'application/json' };
 
-// GET — throw nếu HTTP error, caller dùng .catch(() => []) nếu muốn im lặng
+// QUAN TRỌNG — return type khác nhau:
+//   get()           → Promise<parsed JSON>   (throw nếu HTTP error)
+//   post/put/del()  → Promise<Response>      (caller tự kiểm tra res.ok)
+// Không dùng .then(r => r.ok ? r.json() : []) sau get() — nó đã parse sẵn rồi.
+
 export const get = async (url) => {
   const r = await fetch(url);
   if (!r.ok) {

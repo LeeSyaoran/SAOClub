@@ -29,6 +29,10 @@ public class ChiTietDonHangService {
         return chiTietDonHangRepository.hienThiChiTietDonHang();
     }
 
+    public List<ChiTietDonHangResponse> getByDonHangId(Integer donHangId) {
+        return chiTietDonHangRepository.findByDonHangId(donHangId);
+    }
+
     public ChiTietDonHang getById(Integer id) {
         return chiTietDonHangRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Chi tiết đơn hàng không tồn tại với id: " + id));

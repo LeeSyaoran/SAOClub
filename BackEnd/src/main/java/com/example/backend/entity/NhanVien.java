@@ -33,12 +33,6 @@ public class NhanVien {
     @JoinColumn(name = "chuc_vu_id")
     private ChucVu chucVu;
 
-    @Column(name = "username", length = 50, unique = true)
-    private String username;
-
-    @Column(name = "mat_khau_hash", length = 255)
-    private String matKhauHash;
-
     @Column(name = "luong_co_ban", precision = 18, scale = 2)
     private BigDecimal luongCoBan;
 

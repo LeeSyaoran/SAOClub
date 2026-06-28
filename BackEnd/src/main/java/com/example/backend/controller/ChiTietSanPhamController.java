@@ -30,9 +30,15 @@ public class ChiTietSanPhamController {
         return chiTietSanPhamService.getById(id);
     }
 
+    @GetMapping("/bien-the/{bienTheId}")
+    public List<ChiTietSanPhamResponse> getByBienThe(@PathVariable Integer bienTheId) {
+        return chiTietSanPhamService.getByBienTheId(bienTheId);
+    }
+
     @PostMapping
-    public ResponseEntity<ChiTietSanPham> create(@Valid @RequestBody ChiTietSanPhamRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(chiTietSanPhamService.create(request));
+    public ResponseEntity<Void> create(@Valid @RequestBody ChiTietSanPhamRequest request) {
+        chiTietSanPhamService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PutMapping("update/{id}")

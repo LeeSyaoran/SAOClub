@@ -8,6 +8,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -18,7 +19,6 @@ public class NhanVienResponse {
     private String soDienThoai;
     private String email;
     private Integer chucVuId;
-    private String username;
     private BigDecimal luongCoBan;
     private String trangThai;
     private LocalDateTime ngayTao;

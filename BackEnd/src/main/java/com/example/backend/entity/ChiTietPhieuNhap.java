@@ -2,6 +2,7 @@ package com.example.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 
 import java.math.BigDecimal;
 
@@ -30,9 +31,9 @@ public class ChiTietPhieuNhap {
     @Column(name = "so_luong")
     private Integer soLuong;
 
-    @Column(name = "don_gia_nhap", precision = 18, scale = 2)
+    @Column(name = "don_gia_nhap", precision = 18, scale = 0)
     private BigDecimal donGiaNhap;
 
-    @Column(name = "thanh_tien", precision = 18, scale = 2, insertable = false, updatable = false)
+    @Formula("(so_luong * don_gia_nhap)")
     private BigDecimal thanhTien;
 }

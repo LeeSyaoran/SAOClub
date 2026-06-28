@@ -1,10 +1,17 @@
 package com.example.backend.request;
 
-import lombok.Data;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@NoArgsConstructor
+@Getter
+@Setter
 public class LoginRequest {
+    @NotBlank(message = "Tài khoản không được để trống")
     private String username;
 
+    @NotBlank(message = "Mật khẩu không được để trống")
     private String password;
 }

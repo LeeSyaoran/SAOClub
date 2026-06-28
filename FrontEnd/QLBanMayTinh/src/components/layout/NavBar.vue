@@ -159,58 +159,38 @@
           </span>
         </button>
 
-        <!-- Nút đăng nhập: phát ra sự kiện open-admin -->
-        <template v-if="!user">
-          <button
-              class="btn btn-warning"
-              @click="emit('open-login')">
-            Đăng nhập
+        <!-- Đã đăng nhập: hiển thị tên + nút đăng xuất -->
+        <template v-if="user">
+          <div class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-semibold"
+               style="background:#1f1f1f; border:1px solid #3a3a3a; color:#facc15; font-size:12px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis;">
+            <span style="font-size:10px;">●</span>
+            {{ user.hoTen || user.username }}
+          </div>
+          <button class="btn btn-sm fw-bold"
+                  style="background:#1f1f1f; border:1px solid #7f1d1d; border-radius:12px; color:#f87171; font-size:12px; white-space:nowrap;"
+                  @click="emit('logout')">
+            Đăng xuất
           </button>
         </template>
-        <template v-else>
-          <div class="dropdown">
-            <button
-                class="btn btn-warning dropdown-toggle"
-                data-bs-toggle="dropdown">
-              Xin chào {{ user.hoTen }}
-            </button>
-            <ul class="dropdown-menu">
-              <li>
-                <button
-                    class="dropdown-item"
-                    @click="logout">
-                  Đăng xuất
-                </button>
-              </li>
-            </ul>
-          </div>
-        </template>
+
+        <!-- Chưa đăng nhập: nút đăng nhập -->
+        <button v-else class="btn btn-warning fw-bold" style="font-size:13px;" @click="emit('open-login')">
+          Đăng nhập
+        </button>
       </div>
 
     </div><!-- /container-xl -->
   </header>
-
 </template>
 
 <script setup>
-
-  // Gọi API login ở đây
-const emit = defineEmits([
-  "toggle-cart",
-  "search",
-  "open-admin",
-  "open-login"
-]);
-
-// ── Import ──────────────────────────────────────────────────
 import { ref } from 'vue';
-  const user = ref(
-      JSON.parse(localStorage.getItem("user"))
-  );
 
-// Nhận prop cartCount từ App.vue
+const emit = defineEmits(["toggle-cart", "search", "open-admin", "open-login", "logout"]);
+
 defineProps({
-  cartCount: { type: Number, default: 0 }
+  cartCount: { type: Number, default: 0 },
+  user:      { type: Object, default: null },
 });
 
 // Khai báo các sự kiện có thể emit lên component cha
@@ -219,11 +199,6 @@ defineProps({
 // Trạng thái mở/đóng menu danh mục
 const isMenuOpen = ref(false);
 
-  const logout = () => {
-    localStorage.removeItem("user");
-    user.value = null;
-    location.reload();
-  }
 // Danh mục đang được hover trong mega menu
 const activeCategory = ref('all-laptop');
 

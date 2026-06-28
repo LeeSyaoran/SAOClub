@@ -20,7 +20,6 @@ public class ChiTietSanPhamRequest {
     @NotBlank(message = "Số serial không được để trống")
     private String soSerial;
 
-    private String soImei;
     private String trangThai;
     private LocalDateTime ngayNhapKho;
 }

@@ -57,9 +57,8 @@ public class SanPhamService {
 
         SanPham saved = sanPhamRepository.save(sanPham);
 
-        // Tạo BienTheSanPham — BeanUtils copy: maSku, giaBan, giaNhap, baoHanhThang, mauSac, kichThuocManHinh,
-        // heDieuHanh, pin, trongLuongKg, trangThai, hinhAnhBienThe, manHinhDt, cameraSau, cameraTruoc,
-        // dungLuongPinDt, boNhoTrongDt, chipXuLyDt, soSim
+        // Tạo BienTheSanPham — BeanUtils copy: maSku, giaBan, giaNhap, baoHanhThang, mauSac,
+        // kichThuocManHinh, heDieuHanh, pin, trongLuongKg, trangThai, hinhAnhBienThe
         BienTheSanPham bt = new BienTheSanPham();
         BeanUtils.copyProperties(request, bt, "bienTheId");
         bt.setSanPham(saved);

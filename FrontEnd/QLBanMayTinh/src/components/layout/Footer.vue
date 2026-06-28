@@ -68,12 +68,9 @@
                    style="background:#0a0a0a; border-color:#2a2a2a; color:#e5e7eb; font-size:12px; font-weight:600; border-radius:10px;"
                    placeholder="Nhập số điện thoại của bạn" />
             <!-- Nút đăng ký -->
-            <button
-                type="button"
-                class="btn btn-link btn-sm text-warning fw-bold p-0"
-                @click="emit('open-register')"
-            >
-              Đăng ký ngay
+            <button class="btn btn-warning btn-sm w-100 fw-black"
+                    style="border-radius:10px; font-size:12px;">
+              ĐĂNG KÝ NGAY
             </button>
           </div>
         </div><!-- /cột 2 -->

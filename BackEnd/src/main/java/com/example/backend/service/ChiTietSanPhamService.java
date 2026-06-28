@@ -23,6 +23,10 @@ public class ChiTietSanPhamService {
         return chiTietSanPhamRepository.hienThiChiTietSanPham();
     }
 
+    public List<ChiTietSanPhamResponse> getByBienTheId(Integer bienTheId) {
+        return chiTietSanPhamRepository.findByBienTheId(bienTheId);
+    }
+
     public ChiTietSanPham getById(Integer id) {
         return chiTietSanPhamRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Chi tiết sản phẩm không tồn tại với id: " + id));
