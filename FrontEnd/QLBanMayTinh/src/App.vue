@@ -1,10 +1,40 @@
 <script setup>
 // ── Import các thư viện Vue 3 cần thiết ──────────────────────────────────────
 import { ref, computed, reactive, onMounted, onBeforeUnmount } from "vue";
-
+import RegisterForm from "@/components/auth/RegisterForm.vue";
 // Import store xác thực
 import { AuthStore, setSession, clearSession } from "./stores/index.js";
+import axios from "axios";
 
+const handleRegister = async (data) => {
+  try {
+
+    const res = await axios.post(
+        "http://localhost:8080/api/auth/register",
+        data
+    );
+
+    alert("Đăng ký thành công!");
+
+    showRegister.value = false;
+    showLogin.value = true;
+
+  } catch (e) {
+
+    console.log("REGISTER ERROR:", e);
+
+    console.log("STATUS:", e.response?.status);
+
+    console.log("DATA:", e.response?.data);
+
+    alert(
+        e.response?.data?.message ||
+        e.response?.data ||
+        e.message
+    );
+
+  }
+};
 // Import services
 import * as SanPhamService  from "./Service/SanPhamService.js";
 import * as DanhMucService  from "./Service/DanhMucService.js";
@@ -61,12 +91,19 @@ const showToast = (msg, type = 'success') => {
 };
 
 // ── Login modal ───────────────────────────────────────────────────────────────
-const showLoginModal = ref(false);
-const loginModalErr  = ref('');
+const showLogin = ref(false);
+const showRegister = ref(false);
+const loginModalErr = ref("");
 
 const openLogin = () => {
-  loginModalErr.value  = '';
-  showLoginModal.value = true;
+  showRegister.value = false;
+  showLogin.value = true;
+};
+
+const openRegister = () => {
+
+  showLogin.value = false;
+  showRegister.value = true;
 };
 
 const handleModalLogin = async ({ username, password }) => {
@@ -84,7 +121,7 @@ const handleModalLogin = async ({ username, password }) => {
       return;
     }
     const user = await res.json();
-    showLoginModal.value = false;
+    showLogin.value = false;
     showToast(`Xin chào, ${user.hoTen}!`, 'success');
     onLoginSuccess(user);
   } catch {
@@ -979,23 +1016,38 @@ onBeforeUnmount(() => {
   <!-- ══════════════════════════════════════════════════════
       LOGIN MODAL — overlay trên trang khách hàng
   ══════════════════════════════════════════════════════ -->
-  <div v-if="showLoginModal"
+  <div v-if="showLogin"
        class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
        style="background:rgba(0,0,0,0.75); z-index:1050; backdrop-filter:blur(4px);"
-       @click.self="showLoginModal = false">
+       @click.self="showLogin = false">
     <div class="rounded-4 p-4 position-relative"
          style="background:#141414; border:1px solid #252525; width:460px; max-width:94vw; box-shadow:0 24px 80px rgba(0,0,0,0.7);">
       <button class="btn-close btn-close-white position-absolute"
               style="top:16px; right:16px; font-size:0.75rem;"
-              @click="showLoginModal = false"></button>
+              @click="showLogin = false"></button>
       <LoginForm
           @submit="handleModalLogin"
-          @open-register="showLoginModal = false; window.location.hash = '#login'" />
+          @close="showLogin = false"
+          @open-register="openRegister"
+      />
       <div v-if="loginModalErr"
            class="alert alert-danger small py-2 mt-2 mb-0 rounded-3">
         {{ loginModalErr }}
       </div>
     </div>
+  </div>
+  <!-- ================= REGISTER MODAL ================= -->
+  <div
+      v-if="showRegister"
+      class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+      style="background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1050;"
+      @click.self="showRegister=false"
+  >
+
+    <RegisterForm
+        @close="showRegister=false"
+        @open-login="openLogin"
+    />
   </div>
 
   <!-- ══════════════════════════════════════════════════════

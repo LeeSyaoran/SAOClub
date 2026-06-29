@@ -300,18 +300,6 @@
 
       <div class="social">
 
-        <button class="google">
-
-          Google
-
-        </button>
-
-        <button class="facebook">
-
-          Facebook
-
-        </button>
-
       </div>
 
       <div class="login">
@@ -319,7 +307,6 @@
         Đã có tài khoản?
 
         <a
-
             href="#"
 
             @click.prevent="emit('open-login')"
@@ -339,7 +326,7 @@
 </template>
 <script setup>
 import { reactive, ref } from "vue";
-
+import { register as registerAPI } from "@/Service/AuthService";
 // Emit sự kiện cho component cha
 const emit = defineEmits([
   "register",
@@ -374,83 +361,83 @@ const error = ref("");
 
 // Đăng ký
 const register = async () => {
+
   error.value = "";
 
-  // Kiểm tra dữ liệu
   if (
       !form.hoTen ||
       !form.soDienThoai ||
       !form.email ||
       !form.username ||
       !form.password
-  ) {
+  ){
     alert("Vui lòng nhập đầy đủ thông tin.");
     return;
   }
 
-  // Email
-  const emailRegex =
-      /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-
-  if (!emailRegex.test(form.email)) {
-    alert("Email không hợp lệ.");
-    return;
-  }
-
-  // SĐT
-  const phoneRegex = /^[0-9]{10}$/;
-
-  if (!phoneRegex.test(form.soDienThoai)) {
-    alert("Số điện thoại phải gồm 10 số.");
-    return;
-  }
-
-  // Mật khẩu
-  if (form.password.length < 6) {
-    alert("Mật khẩu tối thiểu 6 ký tự.");
-    return;
-  }
-
-  // Xác nhận mật khẩu
-  if (form.password !== confirmPassword.value) {
+  if(form.password !== confirmPassword.value){
     alert("Mật khẩu xác nhận không khớp.");
     return;
   }
 
-  // Điều khoản
-  if (!agree.value) {
-    alert("Bạn phải đồng ý với điều khoản.");
+  if(!agree.value){
+    alert("Bạn phải đồng ý điều khoản.");
     return;
   }
 
   loading.value = true;
 
-  try {
-    // Sau này thay bằng gọi API
+  try{
 
-    emit("register", {
-      ...form,
+    const res = await registerAPI({
+
+      hoTen:form.hoTen,
+
+      soDienThoai:form.soDienThoai,
+
+      email:form.email,
+
+      diaChi:"",
+
+      username:form.username,
+
+      password:form.password
+
     });
 
-    alert("Đăng ký thành công!");
+    alert(res.data.message || "Đăng ký thành công");
 
-    // Reset form
-    form.hoTen = "";
-    form.soDienThoai = "";
-    form.email = "";
-    form.username = "";
-    form.password = "";
-    confirmPassword.value = "";
-    agree.value = false;
+    form.hoTen="";
 
-    // Chuyển về form đăng nhập
+    form.soDienThoai="";
+
+    form.email="";
+
+    form.username="";
+
+    form.password="";
+
+    confirmPassword.value="";
+
+    agree.value=false;
+
     emit("open-login");
-  } catch (e) {
-    alert("Đăng ký thất bại.");
-  } finally {
-    loading.value = false;
+
+  }catch(e){
+
+    alert(
+        e.response?.data?.message ||
+        e.response?.data ||
+        "Đăng ký thất bại."
+    );
+
+  }finally{
+
+    loading.value=false;
+
   }
-};
+
+}
 </script>
 <style scoped>
 

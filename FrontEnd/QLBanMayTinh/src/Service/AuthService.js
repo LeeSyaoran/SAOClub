@@ -1,9 +1,14 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/auth";
+const authApi = axios.create({
+    baseURL: "http://localhost:8080/api/auth",
+    headers: {
+        "Content-Type": "application/json"
+    }
+});
 
-const api = axios.create({
-    baseURL: API_URL,
+const customerApi = axios.create({
+    baseURL: "http://localhost:8080/api/khach-hang",
     headers: {
         "Content-Type": "application/json"
     }
@@ -11,21 +16,10 @@ const api = axios.create({
 
 // Đăng ký
 export const register = (data) => {
-    return api.post("/register", data);
+    return customerApi.post("/register", data);
 };
 
 // Đăng nhập
 export const login = (data) => {
-    return api.post("/login", data);
-};
-
-// Đăng xuất
-export const logout = () => {
-    localStorage.removeItem("user");
-};
-
-// Lấy user hiện tại
-export const getCurrentUser = () => {
-    const user = localStorage.getItem("user");
-    return user ? JSON.parse(user) : null;
+    return authApi.post("/login", data);
 };

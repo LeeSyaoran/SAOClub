@@ -75,11 +75,12 @@ public class KhachHangService {
         entity.setEmail(request.getEmail());
         entity.setDiaChi(request.getDiaChi());
         entity.setDiemTichLuy(0);
-        entity.setTrangThai("hoat_dong");
+        entity.setTrangThai("active");
         entity.setLoaiKhach("ca_nhan");
         entity.setNgayTao(LocalDateTime.now());
         KhachHang savedKh = khachHangRepository.save(entity);
 
+        System.out.println("Đã lưu khách hàng: " + savedKh.getKhachHangId());
         ChucVu chucVu = chucVuRepository.findByMaChucVu("khach_hang")
                 .orElseThrow(() -> new IllegalStateException("Thiếu dữ liệu chức vụ 'khach_hang'"));
 
@@ -90,8 +91,9 @@ public class KhachHangService {
         tk.setKhachHang(savedKh);
         tk.setTrangThai("active");
         tk.setNgayTao(LocalDateTime.now());
+        System.out.println("Đang tạo tài khoản...");
         taiKhoanRepository.save(tk);
-
+        System.out.println("Đã lưu tài khoản");
         return new KhachHangLoginResponse(
                 savedKh.getKhachHangId(), savedKh.getHoTen(), request.getUsername(),
                 savedKh.getSoDienThoai(), savedKh.getEmail(),

@@ -47,8 +47,7 @@
       <button
           type="button"
           class="btn btn-link btn-sm text-warning fw-bold p-0 text-decoration-none"
-          @click="emit('open-register')"
-      >
+          @click="emit('open-register')">
         Đăng ký ngay
       </button>
     </div>
