@@ -1,58 +1,46 @@
 <template>
   <!-- Một dòng sản phẩm trong giỏ hàng -->
-  <div class="d-flex align-items-center gap-3 p-2 rounded-3"
-       style="background:rgba(255,255,255,0.04);">
+  <div class="d-flex gap-3 p-3 rounded-3"
+       style="background:var(--bg-page); border:1px solid var(--border-color-soft);">
 
     <!-- Ảnh sản phẩm -->
-    <div class="rounded-2 flex-shrink-0 overflow-hidden"
-         style="width:56px; height:56px; background:#1a1a1a;">
-      <img v-if="item.hinhAnhChinh"
-           :src="item.hinhAnhChinh"
-           :alt="item.tenSanPham"
-           style="width:100%; height:100%; object-fit:cover;" />
-      <div v-else class="w-100 h-100 d-flex align-items-center justify-content-center text-secondary"
-           style="font-size:1.2rem;">📦</div>
+    <div class="flex-shrink-0" style="width:64px;height:64px;">
+      <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham"
+           style="width:64px;height:64px;object-fit:contain;border-radius:10px;background:var(--bg-card-inset);" />
+      <div v-else class="d-flex align-items-center justify-content-center rounded-3"
+           style="width:64px;height:64px;background:var(--bg-card-alt);font-size:1.6rem;">💻</div>
     </div>
 
-    <!-- Tên + giá -->
-    <div class="flex-grow-1" style="min-width:0;">
-      <div class="fw-semibold text-light text-truncate" style="font-size:0.85rem;">
-        {{ item.tenSanPham }}
+    <!-- Thông tin -->
+    <div class="flex-grow-1 min-width-0">
+      <div class="fw-semibold" style="font-size:12px; line-height:1.4; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; color:var(--text-primary);">{{ item.tenSanPham }}</div>
+      <div class="mt-1" style="font-size:10px; color:var(--text-secondary);">
+        <span v-if="item.mauSac">{{ item.mauSac }}</span>
+        <span v-if="item.mauSac && item.cpu"> · </span>
+        <span v-if="item.cpu">{{ item.cpu }}</span>
       </div>
-      <div class="text-secondary" style="font-size:0.73rem;">{{ item.maSku }}</div>
-      <div class="text-warning fw-bold" style="font-size:0.88rem;">
-        {{ formatPrice(item.giaBan) }}
+      <!-- Số lượng + giá -->
+      <div class="d-flex align-items-center justify-content-between mt-2">
+        <div class="d-flex align-items-center gap-1">
+          <button class="d-flex align-items-center justify-content-center"
+                  style="width:26px;height:26px;padding:0;background:var(--bg-card-alt);color:var(--text-primary);border:none;border-radius:7px;font-size:15px;cursor:pointer;line-height:1;"
+                  @click="$emit('decrease', item)">−</button>
+          <span class="fw-bold" style="font-size:13px;min-width:22px;text-align:center; color:var(--text-heading);">{{ item.quantity }}</span>
+          <button class="d-flex align-items-center justify-content-center"
+                  style="width:26px;height:26px;padding:0;background:var(--bg-card-alt);color:var(--text-primary);border:none;border-radius:7px;font-size:15px;cursor:pointer;line-height:1;"
+                  @click="$emit('increase', item)">+</button>
+        </div>
+        <span class="text-warning fw-bold" style="font-size:13px;">{{ formatPrice(item.giaBan * item.quantity) }}</span>
       </div>
-    </div>
-
-    <!-- Điều chỉnh số lượng -->
-    <div class="d-flex align-items-center gap-1 flex-shrink-0">
-      <button class="btn btn-sm btn-outline-secondary"
-              style="width:26px; height:26px; padding:0; font-size:1rem; line-height:1;"
-              @click="$emit('decrease', item)">−</button>
-      <span style="min-width:24px; text-align:center; font-size:0.9rem;">{{ item.soLuong }}</span>
-      <button class="btn btn-sm btn-outline-secondary"
-              style="width:26px; height:26px; padding:0; font-size:1rem; line-height:1;"
-              @click="$emit('increase', item)">+</button>
-    </div>
-
-    <!-- Thành tiền + nút xóa -->
-    <div class="text-end flex-shrink-0">
-      <div class="text-warning fw-bold" style="font-size:0.82rem; min-width:80px;">
-        {{ formatPrice(item.giaBan * item.soLuong) }}
-      </div>
-      <button class="btn btn-sm btn-link text-danger p-0 text-decoration-none"
-              style="font-size:0.75rem;"
-              @click="$emit('remove', item)">Xóa</button>
     </div>
   </div>
 </template>
 
 <script setup>
-// Props: item = { tenSanPham, maSku, giaBan, soLuong, hinhAnhChinh }
-// Emits: increase(item), decrease(item), remove(item)
+// Props: item = { tenSanPham, hinhAnhChinh, giaBan, quantity, mauSac?, cpu? }
+// Emits: increase(item), decrease(item) — cha (App.vue) đã có sẵn updateQty(bienTheId, delta)
 defineProps({ item: { type: Object, required: true } });
-defineEmits(['increase', 'decrease', 'remove']);
+defineEmits(['increase', 'decrease']);
 
 const formatPrice = (v) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v ?? 0);

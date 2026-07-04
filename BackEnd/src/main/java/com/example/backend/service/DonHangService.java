@@ -2,6 +2,10 @@ package com.example.backend.service;
 
 import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.entity.DonHang;
+import com.example.backend.entity.ThanhToan;
+import com.example.backend.entity.LichSuTonKho;
+import com.example.backend.entity.PhieuTraHang;
+import com.example.backend.entity.PhieuBaoHanh;
 import com.example.backend.repository.*;
 import com.example.backend.request.DonHangRequest;
 import com.example.backend.response.DonHangResponse;
@@ -30,6 +34,16 @@ public class DonHangService {
     private DiaChiGiaoHangRepository diaChiGiaoHangRepository;
     @Autowired
     private ChiTietDonHangRepository chiTietDonHangRepository;
+    @Autowired
+    private ThanhToanRepository thanhToanRepository;
+    @Autowired
+    private LichSuTonKhoRepository lichSuTonKhoRepository;
+    @Autowired
+    private PhieuTraHangRepository phieuTraHangRepository;
+    @Autowired
+    private PhieuBaoHanhRepository phieuBaoHanhRepository;
+    @Autowired
+    private ChiTietSanPhamRepository chiTietSanPhamRepository;
 
     public List<DonHangResponse> hienThiDonHang() {
         return donHangRepository.hienThiDonHang();
@@ -80,9 +94,23 @@ public class DonHangService {
         return donHangRepository.save(entity);
     }
 
+    // Xoá đơn hàng — trước tiên xoá các dòng chi tiết + lịch sử tồn kho (FK) và trả
+    // seri đã bán về "trong_kho" (trigger DB tự cộng lại tồn kho), nếu không sẽ vỡ FK
+    // khi đơn đã có sản phẩm, và tồn kho sẽ bị lệch vì seri vẫn coi như đã bán.
+    @Transactional
     public void delete(Integer id) {
         if (!donHangRepository.existsById(id))
             throw new IllegalArgumentException("Đơn hàng không tồn tại với id: " + id);
+
+        List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(id);
+        for (ChiTietDonHang item : items) {
+            if (item.getChiTietSanPham() != null) {
+                item.getChiTietSanPham().setTrangThai("trong_kho");
+                chiTietSanPhamRepository.save(item.getChiTietSanPham());
+            }
+        }
+        chiTietDonHangRepository.deleteAll(items);
+        lichSuTonKhoRepository.deleteAll(lichSuTonKhoRepository.findByDonHang_Id(id));
         donHangRepository.deleteById(id);
     }
 
@@ -111,6 +139,25 @@ public class DonHangService {
             for (ChiTietDonHang item : items) {
                 item.setDonHang(target);
                 chiTietDonHangRepository.save(item);
+            }
+            // Chuyển các bản ghi phụ thuộc khác sang targetId trước khi xóa source —
+            // nếu không, DELETE sẽ vi phạm FK (thanh_toan/lich_su_ton_kho/phieu_tra_hang/
+            // phieu_bao_hanh đều tham chiếu don_hang_id, không có ON DELETE CASCADE).
+            for (ThanhToan tt : thanhToanRepository.findByDonHang_Id(sourceId)) {
+                tt.setDonHang(target);
+                thanhToanRepository.save(tt);
+            }
+            for (LichSuTonKho lstk : lichSuTonKhoRepository.findByDonHang_Id(sourceId)) {
+                lstk.setDonHang(target);
+                lichSuTonKhoRepository.save(lstk);
+            }
+            for (PhieuTraHang ptr : phieuTraHangRepository.findByDonHang_Id(sourceId)) {
+                ptr.setDonHang(target);
+                phieuTraHangRepository.save(ptr);
+            }
+            for (PhieuBaoHanh pbh : phieuBaoHanhRepository.findByDonHang_Id(sourceId)) {
+                pbh.setDonHang(target);
+                phieuBaoHanhRepository.save(pbh);
             }
             donHangRepository.deleteById(sourceId);
         }

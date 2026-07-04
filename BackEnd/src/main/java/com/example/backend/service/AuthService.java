@@ -5,6 +5,7 @@ import com.example.backend.entity.NhanVien;
 import com.example.backend.entity.TaiKhoan;
 import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.response.LoginResponse;
+import com.example.backend.security.jwt.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -15,22 +16,26 @@ public class AuthService {
     @Autowired
     private TaiKhoanRepository taiKhoanRepository;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     public LoginResponse buildLoginResponse(String username) {
         TaiKhoan tk = taiKhoanRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + username));
 
         String role = tk.getChucVu().getMaChucVu(); // "admin", "nhan_vien", "quan_kho", "khach_hang"
+        String token = jwtUtil.generateToken(tk.getUsername(), role);
 
         if (tk.getNhanVien() != null) {
             NhanVien nv = tk.getNhanVien();
             return new LoginResponse(nv.getNhanVienId(), nv.getHoTen(), tk.getUsername(),
-                    nv.getSoDienThoai(), nv.getEmail(), role);
+                    nv.getSoDienThoai(), nv.getEmail(), role, token);
         }
 
         if (tk.getKhachHang() != null) {
             KhachHang kh = tk.getKhachHang();
             return new LoginResponse(kh.getKhachHangId(), kh.getHoTen(), tk.getUsername(),
-                    kh.getSoDienThoai(), kh.getEmail(), role);
+                    kh.getSoDienThoai(), kh.getEmail(), role, token);
         }
 
         throw new UsernameNotFoundException("Tài khoản không liên kết với người dùng: " + username);

@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 // Danh mục RAM — dữ liệu tham chiếu đơn giản, không cần service riêng
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/dm-ram")
 public class DmRamController {

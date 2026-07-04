@@ -1,178 +1,552 @@
 <template>
-  <!-- Overlay full màn hình -->
-  <Teleport to="body">
-    <div v-if="modelValue"
-         class="position-fixed top-0 start-0 w-100 h-100"
-         style="background:rgba(0,0,0,0.7); z-index:1060;"
-         @click.self="$emit('update:modelValue', false)">
+  <div v-if="modelValue"
+       class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+       style="background:rgba(0,0,0,0.8); z-index:1050; backdrop-filter:blur(4px);"
+       @click.self="$emit('update:modelValue', false)">
 
-      <!-- Panel trượt từ phải -->
-      <div class="position-fixed top-0 end-0 h-100 d-flex flex-column overflow-hidden"
-           style="width:100%; max-width:460px; background:#121212; border-left:1px solid rgba(255,255,255,0.08);">
+    <div class="rounded-4 d-flex flex-column"
+         style="background:var(--bg-card); border:1px solid var(--border-color); width:660px; max-width:96vw; max-height:92vh; box-shadow:0 24px 80px rgba(0,0,0,0.4);">
 
-        <!-- Header -->
-        <div class="d-flex align-items-center justify-content-between p-4 border-bottom border-secondary">
-          <button class="btn btn-sm btn-outline-secondary" @click="step > 1 ? step-- : $emit('update:modelValue', false)">
-            ‹ Quay lại
+      <!-- ══ Màn hình thành công ══ -->
+      <template v-if="checkoutSuccess">
+        <div class="d-flex flex-column align-items-center justify-content-center gap-4 p-5 text-center">
+          <div class="d-flex align-items-center justify-content-center rounded-circle"
+               style="width:72px;height:72px;background:rgba(72,199,142,0.15);color:#48c78e;font-size:2rem;">✓</div>
+          <div>
+            <h2 class="fw-black mb-1" style="font-size:1.4rem; color:var(--text-heading);">{{ t('checkout.successTitle') }}</h2>
+            <p class="mb-0" style="font-size:0.9rem; color:var(--text-secondary);">
+              {{ t('checkout.orderCode') }} <strong class="text-warning">#{{ checkoutOrderId }}</strong>
+            </p>
+          </div>
+          <!-- Hướng dẫn thanh toán theo phương thức đã chọn -->
+          <div v-if="selectedPayment === 'tien_mat'"
+               class="p-3 rounded-3 text-center small"
+               style="background:#1e2a1e; color:#6ee7b7; border:1px solid #2a3d2a; max-width:360px;">
+            {{ t('checkout.cashInstruction', { amount: formatPrice(checkoutFinalTotal) }) }}
+          </div>
+          <div v-else-if="selectedPayment === 'qr'"
+               class="p-3 rounded-3 text-center small"
+               style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;">
+            {{ t('checkout.qrInstruction') }}
+          </div>
+          <div v-else
+               class="p-3 rounded-3 text-center small"
+               style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;">
+            {{ t('checkout.bankInstruction', { amount: formatPrice(checkoutFinalTotal) }) }}
+          </div>
+          <button class="btn btn-warning fw-bold px-5 rounded-pill" style="font-size:0.9rem;" @click="$emit('update:modelValue', false)">{{ t('checkout.close') }}</button>
+        </div>
+      </template>
+
+      <!-- ══ Form đặt hàng ══ -->
+      <template v-else>
+
+        <!-- Header + step indicator -->
+        <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid var(--border-color-soft);">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="fw-black mb-1" style="font-size:1rem; color:var(--text-heading);">
+                {{ checkoutStep === 1 ? t('checkout.infoTitle') : t('checkout.paymentTitle') }}
+              </h5>
+              <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                       style="width:20px;height:20px;font-size:10px;"
+                       :style="checkoutStep >= 1 ? 'background:#facc15;color:#000;' : 'background:var(--bg-card-alt);color:var(--text-muted);'">1</div>
+                  <span class="small" :style="checkoutStep >= 1 ? 'color:#facc15;' : 'color:var(--text-secondary);'" style="font-size:11px;">{{ t('checkout.stepInfo') }}</span>
+                </div>
+                <div style="font-size:10px; color:var(--text-secondary);">───</div>
+                <div class="d-flex align-items-center gap-1">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                       style="width:20px;height:20px;font-size:10px;"
+                       :style="checkoutStep >= 2 ? 'background:#facc15;color:#000;' : 'background:var(--bg-card-alt);color:var(--text-muted);'">2</div>
+                  <span class="small" :style="checkoutStep >= 2 ? 'color:#facc15;' : 'color:var(--text-secondary);'" style="font-size:11px;">{{ t('checkout.stepPayment') }}</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn-close btn-close-white mt-1" style="font-size:0.7rem;" @click="$emit('update:modelValue', false)"></button>
+          </div>
+        </div>
+
+        <!-- Thông báo lỗi -->
+        <div v-if="checkoutError" class="mx-4 mt-3">
+          <div class="alert alert-danger small py-2 mb-0 rounded-3">{{ checkoutError }}</div>
+        </div>
+
+        <!-- ── BƯỚC 1: Thông tin giao hàng ── -->
+        <div v-if="checkoutStep === 1" class="overflow-y-auto flex-grow-1 px-4 py-3 d-flex flex-column gap-4">
+
+          <!-- Giỏ hàng tóm tắt -->
+          <div>
+            <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.orderSummary', { count: cart.length }) }}</div>
+            <div class="d-flex flex-column gap-1 rounded-3 p-2" style="background:var(--bg-card-alt);">
+              <div v-for="item in cart" :key="item.bienTheId"
+                   class="d-flex align-items-center gap-3 px-2 py-1">
+                <div style="width:36px;height:36px;flex-shrink:0;">
+                  <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham" style="width:36px;height:36px;object-fit:contain;border-radius:6px;" />
+                  <div v-else class="d-flex align-items-center justify-content-center rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);font-size:1rem;">💻</div>
+                </div>
+                <span class="flex-grow-1 small text-truncate" style="color:var(--text-primary);">{{ item.tenSanPham }}</span>
+                <span class="small flex-shrink-0" style="color:var(--text-secondary);">×{{ item.quantity }}</span>
+                <span class="text-warning fw-semibold small flex-shrink-0">{{ formatPrice(item.giaBan * item.quantity) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Thông tin khách hàng -->
+          <div>
+            <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.customerHeading') }}</div>
+            <div class="d-flex gap-2 mb-2">
+              <input v-model="checkoutForm.soDienThoai"
+                     class="form-control form-control-sm"
+                     style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                     :placeholder="t('checkout.phonePlaceholder')" @keyup.enter="lookupCustomer" />
+              <button class="btn btn-sm btn-outline-warning flex-shrink-0 px-3" style="border-radius:10px;" @click="lookupCustomer">{{ t('checkout.find') }}</button>
+            </div>
+            <div v-if="foundCustomer" class="small p-2 rounded-3 mb-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
+              {{ t('checkout.foundCustomer') }} <strong>{{ foundCustomer.hoTen }}</strong>
+            </div>
+            <div v-else-if="checkoutForm.soDienThoai" class="small p-2 rounded-3 mb-2" style="background:var(--bg-card-alt); color:var(--text-secondary);">
+              {{ t('checkout.newCustomer') }}
+            </div>
+            <div class="row g-2">
+              <div class="col-6">
+                <input v-model="checkoutForm.hoTen" class="form-control form-control-sm"
+                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                       :placeholder="t('checkout.fullNamePlaceholder')" />
+              </div>
+              <div class="col-6">
+                <input v-model="checkoutForm.email" class="form-control form-control-sm"
+                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                       :placeholder="t('checkout.emailPlaceholder')" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Thông tin giao hàng -->
+          <div>
+            <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.shippingHeading') }}</div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <input v-model="checkoutForm.nguoiNhan" class="form-control form-control-sm"
+                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                       :placeholder="t('checkout.receiverPlaceholder')" />
+              </div>
+              <div class="col-6">
+                <input v-model="checkoutForm.sdtNguoiNhan" class="form-control form-control-sm"
+                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                       :placeholder="t('checkout.receiverPhonePlaceholder')" />
+              </div>
+            </div>
+            <input v-model="checkoutForm.diaChiGiaoHangText" class="form-control form-control-sm"
+                   style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                   :placeholder="t('checkout.addressPlaceholder')" />
+          </div>
+
+          <!-- Mã khuyến mãi -->
+          <div>
+            <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.promoHeading') }}</div>
+            <div class="d-flex gap-2">
+              <input v-model="checkoutForm.maKhuyenMai" class="form-control form-control-sm"
+                     style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                     :placeholder="t('checkout.promoPlaceholder')" @keyup.enter="applyPromo" />
+              <button class="btn btn-sm btn-outline-warning flex-shrink-0 px-3" style="border-radius:10px;" @click="applyPromo">{{ t('checkout.apply') }}</button>
+            </div>
+            <div v-if="promoMsg" class="small mt-2 px-1" :class="appliedPromo ? 'text-success' : 'text-danger'">{{ promoMsg }}</div>
+          </div>
+
+          <!-- Tổng tiền -->
+          <div class="p-3 rounded-3 d-flex flex-column gap-2" style="background:var(--bg-card-alt);border:1px solid var(--border-color-soft);">
+            <div class="d-flex justify-content-between small" style="color:var(--text-secondary);">
+              <span>{{ t('checkout.subtotal') }}</span><span>{{ formatPrice(cartTotal) }}</span>
+            </div>
+            <div class="d-flex justify-content-between small" style="color:var(--text-secondary);">
+              <span>{{ t('checkout.shippingFee') }}</span>
+              <span :class="phiVanChuyen === 0 ? 'text-success' : ''">{{ phiVanChuyen === 0 ? t('checkout.free') : formatPrice(phiVanChuyen) }}</span>
+            </div>
+            <div v-if="checkoutGiamGia > 0" class="d-flex justify-content-between small text-success">
+              <span>{{ t('checkout.discount') }}</span><span>− {{ formatPrice(checkoutGiamGia) }}</span>
+            </div>
+            <div class="d-flex justify-content-between fw-bold pt-2" style="border-top:1px solid var(--border-color);">
+              <span style="color:var(--text-heading);">{{ t('checkout.total') }}</span>
+              <strong class="text-warning" style="font-size:1.05rem;">{{ formatPrice(checkoutTotal) }}</strong>
+            </div>
+          </div>
+
+        </div><!-- /bước 1 -->
+
+        <!-- ── BƯỚC 2: Phương thức thanh toán ── -->
+        <div v-else class="overflow-y-auto flex-grow-1 px-4 py-3 d-flex flex-column gap-4">
+
+          <!-- Số tiền cần thanh toán -->
+          <div class="text-center py-2">
+            <div class="small mb-1" style="color:var(--text-secondary);">{{ t('checkout.totalToPay') }}</div>
+            <div class="fw-black text-warning" style="font-size:2rem;">{{ formatPrice(checkoutTotal) }}</div>
+          </div>
+
+          <!-- Chọn phương thức -->
+          <div>
+            <div class="fw-semibold mb-3" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.choosePayment') }}</div>
+            <div class="d-flex flex-column gap-2">
+
+              <!-- Tiền mặt -->
+              <label class="d-flex align-items-center gap-3 p-3 rounded-3 cursor-pointer"
+                     style="border:2px solid; cursor:pointer;"
+                     :style="selectedPayment==='tien_mat' ? 'border-color:#facc15;background:rgba(250,204,21,0.06);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                     @click="selectedPayment='tien_mat'">
+                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                     style="width:42px;height:42px;background:#2a2000;font-size:1.3rem;">💵</div>
+                <div class="flex-grow-1">
+                  <div class="fw-bold" style="font-size:0.9rem; color:var(--text-heading);">{{ t('checkout.cashTitle') }}</div>
+                  <div style="font-size:11px; color:var(--text-secondary);">{{ t('checkout.cashDesc') }}</div>
+                </div>
+                <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:20px;height:20px;"
+                     :style="selectedPayment==='tien_mat' ? 'border-color:#facc15;background:#facc15;' : 'border-color:var(--border-color-strong);background:transparent;'">
+                  <div v-if="selectedPayment==='tien_mat'" style="width:8px;height:8px;border-radius:50%;background:#000;"></div>
+                </div>
+              </label>
+
+              <!-- QR Code -->
+              <label class="d-flex align-items-center gap-3 p-3 rounded-3"
+                     style="border:2px solid; cursor:pointer;"
+                     :style="selectedPayment==='qr' ? 'border-color:#facc15;background:rgba(250,204,21,0.06);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                     @click="selectedPayment='qr'">
+                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                     style="width:42px;height:42px;background:#0a1a2a;font-size:1.3rem;">📱</div>
+                <div class="flex-grow-1">
+                  <div class="fw-bold" style="font-size:0.9rem; color:var(--text-heading);">{{ t('checkout.qrTitle') }}</div>
+                  <div style="font-size:11px; color:var(--text-secondary);">{{ t('checkout.qrDesc') }}</div>
+                </div>
+                <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:20px;height:20px;"
+                     :style="selectedPayment==='qr' ? 'border-color:#facc15;background:#facc15;' : 'border-color:var(--border-color-strong);background:transparent;'">
+                  <div v-if="selectedPayment==='qr'" style="width:8px;height:8px;border-radius:50%;background:#000;"></div>
+                </div>
+              </label>
+
+              <!-- Chuyển khoản -->
+              <label class="d-flex align-items-center gap-3 p-3 rounded-3"
+                     style="border:2px solid; cursor:pointer;"
+                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:#facc15;background:rgba(250,204,21,0.06);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                     @click="selectedPayment='chuyen_khoan'">
+                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                     style="width:42px;height:42px;background:#0a1a0a;font-size:1.3rem;">🏦</div>
+                <div class="flex-grow-1">
+                  <div class="fw-bold" style="font-size:0.9rem; color:var(--text-heading);">{{ t('checkout.bankTitle') }}</div>
+                  <div style="font-size:11px; color:var(--text-secondary);">{{ t('checkout.bankDesc') }}</div>
+                </div>
+                <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:20px;height:20px;"
+                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:#facc15;background:#facc15;' : 'border-color:var(--border-color-strong);background:transparent;'">
+                  <div v-if="selectedPayment==='chuyen_khoan'" style="width:8px;height:8px;border-radius:50%;background:#000;"></div>
+                </div>
+              </label>
+
+            </div>
+          </div>
+
+          <!-- QR Code hiển thị khi chọn QR -->
+          <Transition name="fade">
+          <div v-if="selectedPayment === 'qr'" class="d-flex flex-column align-items-center gap-3 p-4 rounded-3" style="background:var(--bg-card-inset);border:1px solid var(--border-color-soft);">
+            <div class="fw-bold small" style="color:var(--text-heading);">{{ t('checkout.scanQr') }}</div>
+            <img v-if="!qrImageFailed" :src="qrImageUrl" alt="VietQR" @error="qrImageFailed = true"
+                 style="width:220px;height:220px;border-radius:12px;background:#fff;padding:6px;" />
+            <div v-else class="d-flex flex-column align-items-center justify-content-center text-center small"
+                 style="width:220px;height:220px;border-radius:12px;background:var(--bg-card-alt);color:var(--text-secondary);gap:6px;">
+              <span style="font-size:1.8rem;">📵</span>{{ t('checkout.qrImageFailed') }}
+            </div>
+            <div class="text-center small" style="line-height:1.8; color:var(--text-secondary);">
+              {{ t('checkout.bank') }} <strong style="color:var(--text-heading);">Vietcombank (VCB)</strong><br />
+              {{ t('checkout.accountNumber') }} <strong class="text-warning">9876543210</strong><br />
+              {{ t('checkout.accountName') }} <strong style="color:var(--text-heading);">CÔNG TY SAO LAPTOP</strong><br />
+              {{ t('checkout.amount') }} <strong class="text-warning">{{ formatPrice(checkoutTotal) }}</strong><br />
+              {{ t('checkout.content') }} <strong style="color:var(--text-heading);">Thanh toan SAO LAPTOP</strong>
+            </div>
+          </div>
+          </Transition>
+
+          <!-- Thông tin chuyển khoản thủ công -->
+          <Transition name="fade">
+          <div v-if="selectedPayment === 'chuyen_khoan'" class="p-4 rounded-3 small" style="background:var(--bg-card-inset);border:1px solid var(--border-color-soft);line-height:2;">
+            <div class="fw-bold mb-2" style="color:var(--text-heading);">{{ t('checkout.bankInfoHeading') }}</div>
+            <div style="color:var(--text-secondary);">
+              {{ t('checkout.bank') }} <strong style="color:var(--text-heading);">Vietcombank (VCB)</strong><br />
+              {{ t('checkout.accountNumber') }} <strong class="text-warning">9876543210</strong><br />
+              {{ t('checkout.accountNameFull') }} <strong style="color:var(--text-heading);">CÔNG TY SAO LAPTOP</strong><br />
+              {{ t('checkout.amount') }} <strong class="text-warning">{{ formatPrice(checkoutTotal) }}</strong><br />
+              {{ t('checkout.contentShort') }} <strong style="color:var(--text-heading);">Thanh toan SAO LAPTOP</strong>
+            </div>
+          </div>
+          </Transition>
+
+        </div><!-- /bước 2 -->
+
+        <!-- Footer: nút điều hướng bước -->
+        <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top:1px solid var(--border-color-soft);">
+          <button v-if="checkoutStep === 1"
+                  class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
+                  @click="$emit('update:modelValue', false)">{{ t('checkout.cancel') }}</button>
+          <button v-else
+                  class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
+                  @click="checkoutStep = 1">{{ t('checkout.back') }}</button>
+
+          <button v-if="checkoutStep === 1"
+                  class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
+                  @click="goToPayment">
+            {{ t('checkout.continue') }}
           </button>
-          <span class="fw-black text-uppercase" style="font-size:0.88rem; letter-spacing:0.05em;">
-            {{ step === 1 ? 'Thông tin đặt hàng' : 'Phương thức thanh toán' }}
-          </span>
-          <button class="btn-close btn-close-white btn-sm"
-                  @click="$emit('update:modelValue', false)"></button>
+          <button v-else
+                  class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
+                  :disabled="checkoutLoading"
+                  @click="placeOrder">
+            {{ checkoutLoading ? t('checkout.processing') : t('checkout.confirmOrder') }}
+          </button>
         </div>
 
-        <!-- Thanh tiến trình 2 bước -->
-        <div class="d-flex gap-2 p-3 border-bottom border-secondary">
-          <div class="flex-grow-1 text-center py-2 rounded-3 small fw-black text-uppercase"
-               :style="step === 1 ? 'background:#f4c200; color:#111;' : 'background:rgba(255,255,255,0.06); color:#666;'">
-            1. Thông tin
-          </div>
-          <div class="flex-grow-1 text-center py-2 rounded-3 small fw-black text-uppercase"
-               :style="step === 2 ? 'background:#f4c200; color:#111;' : 'background:rgba(255,255,255,0.06); color:#666;'">
-            2. Thanh toán
-          </div>
-        </div>
-
-        <!-- Nội dung cuộn được -->
-        <div class="flex-grow-1 overflow-y-auto p-4">
-
-          <!-- Bước 1: Thông tin người nhận -->
-          <div v-if="step === 1" class="d-flex flex-column gap-3">
-            <div>
-              <label class="form-label small text-secondary fw-semibold">Họ và tên *</label>
-              <input v-model="form.name"
-                     class="form-control form-control-sm"
-                     style="background:#1a1a1a; border-color:rgba(255,255,255,0.12); color:#eee;"
-                     placeholder="Nguyễn Văn A" />
-            </div>
-            <div>
-              <label class="form-label small text-secondary fw-semibold">Số điện thoại *</label>
-              <input v-model="form.phone"
-                     class="form-control form-control-sm"
-                     style="background:#1a1a1a; border-color:rgba(255,255,255,0.12); color:#eee;"
-                     placeholder="0909xxxxxx" />
-            </div>
-            <div>
-              <label class="form-label small text-secondary fw-semibold">Địa chỉ giao hàng</label>
-              <textarea v-model="form.address" rows="2"
-                        class="form-control form-control-sm"
-                        style="background:#1a1a1a; border-color:rgba(255,255,255,0.12); color:#eee;"
-                        placeholder="Số nhà, đường, phường, quận, thành phố..."></textarea>
-            </div>
-            <div>
-              <label class="form-label small text-secondary fw-semibold">Ghi chú</label>
-              <input v-model="form.note"
-                     class="form-control form-control-sm"
-                     style="background:#1a1a1a; border-color:rgba(255,255,255,0.12); color:#eee;"
-                     placeholder="Giao giờ hành chính..." />
-            </div>
-            <div v-if="formError" class="alert alert-danger small py-2 mb-0">{{ formError }}</div>
-            <button class="btn btn-warning text-dark fw-black" @click="nextStep">
-              TIẾP TỤC →
-            </button>
-          </div>
-
-          <!-- Bước 2: Phương thức thanh toán -->
-          <div v-else class="d-flex flex-column gap-3">
-            <!-- COD -->
-            <div class="p-3 rounded-3 d-flex align-items-center gap-3"
-                 style="cursor:pointer;"
-                 :style="payMethod === 'cod'
-                   ? 'border:1.5px solid #f4c200; background:rgba(244,194,0,0.08);'
-                   : 'border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03);'"
-                 @click="payMethod = 'cod'">
-              <span style="font-size:1.3rem;">🚚</span>
-              <div>
-                <div class="fw-bold" :class="payMethod === 'cod' ? 'text-warning' : 'text-light'">
-                  Thanh toán khi nhận hàng (COD)
-                </div>
-                <div class="text-secondary small">Miễn phí vận chuyển đơn từ 300.000đ</div>
-              </div>
-            </div>
-            <!-- Chuyển khoản -->
-            <div class="p-3 rounded-3 d-flex align-items-center gap-3"
-                 style="cursor:pointer;"
-                 :style="payMethod === 'bank'
-                   ? 'border:1.5px solid #f4c200; background:rgba(244,194,0,0.08);'
-                   : 'border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03);'"
-                 @click="payMethod = 'bank'">
-              <span style="font-size:1.3rem;">💳</span>
-              <div>
-                <div class="fw-bold" :class="payMethod === 'bank' ? 'text-warning' : 'text-secondary'">
-                  Chuyển khoản ngân hàng
-                </div>
-                <div class="text-secondary small">Xác nhận qua ảnh bill chuyển khoản</div>
-              </div>
-            </div>
-
-            <!-- Tổng tiền -->
-            <div class="border-top border-secondary pt-3 d-flex justify-content-between align-items-center">
-              <span class="text-secondary small">Tổng thanh toán</span>
-              <span class="fw-black text-warning" style="font-size:1.2rem;">{{ formatPrice(total) }}</span>
-            </div>
-
-            <div v-if="submitError" class="alert alert-danger small py-2 mb-0">{{ submitError }}</div>
-
-            <button class="btn btn-warning text-dark fw-black"
-                    :disabled="loading"
-                    @click="handleSubmit">
-              {{ loading ? 'Đang đặt hàng...' : 'XÁC NHẬN THANH TOÁN' }}
-            </button>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </Teleport>
+      </template>
+    </div><!-- /modal box -->
+  </div><!-- /checkout overlay -->
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed, watch } from 'vue';
+import { t } from '../../i18n/index.js';
+import { AuthStore } from '../../stores/index.js';
+import * as KhachHangService from '../../Service/KhachHangService.js';
+import * as KhuyenMaiService  from '../../Service/KhuyenMaiService.js';
+import * as DonHangService    from '../../Service/DonHangService.js';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-  total:      { type: Number,  default: 0 },
+  cart:       { type: Array,   required: true }, // giỏ hàng: { bienTheId, tenSanPham, hinhAnhChinh, giaBan, quantity }
+  cartTotal:  { type: Number,  default: 0 },      // tổng tiền hàng (chưa ship/giảm giá)
 });
 
-// Emit: update:modelValue (đóng modal), confirm (gửi form lên App.vue xử lý)
-const emit = defineEmits(['update:modelValue', 'confirm']);
+// update:modelValue = đóng modal; order-placed = đơn đã tạo xong, cha xoá giỏ hàng
+const emit = defineEmits(['update:modelValue', 'order-placed']);
 
-const step       = ref(1);
-const payMethod  = ref('cod');
-const loading    = ref(false);
-const formError  = ref('');
-const submitError = ref('');
+const checkoutStep    = ref(1);     // 1 = thông tin giao hàng, 2 = phương thức thanh toán
+const checkoutSuccess = ref(false); // Đặt hàng thành công chưa
+const checkoutLoading = ref(false); // Đang xử lý API
+const checkoutError   = ref('');    // Thông báo lỗi khi checkout
+const checkoutOrderId    = ref(null);  // ID đơn hàng sau khi đặt xong
+const checkoutFinalTotal = ref(0);     // Tổng tiền lúc đặt hàng (lưu trước khi cha xóa giỏ)
+const allCustomers    = ref([]);    // Cache danh sách khách hàng
+const allPromos       = ref([]);    // Cache danh sách khuyến mãi
+const foundCustomer   = ref(null);  // Khách hàng tìm thấy qua SĐT
+const appliedPromo    = ref(null);  // Khuyến mãi đã áp dụng
+const promoMsg        = ref('');    // Thông báo kết quả áp dụng mã
+const selectedPayment = ref('tien_mat'); // 'tien_mat' | 'qr' | 'chuyen_khoan'
 
-const form = reactive({ name: '', phone: '', address: '', note: '' });
+// VietQR — tạo QR code thật từ API vietqr.io
+const qrImageFailed = ref(false); // Ảnh QR không tải được (mạng chặn/API ngoài lỗi) — vẫn cho thanh toán bằng thông tin TK bên dưới
+const qrImageUrl = computed(() => {
+  const bank    = 'VCB';
+  const account = '9876543210';
+  const info    = encodeURIComponent('Thanh toan SAO LAPTOP');
+  const name    = encodeURIComponent('SAO LAPTOP');
+  return `https://img.vietqr.io/image/${bank}-${account}-compact2.png?amount=${checkoutTotal.value}&addInfo=${info}&accountName=${name}`;
+});
 
-const formatPrice = (v) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v ?? 0);
+// Form thông tin đặt hàng (reactive để Vue theo dõi thay đổi)
+const checkoutForm = reactive({
+  soDienThoai:          '', // SĐT tìm kiếm khách hàng
+  hoTen:                '', // Họ tên khách hàng
+  email:                '', // Email
+  nguoiNhan:            '', // Tên người nhận hàng
+  sdtNguoiNhan:         '', // SĐT người nhận
+  diaChiGiaoHangText:   '', // Địa chỉ giao hàng
+  maKhuyenMai:          '', // Mã khuyến mãi nhập vào
+});
 
-// Kiểm tra bước 1 rồi chuyển sang bước 2
-const nextStep = () => {
-  formError.value = '';
-  if (!form.name.trim())  { formError.value = 'Vui lòng nhập họ tên.';         return; }
-  if (!form.phone.trim()) { formError.value = 'Vui lòng nhập số điện thoại.';  return; }
-  step.value = 2;
+// Phí vận chuyển: miễn phí nếu đơn từ 300k
+const phiVanChuyen = computed(() => props.cartTotal >= 300000 ? 0 : 30000);
+
+// Tính giảm giá từ mã khuyến mãi
+const checkoutGiamGia = computed(() => {
+  const p = appliedPromo.value;
+  if (!p) return 0;
+  if (p.loai === 'percent') {
+    // Giảm theo % nhưng không vượt quá giaTriToiDa
+    let d = props.cartTotal * Number(p.giaTri) / 100;
+    if (p.giaTriToiDa) d = Math.min(d, Number(p.giaTriToiDa));
+    return d;
+  }
+  return Number(p.giaTri) || 0; // Giảm theo số tiền cố định
+});
+
+// Tổng tiền thanh toán cuối cùng
+const checkoutTotal = computed(() =>
+  Math.max(0, props.cartTotal + phiVanChuyen.value - checkoutGiamGia.value)
+);
+
+const formatPrice = (value) => {
+  if (value == null) return t('productDetail.contact');
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 };
 
-// Gửi thông tin đặt hàng lên component cha
-const handleSubmit = async () => {
-  submitError.value = '';
-  loading.value = true;
+// Mở modal thanh toán và load dữ liệu cần thiết — chạy khi cha set modelValue = true
+watch(() => props.modelValue, async (open) => {
+  if (!open) return;
+  checkoutStep.value    = 1;
+  checkoutSuccess.value = false;
+  checkoutError.value   = '';
+  promoMsg.value        = '';
+  appliedPromo.value    = null;
+  foundCustomer.value   = null;
+  selectedPayment.value = 'tien_mat';
+  qrImageFailed.value   = false;
+  Object.keys(checkoutForm).forEach(k => { checkoutForm[k] = ''; });
+  if (!allCustomers.value.length) {
+    [allCustomers.value, allPromos.value] = await Promise.all([
+      KhachHangService.getAll().catch(() => []),
+      KhuyenMaiService.getAll().catch(() => []),
+    ]);
+  }
+  // Khách đã đăng nhập: tự điền thông tin sẵn có, khỏi phải nhập lại từ đầu
+  if (AuthStore.user?.role === 'khach_hang' && AuthStore.user?.soDienThoai) {
+    checkoutForm.soDienThoai = AuthStore.user.soDienThoai;
+    lookupCustomer();
+  }
+});
+
+// Tìm khách hàng theo số điện thoại
+const lookupCustomer = () => {
+  const c = allCustomers.value.find(
+    (x) => x.soDienThoai === checkoutForm.soDienThoai.trim()
+  );
+  foundCustomer.value = c || null;
+  if (c) {
+    // Tự điền thông tin nếu tìm thấy khách hàng
+    checkoutForm.hoTen              = c.hoTen;
+    checkoutForm.email              = c.email || '';
+    checkoutForm.nguoiNhan          = c.hoTen;
+    checkoutForm.sdtNguoiNhan       = c.soDienThoai;
+    checkoutForm.diaChiGiaoHangText = c.diaChi || '';
+  }
+};
+
+// Kiểm tra và áp dụng mã khuyến mãi
+const applyPromo = () => {
+  const code = checkoutForm.maKhuyenMai.trim().toUpperCase();
+  if (!code) { appliedPromo.value = null; promoMsg.value = ''; return; }
+  const p = allPromos.value.find(
+    (x) => x.maKhuyenMai?.toUpperCase() === code && x.trangThai === 'active'
+  );
+  if (p) {
+    appliedPromo.value = p;
+    promoMsg.value     = t('checkout.promoSuccess', { name: p.tenKhuyenMai });
+  } else {
+    appliedPromo.value = null;
+    promoMsg.value     = t('checkout.promoInvalid');
+  }
+};
+
+// Kiểm tra thông tin bước 1 trước khi sang bước thanh toán — chặn sớm thay vì để
+// backend từ chối rồi hiện lỗi JSON thô cho khách.
+const goToPayment = () => {
+  checkoutError.value = '';
+  if (!checkoutForm.soDienThoai.trim()) { checkoutError.value = t('checkout.errPhoneRequired'); return; }
+  if (!foundCustomer.value && !checkoutForm.hoTen.trim()) { checkoutError.value = t('checkout.errNameRequired'); return; }
+  if (!checkoutForm.nguoiNhan.trim()) { checkoutError.value = t('checkout.errReceiverRequired'); return; }
+  if (!checkoutForm.sdtNguoiNhan.trim()) { checkoutError.value = t('checkout.errReceiverPhoneRequired'); return; }
+  if (!checkoutForm.diaChiGiaoHangText.trim()) { checkoutError.value = t('checkout.errAddressRequired'); return; }
+  checkoutStep.value = 2;
+};
+
+// Chuyển lỗi validate dạng JSON {"field":"message"} tu backend thanh 1 dong text
+// de doc, thay vi hien nguyen JSON tho cho khach hang.
+const parseApiError = async (res, fallbackPrefix) => {
+  const raw = await res.text();
   try {
-    await emit('confirm', {
-      name:      form.name,
-      phone:     form.phone,
-      address:   form.address,
-      note:      form.note,
-      payMethod: payMethod.value,
-    });
+    const obj = JSON.parse(raw);
+    const messages = Object.values(obj).filter((v) => typeof v === 'string');
+    if (messages.length) return messages.join(' · ');
+  } catch { /* khong phai JSON, dung raw text */ }
+  return `${fallbackPrefix}: ${res.status} ${raw}`;
+};
+
+// Gửi đơn hàng lên API
+const placeOrder = async () => {
+  checkoutError.value   = '';
+  checkoutLoading.value = true;
+  try {
+    let khachHangId = foundCustomer.value?.khachHangId;
+
+    // Nếu không tìm thấy khách hàng → tạo mới
+    if (!khachHangId) {
+      const custBody = {
+        hoTen:        checkoutForm.hoTen,
+        soDienThoai:  checkoutForm.soDienThoai,
+        email:        checkoutForm.email,
+        diaChi:       checkoutForm.diaChiGiaoHangText || 'Chua cap nhat',
+        loaiKhach:    'ca_nhan',
+        diemTichLuy:  0,
+        trangThai:    'active',
+      };
+      const r = await KhachHangService.save(null, custBody);
+      if (!r.ok) throw new Error(await parseApiError(r, t('checkout.createCustomerError')));
+      const newC  = await r.json();
+      khachHangId = newC.khachHangId;
+      allCustomers.value = await KhachHangService.getAll().catch(() => []);
+    }
+
+    // Tạo đơn hàng chính
+    const orderBody = {
+      khachHangId,
+      nguoiNhan:          checkoutForm.nguoiNhan,
+      sdtNguoiNhan:       checkoutForm.sdtNguoiNhan,
+      diaChiGiaoHangText: checkoutForm.diaChiGiaoHangText,
+      khuyenMaiId:        appliedPromo.value?.khuyenMaiId ?? null,
+      tongTien:           props.cartTotal,
+      giamGia:            checkoutGiamGia.value,
+      phiVanChuyen:       phiVanChuyen.value,
+      // thanhTien bỏ qua — computed column trong DB (tong_tien - giam_gia + phi_van_chuyen)
+      ngayDat:            new Date().toISOString().slice(0, 19),
+      trangThaiDonHang:   'pending',
+      trangThaiThanhToan: 'unpaid',
+      kenhBan:            'online',
+    };
+    const orderRes = await DonHangService.create(orderBody);
+    if (!orderRes.ok)
+      throw new Error(await parseApiError(orderRes, t('checkout.createOrderError')));
+    const createdOrder = await orderRes.json();
+    const donHangId    = createdOrder.id;
+
+    // Thêm từng sản phẩm vào chi tiết đơn hàng — nếu 1 dòng lỗi giữa chừng thì huỷ
+    // luôn đơn hàng vừa tạo, tránh để lại đơn "pending" thiếu sản phẩm.
+    try {
+      for (const item of props.cart) {
+        const itemRes = await DonHangService.addChiTiet({
+          donHangId,
+          bienTheId:   item.bienTheId,
+          soLuong:     item.quantity,
+          donGia:      item.giaBan,
+          giamGiaDong: 0,
+        });
+        if (!itemRes.ok)
+          throw new Error(`Lỗi chi tiết đơn hàng: ${itemRes.status}`);
+      }
+    } catch (e) {
+      await DonHangService.remove(donHangId).catch(() => {});
+      throw e;
+    }
+
+    // Lưu tổng tiền trước khi cha xóa giỏ (props.cartTotal sẽ về 0 sau khi cart rỗng)
+    checkoutFinalTotal.value = checkoutTotal.value;
+    checkoutOrderId.value    = donHangId;
+    checkoutSuccess.value    = true;
+    emit('order-placed');
   } catch (e) {
-    submitError.value = e.message ?? 'Đặt hàng thất bại, thử lại.';
+    checkoutError.value = e.message;
   } finally {
-    loading.value = false;
+    checkoutLoading.value = false;
   }
 };
 </script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.fade-enter-from, .fade-leave-to       { opacity: 0; transform: translateY(8px); }
+</style>

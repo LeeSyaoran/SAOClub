@@ -12,4 +12,6 @@ import java.util.List;
 public interface LichSuTonKhoRepository extends JpaRepository<LichSuTonKho, Integer> {
     @Query("SELECT new com.example.backend.response.LichSuTonKhoResponse(l.lichSuId, l.bienThe.bienTheId, l.bienThe.maSku, l.chiTietSanPham.chiTietId, l.loaiBienDong, l.soLuongThayDoi, l.donHang.id, l.phieuNhapKho.phieuNhapId, l.nhanVien.nhanVienId, l.ghiChu, l.ngayTao) FROM LichSuTonKho l")
     List<LichSuTonKhoResponse> hienThiLichSuTonKho();
+
+    List<LichSuTonKho> findByDonHang_Id(Integer donHangId);
 }

@@ -17,6 +17,7 @@ public class ChiTietDonHangResponse {
     private Integer bienTheId;
     private String maSku;
     private Integer chiTietId;
+    private String soSerial;
     private Integer soLuong;
     private BigDecimal donGia;
     private BigDecimal giamGiaDong;

@@ -1,353 +1,122 @@
 <template>
-
-  <div class="register-overlay">
-
-    <div class="register-card">
-
-      <!-- Đóng -->
-
-      <button
-          class="close-btn"
-          @click="emit('close')"
-      >
-        ✕
-      </button>
-
-      <!-- Logo -->
-
-      <div class="logo">
-
-        SAO<span>PHONE</span>
-
-      </div>
-
-      <h2>
-
-        Đăng ký tài khoản
-
-      </h2>
-
-      <p class="sub-title">
-
-        Đăng ký thành viên để nhận nhiều ưu đãi, tích điểm và khuyến mãi.
-
-      </p>
-
-      <form
-          class="register-form"
-          @submit.prevent="register"
-      >
-
-        <!-- Họ tên -->
-
-        <div class="form-item">
-
-          <label>
-
-            Họ và tên
-
-          </label>
-
-          <div class="input-box">
-
-                    <span class="icon">
-
-                        👤
-
-                    </span>
-
-            <input
-
-                v-model="form.hoTen"
-
-                placeholder="Nhập họ và tên"
-
-                type="text"
-
-            >
-
-          </div>
-
-        </div>
-
-        <!-- Điện thoại -->
-
-        <div class="form-item">
-
-          <label>
-
-            Số điện thoại
-
-          </label>
-
-          <div class="input-box">
-
-                    <span class="icon">
-
-                        📱
-
-                    </span>
-
-            <input
-
-                v-model="form.soDienThoai"
-
-                placeholder="Nhập số điện thoại"
-
-                type="text"
-
-            >
-
-          </div>
-
-        </div>
-
-        <!-- Email -->
-
-        <div class="form-item">
-
-          <label>
-
-            Email
-
-          </label>
-
-          <div class="input-box">
-
-                    <span class="icon">
-
-                        ✉
-
-                    </span>
-
-            <input
-
-                v-model="form.email"
-
-                placeholder="example@gmail.com"
-
-                type="email"
-
-            >
-
-          </div>
-
-        </div>
-
-        <!-- Username -->
-
-        <div class="form-item">
-
-          <label>
-
-            Tên đăng nhập
-
-          </label>
-
-          <div class="input-box">
-
-                    <span class="icon">
-
-                        👨
-
-                    </span>
-
-            <input
-
-                v-model="form.username"
-
-                placeholder="Tên đăng nhập"
-
-                type="text"
-
-            >
-
-          </div>
-
-        </div>
-
-        <!-- Password -->
-
-        <div class="form-item">
-
-          <label>
-
-            Mật khẩu
-
-          </label>
-
-          <div class="input-box">
-
-                    <span class="icon">
-
-                        🔒
-
-                    </span>
-
-            <input
-
-                :type="showPassword ? 'text':'password'"
-
-                v-model="form.password"
-
-                placeholder="********"
-
-            >
-
-            <span
-
-                class="eye"
-
-                @click="showPassword=!showPassword"
-
-            >
-
-                        {{showPassword ? "🙈":"👁"}}
-
-                    </span>
-
-          </div>
-
-        </div>
-
-        <!-- Confirm -->
-
-        <div class="form-item">
-
-          <label>
-
-            Xác nhận mật khẩu
-
-          </label>
-
-          <div class="input-box">
-
-                    <span class="icon">
-
-                        🔒
-
-                    </span>
-
-            <input
-
-                :type="showConfirm ? 'text':'password'"
-
-                v-model="confirmPassword"
-
-                placeholder="********"
-
-            >
-
-            <span
-
-                class="eye"
-
-                @click="showConfirm=!showConfirm"
-
-            >
-
-                        {{showConfirm ? "🙈":"👁"}}
-
-                    </span>
-
-          </div>
-
-        </div>
-
-        <!-- Agree -->
-
-        <label class="agree">
-
-          <input
-
-              type="checkbox"
-
-              v-model="agree"
-
-          >
-
-          <span>
-
-                    Tôi đồng ý với Điều khoản sử dụng và Chính sách bảo mật.
-
-                </span>
-
-        </label>
-
-        <button
-
-            class="register-btn"
-
-            :disabled="loading"
-
-        >
-
-          {{loading ? "ĐANG ĐĂNG KÝ..." : "ĐĂNG KÝ NGAY"}}
-
-        </button>
-
-      </form>
-
-      <div class="line">
-
-            <span>
-
-                Hoặc
-
-            </span>
-
-      </div>
-
-      <div class="social">
-
-        <button class="google">
-
-          Google
-
-        </button>
-
-        <button class="facebook">
-
-          Facebook
-
-        </button>
-
-      </div>
-
-      <div class="login">
-
-        Đã có tài khoản?
-
-        <a
-
-            href="#"
-
-            @click.prevent="emit('open-login')"
-
-        >
-
-          Đăng nhập
-
-        </a>
-
-      </div>
-
+  <!-- Form đăng ký — dùng trong modal chung với LoginForm (không có overlay riêng) -->
+  <div class="mx-auto" style="max-width:420px;">
+
+    <!-- Tiêu đề -->
+    <div class="text-center mb-4">
+      <div class="fw-black fs-5 mb-1" style="color:var(--text-heading);">{{ t('register.title') }}</div>
+      <div class="small" style="color:var(--text-secondary);">{{ t('register.subtitle') }}</div>
     </div>
 
+    <form @submit.prevent="handleSubmit" class="d-flex flex-column gap-3" novalidate>
+
+      <div>
+        <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.fullNameLabel') }}</label>
+        <input v-model="form.hoTen" type="text"
+               class="form-control form-control-sm"
+               :style="fieldStyle(hoTenValid, touched.hoTen)"
+               :placeholder="t('register.fullNamePlaceholder')" required
+               @blur="touched.hoTen = true" />
+        <div v-if="touched.hoTen && !hoTenValid" class="small text-danger mt-1">{{ t('register.errors.required') }}</div>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-6">
+          <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.phoneLabel') }}</label>
+          <input v-model="form.soDienThoai" type="text"
+                 class="form-control form-control-sm"
+                 :style="fieldStyle(phoneValid, touched.soDienThoai)"
+                 :placeholder="t('register.phonePlaceholder')" required
+                 @blur="touched.soDienThoai = true" />
+          <div v-if="touched.soDienThoai && !phoneValid" class="small text-danger mt-1">{{ t('register.errors.invalidPhone') }}</div>
+        </div>
+        <div class="col-6">
+          <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.emailLabel') }}</label>
+          <input v-model="form.email" type="email"
+                 class="form-control form-control-sm"
+                 :style="fieldStyle(emailValid, touched.email)"
+                 :placeholder="t('register.emailPlaceholder')" required
+                 @blur="touched.email = true" />
+          <div v-if="touched.email && !emailValid" class="small text-danger mt-1">{{ t('register.errors.invalidEmail') }}</div>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.usernameLabel') }}</label>
+        <input v-model="form.username" type="text"
+               class="form-control form-control-sm"
+               :style="fieldStyle(usernameValid, touched.username)"
+               :placeholder="t('register.usernamePlaceholder')" required
+               @blur="touched.username = true" />
+        <div v-if="touched.username && !usernameValid" class="small text-danger mt-1">{{ t('register.errors.usernameTooShort') }}</div>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-6">
+          <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.passwordLabel') }}</label>
+          <div class="input-group input-group-sm">
+            <input v-model="form.password" :type="showPassword ? 'text' : 'password'"
+                   class="form-control form-control-sm"
+                   :style="fieldStyle(passwordValid, touched.password)"
+                   :placeholder="t('register.passwordPlaceholder')" required
+                   @blur="touched.password = true" />
+            <button type="button" class="btn btn-sm"
+                    style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
+                    :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
+                    @click="showPassword = !showPassword">
+              {{ showPassword ? '🙈' : '👁' }}
+            </button>
+          </div>
+          <div v-if="touched.password && !passwordValid" class="small text-danger mt-1">{{ t('register.errors.passwordTooShort') }}</div>
+        </div>
+        <div class="col-6">
+          <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.confirmPasswordLabel') }}</label>
+          <div class="input-group input-group-sm">
+            <input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'"
+                   class="form-control form-control-sm"
+                   :style="fieldStyle(confirmValid, touched.confirmPassword)"
+                   :placeholder="t('register.passwordPlaceholder')" required
+                   @blur="touched.confirmPassword = true" />
+            <button type="button" class="btn btn-sm"
+                    style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
+                    :title="showConfirm ? t('register.hidePassword') : t('register.showPassword')"
+                    @click="showConfirm = !showConfirm">
+              {{ showConfirm ? '🙈' : '👁' }}
+            </button>
+          </div>
+          <div v-if="touched.confirmPassword && !confirmValid" class="small text-danger mt-1">{{ t('register.errors.passwordMismatch') }}</div>
+        </div>
+      </div>
+
+      <label class="d-flex align-items-start gap-2 small" style="color:var(--text-secondary); cursor:pointer;">
+        <input type="checkbox" v-model="agree" class="form-check-input mt-1" style="flex-shrink:0;" />
+        <span>{{ t('register.agreeText') }}</span>
+      </label>
+
+      <div v-if="error" class="alert alert-danger small py-2 mb-0">{{ error }}</div>
+      <div v-if="success" class="alert alert-success small py-2 mb-0">{{ success }}</div>
+
+      <button type="submit" class="btn btn-warning text-dark fw-black w-100" :disabled="loading">
+        {{ loading ? t('register.submitting') : t('register.submit') }}
+      </button>
+    </form>
+
+    <div class="text-center mt-4 pt-3 border-top small" style="border-color:var(--border-color)!important; color:var(--text-secondary);">
+      {{ t('register.haveAccount') }}
+      <button type="button" class="btn btn-link btn-sm text-warning fw-bold p-0 text-decoration-none" @click="emit('open-login')">
+        {{ t('register.loginNow') }}
+      </button>
+    </div>
   </div>
-
 </template>
+
 <script setup>
-import { reactive, ref } from "vue";
+import { reactive, ref, computed } from "vue";
+import { t } from "../../i18n/index.js";
+import * as KhachHangService from "../../Service/KhachHangService.js";
 
-// Emit sự kiện cho component cha
-const emit = defineEmits([
-  "register",
-  "close",
-  "open-login",
-]);
+const emit = defineEmits(["register-success", "open-login"]);
 
-// Form dữ liệu
 const form = reactive({
   hoTen: "",
   soDienThoai: "",
@@ -355,606 +124,93 @@ const form = reactive({
   username: "",
   password: "",
 });
-
-// Xác nhận mật khẩu
 const confirmPassword = ref("");
-
-// Hiển thị mật khẩu
-const showPassword = ref(false);
-const showConfirm = ref(false);
-
-// Checkbox điều khoản
-const agree = ref(false);
-
-// Loading
+const agree   = ref(false);
 const loading = ref(false);
+const error   = ref("");
+const success = ref("");
 
-// Lỗi
-const error = ref("");
+// Hiện/ẩn mật khẩu để người dùng tự kiểm tra lại đã gõ đúng chưa
+const showPassword = ref(false);
+const showConfirm  = ref(false);
 
-// Đăng ký
-const register = async () => {
+// Đánh dấu field đã bị rời khỏi (blur) lần nào chưa — chỉ hiện lỗi sau khi người dùng đã tương tác
+const touched = reactive({
+  hoTen: false, soDienThoai: false, email: false,
+  username: false, password: false, confirmPassword: false,
+});
+
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const PHONE_RE = /^[0-9]{10}$/;
+
+// ── Kiểm tra hợp lệ theo từng ô, cập nhật ngay khi gõ ──────────────────────────
+const hoTenValid    = computed(() => form.hoTen.trim().length > 0);
+const phoneValid    = computed(() => PHONE_RE.test(form.soDienThoai));
+const emailValid    = computed(() => EMAIL_RE.test(form.email));
+const usernameValid = computed(() => form.username.trim().length >= 3);
+const passwordValid = computed(() => form.password.length >= 6);
+const confirmValid  = computed(() => confirmPassword.value.length > 0 && confirmPassword.value === form.password);
+
+// Viền ô input đổi màu theo trạng thái hợp lệ, chỉ sau khi đã touched
+const fieldStyle = (isValid, isTouched) => {
+  const base = 'background:var(--bg-input); color:var(--text-primary);';
+  if (!isTouched) return `${base} border-color:var(--border-color-strong);`;
+  return isValid ? `${base} border-color:#22c55e;` : `${base} border-color:#f87171;`;
+};
+
+const handleSubmit = async () => {
   error.value = "";
+  success.value = "";
 
-  // Kiểm tra dữ liệu
-  if (
-      !form.hoTen ||
-      !form.soDienThoai ||
-      !form.email ||
-      !form.username ||
-      !form.password
-  ) {
-    alert("Vui lòng nhập đầy đủ thông tin.");
+  // Đánh dấu tất cả field đã touched để hiện đủ lỗi khi bấm submit sớm
+  Object.keys(touched).forEach(k => { touched[k] = true; });
+
+  if (!form.hoTen || !form.soDienThoai || !form.email || !form.username || !form.password) {
+    error.value = t('register.errors.fillAllFields');
     return;
   }
-
-  // Email
-  const emailRegex =
-      /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-
-  if (!emailRegex.test(form.email)) {
-    alert("Email không hợp lệ.");
+  if (!emailValid.value) {
+    error.value = t('register.errors.invalidEmail');
     return;
   }
-
-  // SĐT
-  const phoneRegex = /^[0-9]{10}$/;
-
-  if (!phoneRegex.test(form.soDienThoai)) {
-    alert("Số điện thoại phải gồm 10 số.");
+  if (!phoneValid.value) {
+    error.value = t('register.errors.invalidPhone');
     return;
   }
-
-  // Mật khẩu
-  if (form.password.length < 6) {
-    alert("Mật khẩu tối thiểu 6 ký tự.");
+  if (!usernameValid.value) {
+    error.value = t('register.errors.usernameTooShort');
     return;
   }
-
-  // Xác nhận mật khẩu
-  if (form.password !== confirmPassword.value) {
-    alert("Mật khẩu xác nhận không khớp.");
+  if (!passwordValid.value) {
+    error.value = t('register.errors.passwordTooShort');
     return;
   }
-
-  // Điều khoản
+  if (!confirmValid.value) {
+    error.value = t('register.errors.passwordMismatch');
+    return;
+  }
   if (!agree.value) {
-    alert("Bạn phải đồng ý với điều khoản.");
+    error.value = t('register.errors.mustAgree');
     return;
   }
 
   loading.value = true;
-
   try {
-    // Sau này thay bằng gọi API
-
-    emit("register", {
-      ...form,
-    });
-
-    alert("Đăng ký thành công!");
-
-    // Reset form
-    form.hoTen = "";
-    form.soDienThoai = "";
-    form.email = "";
-    form.username = "";
-    form.password = "";
+    const res = await KhachHangService.register({ ...form });
+    if (!res.ok) {
+      error.value = await res.text() || t('register.errors.registerFailed');
+      return;
+    }
+    success.value = t('register.success');
+    Object.assign(form, { hoTen: "", soDienThoai: "", email: "", username: "", password: "" });
     confirmPassword.value = "";
     agree.value = false;
-
-    // Chuyển về form đăng nhập
-    emit("open-login");
-  } catch (e) {
-    alert("Đăng ký thất bại.");
+    Object.keys(touched).forEach(k => { touched[k] = false; });
+    setTimeout(() => emit('register-success'), 1200);
+  } catch {
+    error.value = t('register.errors.cannotConnect');
   } finally {
     loading.value = false;
   }
 };
 </script>
-<style scoped>
-
-/* ===========================
-   Overlay
-=========================== */
-
-.register-overlay{
-  position:fixed;
-  inset:0;
-
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  padding:20px;
-  background:rgba(0,0,0,.75);
-  backdrop-filter:blur(5px);
-  z-index:9999;
-}
-
-/* ===========================
-   Card
-=========================== */
-
-.register-card{
-  width:100%;
-  max-width:520px;
-  max-height:90vh;
-
-  overflow-y:auto;
-
-  background:#181818;
-  border-radius:18px;
-
-  padding:28px;
-
-  border:1px solid rgba(255,255,255,.08);
-
-  box-shadow:0 20px 60px rgba(0,0,0,.55);
-
-  animation:show .3s ease;
-
-  position:relative;
-}
-
-@keyframes show{
-
-  from{
-    opacity:0;
-    transform:translateY(20px);
-  }
-
-  to{
-    opacity:1;
-    transform:translateY(0);
-  }
-
-}
-
-/* ===========================
-   Close
-=========================== */
-
-.close-btn{
-
-  position:absolute;
-  top:18px;
-  right:18px;
-
-  width:36px;
-  height:36px;
-
-  border:none;
-  border-radius:50%;
-
-  background:#2a2a2a;
-
-  color:white;
-
-  cursor:pointer;
-
-  transition:.25s;
-
-}
-
-.close-btn:hover{
-
-  background:#facc15;
-
-  color:black;
-
-}
-
-/* ===========================
-   Logo
-=========================== */
-
-.logo{
-
-  text-align:center;
-
-  font-size:34px;
-
-  font-weight:900;
-
-  color:white;
-
-  margin-bottom:8px;
-
-  letter-spacing:1px;
-
-}
-
-.logo span{
-
-  color:#facc15;
-
-}
-
-/* ===========================
-   Title
-=========================== */
-
-h2{
-
-  text-align:center;
-
-  color:white;
-
-  margin:0;
-
-  font-size:28px;
-
-  font-weight:800;
-
-}
-
-.sub-title{
-
-  text-align:center;
-
-  color:#999;
-
-  margin-top:8px;
-
-  margin-bottom:28px;
-
-  font-size:14px;
-
-}
-
-/* ===========================
-   Form
-=========================== */
-
-.form-item{
-  width:100%;
-  margin-bottom:18px;
-}
-
-.form-item label{
-
-  display:block;
-
-  color:#ddd;
-
-  margin-bottom:8px;
-
-  font-size:14px;
-
-  font-weight:600;
-
-}
-
-/* ===========================
-   Input
-=========================== */
-
-.input-box{
-  width:100%;
-  position:relative;
-}
-
-.input-box input{
-
-  width:100%;
-  height:48px;
-  padding:0 45px;
-  background:#121212;
-  border:1px solid #333;
-  border-radius:12px;
-  color:#fff;
-  font-size:15px;
-
-  box-sizing:border-box;
-
-}
-
-.input-box input::placeholder{
-
-  color:#666;
-
-}
-
-.input-box input:focus{
-
-  outline:none;
-
-  border-color:#facc15;
-
-  box-shadow:0 0 0 3px rgba(250,204,21,.15);
-
-}
-
-/* ===========================
-   Icon
-=========================== */
-
-.icon{
-
-  position:absolute;
-
-  left:15px;
-
-  top:50%;
-
-  transform:translateY(-50%);
-
-  font-size:18px;
-
-  color:#888;
-
-}
-
-/* ===========================
-   Eye
-=========================== */
-
-.eye{
-
-  position:absolute;
-
-  right:16px;
-
-  top:50%;
-
-  transform:translateY(-50%);
-
-  cursor:pointer;
-
-  color:#888;
-
-  transition:.25s;
-
-}
-
-.eye:hover{
-
-  color:#facc15;
-
-}
-
-/* ===========================
-   Checkbox
-=========================== */
-
-.agree{
-
-  display:flex;
-
-  align-items:flex-start;
-
-  gap:10px;
-
-  width:100%;
-
-  margin:18px 0;
-
-  color:#bbb;
-
-  font-size:14px;
-
-}
-
-.agree input{
-
-  width:18px;
-
-  height:18px;
-
-  accent-color:#facc15;
-
-}
-
-/* ===========================
-   Button
-=========================== */
-
-.register-btn{
-
-  width:100%;
-
-  height:48px;
-
-  border:none;
-
-  border-radius:12px;
-
-  background:#facc15;
-
-  color:#000;
-
-  font-size:17px;
-
-  font-weight:700;
-
-}
-
-.register-btn:hover{
-
-  background:#ffd84d;
-
-  transform:translateY(-2px);
-
-  box-shadow:0 8px 18px rgba(250,204,21,.3);
-
-}
-
-.register-btn:disabled{
-
-  opacity:.7;
-
-  cursor:not-allowed;
-
-}
-
-/* ===========================
-   Divider
-=========================== */
-
-.line{
-
-  display:flex;
-
-  align-items:center;
-
-  margin:28px 0;
-
-}
-
-.line::before,
-.line::after{
-
-  content:"";
-
-  flex:1;
-
-  height:1px;
-
-  background:#333;
-
-}
-
-.line span{
-
-  padding:0 15px;
-
-  color:#777;
-
-  font-size:13px;
-
-}
-
-/* ===========================
-   Social
-=========================== */
-
-.social{
-
-  display:flex;
-
-  gap:12px;
-
-}
-
-.social button{
-
-  flex:1;
-
-  height:46px;
-
-  border-radius:10px;
-
-  border:1px solid #333;
-
-  background:#222;
-
-  color:white;
-
-  font-weight:700;
-
-  cursor:pointer;
-
-  transition:.25s;
-
-}
-
-.social button:hover{
-
-  background:#2d2d2d;
-
-}
-
-.google:hover{
-
-  border-color:#db4437;
-
-}
-
-.facebook:hover{
-
-  border-color:#1877f2;
-
-}
-
-/* ===========================
-   Login
-=========================== */
-
-.login{
-
-  margin-top:25px;
-
-  text-align:center;
-
-  color:#aaa;
-
-  font-size:14px;
-
-}
-
-.login a{
-
-  color:#facc15;
-
-  text-decoration:none;
-
-  font-weight:700;
-
-}
-
-.login a:hover{
-
-  text-decoration:underline;
-
-}
-
-/* ===========================
-   Mobile
-=========================== */
-
-@media (max-width:768px){
-
-  .register-card{
-
-    width:95%;
-
-    padding:22px;
-
-    max-height:95vh;
-
-  }
-
-}
-
-  .logo{
-
-    font-size:28px;
-
-  }
-
-  h2{
-
-    font-size:24px;
-
-  }
-
-  .sub-title{
-
-    font-size:13px;
-
-  }
-
-  .input-box input{
-
-    height:45px;
-
-  }
-
-  .register-btn{
-
-    height:46px;
-
-  }
-
-
-</style>

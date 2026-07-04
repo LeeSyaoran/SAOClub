@@ -9,11 +9,11 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/khach-hang")
 public class KhachHangController {
@@ -21,23 +21,27 @@ public class KhachHangController {
     @Autowired
     private KhachHangService khachHangService;
 
-    // GET /api/khach-hang — DTO query, tránh serialize toàn bộ entity
+    // Danh sách toàn bộ khách hàng — chỉ nhân viên/admin/quản kho được xem
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @GetMapping
     public List<KhachHangResponse> getAll() {
         return khachHangService.hienThiKhachHang();
     }
 
+    // Xem 1 khách hàng — nhân viên xem ai cũng được, khách chỉ xem chính mình (check trong service)
     @GetMapping("/{id}")
     public KhachHang getById(@PathVariable Integer id) {
         return khachHangService.getById(id);
     }
 
-    // POST /api/khach-hang — dùng Request DTO có validation
+    // Tạo khách hàng (walk-in) — chỉ nhân viên/admin, khách tự đăng ký qua /register
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PostMapping
     public ResponseEntity<KhachHang> create(@Valid @RequestBody KhachHangRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(khachHangService.create(request));
     }
 
+    // Sửa khách hàng — nhân viên sửa ai cũng được, khách chỉ sửa chính mình (check trong service)
     @PutMapping("update/{id}")
     public ResponseEntity<Void> update(@PathVariable Integer id,
                                        @Valid @RequestBody KhachHangRequest request) {
@@ -45,6 +49,7 @@ public class KhachHangController {
         return ResponseEntity.ok().build();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @DeleteMapping("delete/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         khachHangService.delete(id);

@@ -6,11 +6,13 @@ import com.example.backend.service.ChucVuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*")
+// Danh mục chức vụ — chỉ admin quản lý (dropdown khi tạo/sửa nhân viên)
+@PreAuthorize("hasRole('ADMIN')")
 @RestController
 @RequestMapping("/api/chuc-vu")
 public class ChucVuController {

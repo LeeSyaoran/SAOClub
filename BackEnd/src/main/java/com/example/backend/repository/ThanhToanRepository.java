@@ -12,4 +12,6 @@ import java.util.List;
 public interface ThanhToanRepository extends JpaRepository<ThanhToan, Integer> {
     @Query("SELECT new com.example.backend.response.ThanhToanResponse(t.thanhToanId, t.donHang.id, t.ngayThanhToan, t.phuongThucThanhToan, t.soTien, t.maGiaoDich, t.trangThai, t.ghiChu) FROM ThanhToan t")
     List<ThanhToanResponse> hienThiThanhToan();
+
+    List<ThanhToan> findByDonHang_Id(Integer donHangId);
 }

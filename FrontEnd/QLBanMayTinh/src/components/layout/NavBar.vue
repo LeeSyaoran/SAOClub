@@ -2,35 +2,54 @@
   <!-- ========================================================
     NavBar.vue — Thanh điều hướng chính của trang khách hàng
     Props nhận: cartCount (số lượng sản phẩm trong giỏ)
-    Emit ra:   toggle-cart | open-admin | search
+    Emit ra:   toggle-cart | open-admin | open-account | search
   ======================================================== -->
 
   <!-- Topbar: dải thông báo nhỏ chạy ở trên cùng -->
 
-  <div style="background:#111; border-bottom:1px solid #2a2a2a;">
+  <div style="background:var(--bg-page-alt); border-bottom:1px solid var(--border-color);">
     <div class="container-xl d-flex justify-content-between align-items-center py-1 overflow-hidden">
       <!-- Tên thương hiệu bên trái -->
-      <span class="text-secondary small fw-medium d-none d-md-inline">
-        SAOPHONE — Hệ thống bán lẻ Laptop chính hãng hàng đầu
+      <span class="small fw-medium d-none d-md-inline" style="color:var(--text-secondary);">
+        {{ t('nav.tagline') }}
       </span>
       <!-- Các thông tin tiện ích bên phải -->
-      <div class="d-flex gap-3 small fw-semibold text-secondary">
-        <span class="d-none d-lg-inline">✓ Chính hãng - Xuất VAT đầy đủ</span>
-        <span class="d-none d-xl-inline">🚚 Giao nhanh Miễn phí từ 300k</span>
-        <span class="d-none d-xl-inline">🔄 Thu cũ đổi mới trợ giá cao</span>
+      <div class="d-flex align-items-center gap-3 small fw-semibold" style="color:var(--text-secondary);">
+        <span class="d-none d-lg-inline">✓ {{ t('nav.genuine') }}</span>
+        <span class="d-none d-xl-inline">🚚 {{ t('nav.freeShip') }}</span>
+        <span class="d-none d-xl-inline">🔄 {{ t('nav.tradeIn') }}</span>
         <!-- Số hotline nổi bật màu vàng -->
-        <span class="text-warning fw-black">1800.9999</span>
+        <span class="text-warning fw-black">{{ t('nav.hotline') }}</span>
+
+        <!-- Đổi giao diện sáng/tối — dùng được kể cả khi chưa đăng nhập -->
+        <button type="button" class="btn btn-sm p-0 border-0 lh-1"
+                style="background:transparent; color:var(--text-secondary); font-size:14px;"
+                :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+                @click="toggleTheme">
+          {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
+        </button>
+
+        <!-- Đổi ngôn ngữ — dùng được kể cả khi chưa đăng nhập -->
+        <select class="form-select form-select-sm fw-semibold py-0"
+                style="width:auto; background:transparent; border:none; color:var(--text-secondary); font-size:11px; cursor:pointer;"
+                :value="I18nStore.locale"
+                :title="t('language.label')"
+                @change="setLocale($event.target.value)">
+          <option v-for="loc in LOCALES" :key="loc.code" :value="loc.code" style="background:var(--bg-card); color:var(--text-primary);">
+            {{ loc.flag }} {{ loc.code.toUpperCase() }}
+          </option>
+        </select>
       </div>
     </div>
   </div>
 
   <!-- Header chính: sticky ở trên khi scroll -->
-  <header class="sticky-top" style="background:#171717; border-bottom:1px solid #2a2a2a; z-index:100;">
+  <header class="sticky-top" style="background:var(--bg-header); border-bottom:1px solid var(--border-color); z-index:100;">
     <div class="container-xl d-flex align-items-center gap-2 gap-md-3 py-2">
 
       <!-- Logo SAOPHONE -->
-      <a href="/" class="text-decoration-none fw-black fs-5 text-white me-1 flex-shrink-0"
-         style="letter-spacing:-0.04em;">
+      <a href="/" class="text-decoration-none fw-black fs-5 me-1 flex-shrink-0"
+         style="letter-spacing:-0.04em; color:var(--text-heading);">
         SAO<span class="text-warning">PHONE</span>
       </a>
 
@@ -42,27 +61,27 @@
         <!-- Nút trigger dropdown -->
         <button
           class="btn btn-sm fw-bold small"
-          :class="isMenuOpen ? 'text-warning border-warning' : 'text-light border-secondary'"
-          style="border:1px solid; border-radius:12px; background:#1f1f1f;">
-          ☰ Danh mục Laptop
+          :class="isMenuOpen ? 'text-warning border-warning' : 'border-secondary'"
+          style="border:1px solid; border-radius:12px; background:var(--bg-input); color:var(--text-primary);">
+          ☰ {{ t('nav.categories') }}
         </button>
 
         <!-- Mega menu dropdown panel -->
         <div v-if="isMenuOpen"
              class="position-absolute top-100 start-0 mt-1 shadow-lg rounded-3 overflow-hidden"
-             style="width:820px; background:#0a0a0a; border:1px solid #2a2a2a; z-index:200; height:340px; display:flex;">
+             style="width:820px; background:var(--bg-page-alt); border:1px solid var(--border-color); z-index:200; height:340px; display:flex;">
 
           <!-- Cột trái: danh sách các loại laptop -->
           <div class="d-flex flex-column gap-1 p-2 flex-shrink-0 overflow-y-auto"
-               style="width:280px; background:rgba(255,255,255,0.03); border-right:1px solid #2a2a2a;">
+               style="width:280px; background:var(--bg-hover); border-right:1px solid var(--border-color);">
             <div
               v-for="cat in categories"
               :key="cat.id"
               class="d-flex justify-content-between align-items-center px-3 py-2 rounded-2 small fw-bold"
-              :class="activeCategory === cat.id ? 'text-warning' : 'text-secondary'"
-              :style="activeCategory === cat.id
-                ? 'background:#1a1a1a; padding-left:1.25rem!important; cursor:pointer;'
-                : 'cursor:pointer;'"
+              :class="activeCategory === cat.id ? 'text-warning' : ''"
+              :style="(activeCategory === cat.id
+                ? 'background:var(--bg-card); padding-left:1.25rem!important; cursor:pointer;'
+                : 'cursor:pointer;') + (activeCategory === cat.id ? '' : ' color:var(--text-secondary);')"
               @mouseenter="activeCategory = cat.id">
               <span>{{ cat.title }}</span>
               <span style="font-size:14px; opacity:0.5;">›</span>
@@ -70,34 +89,34 @@
           </div>
 
           <!-- Cột phải: hãng và phân khúc tương ứng -->
-          <div class="p-4 flex-grow-1 overflow-y-auto" style="background:#0a0a0a;">
+          <div class="p-4 flex-grow-1 overflow-y-auto" style="background:var(--bg-page-alt);">
             <template v-for="cat in categories" :key="cat.id">
               <div v-if="cat.id === activeCategory" class="row g-4">
                 <!-- Cột hãng sản xuất -->
                 <div class="col-6">
                   <div class="text-warning fw-black text-uppercase small pb-2 mb-2"
-                       style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid #2a2a2a;">
-                    Hãng sản xuất chính
+                       style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid var(--border-color);">
+                    {{ t('nav.brandsHeading') }}
                   </div>
                   <a v-for="brand in cat.brands" :key="brand"
                      href="#"
-                     class="d-flex align-items-center gap-1 text-decoration-none py-1 small fw-bold text-secondary"
-                     style="font-size:12px;"
-                     @mouseenter="e => e.target.style.color='#fff'"
+                     class="d-flex align-items-center gap-1 text-decoration-none py-1 small fw-bold"
+                     style="font-size:12px; color:var(--text-secondary);"
+                     @mouseenter="e => e.target.style.color='var(--text-heading)'"
                      @mouseleave="e => e.target.style.color=''">
-                    <span style="color:#3f3f3f;">·</span> {{ brand }}
+                    <span style="color:var(--border-color-strong);">·</span> {{ brand }}
                   </a>
                 </div>
                 <!-- Cột phân khúc nổi bật -->
                 <div class="col-6">
                   <div class="text-warning fw-black text-uppercase small pb-2 mb-2"
-                       style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid #2a2a2a;">
-                    Phân khúc nổi bật
+                       style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid var(--border-color);">
+                    {{ t('nav.tagsHeading') }}
                   </div>
                   <a v-for="tag in cat.tags" :key="tag"
                      href="#"
-                     class="d-block text-decoration-none py-1 small fw-bold text-secondary"
-                     style="font-size:12px;"
+                     class="d-block text-decoration-none py-1 small fw-bold"
+                     style="font-size:12px; color:var(--text-secondary);"
                      @mouseenter="e => e.target.style.color='#facc15'"
                      @mouseleave="e => e.target.style.color=''">
                     {{ tag }}
@@ -111,11 +130,11 @@
 
       <!-- Nút chọn thành phố (chỉ hiện trên màn to) -->
       <button class="btn btn-sm fw-bold d-none d-xl-flex align-items-center gap-2 flex-shrink-0"
-              style="background:#1f1f1f; border:1px solid #3f3f3f; border-radius:12px; color:#e5e7eb;">
+              style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary);">
         📍
         <div class="text-start lh-1">
-          <div style="font-size:10px; color:#6b7280;">Xem giá tại</div>
-          <div style="font-size:12px; font-weight:800;">Hà Nội</div>
+          <div style="font-size:10px; color:var(--text-muted);">{{ t('nav.changeCityLabel') }}</div>
+          <div style="font-size:12px; font-weight:800;">{{ t('nav.city') }}</div>
         </div>
       </button>
 
@@ -125,57 +144,53 @@
           v-model="searchValue"
           type="text"
           class="form-control form-control-sm"
-          style="background:#1f1f1f; border-color:#3f3f3f; color:#e5e7eb; border-radius:12px 0 0 12px; font-size:12px; font-weight:600;"
-          placeholder="Nhập tên laptop, hãng hoặc nhu cầu cần tìm...?"
+          style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:12px 0 0 12px; font-size:12px; font-weight:600;"
+          :placeholder="t('nav.searchPlaceholder')"
           @keyup.enter="emit('search', searchValue)"
         />
         <!-- Nút kính lúp trigger tìm kiếm -->
         <button
           class="btn btn-sm"
-          style="background:#1f1f1f; border-color:#3f3f3f; border-left:none; color:#9ca3af; border-radius:0 12px 12px 0;"
+          style="background:var(--bg-input); border-color:var(--border-color-strong); border-left:none; color:var(--text-secondary); border-radius:0 12px 12px 0;"
           @click="emit('search', searchValue)">
           🔎
         </button>
       </div>
 
-      <!-- Nhóm nút bên phải: Tra cứu | Giỏ hàng | Đăng nhập -->
+      <!-- Nhóm nút bên phải: Giỏ hàng | Đăng nhập -->
       <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-1">
-
-        <!-- Nút tra cứu đơn hàng (ẩn trên mobile) -->
-        <button class="btn btn-sm d-none d-lg-flex align-items-center gap-1 fw-bold"
-                style="background:#1f1f1f; border:1px solid #3f3f3f; border-radius:12px; color:#e5e7eb; font-size:12px; white-space:nowrap;">
-          📋 Tra cứu đơn hàng
-        </button>
 
         <!-- Nút giỏ hàng: phát ra sự kiện toggle-cart khi click -->
         <button class="btn btn-sm d-flex align-items-center gap-1 fw-bold"
-                style="background:#1f1f1f; border:1px solid #3f3f3f; border-radius:12px; color:#e5e7eb; font-size:12px; white-space:nowrap;"
+                style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary); font-size:12px; white-space:nowrap;"
                 @click="emit('toggle-cart')">
-          🛒 Giỏ hàng
+          🛒 {{ t('nav.cart') }}
           <!-- Badge hiển thị số lượng sản phẩm trong giỏ -->
-          <span class="badge text-dark fw-black"
-                style="background:#facc15; border-radius:999px; font-size:11px;">
+          <span class="badge fw-black"
+                style="background:var(--accent); color:var(--accent-text); border-radius:999px; font-size:11px;">
             {{ cartCount }}
           </span>
         </button>
 
-        <!-- Đã đăng nhập: hiển thị tên + nút đăng xuất -->
+        <!-- Đã đăng nhập: hiển thị tên (nhân viên → mở trang quản trị, khách → mở trang tài khoản) + nút đăng xuất -->
         <template v-if="user">
-          <div class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-semibold"
-               style="background:#1f1f1f; border:1px solid #3a3a3a; color:#facc15; font-size:12px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis;">
+          <button
+              class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-semibold border-0"
+              style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--accent); font-size:12px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; cursor:pointer;"
+              @click="emit(isStaff ? 'open-admin' : 'open-account')">
             <span style="font-size:10px;">●</span>
             {{ user.hoTen || user.username }}
-          </div>
+          </button>
           <button class="btn btn-sm fw-bold"
-                  style="background:#1f1f1f; border:1px solid #7f1d1d; border-radius:12px; color:#f87171; font-size:12px; white-space:nowrap;"
+                  style="background:var(--bg-input); border:1px solid #7f1d1d; border-radius:12px; color:#f87171; font-size:12px; white-space:nowrap;"
                   @click="emit('logout')">
-            Đăng xuất
+            {{ t('nav.logout') }}
           </button>
         </template>
 
         <!-- Chưa đăng nhập: nút đăng nhập -->
         <button v-else class="btn btn-warning fw-bold" style="font-size:13px;" @click="emit('open-login')">
-          Đăng nhập
+          {{ t('nav.login') }}
         </button>
       </div>
 
@@ -184,17 +199,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { t, I18nStore, LOCALES, setLocale } from '../../i18n/index.js';
+import { ThemeStore, toggleTheme } from '../../stores/theme.js';
 
-const emit = defineEmits(["toggle-cart", "search", "open-admin", "open-login", "logout"]);
+const emit = defineEmits(["toggle-cart", "search", "open-admin", "open-account", "open-login", "logout"]);
 
-defineProps({
+const props = defineProps({
   cartCount: { type: Number, default: 0 },
   user:      { type: Object, default: null },
 });
 
-// Khai báo các sự kiện có thể emit lên component cha
-
+const STAFF_ROLES = ["admin", "nhan_vien", "quan_kho"];
+const isStaff = computed(() => STAFF_ROLES.includes(props.user?.role));
 
 // Trạng thái mở/đóng menu danh mục
 const isMenuOpen = ref(false);
@@ -205,39 +222,39 @@ const activeCategory = ref('all-laptop');
 // Giá trị người dùng nhập vào ô tìm kiếm
 const searchValue = ref('');
 
-// Danh sách các loại laptop trong mega dropdown
-const categories = [
+// Danh sách các loại laptop trong mega dropdown (tiêu đề dịch theo t(), tên hãng/tag giữ nguyên tiếng Việt)
+const categories = computed(() => [
   {
     id: 'all-laptop',
-    title: 'Tất cả thương hiệu Laptop',
+    title: t('nav.catAll'),
     brands: ['ASUS', 'Lenovo', 'MacBook (Apple)', 'MSI', 'Acer', 'HP', 'Dell', 'Gigabyte', 'LG'],
     tags: ['Laptop bán chạy nhất', 'Máy mới về 2026', 'Xả kho máy trưng bày', 'Hỗ trợ trả góp 0%']
   },
   {
     id: 'gaming',
-    title: 'Laptop Gaming / Đồ họa nặng',
+    title: t('nav.catGaming'),
     brands: ['ASUS ROG / TUF', 'Lenovo Legion / LOQ', 'MSI Gaming', 'Acer Predator / Nitro', 'Gigabyte Gaming', 'Dell Alienware'],
     tags: ['Card RTX 40 Series', 'Màn hình 144Hz - 240Hz', 'Tản nhiệt chuyên dụng', 'Cấu hình khủng']
   },
   {
     id: 'office',
-    title: 'Laptop Văn phòng - Học tập',
+    title: t('nav.catOffice'),
     brands: ['ASUS Vivobook', 'Lenovo IdeaPad', 'HP Pavilion / ProBook', 'Dell Inspiron', 'Acer Aspire'],
     tags: ['Giá rẻ dưới 15 triệu', 'Bàn phím gõ êm', 'Pin trâu trên 8 tiếng', 'Màn hình chống chói']
   },
   {
     id: 'premium',
-    title: 'Cao cấp - Mỏng nhẹ - Sang trọng',
+    title: t('nav.catPremium'),
     brands: ['MacBook Air / Pro', 'ASUS Zenbook', 'Lenovo Yoga / Slim', 'HP Envy / Spectre', 'Dell XPS', 'LG Gram'],
     tags: ['Vỏ nhôm nguyên khối', 'Trọng lượng dưới 1.2kg', 'Màn hình OLED / Retina', 'Nhận diện khuôn mặt']
   },
   {
     id: 'creator',
-    title: 'Đồ họa chuyên nghiệp - Kỹ thuật AI',
+    title: t('nav.catCreator'),
     brands: ['MacBook Pro M-Series', 'ASUS ProArt', 'Lenovo ThinkPad P-Series', 'MSI Creator', 'Dell Precision'],
     tags: ['Màn hình chuẩn màu DCI-P3', 'RAM khủng từ 32GB', 'Tối ưu phần mềm Adobe/CAD', 'Xử lý dữ liệu AI chuyên sâu']
   }
-];
+]);
 </script>
 
 <!-- Không còn CSS scoped — toàn bộ giao diện dùng Bootstrap utility classes -->

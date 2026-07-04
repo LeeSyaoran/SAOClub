@@ -1,4 +1,14 @@
-const H = { 'Content-Type': 'application/json' };
+// Gắn JWT (nếu đã đăng nhập) vào mọi request — token được lưu trong session
+// bởi stores/index.js sau khi login (xem setSession).
+const authHeaders = () => {
+  try {
+    const session = JSON.parse(localStorage.getItem('saophone_session'));
+    return session?.token ? { Authorization: `Bearer ${session.token}` } : {};
+  } catch {
+    return {};
+  }
+};
+const headers = () => ({ 'Content-Type': 'application/json', ...authHeaders() });
 
 // QUAN TRỌNG — return type khác nhau:
 //   get()           → Promise<parsed JSON>   (throw nếu HTTP error)
@@ -6,7 +16,7 @@ const H = { 'Content-Type': 'application/json' };
 // Không dùng .then(r => r.ok ? r.json() : []) sau get() — nó đã parse sẵn rồi.
 
 export const get = async (url) => {
-  const r = await fetch(url);
+  const r = await fetch(url, { headers: authHeaders() });
   if (!r.ok) {
     const msg = await r.text().catch(() => '');
     throw new Error(`HTTP ${r.status}${msg ? ': ' + msg : ''}`);
@@ -15,10 +25,10 @@ export const get = async (url) => {
 };
 
 export const post = (url, body) =>
-  fetch(url, { method: 'POST', headers: H, body: JSON.stringify(body) });
+  fetch(url, { method: 'POST', headers: headers(), body: JSON.stringify(body) });
 
 export const put = (url, body) =>
-  fetch(url, { method: 'PUT', headers: H, body: JSON.stringify(body) });
+  fetch(url, { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
 
 export const del = (url) =>
-  fetch(url, { method: 'DELETE' });
+  fetch(url, { method: 'DELETE', headers: authHeaders() });

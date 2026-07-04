@@ -4,8 +4,8 @@
 
     <!-- ── Lọc theo Thương hiệu ── -->
     <div>
-      <div class="fw-bold small text-secondary text-uppercase mb-2"
-           style="letter-spacing:0.05em; font-size:0.72rem;">Thương hiệu</div>
+      <div class="fw-bold small text-uppercase mb-2"
+           style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);">{{ t('productFilter.brand') }}</div>
       <div class="d-flex flex-wrap gap-2">
         <button v-for="b in brands" :key="b"
                 class="btn btn-sm"
@@ -19,8 +19,8 @@
 
     <!-- ── Lọc theo Khoảng giá ── -->
     <div>
-      <div class="fw-bold small text-secondary text-uppercase mb-2"
-           style="letter-spacing:0.05em; font-size:0.72rem;">Khoảng giá</div>
+      <div class="fw-bold small text-uppercase mb-2"
+           style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);">{{ t('productFilter.priceRange') }}</div>
       <div class="d-flex flex-wrap gap-2">
         <button v-for="range in priceRanges" :key="range.label"
                 class="btn btn-sm"
@@ -34,8 +34,8 @@
 
     <!-- ── Lọc theo Danh mục ── -->
     <div v-if="categories.length">
-      <div class="fw-bold small text-secondary text-uppercase mb-2"
-           style="letter-spacing:0.05em; font-size:0.72rem;">Danh mục</div>
+      <div class="fw-bold small text-uppercase mb-2"
+           style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);">{{ t('productFilter.category') }}</div>
       <div class="d-flex flex-wrap gap-2">
         <button v-for="c in categories" :key="c.id"
                 class="btn btn-sm"
@@ -52,7 +52,7 @@
       <button class="btn btn-sm btn-outline-danger"
               style="font-size:0.78rem; border-radius:20px;"
               @click="clearAll">
-        ✕ Xóa bộ lọc
+        {{ t('productFilter.clearFilter') }}
       </button>
     </div>
 
@@ -61,6 +61,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { t } from '../../i18n/index.js';
 
 const props = defineProps({
   // Danh sách tên thương hiệu (string[])
@@ -79,13 +80,16 @@ const selectedCategory = ref(null);
 const priceMin         = ref(null);
 const priceMax         = ref(null);
 
-// Các khoảng giá cố định
-const priceRanges = [
-  { label: 'Dưới 10 triệu',    min: 0,          max: 10_000_000  },
-  { label: '10 - 20 triệu',    min: 10_000_000,  max: 20_000_000  },
-  { label: '20 - 30 triệu',    min: 20_000_000,  max: 30_000_000  },
-  { label: 'Trên 30 triệu',    min: 30_000_000,  max: Infinity    },
-];
+// Các khoảng giá cố định (nhãn dịch theo ngôn ngữ hiện tại)
+const priceRanges = computed(() => {
+  const labels = t('productFilter.priceRanges');
+  return [
+    { label: labels[0], min: 0,          max: 10_000_000  },
+    { label: labels[1], min: 10_000_000,  max: 20_000_000  },
+    { label: labels[2], min: 20_000_000,  max: 30_000_000  },
+    { label: labels[3], min: 30_000_000,  max: Infinity    },
+  ];
+});
 
 // Có bộ lọc nào đang active không
 const hasFilter = computed(

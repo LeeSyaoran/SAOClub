@@ -2,6 +2,8 @@ import { get, post, put, del } from './api.js';
 
 export const getAll = () => get('/api/khach-hang');
 
+export const getById = (id) => get(`/api/khach-hang/${id}`);
+
 export const save = (id, body) =>
   id ? put(`/api/khach-hang/update/${id}`, body) : post('/api/khach-hang', body);
 

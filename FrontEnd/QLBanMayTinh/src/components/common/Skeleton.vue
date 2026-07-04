@@ -15,7 +15,7 @@ defineProps({
 
 <style scoped>
 .skeleton-pulse {
-  background: linear-gradient(90deg, #1e1e1e 25%, #2a2a2a 50%, #1e1e1e 75%);
+  background: linear-gradient(90deg, var(--bg-card-alt) 25%, var(--border-color-strong) 50%, var(--bg-card-alt) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s infinite;
 }

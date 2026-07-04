@@ -1,0 +1,66 @@
+/* ══════════════════════════════════════════════════════════════════
+   Hệ thống biến màu theo theme — mặc định tối (dark), có thể chuyển
+   sang sáng (light) bằng cách đặt [data-theme="light"] trên <html>.
+   Xem src/stores/theme.js để biết cách toggle.
+════════════════════════════════════════════════════════════════════ */
+
+:root,
+[data-theme="dark"] {
+  --bg-page:           #171717;
+  --bg-page-alt:       #0f0f0f;
+  --bg-header:         #171717;
+  --bg-card:           #1a1a1a;
+  --bg-card-alt:       #141414;
+  --bg-card-inset:     #111111;
+  --bg-input:          #1f1f1f;
+  --bg-hover:          rgba(255,255,255,0.045);
+  --bg-overlay:        rgba(0,0,0,0.75);
+
+  --border-color:        #2a2a2a;
+  --border-color-strong: #3f3f3f;
+  --border-color-soft:   #242424;
+
+  --text-heading:   #ffffff;
+  --text-primary:   #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-muted:     #6b7280;
+
+  --accent:      #facc15;
+  --accent-2:    #f59e0b;
+  --accent-text: #111111;
+
+  --shadow-color: rgba(0,0,0,0.4);
+}
+
+[data-theme="light"] {
+  --bg-page:           #f3f4f6;
+  --bg-page-alt:       #ffffff;
+  --bg-header:         #ffffff;
+  --bg-card:           #ffffff;
+  --bg-card-alt:       #f7f8fa;
+  --bg-card-inset:     #eef0f3;
+  --bg-input:          #ffffff;
+  --bg-hover:          rgba(0,0,0,0.035);
+  --bg-overlay:        rgba(15,15,20,0.55);
+
+  --border-color:        #e3e5e9;
+  --border-color-strong: #c7cbd1;
+  --border-color-soft:   #ebedf0;
+
+  --text-heading:   #14161a;
+  --text-primary:   #262a30;
+  --text-secondary: #5c6370;
+  --text-muted:     #8a919e;
+
+  --accent:      #facc15;
+  --accent-2:    #f59e0b;
+  --accent-text: #111111;
+
+  --shadow-color: rgba(20,20,30,0.1);
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}

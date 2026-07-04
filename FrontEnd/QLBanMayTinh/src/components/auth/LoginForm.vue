@@ -4,8 +4,8 @@
 
     <!-- Tiêu đề -->
     <div class="text-center mb-4">
-      <div class="fw-black fs-5 mb-1">Chào mừng trở lại!</div>
-      <div class="text-secondary small">Đăng nhập tài khoản hệ thống SAOPhone</div>
+      <div class="fw-black fs-5 mb-1" style="color:var(--text-heading);">{{ t('login.welcome') }}</div>
+      <div class="small" style="color:var(--text-secondary);">{{ t('login.subtitle') }}</div>
     </div>
 
     <!-- Form -->
@@ -13,22 +13,30 @@
 
       <!-- Username / Email -->
       <div>
-        <label class="form-label small text-secondary fw-semibold">Tên tài khoản hoặc Email</label>
+        <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('login.usernameLabel') }}</label>
         <input v-model="form.username" type="text"
                class="form-control form-control-sm"
-               style="background:#1a1a1a; border-color:rgba(255,255,255,0.12); color:#eee;"
-               placeholder="Gõ tên đăng nhập hoặc email..." required />
+               style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary);"
+               :placeholder="t('login.usernamePlaceholder')" required />
       </div>
 
       <!-- Mật khẩu -->
       <div>
-        <label class="form-label small text-secondary fw-semibold">Mật khẩu</label>
-        <input v-model="form.password" type="password"
-               class="form-control form-control-sm"
-               style="background:#1a1a1a; border-color:rgba(255,255,255,0.12); color:#eee;"
-               placeholder="••••••••" required />
+        <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('login.passwordLabel') }}</label>
+        <div class="input-group input-group-sm">
+          <input v-model="form.password" :type="showPassword ? 'text' : 'password'"
+                 class="form-control form-control-sm"
+                 style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary);"
+                 :placeholder="t('login.passwordPlaceholder')" required />
+          <button type="button" class="btn btn-sm"
+                  style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
+                  :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
+                  @click="showPassword = !showPassword">
+            {{ showPassword ? '🙈' : '👁' }}
+          </button>
+        </div>
         <div class="text-end mt-1">
-          <a href="#" class="text-warning small fw-semibold text-decoration-none">Quên mật khẩu?</a>
+          <a href="#" class="text-warning small fw-semibold text-decoration-none">{{ t('login.forgotPassword') }}</a>
         </div>
       </div>
 
@@ -37,19 +45,19 @@
 
       <!-- Nút đăng nhập -->
       <button type="submit" class="btn btn-warning text-dark fw-black w-100">
-        ĐĂNG NHẬP HỆ THỐNG
+        {{ t('login.submit') }}
       </button>
     </form>
 
     <!-- Chuyển sang đăng ký -->
-    <div class="text-center mt-4 pt-3 border-top border-secondary small text-secondary">
-      Chưa có tài khoản?
+    <div class="text-center mt-4 pt-3 border-top small" style="border-color:var(--border-color)!important; color:var(--text-secondary);">
+      {{ t('login.noAccount') }}
       <button
           type="button"
           class="btn btn-link btn-sm text-warning fw-bold p-0 text-decoration-none"
           @click="emit('open-register')"
       >
-        Đăng ký ngay
+        {{ t('login.registerNow') }}
       </button>
     </div>
   </div>
@@ -57,6 +65,7 @@
 
 <script setup>
 import { reactive, ref } from 'vue';
+import { t } from '../../i18n/index.js';
 
 // Emit: submit (trả về { username, password }), register-click (chuyển tab đăng ký)
 const emit = defineEmits([
@@ -68,10 +77,11 @@ const emit = defineEmits([
 
 const form = reactive({ username: '', password: '' });
 const error = ref('');
+const showPassword = ref(false);
 const handleSubmit = () => {
   error.value = '';
   if (!form.username || !form.password) {
-    error.value = 'Vui lòng điền đầy đủ thông tin.';
+    error.value = t('login.fillAllFields');
     return;
   }
   emit('submit', { username: form.username, password: form.password });

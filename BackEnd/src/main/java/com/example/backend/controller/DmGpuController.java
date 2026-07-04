@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 // Danh mục GPU — dữ liệu tham chiếu đơn giản, không cần service riêng
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/dm-gpu")
 public class DmGpuController {

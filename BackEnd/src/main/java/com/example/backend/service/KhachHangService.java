@@ -12,6 +12,8 @@ import com.example.backend.response.KhachHangLoginResponse;
 import com.example.backend.response.KhachHangResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,8 +41,11 @@ public class KhachHangService {
     }
 
     public KhachHang getById(Integer id) {
-        return khachHangRepository.findById(id)
+        KhachHang entity = khachHangRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Khách hàng không tồn tại với id: " + id));
+        if (!isStaffOrSelf(id))
+            throw new AccessDeniedException("Không có quyền xem khách hàng này");
+        return entity;
     }
 
     public KhachHang create(KhachHangRequest request) {
@@ -51,14 +56,42 @@ public class KhachHangService {
     }
 
     public KhachHang update(Integer id, KhachHangRequest request) {
-        KhachHang entity = getById(id);
-        BeanUtils.copyProperties(request, entity, "khachHangId", "ngayTao");
+        KhachHang entity = getById(id); // đã kiểm tra staff-or-self ở trên
+
+        // Khách tự sửa hồ sơ của mình: không cho đổi điểm tích lũy / trạng thái tài khoản —
+        // chỉ nhân viên/quản trị mới được sửa 2 trường này.
+        if (isStaff()) {
+            BeanUtils.copyProperties(request, entity, "khachHangId", "ngayTao");
+        } else {
+            BeanUtils.copyProperties(request, entity, "khachHangId", "ngayTao", "diemTichLuy", "trangThai");
+        }
         return khachHangRepository.save(entity);
     }
 
+    // ── Kiểm tra quyền: nhân viên/admin/quản kho xem tất cả, khách chỉ xem/sửa chính mình ──
+    private TaiKhoan currentAccount() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return taiKhoanRepository.findByUsername(username).orElse(null);
+    }
+
+    private boolean isStaff() {
+        TaiKhoan tk = currentAccount();
+        return tk != null && !"khach_hang".equals(tk.getChucVu().getMaChucVu());
+    }
+
+    private boolean isStaffOrSelf(Integer khachHangId) {
+        TaiKhoan tk = currentAccount();
+        if (tk == null) return false;
+        if (!"khach_hang".equals(tk.getChucVu().getMaChucVu())) return true;
+        return tk.getKhachHang() != null && khachHangId.equals(tk.getKhachHang().getKhachHangId());
+    }
+
+    // Xoá khách hàng — xoá luôn tài khoản đăng nhập liên kết trước (FK), nếu không sẽ vỡ khoá ngoại.
+    @Transactional
     public void delete(Integer id) {
         if (!khachHangRepository.existsById(id))
             throw new IllegalArgumentException("Khách hàng không tồn tại với id: " + id);
+        taiKhoanRepository.findByKhachHang_KhachHangId(id).ifPresent(taiKhoanRepository::delete);
         khachHangRepository.deleteById(id);
     }
 
@@ -75,7 +108,7 @@ public class KhachHangService {
         entity.setEmail(request.getEmail());
         entity.setDiaChi(request.getDiaChi());
         entity.setDiemTichLuy(0);
-        entity.setTrangThai("hoat_dong");
+        entity.setTrangThai("active");
         entity.setLoaiKhach("ca_nhan");
         entity.setNgayTao(LocalDateTime.now());
         KhachHang savedKh = khachHangRepository.save(entity);

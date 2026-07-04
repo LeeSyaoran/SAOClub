@@ -1,24 +1,24 @@
 <template>
   <div
     class="position-fixed top-0 start-0 w-100 h-100"
-    style="background:#111; z-index:900; overflow-y:auto;"
+    style="background:var(--bg-card-inset); z-index:900; overflow-y:auto;"
   >
     <!-- ── Header sticky ── -->
     <div
       class="d-flex align-items-center gap-3 px-3 py-2 position-sticky top-0"
-      style="background:rgba(17,17,17,0.95); backdrop-filter:blur(8px); border-bottom:1px solid #2a2a2a; z-index:10;"
+      style="background:var(--bg-card-inset); backdrop-filter:blur(8px); border-bottom:1px solid var(--border-color); z-index:10; opacity:0.98;"
     >
       <button
         class="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
         style="width:36px; height:36px; padding:0;"
         @click="$emit('close')"
       >‹</button>
-      <span class="text-light fw-semibold small text-truncate">{{ activeVariant.tenSanPham }}</span>
+      <span class="fw-semibold small text-truncate" style="color:var(--text-primary);">{{ activeVariant.tenSanPham }}</span>
       <span
         class="badge ms-auto flex-shrink-0"
         :class="activeVariant.trangThai === 'active' ? 'bg-success' : 'bg-secondary'"
         style="font-size:10px;"
-      >{{ activeVariant.trangThai === 'active' ? 'Còn hàng' : 'Hết hàng' }}</span>
+      >{{ activeVariant.trangThai === 'active' ? t('productDetail.inStock') : t('productDetail.outOfStock') }}</span>
     </div>
 
     <div class="container-xl py-4">
@@ -28,7 +28,7 @@
         <div class="col-12 col-lg-5">
           <div
             class="rounded-3 d-flex align-items-center justify-content-center"
-            style="background:#1a1a1a; border:1px solid #2a2a2a; min-height:320px; padding:24px;"
+            style="background:var(--bg-card); border:1px solid var(--border-color); min-height:320px; padding:24px;"
           >
             <img
               v-if="activeVariant.hinhAnhChinh"
@@ -55,24 +55,24 @@
 
           <!-- Tên + brand -->
           <div>
-            <div class="text-secondary small mb-1">
+            <div class="small mb-1" style="color:var(--text-secondary);">
               {{ activeVariant.tenThuongHieu }} · {{ activeVariant.tenDanhMuc }}
             </div>
-            <h1 class="text-white fw-black mb-2" style="font-size:1.3rem; line-height:1.3;">
+            <h1 class="fw-black mb-2" style="font-size:1.3rem; line-height:1.3; color:var(--text-heading);">
               {{ activeVariant.tenSanPham }}
             </h1>
             <div class="d-flex align-items-baseline gap-3 flex-wrap">
-              <span class="fw-black" style="font-size:1.8rem; color:#facc15;">
+              <span class="fw-black" style="font-size:1.8rem; color:var(--accent);">
                 {{ formatPrice(activeVariant.giaBan) }}
               </span>
-              <span class="text-secondary small">🚚 Giao nhanh 2H · Miễn phí từ 300K</span>
+              <span class="small" style="color:var(--text-secondary);">{{ t('productDetail.freeShipping') }}</span>
             </div>
           </div>
 
           <!-- ── Phiên bản (cấu hình) ── -->
           <div v-if="configs.length > 1">
-            <div class="text-secondary fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">
-              Phiên bản ({{ configs.length }} cấu hình)
+            <div class="fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
+              {{ t('productDetail.versions', { count: configs.length }) }}
             </div>
             <div class="d-flex flex-wrap gap-2">
               <button
@@ -82,7 +82,7 @@
                 style="border-radius:10px; min-width:140px; transition:all 0.15s;"
                 :style="activeConfigKey === configKey(v)
                   ? 'background:#2a2200; border:1.5px solid #facc15; color:#facc15;'
-                  : 'background:#1f1f1f; border:1.5px solid #333; color:#aaa;'"
+                  : 'background:var(--bg-input); border:1.5px solid var(--border-color-strong); color:var(--text-secondary);'"
                 @click="selectConfig(v)"
               >
                 <span class="fw-semibold" style="font-size:11px; line-height:1.5;">{{ configLabel(v).line1 }}</span>
@@ -93,8 +93,8 @@
 
           <!-- ── Màu sắc ── -->
           <div v-if="colorsForConfig.some(v => v.mauSac)">
-            <div class="text-secondary fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">
-              Màu sắc
+            <div class="fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
+              {{ t('productDetail.colorHeading') }}
             </div>
             <div class="d-flex flex-wrap gap-2">
               <button
@@ -104,7 +104,7 @@
                 style="border-radius:10px; transition:all 0.15s;"
                 :style="activeColor === v.mauSac
                   ? 'background:#2a2200; border:1.5px solid #facc15; color:#facc15;'
-                  : 'background:#1f1f1f; border:1.5px solid #333; color:#aaa;'"
+                  : 'background:var(--bg-input); border:1.5px solid var(--border-color-strong); color:var(--text-secondary);'"
                 @click="selectColor(v)"
               >
                 <span
@@ -120,73 +120,73 @@
           </div>
 
           <!-- Meta: màu sắc, SKU, bảo hành -->
-          <div class="d-flex flex-wrap gap-3 small text-secondary">
-            <span v-if="activeVariant.mauSac">🎨 Màu: <strong class="text-light">{{ activeVariant.mauSac }}</strong></span>
-            <span v-if="activeVariant.baoHanhThang">🛡️ Bảo hành: <strong class="text-light">{{ activeVariant.baoHanhThang }} tháng</strong></span>
+          <div class="d-flex flex-wrap gap-3 small" style="color:var(--text-secondary);">
+            <span v-if="activeVariant.mauSac">🎨 {{ t('productDetail.color') }} <strong style="color:var(--text-primary);">{{ activeVariant.mauSac }}</strong></span>
+            <span v-if="activeVariant.baoHanhThang">🛡️ {{ t('productDetail.warranty') }} <strong style="color:var(--text-primary);">{{ activeVariant.baoHanhThang }} {{ t('productDetail.months') }}</strong></span>
           </div>
 
           <!-- ── Thông số kỹ thuật (nhóm) ── -->
           <div v-if="specGroups.phancung.length || specGroups.manha.length || specGroups.hethong.length || specGroups.sanpham.length">
-            <div class="text-secondary fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">
-              Thông số kỹ thuật
+            <div class="fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
+              {{ t('productDetail.specsHeading') }}
             </div>
             <div class="d-flex flex-column gap-3">
 
               <!-- Phần cứng -->
-              <div v-if="specGroups.phancung.length" class="rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
-                <div class="px-3 py-1" style="background:#1f1f1f; font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#facc15; text-transform:uppercase;">
-                  Phần cứng
+              <div v-if="specGroups.phancung.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
+                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#facc15; text-transform:uppercase;">
+                  {{ t('productDetail.hardwareGroup') }}
                 </div>
                 <table class="w-100 mb-0" style="border-collapse:collapse;">
                   <tbody>
-                    <tr v-for="s in specGroups.phancung" :key="s.label" style="border-top:1px solid #1f1f1f;">
-                      <td class="px-3 py-2 text-secondary" style="width:42%; background:#161616; font-size:0.8rem; font-weight:600; white-space:nowrap;">{{ s.label }}</td>
-                      <td class="px-3 py-2 text-light" style="background:#1a1a1a; font-size:0.82rem;">{{ s.value }}</td>
+                    <tr v-for="s in specGroups.phancung" :key="s.label" style="border-top:1px solid var(--border-color-soft);">
+                      <td class="px-3 py-2" style="width:42%; background:var(--bg-card-alt); font-size:0.8rem; font-weight:600; white-space:nowrap; color:var(--text-secondary);">{{ s.label }}</td>
+                      <td class="px-3 py-2" style="background:var(--bg-card); font-size:0.82rem; color:var(--text-primary);">{{ s.value }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
               <!-- Màn hình & Thiết kế -->
-              <div v-if="specGroups.manha.length" class="rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
-                <div class="px-3 py-1" style="background:#1f1f1f; font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#60a5fa; text-transform:uppercase;">
-                  Màn hình &amp; Thiết kế
+              <div v-if="specGroups.manha.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
+                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#60a5fa; text-transform:uppercase;">
+                  {{ t('productDetail.displayGroup') }}
                 </div>
                 <table class="w-100 mb-0" style="border-collapse:collapse;">
                   <tbody>
-                    <tr v-for="s in specGroups.manha" :key="s.label" style="border-top:1px solid #1f1f1f;">
-                      <td class="px-3 py-2 text-secondary" style="width:42%; background:#161616; font-size:0.8rem; font-weight:600; white-space:nowrap;">{{ s.label }}</td>
-                      <td class="px-3 py-2 text-light" style="background:#1a1a1a; font-size:0.82rem;">{{ s.value }}</td>
+                    <tr v-for="s in specGroups.manha" :key="s.label" style="border-top:1px solid var(--border-color-soft);">
+                      <td class="px-3 py-2" style="width:42%; background:var(--bg-card-alt); font-size:0.8rem; font-weight:600; white-space:nowrap; color:var(--text-secondary);">{{ s.label }}</td>
+                      <td class="px-3 py-2" style="background:var(--bg-card); font-size:0.82rem; color:var(--text-primary);">{{ s.value }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
               <!-- Hệ thống -->
-              <div v-if="specGroups.hethong.length" class="rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
-                <div class="px-3 py-1" style="background:#1f1f1f; font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#34d399; text-transform:uppercase;">
-                  Hệ thống
+              <div v-if="specGroups.hethong.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
+                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#34d399; text-transform:uppercase;">
+                  {{ t('productDetail.systemGroup') }}
                 </div>
                 <table class="w-100 mb-0" style="border-collapse:collapse;">
                   <tbody>
-                    <tr v-for="s in specGroups.hethong" :key="s.label" style="border-top:1px solid #1f1f1f;">
-                      <td class="px-3 py-2 text-secondary" style="width:42%; background:#161616; font-size:0.8rem; font-weight:600; white-space:nowrap;">{{ s.label }}</td>
-                      <td class="px-3 py-2 text-light" style="background:#1a1a1a; font-size:0.82rem;">{{ s.value }}</td>
+                    <tr v-for="s in specGroups.hethong" :key="s.label" style="border-top:1px solid var(--border-color-soft);">
+                      <td class="px-3 py-2" style="width:42%; background:var(--bg-card-alt); font-size:0.8rem; font-weight:600; white-space:nowrap; color:var(--text-secondary);">{{ s.label }}</td>
+                      <td class="px-3 py-2" style="background:var(--bg-card); font-size:0.82rem; color:var(--text-primary);">{{ s.value }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
               <!-- Thông tin sản phẩm -->
-              <div v-if="specGroups.sanpham.length" class="rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
-                <div class="px-3 py-1" style="background:#1f1f1f; font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#a78bfa; text-transform:uppercase;">
-                  Thông tin sản phẩm
+              <div v-if="specGroups.sanpham.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
+                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#a78bfa; text-transform:uppercase;">
+                  {{ t('productDetail.productGroup') }}
                 </div>
                 <table class="w-100 mb-0" style="border-collapse:collapse;">
                   <tbody>
-                    <tr v-for="s in specGroups.sanpham" :key="s.label" style="border-top:1px solid #1f1f1f;">
-                      <td class="px-3 py-2 text-secondary" style="width:42%; background:#161616; font-size:0.8rem; font-weight:600; white-space:nowrap;">{{ s.label }}</td>
-                      <td class="px-3 py-2 text-light" style="background:#1a1a1a; font-size:0.82rem;">{{ s.value }}</td>
+                    <tr v-for="s in specGroups.sanpham" :key="s.label" style="border-top:1px solid var(--border-color-soft);">
+                      <td class="px-3 py-2" style="width:42%; background:var(--bg-card-alt); font-size:0.8rem; font-weight:600; white-space:nowrap; color:var(--text-secondary);">{{ s.label }}</td>
+                      <td class="px-3 py-2" style="background:var(--bg-card); font-size:0.82rem; color:var(--text-primary);">{{ s.value }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -199,11 +199,11 @@
           <div class="d-flex gap-2 mt-auto pt-2">
             <button
               class="btn fw-black flex-grow-1 py-2"
-              style="background:#facc15; color:#111; border-radius:12px; font-size:0.95rem;"
+              style="background:var(--accent); color:var(--accent-text); border-radius:12px; font-size:0.95rem;"
               :disabled="activeVariant.trangThai !== 'active'"
               @click="$emit('add-to-cart', activeVariant)"
             >
-              🛒 Thêm vào giỏ hàng
+              {{ t('productDetail.addToCart') }}
             </button>
           </div>
 
@@ -212,22 +212,22 @@
 
       <!-- ── Sản phẩm gợi ý ── -->
       <div v-if="related.length > 0" class="mt-5">
-        <h2 class="fw-bold text-white mb-3" style="font-size:1rem; border-bottom:1px solid #2a2a2a; padding-bottom:8px;">
-          Có thể bạn cũng thích
+        <h2 class="fw-bold mb-3" style="font-size:1rem; border-bottom:1px solid var(--border-color); padding-bottom:8px; color:var(--text-heading);">
+          {{ t('productDetail.relatedProducts') }}
         </h2>
         <div class="d-flex gap-3 pb-2" style="overflow-x:auto; scrollbar-width:thin; scrollbar-color:#333 transparent;">
           <div
             v-for="p in related"
             :key="p.sanPhamId"
             class="flex-shrink-0 rounded-3 d-flex flex-column"
-            style="width:160px; background:#1a1a1a; border:1px solid #2a2a2a; cursor:pointer; transition:transform 0.15s;"
+            style="width:160px; background:var(--bg-card); border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;"
             @mouseenter="e => e.currentTarget.style.transform='translateY(-3px)'"
             @mouseleave="e => e.currentTarget.style.transform=''"
             @click="$emit('open-product', p)"
           >
             <!-- Ảnh -->
             <div class="d-flex align-items-center justify-content-center rounded-top"
-                 style="height:110px; background:#111; padding:8px;">
+                 style="height:110px; background:var(--bg-card-inset); padding:8px;">
               <img v-if="p.hinhAnhChinh"
                    :src="p.hinhAnhChinh" :alt="p.tenSanPham"
                    style="max-width:100%; max-height:90px; object-fit:contain;" />
@@ -235,12 +235,12 @@
             </div>
             <!-- Info -->
             <div class="p-2 d-flex flex-column gap-1 flex-grow-1">
-              <p class="text-light fw-semibold mb-0"
-                 style="font-size:10px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-clamp:2;">
+              <p class="fw-semibold mb-0"
+                 style="font-size:10px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-clamp:2; color:var(--text-primary);">
                 {{ p.tenSanPham }}
               </p>
-              <p class="text-secondary mb-0" style="font-size:9px;">{{ p.tenThuongHieu }}</p>
-              <p class="fw-black mb-0 mt-auto" style="font-size:11px; color:#facc15;">
+              <p class="mb-0" style="font-size:9px; color:var(--text-secondary);">{{ p.tenThuongHieu }}</p>
+              <p class="fw-black mb-0 mt-auto" style="font-size:11px; color:var(--accent);">
                 {{ formatPrice(p.giaBan) }}
               </p>
             </div>
@@ -250,10 +250,10 @@
 
       <!-- ── Mô tả sản phẩm ── -->
       <div v-if="activeVariant.moTa" class="mt-5">
-        <h2 class="fw-bold text-white mb-3" style="font-size:1rem; border-bottom:1px solid #2a2a2a; padding-bottom:8px;">
-          Mô tả sản phẩm
+        <h2 class="fw-bold mb-3" style="font-size:1rem; border-bottom:1px solid var(--border-color); padding-bottom:8px; color:var(--text-heading);">
+          {{ t('productDetail.description') }}
         </h2>
-        <div class="text-secondary small" style="line-height:1.8; white-space:pre-wrap;">{{ activeVariant.moTa }}</div>
+        <div class="small" style="line-height:1.8; white-space:pre-wrap; color:var(--text-secondary);">{{ activeVariant.moTa }}</div>
       </div>
 
     </div><!-- /container -->
@@ -262,6 +262,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { t } from '../../i18n/index.js';
 
 const props = defineProps({
   product:  { type: Object,  required: true },
@@ -331,7 +332,7 @@ const selectColor = (v) => { activeColor.value = v.mauSac ?? ''; };
 
 // Nhãn 2 dòng cho nút cấu hình
 const configLabel = (v) => ({
-  line1: v.cpu || v.ram || 'Cấu hình',
+  line1: v.cpu || v.ram || t('productDetail.defaultConfig'),
   line2: [v.ram, v.oCung].filter(Boolean).join(' · '),
 });
 
@@ -375,35 +376,36 @@ const related = computed(() => {
 });
 
 const formatPrice = (v) =>
-  v == null ? 'Liên hệ'
+  v == null ? t('productDetail.contact')
   : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
 const row = (label, value) => (value ? { label, value } : null);
 const specGroups = computed(() => {
   const v = activeVariant.value ?? {};
   const f = (arr) => arr.filter(Boolean);
+  const s = t('productDetail.specs');
   return {
     phancung: f([
-      row('Bộ xử lý (CPU)',  v.cpu),
-      row('RAM',             v.ram),
-      row('Ổ cứng',         v.oCung),
-      row('Card đồ họa',    v.gpu),
+      row(s.cpu,  v.cpu),
+      row(s.ram,  v.ram),
+      row(s.storage, v.oCung),
+      row(s.gpu, v.gpu),
     ]),
     manha: f([
-      row('Kích thước màn hình', v.kichThuocManHinh),
-      row('Màu sắc',             v.mauSac),
-      row('Trọng lượng',         v.trongLuongKg ? `${v.trongLuongKg} kg` : null),
+      row(s.screenSize, v.kichThuocManHinh),
+      row(s.color,       v.mauSac),
+      row(s.weight,       v.trongLuongKg ? `${v.trongLuongKg} kg` : null),
     ]),
     hethong: f([
-      row('Hệ điều hành', v.heDieuHanh),
-      row('Pin',          v.pin),
-      row('Bảo hành',     v.baoHanhThang ? `${v.baoHanhThang} tháng` : null),
+      row(s.os,      v.heDieuHanh),
+      row(s.battery, v.pin),
+      row(s.warranty, v.baoHanhThang ? `${v.baoHanhThang} ${t('productDetail.months')}` : null),
     ]),
     sanpham: f([
-      row('Thương hiệu',   v.tenThuongHieu),
-      row('Danh mục',      v.tenDanhMuc),
-      row('Nhà cung cấp',  v.tenNhaCungCap),
-      row('Loại sản phẩm', v.loaiSanPham),
+      row(s.brand,       v.tenThuongHieu),
+      row(s.category,    v.tenDanhMuc),
+      row(s.supplier,    v.tenNhaCungCap),
+      row(s.productType, v.loaiSanPham),
     ]),
   };
 });

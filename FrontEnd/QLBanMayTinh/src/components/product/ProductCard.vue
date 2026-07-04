@@ -1,64 +1,84 @@
 <template>
-  <!-- Thẻ sản phẩm — hiển thị trên trang chủ và trang danh mục -->
-  <div class="card h-100 border-secondary"
-       style="background:#141414; cursor:pointer; transition:border-color 0.15s, transform 0.15s;"
-       @mouseenter="e => { e.currentTarget.style.borderColor='rgba(244,194,0,0.5)'; e.currentTarget.style.transform='translateY(-2px)'; }"
-       @mouseleave="e => { e.currentTarget.style.borderColor=''; e.currentTarget.style.transform=''; }"
+  <!-- Thẻ sản phẩm — hiển thị trên lưới trang chủ -->
+  <article class="card h-100 border-secondary"
+       style="background:var(--bg-card); border-radius:14px; overflow:hidden; transition:transform 0.15s, box-shadow 0.15s; cursor:pointer;"
+       @mouseenter="e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,0.4)'; }"
+       @mouseleave="e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }"
        @click="$emit('click', product)">
 
     <!-- Ảnh sản phẩm -->
-    <div class="position-relative overflow-hidden"
-         style="height:150px; background:#1a1a1a; border-radius:0.375rem 0.375rem 0 0;">
-      <img v-if="product.hinhAnhChinh"
-           :src="product.hinhAnhChinh"
-           :alt="product.tenSanPham"
-           style="width:100%; height:100%; object-fit:contain; padding:8px;" />
-      <div v-else class="w-100 h-100 d-flex align-items-center justify-content-center text-secondary"
-           style="font-size:2rem;">💻</div>
-
-      <!-- Badge trạng thái hàng -->
-      <div class="position-absolute top-0 start-0 m-2">
-        <Badge :text="product.trangThai === 'active' ? 'Còn hàng' : 'Hết hàng'"
-               :variant="product.trangThai === 'active' ? 'success' : 'danger'" />
+    <div class="position-relative" style="background:var(--bg-card-inset); height:160px;">
+      <img
+        v-if="product.hinhAnhChinh"
+        :src="product.hinhAnhChinh"
+        :alt="product.tenSanPham"
+        class="w-100 h-100"
+        style="object-fit:contain; padding:8px;"
+      />
+      <!-- Placeholder nếu không có ảnh -->
+      <div v-else
+           class="w-100 h-100 d-flex align-items-center justify-content-center"
+           style="font-size:2.5rem;">
+        💻
       </div>
+      <!-- Badge trạng thái: Còn hàng / Hết hàng -->
+      <span
+        class="badge position-absolute top-0 start-0 m-2"
+        style="font-size:10px;"
+        :class="product.trangThai === 'active' ? 'bg-success' : 'bg-secondary'">
+        {{ product.trangThai === 'active' ? t('home.inStock') : t('home.outOfStock') }}
+      </span>
     </div>
 
     <!-- Thông tin sản phẩm -->
     <div class="card-body p-2 d-flex flex-column gap-1">
-      <!-- Tên sản phẩm (tối đa 2 dòng) -->
-      <div class="fw-semibold text-light lh-sm"
-           style="font-size:0.82rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+      <h3 class="fw-bold mb-0"
+          style="font-size:11px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; color:var(--text-primary);">
         {{ product.tenSanPham }}
+      </h3>
+      <p class="mb-0" style="font-size:10px; color:var(--text-secondary);">
+        {{ product.tenThuongHieu || product.tenDanhMuc }}
+      </p>
+      <p class="mb-0 text-warning fw-black" style="font-size:13px;">
+        <span v-if="variantCount > 1" class="fw-normal" style="font-size:9px; color:var(--text-secondary);">{{ t('home.fromPrice') }} </span>{{ formatPrice(product.giaBan) }}
+      </p>
+      <p class="mb-0" style="font-size:10px; color:var(--text-secondary);">{{ t('home.fastDelivery') }}</p>
+      <!-- Tags phân loại — hiển thị tên tiếng Việt từ phanLoaiTen -->
+      <div v-if="product.phanLoaiTen" class="d-flex flex-wrap gap-1 mt-1">
+        <span
+          v-for="tag in product.phanLoaiTen.split(',')"
+          :key="tag"
+          class="badge"
+          style="font-size:9px; background:#2a2200; color:#facc15; border:1px solid #3d3000;">
+          {{ tag.trim() }}
+        </span>
       </div>
-
-      <!-- Thương hiệu + danh mục -->
-      <div class="text-secondary" style="font-size:0.72rem;">
-        {{ product.tenThuongHieu }} · {{ product.tenDanhMuc }}
-      </div>
-
-      <!-- Giá -->
-      <div class="fw-black text-warning mt-auto" style="font-size:0.95rem;">
-        {{ formatPrice(product.giaBan) }}
-      </div>
-
-      <!-- Nút thêm vào giỏ -->
-      <button class="btn btn-sm btn-warning text-dark fw-bold w-100 mt-1"
-              style="font-size:0.78rem;"
-              :disabled="product.trangThai !== 'active'"
-              @click.stop="$emit('add-to-cart', product)">
-        🛒 Thêm vào giỏ
+      <!-- Nút thêm vào giỏ — disabled nếu hết hàng. Cha quyết định mở trang chi tiết
+           thay vì thêm thẳng nếu sản phẩm có nhiều biến thể (tránh thêm nhầm biến
+           thể giá thấp nhất đang hiển thị đại diện). -->
+      <button
+        class="btn btn-sm w-100 fw-bold mt-1"
+        style="font-size:11px; border-radius:8px;"
+        :class="product.trangThai === 'active' ? 'btn-warning text-dark' : 'btn-secondary'"
+        :disabled="product.trangThai !== 'active'"
+        @click.stop="$emit('add-to-cart', product)">
+        {{ t('home.addToCart') }}
       </button>
     </div>
-  </div>
+  </article>
 </template>
 
 <script setup>
-import Badge from '../common/Badge.vue';
+import { t } from '../../i18n/index.js';
 
-// Props: object sản phẩm từ API /api/san-pham/hien-thi
-defineProps({ product: { type: Object, required: true } });
+defineProps({
+  // Sản phẩm từ API /api/san-pham/hien-thi
+  product:      { type: Object,  required: true },
+  // Số biến thể của sản phẩm này — > 1 thì hiện nhãn "từ giá"
+  variantCount: { type: Number,  default: 0 },
+});
 
-// Emits: click (xem chi tiết), add-to-cart (thêm vào giỏ)
+// Emits: click (xem chi tiết), add-to-cart (thêm nhanh — cha tự quyết định có mở trang chi tiết trước hay không)
 defineEmits(['click', 'add-to-cart']);
 
 const formatPrice = (v) =>

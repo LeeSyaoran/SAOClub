@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, reactive } from "vue";
 import { AuthStore, clearSession } from "../stores/index.js";
+import { t } from "../i18n/index.js";
+import { orderStatusLabel, orderStatusColor } from "../utils/orderStatus.js";
 import * as SanPhamService   from "../Service/SanPhamService.js";
+import * as BienTheSanPhamService from "../Service/BienTheSanPhamService.js";
 import * as KhachHangService from "../Service/KhachHangService.js";
 import * as NhanVienService  from "../Service/NhanVienService.js";
 import * as DonHangService   from "../Service/DonHangService.js";
@@ -11,6 +14,10 @@ import * as DanhMucService         from "../Service/DanhMucService.js";
 import * as DmService              from "../Service/DmService.js";
 import * as ChiTietSanPhamService  from "../Service/ChiTietSanPhamService.js";
 import * as ChiTietDonHangService  from "../Service/ChiTietDonHangService.js";
+import DonutChart from "../components/common/DonutChart.vue";
+import BarChart   from "../components/common/BarChart.vue";
+import GaugeChart from "../components/common/GaugeChart.vue";
+import TrendChart from "../components/common/TrendChart.vue";
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentRole = ref("admin");
@@ -23,36 +30,36 @@ const switchRole = (role) => {
   currentPage.value = role === "admin" ? "dashboard" : "user-home";
 };
 const PAGE_META = {
-  dashboard: { title: "Dashboard", sub: "Tong quan he thong" },
-  products: { title: "San pham", sub: "Quan ly danh sach san pham" },
-  orders: { title: "Don hang", sub: "Quan ly don hang" },
-  customers: { title: "Khach hang", sub: "Quan ly khach hang" },
-  inventory: { title: "Kho hang", sub: "Quan ly ton kho" },
-  promotions: { title: "Khuyen mai", sub: "Quan ly chuong trinh khuyen mai" },
-  staff: { title: "Nhan vien", sub: "Quan ly nhan vien" },
-  "ban-hang": { title: "Ban hang", sub: "Ban hang tai quay (POS)" },
-  reports: { title: "Bao cao", sub: "Bao cao & thong ke" },
-  settings: { title: "Cai dat", sub: "Cai dat he thong" },
-  "user-home": { title: "Trang chu", sub: "Chao mung ban quay lai" },
-  "user-orders": { title: "Don hang cua toi", sub: "Theo doi don hang" },
-  "user-browse": { title: "Mua sam", sub: "Kham pha san pham" },
-  "user-warranty": { title: "Bao hanh", sub: "Quan ly bao hanh" },
-  "user-profile": { title: "Ho so", sub: "Thong tin tai khoan" },
+  dashboard: { titleKey: "admin.pageMeta.dashboard.title", subKey: "admin.pageMeta.dashboard.sub" },
+  products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub" },
+  orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub" },
+  customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub" },
+  inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub" },
+  promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub" },
+  staff: { titleKey: "admin.pageMeta.staff.title", subKey: "admin.pageMeta.staff.sub" },
+  "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub" },
+  reports: { titleKey: "admin.pageMeta.reports.title", subKey: "admin.pageMeta.reports.sub" },
+  settings: { titleKey: "admin.pageMeta.settings.title", subKey: "admin.pageMeta.settings.sub" },
+  "user-home": { titleKey: "admin.pageMeta.userHome.title", subKey: "admin.pageMeta.userHome.sub" },
+  "user-orders": { titleKey: "admin.pageMeta.userOrders.title", subKey: "admin.pageMeta.userOrders.sub" },
+  "user-browse": { titleKey: "admin.pageMeta.userBrowse.title", subKey: "admin.pageMeta.userBrowse.sub" },
+  "user-warranty": { titleKey: "admin.pageMeta.userWarranty.title", subKey: "admin.pageMeta.userWarranty.sub" },
+  "user-profile": { titleKey: "admin.pageMeta.userProfile.title", subKey: "admin.pageMeta.userProfile.sub" },
 };
 const topbarTitle = computed(
-  () => PAGE_META[currentPage.value]?.title ?? "Dashboard",
+  () => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.dashboard.title"),
 );
-const topbarSub = computed(() => PAGE_META[currentPage.value]?.sub ?? "");
+const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
 
 // ── User ─────────────────────────────────────────────────────────────────────
 const userDisplayName = computed(() => AuthStore.user?.hoTen ?? AuthStore.user?.username ?? "Admin");
 const userAvatar = computed(() => userDisplayName.value.charAt(0).toUpperCase());
 const userDisplayRole = computed(() => {
   const role = AuthStore.user?.role;
-  if (role === "admin")     return "Quản trị viên";
-  if (role === "nhan_vien") return "Nhân viên";
-  if (role === "quan_kho")  return "Quản lý kho";
-  return "Người dùng";
+  if (role === "admin")     return t("admin.userRole.admin");
+  if (role === "nhan_vien") return t("admin.userRole.nhanVien");
+  if (role === "quan_kho")  return t("admin.userRole.quanKho");
+  return t("admin.userRole.guest");
 });
 
 const logout = () => {
@@ -78,12 +85,7 @@ const gpuList = ref([]);
 const loading = ref(false);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const statusLabel = (s) =>
-  ({
-    active: "Hoat dong",
-    inactive: "Ngung ban",
-    ngung_kin_doanh: "Ngung kinh doanh",
-  })[s] ?? s;
+const statusLabel = (s) => t(`admin.statusLabel.${s}`);
 
 const formatPrice = (v) =>
   v == null
@@ -110,8 +112,48 @@ const customerName = (id) =>
 const chucVuName = (id) =>
   chucVuList.value.find((c) => c.id === id)?.tenChucVu ?? "—";
 
+// ── Bo loc man hinh Don hang ──────────────────────────────────────────────────
+const orderSearch = ref("");
+const orderStatusFilter = ref("");
+const orderPaymentFilter = ref("");
+const filteredOrders = computed(() => {
+  const q = orderSearch.value.trim().toLowerCase();
+  return orders.value.filter((o) => {
+    if (orderStatusFilter.value && o.trangThaiDonHang !== orderStatusFilter.value) return false;
+    if (orderPaymentFilter.value && o.trangThaiThanhToan !== orderPaymentFilter.value) return false;
+    if (!q) return true;
+    const name = customerName(o.khachHangId).toLowerCase();
+    return String(o.donHangId).includes(q) || name.includes(q) || (o.nguoiNhan ?? '').toLowerCase().includes(q) || (o.sdtNguoiNhan ?? '').includes(q);
+  });
+});
+
+// ── Bo loc man hinh Khach hang ────────────────────────────────────────────────
+const customerSearch = ref("");
+const filteredCustomers = computed(() => {
+  const q = customerSearch.value.trim().toLowerCase();
+  if (!q) return customers.value;
+  return customers.value.filter((c) =>
+    (c.hoTen ?? '').toLowerCase().includes(q) ||
+    (c.soDienThoai ?? '').includes(q) ||
+    (c.email ?? '').toLowerCase().includes(q)
+  );
+});
+
+// ── Bo loc man hinh San pham ──────────────────────────────────────────────────
+const productSearch = ref("");
+const filteredGroupedProducts = computed(() => {
+  const q = productSearch.value.trim().toLowerCase();
+  if (!q) return groupedProducts.value;
+  return groupedProducts.value.filter((p) =>
+    (p.tenSanPham ?? '').toLowerCase().includes(q) ||
+    (p.tenThuongHieu ?? '').toLowerCase().includes(q)
+  );
+});
+
 // ── Dashboard stats ───────────────────────────────────────────────────────────
-const totalProducts = computed(() => products.value.length);
+// Dem so san pham PHAN BIET (theo sanPhamId), khong phai so dong bien the tho —
+// products.value co 1 dong/bien the nen dem thang se ra con so sai (vd 42 thay vi 12 san pham that)
+const totalProducts = computed(() => groupedProducts.value.length);
 const totalOrders = computed(() => orders.value.length);
 const totalCustomers = computed(() => customers.value.length);
 const totalRevenue = computed(() =>
@@ -126,6 +168,139 @@ const ordersByStatus = computed(() => {
   });
   return Object.entries(map).map(([k, v]) => ({ status: k, count: v }));
 });
+
+// ── Dữ liệu cho biểu đồ Dashboard ──────────────────────────────────────────────
+// Đơn hàng theo ngày được chọn — donut "Đơn hàng theo trạng thái" chỉ tính đơn của 1 ngày,
+// mặc định là hôm nay nhưng admin có thể chọn lại ngày khác (kể cả hôm trước) để xem.
+const toDateInputValue = (d) => {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+const statusChartDate = ref(toDateInputValue(new Date()));
+const isStatusChartToday = computed(() => statusChartDate.value === toDateInputValue(new Date()));
+const ordersOnStatusChartDate = computed(() => {
+  return orders.value.filter((o) => {
+    if (!o.ngayDat) return false;
+    return toDateInputValue(new Date(o.ngayDat)) === statusChartDate.value;
+  });
+});
+const ordersByStatusOnDate = computed(() => {
+  const map = {};
+  ordersOnStatusChartDate.value.forEach((o) => {
+    map[o.trangThaiDonHang] = (map[o.trangThaiDonHang] || 0) + 1;
+  });
+  return Object.entries(map).map(([k, v]) => ({ status: k, count: v }));
+});
+// Đơn hàng theo trạng thái (donut) — dùng lại đúng bảng màu trạng thái đã chốt
+const orderStatusChartData = computed(() =>
+  ordersByStatusOnDate.value.map((row) => ({
+    label: orderStatusLabel(row.status),
+    value: row.count,
+    color: orderStatusColor(row.status).text,
+  }))
+);
+
+// Sản phẩm theo danh mục (bar) — top 6 danh mục nhiều sản phẩm nhất
+const CHART_PALETTE = ['#facc15', '#60a5fa', '#a78bfa', '#34d399', '#fb923c', '#f472b6', '#38bdf8', '#f87171'];
+const productsByCategoryChart = computed(() => {
+  const map = {};
+  products.value.forEach((p) => {
+    const name = p.tenDanhMuc || t('admin.dashboard.uncategorized');
+    map[name] = (map[name] || 0) + 1;
+  });
+  return Object.entries(map)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, value], i) => ({ label, value, color: CHART_PALETTE[i % CHART_PALETTE.length] }));
+});
+
+// Số lượng đã bán theo tên sản phẩm — tổng hợp từ chi tiết của toàn bộ đơn hàng,
+// để trả lời "sản phẩm nào bán chạy / bán chậm" cho Dashboard.
+const productSalesQty = ref({}); // { tenSanPham: soLuongDaBan }
+const fetchProductSales = async () => {
+  // Gọi 1 lần duy nhất lấy toàn bộ chi tiết đơn hàng, thay vì gọi riêng cho từng đơn
+  // (với hàng nghìn đơn, gọi riêng lẻ từng cái sẽ làm treo trình duyệt/backend).
+  const details = await ChiTietDonHangService.getAll().catch(() => []);
+  const map = {};
+  details.forEach((item) => {
+    const p = products.value.find((pp) => pp.bienTheId === item.bienTheId);
+    const name = p?.tenSanPham || item.maSku || t('admin.dashboard.uncategorized');
+    map[name] = (map[name] || 0) + (item.soLuong || 0);
+  });
+  productSalesQty.value = map;
+};
+
+// Ghép với TOÀN BỘ tên sản phẩm (kể cả sản phẩm chưa từng bán = 0) để biểu đồ
+// "bán chậm" phản ánh đúng các sản phẩm tồn đọng, không chỉ sản phẩm đã có đơn.
+const productSalesFull = computed(() => {
+  const uniqueNames = [...new Set(products.value.map((p) => p.tenSanPham).filter(Boolean))];
+  return uniqueNames.map((name) => ({
+    name,
+    qty: productSalesQty.value[name] || 0,
+    image: products.value.find((p) => p.tenSanPham === name)?.hinhAnhChinh || '',
+  }));
+});
+
+const topSellingChart = computed(() =>
+  [...productSalesFull.value]
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 5)
+    .map((r) => ({ label: r.name, value: r.qty, image: r.image, displayValue: t('admin.dashboard.unitsSold', { count: r.qty }), color: '#22c55e' }))
+);
+
+const slowSellingChart = computed(() =>
+  [...productSalesFull.value]
+    .sort((a, b) => a.qty - b.qty)
+    .slice(0, 5)
+    .map((r) => ({ label: r.name, value: r.qty, image: r.image, displayValue: t('admin.dashboard.unitsSold', { count: r.qty }), color: '#f87171' }))
+);
+
+// ── Gauge KPI: 3 chỉ số sức khỏe vận hành dạng % ──────────────────────────────
+const orderCompletionRate = computed(() => {
+  if (!orders.value.length) return 0;
+  return (orders.value.filter((o) => o.trangThaiDonHang === 'delivered').length / orders.value.length) * 100;
+});
+const paymentRate = computed(() => {
+  if (!orders.value.length) return 0;
+  return (orders.value.filter((o) => o.trangThaiThanhToan === 'paid').length / orders.value.length) * 100;
+});
+const stockHealthRate = computed(() => {
+  if (!inventory.value.length) return 0;
+  const unhealthyIds = new Set([
+    ...lowStockItems.value.map(t => t.tonKhoId),
+    ...outOfStockItems.value.map(t => t.tonKhoId),
+  ]);
+  return Math.max(0, ((inventory.value.length - unhealthyIds.size) / inventory.value.length) * 100);
+});
+const gaugeColor = (pct) => (pct >= 70 ? '#22c55e' : pct >= 40 ? '#facc15' : '#f87171');
+
+// ── Doanh thu theo tháng (trend) ───────────────────────────────────────────────
+const revenueTrendChart = computed(() => {
+  const map = {};
+  orders.value.forEach((o) => {
+    if (!o.ngayDat) return;
+    const d = new Date(o.ngayDat);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    map[key] = (map[key] || 0) + (Number(o.thanhTien) || 0);
+  });
+  return Object.entries(map)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => {
+      const [y, m] = key.split('-');
+      return { label: `${m}/${y}`, value };
+    });
+});
+
+// So sánh doanh thu tháng gần nhất với tháng trước đó (mũi tên xu hướng trên the KPI)
+const revenueTrendDelta = computed(() => {
+  const pts = revenueTrendChart.value;
+  if (pts.length < 2) return null;
+  const prev = pts[pts.length - 2].value;
+  const curr = pts[pts.length - 1].value;
+  if (prev === 0) return null;
+  return Math.round(((curr - prev) / prev) * 100);
+});
+
 const activeProducts = computed(
   () => products.value.filter((p) => p.trangThai === "active").length,
 );
@@ -237,11 +412,12 @@ const groupedProducts = computed(() => {
   const map = new Map();
   products.value.forEach(p => {
     if (!map.has(p.sanPhamId)) {
-      map.set(p.sanPhamId, { ...p, variantCount: 1, minPrice: Number(p.giaBan) });
+      map.set(p.sanPhamId, { ...p, variantCount: 1, minPrice: Number(p.giaBan), maxPrice: Number(p.giaBan) });
     } else {
       const ex = map.get(p.sanPhamId);
       ex.variantCount++;
       if (Number(p.giaBan) < ex.minPrice) ex.minPrice = Number(p.giaBan);
+      if (Number(p.giaBan) > ex.maxPrice) ex.maxPrice = Number(p.giaBan);
     }
   });
   return [...map.values()];
@@ -305,7 +481,7 @@ const addSerial = async (bienTheId) => {
       trangThai: 'trong_kho',
       ngayNhapKho: new Date().toISOString().slice(0, 19),
     });
-    if (!res.ok) throw new Error('Lỗi thêm serial');
+    if (!res.ok) throw new Error(t('admin.errors.addSerialError'));
     // Chỉ refresh serial của biến thể vừa thêm
     const updated = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
     variantSerialMap.value = { ...variantSerialMap.value, [bienTheId]: updated };
@@ -362,9 +538,37 @@ const resetImageState = () => {
 const openAdd = () => {
   Object.assign(form, emptyForm());
   editingId.value = null;
+  addVariantMode.value = false;
+  addVariantSanPhamId.value = null;
   formError.value = "";
   soSerialMoi.value = '';
   resetImageState();
+  showProductModal.value = true;
+};
+
+// Thêm biến thể mới (màu/cấu hình khác) cho một sản phẩm ĐÃ TỒN TẠI —
+// dùng lại modal Sản phẩm nhưng ẩn phần thông tin định danh sản phẩm (tên/hãng/danh mục...)
+// vì những field đó dùng chung cho mọi biến thể, không tạo lại. POST thẳng tới
+// /api/bien-the-san-pham (bienTheSanPhamId mới) thay vì /api/san-pham (tránh tạo sanPhamId trùng lặp).
+const addVariantMode      = ref(false);
+const addVariantSanPhamId = ref(null);
+const addVariantSanPhamName = ref('');
+
+const openAddVariant = () => {
+  Object.assign(form, emptyForm());
+  const first = detailModalList.value[0];
+  form.tenSanPham  = detailModalName.value;
+  form.thuongHieuId = first?.thuongHieuId ?? null;
+  form.danhMucId    = first?.danhMucId ?? null;
+  form.loaiSanPham  = first?.loaiSanPham ?? '';
+  editingId.value = null;
+  addVariantMode.value = true;
+  addVariantSanPhamId.value = first?.sanPhamId ?? null;
+  addVariantSanPhamName.value = detailModalName.value;
+  formError.value = "";
+  soSerialMoi.value = '';
+  resetImageState();
+  showDetailModal.value = false;
   showProductModal.value = true;
 };
 const openEdit = (p) => {
@@ -396,6 +600,8 @@ const openEdit = (p) => {
     phanLoaiTen: p.phanLoaiTen ?? "",
   });
   editingId.value = p.sanPhamId;
+  addVariantMode.value = false;
+  addVariantSanPhamId.value = null;
   formError.value = "";
   imagePreview.value = p.hinhAnhChinh || '';
   imageFilePending.value = null;
@@ -422,13 +628,58 @@ const saveProduct = async () => {
         const upData = await upRes.json();
         form.hinhAnhChinh = upData.url;
       } else {
-        formError.value = `Upload anh that bai: ${upRes.status}`;
+        formError.value = t('admin.errors.uploadFailed', { status: upRes.status });
         return;
       }
     } catch (e) {
-      formError.value = `Upload anh loi: ${e.message}`;
+      formError.value = t('admin.errors.uploadError', { message: e.message });
       return;
     }
+  }
+
+  if (addVariantMode.value) {
+    if (!form.maSku.trim()) { formError.value = t('admin.errors.skuRequired'); return; }
+    const variantBody = {
+      sanPhamId: addVariantSanPhamId.value,
+      maSku: form.maSku,
+      giaNhap: Number(form.giaNhap),
+      giaBan: Number(form.giaBan),
+      baoHanhThang: Number(form.baoHanhThang) || 0,
+      hinhAnhBienThe: form.hinhAnhChinh,
+      trangThai: form.trangThai,
+      mauSac: form.mauSac,
+      cpuId: form.cpuId ? Number(form.cpuId) : null,
+      ramId: form.ramId ? Number(form.ramId) : null,
+      oCungId: form.oCungId ? Number(form.oCungId) : null,
+      gpuId: form.gpuId ? Number(form.gpuId) : null,
+      kichThuocManHinh: form.kichThuocManHinh,
+      heDieuHanh: form.heDieuHanh,
+      pin: form.pin,
+      trongLuongKg: form.trongLuongKg ? Number(form.trongLuongKg) : null,
+    };
+    try {
+      const res = await BienTheSanPhamService.create(variantBody);
+      if (!res.ok) {
+        formError.value = t('admin.errors.saveFailed', { status: res.status, text: await res.text() });
+        return;
+      }
+      const created = await res.json();
+      if (soSerialMoi.value.trim()) {
+        await ChiTietSanPhamService.create({
+          bienTheId: created.bienTheId,
+          soSerial: soSerialMoi.value.trim(),
+          trangThai: 'trong_kho',
+          ngayNhapKho: new Date().toISOString().slice(0, 19),
+        }).catch(() => {});
+      }
+      showProductModal.value = false;
+      resetImageState();
+      products.value = await SanPhamService.getAll().catch(() => []);
+      await openDetail(addVariantSanPhamId.value, addVariantSanPhamName.value);
+    } catch (e) {
+      formError.value = e.message;
+    }
+    return;
   }
 
   const body = {
@@ -449,7 +700,7 @@ const saveProduct = async () => {
   try {
     const res = await SanPhamService.save(editingId.value, body);
     if (!res.ok) {
-      formError.value = `Loi: ${res.status} ${await res.text()}`;
+      formError.value = t('admin.errors.saveFailed', { status: res.status, text: await res.text() });
       return;
     }
 
@@ -475,9 +726,9 @@ const saveProduct = async () => {
   }
 };
 const deleteProduct = async (id) => {
-  if (!confirm("Ban co chac muon xoa san pham nay?")) return;
+  if (!confirm(t('admin.confirm.deleteProduct'))) return;
   const res = await SanPhamService.remove(id);
-  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
   products.value = await SanPhamService.getAll().catch(() => []);
 };
 
@@ -518,7 +769,12 @@ const openEditCustomer = (c) => {
   });
   editingCustomerId.value = c.khachHangId;
   customerFormError.value = "";
+  posOpeningCustomerFromPos.value = false;
   showCustomerModal.value = true;
+};
+const closeCustomerModal = () => {
+  showCustomerModal.value = false;
+  posOpeningCustomerFromPos.value = false;
 };
 const saveCustomer = async () => {
   customerFormError.value = "";
@@ -529,19 +785,31 @@ const saveCustomer = async () => {
   try {
     const res = await KhachHangService.save(editingCustomerId.value, body);
     if (!res.ok) {
-      customerFormError.value = `Loi ${res.status}: ${await res.text()}`;
+      customerFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
       return;
     }
     showCustomerModal.value = false;
     customers.value = await KhachHangService.getAll().catch(() => []);
+    // Neu modal nay duoc mo tu luong tao hoa don POS (khach chua co trong he thong) —
+    // tu dong gan khach vua tao lam khach hang cho hoa don dang tao, roi cho phep them SP.
+    if (posOpeningCustomerFromPos.value) {
+      posOpeningCustomerFromPos.value = false;
+      const newCust = customers.value.find((c) => c.soDienThoai === body.soDienThoai);
+      if (newCust) {
+        posFoundCust.value = newCust;
+        posPhoneNotFound.value = false;
+        posError.value = '';
+        posStage.value = 'selling';
+      }
+    }
   } catch (e) {
     customerFormError.value = e.message;
   }
 };
 const deleteCustomer = async (id) => {
-  if (!confirm("Xoa khach hang nay?")) return;
+  if (!confirm(t('admin.confirm.deleteCustomer'))) return;
   const res = await KhachHangService.remove(id);
-  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
   customers.value = await KhachHangService.getAll().catch(() => []);
 };
 
@@ -592,7 +860,7 @@ const saveStaff = async () => {
   try {
     const res = await NhanVienService.save(editingStaffId.value, body);
     if (!res.ok) {
-      staffFormError.value = `Loi ${res.status}: ${await res.text()}`;
+      staffFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
       return;
     }
     showStaffModal.value = false;
@@ -602,9 +870,9 @@ const saveStaff = async () => {
   }
 };
 const deleteStaff = async (id) => {
-  if (!confirm("Xoa nhan vien nay?")) return;
+  if (!confirm(t('admin.confirm.deleteStaff'))) return;
   const res = await NhanVienService.remove(id);
-  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
   staff.value = await NhanVienService.getAll().catch(() => []);
 };
 
@@ -668,7 +936,7 @@ const savePromo = async () => {
   try {
     const res = await KhuyenMaiService.save(editingPromoId.value, body);
     if (!res.ok) {
-      promoFormError.value = `Loi ${res.status}: ${await res.text()}`;
+      promoFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
       return;
     }
     showPromoModal.value = false;
@@ -678,17 +946,17 @@ const savePromo = async () => {
   }
 };
 const deletePromo = async (id) => {
-  if (!confirm("Xoa khuyen mai nay?")) return;
+  if (!confirm(t('admin.confirm.deletePromo'))) return;
   const res = await KhuyenMaiService.remove(id);
-  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
   promotions.value = await KhuyenMaiService.getAll().catch(() => []);
 };
 
 // ── Orders CRUD ───────────────────────────────────────────────────────────────
 const deleteOrder = async (id) => {
-  if (!confirm('Ban co chac muon xoa don hang nay? Hanh dong nay khong the hoan tac.')) return;
+  if (!confirm(t('admin.confirm.deleteOrder'))) return;
   const res = await DonHangService.remove(id);
-  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
   orders.value = await DonHangService.getAll().catch(() => []);
 };
 
@@ -786,7 +1054,7 @@ const confirmAddFromDetail = async () => {
       donGia:      v.giaBan,
       giamGiaDong: 0,
     });
-    if (!res.ok) { alert(`Them that bai: ${res.status}`); return; }
+    if (!res.ok) { alert(t('admin.errors.addItemFailed', { status: res.status })); return; }
     await DonHangService.recalculate(orderDetailData.value.donHangId);
     await refreshOrderDetail();
     addItemQty.value = 1;
@@ -837,7 +1105,7 @@ const addItemToOrder = async () => {
       donGia:       v.giaBan,
       giamGiaDong:  0,
     });
-    if (!res.ok) { alert(`Them that bai: ${res.status}`); return; }
+    if (!res.ok) { alert(t('admin.errors.addItemFailed', { status: res.status })); return; }
     await DonHangService.recalculate(orderDetailData.value.donHangId);
     await refreshOrderDetail();
     addItemBienTheId.value = '';
@@ -849,9 +1117,9 @@ const addItemToOrder = async () => {
 };
 
 const removeItemFromOrder = async (chiTietId) => {
-  if (!confirm('Xoa san pham nay khoi don hang?')) return;
+  if (!confirm(t('admin.confirm.removeItemFromOrder'))) return;
   const res = await fetch(`/api/chi-tiet-don-hang/delete/${chiTietId}`, { method: 'DELETE' });
-  if (!res.ok) { alert(`Xoa that bai: ${res.status}`); return; }
+  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
   await DonHangService.recalculate(orderDetailData.value.donHangId);
   await refreshOrderDetail();
 };
@@ -873,14 +1141,14 @@ const mergeCandidates = computed(() => {
 // Gop tat ca don cung ngay cung khach vao don hien tai (khong can chon thu cong)
 const autoMergeOrders = async () => {
   if (mergeCandidates.value.length === 0) return;
-  if (!confirm(`Gop ${mergeCandidates.value.length} don hang cung ngay vao don #${orderDetailData.value.donHangId}?`)) return;
+  if (!confirm(t('admin.confirm.mergeOrders', { count: mergeCandidates.value.length, id: orderDetailData.value.donHangId }))) return;
   mergeLoading.value = true;
   try {
     const res = await DonHangService.merge(
       orderDetailData.value.donHangId,
       mergeCandidates.value.map(o => o.donHangId)
     );
-    if (!res.ok) { alert(`Gop that bai: ${res.status}`); return; }
+    if (!res.ok) { alert(t('admin.errors.mergeFailed', { status: res.status })); return; }
     await refreshOrderDetail();
   } finally {
     mergeLoading.value = false;
@@ -900,29 +1168,7 @@ const openVariantDetail = (bienTheId) => {
     .then(serials => { detailSerialMap.value = { [bienTheId]: serials }; });
 };
 
-// ── Order status helpers ──────────────────────────────────────────────────────
-const orderStatusLabel = (s) => {
-  const m = {
-    pending:    'Cho xac nhan',
-    confirmed:  'Da xac nhan',
-    processing: 'Dang xu ly',
-    shipping:   'Dang van chuyen',
-    delivered:  'Da giao',
-    cancelled:  'Da huy',
-    returned:   'Da tra hang',
-  };
-  return m[s] || s;
-};
-const orderStatusColor = (s) => {
-  if (s === 'pending')    return { bg: 'rgba(148,163,184,0.15)', text: '#94a3b8' };
-  if (s === 'confirmed')  return { bg: 'rgba(59,130,246,0.15)',  text: '#60a5fa' };
-  if (s === 'processing') return { bg: 'rgba(250,204,21,0.15)',  text: '#facc15' };
-  if (s === 'shipping')   return { bg: 'rgba(139,92,246,0.15)',  text: '#a78bfa' };
-  if (s === 'delivered')  return { bg: 'rgba(34,197,94,0.15)',   text: '#22c55e' };
-  if (s === 'cancelled')  return { bg: 'rgba(239,68,68,0.15)',   text: '#f87171' };
-  if (s === 'returned')   return { bg: 'rgba(251,146,60,0.15)',  text: '#fb923c' };
-  return { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af' };
-};
+// ── Order status helpers (dùng chung — xem src/utils/orderStatus.js) ──────────
 
 // ── Orders status update ──────────────────────────────────────────────────────
 const showOrderModal = ref(false);
@@ -969,7 +1215,7 @@ const saveOrderStatus = async () => {
   try {
     const res = await DonHangService.update(o.donHangId, body);
     if (!res.ok) {
-      orderStatusError.value = `Loi ${res.status}: ${await res.text()}`;
+      orderStatusError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
       return;
     }
     showOrderModal.value = false;
@@ -1000,7 +1246,7 @@ const saveStock = async () => {
   };
   try {
     const res = await TonKhoService.update(item.tonKhoId, body);
-    if (!res.ok) { alert(`Loi: ${res.status}`); return; }
+    if (!res.ok) { alert(t('admin.errors.updateFailed', { status: res.status })); return; }
     showStockModal.value = false;
     inventory.value = await TonKhoService.getAll().catch(() => []);
   } catch (e) {
@@ -1041,7 +1287,7 @@ const addStockSerial = async () => {
       trangThai: 'trong_kho',
       ngayNhapKho: new Date().toISOString().slice(0, 19),
     });
-    if (!res.ok) throw new Error('Loi them serial');
+    if (!res.ok) throw new Error(t('admin.errors.addSerialError'));
     stockDetailSerials.value = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
     inventory.value = await TonKhoService.getAll().catch(() => []);
     stockDetailNewSerial.value = '';
@@ -1049,16 +1295,7 @@ const addStockSerial = async () => {
   finally { stockDetailSaving.value = false; }
 };
 
-const stockDetailStatusLabel = (s) => {
-  const m = {
-    trong_kho:    'Trong kho',
-    giu_hang:     'Dang dat hang',
-    da_ban:       'Da ban',
-    loi_bao_hanh: 'Bao hanh',
-    da_tra_hang:  'Da tra hang',
-  };
-  return m[s] || s;
-};
+const stockDetailStatusLabel = (s) => t(`admin.statusLabel.${s}`);
 const stockDetailStatusColor = (s) => {
   if (s === 'trong_kho')    return '#22c55e';
   if (s === 'giu_hang')     return '#facc15';
@@ -1069,13 +1306,21 @@ const stockDetailStatusColor = (s) => {
 };
 
 // ── POS / Ban hang ───────────────────────────────────────────────────────────
+// Luong bat buoc: phai xac dinh khach hang (co san hoac tao moi) TRUOC khi duoc
+// them san pham vao gio — tranh tao hoa don "vo danh" roi moi lo tim/tao khach sau.
+// posStage: 'start' (chua bat dau) -> 'phone' (dang nhap SDT tim/tao khach) -> 'selling' (da co khach, duoc them SP)
+const posStage = ref('start');
+const posPhoneNotFound = ref(false); // da tim nhung khong thay khach ung voi SDT vua nhap
+const posOpeningCustomerFromPos = ref(false); // dang mo modal "Them khach hang" tu luong POS (de biet gan lai posFoundCust sau khi luu)
 const posSearch = ref("");
 const posCart = ref([]);
 const posPhone = ref("");
 const posFoundCust = ref(null);
-const posNewName = ref("");
 const posError = ref("");
 const posSuccess = ref(false);
+const posPromoCode = ref("");
+const posAppliedPromo = ref(null);
+const posPromoMsg = ref("");
 
 const posProducts = computed(() => {
   const q = posSearch.value.toLowerCase();
@@ -1091,78 +1336,255 @@ const posCartTotal = computed(() =>
   posCart.value.reduce((s, i) => s + i.giaBan * i.soLuong, 0),
 );
 const posFee = computed(() => (posCartTotal.value >= 300000 ? 0 : 30000));
-const posGrandTotal = computed(() => posCartTotal.value + posFee.value);
+const posGiamGia = computed(() => {
+  const p = posAppliedPromo.value;
+  if (!p) return 0;
+  if (p.loai === 'percent') {
+    let d = posCartTotal.value * Number(p.giaTri) / 100;
+    if (p.giaTriToiDa) d = Math.min(d, Number(p.giaTriToiDa));
+    return d;
+  }
+  return Number(p.giaTri) || 0;
+});
+const posGrandTotal = computed(() => Math.max(0, posCartTotal.value + posFee.value - posGiamGia.value));
 
-const posAddToCart = (p) => {
-  const ex = posCart.value.find((i) => i.bienTheId === p.bienTheId);
-  if (ex) {
-    ex.soLuong++;
-  } else
-    posCart.value.push({
-      bienTheId: p.bienTheId,
-      tenSanPham: p.tenSanPham,
-      maSku: p.maSku,
-      giaBan: p.giaBan,
-      soLuong: 1,
-    });
+const posApplyPromo = () => {
+  const code = posPromoCode.value.trim().toUpperCase();
+  if (!code) { posAppliedPromo.value = null; posPromoMsg.value = ''; return; }
+  const p = promotions.value.find(
+    (x) => x.maKhuyenMai?.toUpperCase() === code && x.trangThai === 'active'
+  );
+  if (p) {
+    posAppliedPromo.value = p;
+    posPromoMsg.value = t('checkout.promoSuccess', { name: p.tenKhuyenMai });
+  } else {
+    posAppliedPromo.value = null;
+    posPromoMsg.value = t('checkout.promoInvalid');
+  }
 };
-const posRemove = (bienTheId) => {
-  posCart.value = posCart.value.filter((i) => i.bienTheId !== bienTheId);
+
+// ── Hoa don cho (giu don POS) ─────────────────────────────────────────────────
+// Luu tam gio hang dang ban do khach chua thanh toan xong / nhan vien can phuc vu
+// khach khac — luu o localStorage (tinh nang tien loi cho nhan vien tai quay,
+// khong can bang rieng trong DB vi don chua thuc su ton tai cho toi khi thanh toan).
+const HELD_ORDERS_KEY = 'saophone_pos_held_orders';
+const heldOrders = ref([]);
+const loadHeldOrders = () => {
+  try { heldOrders.value = JSON.parse(localStorage.getItem(HELD_ORDERS_KEY)) ?? []; }
+  catch { heldOrders.value = []; }
 };
-const posReset = () => {
+const saveHeldOrders = () => {
+  localStorage.setItem(HELD_ORDERS_KEY, JSON.stringify(heldOrders.value));
+};
+loadHeldOrders();
+
+const showHeldOrders = ref(false);
+
+const posHoldOrder = () => {
+  if (!posCart.value.length) return;
+  heldOrders.value.unshift({
+    id: Date.now(),
+    heldAt: new Date().toISOString(),
+    cart: posCart.value,
+    phone: posPhone.value,
+    foundCust: posFoundCust.value,
+    promoCode: posPromoCode.value,
+    appliedPromo: posAppliedPromo.value,
+  });
+  saveHeldOrders();
+  // Chi don sach form tai cho — KHONG goi posReset() vi no se tra serial ve trong_kho.
+  // Cac serial trong gio nay van phai o trang thai "giu_hang" cho toi khi tiep tuc
+  // ban (Tiep tuc) hoac huy han (Xoa o danh sach don dang giu).
   posCart.value = [];
   posPhone.value = "";
   posFoundCust.value = null;
-  posNewName.value = "";
   posError.value = "";
   posSuccess.value = false;
+  posPromoCode.value = "";
+  posAppliedPromo.value = null;
+  posPromoMsg.value = "";
+  posStage.value = 'start';
+  posPhoneNotFound.value = false;
+};
+
+const posResumeHeld = (id) => {
+  const held = heldOrders.value.find((h) => h.id === id);
+  if (!held) return;
+  posCart.value = held.cart;
+  posPhone.value = held.phone;
+  posFoundCust.value = held.foundCust;
+  posPromoCode.value = held.promoCode;
+  posAppliedPromo.value = held.appliedPromo;
+  heldOrders.value = heldOrders.value.filter((h) => h.id !== id);
+  saveHeldOrders();
+  showHeldOrders.value = false;
+  // Khach hang cua don nay da duoc xac dinh tu truoc (luc giu don) — vao thang man hinh ban
+  posStage.value = 'selling';
+};
+
+const posDeleteHeld = async (id) => {
+  const held = heldOrders.value.find((h) => h.id === id);
+  heldOrders.value = heldOrders.value.filter((h) => h.id !== id);
+  saveHeldOrders();
+  // Huy han don giu -> tra lai tat ca serial trong don do ve trong_kho de ban duoc tiep
+  if (held) await Promise.all(held.cart.map((item) => setSerialTrangThai(item, 'trong_kho')));
+};
+
+// Ban tai quay bat buoc chon serial cu the truoc khi cho vao gio — moi dong trong
+// gio la 1 don vi vat ly rieng (chiTietId rieng), khong dung soLuong gop nhieu may
+// lai vi moi may co IMEI khac nhau. Serial da o trong gio se khong hien lai de chon.
+const showSerialPicker = ref(false);
+const serialPickerProduct = ref(null);
+const serialPickerList = ref([]);
+const serialPickerLoading = ref(false);
+
+const posOpenSerialPicker = async (p) => {
+  // Chan them vao gio neu chua xac dinh khach hang — nhan vien duyet san pham
+  // thoai mai, nhung phai qua cong "Tao hoa don" (o khu vuc gio hang) truoc.
+  if (posStage.value !== 'selling') {
+    if (posStage.value === 'start') posStartInvoice();
+    posError.value = t('admin.pos.needCustomerFirst');
+    return;
+  }
+  serialPickerProduct.value = p;
+  serialPickerList.value = [];
+  showSerialPicker.value = true;
+  serialPickerLoading.value = true;
+  const all = await ChiTietSanPhamService.getByBienThe(p.bienTheId).catch(() => []);
+  // "trong_kho" la nguon duy nhat cho serial con ban duoc — 1 serial da bi danh dau
+  // "giu_hang" (do dang nam trong gio cua BAT KY phien POS nao, ke ca giu don) se
+  // tu dong bi loai o day, khong can biet gio do thuoc phien nao.
+  serialPickerList.value = all.filter((s) => s.trangThai === 'trong_kho');
+  serialPickerLoading.value = false;
+};
+
+// Doi trang thai 1 serial — dung khi chon vao gio (giu_hang) hoac tra lai kho (trong_kho).
+// Phai truyen du bienTheId/soSerial/ngayNhapKho vi backend dung BeanUtils copy toan bo
+// request len entity, thieu ngayNhapKho se lam mat ngay nhap kho goc.
+const setSerialTrangThai = async (item, trangThai) => {
+  await ChiTietSanPhamService.update(item.chiTietId, {
+    bienTheId: item.bienTheId,
+    soSerial: item.soSerial,
+    trangThai,
+    ngayNhapKho: item.ngayNhapKho,
+  }).catch(() => {});
+};
+
+const posSelectSerial = async (serial) => {
+  const p = serialPickerProduct.value;
+  const item = {
+    bienTheId: p.bienTheId,
+    tenSanPham: p.tenSanPham,
+    maSku: p.maSku,
+    giaBan: p.giaBan,
+    hinhAnhChinh: p.hinhAnhChinh,
+    chiTietId: serial.chiTietId,
+    soSerial: serial.soSerial,
+    ngayNhapKho: serial.ngayNhapKho,
+    soLuong: 1,
+  };
+  posCart.value.push(item);
+  showSerialPicker.value = false;
+  // Danh dau giu ngay khi chon — de phien POS khac (hoac don khac) khong the chon trung
+  // serial nay, ke ca khi don nay chua duoc "giu don" chinh thuc.
+  await setSerialTrangThai(item, 'giu_hang');
+};
+
+const posRemove = async (chiTietId) => {
+  const item = posCart.value.find((i) => i.chiTietId === chiTietId);
+  posCart.value = posCart.value.filter((i) => i.chiTietId !== chiTietId);
+  if (item) await setSerialTrangThai(item, 'trong_kho');
+};
+const posReset = async () => {
+  await Promise.all(posCart.value.map((item) => setSerialTrangThai(item, 'trong_kho')));
+  posCart.value = [];
+  posPhone.value = "";
+  posFoundCust.value = null;
+  posError.value = "";
+  posSuccess.value = false;
+  posPromoCode.value = "";
+  posAppliedPromo.value = null;
+  posPromoMsg.value = "";
+  posStage.value = 'start';
+  posPhoneNotFound.value = false;
+};
+
+const posStartInvoice = () => {
+  posStage.value = 'phone';
+  posPhoneNotFound.value = false;
+  posError.value = '';
 };
 
 const posLookup = () => {
-  posFoundCust.value =
-    customers.value.find((c) => c.soDienThoai === posPhone.value.trim()) ??
-    null;
+  const phone = posPhone.value.trim();
+  if (!phone) return;
+  const found = customers.value.find((c) => c.soDienThoai === phone) ?? null;
+  posFoundCust.value = found;
+  if (found) {
+    posPhoneNotFound.value = false;
+    posError.value = '';
+    posStage.value = 'selling';
+  } else {
+    posPhoneNotFound.value = true;
+  }
+};
+
+const posCancelCreateCustomer = () => {
+  posPhoneNotFound.value = false;
+  posPhone.value = '';
+};
+
+// Mo lai chinh modal "Them khach hang" cua muc Quan ly khach hang (khong tao UI moi) —
+// chi khac la sau khi luu thanh cong se tu gan lam khach hang cho hoa don POS dang tao.
+const posConfirmCreateCustomer = () => {
+  posOpeningCustomerFromPos.value = true;
+  openAddCustomer();
+  customerForm.soDienThoai = posPhone.value.trim();
+};
+
+// Chuyen loi validate dang JSON {"field":"message"} tu backend thanh 1 dong text de doc
+const parsePosApiError = async (res) => {
+  const raw = await res.text();
+  try {
+    const obj = JSON.parse(raw);
+    const messages = Object.values(obj).filter((v) => typeof v === 'string');
+    if (messages.length) return messages.join(' · ');
+  } catch { /* khong phai JSON, dung raw text */ }
+  return raw;
 };
 
 const posPlaceOrder = async () => {
-  if (!posCart.value.length) { posError.value = "Gio hang dang trong!"; return; }
-  if (!posPhone.value.trim()) { posError.value = "Vui long nhap SDT khach hang!"; return; }
+  if (!posCart.value.length) { posError.value = t('admin.pos.cartEmpty'); return; }
+  // Khach hang bat buoc phai duoc xac dinh (co san hoac tao moi) TRUOC khi co san pham
+  // trong gio (theo luong posStage) nen o day luon phai co san posFoundCust.
+  if (!posFoundCust.value) { posError.value = t('admin.pos.phoneRequired'); return; }
   posError.value = "";
   posSuccess.value = false;
   try {
-    let khachHangId = posFoundCust.value?.khachHangId;
-    if (!khachHangId) {
-      const name = posNewName.value.trim() || posPhone.value.trim();
-      const kRes = await KhachHangService.save(null, {
-        hoTen: name, soDienThoai: posPhone.value.trim(),
-        email: "", diaChi: "Tai cua hang",
-        loaiKhach: "ca_nhan", diemTichLuy: 0, trangThai: "active",
-      });
-      if (!kRes.ok) throw new Error(`Loi tao khach hang: ${await kRes.text()}`);
-      const kh = await kRes.json();
-      khachHangId = kh.khachHangId;
-      customers.value = await KhachHangService.getAll().catch(() => []);
-    }
-    const nguoiNhan = posFoundCust.value?.hoTen ?? (posNewName.value.trim() || posPhone.value.trim());
+    const khachHangId = posFoundCust.value.khachHangId;
+    const nguoiNhan = posFoundCust.value.hoTen;
     const orderRes = await DonHangService.create({
-      khachHangId, nguoiNhan, sdtNguoiNhan: posPhone.value.trim(),
-      diaChiGiaoHangText: posFoundCust.value?.diaChi ?? "Tai cua hang",
-      tongTien: posCartTotal.value, giamGia: 0,
+      khachHangId, nguoiNhan, sdtNguoiNhan: posFoundCust.value.soDienThoai,
+      diaChiGiaoHangText: posFoundCust.value.diaChi ?? "Tai cua hang",
+      khuyenMaiId: posAppliedPromo.value?.khuyenMaiId ?? null,
+      tongTien: posCartTotal.value, giamGia: posGiamGia.value,
       phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
       ngayDat: new Date().toISOString().slice(0, 19),
       trangThaiDonHang: "confirmed", trangThaiThanhToan: "paid", kenhBan: "in_store",
     });
-    if (!orderRes.ok) throw new Error(`Loi tao don hang: ${await orderRes.text()}`);
+    if (!orderRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(orderRes) }));
     const created = await orderRes.json();
     const donHangId = created.id ?? created.donHangId;
     for (const item of posCart.value) {
       const ctRes = await DonHangService.addChiTiet({
-        donHangId, bienTheId: item.bienTheId, soLuong: item.soLuong, donGia: item.giaBan, giamGiaDong: 0,
+        donHangId, bienTheId: item.bienTheId, chiTietId: item.chiTietId, soLuong: item.soLuong, donGia: item.giaBan, giamGiaDong: 0,
       });
-      if (!ctRes.ok) throw new Error(`Loi them san pham: ${await ctRes.text()}`);
+      if (!ctRes.ok) throw new Error(t('admin.errors.addProductError', { message: await ctRes.text() }));
     }
     posSuccess.value = true;
-    posCart.value = []; posPhone.value = ""; posFoundCust.value = null; posNewName.value = "";
+    posCart.value = []; posPhone.value = ""; posFoundCust.value = null;
+    posPromoCode.value = ""; posAppliedPromo.value = null; posPromoMsg.value = "";
+    posStage.value = 'start';
     orders.value = await DonHangService.getAll().catch(() => []);
   } catch (e) {
     posError.value = e.message;
@@ -1173,10 +1595,13 @@ let orderSse = null;
 
 onMounted(async () => {
   await fetchAll();
-  orderSse = new EventSource('/api/don-hang/events');
+  await fetchProductSales();
+  // EventSource không gửi được header Authorization → truyền JWT qua query string
+  orderSse = new EventSource(`/api/don-hang/events?token=${encodeURIComponent(AuthStore.user?.token ?? '')}`);
   orderSse.addEventListener('new-order', async () => {
     orders.value = await DonHangService.getAll().catch(() => []);
     await autoMergeAllDuplicates();
+    await fetchProductSales();
   });
 });
 
@@ -1187,20 +1612,20 @@ onUnmounted(() => {
 
 <template>
   <!-- Layout chính: sidebar bên trái + main content bên phải -->
-  <div class="d-flex overflow-hidden" style="height:100vh; background:#0d0d0d; color:#f0f0f0; font-family:'Inter',sans-serif;">
+  <div class="d-flex overflow-hidden" style="height:100vh; background:var(--bg-page-alt); color:var(--text-primary); font-family:'Inter',sans-serif;">
 
     <!-- ══════════ SIDEBAR ══════════ -->
     <aside class="d-flex flex-column border-end flex-shrink-0"
-           style="width:240px; background:#111; border-color:rgba(255,255,255,0.08)!important; overflow-y:auto;">
+           style="width:240px; background:var(--bg-card-inset); border-color:var(--border-color)!important; overflow-y:auto;">
 
       <!-- Logo -->
       <div class="d-flex align-items-center gap-2 p-3 border-bottom"
-           style="border-color:rgba(255,255,255,0.06)!important;">
+           style="border-color:var(--border-color-soft)!important;">
         <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
              style="width:38px;height:38px;background:#f4c200;color:#111;font-size:0.8rem;">SAO</div>
         <div>
-          <div class="fw-bold" style="font-size:0.95rem;">SAOPhone</div>
-          <div style="font-size:0.7rem;color:#888;">He thong quan ly</div>
+          <div class="fw-bold" style="font-size:0.95rem;">{{ t('admin.brand.name') }}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">{{ t('admin.brand.tagline') }}</div>
         </div>
       </div>
 
@@ -1209,100 +1634,100 @@ onUnmounted(() => {
         <button class="btn btn-sm flex-grow-1 fw-medium"
                 :class="currentRole==='admin' ? 'btn-warning text-dark' : 'btn-outline-secondary text-secondary'"
                 style="font-size:0.82rem; border-radius:7px;"
-                @click="switchRole('admin')">Admin</button>
+                @click="switchRole('admin')">{{ t('admin.roleSwitch.admin') }}</button>
         <button class="btn btn-sm flex-grow-1 fw-medium"
                 :class="currentRole==='user' ? 'btn-warning text-dark' : 'btn-outline-secondary text-secondary'"
                 style="font-size:0.82rem; border-radius:7px;"
-                @click="switchRole('user')">Nhan vien</button>
+                @click="switchRole('user')">{{ t('admin.roleSwitch.staff') }}</button>
       </div>
 
       <!-- Nav admin -->
       <nav class="flex-grow-1 d-flex flex-column px-2 pb-2" v-show="currentRole === 'admin'">
-        <div class="adm-nav-label">Tong quan</div>
+        <div class="adm-nav-label">{{ t('admin.sidebar.groupOverview') }}</div>
         <div class="adm-nav" :class="{active: currentPage==='dashboard'}" @click="navigate('dashboard')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zM3 11a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3z"/></svg>
-          Dashboard
+          {{ t('admin.sidebar.dashboard') }}
         </div>
 
-        <div class="adm-nav-label">Quan ly</div>
+        <div class="adm-nav-label">{{ t('admin.sidebar.groupManagement') }}</div>
         <div class="adm-nav" :class="{active: currentPage==='products'}" @click="navigate('products')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-          San pham
+          {{ t('admin.sidebar.products') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='orders'}" @click="navigate('orders')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
-          Don hang
+          {{ t('admin.sidebar.orders') }}
           <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ totalOrders }}</span>
         </div>
         <div class="adm-nav" :class="{active: currentPage==='customers'}" @click="navigate('customers')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
-          Khach hang
+          {{ t('admin.sidebar.customers') }}
           <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ totalCustomers }}</span>
         </div>
         <div class="adm-nav" :class="{active: currentPage==='inventory'}" @click="navigate('inventory')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/><path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
-          Kho hang
+          {{ t('admin.sidebar.inventory') }}
           <span v-if="lowStockItems.length" class="badge bg-danger ms-auto" style="font-size:0.68rem;">{{ lowStockItems.length }}</span>
         </div>
         <div class="adm-nav" :class="{active: currentPage==='promotions'}" @click="navigate('promotions')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clip-rule="evenodd"/><path d="M9 11H3v5a2 2 0 002 2h4v-7zm2 7h4a2 2 0 002-2v-5h-6v7z"/></svg>
-          Khuyen mai
+          {{ t('admin.sidebar.promotions') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='ban-hang'}" @click="navigate('ban-hang')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C4.328 11.142 4 11.574 4 12a2 2 0 002 2h10a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 4H6.28l-.31-1.243A1 1 0 005 2H3z"/><path d="M16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
-          Ban hang
+          {{ t('admin.sidebar.banHang') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='staff'}" @click="navigate('staff')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-          Nhan vien
+          {{ t('admin.sidebar.staff') }}
         </div>
 
-        <div class="adm-nav-label">Phan tich</div>
+        <div class="adm-nav-label">{{ t('admin.sidebar.groupAnalytics') }}</div>
         <div class="adm-nav" :class="{active: currentPage==='reports'}" @click="navigate('reports')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
-          Bao cao
+          {{ t('admin.sidebar.reports') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='settings'}" @click="navigate('settings')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
-          Cai dat
+          {{ t('admin.sidebar.settings') }}
         </div>
       </nav>
 
       <!-- Nav nhan vien -->
       <nav class="flex-grow-1 d-flex flex-column px-2 pb-2" v-show="currentRole === 'user'">
-        <div class="adm-nav-label">Trang cua toi</div>
+        <div class="adm-nav-label">{{ t('admin.sidebar.groupMyPage') }}</div>
         <div class="adm-nav" :class="{active: currentPage==='user-home'}" @click="navigate('user-home')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
-          Trang chu
+          {{ t('admin.sidebar.userHome') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='user-orders'}" @click="navigate('user-orders')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg>
-          Don hang cua toi
+          {{ t('admin.sidebar.userOrders') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='user-browse'}" @click="navigate('user-browse')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/></svg>
-          Mua sam
+          {{ t('admin.sidebar.userBrowse') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='user-profile'}" @click="navigate('user-profile')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-          Ho so
+          {{ t('admin.sidebar.userProfile') }}
         </div>
       </nav>
 
       <!-- Footer sidebar: thong tin user + logout -->
-      <div class="p-3 border-top" style="border-color:rgba(255,255,255,0.06)!important;">
+      <div class="p-3 border-top" style="border-color:var(--border-color-soft)!important;">
         <div class="d-flex align-items-center gap-2 mb-2">
           <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
                style="width:34px;height:34px;background:#f4c200;color:#111;font-size:0.9rem;">{{ userAvatar }}</div>
           <div class="flex-grow-1" style="min-width:0;">
             <div class="fw-semibold text-truncate" style="font-size:0.85rem;">{{ userDisplayName }}</div>
-            <div style="font-size:0.72rem;color:#888;">{{ userDisplayRole }}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);">{{ userDisplayRole }}</div>
           </div>
         </div>
         <button class="btn btn-sm w-100 fw-semibold"
-                style="background:#1a1a1a; border:1px solid #7f1d1d; border-radius:8px; color:#f87171; font-size:0.78rem;"
+                style="background:var(--bg-card); border:1px solid #7f1d1d; border-radius:8px; color:#f87171; font-size:0.78rem;"
                 @click="logout">
-          Dang xuat
+          {{ t('admin.sidebar.logout') }}
         </button>
       </div>
     </aside><!-- /sidebar -->
@@ -1312,14 +1737,14 @@ onUnmounted(() => {
 
       <!-- Topbar: tieu de trang hien tai -->
       <div class="d-flex align-items-center justify-content-between p-3 border-bottom"
-           style="background:#111; border-color:rgba(255,255,255,0.07)!important;">
+           style="background:var(--bg-card-inset); border-color:var(--border-color)!important;">
         <div>
           <div class="fw-bold" style="font-size:1.05rem;">{{ topbarTitle }}</div>
-          <div style="font-size:0.78rem;color:#888;">{{ topbarSub }}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
         </div>
         <div class="d-flex align-items-center gap-2">
           <div class="d-flex align-items-center justify-content-center rounded-2"
-               style="width:34px;height:34px;background:rgba(255,255,255,0.06);cursor:pointer;">&#128276;</div>
+               style="width:34px;height:34px;background:var(--bg-hover);cursor:pointer;">&#128276;</div>
         </div>
       </div>
 
@@ -1328,65 +1753,190 @@ onUnmounted(() => {
 
         <!-- ── Dashboard ── -->
         <section v-show="currentPage === 'dashboard'">
-          <div v-if="loading" class="text-secondary small">Dang tai du lieu...</div>
+          <div v-if="loading" class="text-secondary small">{{ t('admin.dashboard.loading') }}</div>
           <template v-else>
             <!-- Stat cards -->
             <div class="row g-3 mb-4">
               <div class="col-6 col-xl-3">
-                <div class="card border-secondary h-100" style="background:rgba(255,255,255,0.04);">
-                  <div class="card-body">
-                    <div class="text-secondary small mb-2">Tong san pham</div>
-                    <div class="fw-bold" style="font-size:1.55rem;">{{ totalProducts }}</div>
+                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                  <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:44px;height:44px;background:rgba(96,165,250,0.15);font-size:1.3rem;">💻</div>
+                    <div>
+                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalProducts') }}</div>
+                      <div class="fw-bold" style="font-size:1.55rem;">{{ totalProducts }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
               <div class="col-6 col-xl-3">
-                <div class="card border-secondary h-100" style="background:rgba(255,255,255,0.04);">
-                  <div class="card-body">
-                    <div class="text-secondary small mb-2">Don hang</div>
-                    <div class="fw-bold" style="font-size:1.55rem;">{{ totalOrders }}</div>
+                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                  <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:44px;height:44px;background:rgba(167,139,250,0.15);font-size:1.3rem;">🧾</div>
+                    <div>
+                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalOrders') }}</div>
+                      <div class="fw-bold" style="font-size:1.55rem;">{{ totalOrders }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
               <div class="col-6 col-xl-3">
-                <div class="card border-secondary h-100" style="background:rgba(255,255,255,0.04);">
-                  <div class="card-body">
-                    <div class="text-secondary small mb-2">Khach hang</div>
-                    <div class="fw-bold" style="font-size:1.55rem;">{{ totalCustomers }}</div>
+                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                  <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:44px;height:44px;background:rgba(52,211,153,0.15);font-size:1.3rem;">👥</div>
+                    <div>
+                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalCustomers') }}</div>
+                      <div class="fw-bold" style="font-size:1.55rem;">{{ totalCustomers }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
               <div class="col-6 col-xl-3">
-                <div class="card border-secondary h-100" style="background:rgba(255,255,255,0.04);">
-                  <div class="card-body">
-                    <div class="text-secondary small mb-2">Doanh thu</div>
-                    <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(totalRevenue) }}</div>
+                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                  <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:44px;height:44px;background:rgba(250,204,21,0.15);font-size:1.3rem;">💰</div>
+                    <div>
+                      <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="text-secondary small">{{ t('admin.dashboard.totalRevenue') }}</span>
+                        <span v-if="revenueTrendDelta !== null"
+                              class="fw-bold" style="font-size:0.7rem;"
+                              :style="{ color: revenueTrendDelta >= 0 ? '#22c55e' : '#f87171' }">
+                          {{ revenueTrendDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(revenueTrendDelta) }}%
+                        </span>
+                      </div>
+                      <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(totalRevenue) }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- Canh bao het hang -->
-            <div v-if="lowStockItems.length" class="alert alert-danger small py-2 mb-3">
-              &#9888; {{ lowStockItems.length }} bien the san pham sap het hang
+            <div v-if="lowStockItems.length" class="alert alert-danger small py-2 mb-3 d-flex align-items-center gap-2">
+              <span class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                    style="width:22px;height:22px;background:rgba(248,113,113,0.25);font-size:0.85rem;">⚠️</span>
+              {{ t('admin.dashboard.lowStockAlert', { count: lowStockItems.length }) }}
+            </div>
+
+            <!-- Bieu do thong ke -->
+            <div class="row g-3 mb-4">
+              <div class="col-12 col-xl-5">
+                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                      <div class="fw-semibold small text-secondary">🍩 {{ t('admin.dashboard.ordersByStatusChart') }}</div>
+                      <div class="d-flex align-items-center gap-2">
+                        <input type="date" v-model="statusChartDate" :max="toDateInputValue(new Date())"
+                               class="form-control form-control-sm"
+                               style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;" />
+                        <button v-if="!isStatusChartToday" type="button" class="btn btn-sm py-0 px-2"
+                                style="font-size:0.72rem; color:var(--accent); border:1px solid var(--border-color-strong);"
+                                @click="statusChartDate = toDateInputValue(new Date())">
+                          {{ t('admin.dashboard.backToToday') }}
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <span class="badge rounded-pill" style="background:var(--bg-card-inset); color:var(--text-secondary); font-weight:600;">
+                        {{ isStatusChartToday
+                          ? t('admin.dashboard.todayOrders', { count: ordersOnStatusChartDate.length })
+                          : t('admin.dashboard.ordersOnDate', { count: ordersOnStatusChartDate.length }) }}
+                      </span>
+                    </div>
+                    <DonutChart
+                      :data="orderStatusChartData"
+                      :center-value="String(ordersOnStatusChartDate.length)"
+                      :center-label="t('admin.dashboard.totalOrders')"
+                      :empty-text="t('admin.dashboard.chartEmptyOrders')" />
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-xl-7">
+                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                  <div class="card-body">
+                    <div class="fw-semibold small text-secondary mb-3">🗂️ {{ t('admin.dashboard.productsByCategoryChart') }}</div>
+                    <BarChart :data="productsByCategoryChart" :empty-text="t('admin.dashboard.chartEmptyProducts')" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- San pham ban chay / ban cham -->
+            <div class="row g-3 mb-4">
+              <div class="col-12 col-xl-6">
+                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                  <div class="card-body">
+                    <div class="fw-semibold small text-secondary mb-3">🔥 {{ t('admin.dashboard.topSellingChart') }}</div>
+                    <BarChart :data="topSellingChart" :empty-text="t('admin.dashboard.chartEmptyOrders')" />
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-xl-6">
+                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                  <div class="card-body">
+                    <div class="fw-semibold small text-secondary mb-3">🐌 {{ t('admin.dashboard.slowSellingChart') }}</div>
+                    <BarChart :data="slowSellingChart" :empty-text="t('admin.dashboard.chartEmptyProducts')" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gauge KPI: suc khoe van hanh -->
+            <div class="card border-secondary mb-4" style="background:var(--bg-hover);">
+              <div class="card-body">
+                <div class="fw-semibold small text-secondary mb-3">🩺 {{ t('admin.dashboard.kpiHealth') }}</div>
+                <div class="row g-3 text-center">
+                  <div class="col-12 col-md-4 d-flex justify-content-center">
+                    <GaugeChart :value="orderCompletionRate" :color="gaugeColor(orderCompletionRate)"
+                                :label="'✅ ' + t('admin.dashboard.gaugeCompletion')" />
+                  </div>
+                  <div class="col-12 col-md-4 d-flex justify-content-center">
+                    <GaugeChart :value="paymentRate" :color="gaugeColor(paymentRate)"
+                                :label="'💳 ' + t('admin.dashboard.gaugePayment')" />
+                  </div>
+                  <div class="col-12 col-md-4 d-flex justify-content-center">
+                    <GaugeChart :value="stockHealthRate" :color="gaugeColor(stockHealthRate)"
+                                :label="'📦 ' + t('admin.dashboard.gaugeStock')" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Xu huong doanh thu theo thang -->
+            <div class="card border-secondary mb-4" style="background:var(--bg-hover);">
+              <div class="card-body">
+                <div class="fw-semibold small text-secondary mb-3">📈 {{ t('admin.dashboard.revenueTrendChart') }}</div>
+                <TrendChart :data="revenueTrendChart" :height="140" color="#facc15" :empty-text="t('admin.dashboard.chartEmptyOrders')" />
+              </div>
             </div>
 
             <!-- Bang san pham gan day -->
-            <div class="small fw-semibold text-secondary mb-2">San pham gan day</div>
+            <div class="small fw-semibold text-secondary mb-2">🗃️ {{ t('admin.dashboard.recentProducts') }}</div>
             <div class="table-responsive">
-              <table class="table table-dark table-hover table-sm align-middle">
+              <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
                 <thead><tr>
-                  <th>Ten san pham</th><th>Thuong hieu</th><th>Danh muc</th><th>Gia ban</th><th>Trang thai</th>
+                  <th></th><th>🖥️ {{ t('admin.dashboard.colName') }}</th><th>🏷️ {{ t('admin.dashboard.colBrand') }}</th><th>🗂️ {{ t('admin.dashboard.colCategory') }}</th><th>💵 {{ t('admin.dashboard.colPrice') }}</th><th>🔖 {{ t('admin.dashboard.colStatus') }}</th>
                 </tr></thead>
                 <tbody>
                   <tr v-for="p in products.slice(0,5)" :key="p.sanPhamId">
+                    <td style="width:48px;">
+                      <div class="rounded-2 d-flex align-items-center justify-content-center overflow-hidden"
+                           style="width:38px;height:32px;background:var(--bg-card-inset);">
+                        <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham"
+                             style="width:100%;height:100%;object-fit:contain;padding:2px;" />
+                        <span v-else style="font-size:1rem;">💻</span>
+                      </div>
+                    </td>
                     <td>{{ p.tenSanPham }}</td>
                     <td>{{ p.tenThuongHieu }}</td>
                     <td>{{ p.tenDanhMuc }}</td>
                     <td>{{ formatPrice(p.giaBan) }}</td>
                     <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(p.trangThai) }}</span></td>
                   </tr>
-                  <tr v-if="products.length===0"><td colspan="5" class="text-center text-secondary">Chua co san pham</td></tr>
+                  <tr v-if="products.length===0"><td colspan="6" class="text-center text-secondary">{{ t('admin.dashboard.emptyProducts') }}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1395,19 +1945,22 @@ onUnmounted(() => {
 
         <!-- ── San pham ── -->
         <section v-show="currentPage === 'products'">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-secondary small">{{ totalProducts }} san pham</span>
-            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAdd">+ Them san pham</button>
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <span class="text-secondary small">{{ filteredGroupedProducts.length }}/{{ groupedProducts.length }} {{ t('admin.products.countSuffix') }}</span>
+            <div class="d-flex gap-2 flex-wrap">
+              <input v-model="productSearch" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.products.searchPlaceholder')" />
+              <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAdd">{{ t('admin.products.add') }}</button>
+            </div>
           </div>
-          <div v-if="loading" class="text-secondary small">Dang tai...</div>
+          <div v-if="loading" class="text-secondary small">{{ t('admin.products.loading') }}</div>
           <div v-else class="table-responsive">
-            <table class="table table-dark table-hover table-sm align-middle">
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
               <thead><tr>
-                <th>Ten san pham</th><th>Thuong hieu</th><th>Danh muc</th>
-                <th>Bien the</th><th>Gia tu</th><th>Trang thai</th><th>Thao tac</th>
+                <th>{{ t('admin.products.colName') }}</th><th>{{ t('admin.products.colBrand') }}</th><th>{{ t('admin.products.colCategory') }}</th>
+                <th>{{ t('admin.products.colVariant') }}</th><th>{{ t('admin.products.colPriceFrom') }}</th><th>{{ t('admin.products.colStatus') }}</th><th>{{ t('admin.products.colAction') }}</th>
               </tr></thead>
               <tbody>
-                <tr v-for="p in groupedProducts" :key="p.sanPhamId">
+                <tr v-for="p in filteredGroupedProducts" :key="p.sanPhamId">
                   <td>{{ p.tenSanPham }}</td>
                   <td>{{ p.tenThuongHieu }}</td>
                   <td>{{ p.tenDanhMuc }}</td>
@@ -1418,12 +1971,12 @@ onUnmounted(() => {
                   <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(p.trangThai) }}</span></td>
                   <td>
                     <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem; padding:2px 8px;" @click="openDetail(p.sanPhamId, p.tenSanPham)">Chi tiet</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteProduct(p.sanPhamId)">Xoa</button>
+                      <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem; padding:2px 8px;" @click="openDetail(p.sanPhamId, p.tenSanPham)">{{ t('admin.products.detail') }}</button>
+                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteProduct(p.sanPhamId)">{{ t('admin.products.delete') }}</button>
                     </div>
                   </td>
                 </tr>
-                <tr v-if="groupedProducts.length===0"><td colspan="7" class="text-center text-secondary">Chua co san pham</td></tr>
+                <tr v-if="filteredGroupedProducts.length===0"><td colspan="7" class="text-center text-secondary">{{ t('admin.products.empty') }}</td></tr>
               </tbody>
             </table>
           </div>
@@ -1431,15 +1984,33 @@ onUnmounted(() => {
 
         <!-- ── Don hang ── -->
         <section v-show="currentPage === 'orders'">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-secondary small">{{ totalOrders }} don hang</span>
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <span class="text-secondary small">{{ filteredOrders.length }}/{{ totalOrders }} {{ t('admin.orders.countSuffix') }}</span>
+            <div class="d-flex gap-2 flex-wrap">
+              <input v-model="orderSearch" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.orders.searchPlaceholder')" />
+              <select v-model="orderStatusFilter" class="form-select form-select-sm" style="width:170px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);">
+                <option value="">{{ t('admin.orders.allStatuses') }}</option>
+                <option value="pending">{{ orderStatusLabel('pending') }}</option>
+                <option value="confirmed">{{ orderStatusLabel('confirmed') }}</option>
+                <option value="processing">{{ orderStatusLabel('processing') }}</option>
+                <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
+                <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
+                <option value="cancelled">{{ orderStatusLabel('cancelled') }}</option>
+                <option value="returned">{{ orderStatusLabel('returned') }}</option>
+              </select>
+              <select v-model="orderPaymentFilter" class="form-select form-select-sm" style="width:150px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);">
+                <option value="">{{ t('admin.orders.allPayments') }}</option>
+                <option value="paid">{{ t('admin.orders.paid') }}</option>
+                <option value="unpaid">{{ t('admin.orders.unpaid') }}</option>
+              </select>
+            </div>
           </div>
-          <div v-if="loading" class="text-secondary small">Dang tai...</div>
+          <div v-if="loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
           <div v-else class="table-responsive">
-            <table class="table table-dark table-hover table-sm align-middle">
-              <thead><tr><th>Ma don</th><th>Khach hang</th><th>Thanh tien</th><th>TT Don hang</th><th>TT Thanh toan</th><th>Ngay dat</th><th>Thao tac</th></tr></thead>
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
               <tbody>
-                <tr v-for="o in orders" :key="o.donHangId">
+                <tr v-for="o in filteredOrders" :key="o.donHangId">
                   <td class="text-secondary">#{{ o.donHangId }}</td>
                   <td>{{ customerName(o.khachHangId) }}</td>
                   <td>{{ formatPrice(o.thanhTien) }}</td>
@@ -1452,13 +2023,13 @@ onUnmounted(() => {
                   <td>{{ formatDate(o.ngayDat) }}</td>
                   <td>
                     <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-info"    style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">Chi tiet</button>
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">Cap nhat</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">Xoa</button>
+                      <button class="btn btn-sm btn-outline-info"    style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
+                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
+                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">{{ t('admin.orders.delete') }}</button>
                     </div>
                   </td>
                 </tr>
-                <tr v-if="orders.length===0"><td colspan="8" class="text-center text-secondary">Chua co don hang</td></tr>
+                <tr v-if="filteredOrders.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.orders.empty') }}</td></tr>
               </tbody>
             </table>
           </div>
@@ -1466,16 +2037,19 @@ onUnmounted(() => {
 
         <!-- ── Khach hang ── -->
         <section v-show="currentPage === 'customers'">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-secondary small">{{ totalCustomers }} khach hang</span>
-            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddCustomer">+ Them khach hang</button>
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <span class="text-secondary small">{{ filteredCustomers.length }}/{{ totalCustomers }} {{ t('admin.customers.countSuffix') }}</span>
+            <div class="d-flex gap-2 flex-wrap">
+              <input v-model="customerSearch" class="form-control form-control-sm" style="width:240px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.customers.searchPlaceholder')" />
+              <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddCustomer">{{ t('admin.customers.add') }}</button>
+            </div>
           </div>
-          <div v-if="loading" class="text-secondary small">Dang tai...</div>
+          <div v-if="loading" class="text-secondary small">{{ t('admin.customers.loading') }}</div>
           <div v-else class="table-responsive">
-            <table class="table table-dark table-hover table-sm align-middle">
-              <thead><tr><th>Ho ten</th><th>Dien thoai</th><th>Email</th><th>Loai khach</th><th>Diem</th><th>Trang thai</th><th>Thao tac</th></tr></thead>
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr><th>{{ t('admin.customers.colFullName') }}</th><th>{{ t('admin.customers.colPhone') }}</th><th>{{ t('admin.customers.colEmail') }}</th><th>{{ t('admin.customers.colCustomerType') }}</th><th>{{ t('admin.customers.colPoints') }}</th><th>{{ t('admin.customers.colStatus') }}</th><th>{{ t('admin.customers.colAction') }}</th></tr></thead>
               <tbody>
-                <tr v-for="c in customers" :key="c.khachHangId">
+                <tr v-for="c in filteredCustomers" :key="c.khachHangId">
                   <td>{{ c.hoTen }}</td>
                   <td class="text-secondary">{{ c.soDienThoai }}</td>
                   <td class="text-secondary">{{ c.email }}</td>
@@ -1484,12 +2058,12 @@ onUnmounted(() => {
                   <td><span class="badge" :class="c.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(c.trangThai) }}</span></td>
                   <td>
                     <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditCustomer(c)">Sua</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteCustomer(c.khachHangId)">Xoa</button>
+                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditCustomer(c)">{{ t('admin.customers.edit') }}</button>
+                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteCustomer(c.khachHangId)">{{ t('admin.customers.delete') }}</button>
                     </div>
                   </td>
                 </tr>
-                <tr v-if="customers.length===0"><td colspan="7" class="text-center text-secondary">Chua co khach hang</td></tr>
+                <tr v-if="filteredCustomers.length===0"><td colspan="7" class="text-center text-secondary">{{ t('admin.customers.empty') }}</td></tr>
               </tbody>
             </table>
           </div>
@@ -1499,62 +2073,62 @@ onUnmounted(() => {
         <section v-show="currentPage === 'inventory'">
           <!-- Summary + Search -->
           <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-            <span class="text-secondary small">{{ inventoryGrouped.length }} san pham · {{ inventory.length }} SKU</span>
-            <span v-if="outOfStockItems.length" class="badge bg-danger">● {{ outOfStockItems.length }} het hang</span>
-            <span v-if="lowStockItems.length" class="badge bg-warning text-dark">⚠ {{ lowStockItems.length }} sap het</span>
+            <span class="text-secondary small">{{ t('admin.inventory.summary', { groups: inventoryGrouped.length, skus: inventory.length }) }}</span>
+            <span v-if="outOfStockItems.length" class="badge bg-danger">● {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
+            <span v-if="lowStockItems.length" class="badge bg-warning text-dark">⚠ {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
             <div class="ms-auto" style="min-width:200px;">
               <input v-model="inventorySearch" class="form-control form-control-sm"
-                     placeholder="Tim san pham..."
-                     style="background:#1a1a1a;border-color:#333;color:#e0e0e0;font-size:0.82rem;" />
+                     :placeholder="t('admin.inventory.searchPlaceholder')"
+                     style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;" />
             </div>
           </div>
 
-          <div v-if="loading" class="text-secondary small py-4 text-center">Dang tai...</div>
+          <div v-if="loading" class="text-secondary small py-4 text-center">{{ t('admin.inventory.loading') }}</div>
           <div v-else class="d-flex flex-column gap-2">
 
             <div v-for="group in inventoryGrouped" :key="group.name"
                  class="rounded-3 overflow-hidden"
-                 style="background:#1a1a1a;border:1px solid #2a2a2a;">
+                 style="background:var(--bg-card);border:1px solid var(--border-color);">
 
               <!-- Product header -->
               <div class="d-flex align-items-center px-3 py-2 gap-3"
                    style="cursor:pointer;transition:background 0.15s;"
-                   @mouseenter="$event.currentTarget.style.background='#202020'"
+                   @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
                    @mouseleave="$event.currentTarget.style.background=''"
                    @click="toggleGroup(group.name)">
                 <img v-if="group.hinhAnh" :src="group.hinhAnh"
-                     style="width:44px;height:36px;object-fit:contain;border-radius:4px;background:#111;flex-shrink:0;" />
-                <div v-else style="width:44px;height:36px;background:#222;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;">💻</div>
+                     style="width:44px;height:36px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;" />
+                <div v-else style="width:44px;height:36px;background:var(--bg-input);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;">💻</div>
                 <div class="flex-grow-1 min-width-0">
-                  <div class="text-white fw-semibold" style="font-size:0.88rem;">{{ group.name }}</div>
+                  <div class="fw-semibold" style="font-size:0.88rem;color:var(--text-heading);">{{ group.name }}</div>
                   <div class="text-secondary" style="font-size:0.72rem;">
-                    {{ group.thuongHieu ? group.thuongHieu + ' · ' : '' }}{{ group.items.length }} bien the · Tong ton: <strong :class="group.totalTon===0?'text-danger':group.totalTon<5?'text-warning':'text-success'">{{ group.totalTon }}</strong>
+                    {{ group.thuongHieu ? group.thuongHieu + ' · ' : '' }}{{ group.items.length }} {{ t('admin.inventory.totalStockLabel') }} <strong :class="group.totalTon===0?'text-danger':group.totalTon<5?'text-warning':'text-success'">{{ group.totalTon }}</strong>
                   </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                  <span v-if="group.outCount" class="badge bg-danger" style="font-size:0.7rem;">{{ group.outCount }} het hang</span>
-                  <span v-else-if="group.lowCount" class="badge bg-warning text-dark" style="font-size:0.7rem;">{{ group.lowCount }} sap het</span>
-                  <span v-else class="badge bg-success" style="font-size:0.7rem;">OK</span>
+                  <span v-if="group.outCount" class="badge bg-danger" style="font-size:0.7rem;">{{ group.outCount }} {{ t('admin.inventory.outOfStock') }}</span>
+                  <span v-else-if="group.lowCount" class="badge bg-warning text-dark" style="font-size:0.7rem;">{{ group.lowCount }} {{ t('admin.inventory.lowStock') }}</span>
+                  <span v-else class="badge bg-success" style="font-size:0.7rem;">{{ t('admin.inventory.ok') }}</span>
                   <span class="text-secondary" style="font-size:0.75rem;width:12px;text-align:center;">{{ expandedGroups[group.name] ? '▲' : '▼' }}</span>
                 </div>
               </div>
 
               <!-- Variant detail table -->
-              <div v-if="expandedGroups[group.name]" style="border-top:1px solid #252525;">
+              <div v-if="expandedGroups[group.name]" style="border-top:1px solid var(--border-color-soft);">
                 <table class="w-100" style="border-collapse:collapse;font-size:0.8rem;">
                   <thead>
-                    <tr style="background:#1e1e1e;">
-                      <th class="px-3 py-2 text-secondary" style="font-weight:500;width:22%;">SKU</th>
-                      <th class="px-3 py-2 text-secondary" style="font-weight:500;">Cau hinh</th>
-                      <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">Ton</th>
-                      <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:70px;">Giu</th>
-                      <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">Toi thieu</th>
+                    <tr style="background:var(--bg-input);">
+                      <th class="px-3 py-2 text-secondary" style="font-weight:500;width:22%;">{{ t('admin.inventory.colSku') }}</th>
+                      <th class="px-3 py-2 text-secondary" style="font-weight:500;">{{ t('admin.inventory.colConfig') }}</th>
+                      <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">{{ t('admin.inventory.colStock') }}</th>
+                      <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:70px;">{{ t('admin.inventory.colHeld') }}</th>
+                      <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">{{ t('admin.inventory.colMinStock') }}</th>
                       <th class="px-3 py-2 text-secondary" style="font-weight:500;width:90px;"></th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="item in group.items" :key="item.tonKhoId"
-                        style="border-top:1px solid #222;">
+                        style="border-top:1px solid var(--border-color-soft);">
                       <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.73rem;">{{ item.bienThe?.maSku || '—' }}</td>
                       <td class="px-3 py-2">
                         <div class="d-flex gap-1 flex-wrap">
@@ -1573,10 +2147,10 @@ onUnmounted(() => {
                         <div class="d-flex gap-1">
                           <button class="btn btn-sm btn-outline-info"
                                   style="font-size:0.72rem;padding:2px 8px;"
-                                  @click.stop="openStockDetail(item)">Chi tiet</button>
+                                  @click.stop="openStockDetail(item)">{{ t('admin.inventory.detail') }}</button>
                           <button class="btn btn-sm btn-outline-warning"
                                   style="font-size:0.72rem;padding:2px 8px;"
-                                  @click.stop="openEditStock(item)">Cap nhat</button>
+                                  @click.stop="openEditStock(item)">{{ t('admin.inventory.update') }}</button>
                         </div>
                       </td>
                     </tr>
@@ -1585,25 +2159,25 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div v-if="inventoryGrouped.length === 0" class="text-secondary small text-center py-5">Khong co du lieu</div>
+            <div v-if="inventoryGrouped.length === 0" class="text-secondary small text-center py-5">{{ t('admin.inventory.empty') }}</div>
           </div>
         </section>
 
         <!-- ── Khuyen mai ── -->
         <section v-show="currentPage === 'promotions'">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-secondary small">{{ promotions.length }} khuyen mai</span>
-            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPromo">+ Them khuyen mai</button>
+            <span class="text-secondary small">{{ promotions.length }} {{ t('admin.promotions.countSuffix') }}</span>
+            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPromo">{{ t('admin.promotions.add') }}</button>
           </div>
-          <div v-if="loading" class="text-secondary small">Dang tai...</div>
+          <div v-if="loading" class="text-secondary small">{{ t('admin.promotions.loading') }}</div>
           <div v-else class="table-responsive">
-            <table class="table table-dark table-hover table-sm align-middle">
-              <thead><tr><th>Ma KM</th><th>Ten</th><th>Loai</th><th>Gia tri</th><th>Bat dau</th><th>Ket thuc</th><th>Da dung</th><th>Trang thai</th><th>Thao tac</th></tr></thead>
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr><th>{{ t('admin.promotions.colCode') }}</th><th>{{ t('admin.promotions.colName') }}</th><th>{{ t('admin.promotions.colType') }}</th><th>{{ t('admin.promotions.colValue') }}</th><th>{{ t('admin.promotions.colStart') }}</th><th>{{ t('admin.promotions.colEnd') }}</th><th>{{ t('admin.promotions.colUsed') }}</th><th>{{ t('admin.promotions.colStatus') }}</th><th>{{ t('admin.promotions.colAction') }}</th></tr></thead>
               <tbody>
                 <tr v-for="p in promotions" :key="p.khuyenMaiId">
                   <td class="text-secondary">{{ p.maKhuyenMai }}</td>
                   <td>{{ p.tenKhuyenMai }}</td>
-                  <td>{{ p.loai==='percent'?'Phan tram':'So tien' }}</td>
+                  <td>{{ p.loai==='percent'?t('admin.promotions.typePercent'):t('admin.promotions.typeFixed') }}</td>
                   <td>{{ p.loai==='percent'?`${p.giaTri}%`:formatPrice(p.giaTri) }}</td>
                   <td>{{ formatDate(p.ngayBatDau) }}</td>
                   <td>{{ formatDate(p.ngayKetThuc) }}</td>
@@ -1611,12 +2185,12 @@ onUnmounted(() => {
                   <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(p.trangThai) }}</span></td>
                   <td>
                     <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditPromo(p)">Sua</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deletePromo(p.khuyenMaiId)">Xoa</button>
+                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditPromo(p)">{{ t('admin.promotions.edit') }}</button>
+                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deletePromo(p.khuyenMaiId)">{{ t('admin.promotions.delete') }}</button>
                     </div>
                   </td>
                 </tr>
-                <tr v-if="promotions.length===0"><td colspan="9" class="text-center text-secondary">Chua co khuyen mai</td></tr>
+                <tr v-if="promotions.length===0"><td colspan="9" class="text-center text-secondary">{{ t('admin.promotions.empty') }}</td></tr>
               </tbody>
             </table>
           </div>
@@ -1625,13 +2199,13 @@ onUnmounted(() => {
         <!-- ── Nhan vien ── -->
         <section v-show="currentPage === 'staff'">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-secondary small">{{ staff.length }} nhan vien</span>
-            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddStaff">+ Them nhan vien</button>
+            <span class="text-secondary small">{{ staff.length }} {{ t('admin.staff.countSuffix') }}</span>
+            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddStaff">{{ t('admin.staff.add') }}</button>
           </div>
-          <div v-if="loading" class="text-secondary small">Dang tai...</div>
+          <div v-if="loading" class="text-secondary small">{{ t('admin.staff.loading') }}</div>
           <div v-else class="table-responsive">
-            <table class="table table-dark table-hover table-sm align-middle">
-              <thead><tr><th>Ho ten</th><th>Dien thoai</th><th>Email</th><th>Chuc vu</th><th>Username</th><th>Luong co ban</th><th>Trang thai</th><th>Thao tac</th></tr></thead>
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr><th>{{ t('admin.staff.colFullName') }}</th><th>{{ t('admin.staff.colPhone') }}</th><th>{{ t('admin.staff.colEmail') }}</th><th>{{ t('admin.staff.colPosition') }}</th><th>{{ t('admin.staff.colUsername') }}</th><th>{{ t('admin.staff.colBaseSalary') }}</th><th>{{ t('admin.staff.colStatus') }}</th><th>{{ t('admin.staff.colAction') }}</th></tr></thead>
               <tbody>
                 <tr v-for="s in staff" :key="s.nhanVienId">
                   <td>{{ s.hoTen }}</td>
@@ -1643,12 +2217,12 @@ onUnmounted(() => {
                   <td><span class="badge" :class="s.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(s.trangThai) }}</span></td>
                   <td>
                     <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditStaff(s)">Sua</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteStaff(s.nhanVienId)">Xoa</button>
+                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditStaff(s)">{{ t('admin.staff.edit') }}</button>
+                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteStaff(s.nhanVienId)">{{ t('admin.staff.delete') }}</button>
                     </div>
                   </td>
                 </tr>
-                <tr v-if="staff.length===0"><td colspan="8" class="text-center text-secondary">Chua co nhan vien</td></tr>
+                <tr v-if="staff.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.staff.empty') }}</td></tr>
               </tbody>
             </table>
           </div>
@@ -1658,50 +2232,50 @@ onUnmounted(() => {
         <section v-show="currentPage === 'reports'">
           <div class="row g-3 mb-4">
             <div class="col-6 col-xl-3">
-              <div class="card border-secondary" style="background:rgba(255,255,255,0.04);"><div class="card-body">
-                <div class="text-secondary small mb-1">Tong doanh thu</div>
+              <div class="card border-secondary" style="background:var(--bg-hover);"><div class="card-body">
+                <div class="text-secondary small mb-1">{{ t('admin.reports.totalRevenue') }}</div>
                 <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(totalRevenue) }}</div>
               </div></div>
             </div>
             <div class="col-6 col-xl-3">
-              <div class="card border-secondary" style="background:rgba(255,255,255,0.04);"><div class="card-body">
-                <div class="text-secondary small mb-1">San pham dang ban</div>
+              <div class="card border-secondary" style="background:var(--bg-hover);"><div class="card-body">
+                <div class="text-secondary small mb-1">{{ t('admin.reports.activeProducts') }}</div>
                 <div class="fw-bold" style="font-size:1.55rem;">{{ activeProducts }}</div>
               </div></div>
             </div>
             <div class="col-6 col-xl-3">
-              <div class="card border-secondary" style="background:rgba(255,255,255,0.04);"><div class="card-body">
-                <div class="text-secondary small mb-1">Khuyen mai dang chay</div>
+              <div class="card border-secondary" style="background:var(--bg-hover);"><div class="card-body">
+                <div class="text-secondary small mb-1">{{ t('admin.reports.activePromotions') }}</div>
                 <div class="fw-bold" style="font-size:1.55rem;">{{ activePromos }}</div>
               </div></div>
             </div>
             <div class="col-6 col-xl-3">
-              <div class="card border-secondary" style="background:rgba(255,255,255,0.04);"><div class="card-body">
-                <div class="text-secondary small mb-1">Bien the sap het hang</div>
+              <div class="card border-secondary" style="background:var(--bg-hover);"><div class="card-body">
+                <div class="text-secondary small mb-1">{{ t('admin.reports.lowStockVariants') }}</div>
                 <div class="fw-bold" :class="lowStockItems.length?'text-danger':''" style="font-size:1.55rem;">{{ lowStockItems.length }}</div>
               </div></div>
             </div>
           </div>
-          <div class="small fw-semibold text-secondary mb-2">Don hang theo trang thai</div>
+          <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.ordersByStatus') }}</div>
           <div class="table-responsive mb-4">
-            <table class="table table-dark table-hover table-sm align-middle">
-              <thead><tr><th>Trang thai</th><th>So luong</th></tr></thead>
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr><th>{{ t('admin.reports.colStatus') }}</th><th>{{ t('admin.reports.colQuantity') }}</th></tr></thead>
               <tbody>
                 <tr v-for="row in ordersByStatus" :key="row.status">
-                  <td><span class="badge bg-primary bg-opacity-25 text-primary">{{ row.status||'Chua co' }}</span></td>
+                  <td><span class="badge bg-primary bg-opacity-25 text-primary">{{ row.status||t('admin.reports.noStatus') }}</span></td>
                   <td><strong>{{ row.count }}</strong></td>
                 </tr>
-                <tr v-if="ordersByStatus.length===0"><td colspan="2" class="text-center text-secondary">Chua co don hang</td></tr>
+                <tr v-if="ordersByStatus.length===0"><td colspan="2" class="text-center text-secondary">{{ t('admin.reports.emptyOrders') }}</td></tr>
               </tbody>
             </table>
           </div>
-          <div class="small fw-semibold text-secondary mb-2">Top 5 san pham gia cao nhat</div>
+          <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.topProducts') }}</div>
           <div class="table-responsive">
-            <table class="table table-dark table-hover table-sm align-middle">
-              <thead><tr><th>#</th><th>Ten san pham</th><th>Thuong hieu</th><th>Gia ban</th></tr></thead>
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr><th>{{ t('admin.reports.colIndex') }}</th><th>{{ t('admin.reports.colName') }}</th><th>{{ t('admin.reports.colBrand') }}</th><th>{{ t('admin.reports.colPrice') }}</th></tr></thead>
               <tbody>
-                <tr v-for="(p,i) in [...products].sort((a,b)=>(b.giaBan??0)-(a.giaBan??0)).slice(0,5)" :key="p.sanPhamId">
-                  <td class="text-secondary">{{ i+1 }}</td><td>{{ p.tenSanPham }}</td><td>{{ p.tenThuongHieu }}</td><td>{{ formatPrice(p.giaBan) }}</td>
+                <tr v-for="(p,i) in [...groupedProducts].sort((a,b)=>(b.maxPrice??0)-(a.maxPrice??0)).slice(0,5)" :key="p.sanPhamId">
+                  <td class="text-secondary">{{ i+1 }}</td><td>{{ p.tenSanPham }}</td><td>{{ p.tenThuongHieu }}</td><td>{{ formatPrice(p.maxPrice) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -1710,22 +2284,22 @@ onUnmounted(() => {
 
         <!-- ── Cai dat ── -->
         <section v-show="currentPage === 'settings'">
-          <div class="card border-secondary" style="background:rgba(255,255,255,0.04); max-width:520px;">
+          <div class="card border-secondary" style="background:var(--bg-hover); max-width:520px;">
             <div class="card-body">
-              <div class="fw-bold mb-3">Thong tin he thong</div>
+              <div class="fw-bold mb-3">{{ t('admin.settings.systemInfo') }}</div>
               <div v-for="row in [
-                {label:'Ten he thong', value:'SAOPhone Admin'},
-                {label:'Phien ban', value:'1.0.0'},
-                {label:'Backend API', value:'http://localhost:8080'},
-                {label:'Database', value:'SQL Server — QLBanMayTinh'},
+                {label:t('admin.settings.systemName'), value:'SAOPhone Admin'},
+                {label:t('admin.settings.version'), value:'1.0.0'},
+                {label:t('admin.settings.backendApi'), value:'http://localhost:8080'},
+                {label:t('admin.settings.database'), value:'SQL Server — QLBanMayTinh'},
               ]" :key="row.label"
                    class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
                 <span class="text-secondary">{{ row.label }}</span>
                 <span>{{ row.value }}</span>
               </div>
               <div class="d-flex justify-content-between align-items-center py-2 small">
-                <span class="text-secondary">Trang thai</span>
-                <span class="badge bg-success">Hoat dong</span>
+                <span class="text-secondary">{{ t('admin.settings.status') }}</span>
+                <span class="badge bg-success">{{ t('admin.settings.active') }}</span>
               </div>
             </div>
           </div>
@@ -1734,90 +2308,180 @@ onUnmounted(() => {
         <!-- ── Ban hang (POS) ── -->
         <section v-show="currentPage === 'ban-hang'">
           <div class="pos-grid-layout">
-            <!-- LEFT: tim kiem + san pham -->
+            <!-- LEFT: tim kiem + san pham — luon hien, nhan vien duyet duoc binh thuong;
+                 chi viec THEM VAO GIO moi bi chan neu chua xac dinh khach hang (xem posOpenSerialPicker) -->
             <div class="d-flex flex-column gap-3 overflow-hidden">
               <input v-model="posSearch" class="form-control form-control-sm"
-                     style="background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.12); color:#eee;"
-                     placeholder="Tim san pham theo ten hoac SKU..." />
-              <div v-if="loading" class="text-secondary small">Dang tai...</div>
+                     style="background:var(--bg-hover); border-color:var(--border-color-strong); color:var(--text-primary);"
+                     :placeholder="t('admin.pos.searchPlaceholder')" />
+              <div v-if="loading" class="text-secondary small">{{ t('admin.pos.loading') }}</div>
               <div v-else class="row g-2 overflow-y-auto">
                 <div v-for="p in posProducts" :key="p.bienTheId" class="col-6 col-xl-4">
-                  <div class="card h-100 border-secondary" style="background:rgba(255,255,255,0.04);">
+                  <div class="card h-100 border-secondary" style="background:var(--bg-hover);">
+                    <div class="d-flex align-items-center justify-content-center" style="height:88px;background:var(--bg-card-inset);">
+                      <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:6px;" />
+                      <span v-else style="font-size:1.8rem;">💻</span>
+                    </div>
                     <div class="card-body p-2 d-flex flex-column gap-1">
                       <div class="fw-semibold small text-light">{{ p.tenSanPham }}</div>
                       <div class="text-secondary" style="font-size:0.76rem;">{{ p.maSku }}</div>
                       <div class="text-secondary" style="font-size:0.75rem;">{{ p.tenThuongHieu }} · {{ p.tenDanhMuc }}</div>
                       <div class="fw-bold text-warning" style="font-size:0.95rem;">{{ formatPrice(p.giaBan) }}</div>
-                      <button class="btn btn-sm btn-warning text-dark fw-bold mt-auto" @click="posAddToCart(p)">+ Them vao gio</button>
+                      <button class="btn btn-sm btn-warning text-dark fw-bold mt-auto" @click="posOpenSerialPicker(p)">{{ t('admin.pos.addToCart') }}</button>
                     </div>
                   </div>
                 </div>
-                <div v-if="posProducts.length===0" class="col-12 text-center text-secondary small py-4">Khong tim thay san pham</div>
+                <div v-if="posProducts.length===0" class="col-12 text-center text-secondary small py-4">{{ t('admin.pos.noProductsFound') }}</div>
               </div>
             </div>
 
-            <!-- RIGHT: gio hang POS -->
-            <div class="card border-secondary d-flex flex-column overflow-hidden" style="background:rgba(255,255,255,0.03);">
+            <!-- RIGHT: gio hang POS — cong xac dinh khach hang nam o day -->
+            <div class="card border-secondary d-flex flex-column overflow-hidden" style="background:var(--bg-hover);">
               <div class="card-header border-secondary d-flex justify-content-between align-items-center fw-bold">
-                Gio hang <span class="text-secondary fw-normal small">{{ posCart.length }} san pham</span>
+                <span>{{ t('admin.pos.cart') }} <span class="text-secondary fw-normal small">{{ posCart.length }} {{ t('admin.pos.cartCountSuffix') }}</span></span>
+                <button class="btn btn-sm btn-outline-info position-relative" style="font-size:0.72rem;padding:2px 8px;" @click="showHeldOrders = true">
+                  {{ t('admin.pos.heldOrders') }}
+                  <span v-if="heldOrders.length" class="badge rounded-pill bg-warning text-dark" style="font-size:0.62rem;">{{ heldOrders.length }}</span>
+                </button>
               </div>
-              <!-- Danh sach san pham trong gio -->
+
+              <!-- Cong xac dinh khach hang: thay the phan gio hang cho toi khi co khach -->
+              <div v-if="posStage !== 'selling'" class="d-flex flex-column align-items-center justify-content-center gap-3 flex-grow-1 text-center p-3">
+                <div v-if="posError" class="small p-2 rounded-2 w-100" style="background:rgba(220,53,69,0.1);color:#e05252;">{{ posError }}</div>
+                <template v-if="posStage === 'start'">
+                  <div style="font-size:2.4rem;">🧾</div>
+                  <div class="text-secondary small">{{ t('admin.pos.startHint') }}</div>
+                  <button class="btn btn-warning text-dark fw-bold px-4" @click="posStartInvoice">{{ t('admin.pos.startInvoice') }}</button>
+                </template>
+                <template v-else-if="posStage === 'phone'">
+                  <div class="fw-bold text-light">{{ t('admin.pos.enterPhoneTitle') }}</div>
+                  <div class="d-flex gap-2 w-100">
+                    <input v-model="posPhone" class="form-control form-control-sm" style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.pos.phonePlaceholder')" @keyup.enter="posLookup" />
+                    <button class="btn btn-sm btn-warning text-dark fw-bold flex-shrink-0" @click="posLookup">{{ t('admin.pos.find') }}</button>
+                  </div>
+                  <div v-if="posPhoneNotFound" class="d-flex flex-column align-items-center gap-2 w-100">
+                    <div class="small" style="color:#e05252;">{{ t('admin.pos.customerNotFound') }}</div>
+                    <div class="small text-secondary">{{ t('admin.pos.askCreateCustomer') }}</div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-outline-secondary" @click="posCancelCreateCustomer">{{ t('admin.pos.no') }}</button>
+                      <button class="btn btn-sm btn-warning text-dark fw-bold" @click="posConfirmCreateCustomer">{{ t('admin.pos.yesCreateCustomer') }}</button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Danh sach san pham trong gio: chi hien khi da xac dinh khach hang -->
+              <template v-if="posStage === 'selling'">
               <div class="flex-grow-1 overflow-y-auto p-2 d-flex flex-column gap-1">
-                <div v-if="posCart.length===0" class="text-secondary small text-center py-4">Chua co san pham nao</div>
-                <div v-for="item in posCart" :key="item.bienTheId"
-                     class="d-flex align-items-center gap-2 p-2 rounded-2" style="background:rgba(255,255,255,0.04);">
+                <div v-if="posCart.length===0" class="text-secondary small text-center py-4">{{ t('admin.pos.cartEmptyList') }}</div>
+                <div v-for="item in posCart" :key="item.chiTietId"
+                     class="d-flex align-items-center gap-2 p-2 rounded-2" style="background:var(--bg-hover);">
+                  <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);">
+                    <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:2px;" />
+                    <span v-else style="font-size:1rem;">💻</span>
+                  </div>
                   <div class="flex-grow-1" style="min-width:0;">
                     <div class="fw-semibold small text-light text-truncate">{{ item.tenSanPham }}</div>
                     <div class="text-secondary" style="font-size:0.73rem;">{{ item.maSku }}</div>
+                    <div class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
                   </div>
                   <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                    <button class="btn btn-sm btn-outline-secondary" style="width:22px;height:22px;padding:0;font-size:0.85rem;"
-                            @click="item.soLuong>1?item.soLuong--:posRemove(item.bienTheId)">−</button>
-                    <span class="text-center" style="min-width:22px;font-size:0.84rem;">{{ item.soLuong }}</span>
-                    <button class="btn btn-sm btn-outline-secondary" style="width:22px;height:22px;padding:0;font-size:0.85rem;"
-                            @click="item.soLuong++">+</button>
                     <button class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
-                            @click="posRemove(item.bienTheId)">✕</button>
+                            @click="posRemove(item.chiTietId)">✕</button>
                   </div>
                   <div class="text-warning fw-bold flex-shrink-0 text-end" style="font-size:0.8rem;min-width:72px;">{{ formatPrice(item.giaBan*item.soLuong) }}</div>
                 </div>
               </div>
+              <!-- Ma khuyen mai -->
+              <div class="p-2 border-top border-secondary d-flex flex-column gap-1">
+                <div class="d-flex gap-2">
+                  <input v-model="posPromoCode" class="form-control form-control-sm" style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('checkout.promoPlaceholder')" @keyup.enter="posApplyPromo" />
+                  <button class="btn btn-sm btn-outline-warning flex-shrink-0" @click="posApplyPromo">{{ t('checkout.apply') }}</button>
+                </div>
+                <div v-if="posPromoMsg" class="small" :class="posAppliedPromo ? 'text-success' : 'text-danger'">{{ posPromoMsg }}</div>
+              </div>
               <!-- Tong tien -->
               <div class="p-2 border-top border-secondary d-flex flex-column gap-1">
-                <div class="d-flex justify-content-between text-secondary small"><span>Tong hang:</span><span>{{ formatPrice(posCartTotal) }}</span></div>
-                <div class="d-flex justify-content-between text-secondary small"><span>Phi van chuyen:</span><span>{{ posFee===0?'Mien phi':formatPrice(posFee) }}</span></div>
-                <div class="d-flex justify-content-between fw-bold"><span>Thanh toan:</span><span>{{ formatPrice(posGrandTotal) }}</span></div>
+                <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.subtotalLabel') }}</span><span>{{ formatPrice(posCartTotal) }}</span></div>
+                <div v-if="posGiamGia > 0" class="d-flex justify-content-between text-success small"><span>{{ t('checkout.discount') }}</span><span>-{{ formatPrice(posGiamGia) }}</span></div>
+                <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.shippingFeeLabel') }}</span><span>{{ posFee===0?t('admin.pos.free'):formatPrice(posFee) }}</span></div>
+                <div class="d-flex justify-content-between fw-bold"><span>{{ t('admin.pos.totalLabel') }}</span><span>{{ formatPrice(posGrandTotal) }}</span></div>
               </div>
               <!-- Khach hang -->
               <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
-                <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">Thong tin khach hang</div>
-                <div class="d-flex gap-2">
-                  <input v-model="posPhone" class="form-control form-control-sm" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#eee;" placeholder="So dien thoai *" @keyup.enter="posLookup" />
-                  <button class="btn btn-sm btn-outline-warning flex-shrink-0" @click="posLookup">Tim</button>
+                <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.customerInfo') }}</div>
+                <div v-if="posFoundCust" class="d-flex justify-content-between align-items-center gap-2 small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
+                  <span>✓ {{ posFoundCust.hoTen }} · {{ posFoundCust.soDienThoai }}</span>
+                  <button class="btn btn-sm btn-link text-secondary p-0" style="font-size:0.7rem;text-decoration:underline;" @click="posReset">{{ t('admin.pos.changeCustomer') }}</button>
                 </div>
-                <div v-if="posFoundCust" class="small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">✓ {{ posFoundCust.hoTen }} · {{ posFoundCust.soDienThoai }}</div>
-                <div v-else-if="posPhone.trim()" class="d-flex flex-column gap-1">
-                  <input v-model="posNewName" class="form-control form-control-sm" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#eee;" placeholder="Ho ten khach moi (neu co)" />
-                  <div class="text-secondary" style="font-size:0.75rem;">Khach hang moi se duoc tao tu dong</div>
-                </div>
+                <div v-else class="small text-secondary">{{ t('admin.pos.noCustomerYet') }}</div>
                 <div v-if="posError" class="small p-2 rounded-2" style="background:rgba(220,53,69,0.1);color:#e05252;">{{ posError }}</div>
-                <div v-if="posSuccess" class="small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">✓ Tao don hang thanh cong!</div>
+                <div v-if="posSuccess" class="small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">{{ t('admin.pos.orderCreated') }}</div>
                 <div class="d-flex gap-2">
-                  <button class="btn btn-sm btn-outline-secondary flex-grow-1" @click="posReset">Lam moi</button>
-                  <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" @click="posPlaceOrder">Tao don hang</button>
+                  <button class="btn btn-sm btn-outline-secondary" @click="posReset">{{ t('admin.pos.reset') }}</button>
+                  <button class="btn btn-sm btn-outline-info" :disabled="!posCart.length" @click="posHoldOrder">{{ t('admin.pos.holdOrder') }}</button>
+                  <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" :disabled="posStage !== 'selling' || !posCart.length" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
                 </div>
               </div>
+              </template>
             </div>
           </div>
         </section>
 
+        <!-- ══ MODAL CHON SERIAL (POS) ══ -->
+        <div v-if="showSerialPicker" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="showSerialPicker=false">
+          <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:480px;max-width:95vw;max-height:75vh;">
+            <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+              <div>
+                <div>{{ t('admin.pos.chooseSerial') }}</div>
+                <div class="text-secondary fw-normal" style="font-size:0.75rem;">{{ serialPickerProduct?.tenSanPham }} — {{ serialPickerProduct?.maSku }}</div>
+              </div>
+              <button class="btn-close btn-close-white btn-sm" @click="showSerialPicker=false"></button>
+            </div>
+            <div class="overflow-y-auto p-3 d-flex flex-column gap-2">
+              <div v-if="serialPickerLoading" class="text-secondary small text-center py-4">{{ t('admin.pos.loading') }}</div>
+              <div v-else-if="serialPickerList.length===0" class="text-secondary small text-center py-4">{{ t('admin.pos.noSerialAvailable') }}</div>
+              <button v-else v-for="s in serialPickerList" :key="s.chiTietId"
+                      class="btn btn-outline-warning d-flex justify-content-between align-items-center"
+                      style="font-family:monospace;font-size:0.85rem;"
+                      @click="posSelectSerial(s)">
+                <span>{{ s.soSerial }}</span>
+                <span class="text-secondary" style="font-size:0.7rem;">{{ formatDate(s.ngayNhapKho) }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ MODAL DON DANG GIU (POS) ══ -->
+        <div v-if="showHeldOrders" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="showHeldOrders=false">
+          <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:520px;max-width:95vw;max-height:80vh;">
+            <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+              <span>{{ t('admin.pos.heldOrders') }}</span>
+              <button class="btn-close btn-close-white btn-sm" @click="showHeldOrders=false"></button>
+            </div>
+            <div class="overflow-y-auto p-3 d-flex flex-column gap-2">
+              <div v-if="heldOrders.length===0" class="text-secondary small text-center py-4">{{ t('admin.pos.noHeldOrders') }}</div>
+              <div v-for="h in heldOrders" :key="h.id" class="rounded-3 p-2 d-flex justify-content-between align-items-center" style="background:var(--bg-hover);border:1px solid var(--border-color-soft);">
+                <div>
+                  <div class="small text-light">{{ h.foundCust?.hoTen ?? (h.newName || h.phone || t('admin.pos.walkInCustomer')) }}</div>
+                  <div class="text-secondary" style="font-size:0.72rem;">{{ h.cart.length }} {{ t('admin.pos.cartCountSuffix') }} · {{ formatDate(h.heldAt) }}</div>
+                </div>
+                <div class="d-flex gap-1">
+                  <button class="btn btn-sm btn-warning text-dark fw-bold" style="font-size:0.72rem;padding:2px 8px;" @click="posResumeHeld(h.id)">{{ t('admin.pos.resume') }}</button>
+                  <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="posDeleteHeld(h.id)">{{ t('admin.products.delete') }}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ── Trang placeholder cho nhan vien ── -->
         <section v-show="['user-home','user-orders','user-browse','user-warranty','user-profile'].includes(currentPage)"
-                 class="d-flex flex-column align-items-center justify-content-center text-secondary"
-                 style="min-height:300px;gap:12px;">
+                 class="flex-column align-items-center justify-content-center text-secondary"
+                 style="display:flex;min-height:300px;gap:12px;">
           <div style="font-size:2.8rem;">&#128101;</div>
-          <div class="fw-bold" style="color:#888;font-size:1.15rem;">{{ topbarTitle }}</div>
-          <div style="font-size:0.83rem;">Xem trang khach hang tai trang chu chinh</div>
+          <div class="fw-bold" style="color:var(--text-muted);font-size:1.15rem;">{{ topbarTitle }}</div>
+          <div style="font-size:0.83rem;">{{ t('admin.placeholder.userPageNote') }}</div>
         </section>
 
       </div><!-- /content -->
@@ -1825,14 +2489,15 @@ onUnmounted(() => {
   </div><!-- /dashboard-shell -->
 
   <!-- ══ MODAL SAN PHAM ══ -->
-  <div v-if="showProductModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.7);z-index:1000;" @click.self="showProductModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.1);width:860px;max-width:96vw;max-height:92vh;">
+  <div v-if="showProductModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showProductModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:860px;max-width:96vw;max-height:92vh;">
 
       <!-- Header -->
-      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid #2a2a2a;">
+      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color);">
         <div>
-          <div class="fw-bold text-light" style="font-size:1rem;">{{ editingId ? 'Cap nhat san pham' : 'Them san pham moi' }}</div>
-          <div v-if="editingId" class="text-secondary" style="font-size:0.72rem;margin-top:2px;">ID: {{ editingId }}</div>
+          <div class="fw-bold text-light" style="font-size:1rem;">{{ addVariantMode ? t('admin.variantModal.addVariant') : (editingId ? t('admin.productModal.titleEdit') : t('admin.productModal.titleAdd')) }}</div>
+          <div v-if="addVariantMode" class="text-secondary" style="font-size:0.72rem;margin-top:2px;">{{ addVariantSanPhamName }}</div>
+          <div v-else-if="editingId" class="text-secondary" style="font-size:0.72rem;margin-top:2px;">{{ t('admin.productModal.idLabel') }} {{ editingId }}</div>
         </div>
         <button class="btn-close btn-close-white btn-sm" @click="showProductModal=false"></button>
       </div>
@@ -1842,205 +2507,209 @@ onUnmounted(() => {
         <div v-if="formError" class="alert alert-danger small py-2 mb-3">{{ formError }}</div>
 
         <!-- ── Thong tin co ban ── -->
-        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">Thong tin co ban</div>
-        <div class="rounded-3 p-3 mb-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
+        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">{{ t('admin.productModal.sectionBasic') }}</div>
+        <div class="rounded-3 p-3 mb-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
           <div class="row g-3">
-            <div class="col-8">
-              <label class="form-label small text-secondary mb-1">Ten san pham *</label>
-              <input v-model="form.tenSanPham" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Ten san pham" />
+            <div class="col-8" v-if="!addVariantMode">
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.nameLabel') }}</label>
+              <input v-model="form.tenSanPham" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.namePlaceholder')" />
             </div>
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">Ma SKU *</label>
-              <input v-model="form.maSku" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="SKU-001" style="font-family:monospace;" />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.skuLabel') }}</label>
+              <input v-model="form.maSku" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); font-family:monospace;" :placeholder="t('admin.productModal.skuPlaceholder')" />
             </div>
-            <div class="col-3">
-              <label class="form-label small text-secondary mb-1">Loai san pham *</label>
-              <select v-model="form.loaiSanPham" class="form-select form-select-sm bg-dark text-light border-secondary">
-                <option value="" disabled>-- Chon --</option>
-                <option value="LAPTOP">Laptop</option>
-                <option value="PHU_KIEN">Phu kien</option>
+            <div class="col-3" v-if="!addVariantMode">
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.typeLabel') }}</label>
+              <select v-model="form.loaiSanPham" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                <option value="" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
+                <option value="LAPTOP">{{ t('admin.productModal.typeLaptop') }}</option>
+                <option value="PHU_KIEN">{{ t('admin.productModal.typeAccessory') }}</option>
               </select>
             </div>
             <div class="col-3">
-              <label class="form-label small text-secondary mb-1">Trang thai *</label>
-              <select v-model="form.trangThai" class="form-select form-select-sm bg-dark text-light border-secondary">
-                <option value="active">Hoat dong</option>
-                <option value="inactive">Ngung ban</option>
-                <option value="ngung_kin_doanh">Ngung kinh doanh</option>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.statusLabel') }}</label>
+              <select v-model="form.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                <option value="active">{{ t('admin.productModal.statusActive') }}</option>
+                <option value="inactive">{{ t('admin.productModal.statusInactive') }}</option>
+                <option value="ngung_kin_doanh">{{ t('admin.productModal.statusDiscontinued') }}</option>
               </select>
             </div>
             <div class="col-3">
-              <label class="form-label small text-secondary mb-1">Mau sac *</label>
-              <input v-model="form.mauSac" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Den, Bac..." />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.colorLabel') }}</label>
+              <input v-model="form.mauSac" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.colorPlaceholder')" />
             </div>
             <div class="col-3">
-              <label class="form-label small text-secondary mb-1">Bao hanh (thang) *</label>
-              <input v-model="form.baoHanhThang" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.warrantyLabel') }}</label>
+              <input v-model="form.baoHanhThang" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
             </div>
+            <template v-if="!addVariantMode">
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">Thuong hieu *</label>
-              <select v-model="form.thuongHieuId" class="form-select form-select-sm bg-dark text-light border-secondary">
-                <option :value="null" disabled>-- Chon --</option>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.brandLabel') }}</label>
+              <select v-model="form.thuongHieuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                <option :value="null" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
                 <option v-for="b in brands" :key="b.thuongHieuId" :value="b.thuongHieuId">{{ b.tenThuongHieu }}</option>
               </select>
             </div>
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">Danh muc *</label>
-              <select v-model="form.danhMucId" class="form-select form-select-sm bg-dark text-light border-secondary">
-                <option :value="null" disabled>-- Chon --</option>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.categoryLabel') }}</label>
+              <select v-model="form.danhMucId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                <option :value="null" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
                 <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.tenDanhMuc }}</option>
               </select>
             </div>
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">Nha cung cap</label>
-              <select v-model="form.nhaCungCapId" class="form-select form-select-sm bg-dark text-light border-secondary">
-                <option :value="null">-- Khong co --</option>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.supplierLabel') }}</label>
+              <select v-model="form.nhaCungCapId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
                 <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">{{ s.tenNhaCungCap }}</option>
               </select>
             </div>
+            </template>
           </div>
         </div>
 
         <!-- ── Cau hinh ky thuat ── -->
-        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">Cau hinh ky thuat</div>
-        <div class="rounded-3 p-3 mb-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
+        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">{{ t('admin.productModal.sectionTech') }}</div>
+        <div class="rounded-3 p-3 mb-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
           <div class="row g-3">
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1">CPU</label>
-              <select v-model="form.cpuId" class="form-select form-select-sm bg-dark text-light border-secondary">
-                <option :value="null">-- Khong co --</option>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.cpuLabel') }}</label>
+              <select v-model="form.cpuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
                 <option v-for="c in cpuList" :key="c.cpuId" :value="c.cpuId">{{ c.tenCpu }}</option>
               </select>
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1">GPU</label>
-              <select v-model="form.gpuId" class="form-select form-select-sm bg-dark text-light border-secondary">
-                <option :value="null">-- Khong co --</option>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.gpuLabel') }}</label>
+              <select v-model="form.gpuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
                 <option v-for="g in gpuList" :key="g.gpuId" :value="g.gpuId">{{ g.tenGpu }}</option>
               </select>
             </div>
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">RAM</label>
-              <select v-model="form.ramId" class="form-select form-select-sm bg-dark text-light border-secondary">
-                <option :value="null">-- Khong co --</option>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.ramLabel') }}</label>
+              <select v-model="form.ramId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
                 <option v-for="r in ramList" :key="r.ramId" :value="r.ramId">{{ r.dungLuong }}</option>
               </select>
             </div>
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">O cung</label>
-              <select v-model="form.oCungId" class="form-select form-select-sm bg-dark text-light border-secondary">
-                <option :value="null">-- Khong co --</option>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.storageLabel') }}</label>
+              <select v-model="form.oCungId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
                 <option v-for="o in oCungList" :key="o.oCungId" :value="o.oCungId">{{ o.loaiOcung }}</option>
               </select>
             </div>
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">Man hinh</label>
-              <input v-model="form.kichThuocManHinh" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder='15.6" FHD' />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.screenLabel') }}</label>
+              <input v-model="form.kichThuocManHinh" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.screenPlaceholder')" />
             </div>
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">He dieu hanh</label>
-              <input v-model="form.heDieuHanh" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Windows 11" />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.osLabel') }}</label>
+              <input v-model="form.heDieuHanh" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.osPlaceholder')" />
             </div>
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">Pin</label>
-              <input v-model="form.pin" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="72Wh" />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.batteryLabel') }}</label>
+              <input v-model="form.pin" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.batteryPlaceholder')" />
             </div>
             <div class="col-4">
-              <label class="form-label small text-secondary mb-1">Trong luong (kg)</label>
-              <input v-model="form.trongLuongKg" type="number" step="0.1" class="form-control form-control-sm bg-dark text-light border-secondary" />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.weightLabel') }}</label>
+              <input v-model="form.trongLuongKg" type="number" step="0.1" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
             </div>
           </div>
         </div>
 
         <!-- ── Gia ca ── -->
-        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">Gia ca</div>
-        <div class="rounded-3 p-3 mb-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
+        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">{{ t('admin.productModal.sectionPrice') }}</div>
+        <div class="rounded-3 p-3 mb-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
           <div class="row g-3">
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1">Gia ban (VND) *</label>
-              <input v-model="form.giaBan" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.priceSellLabel') }}</label>
+              <input v-model="form.giaBan" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1">Gia nhap (VND) *</label>
-              <input v-model="form.giaNhap" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.priceBuyLabel') }}</label>
+              <input v-model="form.giaNhap" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
             </div>
           </div>
         </div>
 
         <!-- ── Hinh anh, mo ta, phan loai ── -->
-        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">Hinh anh & Mo ta</div>
-        <div class="rounded-3 p-3 mb-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
+        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">{{ t('admin.productModal.sectionMedia') }}</div>
+        <div class="rounded-3 p-3 mb-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
           <div class="row g-3">
             <div class="col-12">
-              <label class="form-label small text-secondary mb-1">Hinh anh chinh</label>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.imageLabel') }}</label>
               <div class="d-flex align-items-center gap-3">
-                <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:110px;height:88px;cursor:pointer;flex-shrink:0;overflow:hidden;background:#111;">
+                <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:110px;height:88px;cursor:pointer;flex-shrink:0;overflow:hidden;background:var(--bg-card-inset);">
                   <img v-if="imagePreview" :src="imagePreview" style="width:110px;height:88px;object-fit:contain;" />
                   <template v-else>
                     <span style="font-size:1.4rem;">&#128247;</span>
-                    <span style="font-size:0.68rem;margin-top:4px;">Click de chon</span>
+                    <span style="font-size:0.68rem;margin-top:4px;">{{ t('admin.productModal.imageClickToChoose') }}</span>
                   </template>
                   <input type="file" accept="image/*" class="d-none" @change="handleImageFile" />
                 </label>
                 <div v-if="imageFilePending" class="text-warning" style="font-size:0.75rem;">{{ imageFilePending.name }}</div>
-                <div v-else class="text-secondary" style="font-size:0.75rem;">JPG, PNG, WEBP</div>
+                <div v-else class="text-secondary" style="font-size:0.75rem;">{{ t('admin.productModal.imageFormats') }}</div>
               </div>
             </div>
+            <template v-if="!addVariantMode">
             <div class="col-12">
-              <label class="form-label small text-secondary mb-1">Mo ta</label>
-              <textarea v-model="form.moTa" rows="3" class="form-control form-control-sm bg-dark text-light border-secondary"></textarea>
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.descLabel') }}</label>
+              <textarea v-model="form.moTa" rows="3" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"></textarea>
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1">Phan loai Tags <span class="text-warning small">(de loc)</span></label>
-              <input v-model="form.phanLoaiTags" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="gaming,do_hoa  hoac  van_phong,sinh_vien" />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagsLabel') }} <span class="text-warning small">{{ t('admin.productModal.tagsHint') }}</span></label>
+              <input v-model="form.phanLoaiTags" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.tagsPlaceholder')" />
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1">Phan loai Ten <span class="text-muted small">(ten hien thi)</span></label>
-              <input v-model="form.phanLoaiTen" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Gaming, Do hoa" />
+              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagNameLabel') }} <span class="text-muted small">{{ t('admin.productModal.tagNameHint') }}</span></label>
+              <input v-model="form.phanLoaiTen" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.tagNamePlaceholder')" />
             </div>
+            </template>
           </div>
         </div>
 
         <!-- ── Serial (chi khi them moi) ── -->
         <div v-if="!editingId">
-          <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#facc15;">Serial dau tien</div>
-          <div class="rounded-3 p-3" style="background:#1e1e1e;border:1px solid #2a2a2a;">
-            <label class="form-label small text-secondary mb-1">So Serial <span class="text-danger">*</span></label>
-            <input v-model="soSerialMoi" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="VD: SN2024DELL001" style="font-family:monospace;" />
-            <div class="text-secondary mt-1" style="font-size:0.72rem;">Bat buoc khi them moi — dung de quan ly kho</div>
+          <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#facc15;">{{ t('admin.productModal.sectionSerial') }}</div>
+          <div class="rounded-3 p-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
+            <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.serialLabel') }} <span class="text-danger">*</span></label>
+            <input v-model="soSerialMoi" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); font-family:monospace;" :placeholder="t('admin.productModal.serialPlaceholder')" />
+            <div class="text-secondary mt-1" style="font-size:0.72rem;">{{ t('admin.productModal.serialHint') }}</div>
           </div>
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="d-flex justify-content-end gap-2 px-4 py-3" style="border-top:1px solid #2a2a2a;">
-        <button class="btn btn-sm btn-outline-secondary px-3" @click="showProductModal=false">Huy</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold px-4" @click="saveProduct">{{ editingId ? 'Cap nhat' : 'Them moi' }}</button>
+      <div class="d-flex justify-content-end gap-2 px-4 py-3" style="border-top:1px solid var(--border-color);">
+        <button class="btn btn-sm btn-outline-secondary px-3" @click="showProductModal=false">{{ t('admin.productModal.cancel') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold px-4" @click="saveProduct">{{ addVariantMode ? t('admin.variantModal.addVariant') : (editingId ? t('admin.productModal.update') : t('admin.productModal.addNew')) }}</button>
       </div>
     </div>
   </div>
 
   <!-- ══ MODAL BIEN THE SAN PHAM ══ -->
-  <div v-if="showVariantModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.72);z-index:1050;" @click.self="showVariantModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.12);width:960px;max-width:96vw;max-height:90vh;">
+  <div v-if="showVariantModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1050;" @click.self="showVariantModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:960px;max-width:96vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>Bien the: {{ variantModalName }}</span>
+        <span>{{ t('admin.variantModal.titlePrefix') }} {{ variantModalName }}</span>
         <button class="btn-close btn-close-white btn-sm" @click="showVariantModal=false"></button>
       </div>
       <div class="overflow-y-auto p-3">
         <!-- moi bien the la 1 card -->
-        <div v-for="v in variantModalList" :key="v.bienTheId" class="mb-3 rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
+        <div v-for="v in variantModalList" :key="v.bienTheId" class="mb-3 rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
           <!-- header bien the -->
-          <div class="d-flex align-items-center gap-3 px-3 py-2 justify-content-between" style="background:#222;">
+          <div class="d-flex align-items-center gap-3 px-3 py-2 justify-content-between" style="background:var(--bg-input);">
             <div class="d-flex align-items-center gap-3 flex-wrap">
               <span class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</span>
-              <span class="badge rounded-pill" style="font-size:0.72rem;background:#333;color:#eee;">{{ v.mauSac }}</span>
+              <span class="badge rounded-pill" style="font-size:0.72rem;background:var(--border-color-strong);color:var(--text-primary);">{{ v.mauSac }}</span>
               <span class="text-light" style="font-size:0.82rem;">{{ v.cpu }} · {{ v.ram }} · {{ v.oCung }}</span>
               <span class="text-secondary" style="font-size:0.8rem;">{{ v.kichThuocManHinh }}</span>
               <span class="fw-bold text-warning" style="font-size:0.88rem;">{{ formatPrice(v.giaBan) }}</span>
               <span class="badge" :class="v.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.7rem;">{{ statusLabel(v.trangThai) }}</span>
             </div>
-            <button class="btn btn-sm btn-outline-warning flex-shrink-0" style="font-size:0.75rem;padding:2px 8px;" @click="showVariantModal=false; openEdit(v)">Sua</button>
+            <button class="btn btn-sm btn-outline-warning flex-shrink-0" style="font-size:0.75rem;padding:2px 8px;" @click="showVariantModal=false; openEdit(v)">{{ t('admin.variantModal.edit') }}</button>
           </div>
 
         </div>
@@ -2049,84 +2718,87 @@ onUnmounted(() => {
   </div>
 
   <!-- ══ MODAL CHI TIET SAN PHAM ══ -->
-  <div v-if="showDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.75);z-index:1060;" @click.self="showDetailModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.12);width:1100px;max-width:97vw;max-height:92vh;">
+  <div v-if="showDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1060;" @click.self="showDetailModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:1100px;max-width:97vw;max-height:92vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>Chi tiet: {{ detailModalName }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showDetailModal=false"></button>
+        <span>{{ t('admin.detailModal.titlePrefix') }} {{ detailModalName }}</span>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-warning text-dark fw-bold" style="font-size:0.78rem;" @click="openAddVariant">{{ t('admin.variantModal.addVariant') }}</button>
+          <button class="btn-close btn-close-white btn-sm" @click="showDetailModal=false"></button>
+        </div>
       </div>
       <div class="overflow-y-auto p-3">
-        <div v-for="v in detailModalList" :key="v.bienTheId" class="mb-4 rounded-3 overflow-hidden" style="border:1px solid #2a2a2a;">
+        <div v-for="v in detailModalList" :key="v.bienTheId" class="mb-4 rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
           <!-- Header bien the -->
-          <div class="d-flex align-items-center justify-content-between gap-3 p-3" style="background:#222;">
+          <div class="d-flex align-items-center justify-content-between gap-3 p-3" style="background:var(--bg-input);">
             <div class="d-flex align-items-center gap-3">
-              <img v-if="v.hinhAnhChinh" :src="v.hinhAnhChinh" style="width:72px;height:54px;object-fit:contain;background:#111;border-radius:6px;padding:4px;" />
+              <img v-if="v.hinhAnhChinh" :src="v.hinhAnhChinh" style="width:72px;height:54px;object-fit:contain;background:var(--bg-card-inset);border-radius:6px;padding:4px;" />
               <span v-else style="font-size:2rem;width:72px;text-align:center;">💻</span>
               <div>
                 <div class="fw-bold text-light" style="font-size:0.95rem;">{{ v.tenSanPham }}</div>
                 <div class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</div>
               </div>
             </div>
-            <button class="btn btn-sm btn-outline-warning flex-shrink-0" style="font-size:0.75rem;padding:3px 12px;" @click="showDetailModal=false; openEdit(v)">Sua</button>
+            <button class="btn btn-sm btn-outline-warning flex-shrink-0" style="font-size:0.75rem;padding:3px 12px;" @click="showDetailModal=false; openEdit(v)">{{ t('admin.detailModal.edit') }}</button>
           </div>
           <!-- Bang thong tin 4 cot (label | value | label | value) -->
           <table class="w-100 mb-0" style="border-collapse:collapse;font-size:0.8rem;">
             <tbody>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Thuong hieu</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.tenThuongHieu }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Danh muc</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.tenDanhMuc }}</td>
+              <tr style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.brand') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.tenThuongHieu }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.category') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.tenDanhMuc }}</td>
               </tr>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Nha cung cap</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.tenNhaCungCap }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Loai san pham</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.loaiSanPham }}</td>
+              <tr style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.supplier') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.tenNhaCungCap }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.productType') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.loaiSanPham }}</td>
               </tr>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Gia ban</td>
-                <td class="px-3 py-1 fw-bold" style="background:#1a1a1a;color:#facc15;">{{ formatPrice(v.giaBan) }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Gia nhap</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ formatPrice(v.giaNhap) }}</td>
+              <tr style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.priceSell') }}</td>
+                <td class="px-3 py-1 fw-bold" style="background:var(--bg-card);color:#facc15;">{{ formatPrice(v.giaBan) }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.priceBuy') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ formatPrice(v.giaNhap) }}</td>
               </tr>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Bao hanh</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.baoHanhThang ? v.baoHanhThang + ' thang' : '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Mau sac</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.mauSac }}</td>
+              <tr style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.warranty') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.baoHanhThang ? v.baoHanhThang + ' ' + t('admin.detailModal.months') : '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.color') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.mauSac }}</td>
               </tr>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Trang thai</td>
-                <td class="px-3 py-1" style="background:#1a1a1a;">
+              <tr style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.status') }}</td>
+                <td class="px-3 py-1" style="background:var(--bg-card);">
                   <span class="badge" :class="v.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.7rem;">{{ statusLabel(v.trangThai) }}</span>
                 </td>
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">CPU</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.cpu || '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.cpu') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.cpu || '—' }}</td>
               </tr>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">RAM</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.ram || '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">O cung</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.oCung || '—' }}</td>
+              <tr style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.ram') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.ram || '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.storage') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.oCung || '—' }}</td>
               </tr>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">GPU</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.gpu || '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Man hinh</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.kichThuocManHinh || '—' }}</td>
+              <tr style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.gpu') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.gpu || '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.screen') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.kichThuocManHinh || '—' }}</td>
               </tr>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">He dieu hanh</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.heDieuHanh || '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Pin</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.pin || '—' }}</td>
+              <tr style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.os') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.heDieuHanh || '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.battery') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.pin || '—' }}</td>
               </tr>
-              <tr style="border-top:1px solid #222;">
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Trong luong</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.trongLuongKg ? v.trongLuongKg + ' kg' : '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:#161616;font-weight:600;">Phan loai</td>
-                <td class="px-3 py-1 text-light" style="background:#1a1a1a;">{{ v.phanLoaiTen || '—' }}</td>
+              <tr style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.weight') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.trongLuongKg ? v.trongLuongKg + ' ' + t('admin.detailModal.kg') : '—' }}</td>
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.classification') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.phanLoaiTen || '—' }}</td>
               </tr>
             </tbody>
           </table>
@@ -2136,97 +2808,97 @@ onUnmounted(() => {
   </div>
 
   <!-- ══ MODAL KHACH HANG ══ -->
-  <div v-if="showCustomerModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.65);z-index:1000;" @click.self="showCustomerModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.1);width:560px;max-width:95vw;max-height:90vh;">
+  <div v-if="showCustomerModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="closeCustomerModal()">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:560px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ editingCustomerId?'Cap nhat khach hang':'Them khach hang moi' }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showCustomerModal=false"></button>
+        <span>{{ editingCustomerId?t('admin.customerModal.titleEdit'):t('admin.customerModal.titleAdd') }}</span>
+        <button class="btn-close btn-close-white btn-sm" @click="closeCustomerModal()"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="customerFormError" class="alert alert-danger small py-2 mb-3">{{ customerFormError }}</div>
         <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">Ho ten *</label><input v-model="customerForm.hoTen" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Dien thoai *</label><input v-model="customerForm.soDienThoai" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Email *</label><input v-model="customerForm.email" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Loai khach</label><select v-model="customerForm.loaiKhach" class="form-select form-select-sm bg-dark text-light border-secondary"><option value="ca_nhan">Ca nhan</option><option value="doanh_nghiep">Doanh nghiep</option></select></div>
-          <div class="col-12"><label class="form-label small text-secondary">Dia chi</label><input v-model="customerForm.diaChi" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Ten cong ty</label><input v-model="customerForm.tenCongTy" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Ma so thue</label><input v-model="customerForm.maSoThue" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Diem tich luy</label><input v-model="customerForm.diemTichLuy" type="number" min="0" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Trang thai</label><select v-model="customerForm.trangThai" class="form-select form-select-sm bg-dark text-light border-secondary"><option value="active">Hoat dong</option><option value="inactive">Khoa</option></select></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.fullNameLabel') }}</label><input v-model="customerForm.hoTen" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.phoneLabel') }}</label><input v-model="customerForm.soDienThoai" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.emailLabel') }}</label><input v-model="customerForm.email" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.typeLabel') }}</label><select v-model="customerForm.loaiKhach" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="ca_nhan">{{ t('admin.customerModal.typePersonal') }}</option><option value="doanh_nghiep">{{ t('admin.customerModal.typeBusiness') }}</option></select></div>
+          <div class="col-12"><label class="form-label small text-secondary">{{ t('admin.customerModal.addressLabel') }}</label><input v-model="customerForm.diaChi" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.companyNameLabel') }}</label><input v-model="customerForm.tenCongTy" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.taxCodeLabel') }}</label><input v-model="customerForm.maSoThue" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.pointsLabel') }}</label><input v-model="customerForm.diemTichLuy" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.statusLabel') }}</label><select v-model="customerForm.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="active">{{ t('admin.customerModal.statusActive') }}</option><option value="inactive">{{ t('admin.customerModal.statusLocked') }}</option></select></div>
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showCustomerModal=false">Huy</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveCustomer">{{ editingCustomerId?'Cap nhat':'Them moi' }}</button>
+        <button class="btn btn-sm btn-outline-secondary" @click="closeCustomerModal()">{{ t('admin.customerModal.cancel') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveCustomer">{{ editingCustomerId?t('admin.customerModal.update'):t('admin.customerModal.addNew') }}</button>
       </div>
     </div>
   </div>
 
   <!-- ══ MODAL NHAN VIEN ══ -->
-  <div v-if="showStaffModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.65);z-index:1000;" @click.self="showStaffModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.1);width:560px;max-width:95vw;max-height:90vh;">
+  <div v-if="showStaffModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showStaffModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:560px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ editingStaffId?'Cap nhat nhan vien':'Them nhan vien moi' }}</span>
+        <span>{{ editingStaffId?t('admin.staffModal.titleEdit'):t('admin.staffModal.titleAdd') }}</span>
         <button class="btn-close btn-close-white btn-sm" @click="showStaffModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="staffFormError" class="alert alert-danger small py-2 mb-3">{{ staffFormError }}</div>
         <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">Ho ten *</label><input v-model="staffForm.hoTen" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Dien thoai *</label><input v-model="staffForm.soDienThoai" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Email *</label><input v-model="staffForm.email" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Chuc vu *</label><select v-model="staffForm.chucVuId" class="form-select form-select-sm bg-dark text-light border-secondary"><option :value="null" disabled>-- Chon chuc vu --</option><option v-for="cv in chucVuList" :key="cv.id" :value="cv.id">{{ cv.tenChucVu }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">Username *</label><input v-model="staffForm.username" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Mat khau {{ editingStaffId?'(de trong neu khong doi)':'*' }}</label><input v-model="staffForm.matKhauHash" type="password" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Luong co ban *</label><input v-model="staffForm.luongCoBan" type="number" min="0" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Trang thai</label><select v-model="staffForm.trangThai" class="form-select form-select-sm bg-dark text-light border-secondary"><option value="active">Hoat dong</option><option value="inactive">Nghi viec</option></select></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.fullNameLabel') }}</label><input v-model="staffForm.hoTen" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.phoneLabel') }}</label><input v-model="staffForm.soDienThoai" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.emailLabel') }}</label><input v-model="staffForm.email" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.positionLabel') }}</label><select v-model="staffForm.chucVuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option :value="null" disabled>{{ t('admin.staffModal.positionSelectPlaceholder') }}</option><option v-for="cv in chucVuList" :key="cv.id" :value="cv.id">{{ cv.tenChucVu }}</option></select></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.usernameLabel') }}</label><input v-model="staffForm.username" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.passwordLabel') }} {{ editingStaffId?t('admin.staffModal.passwordKeepHint'):t('admin.staffModal.passwordRequired') }}</label><input v-model="staffForm.matKhauHash" type="password" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.baseSalaryLabel') }}</label><input v-model="staffForm.luongCoBan" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.statusLabel') }}</label><select v-model="staffForm.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="active">{{ t('admin.staffModal.statusActive') }}</option><option value="inactive">{{ t('admin.staffModal.statusResigned') }}</option></select></div>
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showStaffModal=false">Huy</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveStaff">{{ editingStaffId?'Cap nhat':'Them moi' }}</button>
+        <button class="btn btn-sm btn-outline-secondary" @click="showStaffModal=false">{{ t('admin.staffModal.cancel') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveStaff">{{ editingStaffId?t('admin.staffModal.update'):t('admin.staffModal.addNew') }}</button>
       </div>
     </div>
   </div>
 
   <!-- ══ MODAL KHUYEN MAI ══ -->
-  <div v-if="showPromoModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.65);z-index:1000;" @click.self="showPromoModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.1);width:620px;max-width:95vw;max-height:90vh;">
+  <div v-if="showPromoModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showPromoModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:620px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ editingPromoId?'Cap nhat khuyen mai':'Them khuyen mai moi' }}</span>
+        <span>{{ editingPromoId?t('admin.promoModal.titleEdit'):t('admin.promoModal.titleAdd') }}</span>
         <button class="btn-close btn-close-white btn-sm" @click="showPromoModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="promoFormError" class="alert alert-danger small py-2 mb-3">{{ promoFormError }}</div>
         <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">Ma khuyen mai *</label><input v-model="promoForm.maKhuyenMai" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Ten khuyen mai *</label><input v-model="promoForm.tenKhuyenMai" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Loai</label><select v-model="promoForm.loai" class="form-select form-select-sm bg-dark text-light border-secondary"><option value="percent">Phan tram (%)</option><option value="fixed">So tien (VND)</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">Gia tri {{ promoForm.loai==='percent'?'(%)':'(VND)' }}</label><input v-model="promoForm.giaTri" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Giam toi da (VND)</label><input v-model="promoForm.giaTriToiDa" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Don hang toi thieu (VND)</label><input v-model="promoForm.donHangToiThieu" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Ngay bat dau *</label><input v-model="promoForm.ngayBatDau" type="datetime-local" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Ngay ket thuc *</label><input v-model="promoForm.ngayKetThuc" type="datetime-local" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">So luong toi da</label><input v-model="promoForm.soLuongToiDa" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Trang thai</label><select v-model="promoForm.trangThai" class="form-select form-select-sm bg-dark text-light border-secondary"><option value="active">Hoat dong</option><option value="inactive">Ngung</option></select></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.codeLabel') }}</label><input v-model="promoForm.maKhuyenMai" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.nameLabel') }}</label><input v-model="promoForm.tenKhuyenMai" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.typeLabel') }}</label><select v-model="promoForm.loai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="percent">{{ t('admin.promoModal.typePercent') }}</option><option value="fixed">{{ t('admin.promoModal.typeFixed') }}</option></select></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ promoForm.loai==='percent'?t('admin.promoModal.valueLabelPercent'):t('admin.promoModal.valueLabelFixed') }}</label><input v-model="promoForm.giaTri" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.maxDiscountLabel') }}</label><input v-model="promoForm.giaTriToiDa" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.minOrderLabel') }}</label><input v-model="promoForm.donHangToiThieu" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.startDateLabel') }}</label><input v-model="promoForm.ngayBatDau" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.endDateLabel') }}</label><input v-model="promoForm.ngayKetThuc" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.maxUsageLabel') }}</label><input v-model="promoForm.soLuongToiDa" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.statusLabel') }}</label><select v-model="promoForm.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="active">{{ t('admin.promoModal.statusActive') }}</option><option value="inactive">{{ t('admin.promoModal.statusStopped') }}</option></select></div>
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showPromoModal=false">Huy</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="savePromo">{{ editingPromoId?'Cap nhat':'Them moi' }}</button>
+        <button class="btn btn-sm btn-outline-secondary" @click="showPromoModal=false">{{ t('admin.promoModal.cancel') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="savePromo">{{ editingPromoId?t('admin.promoModal.update'):t('admin.promoModal.addNew') }}</button>
       </div>
     </div>
   </div>
 
   <!-- ══ MODAL THEM SAN PHAM CHI TIET ══ -->
   <div v-if="showAddItemDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-       style="background:rgba(0,0,0,0.85);z-index:1070;" @click.self="showAddItemDetailModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#111;border:1px solid rgba(255,255,255,0.1);width:960px;max-width:97vw;max-height:93vh;">
+       style="background:var(--bg-overlay);z-index:1070;" @click.self="showAddItemDetailModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card-inset);border:1px solid var(--border-color-strong);width:960px;max-width:97vw;max-height:93vh;">
 
       <!-- Header -->
-      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid #1e1e1e;">
-        <span class="text-secondary" style="font-size:0.8rem;">Chon san pham de them vao don hang</span>
+      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--bg-input);">
+        <span class="text-secondary" style="font-size:0.8rem;">{{ t('admin.addItemDetailModal.chooseProduct') }}</span>
         <button class="btn-close btn-close-white btn-sm" @click="showAddItemDetailModal=false"></button>
       </div>
 
@@ -2236,8 +2908,8 @@ onUnmounted(() => {
 
           <!-- Left: Anh san pham -->
           <div class="d-flex flex-column align-items-center justify-content-center p-4"
-               style="width:42%;background:#0d0d0d;border-right:1px solid #1e1e1e;flex-shrink:0;">
-            <div style="width:100%;max-width:320px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:#141414;border-radius:12px;overflow:hidden;padding:16px;">
+               style="width:42%;background:var(--bg-page-alt);border-right:1px solid var(--bg-input);flex-shrink:0;">
+            <div style="width:100%;max-width:320px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:var(--bg-card-alt);border-radius:12px;overflow:hidden;padding:16px;">
               <img v-if="(addItemCurrentVariant || addItemDetailGroup.variants[0])?.hinhAnhChinh"
                    :src="(addItemCurrentVariant || addItemDetailGroup.variants[0]).hinhAnhChinh"
                    style="max-width:100%;max-height:100%;object-fit:contain;" />
@@ -2258,13 +2930,13 @@ onUnmounted(() => {
             <h5 class="fw-bold text-light mb-2">{{ addItemDetailGroup.tenSanPham }}</h5>
             <div class="mb-3" style="font-size:1.4rem;font-weight:700;color:#facc15;">
               {{ addItemCurrentVariant ? formatPrice(addItemCurrentVariant.giaBan) : formatPrice(addItemDetailGroup.minPrice) }}
-              <span class="text-secondary ms-2" style="font-size:0.8rem;font-weight:400;">🚚 Giao nhanh 2H · Mien phi tu 300K</span>
+              <span class="text-secondary ms-2" style="font-size:0.8rem;font-weight:400;">{{ t('admin.addItemDetailModal.freeshipNote') }}</span>
             </div>
 
             <!-- Chon phien ban (CPU + RAM + Storage) -->
             <div v-if="addItemConfigs.length > 1" class="mb-3">
               <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">
-                PHIEN BAN ({{ addItemConfigs.length }} CAU HINH)
+                {{ t('admin.addItemDetailModal.configCount', { count: addItemConfigs.length }) }}
               </div>
               <div class="d-flex flex-wrap gap-2">
                 <button v-for="cfg in addItemConfigs" :key="cfg.key"
@@ -2273,8 +2945,8 @@ onUnmounted(() => {
                         style="padding:8px 12px;border-radius:8px;min-width:140px;"
                         :style="addItemSelectedConfig === cfg.key
                           ? 'background:#1e1a00;border:2px solid #facc15;color:#facc15;'
-                          : 'background:#1a1a1a;border:1px solid #333;color:#aaa;'">
-                  <div style="font-size:0.78rem;font-weight:600;">{{ cfg.cpu || 'Tieu chuan' }}</div>
+                          : 'background:var(--bg-card);border:1px solid var(--border-color-strong);color:var(--text-secondary);'">
+                  <div style="font-size:0.78rem;font-weight:600;">{{ cfg.cpu || t('admin.addItemDetailModal.standard') }}</div>
                   <div style="font-size:0.68rem;">{{ [cfg.ram, cfg.oCung].filter(Boolean).join(' · ') }}</div>
                 </button>
               </div>
@@ -2282,7 +2954,7 @@ onUnmounted(() => {
 
             <!-- Chon mau sac -->
             <div v-if="addItemColorsForConfig.length > 0" class="mb-3">
-              <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">MAU SAC</div>
+              <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">{{ t('admin.addItemDetailModal.color') }}</div>
               <div class="d-flex flex-wrap gap-2">
                 <button v-for="v in addItemColorsForConfig" :key="v.bienTheId"
                         @click="addItemSelectedColor = v.mauSac"
@@ -2290,7 +2962,7 @@ onUnmounted(() => {
                         style="padding:6px 14px;border-radius:8px;"
                         :style="addItemSelectedColor === v.mauSac
                           ? 'background:#1e1a00;border:2px solid #facc15;color:#facc15;'
-                          : 'background:#1a1a1a;border:1px solid #333;color:#ccc;'">
+                          : 'background:var(--bg-card);border:1px solid var(--border-color-strong);color:var(--text-primary);'">
                   <div style="font-size:0.78rem;font-weight:600;">{{ v.mauSac }}</div>
                   <div style="font-size:0.7rem;color:#facc15;">{{ formatPrice(v.giaBan) }}</div>
                 </button>
@@ -2298,31 +2970,31 @@ onUnmounted(() => {
             </div>
 
             <!-- Thong tin chon -->
-            <div v-if="addItemCurrentVariant" class="mb-3 py-2 px-3 rounded-3" style="background:#1a1a1a;font-size:0.8rem;">
-              <span class="text-secondary">Mau: </span>
+            <div v-if="addItemCurrentVariant" class="mb-3 py-2 px-3 rounded-3" style="background:var(--bg-card);font-size:0.8rem;">
+              <span class="text-secondary">{{ t('admin.addItemDetailModal.colorLabel') }} </span>
               <strong class="text-light">{{ addItemCurrentVariant.mauSac }}</strong>
               <span class="mx-2 text-secondary">·</span>
-              <span class="text-secondary">Bao hanh: </span>
-              <strong class="text-light">{{ addItemCurrentVariant.baoHanhThang ? addItemCurrentVariant.baoHanhThang + ' thang' : '—' }}</strong>
+              <span class="text-secondary">{{ t('admin.addItemDetailModal.warrantyLabel') }} </span>
+              <strong class="text-light">{{ addItemCurrentVariant.baoHanhThang ? addItemCurrentVariant.baoHanhThang + ' ' + t('admin.addItemDetailModal.months') : '—' }}</strong>
               <span class="mx-2 text-secondary">·</span>
-              <span class="text-secondary">SKU: </span>
+              <span class="text-secondary">{{ t('admin.addItemDetailModal.skuLabel') }} </span>
               <span class="text-light" style="font-family:monospace;font-size:0.75rem;">{{ addItemCurrentVariant.maSku }}</span>
             </div>
 
             <!-- Thong so ky thuat -->
             <div v-if="addItemCurrentVariant" class="mb-3">
-              <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">THONG SO KY THUAT</div>
+              <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">{{ t('admin.addItemDetailModal.specsHeading') }}</div>
               <table style="width:100%;font-size:0.78rem;border-collapse:collapse;">
                 <tr v-for="([label, val]) in [
-                  ['Bo xu ly (CPU)', addItemCurrentVariant.cpu],
-                  ['RAM', addItemCurrentVariant.ram],
-                  ['O cung', addItemCurrentVariant.oCung],
-                  ['Card do hoa', addItemCurrentVariant.gpu],
-                  ['Man hinh', addItemCurrentVariant.kichThuocManHinh],
-                  ['He dieu hanh', addItemCurrentVariant.heDieuHanh],
-                  ['Pin', addItemCurrentVariant.pin],
-                  ['Trong luong', addItemCurrentVariant.trongLuongKg ? addItemCurrentVariant.trongLuongKg + ' kg' : null],
-                ].filter(([,v]) => v)" :key="label" style="border-top:1px solid #1e1e1e;">
+                  [t('admin.addItemDetailModal.specCpu'), addItemCurrentVariant.cpu],
+                  [t('admin.addItemDetailModal.specRam'), addItemCurrentVariant.ram],
+                  [t('admin.addItemDetailModal.specStorage'), addItemCurrentVariant.oCung],
+                  [t('admin.addItemDetailModal.specGpu'), addItemCurrentVariant.gpu],
+                  [t('admin.addItemDetailModal.specScreen'), addItemCurrentVariant.kichThuocManHinh],
+                  [t('admin.addItemDetailModal.specOs'), addItemCurrentVariant.heDieuHanh],
+                  [t('admin.addItemDetailModal.specBattery'), addItemCurrentVariant.pin],
+                  [t('admin.addItemDetailModal.specWeight'), addItemCurrentVariant.trongLuongKg ? addItemCurrentVariant.trongLuongKg + ' kg' : null],
+                ].filter(([,v]) => v)" :key="label" style="border-top:1px solid var(--bg-input);">
                   <td class="py-1 text-secondary" style="padding-left:0;width:44%;">{{ label }}</td>
                   <td class="py-1 text-light fw-semibold">{{ val }}</td>
                 </tr>
@@ -2333,29 +3005,29 @@ onUnmounted(() => {
       </div>
 
       <!-- Footer: so luong + them -->
-      <div class="px-4 py-3 d-flex align-items-center gap-3" style="border-top:1px solid #1e1e1e;background:#0d0d0d;">
-        <span class="text-secondary" style="font-size:0.85rem;">So luong:</span>
+      <div class="px-4 py-3 d-flex align-items-center gap-3" style="border-top:1px solid var(--bg-input);background:var(--bg-page-alt);">
+        <span class="text-secondary" style="font-size:0.85rem;">{{ t('admin.addItemDetailModal.qtyLabel') }}</span>
         <input v-model.number="addItemQty" type="number" min="1" max="99"
                class="form-control form-control-sm"
-               style="width:80px;background:#1e1e1e;color:#e0e0e0;border-color:#444;" />
+               style="width:80px;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
         <button class="btn btn-warning flex-grow-1 fw-bold" style="font-size:0.9rem;"
                 :disabled="!addItemCurrentVariant || addItemQty < 1 || addItemLoading"
                 @click="confirmAddFromDetail">
-          {{ addItemLoading ? 'Dang them...' : 'Them vao don hang' }}
+          {{ addItemLoading ? t('admin.addItemDetailModal.adding') : t('admin.addItemDetailModal.addToOrder') }}
         </button>
       </div>
     </div>
   </div>
 
   <!-- ══ MODAL CHI TIET DON HANG ══ -->
-  <div v-if="showOrderDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.75);z-index:1050;" @click.self="showOrderDetailModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.12);width:720px;max-width:96vw;max-height:90vh;">
+  <div v-if="showOrderDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1050;" @click.self="showOrderDetailModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:720px;max-width:96vw;max-height:90vh;">
 
       <!-- Header -->
-      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid #252525;">
+      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
         <div>
-          <div class="fw-bold text-white" style="font-size:0.95rem;">
-            Don hang #{{ orderDetailData?.donHangId }}
+          <div class="fw-bold" style="font-size:0.95rem;color:var(--text-heading);">
+            {{ t('admin.orderDetailModal.titlePrefix') }}{{ orderDetailData?.donHangId }}
             <span v-if="orderDetailData?.maDonHang" class="text-secondary ms-2" style="font-size:0.8rem;font-family:monospace;">{{ orderDetailData.maDonHang }}</span>
           </div>
           <div class="text-secondary" style="font-size:0.78rem;">
@@ -2369,32 +3041,35 @@ onUnmounted(() => {
       <div class="overflow-y-auto flex-grow-1">
       <!-- Danh sach san pham trong don -->
       <div class="p-3">
-        <div v-if="orderDetailLoading" class="text-secondary small text-center py-4">Dang tai...</div>
-        <div v-else-if="orderDetailItems.length === 0" class="text-secondary small text-center py-4">Khong co san pham nao</div>
+        <div v-if="orderDetailLoading" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.loading') }}</div>
+        <div v-else-if="orderDetailItems.length === 0" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.empty') }}</div>
         <table v-else class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
           <thead>
-            <tr style="background:#222;">
-              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:38%;">San pham</th>
-              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:16%;font-family:monospace;">SKU</th>
-              <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:8%;">SL</th>
-              <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">Don gia</th>
-              <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">Thanh tien</th>
+            <tr style="background:var(--bg-input);">
+              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:38%;">{{ t('admin.orderDetailModal.colProduct') }}</th>
+              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:16%;font-family:monospace;">{{ t('admin.orderDetailModal.colSku') }}</th>
+              <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:8%;">{{ t('admin.orderDetailModal.colQty') }}</th>
+              <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colUnitPrice') }}</th>
+              <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colTotal') }}</th>
               <th class="px-3 py-2 text-secondary" style="font-weight:600;width:10%;"></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in orderDetailItems" :key="item.id" style="border-top:1px solid #252525;">
+            <tr v-for="item in orderDetailItems" :key="item.id" style="border-top:1px solid var(--border-color-soft);">
               <td class="px-3 py-2">
                 <div class="d-flex align-items-center gap-2">
                   <img v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
                        :src="productByBienThe(item.bienTheId).hinhAnhChinh"
-                       style="width:36px;height:28px;object-fit:contain;border-radius:4px;background:#111;flex-shrink:0;" />
+                       style="width:36px;height:28px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;" />
                   <span v-else style="font-size:1.2rem;flex-shrink:0;">💻</span>
                   <span class="text-light">{{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}</span>
                 </div>
               </td>
-              <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.75rem;">{{ item.maSku }}</td>
-              <td class="px-3 py-2 text-center text-white fw-bold">{{ item.soLuong }}</td>
+              <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.75rem;">
+                {{ item.maSku }}
+                <div v-if="item.soSerial" class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
+              </td>
+              <td class="px-3 py-2 text-center fw-bold" style="color:var(--text-heading);">{{ item.soLuong }}</td>
               <td class="px-3 py-2 text-end text-secondary">{{ formatPrice(item.donGia) }}</td>
               <td class="px-3 py-2 text-end text-warning fw-semibold">{{ formatPrice(item.thanhTien) }}</td>
               <td class="px-3 py-2">
@@ -2403,12 +3078,12 @@ onUnmounted(() => {
                           class="btn btn-sm btn-outline-secondary"
                           style="font-size:0.72rem;padding:2px 6px;"
                           @click="openVariantDetail(item.bienTheId)">
-                    Chi tiet
+                    {{ t('admin.orderDetailModal.detail') }}
                   </button>
                   <button class="btn btn-sm btn-outline-danger"
                           style="font-size:0.72rem;padding:2px 6px;"
                           @click="removeItemFromOrder(item.id)">
-                    Xoa
+                    {{ t('admin.orderDetailModal.delete') }}
                   </button>
                 </div>
               </td>
@@ -2418,59 +3093,59 @@ onUnmounted(() => {
       </div>
 
       <!-- Footer: tong ket -->
-      <div v-if="orderDetailData" class="px-4 py-3 d-flex flex-column gap-1" style="border-top:1px solid #252525;background:#141414;">
+      <div v-if="orderDetailData" class="px-4 py-3 d-flex flex-column gap-1" style="border-top:1px solid var(--border-color-soft);background:var(--bg-card-alt);">
         <div class="d-flex justify-content-between small text-secondary">
-          <span>Tam tinh</span><span>{{ formatPrice(orderDetailData.tongTien) }}</span>
+          <span>{{ t('admin.orderDetailModal.subtotal') }}</span><span>{{ formatPrice(orderDetailData.tongTien) }}</span>
         </div>
         <div v-if="orderDetailData.giamGia > 0" class="d-flex justify-content-between small text-success">
-          <span>Giam gia</span><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
+          <span>{{ t('admin.orderDetailModal.discount') }}</span><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
         </div>
         <div class="d-flex justify-content-between small text-secondary">
-          <span>Phi van chuyen</span>
+          <span>{{ t('admin.orderDetailModal.shippingFee') }}</span>
           <span :class="orderDetailData.phiVanChuyen === 0 ? 'text-success' : ''">
-            {{ orderDetailData.phiVanChuyen === 0 ? 'Mien phi' : formatPrice(orderDetailData.phiVanChuyen) }}
+            {{ orderDetailData.phiVanChuyen === 0 ? t('admin.orderDetailModal.free') : formatPrice(orderDetailData.phiVanChuyen) }}
           </span>
         </div>
-        <div class="d-flex justify-content-between fw-bold pt-2 mt-1" style="border-top:1px solid #2a2a2a;">
-          <span class="text-white">Thanh tien</span>
+        <div class="d-flex justify-content-between fw-bold pt-2 mt-1" style="border-top:1px solid var(--border-color);">
+          <span style="color:var(--text-heading);">{{ t('admin.orderDetailModal.total') }}</span>
           <span class="text-warning" style="font-size:1rem;">{{ formatPrice(orderDetailData.thanhTien) }}</span>
         </div>
-        <div class="d-flex justify-content-between small mt-2 pt-2" style="border-top:1px solid #1e1e1e;">
-          <span class="text-secondary">Trang thai don</span>
+        <div class="d-flex justify-content-between small mt-2 pt-2" style="border-top:1px solid var(--bg-input);">
+          <span class="text-secondary">{{ t('admin.orderDetailModal.orderStatus') }}</span>
           <span class="badge" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
             {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
           </span>
         </div>
         <div class="d-flex justify-content-between small">
-          <span class="text-secondary">Thanh toan</span>
+          <span class="text-secondary">{{ t('admin.orderDetailModal.paymentStatus') }}</span>
           <span class="badge" :class="orderDetailData.trangThaiThanhToan==='paid'?'bg-success':'bg-secondary'">
             {{ orderDetailData.trangThaiThanhToan }}
           </span>
         </div>
 
         <!-- Them san pham moi vao don -->
-        <div class="mt-3 pt-2" style="border-top:1px solid #222;">
+        <div class="mt-3 pt-2" style="border-top:1px solid var(--bg-input);">
           <div class="d-flex align-items-center justify-content-between mb-2" style="cursor:pointer;"
                @click="addItemMode = !addItemMode; addItemBienTheId = ''; addItemSelectedSpId = null; addItemSearch = ''">
-            <span class="fw-semibold" style="font-size:0.85rem;color:#e0e0e0;">Them san pham moi</span>
-            <span style="color:#888;font-size:0.75rem;">{{ addItemMode ? '▲' : '▼' }}</span>
+            <span class="fw-semibold" style="font-size:0.85rem;color:var(--text-primary);">{{ t('admin.orderDetailModal.addNewItem') }}</span>
+            <span style="color:var(--text-muted);font-size:0.75rem;">{{ addItemMode ? '▲' : '▼' }}</span>
           </div>
 
           <div v-if="addItemMode">
             <!-- Tim kiem -->
-            <input v-model="addItemSearch" type="text" placeholder="Tim san pham..."
+            <input v-model="addItemSearch" type="text" :placeholder="t('admin.orderDetailModal.searchPlaceholder')"
                    class="form-control form-control-sm mb-3"
-                   style="background:#1e1e1e;color:#e0e0e0;border-color:#444;font-size:0.8rem;" />
+                   style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);font-size:0.8rem;" />
 
             <!-- Grid san pham -->
             <div class="d-grid gap-2 mb-2" style="grid-template-columns:repeat(3,1fr);max-height:280px;overflow-y:auto;">
               <div v-for="g in addItemProductGroups" :key="g.sanPhamId"
                    @click="openAddItemDetail(g)"
                    class="rounded-3 overflow-hidden"
-                   style="cursor:pointer;border:1px solid #2a2a2a;background:#1a1a1a;transition:border-color .15s;"
+                   style="cursor:pointer;border:1px solid var(--border-color);background:var(--bg-card);transition:border-color .15s;"
                    @mouseenter="$event.currentTarget.style.borderColor='#facc15'"
-                   @mouseleave="$event.currentTarget.style.borderColor='#2a2a2a'">
-                <div style="background:#111;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                   @mouseleave="$event.currentTarget.style.borderColor='var(--border-color)'">
+                <div style="background:var(--bg-card-inset);height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
                   <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh"
                        style="max-height:76px;max-width:100%;object-fit:contain;" />
                   <span v-else style="font-size:1.8rem;">💻</span>
@@ -2482,7 +3157,7 @@ onUnmounted(() => {
                   </div>
                   <div class="text-secondary" style="font-size:0.65rem;">{{ g.tenThuongHieu }}</div>
                   <div style="font-size:0.72rem;color:#facc15;font-weight:600;margin-top:2px;">
-                    Tu {{ formatPrice(g.minPrice) }}
+                    {{ t('admin.orderDetailModal.priceFrom') }} {{ formatPrice(g.minPrice) }}
                   </div>
                   <div v-if="g.phanLoaiTen" class="mt-1">
                     <span v-for="tag in (g.phanLoaiTen||'').split(',').filter(Boolean)" :key="tag"
@@ -2492,21 +3167,21 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="text-secondary text-center py-1" style="font-size:0.75rem;">Nhan vao san pham de chon phien ban</div>
+            <div class="text-secondary text-center py-1" style="font-size:0.75rem;">{{ t('admin.orderDetailModal.selectVariantHint') }}</div>
           </div>
         </div>
 
         <!-- Canh bao gop don: chi 1 nut, tu dong gop tat ca don cung ngay -->
         <div v-if="mergeCandidates.length > 0" class="mt-2 pt-2 d-flex align-items-center justify-content-between gap-2"
-             style="border-top:1px solid #222;background:#1a1500;border-radius:6px;padding:8px 12px;">
+             style="border-top:1px solid var(--bg-input);background:#1a1500;border-radius:6px;padding:8px 12px;">
           <span style="font-size:0.78rem;color:#fbbf24;">
-            Co {{ mergeCandidates.length }} don hang cung ngay cua khach nay
+            {{ t('admin.orderDetailModal.mergeBannerText', { count: mergeCandidates.length }) }}
             <span class="text-secondary ms-1">(#{{ mergeCandidates.map(o => o.donHangId).join(', #') }})</span>
           </span>
           <button class="btn btn-sm btn-warning flex-shrink-0" style="font-size:0.78rem;padding:3px 10px;"
                   :disabled="mergeLoading"
                   @click="autoMergeOrders">
-            {{ mergeLoading ? '...' : 'Gop tat ca' }}
+            {{ mergeLoading ? t('admin.orderDetailModal.merging') : t('admin.orderDetailModal.mergeAll') }}
           </button>
         </div>
       </div>
@@ -2515,49 +3190,49 @@ onUnmounted(() => {
   </div>
 
   <!-- ══ MODAL TRANG THAI DON HANG ══ -->
-  <div v-if="showOrderModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.65);z-index:1000;" @click.self="showOrderModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.1);width:460px;max-width:95vw;max-height:90vh;">
+  <div v-if="showOrderModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showOrderModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:460px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>Cap nhat trang thai don hang</span>
+        <span>{{ t('admin.orderStatusModal.title') }}</span>
         <button class="btn-close btn-close-white btn-sm" @click="showOrderModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="orderStatusError" class="alert alert-danger small py-2 mb-3">{{ orderStatusError }}</div>
-        <div v-if="editingOrder" class="small p-2 rounded-2 mb-3 text-secondary" style="background:rgba(255,255,255,0.04);">
-          Don hang #{{ editingOrder.donHangId }} — Khach: <strong>{{ customerName(editingOrder.khachHangId) }}</strong>
+        <div v-if="editingOrder" class="small p-2 rounded-2 mb-3 text-secondary" style="background:var(--bg-hover);">
+          {{ t('admin.orderStatusModal.orderPrefix') }}{{ editingOrder.donHangId }} — {{ t('admin.orderStatusModal.customerLabel') }} <strong>{{ customerName(editingOrder.khachHangId) }}</strong>
         </div>
         <div class="d-flex flex-column gap-3">
-          <div><label class="form-label small text-secondary">Trang thai don hang</label><select v-model="orderStatusForm.trangThaiDonHang" class="form-select form-select-sm bg-dark text-light border-secondary"><option value="pending">Cho xac nhan</option><option value="confirmed">Da xac nhan</option><option value="processing">Dang xu ly</option><option value="shipping">Dang giao</option><option value="delivered">Da giao</option><option value="cancelled">Huy</option><option value="returned">Hoan tra</option></select></div>
-          <div><label class="form-label small text-secondary">Trang thai thanh toan</label><select v-model="orderStatusForm.trangThaiThanhToan" class="form-select form-select-sm bg-dark text-light border-secondary"><option value="unpaid">Chua thanh toan</option><option value="partial">Thanh toan mot phan</option><option value="paid">Da thanh toan</option><option value="refunded">Hoan tien</option></select></div>
+          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.statusLabel') }}</label><select v-model="orderStatusForm.trangThaiDonHang" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="pending">{{ t('admin.orderStatusModal.status.pending') }}</option><option value="confirmed">{{ t('admin.orderStatusModal.status.confirmed') }}</option><option value="processing">{{ t('admin.orderStatusModal.status.processing') }}</option><option value="shipping">{{ t('admin.orderStatusModal.status.shipping') }}</option><option value="delivered">{{ t('admin.orderStatusModal.status.delivered') }}</option><option value="cancelled">{{ t('admin.orderStatusModal.status.cancelled') }}</option><option value="returned">{{ t('admin.orderStatusModal.status.returned') }}</option></select></div>
+          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.paymentLabel') }}</label><select v-model="orderStatusForm.trangThaiThanhToan" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="unpaid">{{ t('admin.paymentStatus.unpaid') }}</option><option value="partial">{{ t('admin.paymentStatus.partial') }}</option><option value="paid">{{ t('admin.paymentStatus.paid') }}</option><option value="refunded">{{ t('admin.paymentStatus.refunded') }}</option></select></div>
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showOrderModal=false">Huy</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveOrderStatus">Luu</button>
+        <button class="btn btn-sm btn-outline-secondary" @click="showOrderModal=false">{{ t('admin.orderStatusModal.cancel') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveOrderStatus">{{ t('admin.orderStatusModal.save') }}</button>
       </div>
     </div>
   </div>
 
   <!-- ══ MODAL TON KHO ══ -->
-  <div v-if="showStockModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.65);z-index:1000;" @click.self="showStockModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:#181818;border:1px solid rgba(255,255,255,0.1);width:420px;max-width:95vw;max-height:90vh;">
+  <div v-if="showStockModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showStockModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:420px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>Cap nhat ton kho</span>
+        <span>{{ t('admin.stockModal.title') }}</span>
         <button class="btn-close btn-close-white btn-sm" @click="showStockModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
-        <div v-if="editingStock" class="small p-2 rounded-2 mb-3 text-secondary" style="background:rgba(255,255,255,0.04);">
-          {{ editingStock.bienThe?.sanPham?.tenSanPham??'—' }} — SKU: <strong>{{ editingStock.bienThe?.maSku??'—' }}</strong>
+        <div v-if="editingStock" class="small p-2 rounded-2 mb-3 text-secondary" style="background:var(--bg-hover);">
+          {{ editingStock.bienThe?.sanPham?.tenSanPham??'—' }} — {{ t('admin.stockModal.skuLabel') }} <strong>{{ editingStock.bienThe?.maSku??'—' }}</strong>
         </div>
         <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">So luong ton</label><input v-model="stockForm.soLuongTon" type="number" min="0" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">Dang giu</label><input v-model="stockForm.soLuongGiu" type="number" min="0" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
-          <div class="col-12"><label class="form-label small text-secondary">Ton kho toi thieu (canh bao)</label><input v-model="stockForm.tonKhoToiThieu" type="number" min="0" class="form-control form-control-sm bg-dark text-light border-secondary" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.stockModal.stockLabel') }}</label><input v-model="stockForm.soLuongTon" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.stockModal.heldLabel') }}</label><input v-model="stockForm.soLuongGiu" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-12"><label class="form-label small text-secondary">{{ t('admin.stockModal.minStockLabel') }}</label><input v-model="stockForm.tonKhoToiThieu" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showStockModal=false">Huy</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveStock">Luu</button>
+        <button class="btn btn-sm btn-outline-secondary" @click="showStockModal=false">{{ t('admin.stockModal.cancel') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveStock">{{ t('admin.stockModal.save') }}</button>
       </div>
     </div>
   </div>
@@ -2565,16 +3240,16 @@ onUnmounted(() => {
   <!-- ══ MODAL CHI TIET SERIAL ══ -->
   <div v-if="showStockDetailModal"
        class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-       style="background:rgba(0,0,0,0.7);z-index:1060;"
+       style="background:var(--bg-overlay);z-index:1060;"
        @click.self="showStockDetailModal=false">
     <div class="rounded-4 d-flex flex-column"
-         style="background:#181818;border:1px solid rgba(255,255,255,0.12);width:760px;max-width:96vw;max-height:88vh;">
+         style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:760px;max-width:96vw;max-height:88vh;">
 
       <!-- Header -->
-      <div class="d-flex align-items-start justify-content-between px-4 py-3" style="border-bottom:1px solid #252525;">
+      <div class="d-flex align-items-start justify-content-between px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
         <div>
-          <div class="fw-bold text-white" style="font-size:0.95rem;">
-            Chi tiet serial — {{ stockDetailItem?.bienThe?.maSku || '—' }}
+          <div class="fw-bold" style="font-size:0.95rem;color:var(--text-heading);">
+            {{ t('admin.stockDetailModal.titlePrefix') }} {{ stockDetailItem?.bienThe?.maSku || '—' }}
           </div>
           <div class="d-flex gap-1 mt-1 flex-wrap">
             <span v-if="getVariantInfo(stockDetailItem)?.cpu" class="badge" style="background:#2a2a3a;color:#aab;font-size:0.7rem;">{{ getVariantInfo(stockDetailItem).cpu }}</span>
@@ -2587,23 +3262,23 @@ onUnmounted(() => {
           <div class="text-center">
             <div class="d-flex align-items-center justify-content-center gap-1">
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
-              <span class="fw-bold text-white" style="font-size:1.2rem;">{{ stockDetailSerials.filter(s=>s.trangThai==='trong_kho').length }}</span>
+              <span class="fw-bold" style="font-size:1.2rem;color:var(--text-heading);">{{ stockDetailSerials.filter(s=>s.trangThai==='trong_kho').length }}</span>
             </div>
-            <div class="text-secondary" style="font-size:0.7rem;">Trong kho</div>
+            <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.stockDetailModal.inStock') }}</div>
           </div>
           <div class="text-center">
             <div class="d-flex align-items-center justify-content-center gap-1">
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0;"></span>
-              <span class="fw-bold text-white" style="font-size:1.2rem;">{{ stockDetailSerials.filter(s=>s.trangThai==='da_ban').length }}</span>
+              <span class="fw-bold" style="font-size:1.2rem;color:var(--text-heading);">{{ stockDetailSerials.filter(s=>s.trangThai==='da_ban').length }}</span>
             </div>
-            <div class="text-secondary" style="font-size:0.7rem;">Da ban</div>
+            <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.stockDetailModal.sold') }}</div>
           </div>
           <div class="text-center">
             <div class="d-flex align-items-center justify-content-center gap-1">
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fb923c;flex-shrink:0;"></span>
-              <span class="fw-bold text-white" style="font-size:1.2rem;">{{ stockDetailSerials.filter(s=>s.trangThai==='loi_bao_hanh').length }}</span>
+              <span class="fw-bold" style="font-size:1.2rem;color:var(--text-heading);">{{ stockDetailSerials.filter(s=>s.trangThai==='loi_bao_hanh').length }}</span>
             </div>
-            <div class="text-secondary" style="font-size:0.7rem;">Dang bao hanh</div>
+            <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.stockDetailModal.warranty') }}</div>
           </div>
           <button class="btn-close btn-close-white btn-sm ms-2" @click="showStockDetailModal=false"></button>
         </div>
@@ -2611,22 +3286,22 @@ onUnmounted(() => {
 
       <!-- Serial list -->
       <div class="overflow-y-auto flex-grow-1">
-        <div v-if="stockDetailLoading" class="text-secondary small text-center py-5">Dang tai...</div>
-        <div v-else-if="stockDetailSerials.length === 0" class="text-secondary small text-center py-5">Chua co serial nao</div>
+        <div v-if="stockDetailLoading" class="text-secondary small text-center py-5">{{ t('admin.stockDetailModal.loading') }}</div>
+        <div v-else-if="stockDetailSerials.length === 0" class="text-secondary small text-center py-5">{{ t('admin.stockDetailModal.empty') }}</div>
         <table v-else class="w-100" style="border-collapse:collapse;font-size:0.82rem;">
           <thead>
-            <tr style="background:#1e1e1e;position:sticky;top:0;">
-              <th class="px-4 py-2 text-secondary" style="font-weight:500;width:40px;">#</th>
-              <th class="px-4 py-2 text-secondary" style="font-weight:500;">So serial</th>
-              <th class="px-4 py-2 text-secondary" style="font-weight:500;">Ngay nhap</th>
-              <th class="px-4 py-2 text-secondary" style="font-weight:500;">Trang thai</th>
+            <tr style="background:var(--bg-input);position:sticky;top:0;">
+              <th class="px-4 py-2 text-secondary" style="font-weight:500;width:40px;">{{ t('admin.stockDetailModal.colIndex') }}</th>
+              <th class="px-4 py-2 text-secondary" style="font-weight:500;">{{ t('admin.stockDetailModal.colSerial') }}</th>
+              <th class="px-4 py-2 text-secondary" style="font-weight:500;">{{ t('admin.stockDetailModal.colImportDate') }}</th>
+              <th class="px-4 py-2 text-secondary" style="font-weight:500;">{{ t('admin.stockDetailModal.colStatus') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(s, idx) in stockDetailSerials" :key="s.chiTietId"
-                style="border-top:1px solid #222;">
+                style="border-top:1px solid var(--bg-input);">
               <td class="px-4 py-2 text-secondary">{{ idx + 1 }}</td>
-              <td class="px-4 py-2 text-white fw-semibold" style="font-family:monospace;">{{ s.soSerial }}</td>
+              <td class="px-4 py-2 fw-semibold" style="font-family:monospace;color:var(--text-heading);">{{ s.soSerial }}</td>
               <td class="px-4 py-2 text-secondary">{{ formatDate(s.ngayNhapKho) }}</td>
               <td class="px-4 py-2">
                 <span
@@ -2647,6 +3322,13 @@ onUnmounted(() => {
 <style scoped>
 /* CSS toi thieu cho nhung gi Bootstrap khong the thay the */
 
+/* Bootstrap .text-light hardcode mau trang co dinh — ghi de theo theme hien tai
+   (toan bo cac cho dung .text-light trong file nay deu nam tren nen the/card,
+   khong phai nen mau thuong hieu co dinh, nen an toan khi ghi de theo bien theme) */
+.text-light {
+  color: var(--text-primary) !important;
+}
+
 /* Nav item: hover va active state voi mau vang dac trung */
 .adm-nav {
   display: flex;
@@ -2656,11 +3338,11 @@ onUnmounted(() => {
   border-radius: 7px;
   cursor: pointer;
   font-size: 0.87rem;
-  color: #ccc;
+  color: var(--text-primary);
   transition: background 0.12s, color 0.12s;
   user-select: none;
 }
-.adm-nav:hover { background: rgba(255,255,255,0.06); color: #f0f0f0; }
+.adm-nav:hover { background: var(--bg-hover); color: var(--text-heading); }
 .adm-nav.active { background: rgba(244,194,0,0.12); color: #f4c200; }
 .adm-nav.active .adm-icon { opacity: 1; }
 

@@ -85,9 +85,12 @@ public class NhanVienService {
         return saved;
     }
 
+    // Xoá nhân viên — xoá luôn tài khoản đăng nhập liên kết trước (FK), nếu không sẽ vỡ khoá ngoại.
+    @Transactional
     public void delete(Integer id) {
         if (!nhanVienRepository.existsById(id))
             throw new IllegalArgumentException("Nhân viên không tồn tại với id: " + id);
+        taiKhoanRepository.findByNhanVien_NhanVienId(id).ifPresent(taiKhoanRepository::delete);
         nhanVienRepository.deleteById(id);
     }
 }
