@@ -12,15 +12,18 @@
                style="top:18px; right:50%; width:100%; height:2px; transform:translateX(-50%);"
                :style="index <= currentStep ? 'background:#f4c200;' : 'background:var(--border-color-strong);'"></div>
 
-          <!-- Icon vòng tròn -->
+          <!-- Icon vòng tròn — icon riêng theo từng bước. Nền phải ĐẶC (không rgba mờ),
+               nếu không đường kẻ nối phía sau sẽ lộ xuyên qua vòng tròn. -->
           <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 position-relative"
                style="width:36px; height:36px; z-index:1;"
                :style="index <= currentStep
-                 ? 'background:rgba(244,194,0,0.15); border:2px solid #f4c200;'
+                 ? 'background:var(--bg-hover); border:2px solid #f4c200;'
                  : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'">
-            <span v-if="index < currentStep" style="color:#f4c200; font-size:1rem;">✓</span>
-            <span v-else-if="index === currentStep" style="color:#f4c200; font-size:0.75rem;">●</span>
-            <span v-else style="color:var(--text-muted); font-size:0.75rem;">○</span>
+            <span :style="index <= currentStep ? 'font-size:1rem; opacity:1;' : 'font-size:1rem; opacity:0.35;'">{{ step.icon }}</span>
+            <!-- Dấu tích nhạt màu cho bước đã hoàn tất (không phải bước đang tới) -->
+            <span v-if="index < currentStep"
+                  class="rounded-circle d-flex align-items-center justify-content-center position-absolute"
+                  style="width:15px; height:15px; bottom:-2px; right:-2px; background:#f4c200; color:#111; font-size:9px; opacity:0.55; border:1px solid var(--bg-hover);">✓</span>
           </div>
 
           <!-- Chữ mô tả -->
@@ -45,9 +48,9 @@ import { t } from '../../i18n/index.js';
 defineProps({ currentStep: { type: Number, default: 0 } });
 
 const steps = computed(() => [
-  { title: t('orderStatus.timeline.placedTitle'),    desc: t('orderStatus.timeline.placedDesc') },
-  { title: t('orderStatus.timeline.confirmedTitle'), desc: t('orderStatus.timeline.confirmedDesc') },
-  { title: t('orderStatus.timeline.shippingTitle'),  desc: t('orderStatus.timeline.shippingDesc') },
-  { title: t('orderStatus.timeline.deliveredTitle'), desc: t('orderStatus.timeline.deliveredDesc') },
+  { title: t('orderStatus.timeline.placedTitle'),    desc: t('orderStatus.timeline.placedDesc'),    icon: '📝' },
+  { title: t('orderStatus.timeline.confirmedTitle'), desc: t('orderStatus.timeline.confirmedDesc'), icon: '✅' },
+  { title: t('orderStatus.timeline.shippingTitle'),  desc: t('orderStatus.timeline.shippingDesc'),  icon: '🚚' },
+  { title: t('orderStatus.timeline.deliveredTitle'), desc: t('orderStatus.timeline.deliveredDesc'), icon: '🎉' },
 ]);
 </script>

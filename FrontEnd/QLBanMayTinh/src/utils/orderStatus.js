@@ -13,3 +13,15 @@ export const orderStatusColor = (s) => {
   if (s === 'returned')   return { bg: 'rgba(251,146,60,0.15)',  text: '#fb923c' };
   return { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af' };
 };
+
+// Icon theo trạng thái đơn hàng — dùng thay cho chấm tròn chung chung ở badge trạng thái
+export const orderStatusIcon = (s) => {
+  if (s === 'pending')    return '⏳';
+  if (s === 'confirmed')  return '✅';
+  if (s === 'processing') return '📦';
+  if (s === 'shipping')   return '🚚';
+  if (s === 'delivered')  return '🎉';
+  if (s === 'cancelled')  return '❌';
+  if (s === 'returned')   return '↩️';
+  return '●';
+};

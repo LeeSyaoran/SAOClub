@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, reactive } from "vue";
 import { AuthStore, clearSession } from "../stores/index.js";
 import { t } from "../i18n/index.js";
-import { orderStatusLabel, orderStatusColor } from "../utils/orderStatus.js";
+import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
 import * as SanPhamService   from "../Service/SanPhamService.js";
 import * as BienTheSanPhamService from "../Service/BienTheSanPhamService.js";
 import * as KhachHangService from "../Service/KhachHangService.js";
@@ -104,6 +104,17 @@ const formatDate = (d) => {
   }
 };
 
+// Ngày + giờ (khác formatDate — chỉ có ngày) — dùng cho ngày giao dự kiến/thực tế,
+// vì admin cần biết cả mốc giờ, không chỉ ngày.
+const formatDateTime = (d) => {
+  if (!d) return "—";
+  try {
+    return new Date(d).toLocaleString("vi-VN");
+  } catch {
+    return d;
+  }
+};
+
 const toLocalDT = (s) =>
   s ? (s.length === 16 ? s + ":00" : s.slice(0, 19)) : null;
 
@@ -116,9 +127,26 @@ const chucVuName = (id) =>
 const orderSearch = ref("");
 const orderStatusFilter = ref("");
 const orderPaymentFilter = ref("");
+
+// Chế độ xem đơn hàng: 'today' = mặc định chỉ đơn hôm nay, 'history-dates' = danh
+// sách các ngày có đơn (để xem lịch sử), 'history-day' = đơn của 1 ngày cụ thể đã chọn.
+const orderViewMode = ref('today');
+const historySelectedDate = ref(null); // 'YYYY-MM-DD'
+
+// Danh sách đơn hàng làm nền cho bộ lọc bên dưới, tùy theo chế độ xem đang chọn.
+const ordersBaseList = computed(() => {
+  if (orderViewMode.value === 'history-day' && historySelectedDate.value) {
+    return orders.value.filter((o) => o.ngayDat?.slice(0, 10) === historySelectedDate.value);
+  }
+  if (orderViewMode.value === 'today') {
+    return orders.value.filter((o) => o.ngayDat?.slice(0, 10) === toDateInputValue(new Date()));
+  }
+  return orders.value;
+});
+
 const filteredOrders = computed(() => {
   const q = orderSearch.value.trim().toLowerCase();
-  return orders.value.filter((o) => {
+  return ordersBaseList.value.filter((o) => {
     if (orderStatusFilter.value && o.trangThaiDonHang !== orderStatusFilter.value) return false;
     if (orderPaymentFilter.value && o.trangThaiThanhToan !== orderPaymentFilter.value) return false;
     if (!q) return true;
@@ -126,6 +154,29 @@ const filteredOrders = computed(() => {
     return String(o.donHangId).includes(q) || name.includes(q) || (o.nguoiNhan ?? '').toLowerCase().includes(q) || (o.sdtNguoiNhan ?? '').includes(q);
   });
 });
+
+// Danh sách ngày có đơn hàng (mới nhất trước), dùng cho màn "Lịch sử đơn hàng"
+const VN_WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+const formatDateHeading = (dateKey) => {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${VN_WEEKDAYS[dt.getDay()]}, ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+};
+const orderDatesGrouped = computed(() => {
+  const map = {};
+  orders.value.forEach((o) => {
+    const key = o.ngayDat?.slice(0, 10);
+    if (key) map[key] = (map[key] || 0) + 1;
+  });
+  return Object.keys(map)
+    .sort((a, b) => b.localeCompare(a))
+    .map((key) => ({ dateKey: key, label: formatDateHeading(key), count: map[key] }));
+});
+
+const openOrderHistory = () => { orderViewMode.value = 'history-dates'; };
+const openHistoryDay = (dateKey) => { historySelectedDate.value = dateKey; orderViewMode.value = 'history-day'; };
+const backToToday = () => { orderViewMode.value = 'today'; historySelectedDate.value = null; };
+const backToDateList = () => { orderViewMode.value = 'history-dates'; historySelectedDate.value = null; };
 
 // ── Bo loc man hinh Khach hang ────────────────────────────────────────────────
 const customerSearch = ref("");
@@ -200,20 +251,54 @@ const orderStatusChartData = computed(() =>
   }))
 );
 
-// Sản phẩm theo danh mục (bar) — top 6 danh mục nhiều sản phẩm nhất
-const CHART_PALETTE = ['#facc15', '#60a5fa', '#a78bfa', '#34d399', '#fb923c', '#f472b6', '#38bdf8', '#f87171'];
-const productsByCategoryChart = computed(() => {
-  const map = {};
-  products.value.forEach((p) => {
-    const name = p.tenDanhMuc || t('admin.dashboard.uncategorized');
-    map[name] = (map[name] || 0) + 1;
-  });
-  return Object.entries(map)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([label, value], i) => ({ label, value, color: CHART_PALETTE[i % CHART_PALETTE.length] }));
+// ── Đơn hàng theo tuần (donut) — chọn khoảng ngày, mặc định tuần hiện tại (Thứ
+// hai → Chủ nhật). Đơn có thể giao trễ tối đa khoảng 1 tuần mới tới tay khách,
+// nên xem gộp theo tuần dễ theo dõi tiến độ hơn xem từng ngày riêng lẻ.
+const startOfWeek = (d) => {
+  const date = new Date(d);
+  const day = date.getDay(); // 0 = Chủ nhật
+  date.setDate(date.getDate() + (day === 0 ? -6 : 1 - day)); // lùi về Thứ hai
+  return date;
+};
+const endOfWeek = (d) => {
+  const e = startOfWeek(d);
+  e.setDate(e.getDate() + 6);
+  return e;
+};
+// Chỉ chọn 1 ngày mốc — khoảng tuần (Thứ hai → Chủ nhật) luôn tự tính từ ngày đó,
+// không cho chọn khoảng tuỳ ý (tránh lọc lẫn nhiều tuần hoặc khoảng lệch tuần).
+const weekChartAnchor = ref(toDateInputValue(new Date()));
+const weekChartFrom = computed(() => toDateInputValue(startOfWeek(new Date(weekChartAnchor.value))));
+const weekChartTo   = computed(() => toDateInputValue(endOfWeek(new Date(weekChartAnchor.value))));
+const isWeekChartCurrentWeek = computed(() => weekChartAnchor.value === toDateInputValue(new Date()));
+const resetToCurrentWeek = () => { weekChartAnchor.value = toDateInputValue(new Date()); };
+// Hiển thị khoảng tuần đã khoanh, vd "29/06 → 05/07" — vì input chỉ còn 1 ngày mốc
+const weekChartRangeLabel = computed(() => {
+  const fmt = (s) => { const [, m, d] = s.split('-'); return `${d}/${m}`; };
+  return `${fmt(weekChartFrom.value)} → ${fmt(weekChartTo.value)}`;
 });
-
+const ordersInWeekRange = computed(() => {
+  if (!weekChartFrom.value || !weekChartTo.value) return [];
+  return orders.value.filter((o) => {
+    if (!o.ngayDat) return false;
+    const d = toDateInputValue(new Date(o.ngayDat));
+    return d >= weekChartFrom.value && d <= weekChartTo.value;
+  });
+});
+const ordersByStatusInWeek = computed(() => {
+  const map = {};
+  ordersInWeekRange.value.forEach((o) => {
+    map[o.trangThaiDonHang] = (map[o.trangThaiDonHang] || 0) + 1;
+  });
+  return Object.entries(map).map(([k, v]) => ({ status: k, count: v }));
+});
+const weekOrderStatusChartData = computed(() =>
+  ordersByStatusInWeek.value.map((row) => ({
+    label: orderStatusLabel(row.status),
+    value: row.count,
+    color: orderStatusColor(row.status).text,
+  }))
+);
 // Số lượng đã bán theo tên sản phẩm — tổng hợp từ chi tiết của toàn bộ đơn hàng,
 // để trả lời "sản phẩm nào bán chạy / bán chậm" cho Dashboard.
 const productSalesQty = ref({}); // { tenSanPham: soLuongDaBan }
@@ -1177,12 +1262,16 @@ const orderStatusError = ref("");
 const orderStatusForm = reactive({
   trangThaiDonHang: "",
   trangThaiThanhToan: "",
+  ngayGiaoDuKien: "", // Ngày dự kiến giao hàng
+  ngayGiaoThucTe: "", // Ngày khách nhận hàng thực tế
 });
 
 const openOrderStatus = (o) => {
   editingOrder.value = o;
   orderStatusForm.trangThaiDonHang = o.trangThaiDonHang ?? "";
   orderStatusForm.trangThaiThanhToan = o.trangThaiThanhToan ?? "";
+  orderStatusForm.ngayGiaoDuKien = o.ngayGiaoDuKien?.slice(0, 16) ?? "";
+  orderStatusForm.ngayGiaoThucTe = o.ngayGiaoThucTe?.slice(0, 16) ?? "";
   orderStatusError.value = "";
   showOrderModal.value = true;
 };
@@ -1205,8 +1294,8 @@ const saveOrderStatus = async () => {
     phiVanChuyen: o.phiVanChuyen ?? 0,
     thanhTien: o.thanhTien ?? 0,
     ngayDat: o.ngayDat?.slice(0, 19),
-    ngayGiaoDuKien: o.ngayGiaoDuKien?.slice(0, 19) ?? null,
-    ngayGiaoThucTe: o.ngayGiaoThucTe?.slice(0, 19) ?? null,
+    ngayGiaoDuKien: orderStatusForm.ngayGiaoDuKien || null,
+    ngayGiaoThucTe: orderStatusForm.ngayGiaoThucTe || null,
     trangThaiDonHang: orderStatusForm.trangThaiDonHang,
     trangThaiThanhToan: orderStatusForm.trangThaiThanhToan,
     kenhBan: o.kenhBan ?? null,
@@ -1857,8 +1946,32 @@ onUnmounted(() => {
               <div class="col-12 col-xl-7">
                 <div class="card border-secondary h-100" style="background:var(--bg-hover);">
                   <div class="card-body">
-                    <div class="fw-semibold small text-secondary mb-3">🗂️ {{ t('admin.dashboard.productsByCategoryChart') }}</div>
-                    <BarChart :data="productsByCategoryChart" :empty-text="t('admin.dashboard.chartEmptyProducts')" />
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                      <div class="fw-semibold small text-secondary">📅 {{ t('admin.dashboard.ordersByWeekChart') }}</div>
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <input type="date" v-model="weekChartAnchor" :max="toDateInputValue(new Date())"
+                               class="form-control form-control-sm"
+                               style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;" />
+                        <button v-if="!isWeekChartCurrentWeek" type="button" class="btn btn-sm py-0 px-2"
+                                style="font-size:0.72rem; color:var(--accent); border:1px solid var(--border-color-strong);"
+                                @click="resetToCurrentWeek">
+                          {{ t('admin.dashboard.backToThisWeek') }}
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
+                      <span class="badge rounded-pill" style="background:var(--bg-card-inset); color:var(--text-secondary); font-weight:600;">
+                        {{ weekChartRangeLabel }}
+                      </span>
+                      <span class="badge rounded-pill" style="background:var(--bg-card-inset); color:var(--text-secondary); font-weight:600;">
+                        {{ t('admin.dashboard.ordersInRange', { count: ordersInWeekRange.length }) }}
+                      </span>
+                    </div>
+                    <DonutChart
+                      :data="weekOrderStatusChartData"
+                      :center-value="String(ordersInWeekRange.length)"
+                      :center-label="t('admin.dashboard.totalOrders')"
+                      :empty-text="t('admin.dashboard.chartEmptyOrders')" />
                   </div>
                 </div>
               </div>
@@ -1984,55 +2097,90 @@ onUnmounted(() => {
 
         <!-- ── Don hang ── -->
         <section v-show="currentPage === 'orders'">
-          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <span class="text-secondary small">{{ filteredOrders.length }}/{{ totalOrders }} {{ t('admin.orders.countSuffix') }}</span>
-            <div class="d-flex gap-2 flex-wrap">
-              <input v-model="orderSearch" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.orders.searchPlaceholder')" />
-              <select v-model="orderStatusFilter" class="form-select form-select-sm" style="width:170px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);">
-                <option value="">{{ t('admin.orders.allStatuses') }}</option>
-                <option value="pending">{{ orderStatusLabel('pending') }}</option>
-                <option value="confirmed">{{ orderStatusLabel('confirmed') }}</option>
-                <option value="processing">{{ orderStatusLabel('processing') }}</option>
-                <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
-                <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
-                <option value="cancelled">{{ orderStatusLabel('cancelled') }}</option>
-                <option value="returned">{{ orderStatusLabel('returned') }}</option>
-              </select>
-              <select v-model="orderPaymentFilter" class="form-select form-select-sm" style="width:150px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);">
-                <option value="">{{ t('admin.orders.allPayments') }}</option>
-                <option value="paid">{{ t('admin.orders.paid') }}</option>
-                <option value="unpaid">{{ t('admin.orders.unpaid') }}</option>
-              </select>
+
+          <!-- Chế độ: danh sách các ngày có đơn hàng (Lịch sử đơn hàng) -->
+          <template v-if="orderViewMode === 'history-dates'">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <span class="fw-bold" style="color:var(--text-heading);">{{ t('admin.orders.history') }}</span>
+              <button class="btn btn-sm btn-outline-secondary" @click="backToToday">{{ t('admin.orders.backToToday') }}</button>
             </div>
-          </div>
-          <div v-if="loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
-          <div v-else class="table-responsive">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
-              <tbody>
-                <tr v-for="o in filteredOrders" :key="o.donHangId">
-                  <td class="text-secondary">#{{ o.donHangId }}</td>
-                  <td>{{ customerName(o.khachHangId) }}</td>
-                  <td>{{ formatPrice(o.thanhTien) }}</td>
-                  <td>
-                    <span class="badge" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
-                      {{ orderStatusLabel(o.trangThaiDonHang) }}
-                    </span>
-                  </td>
-                  <td><span class="badge" :class="o.trangThaiThanhToan==='paid'?'bg-success':'bg-secondary'">{{ o.trangThaiThanhToan||'—' }}</span></td>
-                  <td>{{ formatDate(o.ngayDat) }}</td>
-                  <td>
-                    <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-info"    style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">{{ t('admin.orders.delete') }}</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="filteredOrders.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.orders.empty') }}</td></tr>
-              </tbody>
-            </table>
-          </div>
+            <div v-if="loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
+            <div v-else class="d-flex flex-column gap-2">
+              <div v-for="d in orderDatesGrouped" :key="d.dateKey"
+                   class="d-flex justify-content-between align-items-center px-3 py-3 rounded-3"
+                   style="background:var(--bg-card); border:1px solid var(--border-color-soft); cursor:pointer;"
+                   @click="openHistoryDay(d.dateKey)">
+                <span class="fw-semibold" style="color:var(--text-primary);">{{ d.label }}</span>
+                <span class="text-secondary small d-flex align-items-center gap-2">{{ d.count }} {{ t('admin.orders.countSuffix') }} <span style="font-size:1.1rem;">›</span></span>
+              </div>
+              <div v-if="orderDatesGrouped.length===0" class="text-center text-secondary py-3">{{ t('admin.orders.empty') }}</div>
+            </div>
+          </template>
+
+          <!-- Chế độ: đơn hôm nay (mặc định) hoặc đơn của 1 ngày lịch sử đã chọn -->
+          <template v-else>
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <button v-if="orderViewMode==='history-day'" class="btn btn-sm btn-outline-secondary" @click="backToDateList">{{ t('admin.orders.backToDateList') }}</button>
+                <span class="text-secondary small">
+                  <span v-if="orderViewMode==='history-day'" class="fw-semibold" style="color:var(--text-primary);">{{ formatDateHeading(historySelectedDate) }} · </span>
+                  {{ filteredOrders.length }}/{{ ordersBaseList.length }} {{ t('admin.orders.countSuffix') }}
+                </span>
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <input v-model="orderSearch" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.orders.searchPlaceholder')" />
+                <select v-model="orderStatusFilter" class="form-select form-select-sm" style="width:170px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);">
+                  <option value="">{{ t('admin.orders.allStatuses') }}</option>
+                  <option value="pending">{{ orderStatusLabel('pending') }}</option>
+                  <option value="confirmed">{{ orderStatusLabel('confirmed') }}</option>
+                  <option value="processing">{{ orderStatusLabel('processing') }}</option>
+                  <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
+                  <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
+                  <option value="cancelled">{{ orderStatusLabel('cancelled') }}</option>
+                  <option value="returned">{{ orderStatusLabel('returned') }}</option>
+                </select>
+                <select v-model="orderPaymentFilter" class="form-select form-select-sm" style="width:150px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);">
+                  <option value="">{{ t('admin.orders.allPayments') }}</option>
+                  <option value="paid">{{ t('admin.orders.paid') }}</option>
+                  <option value="unpaid">{{ t('admin.orders.unpaid') }}</option>
+                </select>
+                <button v-if="orderViewMode==='today'" class="btn btn-sm btn-outline-warning" @click="openOrderHistory">{{ t('admin.orders.history') }}</button>
+              </div>
+            </div>
+            <div v-if="loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
+            <div v-else class="table-responsive">
+              <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+                <thead><tr><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
+                <tbody>
+                  <tr v-for="o in filteredOrders" :key="o.donHangId">
+                    <td class="text-secondary">#{{ o.donHangId }}</td>
+                    <td>{{ customerName(o.khachHangId) }}</td>
+                    <td>{{ formatPrice(o.thanhTien) }}</td>
+                    <td>
+                      <span class="badge" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                        {{ orderStatusIcon(o.trangThaiDonHang) }} {{ orderStatusLabel(o.trangThaiDonHang) }}
+                      </span>
+                    </td>
+                    <td><span class="badge" :class="o.trangThaiThanhToan==='paid'?'bg-success':'bg-secondary'">{{ o.trangThaiThanhToan||'—' }}</span></td>
+                    <td>
+                      {{ formatDate(o.ngayDat) }}
+                      <div v-if="o.ngayGiaoThucTe" class="text-success" style="font-size:0.72rem;">
+                        ✅ {{ t('admin.orderStatusModal.actualDeliveryLabel') }}: {{ formatDateTime(o.ngayGiaoThucTe) }}
+                      </div>
+                    </td>
+                    <td>
+                      <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-info"    style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
+                        <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
+                        <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">{{ t('admin.orders.delete') }}</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="filteredOrders.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.orders.empty') }}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
         </section>
 
         <!-- ── Khach hang ── -->
@@ -3113,7 +3261,7 @@ onUnmounted(() => {
         <div class="d-flex justify-content-between small mt-2 pt-2" style="border-top:1px solid var(--bg-input);">
           <span class="text-secondary">{{ t('admin.orderDetailModal.orderStatus') }}</span>
           <span class="badge" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
-            {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
+            {{ orderStatusIcon(orderDetailData.trangThaiDonHang) }} {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
           </span>
         </div>
         <div class="d-flex justify-content-between small">
@@ -3121,6 +3269,14 @@ onUnmounted(() => {
           <span class="badge" :class="orderDetailData.trangThaiThanhToan==='paid'?'bg-success':'bg-secondary'">
             {{ orderDetailData.trangThaiThanhToan }}
           </span>
+        </div>
+        <div v-if="orderDetailData.ngayGiaoDuKien" class="d-flex justify-content-between small">
+          <span class="text-secondary">{{ t('admin.orderStatusModal.expectedDeliveryLabel') }}</span>
+          <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoDuKien) }}</span>
+        </div>
+        <div v-if="orderDetailData.ngayGiaoThucTe" class="d-flex justify-content-between small">
+          <span class="text-secondary">{{ t('admin.orderStatusModal.actualDeliveryLabel') }}</span>
+          <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoThucTe) }}</span>
         </div>
 
         <!-- Them san pham moi vao don -->
@@ -3204,6 +3360,16 @@ onUnmounted(() => {
         <div class="d-flex flex-column gap-3">
           <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.statusLabel') }}</label><select v-model="orderStatusForm.trangThaiDonHang" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="pending">{{ t('admin.orderStatusModal.status.pending') }}</option><option value="confirmed">{{ t('admin.orderStatusModal.status.confirmed') }}</option><option value="processing">{{ t('admin.orderStatusModal.status.processing') }}</option><option value="shipping">{{ t('admin.orderStatusModal.status.shipping') }}</option><option value="delivered">{{ t('admin.orderStatusModal.status.delivered') }}</option><option value="cancelled">{{ t('admin.orderStatusModal.status.cancelled') }}</option><option value="returned">{{ t('admin.orderStatusModal.status.returned') }}</option></select></div>
           <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.paymentLabel') }}</label><select v-model="orderStatusForm.trangThaiThanhToan" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="unpaid">{{ t('admin.paymentStatus.unpaid') }}</option><option value="partial">{{ t('admin.paymentStatus.partial') }}</option><option value="paid">{{ t('admin.paymentStatus.paid') }}</option><option value="refunded">{{ t('admin.paymentStatus.refunded') }}</option></select></div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label small text-secondary">{{ t('admin.orderStatusModal.expectedDeliveryLabel') }}</label>
+              <input type="datetime-local" v-model="orderStatusForm.ngayGiaoDuKien" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
+            </div>
+            <div class="col-6">
+              <label class="form-label small text-secondary">{{ t('admin.orderStatusModal.actualDeliveryLabel') }}</label>
+              <input type="datetime-local" v-model="orderStatusForm.ngayGiaoThucTe" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
+            </div>
+          </div>
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">

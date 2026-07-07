@@ -473,7 +473,7 @@ onBeforeUnmount(() => {
     <!-- ══════════════════════════════════════════════════════
         TRANG TÀI KHOẢN KHÁCH HÀNG — chỉ hiển thị khi URL có #account VÀ đã đăng nhập khách hàng
     ══════════════════════════════════════════════════════ -->
-    <AccountPage v-else-if="isAccountHash && auth.user && !auth.isAdmin" @go-home="goHome" />
+    <AccountPage v-else-if="isAccountHash && auth.user && !auth.isAdmin" @go-home="goHome" @add-to-cart="addToCart" />
 
     <!-- Chưa đăng nhập (hoặc là tài khoản staff) mà vào #account -->
     <section v-else-if="isAccountHash"

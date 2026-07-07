@@ -2,7 +2,7 @@
 // bởi stores/index.js sau khi login (xem setSession).
 const authHeaders = () => {
   try {
-    const session = JSON.parse(localStorage.getItem('saophone_session'));
+    const session = JSON.parse(sessionStorage.getItem('saophone_session'));
     return session?.token ? { Authorization: `Bearer ${session.token}` } : {};
   } catch {
     return {};

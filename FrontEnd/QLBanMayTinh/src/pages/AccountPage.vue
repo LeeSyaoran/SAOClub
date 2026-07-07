@@ -2,28 +2,41 @@
 // ========================================================
 // AccountPage.vue — Trang tài khoản khách hàng
 // Gồm 3 tab: Đơn hàng hiện tại | Lịch sử mua hàng | Cài đặt tài khoản
-// Emit ra: go-home
+// Emit ra: go-home, add-to-cart (App.vue sở hữu giỏ hàng, xem xem sản phẩm rồi
+// mua lại sẽ báo lên App.vue thêm hộ)
 // ========================================================
 import { ref, computed, onMounted } from "vue";
 import { AuthStore, setSession } from "../stores/index.js";
 import { I18nStore, t } from "../i18n/index.js";
-import { orderStatusLabel, orderStatusColor } from "../utils/orderStatus.js";
+import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
 import * as DonHangService         from "../Service/DonHangService.js";
 import * as ChiTietDonHangService  from "../Service/ChiTietDonHangService.js";
 import * as SanPhamService         from "../Service/SanPhamService.js";
 import * as KhachHangService       from "../Service/KhachHangService.js";
 import OrderStatusTimeline from "../components/order/OrderStatusTimeline.vue";
+import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
 
-const emit = defineEmits(["go-home"]);
+const emit = defineEmits(["go-home", "add-to-cart"]);
 
 const auth = AuthStore;
-const activeTab = ref("orders"); // 'orders' | 'history' | 'settings'
+// Tách theo trạng thái kiểu Shopee thay vì gộp chung "hiện tại/lịch sử"
+const activeTab = ref("pending"); // 'pending' | 'shipping' | 'completed' | 'cancelled' | 'settings'
+
+// Nhóm trạng thái đơn hàng (trangThaiDonHang) ứng với từng tab
+const TAB_STATUS_GROUPS = {
+  pending:   ["pending", "confirmed"],
+  shipping:  ["processing", "shipping"],
+  completed: ["delivered"],
+  cancelled: ["cancelled", "returned"],
+};
 
 const TABS = computed(() => [
-  { id: "orders",   icon: "📦", label: t("account.tabOrders") },
-  { id: "history",  icon: "🕘", label: t("account.tabHistory") },
-  { id: "settings", icon: "⚙️", label: t("account.tabSettings") },
+  { id: "pending",   icon: "🕐", label: t("account.tabPending") },
+  { id: "shipping",  icon: "🚚", label: t("account.tabShipping") },
+  { id: "completed", icon: "✅", label: t("account.tabCompleted") },
+  { id: "cancelled", icon: "❌", label: t("account.tabCancelled") },
+  { id: "settings",  icon: "⚙️", label: t("account.tabSettings") },
 ]);
 
 // ── Dữ liệu ─────────────────────────────────────────────────────────────────
@@ -32,20 +45,51 @@ const products    = ref([]);   // danh sách bienThe/sanPham (để map ảnh + 
 const itemsByOrder = ref({});  // { [donHangId]: ChiTietDonHangResponse[] }
 const loading      = ref(false);
 
-const HOAN_TAT_STATUSES = ["delivered", "cancelled", "returned"];
+// Số đơn theo từng tab — hiện badge trên tab dù đang xem tab khác
+const tabOrderCounts = computed(() => {
+  const counts = { pending: 0, shipping: 0, completed: 0, cancelled: 0 };
+  orders.value.forEach(o => {
+    for (const [tabId, statuses] of Object.entries(TAB_STATUS_GROUPS)) {
+      if (statuses.includes(o.trangThaiDonHang)) { counts[tabId]++; break; }
+    }
+  });
+  return counts;
+});
 
-// Đơn hàng đang xử lý (chưa hoàn tất)
-const currentOrders = computed(() =>
-  orders.value.filter(o => !HOAN_TAT_STATUSES.includes(o.trangThaiDonHang))
-);
+// Đơn thuộc tab "Chờ xác nhận" / "Đang giao" — hiện dạng thẻ đầy đủ + timeline
+const currentOrders = computed(() => {
+  const statuses = TAB_STATUS_GROUPS[activeTab.value];
+  return (activeTab.value === 'pending' || activeTab.value === 'shipping') && statuses
+    ? orders.value.filter(o => statuses.includes(o.trangThaiDonHang))
+    : [];
+});
 
-// Lịch sử mua hàng (đã giao / đã hủy / đã trả)
-const historyOrders = computed(() =>
-  orders.value.filter(o => HOAN_TAT_STATUSES.includes(o.trangThaiDonHang))
-);
+// Đơn thuộc tab "Hoàn tất" / "Đã hủy/Trả hàng" — hiện dạng dòng gọn, bấm mở xem sản phẩm
+const historyOrders = computed(() => {
+  const statuses = TAB_STATUS_GROUPS[activeTab.value];
+  return (activeTab.value === 'completed' || activeTab.value === 'cancelled') && statuses
+    ? orders.value.filter(o => statuses.includes(o.trangThaiDonHang))
+    : [];
+});
 
 const productByBienThe = (bienTheId) =>
   products.value.find(p => p.bienTheId === bienTheId);
+
+// Bấm vào 1 đơn trong "Lịch sử mua hàng" để xem đã mua sản phẩm gì (đóng/mở)
+const expandedHistoryOrders = ref(new Set());
+const toggleHistoryOrder = (donHangId) => {
+  const s = expandedHistoryOrders.value;
+  if (s.has(donHangId)) s.delete(donHangId); else s.add(donHangId);
+  expandedHistoryOrders.value = new Set(s);
+};
+
+// Bấm vào 1 sản phẩm đã mua — mở trang chi tiết (đủ thông số + nút thêm vào giỏ
+// để mua lại), dùng lại đúng ProductDetail của trang chủ.
+const selectedProductDetail = ref(null);
+const viewProductDetail = (item) => {
+  const product = productByBienThe(item.bienTheId);
+  if (product) selectedProductDetail.value = product;
+};
 
 const fetchData = async () => {
   loading.value = true;
@@ -195,15 +239,15 @@ onMounted(() => {
                 @click="activeTab = tab.id">
           <span>{{ tab.icon }}</span>
           {{ tab.label }}
-          <span v-if="tab.id === 'orders' && currentOrders.length"
+          <span v-if="tabOrderCounts[tab.id]"
                 class="badge rounded-pill" style="background:var(--accent); color:var(--accent-text); font-size:10px;">
-            {{ currentOrders.length }}
+            {{ tabOrderCounts[tab.id] }}
           </span>
         </button>
       </div>
 
-      <!-- ══ Tab: Đơn hàng hiện tại ══ -->
-      <div v-if="activeTab === 'orders'">
+      <!-- ══ Tab: Chờ xác nhận / Đang giao — thẻ đầy đủ + timeline ══ -->
+      <div v-if="activeTab === 'pending' || activeTab === 'shipping'">
         <div v-if="loading" class="d-flex flex-column gap-3">
           <div v-for="i in 2" :key="i" class="rounded-4 p-3" style="background:var(--bg-card); border:1px solid var(--border-color);">
             <Skeleton width="220px" height="18px" class="mb-3" />
@@ -241,7 +285,7 @@ onMounted(() => {
               </div>
               <span class="badge d-flex align-items-center gap-1 px-3 py-2 rounded-pill fw-semibold"
                     :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
-                <span style="font-size:8px;">●</span>
+                <span style="font-size:11px;">{{ orderStatusIcon(o.trangThaiDonHang) }}</span>
                 {{ orderStatusLabel(o.trangThaiDonHang) }}
               </span>
             </div>
@@ -251,11 +295,19 @@ onMounted(() => {
               <OrderStatusTimeline :current-step="orderStep(o.trangThaiDonHang)" />
             </div>
 
+            <!-- Ngày giao dự kiến / ngày nhận hàng thực tế -->
+            <div v-if="o.ngayGiaoDuKien || o.ngayGiaoThucTe"
+                 class="d-flex flex-wrap gap-3 mb-3 small" style="color:var(--text-secondary);">
+              <span v-if="o.ngayGiaoDuKien">📦 {{ t('account.expectedDelivery') }}: {{ formatDate(o.ngayGiaoDuKien) }}</span>
+              <span v-if="o.ngayGiaoThucTe">✅ {{ t('account.actualDelivery') }}: {{ formatDate(o.ngayGiaoThucTe) }}</span>
+            </div>
+
             <!-- Danh sách sản phẩm trong đơn -->
             <div class="d-flex flex-column gap-2">
               <div v-for="item in itemsByOrder[o.donHangId] || []" :key="item.id"
                    class="d-flex align-items-center gap-3 p-2 rounded-3"
-                   style="background:var(--bg-card-alt); border:1px solid var(--border-color-soft); transition:background 0.15s;"
+                   style="background:var(--bg-card-alt); border:1px solid var(--border-color-soft); transition:background 0.15s; cursor:pointer;"
+                   @click="viewProductDetail(item)"
                    @mouseenter="e => e.currentTarget.style.background = 'var(--bg-hover)'"
                    @mouseleave="e => e.currentTarget.style.background = 'var(--bg-card-alt)'">
                 <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -280,8 +332,8 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- ══ Tab: Lịch sử mua hàng ══ -->
-      <div v-else-if="activeTab === 'history'">
+      <!-- ══ Tab: Hoàn tất / Đã hủy-Trả hàng — dòng gọn, bấm mở xem sản phẩm ══ -->
+      <div v-else-if="activeTab === 'completed' || activeTab === 'cancelled'">
         <div v-if="loading" class="d-flex flex-column gap-2">
           <Skeleton v-for="i in 3" :key="i" width="100%" height="64px" radius="14px" />
         </div>
@@ -296,27 +348,56 @@ onMounted(() => {
 
         <div v-else class="d-flex flex-column gap-2">
           <div v-for="o in historyOrders" :key="o.donHangId"
-               class="rounded-4 p-3 d-flex flex-wrap justify-content-between align-items-center gap-2"
-               style="background:var(--bg-card); border:1px solid var(--border-color); border-left:4px solid; transition:transform 0.15s, box-shadow 0.15s;"
+               class="rounded-4 p-3"
+               style="background:var(--bg-card); border:1px solid var(--border-color); border-left:4px solid; transition:transform 0.15s, box-shadow 0.15s; cursor:pointer;"
                :style="{ borderLeftColor: orderStatusColor(o.trangThaiDonHang).text }"
+               @click="toggleHistoryOrder(o.donHangId)"
                @mouseenter="e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 6px 20px var(--shadow-color)'; }"
                @mouseleave="e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }">
-            <div class="d-flex align-items-center gap-3">
-              <span style="font-size:1.3rem; opacity:0.6;">🧾</span>
-              <div>
-                <div class="fw-bold" style="color:var(--text-heading); font-size:0.88rem;">{{ t('account.orderCode', { code: o.maDonHang || o.donHangId }) }}</div>
-                <div style="color:var(--text-secondary); font-size:11px;">
-                  {{ formatDate(o.ngayDat) }} · {{ (itemsByOrder[o.donHangId] || []).length }} {{ t('account.products') }}
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div class="d-flex align-items-center gap-3">
+                <span style="font-size:1.3rem; opacity:0.6;">🧾</span>
+                <div>
+                  <div class="fw-bold" style="color:var(--text-heading); font-size:0.88rem;">{{ t('account.orderCode', { code: o.maDonHang || o.donHangId }) }}</div>
+                  <div style="color:var(--text-secondary); font-size:11px;">
+                    {{ formatDate(o.ngayDat) }} · {{ (itemsByOrder[o.donHangId] || []).length }} {{ t('account.products') }}
+                  </div>
+                  <div v-if="o.ngayGiaoThucTe" style="color:var(--text-secondary); font-size:11px;">
+                    ✅ {{ t('account.actualDelivery') }}: {{ formatDate(o.ngayGiaoThucTe) }}
+                  </div>
                 </div>
               </div>
+              <div class="d-flex align-items-center gap-3">
+                <span class="badge d-flex align-items-center gap-1 px-3 py-2 rounded-pill fw-semibold"
+                      :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                  <span style="font-size:11px;">{{ orderStatusIcon(o.trangThaiDonHang) }}</span>
+                  {{ orderStatusLabel(o.trangThaiDonHang) }}
+                </span>
+                <span class="fw-black" style="color:var(--accent); font-size:0.95rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
+                <span style="color:var(--text-secondary); font-size:0.8rem;">{{ expandedHistoryOrders.has(o.donHangId) ? '▲' : '▼' }}</span>
+              </div>
             </div>
-            <div class="d-flex align-items-center gap-3">
-              <span class="badge d-flex align-items-center gap-1 px-3 py-2 rounded-pill fw-semibold"
-                    :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
-                <span style="font-size:8px;">●</span>
-                {{ orderStatusLabel(o.trangThaiDonHang) }}
-              </span>
-              <span class="fw-black" style="color:var(--accent); font-size:0.95rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
+
+            <!-- Danh sách sản phẩm đã mua — chỉ hiện khi bấm mở đơn -->
+            <div v-if="expandedHistoryOrders.has(o.donHangId)"
+                 class="rounded-3 mt-3 p-2" style="background:var(--bg-card-inset);"
+                 @click.stop>
+              <div v-for="(item, idx) in (itemsByOrder[o.donHangId] || [])" :key="item.id"
+                   class="d-flex align-items-center gap-3 py-2"
+                   style="cursor:pointer;"
+                   :style="idx > 0 ? 'border-top:1px solid var(--border-color-soft);' : ''"
+                   @click="viewProductDetail(item)">
+                <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:36px; height:30px; background:var(--bg-card-alt); overflow:hidden;">
+                  <img v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
+                       :src="productByBienThe(item.bienTheId).hinhAnhChinh"
+                       style="width:100%; height:100%; object-fit:contain; padding:3px;" />
+                  <span v-else style="font-size:1rem;">💻</span>
+                </div>
+                <span class="flex-grow-1" style="color:var(--text-primary); font-size:12.5px;">{{ productByBienThe(item.bienTheId)?.tenSanPham || item.maSku }}</span>
+                <span class="text-secondary" style="font-size:12px;">x{{ item.soLuong }}</span>
+                <span class="fw-semibold" style="color:var(--accent); font-size:12.5px; min-width:100px; text-align:right;">{{ formatPrice(item.thanhTien) }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -385,4 +466,15 @@ onMounted(() => {
 
     </div>
   </div>
+
+  <!-- Chi tiết sản phẩm đã mua — bấm vào 1 sản phẩm trong đơn để xem lại + mua lại -->
+  <ProductDetail
+    v-if="selectedProductDetail"
+    :key="selectedProductDetail.bienTheId"
+    :product="selectedProductDetail"
+    :products="products"
+    @close="selectedProductDetail = null"
+    @add-to-cart="p => { emit('add-to-cart', p); selectedProductDetail = null; }"
+    @open-product="p => selectedProductDetail = p"
+  />
 </template>

@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -51,6 +52,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handlerEntityNotFound(Exception e) {
         log.warn("Data integrity error: {}", e.getMessage());
         return new ResponseEntity<>("Dữ liệu không hợp lệ hoặc liên kết không tồn tại, vui lòng kiểm tra lại", HttpStatus.BAD_REQUEST);
+    }
+
+    // Client (trình duyệt) đã ngắt kết nối giữa chừng khi server đang ghi response
+    // (reload trang, đóng tab, Vite HMR...) — không phải lỗi server, không viết body
+    // (kết nối đã chết, viết cũng sẽ thất bại lần nữa) và chỉ log nhẹ để khỏi rác log.
+    @ExceptionHandler(HttpMessageNotWritableException.class)
+    public void handlerClientDisconnected(HttpMessageNotWritableException e) {
+        log.debug("Client disconnected before response could be written: {}", e.getMessage());
     }
 
     // Lỗi không lường trước (SQL, NPE...) — log chi tiết ở server, không lộ ra ngoài
