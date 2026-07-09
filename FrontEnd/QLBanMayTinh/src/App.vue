@@ -492,7 +492,7 @@ onBeforeUnmount(() => {
     <!-- ══════════════════════════════════════════════════════
         TRANG KHÁCH HÀNG — hiển thị khi không có #admin
     ══════════════════════════════════════════════════════ -->
-    <div v-else style="min-height:100vh; background:var(--bg-page); color:var(--text-primary); font-family:'Inter','Segoe UI',sans-serif;">
+    <div v-else style="min-height:100vh; background:var(--bg-page); color:var(--text-primary); font-family:'Nunito Sans','Segoe UI',sans-serif;">
 
       <!-- Header / NavBar — nhận cartCount và xử lý các sự kiện -->
       <NavBar
@@ -534,13 +534,13 @@ onBeforeUnmount(() => {
                  class="d-flex align-items-center justify-content-between px-3 py-2 rounded-2 text-decoration-none small fw-bold"
                  style="font-size:12px; transition:all 0.15s;"
                  :style="activeSidebarCat && activeSidebarCat.id === cat.id
-                   ? 'background:var(--bg-hover); color:#facc15;'
+                   ? 'background:var(--bg-hover); color:var(--accent-fg);'
                    : 'color:var(--text-muted);'"
-                 @mouseenter="e => { e.currentTarget.style.background='var(--bg-hover)'; e.currentTarget.style.color='#facc15'; }"
+                 @mouseenter="e => { e.currentTarget.style.background='var(--bg-hover)'; e.currentTarget.style.color='var(--accent)'; }"
                  @mouseleave="e => {
                    const isActive = activeSidebarCat && activeSidebarCat.id === cat.id;
                    e.currentTarget.style.background = isActive ? 'var(--bg-hover)' : '';
-                   e.currentTarget.style.color      = isActive ? '#facc15' : '';
+                   e.currentTarget.style.color      = isActive ? 'var(--accent)' : '';
                  }"
                  @click.prevent="selectSidebarCat(cat)">
                 <span class="d-flex align-items-center gap-2">
@@ -636,14 +636,14 @@ onBeforeUnmount(() => {
                 ]" :key="link" href="#"
                    class="d-block text-decoration-none fw-semibold p-2 rounded-2 small"
                    style="font-size:11px; transition:background 0.15s; color:var(--text-secondary);"
-                   @mouseenter="e => { e.target.style.background='var(--bg-hover)'; e.target.style.color='#facc15'; }"
+                   @mouseenter="e => { e.target.style.background='var(--bg-hover)'; e.target.style.color='var(--accent)'; }"
                    @mouseleave="e => { e.target.style.background=''; e.target.style.color=''; }">
                   {{ link }}
                 </a>
               </div>
               <!-- Banner CTA -->
               <div class="mt-auto text-center fw-black py-2 rounded-2 small"
-                   style="background:linear-gradient(135deg,#facc15,#f59e0b); color:#111; font-size:11px; letter-spacing:0.06em;">
+                   style="background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:var(--accent-text); font-size:11px; letter-spacing:0.06em;">
                 {{ t('home.examBanner') }}
               </div>
             </div>
@@ -662,7 +662,7 @@ onBeforeUnmount(() => {
               class="btn btn-sm fw-black px-3 pb-2 rounded-0 border-0"
               style="font-size:12px; letter-spacing:0.04em; border-bottom:3px solid transparent!important;"
               :style="activeTab === tab.id
-                ? 'border-bottom:3px solid #facc15!important; color:#facc15;'
+                ? 'border-bottom:3px solid var(--accent)!important; color:var(--accent-fg);'
                 : 'color:var(--text-secondary);'"
               @click="activeTab = tab.id">
               {{ tab.label }}
@@ -762,6 +762,7 @@ onBeforeUnmount(() => {
             </div>
             <button class="btn btn-sm d-flex align-items-center justify-content-center rounded-circle"
                     style="width:30px;height:30px;padding:0;background:var(--bg-input);color:var(--text-secondary);border:none;font-size:14px;"
+                    :aria-label="t('common.close')"
                     @click="toggleCart">✕</button>
           </div>
 

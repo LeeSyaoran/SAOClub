@@ -1,6 +1,6 @@
 // Gắn JWT (nếu đã đăng nhập) vào mọi request — token được lưu trong session
 // bởi stores/index.js sau khi login (xem setSession).
-const authHeaders = () => {
+export const authHeaders = () => {
   try {
     const session = JSON.parse(sessionStorage.getItem('saophone_session'));
     return session?.token ? { Authorization: `Bearer ${session.token}` } : {};

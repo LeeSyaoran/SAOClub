@@ -2,61 +2,85 @@
    Hệ thống biến màu theo theme — mặc định tối (dark), có thể chuyển
    sang sáng (light) bằng cách đặt [data-theme="light"] trên <html>.
    Xem src/stores/theme.js để biết cách toggle.
+
+   Bảng màu "Vibrant & Block-based" (tím-neon + hồng, ui-ux-pro-max) —
+   thay cho hệ vàng-đen cũ. accent = hồng (CTA/giá/badge), accent-2 =
+   tím (hover/gradient/nhấn phụ). Giữ nguyên tên biến để toàn bộ
+   component (đang dùng var(--accent)...) tự động ăn theo, không cần
+   sửa từng file.
 ════════════════════════════════════════════════════════════════════ */
 
 :root,
 [data-theme="dark"] {
-  --bg-page:           #171717;
-  --bg-page-alt:       #0f0f0f;
-  --bg-header:         #171717;
-  --bg-card:           #1a1a1a;
-  --bg-card-alt:       #141414;
-  --bg-card-inset:     #111111;
-  --bg-input:          #1f1f1f;
-  --bg-hover:          rgba(255,255,255,0.045);
-  --bg-overlay:        rgba(0,0,0,0.75);
+  /* Nền/viền trung tính đã giảm bớt chroma tím (~45%) so với bản đầu —
+     giữ cùng độ sáng và hue nhưng bớt "đục" hơn, gần với near-black hơn. */
+  --bg-page:           #12121d;
+  --bg-page-alt:       #0c0c15;
+  --bg-header:         #12121d;
+  --bg-card:           #1d1d28;
+  --bg-card-alt:       #191924;
+  --bg-card-inset:     #161620;
+  --bg-input:          #222230;
+  --bg-hover:          rgba(167,139,250,0.08);
+  --bg-overlay:        rgba(10,10,26,0.8);
 
-  --border-color:        #2a2a2a;
-  --border-color-strong: #3f3f3f;
-  --border-color-soft:   #242424;
+  --border-color:        #2d283c;
+  --border-color-strong: #4c1d95;
+  --border-color-soft:   #201a38;
 
   --text-heading:   #ffffff;
-  --text-primary:   #e5e7eb;
-  --text-secondary: #9ca3af;
-  --text-muted:     #6b7280;
+  --text-primary:   #e2e8f0;
+  --text-secondary: #a5a3c4;
+  --text-muted:     #6b6890;
 
-  --accent:      #facc15;
-  --accent-2:    #f59e0b;
-  --accent-text: #111111;
+  --accent:      #f43f5e;
+  --accent-2:    #7c3aed;
+  --accent-text: #ffffff;
+  /* accent-fg: bản sáng hơn của accent, CHỈ dùng khi accent làm màu CHỮ
+     (label/giá/link nhỏ) trên nền tối — #f43f5e đặc chỉ đạt ~5.1:1 vì
+     "tối" hơn vàng cũ; bản sáng này lên ~6.4:1. Nút/badge nền đặc vẫn
+     dùng var(--accent) nguyên bản (không đổi). */
+  --accent-fg:   #f06b81;
 
-  --shadow-color: rgba(0,0,0,0.4);
+  --shadow-color: rgba(12,12,21,0.5);
 }
 
 [data-theme="light"] {
-  --bg-page:           #f3f4f6;
+  /* Tông riêng cho light theme — không dùng lại rose/violet neon của dark.
+     #f43f5e chỉ đạt ~3.67:1 trên nền trắng (dưới AA cho chữ thường) và nhìn
+     "nhạt" trên sáng dù rực trên tối. Đổi sang rose đậm hơn (jewel-tone,
+     kiểu Tailwind rose-600) — cùng họ hue với dark để vẫn là một thương
+     hiệu, nhưng đủ đậm/bão hòa để đọc tốt trên nền sáng. */
+  --bg-page:           #fdf5fa;
   --bg-page-alt:       #ffffff;
   --bg-header:         #ffffff;
   --bg-card:           #ffffff;
-  --bg-card-alt:       #f7f8fa;
-  --bg-card-inset:     #eef0f3;
+  --bg-card-alt:       #fbf5f8;
+  --bg-card-inset:     #f7eef4;
   --bg-input:          #ffffff;
-  --bg-hover:          rgba(0,0,0,0.035);
-  --bg-overlay:        rgba(15,15,20,0.55);
+  --bg-hover:          rgba(14,116,144,0.06);
+  --bg-overlay:        rgba(26,16,51,0.55);
 
-  --border-color:        #e3e5e9;
-  --border-color-strong: #c7cbd1;
-  --border-color-soft:   #ebedf0;
+  --border-color:        #f3dce9;
+  --border-color-strong: #dba9c7;
+  --border-color-soft:   #f8ecf3;
 
-  --text-heading:   #14161a;
-  --text-primary:   #262a30;
-  --text-secondary: #5c6370;
-  --text-muted:     #8a919e;
+  --text-heading:   #1a1033;
+  --text-primary:   #2e2350;
+  --text-secondary: #6b6890;
+  --text-muted:     #9c97b8;
 
-  --accent:      #facc15;
-  --accent-2:    #f59e0b;
-  --accent-text: #111111;
+  /* accent-2: KHÔNG dùng tím trên light theme (tối/lệch tông với nền sáng) —
+     đổi sang teal đậm, cặp tương phản ấm-lạnh kinh điển với rose, tương
+     phản ~5.35:1 trên trắng, tương đương mức tím đạt trên dark theme. */
+  --accent:      #e11d48;
+  --accent-2:    #0e7490;
+  --accent-text: #ffffff;
+  /* Light theme: accent đặc (#e11d48, ~4.7:1 trên trắng) đã đủ tương phản
+     để làm chữ luôn, không cần bản riêng như dark theme. */
+  --accent-fg:   #e11d48;
 
-  --shadow-color: rgba(20,20,30,0.1);
+  --shadow-color: rgba(225,29,72,0.1);
 }
 
 body {
@@ -64,3 +88,29 @@ body {
   color: var(--text-primary);
   transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* ── Bootstrap "warning" utility → route qua accent mới ──────────────
+   Nhiều component đang dùng sẵn class Bootstrap (btn-warning, text-warning...)
+   cho nút/CTA chính thay vì var(--accent) trực tiếp. Override 1 chỗ ở đây để
+   toàn bộ các chỗ đó tự đổi màu theo theme mới, không phải sửa từng file. */
+.btn-warning {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-text) !important;
+}
+.btn-warning:hover, .btn-warning:focus {
+  background-color: var(--accent-2) !important;
+  border-color: var(--accent-2) !important;
+  color: var(--accent-text) !important;
+}
+.btn-outline-warning {
+  color: var(--accent-fg) !important;
+  border-color: var(--accent) !important;
+}
+.btn-outline-warning:hover {
+  background-color: var(--accent) !important;
+  color: var(--accent-text) !important;
+}
+.text-warning { color: var(--accent-fg) !important; }
+.border-warning { border-color: var(--accent) !important; }
+.bg-warning { background-color: var(--accent) !important; color: var(--accent-text) !important; }

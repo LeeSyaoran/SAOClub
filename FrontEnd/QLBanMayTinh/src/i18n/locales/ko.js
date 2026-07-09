@@ -6,6 +6,7 @@ export default {
     save: "변경사항 저장",
     saving: "저장 중...",
     cancel: "취소",
+    confirm: "확인",
     close: "닫기",
     loading: "로딩 중...",
     continueShopping: "쇼핑 계속하기",
@@ -206,6 +207,8 @@ export default {
     subtotal: "소계 ({count}개 상품)",
     freeShipNote: "🚚 30만동 이상 무료배송",
     checkout: "결제하기",
+    decrease: "수량 감소",
+    increase: "수량 증가",
   },
 
   checkout: {
@@ -265,6 +268,9 @@ export default {
     continue: "계속 →",
     processing: "처리 중...",
     confirmOrder: "주문 확정",
+    progressCustomer: "고객 정보 확인 중...",
+    progressOrder: "주문 생성 중...",
+    progressItems: "상품 추가 중... {current}/{total}",
     successTitle: "주문이 완료되었습니다!",
     orderCode: "주문 번호:",
     cashInstruction: "💵 배송 기사가 도착하면 현금 {amount}을 준비해 주세요.",
@@ -910,6 +916,7 @@ export default {
 
     confirm: {
       deleteProduct: "이 상품을 삭제하시겠습니까?",
+      deleteVariant: "이 옵션(변형)을 삭제하시겠습니까? 관련된 시리얼/재고도 모두 삭제됩니다.",
       deleteCustomer: "이 고객을 삭제하시겠습니까?",
       deleteStaff: "이 직원을 삭제하시겠습니까?",
       deletePromo: "이 프로모션을 삭제하시겠습니까?",

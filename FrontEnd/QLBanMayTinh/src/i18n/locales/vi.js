@@ -6,6 +6,7 @@ export default {
     save: "Lưu thay đổi",
     saving: "Đang lưu...",
     cancel: "Hủy",
+    confirm: "Xác nhận",
     close: "Đóng",
     loading: "Đang tải...",
     continueShopping: "Tiếp tục mua sắm",
@@ -206,6 +207,8 @@ export default {
     subtotal: "Tạm tính ({count} sản phẩm)",
     freeShipNote: "🚚 Miễn phí vận chuyển cho đơn từ 300.000đ",
     checkout: "Thanh toán",
+    decrease: "Giảm số lượng",
+    increase: "Tăng số lượng",
   },
 
   checkout: {
@@ -265,6 +268,9 @@ export default {
     continue: "Tiếp tục →",
     processing: "Đang xử lý...",
     confirmOrder: "Xác nhận đặt hàng",
+    progressCustomer: "Đang xác thực khách hàng...",
+    progressOrder: "Đang tạo đơn hàng...",
+    progressItems: "Đang thêm sản phẩm... {current}/{total}",
     successTitle: "Đặt hàng thành công!",
     orderCode: "Mã đơn hàng:",
     cashInstruction: "💵 Vui lòng chuẩn bị tiền mặt {amount} khi nhân viên giao hàng đến.",
@@ -910,6 +916,7 @@ export default {
 
     confirm: {
       deleteProduct: "Bạn có chắc muốn xóa sản phẩm này?",
+      deleteVariant: "Xóa biến thể này? Toàn bộ serial/tồn kho gắn với biến thể sẽ mất theo.",
       deleteCustomer: "Xóa khách hàng này?",
       deleteStaff: "Xóa nhân viên này?",
       deletePromo: "Xóa khuyến mãi này?",

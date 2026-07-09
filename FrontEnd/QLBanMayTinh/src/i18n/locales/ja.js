@@ -6,6 +6,7 @@ export default {
     save: "変更を保存",
     saving: "保存中...",
     cancel: "キャンセル",
+    confirm: "確認",
     close: "閉じる",
     loading: "読み込み中...",
     continueShopping: "買い物を続ける",
@@ -206,6 +207,8 @@ export default {
     subtotal: "小計（{count} 点）",
     freeShipNote: "🚚 30万ドン以上で送料無料",
     checkout: "レジに進む",
+    decrease: "数量を減らす",
+    increase: "数量を増やす",
   },
 
   checkout: {
@@ -265,6 +268,9 @@ export default {
     continue: "次へ →",
     processing: "処理中...",
     confirmOrder: "注文を確定する",
+    progressCustomer: "顧客情報を確認中...",
+    progressOrder: "注文を作成中...",
+    progressItems: "商品を追加中... {current}/{total}",
     successTitle: "注文が完了しました！",
     orderCode: "注文番号：",
     cashInstruction: "💵 配送スタッフが到着した際に現金{amount}をご用意ください。",
@@ -910,6 +916,7 @@ export default {
 
     confirm: {
       deleteProduct: "この商品を削除してもよろしいですか？",
+      deleteVariant: "このバリエーションを削除しますか？関連するシリアル/在庫もすべて失われます。",
       deleteCustomer: "この顧客を削除しますか？",
       deleteStaff: "このスタッフを削除しますか？",
       deletePromo: "このプロモーションを削除しますか？",

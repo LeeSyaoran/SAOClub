@@ -10,6 +10,10 @@ export const ThemeStore = reactive({ mode: initialMode });
 
 const applyToDom = (mode) => {
   document.documentElement.setAttribute("data-theme", mode);
+  // Đồng bộ luôn Bootstrap color mode — nếu không, các component Bootstrap
+  // dùng biến CSS riêng (alert, form control...) sẽ đứng yên ở dark bất kể
+  // theme của app, vì index.html khai báo data-bs-theme="dark" cố định.
+  document.documentElement.setAttribute("data-bs-theme", mode);
 };
 
 export const setTheme = (mode) => {

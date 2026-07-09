@@ -5,6 +5,7 @@
        @click.self="$emit('update:modelValue', false)">
 
     <div class="rounded-4 d-flex flex-column"
+         role="dialog" aria-modal="true"
          style="background:var(--bg-card); border:1px solid var(--border-color); width:660px; max-width:96vw; max-height:92vh; box-shadow:0 24px 80px rgba(0,0,0,0.4);">
 
       <!-- ══ Màn hình thành công ══ -->
@@ -52,19 +53,19 @@
                 <div class="d-flex align-items-center gap-1">
                   <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
                        style="width:20px;height:20px;font-size:10px;"
-                       :style="checkoutStep >= 1 ? 'background:#facc15;color:#000;' : 'background:var(--bg-card-alt);color:var(--text-muted);'">1</div>
-                  <span class="small" :style="checkoutStep >= 1 ? 'color:#facc15;' : 'color:var(--text-secondary);'" style="font-size:11px;">{{ t('checkout.stepInfo') }}</span>
+                       :style="checkoutStep >= 1 ? 'background:var(--accent);color:var(--accent-text);' : 'background:var(--bg-card-alt);color:var(--text-muted);'">1</div>
+                  <span class="small" :style="checkoutStep >= 1 ? 'color:var(--accent-fg);' : 'color:var(--text-secondary);'" style="font-size:11px;">{{ t('checkout.stepInfo') }}</span>
                 </div>
                 <div style="font-size:10px; color:var(--text-secondary);">───</div>
                 <div class="d-flex align-items-center gap-1">
                   <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
                        style="width:20px;height:20px;font-size:10px;"
-                       :style="checkoutStep >= 2 ? 'background:#facc15;color:#000;' : 'background:var(--bg-card-alt);color:var(--text-muted);'">2</div>
-                  <span class="small" :style="checkoutStep >= 2 ? 'color:#facc15;' : 'color:var(--text-secondary);'" style="font-size:11px;">{{ t('checkout.stepPayment') }}</span>
+                       :style="checkoutStep >= 2 ? 'background:var(--accent);color:var(--accent-text);' : 'background:var(--bg-card-alt);color:var(--text-muted);'">2</div>
+                  <span class="small" :style="checkoutStep >= 2 ? 'color:var(--accent-fg);' : 'color:var(--text-secondary);'" style="font-size:11px;">{{ t('checkout.stepPayment') }}</span>
                 </div>
               </div>
             </div>
-            <button class="btn-close btn-close-white mt-1" style="font-size:0.7rem;" @click="$emit('update:modelValue', false)"></button>
+            <button class="btn-close btn-close-white mt-1" style="font-size:0.7rem;" :aria-label="t('common.close')" @click="$emit('update:modelValue', false)"></button>
           </div>
         </div>
 
@@ -192,7 +193,7 @@
               <!-- Tiền mặt -->
               <label class="d-flex align-items-center gap-3 p-3 rounded-3 cursor-pointer"
                      style="border:2px solid; cursor:pointer;"
-                     :style="selectedPayment==='tien_mat' ? 'border-color:#facc15;background:rgba(250,204,21,0.06);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                     :style="selectedPayment==='tien_mat' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
                      @click="selectedPayment='tien_mat'">
                 <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
                      style="width:42px;height:42px;background:#2a2000;font-size:1.3rem;">💵</div>
@@ -202,15 +203,15 @@
                 </div>
                 <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
                      style="width:20px;height:20px;"
-                     :style="selectedPayment==='tien_mat' ? 'border-color:#facc15;background:#facc15;' : 'border-color:var(--border-color-strong);background:transparent;'">
-                  <div v-if="selectedPayment==='tien_mat'" style="width:8px;height:8px;border-radius:50%;background:#000;"></div>
+                     :style="selectedPayment==='tien_mat' ? 'border-color:var(--accent);background:var(--accent);' : 'border-color:var(--border-color-strong);background:transparent;'">
+                  <div v-if="selectedPayment==='tien_mat'" style="width:8px;height:8px;border-radius:50%;background:var(--accent-text);"></div>
                 </div>
               </label>
 
               <!-- QR Code -->
               <label class="d-flex align-items-center gap-3 p-3 rounded-3"
                      style="border:2px solid; cursor:pointer;"
-                     :style="selectedPayment==='qr' ? 'border-color:#facc15;background:rgba(250,204,21,0.06);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                     :style="selectedPayment==='qr' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
                      @click="selectedPayment='qr'">
                 <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
                      style="width:42px;height:42px;background:#0a1a2a;font-size:1.3rem;">📱</div>
@@ -220,15 +221,15 @@
                 </div>
                 <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
                      style="width:20px;height:20px;"
-                     :style="selectedPayment==='qr' ? 'border-color:#facc15;background:#facc15;' : 'border-color:var(--border-color-strong);background:transparent;'">
-                  <div v-if="selectedPayment==='qr'" style="width:8px;height:8px;border-radius:50%;background:#000;"></div>
+                     :style="selectedPayment==='qr' ? 'border-color:var(--accent);background:var(--accent);' : 'border-color:var(--border-color-strong);background:transparent;'">
+                  <div v-if="selectedPayment==='qr'" style="width:8px;height:8px;border-radius:50%;background:var(--accent-text);"></div>
                 </div>
               </label>
 
               <!-- Chuyển khoản -->
               <label class="d-flex align-items-center gap-3 p-3 rounded-3"
                      style="border:2px solid; cursor:pointer;"
-                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:#facc15;background:rgba(250,204,21,0.06);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
                      @click="selectedPayment='chuyen_khoan'">
                 <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
                      style="width:42px;height:42px;background:#0a1a0a;font-size:1.3rem;">🏦</div>
@@ -238,8 +239,8 @@
                 </div>
                 <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
                      style="width:20px;height:20px;"
-                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:#facc15;background:#facc15;' : 'border-color:var(--border-color-strong);background:transparent;'">
-                  <div v-if="selectedPayment==='chuyen_khoan'" style="width:8px;height:8px;border-radius:50%;background:#000;"></div>
+                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:var(--accent);background:var(--accent);' : 'border-color:var(--border-color-strong);background:transparent;'">
+                  <div v-if="selectedPayment==='chuyen_khoan'" style="width:8px;height:8px;border-radius:50%;background:var(--accent-text);"></div>
                 </div>
               </label>
 
@@ -282,6 +283,11 @@
 
         </div><!-- /bước 2 -->
 
+        <!-- Trạng thái tiến trình khi đang đặt hàng — aria-live để screen reader cũng đọc được -->
+        <div v-if="checkoutLoading" class="px-4 pb-2 small text-center" style="color:var(--text-secondary);" role="status" aria-live="polite">
+          {{ checkoutProgress }}
+        </div>
+
         <!-- Footer: nút điều hướng bước -->
         <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top:1px solid var(--border-color-soft);">
           <button v-if="checkoutStep === 1"
@@ -289,6 +295,7 @@
                   @click="$emit('update:modelValue', false)">{{ t('checkout.cancel') }}</button>
           <button v-else
                   class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
+                  :disabled="checkoutLoading"
                   @click="checkoutStep = 1">{{ t('checkout.back') }}</button>
 
           <button v-if="checkoutStep === 1"
@@ -329,6 +336,7 @@ const emit = defineEmits(['update:modelValue', 'order-placed']);
 const checkoutStep    = ref(1);     // 1 = thông tin giao hàng, 2 = phương thức thanh toán
 const checkoutSuccess = ref(false); // Đặt hàng thành công chưa
 const checkoutLoading = ref(false); // Đang xử lý API
+const checkoutProgress = ref('');   // Bước hiện tại trong placeOrder() — hiện cho người dùng biết đơn đang xử lý tới đâu
 const checkoutError   = ref('');    // Thông báo lỗi khi checkout
 const checkoutOrderId    = ref(null);  // ID đơn hàng sau khi đặt xong
 const checkoutFinalTotal = ref(0);     // Tổng tiền lúc đặt hàng (lưu trước khi cha xóa giỏ)
@@ -386,12 +394,18 @@ const formatPrice = (value) => {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 };
 
+// Đóng bằng phím Escape — không đóng khi đang gọi API để tránh rời màn hình giữa chừng
+const onKeydown = (e) => { if (e.key === 'Escape' && !checkoutLoading.value) emit('update:modelValue', false); };
+
 // Mở modal thanh toán và load dữ liệu cần thiết — chạy khi cha set modelValue = true
 watch(() => props.modelValue, async (open) => {
+  if (open) window.addEventListener('keydown', onKeydown);
+  else window.removeEventListener('keydown', onKeydown);
   if (!open) return;
-  checkoutStep.value    = 1;
-  checkoutSuccess.value = false;
-  checkoutError.value   = '';
+  checkoutStep.value     = 1;
+  checkoutSuccess.value  = false;
+  checkoutError.value    = '';
+  checkoutProgress.value = '';
   promoMsg.value        = '';
   appliedPromo.value    = null;
   foundCustomer.value   = null;
@@ -469,8 +483,9 @@ const parseApiError = async (res, fallbackPrefix) => {
 
 // Gửi đơn hàng lên API
 const placeOrder = async () => {
-  checkoutError.value   = '';
-  checkoutLoading.value = true;
+  checkoutError.value    = '';
+  checkoutLoading.value  = true;
+  checkoutProgress.value = t('checkout.progressCustomer');
   try {
     let khachHangId = foundCustomer.value?.khachHangId;
 
@@ -493,6 +508,7 @@ const placeOrder = async () => {
     }
 
     // Tạo đơn hàng chính
+    checkoutProgress.value = t('checkout.progressOrder');
     const orderBody = {
       khachHangId,
       nguoiNhan:          checkoutForm.nguoiNhan,
@@ -517,7 +533,10 @@ const placeOrder = async () => {
     // Thêm từng sản phẩm vào chi tiết đơn hàng — nếu 1 dòng lỗi giữa chừng thì huỷ
     // luôn đơn hàng vừa tạo, tránh để lại đơn "pending" thiếu sản phẩm.
     try {
+      let itemIndex = 0;
       for (const item of props.cart) {
+        itemIndex += 1;
+        checkoutProgress.value = t('checkout.progressItems', { current: itemIndex, total: props.cart.length });
         const itemRes = await DonHangService.addChiTiet({
           donHangId,
           bienTheId:   item.bienTheId,
@@ -541,7 +560,8 @@ const placeOrder = async () => {
   } catch (e) {
     checkoutError.value = e.message;
   } finally {
-    checkoutLoading.value = false;
+    checkoutLoading.value  = false;
+    checkoutProgress.value = '';
   }
 };
 </script>

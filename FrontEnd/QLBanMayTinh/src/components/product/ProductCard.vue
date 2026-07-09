@@ -49,7 +49,7 @@
           v-for="tag in product.phanLoaiTen.split(',')"
           :key="tag"
           class="badge"
-          style="font-size:9px; background:#2a2200; color:#facc15; border:1px solid #3d3000;">
+          style="font-size:9px; background:rgba(244,63,94,0.12); color:var(--accent-fg); border:1px solid rgba(244,63,94,0.35);">
           {{ tag.trim() }}
         </span>
       </div>

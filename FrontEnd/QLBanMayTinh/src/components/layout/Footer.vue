@@ -88,7 +88,7 @@
               <a href="#"
                  class="text-decoration-none fw-semibold"
                  style="color:var(--text-secondary); font-size:11px;"
-                 @mouseenter="e => e.target.style.color='#facc15'"
+                 @mouseenter="e => e.target.style.color='var(--accent)'"
                  @mouseleave="e => e.target.style.color='var(--text-secondary)'">
                 • {{ item }}
               </a>
@@ -108,7 +108,7 @@
             <!-- Facebook -->
             <a href="#" class="d-flex align-items-center justify-content-center rounded-circle text-decoration-none"
                style="width:32px; height:32px; background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-secondary);"
-               @mouseenter="e => e.currentTarget.style.color='#facc15'"
+               @mouseenter="e => e.currentTarget.style.color='var(--accent)'"
                @mouseleave="e => e.currentTarget.style.color='var(--text-secondary)'">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.8z"/>
@@ -117,7 +117,7 @@
             <!-- YouTube -->
             <a href="#" class="d-flex align-items-center justify-content-center rounded-circle text-decoration-none"
                style="width:32px; height:32px; background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-secondary);"
-               @mouseenter="e => e.currentTarget.style.color='#facc15'"
+               @mouseenter="e => e.currentTarget.style.color='var(--accent)'"
                @mouseleave="e => e.currentTarget.style.color='var(--text-secondary)'">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
@@ -126,7 +126,7 @@
             <!-- Instagram -->
             <a href="#" class="d-flex align-items-center justify-content-center rounded-circle text-decoration-none"
                style="width:32px; height:32px; background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-secondary);"
-               @mouseenter="e => e.currentTarget.style.color='#facc15'"
+               @mouseenter="e => e.currentTarget.style.color='var(--accent)'"
                @mouseleave="e => e.currentTarget.style.color='var(--text-secondary)'">
               <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="2" width="20" height="20" rx="5"/>

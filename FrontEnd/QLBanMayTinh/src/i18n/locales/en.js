@@ -6,6 +6,7 @@ export default {
     save: "Save changes",
     saving: "Saving...",
     cancel: "Cancel",
+    confirm: "Confirm",
     close: "Close",
     loading: "Loading...",
     continueShopping: "Continue shopping",
@@ -206,6 +207,8 @@ export default {
     subtotal: "Subtotal ({count} items)",
     freeShipNote: "🚚 Free shipping for orders from 300,000₫",
     checkout: "Checkout",
+    decrease: "Decrease quantity",
+    increase: "Increase quantity",
   },
 
   checkout: {
@@ -265,6 +268,9 @@ export default {
     continue: "Continue →",
     processing: "Processing...",
     confirmOrder: "Confirm order",
+    progressCustomer: "Verifying customer...",
+    progressOrder: "Creating order...",
+    progressItems: "Adding items... {current}/{total}",
     successTitle: "Order placed successfully!",
     orderCode: "Order code:",
     cashInstruction: "💵 Please prepare {amount} in cash when the delivery staff arrives.",
@@ -910,6 +916,7 @@ export default {
 
     confirm: {
       deleteProduct: "Are you sure you want to delete this product?",
+      deleteVariant: "Delete this variant? All serials/stock linked to it will be lost too.",
       deleteCustomer: "Delete this customer?",
       deleteStaff: "Delete this staff member?",
       deletePromo: "Delete this promotion?",

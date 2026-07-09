@@ -18,12 +18,28 @@ import DonutChart from "../components/common/DonutChart.vue";
 import BarChart   from "../components/common/BarChart.vue";
 import GaugeChart from "../components/common/GaugeChart.vue";
 import TrendChart from "../components/common/TrendChart.vue";
+import ConfirmDialog from "../components/common/ConfirmDialog.vue";
+import { askConfirm } from "../stores/confirm.js";
+import { ThemeStore, toggleTheme } from "../stores/theme.js";
+import { authHeaders } from "../Service/api.js";
+
+// ── Toast thông báo (thay window.alert()) ──────────────────────────────────
+const toast = reactive({ show: false, msg: '', type: 'success' });
+let toastTimer = null;
+const showToast = (msg, type = 'error') => {
+  clearTimeout(toastTimer);
+  toast.msg  = msg;
+  toast.type = type;
+  toast.show = true;
+  toastTimer = setTimeout(() => { toast.show = false; }, 3500);
+};
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentRole = ref("admin");
 const currentPage = ref("dashboard");
 const navigate = (page) => {
   currentPage.value = page;
+  if (page === "staff") ensureChucVuList();
 };
 const switchRole = (role) => {
   currentRole.value = role;
@@ -435,6 +451,11 @@ const stockClass = (item) => {
 };
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
+// Chỉ tải 6 bảng chính lúc vào trang (dashboard + các bảng danh sách cần ngay).
+// 7 danh sách tham chiếu (danh mục/hãng/NCC/CPU/RAM/ổ cứng/GPU) + chức vụ
+// KHÔNG tải ở đây nữa — chỉ tải khi thực sự cần (mở form thêm/sửa sản phẩm,
+// vào trang Nhân viên), xem ensureProductRefData()/ensureChucVuList() bên dưới.
+// Với dữ liệu lớn, bớt 7-8 lệnh gọi song song này giúp trang vào nhanh hơn hẳn.
 const fetchAll = async () => {
   loading.value = true;
   const safe = (p) => p.catch(() => []);
@@ -445,14 +466,6 @@ const fetchAll = async () => {
     staff.value,
     promotions.value,
     inventory.value,
-    categories.value,
-    brands.value,
-    suppliers.value,
-    chucVuList.value,
-    cpuList.value,
-    ramList.value,
-    oCungList.value,
-    gpuList.value,
   ] = await Promise.all([
     safe(SanPhamService.getAll()),
     safe(DonHangService.getAll()),
@@ -460,17 +473,44 @@ const fetchAll = async () => {
     safe(NhanVienService.getAll()),
     safe(KhuyenMaiService.getAll()),
     safe(TonKhoService.getAll()),
-    safe(DanhMucService.getAll()),
-    safe(DmService.getThuongHieu()),
-    safe(DmService.getNhaCungCap()),
-    safe(DmService.getChucVu()),
-    safe(DmService.getCpu()),
-    safe(DmService.getRam()),
-    safe(DmService.getOCung()),
-    safe(DmService.getGpu()),
   ]);
   loading.value = false;
   await autoMergeAllDuplicates();
+};
+
+// Danh mục/hãng/NCC/CPU/RAM/ổ cứng/GPU — chỉ cần khi mở form thêm/sửa sản phẩm.
+// Tải 1 lần, cache lại (promise dùng chung để 2 lần gọi gần nhau không tải trùng).
+let productRefDataPromise = null;
+const ensureProductRefData = () => {
+  if (productRefDataPromise) return productRefDataPromise;
+  productRefDataPromise = Promise.all([
+    DanhMucService.getAll().catch(() => []),
+    DmService.getThuongHieu().catch(() => []),
+    DmService.getNhaCungCap().catch(() => []),
+    DmService.getCpu().catch(() => []),
+    DmService.getRam().catch(() => []),
+    DmService.getOCung().catch(() => []),
+    DmService.getGpu().catch(() => []),
+  ]).then(([cat, br, sup, cpu, ram, oc, gpu]) => {
+    categories.value = cat;
+    brands.value = br;
+    suppliers.value = sup;
+    cpuList.value = cpu;
+    ramList.value = ram;
+    oCungList.value = oc;
+    gpuList.value = gpu;
+  });
+  return productRefDataPromise;
+};
+
+// Chức vụ — cần cho cả bảng Nhân viên (chucVuName) lẫn form thêm/sửa nhân viên.
+let chucVuListPromise = null;
+const ensureChucVuList = () => {
+  if (chucVuListPromise) return chucVuListPromise;
+  chucVuListPromise = DmService.getChucVu().catch(() => []).then((list) => {
+    chucVuList.value = list;
+  });
+  return chucVuListPromise;
 };
 
 // Tự động gộp tất cả đơn cùng khách + cùng ngày khi tải trang
@@ -620,7 +660,8 @@ const resetImageState = () => {
   imageFilePending.value = null;
 };
 
-const openAdd = () => {
+const openAdd = async () => {
+  await ensureProductRefData();
   Object.assign(form, emptyForm());
   editingId.value = null;
   addVariantMode.value = false;
@@ -639,7 +680,8 @@ const addVariantMode      = ref(false);
 const addVariantSanPhamId = ref(null);
 const addVariantSanPhamName = ref('');
 
-const openAddVariant = () => {
+const openAddVariant = async () => {
+  await ensureProductRefData();
   Object.assign(form, emptyForm());
   const first = detailModalList.value[0];
   form.tenSanPham  = detailModalName.value;
@@ -656,7 +698,8 @@ const openAddVariant = () => {
   showDetailModal.value = false;
   showProductModal.value = true;
 };
-const openEdit = (p) => {
+const openEdit = async (p) => {
+  await ensureProductRefData();
   Object.assign(form, {
     bienTheId: p.bienTheId,
     tenSanPham: p.tenSanPham,
@@ -708,7 +751,7 @@ const saveProduct = async () => {
     const fd = new FormData();
     fd.append('file', imageFilePending.value);
     try {
-      const upRes = await fetch('/api/upload/image', { method: 'POST', body: fd });
+      const upRes = await fetch('/api/upload/image', { method: 'POST', headers: authHeaders(), body: fd });
       if (upRes.ok) {
         const upData = await upRes.json();
         form.hinhAnhChinh = upData.url;
@@ -810,11 +853,24 @@ const saveProduct = async () => {
     formError.value = e.message;
   }
 };
+// Xoá xong không cần tải lại cả bảng — API trả 204 rỗng nên chỉ cần biết ID
+// vừa xoá là đủ để lọc khỏi mảng cục bộ (products = 1 dòng/biến thể, nên xoá
+// sản phẩm = xoá hết các dòng cùng sanPhamId).
 const deleteProduct = async (id) => {
-  if (!confirm(t('admin.confirm.deleteProduct'))) return;
+  if (!(await askConfirm(t('admin.confirm.deleteProduct')))) return;
   const res = await SanPhamService.remove(id);
-  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  products.value = await SanPhamService.getAll().catch(() => []);
+  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  products.value = products.value.filter(p => p.sanPhamId !== id);
+};
+
+// Xoá 1 biến thể (bienTheId) — dùng trong modal "Biến thể" và "Chi tiết", không xoá cả sản phẩm
+const deleteVariant = async (bienTheId) => {
+  if (!(await askConfirm(t('admin.confirm.deleteVariant')))) return;
+  const res = await BienTheSanPhamService.remove(bienTheId);
+  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  products.value = products.value.filter(p => p.bienTheId !== bienTheId);
+  variantModalList.value = variantModalList.value.filter(v => v.bienTheId !== bienTheId);
+  detailModalList.value = detailModalList.value.filter(v => v.bienTheId !== bienTheId);
 };
 
 // ── Customers CRUD ────────────────────────────────────────────────────────────
@@ -874,7 +930,15 @@ const saveCustomer = async () => {
       return;
     }
     showCustomerModal.value = false;
-    customers.value = await KhachHangService.getAll().catch(() => []);
+    // Khách hàng là entity phẳng (không join tên qua ID) nên vá cục bộ an toàn,
+    // khỏi phải tải lại cả bảng khách hàng.
+    if (editingCustomerId.value) {
+      const idx = customers.value.findIndex((c) => c.khachHangId === editingCustomerId.value);
+      if (idx !== -1) customers.value[idx] = { ...customers.value[idx], ...body };
+    } else {
+      const created = await res.json();
+      customers.value = [...customers.value, created];
+    }
     // Neu modal nay duoc mo tu luong tao hoa don POS (khach chua co trong he thong) —
     // tu dong gan khach vua tao lam khach hang cho hoa don dang tao, roi cho phep them SP.
     if (posOpeningCustomerFromPos.value) {
@@ -892,10 +956,10 @@ const saveCustomer = async () => {
   }
 };
 const deleteCustomer = async (id) => {
-  if (!confirm(t('admin.confirm.deleteCustomer'))) return;
+  if (!(await askConfirm(t('admin.confirm.deleteCustomer')))) return;
   const res = await KhachHangService.remove(id);
-  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  customers.value = await KhachHangService.getAll().catch(() => []);
+  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  customers.value = customers.value.filter((c) => c.khachHangId !== id);
 };
 
 // ── Staff CRUD ────────────────────────────────────────────────────────────────
@@ -949,16 +1013,22 @@ const saveStaff = async () => {
       return;
     }
     showStaffModal.value = false;
-    staff.value = await NhanVienService.getAll().catch(() => []);
+    if (editingStaffId.value) {
+      const idx = staff.value.findIndex((s) => s.nhanVienId === editingStaffId.value);
+      if (idx !== -1) staff.value[idx] = { ...staff.value[idx], ...body };
+    } else {
+      const created = await res.json();
+      staff.value = [...staff.value, created];
+    }
   } catch (e) {
     staffFormError.value = e.message;
   }
 };
 const deleteStaff = async (id) => {
-  if (!confirm(t('admin.confirm.deleteStaff'))) return;
+  if (!(await askConfirm(t('admin.confirm.deleteStaff')))) return;
   const res = await NhanVienService.remove(id);
-  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  staff.value = await NhanVienService.getAll().catch(() => []);
+  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  staff.value = staff.value.filter((s) => s.nhanVienId !== id);
 };
 
 // ── Promotions CRUD ───────────────────────────────────────────────────────────
@@ -1025,24 +1095,30 @@ const savePromo = async () => {
       return;
     }
     showPromoModal.value = false;
-    promotions.value = await KhuyenMaiService.getAll().catch(() => []);
+    if (editingPromoId.value) {
+      const idx = promotions.value.findIndex((p) => p.khuyenMaiId === editingPromoId.value);
+      if (idx !== -1) promotions.value[idx] = { ...promotions.value[idx], ...body };
+    } else {
+      const created = await res.json();
+      promotions.value = [...promotions.value, created];
+    }
   } catch (e) {
     promoFormError.value = e.message;
   }
 };
 const deletePromo = async (id) => {
-  if (!confirm(t('admin.confirm.deletePromo'))) return;
+  if (!(await askConfirm(t('admin.confirm.deletePromo')))) return;
   const res = await KhuyenMaiService.remove(id);
-  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  promotions.value = await KhuyenMaiService.getAll().catch(() => []);
+  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  promotions.value = promotions.value.filter((p) => p.khuyenMaiId !== id);
 };
 
 // ── Orders CRUD ───────────────────────────────────────────────────────────────
 const deleteOrder = async (id) => {
-  if (!confirm(t('admin.confirm.deleteOrder'))) return;
+  if (!(await askConfirm(t('admin.confirm.deleteOrder')))) return;
   const res = await DonHangService.remove(id);
-  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  orders.value = await DonHangService.getAll().catch(() => []);
+  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  orders.value = orders.value.filter((o) => o.donHangId !== id);
 };
 
 // ── Order detail modal (xem san pham trong don) ───────────────────────────────
@@ -1139,7 +1215,7 @@ const confirmAddFromDetail = async () => {
       donGia:      v.giaBan,
       giamGiaDong: 0,
     });
-    if (!res.ok) { alert(t('admin.errors.addItemFailed', { status: res.status })); return; }
+    if (!res.ok) { showToast(t('admin.errors.addItemFailed', { status: res.status })); return; }
     await DonHangService.recalculate(orderDetailData.value.donHangId);
     await refreshOrderDetail();
     addItemQty.value = 1;
@@ -1190,7 +1266,7 @@ const addItemToOrder = async () => {
       donGia:       v.giaBan,
       giamGiaDong:  0,
     });
-    if (!res.ok) { alert(t('admin.errors.addItemFailed', { status: res.status })); return; }
+    if (!res.ok) { showToast(t('admin.errors.addItemFailed', { status: res.status })); return; }
     await DonHangService.recalculate(orderDetailData.value.donHangId);
     await refreshOrderDetail();
     addItemBienTheId.value = '';
@@ -1202,9 +1278,9 @@ const addItemToOrder = async () => {
 };
 
 const removeItemFromOrder = async (chiTietId) => {
-  if (!confirm(t('admin.confirm.removeItemFromOrder'))) return;
-  const res = await fetch(`/api/chi-tiet-don-hang/delete/${chiTietId}`, { method: 'DELETE' });
-  if (!res.ok) { alert(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  if (!(await askConfirm(t('admin.confirm.removeItemFromOrder')))) return;
+  const res = await fetch(`/api/chi-tiet-don-hang/delete/${chiTietId}`, { method: 'DELETE', headers: authHeaders() });
+  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
   await DonHangService.recalculate(orderDetailData.value.donHangId);
   await refreshOrderDetail();
 };
@@ -1226,14 +1302,14 @@ const mergeCandidates = computed(() => {
 // Gop tat ca don cung ngay cung khach vao don hien tai (khong can chon thu cong)
 const autoMergeOrders = async () => {
   if (mergeCandidates.value.length === 0) return;
-  if (!confirm(t('admin.confirm.mergeOrders', { count: mergeCandidates.value.length, id: orderDetailData.value.donHangId }))) return;
+  if (!(await askConfirm(t('admin.confirm.mergeOrders', { count: mergeCandidates.value.length, id: orderDetailData.value.donHangId })))) return;
   mergeLoading.value = true;
   try {
     const res = await DonHangService.merge(
       orderDetailData.value.donHangId,
       mergeCandidates.value.map(o => o.donHangId)
     );
-    if (!res.ok) { alert(t('admin.errors.mergeFailed', { status: res.status })); return; }
+    if (!res.ok) { showToast(t('admin.errors.mergeFailed', { status: res.status })); return; }
     await refreshOrderDetail();
   } finally {
     mergeLoading.value = false;
@@ -1335,11 +1411,12 @@ const saveStock = async () => {
   };
   try {
     const res = await TonKhoService.update(item.tonKhoId, body);
-    if (!res.ok) { alert(t('admin.errors.updateFailed', { status: res.status })); return; }
+    if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
     showStockModal.value = false;
-    inventory.value = await TonKhoService.getAll().catch(() => []);
+    const idx = inventory.value.findIndex((i) => i.tonKhoId === item.tonKhoId);
+    if (idx !== -1) inventory.value[idx] = { ...inventory.value[idx], ...body };
   } catch (e) {
-    alert(e.message);
+    showToast(e.message);
   }
 };
 
@@ -1378,9 +1455,15 @@ const addStockSerial = async () => {
     });
     if (!res.ok) throw new Error(t('admin.errors.addSerialError'));
     stockDetailSerials.value = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
-    inventory.value = await TonKhoService.getAll().catch(() => []);
+    // Chỉ lấy lại đúng 1 dòng tồn kho vừa đổi (server tự tính lại soLuongTon
+    // từ số serial), khỏi phải tải cả bảng tồn kho.
+    const updatedStock = await TonKhoService.getByBienThe(bienTheId).catch(() => null);
+    if (updatedStock) {
+      const idx = inventory.value.findIndex((i) => i.tonKhoId === updatedStock.tonKhoId);
+      if (idx !== -1) inventory.value[idx] = updatedStock;
+    }
     stockDetailNewSerial.value = '';
-  } catch(e) { alert(e.message); }
+  } catch(e) { showToast(e.message); }
   finally { stockDetailSaving.value = false; }
 };
 
@@ -1701,7 +1784,7 @@ onUnmounted(() => {
 
 <template>
   <!-- Layout chính: sidebar bên trái + main content bên phải -->
-  <div class="d-flex overflow-hidden" style="height:100vh; background:var(--bg-page-alt); color:var(--text-primary); font-family:'Inter',sans-serif;">
+  <div class="d-flex overflow-hidden" style="height:100vh; background:var(--bg-page-alt); color:var(--text-primary); font-family:'Nunito Sans',sans-serif;">
 
     <!-- ══════════ SIDEBAR ══════════ -->
     <aside class="d-flex flex-column border-end flex-shrink-0"
@@ -1711,7 +1794,7 @@ onUnmounted(() => {
       <div class="d-flex align-items-center gap-2 p-3 border-bottom"
            style="border-color:var(--border-color-soft)!important;">
         <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
-             style="width:38px;height:38px;background:#f4c200;color:#111;font-size:0.8rem;">SAO</div>
+             style="width:38px;height:38px;background:var(--accent);color:var(--accent-text);font-size:0.8rem;">SAO</div>
         <div>
           <div class="fw-bold" style="font-size:0.95rem;">{{ t('admin.brand.name') }}</div>
           <div style="font-size:0.7rem;color:var(--text-muted);">{{ t('admin.brand.tagline') }}</div>
@@ -1807,7 +1890,7 @@ onUnmounted(() => {
       <div class="p-3 border-top" style="border-color:var(--border-color-soft)!important;">
         <div class="d-flex align-items-center gap-2 mb-2">
           <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
-               style="width:34px;height:34px;background:#f4c200;color:#111;font-size:0.9rem;">{{ userAvatar }}</div>
+               style="width:34px;height:34px;background:var(--accent);color:var(--accent-text);font-size:0.9rem;">{{ userAvatar }}</div>
           <div class="flex-grow-1" style="min-width:0;">
             <div class="fw-semibold text-truncate" style="font-size:0.85rem;">{{ userDisplayName }}</div>
             <div style="font-size:0.72rem;color:var(--text-muted);">{{ userDisplayRole }}</div>
@@ -1832,6 +1915,13 @@ onUnmounted(() => {
           <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
         </div>
         <div class="d-flex align-items-center gap-2">
+          <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
+                  style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1rem;"
+                  :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+                  :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+                  @click="toggleTheme">
+            {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
+          </button>
           <div class="d-flex align-items-center justify-content-center rounded-2"
                style="width:34px;height:34px;background:var(--bg-hover);cursor:pointer;">&#128276;</div>
         </div>
@@ -1886,7 +1976,7 @@ onUnmounted(() => {
                 <div class="card border-secondary h-100" style="background:var(--bg-hover);">
                   <div class="card-body d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:44px;height:44px;background:rgba(250,204,21,0.15);font-size:1.3rem;">💰</div>
+                         style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">💰</div>
                     <div>
                       <div class="d-flex align-items-center gap-2 mb-1">
                         <span class="text-secondary small">{{ t('admin.dashboard.totalRevenue') }}</span>
@@ -1922,7 +2012,7 @@ onUnmounted(() => {
                                class="form-control form-control-sm"
                                style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;" />
                         <button v-if="!isStatusChartToday" type="button" class="btn btn-sm py-0 px-2"
-                                style="font-size:0.72rem; color:var(--accent); border:1px solid var(--border-color-strong);"
+                                style="font-size:0.72rem; color:var(--accent-fg); border:1px solid var(--border-color-strong);"
                                 @click="statusChartDate = toDateInputValue(new Date())">
                           {{ t('admin.dashboard.backToToday') }}
                         </button>
@@ -1953,7 +2043,7 @@ onUnmounted(() => {
                                class="form-control form-control-sm"
                                style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;" />
                         <button v-if="!isWeekChartCurrentWeek" type="button" class="btn btn-sm py-0 px-2"
-                                style="font-size:0.72rem; color:var(--accent); border:1px solid var(--border-color-strong);"
+                                style="font-size:0.72rem; color:var(--accent-fg); border:1px solid var(--border-color-strong);"
                                 @click="resetToCurrentWeek">
                           {{ t('admin.dashboard.backToThisWeek') }}
                         </button>
@@ -2022,7 +2112,7 @@ onUnmounted(() => {
             <div class="card border-secondary mb-4" style="background:var(--bg-hover);">
               <div class="card-body">
                 <div class="fw-semibold small text-secondary mb-3">📈 {{ t('admin.dashboard.revenueTrendChart') }}</div>
-                <TrendChart :data="revenueTrendChart" :height="140" color="#facc15" :empty-text="t('admin.dashboard.chartEmptyOrders')" />
+                <TrendChart :data="revenueTrendChart" :height="140" color="#f06b81" :empty-text="t('admin.dashboard.chartEmptyOrders')" />
               </div>
             </div>
 
@@ -2820,7 +2910,7 @@ onUnmounted(() => {
 
         <!-- ── Serial (chi khi them moi) ── -->
         <div v-if="!editingId">
-          <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#facc15;">{{ t('admin.productModal.sectionSerial') }}</div>
+          <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:var(--accent-fg);">{{ t('admin.productModal.sectionSerial') }}</div>
           <div class="rounded-3 p-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
             <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.serialLabel') }} <span class="text-danger">*</span></label>
             <input v-model="soSerialMoi" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); font-family:monospace;" :placeholder="t('admin.productModal.serialPlaceholder')" />
@@ -2857,7 +2947,10 @@ onUnmounted(() => {
               <span class="fw-bold text-warning" style="font-size:0.88rem;">{{ formatPrice(v.giaBan) }}</span>
               <span class="badge" :class="v.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.7rem;">{{ statusLabel(v.trangThai) }}</span>
             </div>
-            <button class="btn btn-sm btn-outline-warning flex-shrink-0" style="font-size:0.75rem;padding:2px 8px;" @click="showVariantModal=false; openEdit(v)">{{ t('admin.variantModal.edit') }}</button>
+            <div class="d-flex gap-2 flex-shrink-0">
+              <button class="btn btn-sm btn-outline-warning" style="font-size:0.75rem;padding:2px 8px;" @click="showVariantModal=false; openEdit(v)">{{ t('admin.variantModal.edit') }}</button>
+              <button class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;padding:2px 8px;" @click="deleteVariant(v.bienTheId)">{{ t('admin.products.delete') }}</button>
+            </div>
           </div>
 
         </div>
@@ -2887,7 +2980,10 @@ onUnmounted(() => {
                 <div class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</div>
               </div>
             </div>
-            <button class="btn btn-sm btn-outline-warning flex-shrink-0" style="font-size:0.75rem;padding:3px 12px;" @click="showDetailModal=false; openEdit(v)">{{ t('admin.detailModal.edit') }}</button>
+            <div class="d-flex gap-2 flex-shrink-0">
+              <button class="btn btn-sm btn-outline-warning" style="font-size:0.75rem;padding:3px 12px;" @click="showDetailModal=false; openEdit(v)">{{ t('admin.detailModal.edit') }}</button>
+              <button class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;padding:3px 12px;" @click="deleteVariant(v.bienTheId)">{{ t('admin.products.delete') }}</button>
+            </div>
           </div>
           <!-- Bang thong tin 4 cot (label | value | label | value) -->
           <table class="w-100 mb-0" style="border-collapse:collapse;font-size:0.8rem;">
@@ -2906,7 +3002,7 @@ onUnmounted(() => {
               </tr>
               <tr style="border-top:1px solid var(--border-color-soft);">
                 <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.priceSell') }}</td>
-                <td class="px-3 py-1 fw-bold" style="background:var(--bg-card);color:#facc15;">{{ formatPrice(v.giaBan) }}</td>
+                <td class="px-3 py-1 fw-bold" style="background:var(--bg-card);color:var(--accent-fg);">{{ formatPrice(v.giaBan) }}</td>
                 <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.priceBuy') }}</td>
                 <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ formatPrice(v.giaNhap) }}</td>
               </tr>
@@ -3065,7 +3161,7 @@ onUnmounted(() => {
             </div>
             <div class="mt-3 d-flex gap-1 flex-wrap justify-content-center">
               <span v-for="tag in (addItemDetailGroup.variants[0]?.phanLoaiTen||'').split(',').filter(Boolean)"
-                    :key="tag" class="badge" style="background:#2a2a00;color:#facc15;font-size:0.7rem;">{{ tag.trim() }}</span>
+                    :key="tag" class="badge" style="background:rgba(244,63,94,0.12);color:var(--accent-fg);font-size:0.7rem;">{{ tag.trim() }}</span>
             </div>
           </div>
 
@@ -3076,7 +3172,7 @@ onUnmounted(() => {
               {{ addItemDetailGroup.variants[0]?.tenThuongHieu }} · {{ addItemDetailGroup.variants[0]?.tenDanhMuc }}
             </div>
             <h5 class="fw-bold text-light mb-2">{{ addItemDetailGroup.tenSanPham }}</h5>
-            <div class="mb-3" style="font-size:1.4rem;font-weight:700;color:#facc15;">
+            <div class="mb-3" style="font-size:1.4rem;font-weight:700;color:var(--accent-fg);">
               {{ addItemCurrentVariant ? formatPrice(addItemCurrentVariant.giaBan) : formatPrice(addItemDetailGroup.minPrice) }}
               <span class="text-secondary ms-2" style="font-size:0.8rem;font-weight:400;">{{ t('admin.addItemDetailModal.freeshipNote') }}</span>
             </div>
@@ -3092,7 +3188,7 @@ onUnmounted(() => {
                         class="btn btn-sm text-start"
                         style="padding:8px 12px;border-radius:8px;min-width:140px;"
                         :style="addItemSelectedConfig === cfg.key
-                          ? 'background:#1e1a00;border:2px solid #facc15;color:#facc15;'
+                          ? 'background:rgba(244,63,94,0.12);border:2px solid var(--accent);color:var(--accent-fg);'
                           : 'background:var(--bg-card);border:1px solid var(--border-color-strong);color:var(--text-secondary);'">
                   <div style="font-size:0.78rem;font-weight:600;">{{ cfg.cpu || t('admin.addItemDetailModal.standard') }}</div>
                   <div style="font-size:0.68rem;">{{ [cfg.ram, cfg.oCung].filter(Boolean).join(' · ') }}</div>
@@ -3109,10 +3205,10 @@ onUnmounted(() => {
                         class="btn btn-sm"
                         style="padding:6px 14px;border-radius:8px;"
                         :style="addItemSelectedColor === v.mauSac
-                          ? 'background:#1e1a00;border:2px solid #facc15;color:#facc15;'
+                          ? 'background:rgba(244,63,94,0.12);border:2px solid var(--accent);color:var(--accent-fg);'
                           : 'background:var(--bg-card);border:1px solid var(--border-color-strong);color:var(--text-primary);'">
                   <div style="font-size:0.78rem;font-weight:600;">{{ v.mauSac }}</div>
-                  <div style="font-size:0.7rem;color:#facc15;">{{ formatPrice(v.giaBan) }}</div>
+                  <div style="font-size:0.7rem;color:var(--accent-fg);">{{ formatPrice(v.giaBan) }}</div>
                 </button>
               </div>
             </div>
@@ -3299,7 +3395,7 @@ onUnmounted(() => {
                    @click="openAddItemDetail(g)"
                    class="rounded-3 overflow-hidden"
                    style="cursor:pointer;border:1px solid var(--border-color);background:var(--bg-card);transition:border-color .15s;"
-                   @mouseenter="$event.currentTarget.style.borderColor='#facc15'"
+                   @mouseenter="$event.currentTarget.style.borderColor='var(--accent)'"
                    @mouseleave="$event.currentTarget.style.borderColor='var(--border-color)'">
                 <div style="background:var(--bg-card-inset);height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
                   <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh"
@@ -3312,7 +3408,7 @@ onUnmounted(() => {
                     {{ g.tenSanPham }}
                   </div>
                   <div class="text-secondary" style="font-size:0.65rem;">{{ g.tenThuongHieu }}</div>
-                  <div style="font-size:0.72rem;color:#facc15;font-weight:600;margin-top:2px;">
+                  <div style="font-size:0.72rem;color:var(--accent-fg);font-weight:600;margin-top:2px;">
                     {{ t('admin.orderDetailModal.priceFrom') }} {{ formatPrice(g.minPrice) }}
                   </div>
                   <div v-if="g.phanLoaiTen" class="mt-1">
@@ -3482,10 +3578,30 @@ onUnmounted(() => {
       </div>
 
     </div>
+
+    <!-- Dialog xác nhận dùng chung (thay window.confirm()) -->
+    <ConfirmDialog />
+
+    <!-- Toast thông báo lỗi/thành công (thay window.alert()) -->
+    <Transition name="adm-toast-slide">
+      <div v-if="toast.show"
+           class="position-fixed d-flex align-items-center gap-2 px-4 py-3 rounded-3 fw-semibold small shadow-lg"
+           style="top:24px; right:24px; z-index:9999; min-width:260px; max-width:380px; pointer-events:none;"
+           :style="toast.type === 'success'
+             ? 'background:var(--state-success,#16a34a); color:#fff;'
+             : 'background:var(--state-danger,#dc2626); color:#fff;'"
+           role="status" aria-live="polite">
+        <span style="font-size:1.1rem; flex-shrink:0;">{{ toast.type === 'success' ? '✓' : '✕' }}</span>
+        {{ toast.msg }}
+      </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
+.adm-toast-slide-enter-active, .adm-toast-slide-leave-active { transition: transform 0.3s ease, opacity 0.25s ease; }
+.adm-toast-slide-enter-from, .adm-toast-slide-leave-to       { transform: translateX(110%); opacity: 0; }
+
 /* CSS toi thieu cho nhung gi Bootstrap khong the thay the */
 
 /* Bootstrap .text-light hardcode mau trang co dinh — ghi de theo theme hien tai
@@ -3509,7 +3625,7 @@ onUnmounted(() => {
   user-select: none;
 }
 .adm-nav:hover { background: var(--bg-hover); color: var(--text-heading); }
-.adm-nav.active { background: rgba(244,194,0,0.12); color: #f4c200; }
+.adm-nav.active { background: rgba(244,63,94,0.12); color: var(--accent-fg); }
 .adm-nav.active .adm-icon { opacity: 1; }
 
 /* Icon trong nav */

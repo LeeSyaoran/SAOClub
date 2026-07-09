@@ -62,7 +62,7 @@
               {{ activeVariant.tenSanPham }}
             </h1>
             <div class="d-flex align-items-baseline gap-3 flex-wrap">
-              <span class="fw-black" style="font-size:1.8rem; color:var(--accent);">
+              <span class="fw-black" style="font-size:1.8rem; color:var(--accent-fg);">
                 {{ formatPrice(activeVariant.giaBan) }}
               </span>
               <span class="small" style="color:var(--text-secondary);">{{ t('productDetail.freeShipping') }}</span>
@@ -81,7 +81,7 @@
                 class="btn btn-sm d-flex flex-column align-items-start text-start px-3 py-2"
                 style="border-radius:10px; min-width:140px; transition:all 0.15s;"
                 :style="activeConfigKey === configKey(v)
-                  ? 'background:#2a2200; border:1.5px solid #facc15; color:#facc15;'
+                  ? 'background:rgba(244,63,94,0.12); border:1.5px solid var(--accent); color:var(--accent-fg);'
                   : 'background:var(--bg-input); border:1.5px solid var(--border-color-strong); color:var(--text-secondary);'"
                 @click="selectConfig(v)"
               >
@@ -103,7 +103,7 @@
                 class="btn btn-sm d-flex align-items-center gap-2 px-3 py-2"
                 style="border-radius:10px; transition:all 0.15s;"
                 :style="activeColor === v.mauSac
-                  ? 'background:#2a2200; border:1.5px solid #facc15; color:#facc15;'
+                  ? 'background:rgba(244,63,94,0.12); border:1.5px solid var(--accent); color:var(--accent-fg);'
                   : 'background:var(--bg-input); border:1.5px solid var(--border-color-strong); color:var(--text-secondary);'"
                 @click="selectColor(v)"
               >
@@ -113,7 +113,7 @@
                 ></span>
                 <div class="d-flex flex-column align-items-start text-start">
                   <span class="fw-semibold" style="font-size:11px; line-height:1.3;">{{ v.mauSac }}</span>
-                  <span style="font-size:10px; color:#facc15;">{{ formatPrice(v.giaBan) }}</span>
+                  <span style="font-size:10px; color:var(--accent-fg);">{{ formatPrice(v.giaBan) }}</span>
                 </div>
               </button>
             </div>
@@ -134,7 +134,7 @@
 
               <!-- Phần cứng -->
               <div v-if="specGroups.phancung.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
-                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#facc15; text-transform:uppercase;">
+                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:var(--accent-fg); text-transform:uppercase;">
                   {{ t('productDetail.hardwareGroup') }}
                 </div>
                 <table class="w-100 mb-0" style="border-collapse:collapse;">
@@ -240,7 +240,7 @@
                 {{ p.tenSanPham }}
               </p>
               <p class="mb-0" style="font-size:9px; color:var(--text-secondary);">{{ p.tenThuongHieu }}</p>
-              <p class="fw-black mb-0 mt-auto" style="font-size:11px; color:var(--accent);">
+              <p class="fw-black mb-0 mt-auto" style="font-size:11px; color:var(--accent-fg);">
                 {{ formatPrice(p.giaBan) }}
               </p>
             </div>

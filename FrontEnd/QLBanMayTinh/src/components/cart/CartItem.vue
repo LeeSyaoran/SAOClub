@@ -24,10 +24,12 @@
         <div class="d-flex align-items-center gap-1">
           <button class="d-flex align-items-center justify-content-center"
                   style="width:26px;height:26px;padding:0;background:var(--bg-card-alt);color:var(--text-primary);border:none;border-radius:7px;font-size:15px;cursor:pointer;line-height:1;"
+                  :aria-label="t('cart.decrease')"
                   @click="$emit('decrease', item)">−</button>
           <span class="fw-bold" style="font-size:13px;min-width:22px;text-align:center; color:var(--text-heading);">{{ item.quantity }}</span>
           <button class="d-flex align-items-center justify-content-center"
                   style="width:26px;height:26px;padding:0;background:var(--bg-card-alt);color:var(--text-primary);border:none;border-radius:7px;font-size:15px;cursor:pointer;line-height:1;"
+                  :aria-label="t('cart.increase')"
                   @click="$emit('increase', item)">+</button>
         </div>
         <span class="text-warning fw-bold" style="font-size:13px;">{{ formatPrice(item.giaBan * item.quantity) }}</span>
@@ -39,6 +41,8 @@
 <script setup>
 // Props: item = { tenSanPham, hinhAnhChinh, giaBan, quantity, mauSac?, cpu? }
 // Emits: increase(item), decrease(item) — cha (App.vue) đã có sẵn updateQty(bienTheId, delta)
+import { t } from '../../i18n/index.js';
+
 defineProps({ item: { type: Object, required: true } });
 defineEmits(['increase', 'decrease']);
 

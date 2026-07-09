@@ -6,6 +6,7 @@ export default {
     save: "保存更改",
     saving: "保存中...",
     cancel: "取消",
+    confirm: "确认",
     close: "关闭",
     loading: "加载中...",
     continueShopping: "继续购物",
@@ -206,6 +207,8 @@ export default {
     subtotal: "小计（{count} 件商品）",
     freeShipNote: "🚚 满30万免运费",
     checkout: "结算",
+    decrease: "减少数量",
+    increase: "增加数量",
   },
 
   checkout: {
@@ -265,6 +268,9 @@ export default {
     continue: "继续 →",
     processing: "处理中...",
     confirmOrder: "确认下单",
+    progressCustomer: "正在核实客户信息...",
+    progressOrder: "正在创建订单...",
+    progressItems: "正在添加商品... {current}/{total}",
     successTitle: "下单成功！",
     orderCode: "订单号：",
     cashInstruction: "💵 请在配送员到达时准备好现金 {amount}。",
@@ -910,6 +916,7 @@ export default {
 
     confirm: {
       deleteProduct: "确定要删除该商品吗？",
+      deleteVariant: "删除此变体？关联的序列号/库存也会一并丢失。",
       deleteCustomer: "删除该客户？",
       deleteStaff: "删除该员工？",
       deletePromo: "删除该促销活动？",

@@ -21,7 +21,7 @@ const props = defineProps({
   data:      { type: Array, required: true }, // [{ label, value }]
   width:     { type: Number, default: 400 },
   height:    { type: Number, default: 120 },
-  color:     { type: String, default: '#facc15' },
+  color:     { type: String, default: '#f06b81' },
   emptyText: { type: String, default: '' },
 });
 

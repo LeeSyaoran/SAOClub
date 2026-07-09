@@ -25,6 +25,7 @@
         <button type="button" class="btn btn-sm p-0 border-0 lh-1"
                 style="background:transparent; color:var(--text-secondary); font-size:14px;"
                 :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+                :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
                 @click="toggleTheme">
           {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
         </button>
@@ -34,6 +35,7 @@
                 style="width:auto; background:transparent; border:none; color:var(--text-secondary); font-size:11px; cursor:pointer;"
                 :value="I18nStore.locale"
                 :title="t('language.label')"
+                :aria-label="t('language.label')"
                 @change="setLocale($event.target.value)">
           <option v-for="loc in LOCALES" :key="loc.code" :value="loc.code" style="background:var(--bg-card); color:var(--text-primary);">
             {{ loc.flag }} {{ loc.code.toUpperCase() }}
@@ -56,13 +58,20 @@
       <!-- ── Nút Danh mục + Mega dropdown ── -->
       <div class="position-relative flex-shrink-0"
            @mouseenter="isMenuOpen = true"
-           @mouseleave="isMenuOpen = false">
+           @mouseleave="isMenuOpen = false"
+           @keydown.esc="closeMenu"
+           @focusout="onMenuFocusOut">
 
-        <!-- Nút trigger dropdown -->
+        <!-- Nút trigger dropdown — click hoặc hover đều mở, bàn phím dùng được -->
         <button
+          ref="menuTriggerRef"
+          type="button"
           class="btn btn-sm fw-bold small"
           :class="isMenuOpen ? 'text-warning border-warning' : 'border-secondary'"
-          style="border:1px solid; border-radius:12px; background:var(--bg-input); color:var(--text-primary);">
+          style="border:1px solid; border-radius:12px; background:var(--bg-input); color:var(--text-primary);"
+          aria-haspopup="true"
+          :aria-expanded="isMenuOpen"
+          @click="isMenuOpen = !isMenuOpen">
           ☰ {{ t('nav.categories') }}
         </button>
 
@@ -77,12 +86,15 @@
             <div
               v-for="cat in categories"
               :key="cat.id"
+              tabindex="0"
+              role="button"
               class="d-flex justify-content-between align-items-center px-3 py-2 rounded-2 small fw-bold"
               :class="activeCategory === cat.id ? 'text-warning' : ''"
               :style="(activeCategory === cat.id
                 ? 'background:var(--bg-card); padding-left:1.25rem!important; cursor:pointer;'
                 : 'cursor:pointer;') + (activeCategory === cat.id ? '' : ' color:var(--text-secondary);')"
-              @mouseenter="activeCategory = cat.id">
+              @mouseenter="activeCategory = cat.id"
+              @focus="activeCategory = cat.id">
               <span>{{ cat.title }}</span>
               <span style="font-size:14px; opacity:0.5;">›</span>
             </div>
@@ -117,7 +129,7 @@
                      href="#"
                      class="d-block text-decoration-none py-1 small fw-bold"
                      style="font-size:12px; color:var(--text-secondary);"
-                     @mouseenter="e => e.target.style.color='#facc15'"
+                     @mouseenter="e => e.target.style.color='var(--accent)'"
                      @mouseleave="e => e.target.style.color=''">
                     {{ tag }}
                   </a>
@@ -176,7 +188,7 @@
         <template v-if="user">
           <button
               class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-semibold border-0"
-              style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--accent); font-size:12px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; cursor:pointer;"
+              style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--accent-fg); font-size:12px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; cursor:pointer;"
               @click="emit(isStaff ? 'open-admin' : 'open-account')">
             <span style="font-size:10px;">●</span>
             {{ user.hoTen || user.username }}
@@ -215,6 +227,17 @@ const isStaff = computed(() => STAFF_ROLES.includes(props.user?.role));
 
 // Trạng thái mở/đóng menu danh mục
 const isMenuOpen = ref(false);
+const menuTriggerRef = ref(null);
+
+// Đóng menu + trả focus về nút trigger (Escape, hoặc focus rời khỏi cả cụm menu)
+const closeMenu = () => {
+  isMenuOpen.value = false;
+  menuTriggerRef.value?.focus();
+};
+// Focus rời khỏi cụm trigger+panel (không phải chuyển sang phần tử con khác bên trong) → đóng
+const onMenuFocusOut = (e) => {
+  if (!e.currentTarget.contains(e.relatedTarget)) isMenuOpen.value = false;
+};
 
 // Danh mục đang được hover trong mega menu
 const activeCategory = ref('all-laptop');

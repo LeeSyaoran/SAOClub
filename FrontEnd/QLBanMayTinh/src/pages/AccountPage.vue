@@ -190,7 +190,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div style="min-height:100vh; background:var(--bg-page); color:var(--text-primary); font-family:'Inter','Segoe UI',sans-serif;">
+  <div style="min-height:100vh; background:var(--bg-page); color:var(--text-primary); font-family:'Nunito Sans','Segoe UI',sans-serif;">
 
     <!-- Header -->
     <header class="sticky-top" style="background:var(--bg-header); backdrop-filter:blur(8px); border-bottom:1px solid var(--border-color);">
@@ -205,7 +205,7 @@ onMounted(() => {
 
         <div class="d-flex align-items-center gap-3 flex-grow-1">
           <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
-               style="width:44px; height:44px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:var(--accent-text); font-size:1.05rem; box-shadow:0 4px 14px rgba(250,204,21,0.25);">
+               style="width:44px; height:44px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:var(--accent-text); font-size:1.05rem; box-shadow:0 4px 14px rgba(244,63,94,0.25);">
             {{ (auth.user?.hoTen || auth.user?.username || '?').charAt(0).toUpperCase() }}
           </div>
           <div>
@@ -218,7 +218,7 @@ onMounted(() => {
 
         <!-- Điểm tích lũy -->
         <div v-if="profile" class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-bold"
-             style="background:rgba(250,204,21,0.1); border:1px solid rgba(250,204,21,0.25); color:var(--accent); font-size:12px; white-space:nowrap;">
+             style="background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.25); color:var(--accent-fg); font-size:12px; white-space:nowrap;">
           🎁 {{ t('account.points', { points: profile.diemTichLuy ?? 0 }) }}
         </div>
       </div>
@@ -232,7 +232,7 @@ onMounted(() => {
                 class="btn btn-sm fw-black px-3 pb-2 pt-2 rounded-top-3 border-0 d-flex align-items-center gap-2"
                 style="font-size:12.5px; letter-spacing:0.02em; border-bottom:3px solid transparent!important; transition:background 0.15s;"
                 :style="activeTab === tab.id
-                  ? 'border-bottom:3px solid var(--accent)!important; background:rgba(250,204,21,0.06); color:var(--accent);'
+                  ? 'border-bottom:3px solid var(--accent)!important; background:rgba(244,63,94,0.06); color:var(--accent-fg);'
                   : 'color:var(--text-secondary);'"
                 @mouseenter="e => { if (activeTab !== tab.id) e.currentTarget.style.background = 'var(--bg-hover)'; }"
                 @mouseleave="e => { if (activeTab !== tab.id) e.currentTarget.style.background = ''; }"
@@ -270,7 +270,7 @@ onMounted(() => {
           <div v-for="o in currentOrders" :key="o.donHangId"
                class="rounded-4 p-3 p-md-4"
                style="background:var(--bg-card); border:1px solid var(--border-color); box-shadow:0 4px 18px var(--shadow-color); transition:border-color 0.15s;"
-               @mouseenter="e => e.currentTarget.style.borderColor = 'rgba(250,204,21,0.35)'"
+               @mouseenter="e => e.currentTarget.style.borderColor = 'rgba(244,63,94,0.35)'"
                @mouseleave="e => e.currentTarget.style.borderColor = 'var(--border-color)'">
 
             <!-- Header đơn -->
@@ -319,14 +319,14 @@ onMounted(() => {
                 </div>
                 <span class="flex-grow-1" style="color:var(--text-primary); font-size:12.5px;">{{ productByBienThe(item.bienTheId)?.tenSanPham || item.maSku }}</span>
                 <span class="fw-semibold" style="color:var(--text-secondary); font-size:12px;">x{{ item.soLuong }}</span>
-                <span class="fw-bold" style="color:var(--accent); font-size:13px; min-width:100px; text-align:right;">{{ formatPrice(item.thanhTien) }}</span>
+                <span class="fw-bold" style="color:var(--accent-fg); font-size:13px; min-width:100px; text-align:right;">{{ formatPrice(item.thanhTien) }}</span>
               </div>
             </div>
 
             <!-- Tổng tiền -->
             <div class="d-flex justify-content-end align-items-center gap-2 mt-3 pt-3" style="border-top:1px solid var(--border-color-soft);">
               <span style="color:var(--text-secondary); font-size:12px;">{{ t('account.total') }}</span>
-              <span class="fw-black" style="color:var(--accent); font-size:1.05rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
+              <span class="fw-black" style="color:var(--accent-fg); font-size:1.05rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
             </div>
           </div>
         </div>
@@ -373,7 +373,7 @@ onMounted(() => {
                   <span style="font-size:11px;">{{ orderStatusIcon(o.trangThaiDonHang) }}</span>
                   {{ orderStatusLabel(o.trangThaiDonHang) }}
                 </span>
-                <span class="fw-black" style="color:var(--accent); font-size:0.95rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
+                <span class="fw-black" style="color:var(--accent-fg); font-size:0.95rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
                 <span style="color:var(--text-secondary); font-size:0.8rem;">{{ expandedHistoryOrders.has(o.donHangId) ? '▲' : '▼' }}</span>
               </div>
             </div>
@@ -396,7 +396,7 @@ onMounted(() => {
                 </div>
                 <span class="flex-grow-1" style="color:var(--text-primary); font-size:12.5px;">{{ productByBienThe(item.bienTheId)?.tenSanPham || item.maSku }}</span>
                 <span class="text-secondary" style="font-size:12px;">x{{ item.soLuong }}</span>
-                <span class="fw-semibold" style="color:var(--accent); font-size:12.5px; min-width:100px; text-align:right;">{{ formatPrice(item.thanhTien) }}</span>
+                <span class="fw-semibold" style="color:var(--accent-fg); font-size:12.5px; min-width:100px; text-align:right;">{{ formatPrice(item.thanhTien) }}</span>
               </div>
             </div>
           </div>

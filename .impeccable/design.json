@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-09T00:00:00.000Z",
+  "title": "Design System: SAOPHONE",
+  "extensions": {
+    "colorMeta": {
+      "accent-primary":    { "role": "primary",  "displayName": "Arcade Rose",    "canonical": "oklch(64% 0.22 15)",  "tonalRamp": ["#3d0a17", "#5c1024", "#8a1836", "#c92650", "#f43f5e", "#f76e85", "#fa9cad", "#fdcbd4"] },
+      "accent-primary-fg": { "role": "primary",  "displayName": "Arcade Rose FG", "canonical": "oklch(72% 0.16 15)",  "tonalRamp": ["#f06b81"] },
+      "accent-secondary":  { "role": "secondary","displayName": "Neon Violet (dark) / Deep Teal (light)", "canonical": "oklch(51% 0.25 293)", "tonalRamp": ["#180a33", "#26124f", "#3c1d7a", "#5b2cb8", "#7c3aed", "#9a63f1", "#b98cf5", "#d8c1fa"], "lightThemeOverride": "#0e7490" },
+      "accent-tertiary":   { "role": "tertiary", "displayName": "Soft Lilac",     "canonical": "oklch(72% 0.14 293)" },
+      "bg-page":           { "role": "neutral",  "displayName": "Void Indigo",    "canonical": "oklch(13% 0.02 280)", "tonalRamp": ["#0c0c15", "#12121d", "#161620", "#191924", "#1d1d28", "#222230", "#2d283c", "#4c1d95"] },
+      "text-body":        { "role": "neutral",  "displayName": "Fog Lavender", "canonical": "oklch(89% 0.02 280)", "tonalRamp": ["#6b6890", "#a5a3c4", "#c7c5dc", "#e2e8f0", "#eceefa", "#f4f5fc", "#f9fafd", "#ffffff"] },
+      "state-success":    { "role": "status",   "displayName": "Signal Green", "canonical": "oklch(56% 0.15 145)" },
+      "state-danger":     { "role": "status",   "displayName": "Signal Red",   "canonical": "oklch(63% 0.21 27)" },
+      "state-info":       { "role": "status",   "displayName": "Signal Blue",  "canonical": "oklch(53% 0.19 260)" }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Tên thương hiệu, tiêu đề hero/banner — Rubik." },
+      "title":    { "displayName": "Title",    "purpose": "Tên panel, tên item danh sách nổi bật — Rubik." },
+      "body":     { "displayName": "Body",     "purpose": "Tên sản phẩm, mô tả, nội dung form — Nunito Sans." },
+      "label":    { "displayName": "Label",    "purpose": "Badge, chip, tab, nhãn nhóm uppercase — Nunito Sans." }
+    },
+    "shadows": [
+      { "name": "lift",         "value": "0 8px 24px rgba(0,0,0,0.4)",  "purpose": "Hover trên product card, kết hợp translateY(-3px)." },
+      { "name": "overlay",      "value": "0 24px 80px rgba(0,0,0,0.4)", "purpose": "Modal (login/register, checkout)." },
+      { "name": "slide-panel",  "value": "-12px 0 48px rgba(0,0,0,0.4)","purpose": "Panel giỏ hàng trượt từ phải." },
+      { "name": "accent-glow",  "value": "0 0 0 3px rgba(244,63,94,0.18), 0 0 20px rgba(244,63,94,0.25)", "purpose": "Aura hồng cho CTA/input/card khi hover hoặc focus." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "ease", "purpose": "Transition mặc định (0.15–0.28s) cho hover, slide panel, toast." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" },
+      { "name": "xl", "value": "1200px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "CTA chính — thêm giỏ hàng, đăng nhập, xác nhận.",
+      "html": "<button class=\"ds-btn-primary\">Thêm vào giỏ</button>",
+      "css": ".ds-btn-primary { background: #f43f5e; color: #ffffff; font-weight: 700; padding: 8px 16px; border: none; border-radius: 8px; transition: background 0.15s, box-shadow 0.15s; } .ds-btn-primary:hover { background: #7c3aed; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(244,63,94,0.18), 0 0 20px rgba(244,63,94,0.25); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Nút phụ, chip filter ở trạng thái inactive.",
+      "html": "<button class=\"ds-btn-outline\">Bộ lọc</button>",
+      "css": ".ds-btn-outline { background: transparent; color: #a5a3c4; font-weight: 700; padding: 6px 14px; border: 1px solid #4c1d95; border-radius: 999px; transition: color 0.15s, border-color 0.15s; } .ds-btn-outline:hover { color: #f43f5e; border-color: #f43f5e; }"
+    },
+    {
+      "name": "Product Card",
+      "kind": "card",
+      "refersTo": "card-product",
+      "description": "Thẻ sản phẩm trong lưới trang chủ.",
+      "html": "<article class=\"ds-card-product\"><div class=\"ds-card-product-media\"></div><div class=\"ds-card-product-body\"><h3>Tên sản phẩm</h3><p class=\"ds-price\">12.990.000₫</p></div></article>",
+      "css": ".ds-card-product { background: #1d1d28; border-radius: 14px; overflow: hidden; transition: transform 0.15s, box-shadow 0.15s; cursor: pointer; } .ds-card-product:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); } .ds-card-product-media { background: #161620; height: 160px; } .ds-card-product-body { padding: 8px; display: flex; flex-direction: column; gap: 4px; } .ds-card-product-body h3 { font-family: 'Rubik', sans-serif; font-size: 11px; font-weight: 700; color: #e2e8f0; } .ds-price { font-family: 'Nunito Sans', sans-serif; font-size: 13px; font-weight: 900; color: #f06b81; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Ô nhập liệu / tìm kiếm.",
+      "html": "<input class=\"ds-input\" placeholder=\"Tìm laptop, linh kiện...\" />",
+      "css": ".ds-input { background: #1e1e38; color: #e2e8f0; border: 1px solid #4c1d95; border-radius: 12px; padding: 8px 12px; font-size: 12px; } .ds-input:focus { outline: none; box-shadow: 0 0 0 3px rgba(244,63,94,0.18), 0 0 20px rgba(244,63,94,0.25); }"
+    },
+    {
+      "name": "Pill Badge",
+      "kind": "chip",
+      "refersTo": "badge-pill",
+      "description": "Badge số lượng giỏ hàng / chip filter active.",
+      "html": "<span class=\"ds-badge-pill\">3</span>",
+      "css": ".ds-badge-pill { background: #f43f5e; color: #ffffff; font-weight: 900; border-radius: 999px; padding: 2px 10px; font-size: 11px; display: inline-block; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Neon Block Arcade",
+    "overview": "SAOPHONE bán laptop online và điều hành cửa hàng qua một dashboard nội bộ trong cùng một hệ giao diện. Bản sắc thị giác chuyển sang Vibrant & Block-based: nền chàm-đen sâu (#12121d, đã giảm chroma tím ~45% cho đỡ đục), một cặp accent hồng-tím neon (#f43f5e hồng chủ đạo cho nền đặc, #7c3aed tím cho hover/nhấn phụ) — năng lượng arcade, trẻ trung và táo bạo hơn hệ vàng-đen trước đó. Vì rose là hue tối hơn vàng cũ (~5.1:1 vs ~11.7:1 khi làm chữ), có riêng accent-primary-fg (#f06b81, ~6.4:1) dành cho accent-làm-màu-chữ. Font kép Rubik (tiêu đề) + Nunito Sans (thân chữ) tạo tương phản rõ giữa hai vai trò.",
+    "keyCharacteristics": [
+      "Nền chàm-đen sâu (#12121d), chroma tím đã giảm để không đục",
+      "Hai accent: hồng #f43f5e (nền đặc: CTA/badge) + tím #7c3aed (hover/nhấn phụ); accent-primary-fg #f06b81 khi làm màu chữ",
+      "Font kép: Rubik cho heading thật, Nunito Sans cho mọi thứ khác",
+      "Phẳng lúc nghỉ; nổi bật bằng shadow tối + glow hồng khi hover/active",
+      "Bo góc theo bậc rõ ràng: 8/12/14/16px, badge/chip luôn pill",
+      "Bảng màu trạng thái đơn hàng/serial/gauge là hệ riêng, đã khoá, không đổi theo accent",
+      "Sống được trong cả dark/light theme và 5 ngôn ngữ (vi/en/ja/ko/zh)"
+    ],
+    "rules": [
+      { "name": "The Two-Accent Rule", "body": "Hồng (#f43f5e) là tín hiệu hành động chính; tím (#7c3aed) chỉ cho hover/gradient/nhấn phụ, không dùng làm CTA độc lập.", "section": "colors" },
+      { "name": "The Two-Font Rule", "body": "Rubik chỉ trên heading thật (h1-h6); mọi nơi khác kể cả text đậm dùng Nunito Sans.", "section": "typography" },
+      { "name": "The Idle-Is-Flat Rule", "body": "Không phần tử nào có shadow khi ở trạng thái nghỉ; shadow/glow chỉ xuất hiện khi có tương tác.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do dùng hồng (#f43f5e) là tín hiệu hành động chính, tím chỉ cho hover/nhấn phụ",
+      "Do giữ ranh giới Rubik (heading) vs Nunito Sans (còn lại)",
+      "Do giữ mọi phần tử phẳng lúc nghỉ; chỉ thêm shadow/glow khi tương tác",
+      "Do đảm bảo contrast WCAG AA kể cả khi thêm glow",
+      "Do giữ nguyên bảng màu trạng thái đơn hàng/serial/gauge đã khoá",
+      "Do thiết kế cho cả 5 ngôn ngữ và cả light/dark theme"
+    ],
+    "donts": [
+      "Don't dùng tím làm CTA độc lập cạnh tranh với hồng",
+      "Don't dùng border-left/border-right dày làm dải màu trang trí",
+      "Don't dùng gradient text",
+      "Don't dùng glassmorphism trang trí ở trạng thái tĩnh",
+      "Don't copy mẫu hero-metric SaaS chung chung hay lưới card giống hệt nhau",
+      "Don't thêm shadow/glow ở trạng thái nghỉ",
+      "Don't áp Rubik cho text đậm không phải heading thật"
+    ]
+  }
+}

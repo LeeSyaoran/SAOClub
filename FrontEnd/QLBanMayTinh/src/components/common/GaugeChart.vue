@@ -25,7 +25,7 @@ const props = defineProps({
   displayValue: { type: String, default: '' },     // ví dụ "82%" — mặc định tự lấy value + "%"
   size:         { type: Number, default: 140 },
   thickness:    { type: Number, default: 14 },
-  color:        { type: String, default: '#facc15' },
+  color:        { type: String, default: '#f43f5e' },
 });
 
 const pad = 16;
