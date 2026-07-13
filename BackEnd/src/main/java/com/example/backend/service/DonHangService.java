@@ -1,6 +1,8 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.ChiTietDonHang;
+import com.example.backend.entity.ChiTietDonHangSerial;
+import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.DonHang;
 import com.example.backend.entity.ThanhToan;
 import com.example.backend.entity.LichSuTonKho;
@@ -8,14 +10,22 @@ import com.example.backend.entity.PhieuTraHang;
 import com.example.backend.entity.PhieuBaoHanh;
 import com.example.backend.repository.*;
 import com.example.backend.request.DonHangRequest;
+import com.example.backend.request.DongGoiLineRequest;
+import com.example.backend.request.DongGoiRequest;
 import com.example.backend.response.DonHangResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class DonHangService {
@@ -44,9 +54,11 @@ public class DonHangService {
     private PhieuBaoHanhRepository phieuBaoHanhRepository;
     @Autowired
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
+    @Autowired
+    private ChiTietDonHangSerialRepository chiTietDonHangSerialRepository;
 
-    public List<DonHangResponse> hienThiDonHang() {
-        return donHangRepository.hienThiDonHang();
+    public Page<DonHangResponse> hienThiDonHang(Integer khachHangId, Pageable pageable) {
+        return donHangRepository.hienThiDonHang(khachHangId, pageable);
     }
 
     public DonHang getById(Integer id) {
@@ -78,8 +90,10 @@ public class DonHangService {
         return saved;
     }
 
+    @Transactional
     public DonHang update(Integer id, DonHangRequest request) {
         DonHang entity = getById(id);
+        String oldStatus = entity.getTrangThaiDonHang();
         BeanUtils.copyProperties(request, entity,
                 "id", "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId");
 
@@ -91,7 +105,31 @@ public class DonHangService {
         entity.setDiaChiGiaoHang(request.getDiaChiGiaoHangId() != null
                 ? diaChiGiaoHangRepository.getReferenceById(request.getDiaChiGiaoHangId()) : null);
 
-        return donHangRepository.save(entity);
+        DonHang saved = donHangRepository.save(entity);
+
+        // Đơn vừa chuyển sang "cancelled" (trước đó chưa hủy) -> trả serial đã giữ/đã bán
+        // về lại "trong_kho", giống hệt delete() — nếu không, serial sẽ kẹt vĩnh viễn ở
+        // "giu_hang"/"da_ban" dù đơn đã hủy, làm lệch tồn kho thật.
+        if ("cancelled".equals(request.getTrangThaiDonHang()) && !"cancelled".equals(oldStatus)) {
+            releaseSerialsToStock(id);
+        }
+
+        // Báo real-time cho admin (tab khác) + trang khách hàng đang mở đơn này, khỏi cần F5.
+        sseService.notifyOrderUpdate(id);
+
+        return saved;
+    }
+
+    // Trả toàn bộ serial đã gắn với đơn hàng về lại "trong_kho" — dùng chung khi xóa đơn
+    // (delete) hoặc khi đơn chuyển sang trạng thái "cancelled" (update).
+    private void releaseSerialsToStock(Integer donHangId) {
+        List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(donHangId);
+        for (ChiTietDonHang item : items) {
+            if (item.getChiTietSanPham() != null) {
+                item.getChiTietSanPham().setTrangThai("trong_kho");
+                chiTietSanPhamRepository.save(item.getChiTietSanPham());
+            }
+        }
     }
 
     // Xoá đơn hàng — trước tiên xoá các dòng chi tiết + lịch sử tồn kho (FK) và trả
@@ -102,16 +140,80 @@ public class DonHangService {
         if (!donHangRepository.existsById(id))
             throw new IllegalArgumentException("Đơn hàng không tồn tại với id: " + id);
 
-        List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(id);
-        for (ChiTietDonHang item : items) {
-            if (item.getChiTietSanPham() != null) {
-                item.getChiTietSanPham().setTrangThai("trong_kho");
-                chiTietSanPhamRepository.save(item.getChiTietSanPham());
-            }
-        }
-        chiTietDonHangRepository.deleteAll(items);
+        releaseSerialsToStock(id);
+        chiTietDonHangRepository.deleteAll(chiTietDonHangRepository.findEntityByDonHangId(id));
         lichSuTonKhoRepository.deleteAll(lichSuTonKhoRepository.findByDonHang_Id(id));
         donHangRepository.deleteById(id);
+    }
+
+    // Chọn serial cho từng dòng + chốt "da_ban" + chuyển trạng thái "processing" trong 1
+    // transaction — chỉ áp dụng đơn online (đơn tại quầy đã chốt serial ngay lúc tạo dòng
+    // đơn, không qua bước xác nhận/đóng gói nên không cần gọi endpoint này).
+    @Transactional
+    public void dongGoi(Integer donHangId, DongGoiRequest request) {
+        DonHang donHang = getById(donHangId);
+        if (!"online".equals(donHang.getKenhBan()))
+            throw new IllegalArgumentException("Chỉ đơn hàng online mới cần chọn serial trước khi đóng gói");
+        if (!"confirmed".equals(donHang.getTrangThaiDonHang()))
+            throw new IllegalArgumentException("Đơn hàng phải ở trạng thái 'Đã xác nhận' mới đóng gói được");
+
+        for (DongGoiLineRequest line : request.getLines()) {
+            ChiTietDonHang item = chiTietDonHangRepository.findById(line.getChiTietDonHangId())
+                    .orElseThrow(() -> new IllegalArgumentException("Dòng đơn hàng không tồn tại với id: " + line.getChiTietDonHangId()));
+            if (!item.getDonHang().getId().equals(donHangId))
+                throw new IllegalArgumentException("Dòng #" + item.getId() + " không thuộc đơn hàng này");
+
+            List<Integer> serialIds = line.getSerialIds();
+            if (new HashSet<>(serialIds).size() != serialIds.size())
+                throw new IllegalArgumentException("Dòng #" + item.getId() + " chọn trùng serial");
+            if (serialIds.size() != item.getSoLuong())
+                throw new IllegalArgumentException(
+                        "Dòng #" + item.getId() + " cần đúng " + item.getSoLuong() + " serial, đã chọn " + serialIds.size());
+
+            List<ChiTietDonHangSerial> existingLinks = chiTietDonHangSerialRepository.findByChiTietDonHang_Id(item.getId());
+            Set<Integer> reservedForThisLine = existingLinks.stream()
+                    .map(l -> l.getChiTietSanPham().getChiTietId())
+                    .collect(Collectors.toSet());
+
+            List<ChiTietSanPham> finalSerials = new ArrayList<>();
+            for (Integer serialId : serialIds) {
+                ChiTietSanPham serial = chiTietSanPhamRepository.findById(serialId)
+                        .orElseThrow(() -> new IllegalArgumentException("Serial không tồn tại với id: " + serialId));
+                if (!serial.getBienThe().getBienTheId().equals(item.getBienThe().getBienTheId()))
+                    throw new IllegalArgumentException("Serial " + serial.getSoSerial() + " không thuộc đúng sản phẩm của dòng #" + item.getId());
+                boolean daGiuChoDongNay = reservedForThisLine.contains(serialId);
+                if (!"trong_kho".equals(serial.getTrangThai()) && !daGiuChoDongNay)
+                    throw new IllegalArgumentException("Serial " + serial.getSoSerial() + " không còn khả dụng, vui lòng chọn lại");
+                finalSerials.add(serial);
+            }
+
+            // Trả các serial đã giữ chỗ trước đó nhưng bị bỏ chọn (admin đổi ý) về lại kho
+            for (ChiTietDonHangSerial link : existingLinks) {
+                if (!serialIds.contains(link.getChiTietSanPham().getChiTietId())) {
+                    link.getChiTietSanPham().setTrangThai("trong_kho");
+                    chiTietSanPhamRepository.save(link.getChiTietSanPham());
+                }
+            }
+            chiTietDonHangSerialRepository.deleteByChiTietDonHang_Id(item.getId());
+
+            for (ChiTietSanPham serial : finalSerials) {
+                serial.setTrangThai("da_ban");
+                chiTietSanPhamRepository.save(serial);
+                ChiTietDonHangSerial link = new ChiTietDonHangSerial();
+                link.setChiTietDonHang(item);
+                link.setChiTietSanPham(serial);
+                chiTietDonHangSerialRepository.save(link);
+            }
+
+            // Đồng bộ serial đại diện trên FK đơn — nếu admin đổi serial khác lúc đóng gói,
+            // các nơi hiển thị dựa trên FK này (chi tiết đơn, bảo hành...) vẫn đúng.
+            item.setChiTietSanPham(finalSerials.get(0));
+            chiTietDonHangRepository.save(item);
+        }
+
+        donHang.setTrangThaiDonHang("processing");
+        donHangRepository.save(donHang);
+        sseService.notifyOrderUpdate(donHangId);
     }
 
     // Tính lại tong_tien từ tổng các dòng chi tiết (don_gia * so_luong - giam_gia_dong)

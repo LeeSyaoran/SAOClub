@@ -2,18 +2,19 @@ package com.example.backend.controller;
 
 import com.example.backend.entity.DonHang;
 import com.example.backend.request.DonHangRequest;
+import com.example.backend.request.DongGoiRequest;
 import com.example.backend.request.MergeOrderRequest;
 import com.example.backend.response.DonHangResponse;
 import com.example.backend.service.DonHangService;
 import com.example.backend.service.SseService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/don-hang")
@@ -24,11 +25,16 @@ public class DonHangController {
     @Autowired
     private SseService sseService;
 
-    // GET /api/don-hang — DTO query với LEFT JOIN nullable FKs
-    // (nhanVien, khuyenMai, diaChiGiaoHang có thể null)
+    // GET /api/don-hang?page=0&size=20&khachHangId=... — DTO query với LEFT JOIN nullable
+    // FKs (nhanVien, khuyenMai, diaChiGiaoHang có thể null), có phân trang.
+    // khachHangId optional: trang "Đơn hàng của tôi" truyền vào để chỉ lấy đơn của khách
+    // đó thay vì tải hết đơn toàn hệ thống rồi lọc ở trình duyệt (rất chậm khi số đơn lớn).
     @GetMapping
-    public List<DonHangResponse> getAll() {
-        return donHangService.hienThiDonHang();
+    public Page<DonHangResponse> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Integer khachHangId) {
+        return donHangService.hienThiDonHang(khachHangId, PageRequest.of(page, size));
     }
 
     @GetMapping("/{id}")
@@ -66,6 +72,14 @@ public class DonHangController {
     @PatchMapping("{id}/recalculate")
     public ResponseEntity<Void> recalculate(@PathVariable Integer id) {
         donHangService.recalculateTongTien(id);
+        return ResponseEntity.ok().build();
+    }
+
+    // Chọn serial cho từng dòng + chốt bán + chuyển sang "processing" (đóng gói) — chỉ
+    // đơn online (đơn tại quầy đã chốt serial ngay lúc tạo, không qua bước này).
+    @PatchMapping("{id}/dong-goi")
+    public ResponseEntity<Void> dongGoi(@PathVariable Integer id, @Valid @RequestBody DongGoiRequest request) {
+        donHangService.dongGoi(id, request);
         return ResponseEntity.ok().build();
     }
 
