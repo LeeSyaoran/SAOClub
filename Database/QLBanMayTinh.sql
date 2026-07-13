@@ -355,24 +355,30 @@ CREATE TABLE chi_tiet_don_hang (
 -- Gắn nhiều serial cho 1 dòng đơn hàng — chi_tiet_don_hang.chi_tiet_id (FK đơn) chỉ giữ
 -- được 1 serial đại diện, bảng này là nguồn đầy đủ khi so_luong > 1. Dùng cho cả 2 kênh
 -- bán, nhưng chỉ đơn online thực sự cần luồng giữ chỗ ("giu_hang") -> chọn lại -> đóng gói.
-CREATE TABLE chi_tiet_don_hang_serial (
-    chi_tiet_don_hang_serial_id INT IDENTITY(1,1) PRIMARY KEY,
-    chi_tiet_don_hang_id        INT NOT NULL,
-    chi_tiet_id                 INT NOT NULL,
-    CONSTRAINT FK_ctdhs_ctdh FOREIGN KEY (chi_tiet_don_hang_id) REFERENCES chi_tiet_don_hang(chi_tiet_don_hang_id) ON DELETE CASCADE,
-    CONSTRAINT FK_ctdhs_ctsp FOREIGN KEY (chi_tiet_id)          REFERENCES chi_tiet_san_pham(chi_tiet_id),
-    CONSTRAINT UX_ctdhs_pair UNIQUE (chi_tiet_don_hang_id, chi_tiet_id)
-);
+-- IF NOT EXISTS: file này giờ chạy được thẳng (nhấn Execute) vào DB đã có sẵn dữ liệu từ
+-- bản dump cũ, không chỉ vào DB trắng — bỏ qua nếu bảng đã tồn tại thay vì báo lỗi.
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_don_hang_serial')
+BEGIN
+    CREATE TABLE chi_tiet_don_hang_serial (
+        chi_tiet_don_hang_serial_id INT IDENTITY(1,1) PRIMARY KEY,
+        chi_tiet_don_hang_id        INT NOT NULL,
+        chi_tiet_id                 INT NOT NULL,
+        CONSTRAINT FK_ctdhs_ctdh FOREIGN KEY (chi_tiet_don_hang_id) REFERENCES chi_tiet_don_hang(chi_tiet_don_hang_id) ON DELETE CASCADE,
+        CONSTRAINT FK_ctdhs_ctsp FOREIGN KEY (chi_tiet_id)          REFERENCES chi_tiet_san_pham(chi_tiet_id),
+        CONSTRAINT UX_ctdhs_pair UNIQUE (chi_tiet_don_hang_id, chi_tiet_id)
+    );
+END
 GO
 
--- DB đã tồn tại từ trước (tạo bằng bản dump cũ của file này) cần chạy thêm ALTER dưới đây —
--- CREATE TABLE ở trên chỉ áp dụng cho DB tạo mới từ đầu. Không có ALTER này, insert
--- lich_su_ton_kho với loai_bien_dong = 'giu_hang' (đơn online giữ chỗ serial) sẽ bị SQL
--- Server từ chối vì vi phạm CK_lsdk_loai, làm rollback toàn bộ giao dịch đặt hàng online.
--- ALTER TABLE lich_su_ton_kho DROP CONSTRAINT CK_lsdk_loai;
--- ALTER TABLE lich_su_ton_kho ADD CONSTRAINT CK_lsdk_loai
---     CHECK (loai_bien_dong IN (N'nhap', N'xuat_ban', N'tra_hang', N'dieu_chinh', N'huy', N'giu_hang'));
--- GO
+-- DB đã có sẵn bảng lich_su_ton_kho (CREATE TABLE bên dưới sẽ báo lỗi "already an object"
+-- và không chạy) vẫn cần constraint cho phép "giu_hang" — áp dụng luôn ở đây, độc lập với
+-- CREATE TABLE bên dưới, drop-rồi-add nên chạy lại bao nhiêu lần cũng an toàn.
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_lsdk_loai')
+    ALTER TABLE lich_su_ton_kho DROP CONSTRAINT CK_lsdk_loai;
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'lich_su_ton_kho')
+    ALTER TABLE lich_su_ton_kho ADD CONSTRAINT CK_lsdk_loai
+        CHECK (loai_bien_dong IN (N'nhap', N'xuat_ban', N'tra_hang', N'dieu_chinh', N'huy', N'giu_hang'));
+GO
 
 CREATE TABLE lich_su_ton_kho (
     lich_su_id        INT            IDENTITY(1,1) PRIMARY KEY,
