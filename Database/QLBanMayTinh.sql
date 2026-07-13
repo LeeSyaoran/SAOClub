@@ -1,15 +1,14 @@
 USE master;
 GO
 
-IF EXISTS (SELECT name FROM sys.databases WHERE name = N'QLBanMayTinh')
+-- Không DROP database nữa — chỉ tạo mới nếu chưa tồn tại, giữ nguyên nếu đã có.
+-- Chạy file này vào DB đã có sẵn bảng (cùng tên) sẽ báo lỗi "already an object" —
+-- cần trỏ vào database trống trước khi chạy.
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'QLBanMayTinh')
 BEGIN
-    ALTER DATABASE QLBanMayTinh SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE QLBanMayTinh;
+    CREATE DATABASE QLBanMayTinh
+        COLLATE Vietnamese_CI_AS;
 END
-GO
-
-CREATE DATABASE QLBanMayTinh
-    COLLATE Vietnamese_CI_AS;
 GO
 
 USE QLBanMayTinh;
