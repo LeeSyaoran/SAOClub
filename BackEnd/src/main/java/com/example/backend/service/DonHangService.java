@@ -125,9 +125,17 @@ public class DonHangService {
     private void releaseSerialsToStock(Integer donHangId) {
         List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(donHangId);
         for (ChiTietDonHang item : items) {
+            // Serial đại diện trên FK đơn (chi_tiet_id) — luôn có nếu dòng đã gán serial.
             if (item.getChiTietSanPham() != null) {
                 item.getChiTietSanPham().setTrangThai("trong_kho");
                 chiTietSanPhamRepository.save(item.getChiTietSanPham());
+            }
+            // Đơn có so_luong > 1: các serial còn lại chỉ nằm trong bảng join, không nằm
+            // trên FK đại diện — phải trả riêng, nếu không sẽ kẹt vĩnh viễn ở "giu_hang"/
+            // "da_ban" dù đơn đã hủy, làm lệch tồn kho thật.
+            for (ChiTietDonHangSerial link : chiTietDonHangSerialRepository.findByChiTietDonHang_Id(item.getId())) {
+                link.getChiTietSanPham().setTrangThai("trong_kho");
+                chiTietSanPhamRepository.save(link.getChiTietSanPham());
             }
         }
     }

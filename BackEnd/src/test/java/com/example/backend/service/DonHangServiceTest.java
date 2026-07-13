@@ -111,4 +111,38 @@ class DonHangServiceTest {
         assertThat(serial.getTrangThai()).isEqualTo("da_ban");
         assertThat(d.getTrangThaiDonHang()).isEqualTo("processing");
     }
+
+    @Test
+    void update_chuyenCancelled_giaiPhongCaSerialTrongBangJoin() {
+        DonHang d = new DonHang();
+        d.setId(1);
+        d.setTrangThaiDonHang("processing");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+        when(khachHangRepository.getReferenceById(1)).thenReturn(new com.example.backend.entity.KhachHang());
+        when(donHangRepository.save(d)).thenReturn(d);
+
+        ChiTietSanPham repSerial = new ChiTietSanPham();
+        repSerial.setChiTietId(100);
+        repSerial.setTrangThai("da_ban");
+        ChiTietDonHang item = new ChiTietDonHang();
+        item.setId(5);
+        item.setChiTietSanPham(repSerial);
+        when(chiTietDonHangRepository.findEntityByDonHangId(1)).thenReturn(List.of(item));
+
+        ChiTietSanPham extraSerial = new ChiTietSanPham();
+        extraSerial.setChiTietId(101);
+        extraSerial.setTrangThai("da_ban");
+        com.example.backend.entity.ChiTietDonHangSerial link = new com.example.backend.entity.ChiTietDonHangSerial();
+        link.setChiTietSanPham(extraSerial);
+        when(chiTietDonHangSerialRepository.findByChiTietDonHang_Id(5)).thenReturn(List.of(link));
+
+        com.example.backend.request.DonHangRequest request = new com.example.backend.request.DonHangRequest();
+        request.setKhachHangId(1);
+        request.setTrangThaiDonHang("cancelled");
+
+        service.update(1, request);
+
+        assertThat(repSerial.getTrangThai()).isEqualTo("trong_kho");
+        assertThat(extraSerial.getTrangThai()).isEqualTo("trong_kho");
+    }
 }
