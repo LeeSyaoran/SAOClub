@@ -1,0 +1,37 @@
+package com.example.backend.response;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+public class WarrantyStatusResponse {
+    private Integer chiTietId;
+    private String soSerial;
+    private String maSku;
+    private String tenSanPham;
+    private Integer baoHanhThang;
+    private LocalDateTime ngayGiaoThucTe;
+    private String maDonHang;
+    private String tenKhachHang;
+    private String soDienThoaiKhachHang;
+    // Tính ở service (ngayGiaoThucTe + baoHanhThang tháng) — không lấy được thẳng bằng JPQL
+    // constructor-expression nên để trống ở đây, set sau khi query xong.
+    private LocalDateTime ngayHetBaoHanh;
+
+    public WarrantyStatusResponse(Integer chiTietId, String soSerial, String maSku, String tenSanPham,
+                                   Integer baoHanhThang, LocalDateTime ngayGiaoThucTe, String maDonHang,
+                                   String tenKhachHang, String soDienThoaiKhachHang) {
+        this.chiTietId = chiTietId;
+        this.soSerial = soSerial;
+        this.maSku = maSku;
+        this.tenSanPham = tenSanPham;
+        this.baoHanhThang = baoHanhThang;
+        this.ngayGiaoThucTe = ngayGiaoThucTe;
+        this.maDonHang = maDonHang;
+        this.tenKhachHang = tenKhachHang;
+        this.soDienThoaiKhachHang = soDienThoaiKhachHang;
+    }
+}
