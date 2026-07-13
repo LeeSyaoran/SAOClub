@@ -3,6 +3,7 @@ package com.example.backend.controller;
 import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.request.ChiTietDonHangRequest;
 import com.example.backend.response.ChiTietDonHangResponse;
+import com.example.backend.response.ChiTietDonHangSerialResponse;
 import com.example.backend.service.ChiTietDonHangService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,11 @@ public class ChiTietDonHangController {
     @GetMapping("/don-hang/{donHangId}")
     public List<ChiTietDonHangResponse> getByDonHang(@PathVariable Integer donHangId) {
         return chiTietDonHangService.getByDonHangId(donHangId);
+    }
+
+    @GetMapping("/don-hang/{donHangId}/serials")
+    public List<ChiTietDonHangSerialResponse> getSerialsByDonHang(@PathVariable Integer donHangId) {
+        return chiTietDonHangService.getSerialsByDonHangId(donHangId);
     }
 
     @PostMapping
