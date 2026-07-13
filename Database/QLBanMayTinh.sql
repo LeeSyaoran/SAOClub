@@ -9100,4 +9100,83 @@ BEGIN
 END
 GO
 
+-- ============================================================
+--  14. NÂNG TỒN KHO DEMO (mỗi biến thể ~20-30 máy, trừ 1 biến thể sắp hết hàng)
+-- ============================================================
+-- Đồng bộ ton_kho TRƯỚC — nhiều biến thể ngoài Dell đang bị lệch (so_luong_ton_thuc_te
+-- sai lệch so với số serial "trong_kho" thật) do 1 dòng UPDATE reset cũ trong file này.
+-- Trigger trg_CapNhatTonKhoThucTe chỉ CỘNG/TRỪ phần thay đổi (delta) mỗi khi serial đổi
+-- trạng thái — nếu baseline sai từ trước, delta cộng/trừ vẫn cho ra kết quả sai và có
+-- thể vi phạm CHECK (>= 0). Phải sửa đúng baseline ở đây trước khi các bước bên dưới
+-- thêm/đổi trạng thái serial.
+UPDATE tk
+SET so_luong_ton_thuc_te = ISNULL(tinh_lai.trong_kho, 0),
+    so_luong_giu         = ISNULL(tinh_lai.giu_hang, 0)
+FROM ton_kho tk
+LEFT JOIN (
+    SELECT bien_the_id,
+           SUM(CASE WHEN trang_thai = N'trong_kho' THEN 1 ELSE 0 END) AS trong_kho,
+           SUM(CASE WHEN trang_thai = N'giu_hang'  THEN 1 ELSE 0 END) AS giu_hang
+    FROM chi_tiet_san_pham
+    GROUP BY bien_the_id
+) tinh_lai ON tk.bien_the_id = tinh_lai.bien_the_id;
+GO
+
+-- Chỉ chạy 1 lần (đánh dấu bằng tiền tố serial 'RESTOCK-') dù file được Execute lại
+-- bao nhiêu lần — không cộng dồn thêm máy mỗi lần chạy.
+IF NOT EXISTS (SELECT 1 FROM chi_tiet_san_pham WHERE so_serial LIKE N'RESTOCK-%')
+BEGIN
+    ;WITH Numbers AS (
+        SELECT 1 AS n
+        UNION ALL SELECT n + 1 FROM Numbers WHERE n < 30
+    ),
+    Targets AS (
+        -- Mỗi biến thể mục tiêu 20-30 máy (rải theo bien_the_id cho đa dạng), riêng
+        -- bien_the_id=37 (Dell XPS 15 i9 32GB, ton_kho_toi_thieu=1) giữ mục tiêu chỉ 1
+        -- máy để luôn hiện "sắp hết hàng" làm demo.
+        SELECT bien_the_id,
+               CASE WHEN bien_the_id = 37 THEN 1 ELSE 20 + (bien_the_id % 11) END AS muc_tieu
+        FROM bien_the_san_pham
+    ),
+    TonThucTe AS (
+        SELECT bien_the_id, COUNT(*) AS so_luong
+        FROM chi_tiet_san_pham
+        WHERE trang_thai = N'trong_kho'
+        GROUP BY bien_the_id
+    )
+    INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho)
+    SELECT t.bien_the_id,
+           N'RESTOCK-' + CAST(t.bien_the_id AS NVARCHAR(10)) + '-' + RIGHT('00' + CAST(n.n AS VARCHAR(2)), 2),
+           N'trong_kho',
+           GETDATE()
+    FROM Targets t
+    JOIN Numbers n ON n.n <= (t.muc_tieu - ISNULL((SELECT tt.so_luong FROM TonThucTe tt WHERE tt.bien_the_id = t.bien_the_id), 0))
+    OPTION (MAXRECURSION 100);
+END
+GO
+
+-- bien_the_id=37 đã có sẵn vài máy trong_kho — đánh dấu bớt còn đúng 1 máy để mô phỏng
+-- sản phẩm sắp hết hàng. Tách guard riêng theo số lượng thật (không dùng chung guard
+-- 'RESTOCK-%' ở trên) — tự chạy lại đến khi đúng còn 1 máy, kể cả khi lần trước lỡ dở.
+IF (SELECT COUNT(*) FROM chi_tiet_san_pham WHERE bien_the_id = 37 AND trang_thai = N'trong_kho') > 1
+BEGIN
+    UPDATE TOP (1) chi_tiet_san_pham
+    SET trang_thai = N'da_ban'
+    WHERE bien_the_id = 37 AND trang_thai = N'trong_kho';
+END
+GO
+
+-- Đồng bộ lại lần nữa sau khi thêm máy demo + đánh dấu bán ở trên — an toàn chạy lại
+-- nhiều lần, luôn tính lại từ dữ liệu thật, không cộng dồn sai.
+UPDATE tk
+SET so_luong_ton_thuc_te = ISNULL(tinh_lai.trong_kho, 0),
+    so_luong_giu         = ISNULL(tinh_lai.giu_hang, 0)
+FROM ton_kho tk
+LEFT JOIN (
+    SELECT bien_the_id,
+           SUM(CASE WHEN trang_thai = N'trong_kho' THEN 1 ELSE 0 END) AS trong_kho,
+           SUM(CASE WHEN trang_thai = N'giu_hang'  THEN 1 ELSE 0 END) AS giu_hang
+    FROM chi_tiet_san_pham
+    GROUP BY bien_the_id
+) tinh_lai ON tk.bien_the_id = tinh_lai.bien_the_id;
 GO
