@@ -902,6 +902,15 @@ export default {
       needCustomerFirst: "상품을 추가하기 전에 장바구니 영역에서 고객을 먼저 확인해 주세요",
     },
 
+    packModal: {
+      title: "포장 전 시리얼 선택",
+      loading: "불러오는 중...",
+      selectedCount: "{selected}/{count} 선택됨",
+      noSerialAvailable: "이 제품에 사용 가능한 시리얼이 없습니다",
+      cancel: "취소",
+      confirm: "포장 확인",
+    },
+
     placeholder: {
       userPageNote: "고객 페이지는 메인 홈페이지에서 확인하세요",
     },

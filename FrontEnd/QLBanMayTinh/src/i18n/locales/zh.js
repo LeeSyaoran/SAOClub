@@ -902,6 +902,15 @@ export default {
       needCustomerFirst: "请先在购物车区域确认客户，再添加商品",
     },
 
+    packModal: {
+      title: "打包前选择序列号",
+      loading: "加载中...",
+      selectedCount: "已选 {selected}/{count}",
+      noSerialAvailable: "该商品没有可用的序列号",
+      cancel: "取消",
+      confirm: "确认打包",
+    },
+
     placeholder: {
       userPageNote: "请在主页面查看客户端页面",
     },

@@ -902,6 +902,15 @@ export default {
       needCustomerFirst: "商品を追加する前に、カート欄で顧客を確認してください",
     },
 
+    packModal: {
+      title: "梱包前にシリアルを選択",
+      loading: "読み込み中...",
+      selectedCount: "{selected}/{count} 選択済み",
+      noSerialAvailable: "この製品には利用可能なシリアルがありません",
+      cancel: "キャンセル",
+      confirm: "梱包を確定",
+    },
+
     placeholder: {
       userPageNote: "顧客向けページはメインのホームページでご確認ください",
     },

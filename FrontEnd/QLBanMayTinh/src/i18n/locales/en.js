@@ -902,6 +902,15 @@ export default {
       needCustomerFirst: "Please identify the customer (in the cart panel) before adding products",
     },
 
+    packModal: {
+      title: "Choose serial before packing",
+      loading: "Loading...",
+      selectedCount: "{selected}/{count} selected",
+      noSerialAvailable: "No serial available for this product",
+      cancel: "Cancel",
+      confirm: "Confirm packing",
+    },
+
     placeholder: {
       userPageNote: "View the customer page on the main homepage",
     },

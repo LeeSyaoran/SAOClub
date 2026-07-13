@@ -1007,6 +1007,15 @@ export default {
       needCustomerFirst: "Vui lòng xác định khách hàng (bên khung giỏ hàng) trước khi thêm sản phẩm",
     },
 
+    packModal: {
+      title: "Chọn serial trước khi đóng gói",
+      loading: "Đang tải...",
+      selectedCount: "{selected}/{count} đã chọn",
+      noSerialAvailable: "Không còn serial khả dụng cho sản phẩm này",
+      cancel: "Hủy",
+      confirm: "Xác nhận đóng gói",
+    },
+
     placeholder: {
       userPageNote: "Xem trang khách hàng tại trang chủ chính",
     },
