@@ -437,6 +437,26 @@ const formatPrice = (value) => {
 const onKeydown = (e) => { if (e.key === 'Escape' && !checkoutLoading.value) emit('update:modelValue', false); };
 
 // Mở modal thanh toán và load dữ liệu cần thiết — chạy khi cha set modelValue = true
+// Khách đã đăng nhập: điền thẳng từ thông tin phiên đăng nhập (đáng tin cậy, luôn có
+// sẵn ngay lúc login) — KHÔNG dùng KhachHangService.getAll() (chỉ nhân viên/admin được
+// gọi, khách gọi sẽ bị 403) để dò theo SĐT như cách cũ. Tách riêng thành hàm để gọi lại
+// được cả khi khách đăng nhập NGAY TRONG LÚC modal đang mở (trước đây chỉ điền 1 lần lúc
+// mở modal — nếu khách mở giỏ hàng trước rồi mới đăng nhập mà không đóng/mở lại modal,
+// các ô vẫn trống dù banner "đã đăng nhập" đã hiện đúng).
+const fillFromLoggedInAccount = async () => {
+  if (!(AuthStore.user?.role === 'khach_hang' && AuthStore.user?.soDienThoai)) return;
+  checkoutForm.soDienThoai  = AuthStore.user.soDienThoai;
+  checkoutForm.hoTen        = AuthStore.user.hoTen || '';
+  checkoutForm.email        = AuthStore.user.email || '';
+  checkoutForm.nguoiNhan    = AuthStore.user.hoTen || '';
+  checkoutForm.sdtNguoiNhan = AuthStore.user.soDienThoai;
+  foundCustomer.value = { khachHangId: AuthStore.user.id, hoTen: AuthStore.user.hoTen };
+  // Địa chỉ không có trong phiên đăng nhập — xem hồ sơ của chính mình (endpoint tự-xem
+  // cho phép khách xem đúng bản ghi của họ), không có thì để trống, khách tự nhập.
+  const full = await KhachHangService.getById(AuthStore.user.id).catch(() => null);
+  if (full?.diaChi) checkoutForm.diaChiGiaoHangText = full.diaChi;
+};
+
 watch(() => props.modelValue, async (open) => {
   if (open) window.addEventListener('keydown', onKeydown);
   else window.removeEventListener('keydown', onKeydown);
@@ -454,21 +474,13 @@ watch(() => props.modelValue, async (open) => {
   if (!allPromos.value.length) {
     allPromos.value = await KhuyenMaiService.getAll().catch(() => []);
   }
-  // Khách đã đăng nhập: điền thẳng từ thông tin phiên đăng nhập (đáng tin cậy, luôn có
-  // sẵn ngay lúc login) — KHÔNG dùng KhachHangService.getAll() (chỉ nhân viên/admin được
-  // gọi, khách gọi sẽ bị 403) để dò theo SĐT như cách cũ.
-  if (AuthStore.user?.role === 'khach_hang' && AuthStore.user?.soDienThoai) {
-    checkoutForm.soDienThoai  = AuthStore.user.soDienThoai;
-    checkoutForm.hoTen        = AuthStore.user.hoTen || '';
-    checkoutForm.email        = AuthStore.user.email || '';
-    checkoutForm.nguoiNhan    = AuthStore.user.hoTen || '';
-    checkoutForm.sdtNguoiNhan = AuthStore.user.soDienThoai;
-    foundCustomer.value = { khachHangId: AuthStore.user.id, hoTen: AuthStore.user.hoTen };
-    // Địa chỉ không có trong phiên đăng nhập — xem hồ sơ của chính mình (endpoint tự-xem
-    // cho phép khách xem đúng bản ghi của họ), không có thì để trống, khách tự nhập.
-    const full = await KhachHangService.getById(AuthStore.user.id).catch(() => null);
-    if (full?.diaChi) checkoutForm.diaChiGiaoHangText = full.diaChi;
-  }
+  await fillFromLoggedInAccount();
+});
+
+// Khách đăng nhập NGAY TRONG LÚC modal đang mở (vd bấm "Đăng nhập" từ 1 modal khác chồng
+// lên mà không đóng modal thanh toán) — điền lại ngay, khỏi phải đóng/mở lại modal.
+watch(() => AuthStore.user, () => {
+  if (props.modelValue) fillFromLoggedInAccount();
 });
 
 // Tìm khách hàng theo số điện thoại — endpoint công khai riêng cho checkout (khách vãng
