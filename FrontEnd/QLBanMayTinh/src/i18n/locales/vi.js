@@ -1008,12 +1008,12 @@ export default {
     },
 
     packModal: {
-      title: "Chọn serial trước khi đóng gói",
+      title: "Chọn serial trước khi xác nhận",
       loading: "Đang tải...",
       selectedCount: "{selected}/{count} đã chọn",
       noSerialAvailable: "Không còn serial khả dụng cho sản phẩm này",
       cancel: "Hủy",
-      confirm: "Xác nhận đóng gói",
+      confirm: "Xác nhận đơn hàng",
     },
 
     placeholder: {

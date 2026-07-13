@@ -903,12 +903,12 @@ export default {
     },
 
     packModal: {
-      title: "포장 전 시리얼 선택",
+      title: "확인 전 시리얼 선택",
       loading: "불러오는 중...",
       selectedCount: "{selected}/{count} 선택됨",
       noSerialAvailable: "이 제품에 사용 가능한 시리얼이 없습니다",
       cancel: "취소",
-      confirm: "포장 확인",
+      confirm: "주문 확인",
     },
 
     placeholder: {

@@ -1,5 +1,13 @@
 # Thiết kế: Chọn serial trước khi đóng gói đơn hàng online
 
+> **Cập nhật sau khi triển khai:** Theo phản hồi thực tế khi test, bước chọn serial đã
+> **dời từ "Đóng gói" sang "Xác nhận"** (gate ở `pending` → `confirmed` thay vì `confirmed`
+> → `processing`). Endpoint/hàm liên quan đã đổi tên từ `dongGoi`/`DongGoiRequest` thành
+> `xacNhanDonHang`/`XacNhanDonHangRequest` cho đúng nghĩa. Tài liệu bên dưới mô tả thiết kế
+> ban đầu (gate ở bước đóng gói) — kiến trúc giữ chỗ/chốt serial vẫn y hệt, chỉ đổi **thời
+> điểm** gate. Sau khi xác nhận xong (đã chọn serial), bước "Đóng gói" (`confirmed` →
+> `processing`) chỉ còn là đổi trạng thái đơn thuần, không qua modal nữa.
+
 ## Bối cảnh
 
 Hiện tại, khi khách đặt đơn online, mỗi dòng `ChiTietDonHang` tự động FIFO-chọn serial (`ChiTietSanPham`) và đánh dấu `trangThai = "da_ban"` ngay lúc tạo đơn (`ChiTietDonHangService.create()`), bất kể đơn đang ở trạng thái `pending`. Admin không hề có cơ hội xem/chọn lại serial trước khi đóng gói.

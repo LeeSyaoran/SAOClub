@@ -5,8 +5,8 @@ import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.DonHang;
 import com.example.backend.repository.*;
-import com.example.backend.request.DongGoiLineRequest;
-import com.example.backend.request.DongGoiRequest;
+import com.example.backend.request.XacNhanDonHangLineRequest;
+import com.example.backend.request.XacNhanDonHangRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,30 +40,30 @@ class DonHangServiceTest {
     @InjectMocks
     private DonHangService service;
 
-    private DonHang donHangOnlineConfirmed() {
+    private DonHang donHangOnlinePending() {
         DonHang d = new DonHang();
         d.setId(1);
         d.setKenhBan("online");
-        d.setTrangThaiDonHang("confirmed");
+        d.setTrangThaiDonHang("pending");
         return d;
     }
 
     @Test
-    void dongGoi_khongPhaiDonOnline_biChan() {
-        DonHang d = donHangOnlineConfirmed();
+    void xacNhan_khongPhaiDonOnline_biChan() {
+        DonHang d = donHangOnlinePending();
         d.setKenhBan("in_store");
         when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
 
-        DongGoiRequest req = new DongGoiRequest(List.of());
+        XacNhanDonHangRequest req = new XacNhanDonHangRequest(List.of());
 
-        assertThatThrownBy(() -> service.dongGoi(1, req))
+        assertThatThrownBy(() -> service.xacNhanDonHang(1, req))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("online");
     }
 
     @Test
-    void dongGoi_saiSoLuongSerial_biChan() {
-        DonHang d = donHangOnlineConfirmed();
+    void xacNhan_saiSoLuongSerial_biChan() {
+        DonHang d = donHangOnlinePending();
         when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
 
         BienTheSanPham bienThe = new BienTheSanPham();
@@ -75,16 +75,16 @@ class DonHangServiceTest {
         item.setSoLuong(2);
         when(chiTietDonHangRepository.findById(5)).thenReturn(Optional.of(item));
 
-        DongGoiRequest req = new DongGoiRequest(List.of(new DongGoiLineRequest(5, List.of(100))));
+        XacNhanDonHangRequest req = new XacNhanDonHangRequest(List.of(new XacNhanDonHangLineRequest(5, List.of(100))));
 
-        assertThatThrownBy(() -> service.dongGoi(1, req))
+        assertThatThrownBy(() -> service.xacNhanDonHang(1, req))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("2 serial");
     }
 
     @Test
-    void dongGoi_hopLe_chotDaBanVaChuyenProcessing() {
-        DonHang d = donHangOnlineConfirmed();
+    void xacNhan_hopLe_chotDaBanVaChuyenConfirmed() {
+        DonHang d = donHangOnlinePending();
         when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
 
         BienTheSanPham bienThe = new BienTheSanPham();
@@ -104,12 +104,12 @@ class DonHangServiceTest {
         serial.setTrangThai("trong_kho");
         when(chiTietSanPhamRepository.findById(100)).thenReturn(Optional.of(serial));
 
-        DongGoiRequest req = new DongGoiRequest(List.of(new DongGoiLineRequest(5, List.of(100))));
+        XacNhanDonHangRequest req = new XacNhanDonHangRequest(List.of(new XacNhanDonHangLineRequest(5, List.of(100))));
 
-        service.dongGoi(1, req);
+        service.xacNhanDonHang(1, req);
 
         assertThat(serial.getTrangThai()).isEqualTo("da_ban");
-        assertThat(d.getTrangThaiDonHang()).isEqualTo("processing");
+        assertThat(d.getTrangThaiDonHang()).isEqualTo("confirmed");
     }
 
     @Test
@@ -144,5 +144,21 @@ class DonHangServiceTest {
 
         assertThat(repSerial.getTrangThai()).isEqualTo("trong_kho");
         assertThat(extraSerial.getTrangThai()).isEqualTo("trong_kho");
+    }
+
+    @Test
+    void mergeOrders_donNguonChuaXacNhan_biChan() {
+        DonHang target = new DonHang();
+        target.setId(1);
+        target.setTrangThaiDonHang("confirmed");
+        DonHang source = new DonHang();
+        source.setId(2);
+        source.setTrangThaiDonHang("pending");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(target));
+        when(donHangRepository.findById(2)).thenReturn(Optional.of(source));
+
+        assertThatThrownBy(() -> service.mergeOrders(1, List.of(2)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("chưa được xác nhận");
     }
 }

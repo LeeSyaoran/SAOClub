@@ -13,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 @Setter
-public class DongGoiLineRequest {
+public class XacNhanDonHangLineRequest {
     @NotNull(message = "Dòng đơn hàng không được để trống")
     private Integer chiTietDonHangId;
 

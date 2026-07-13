@@ -13,8 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 @Setter
-public class DongGoiRequest {
+public class XacNhanDonHangRequest {
     @NotEmpty(message = "Đơn hàng chưa có dòng sản phẩm nào")
     @Valid
-    private List<DongGoiLineRequest> lines;
+    private List<XacNhanDonHangLineRequest> lines;
 }

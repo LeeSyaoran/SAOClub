@@ -903,12 +903,12 @@ export default {
     },
 
     packModal: {
-      title: "打包前选择序列号",
+      title: "确认前选择序列号",
       loading: "加载中...",
       selectedCount: "已选 {selected}/{count}",
       noSerialAvailable: "该商品没有可用的序列号",
       cancel: "取消",
-      confirm: "确认打包",
+      confirm: "确认订单",
     },
 
     placeholder: {

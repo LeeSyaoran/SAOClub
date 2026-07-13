@@ -88,9 +88,9 @@ public class ChiTietDonHangService {
 
         ChiTietDonHang saved = chiTietDonHangRepository.save(entity);
 
-        // Đơn online: chỉ giữ chỗ ("giu_hang") — admin xác nhận/đổi serial ở bước đóng gói
-        // (xem DonHangService.dongGoi) mới chốt "da_ban". Đơn tại quầy (in_store): chốt bán
-        // ngay như trước, không qua bước xác nhận/đóng gói (nhân viên đã cầm máy trên tay).
+        // Đơn online: chỉ giữ chỗ ("giu_hang") — admin xác nhận/đổi serial ở bước xác nhận
+        // (xem DonHangService.xacNhanDonHang) mới chốt "da_ban". Đơn tại quầy (in_store): chốt
+        // bán ngay như trước, không qua bước xác nhận (nhân viên đã cầm máy trên tay).
         boolean online = "online".equals(donHang.getKenhBan());
         String trangThaiMoi = online ? "giu_hang" : "da_ban";
 

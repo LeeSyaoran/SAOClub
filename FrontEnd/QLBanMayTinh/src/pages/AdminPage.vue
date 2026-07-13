@@ -1825,9 +1825,9 @@ const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGia
 const saveOrderStatus = async () => {
   orderStatusError.value = "";
   const o = editingOrder.value;
-  if (orderStatusForm.trangThaiDonHang === 'processing' && o.trangThaiDonHang !== 'processing' && o.kenhBan === 'online') {
+  if (orderStatusForm.trangThaiDonHang === 'confirmed' && o.trangThaiDonHang !== 'confirmed' && o.kenhBan === 'online') {
     showOrderModal.value = false;
-    await openPackModal(o);
+    await openXacNhanSerialModal(o);
     return;
   }
   const body = buildOrderUpdateBody(o, {
@@ -1863,10 +1863,12 @@ const NEXT_ORDER_STATUS_LABEL = {
 const advanceOrderStatus = async (o) => {
   const next = NEXT_ORDER_STATUS[o.trangThaiDonHang];
   if (!next) return;
-  // Đơn online chuyển sang "processing" (đóng gói) phải chọn serial trước — mở modal thay
-  // vì đổi trạng thái thẳng. Đơn tại quầy đã chốt serial từ lúc tạo, không qua đây.
-  if (next === 'processing' && o.kenhBan === 'online') {
-    await openPackModal(o);
+  // Đơn online chuyển sang "confirmed" (xác nhận) phải chọn serial trước — mở modal thay
+  // vì đổi trạng thái thẳng. Sau khi xác nhận xong, bước "đóng gói" (confirmed -> processing)
+  // chỉ còn đổi trạng thái đơn thuần, không qua modal nữa. Đơn tại quầy đã chốt serial từ
+  // lúc tạo, không qua đây.
+  if (next === 'confirmed' && o.kenhBan === 'online') {
+    await openXacNhanSerialModal(o);
     return;
   }
   const body = buildOrderUpdateBody(o, {
@@ -1885,23 +1887,24 @@ const advanceOrderStatus = async (o) => {
   orders.value = await DonHangService.getAll().catch(() => orders.value);
 };
 
-// ── Modal "Chọn serial trước khi đóng gói" (chỉ đơn online) ──────────────────────
+// ── Modal "Chọn serial trước khi xác nhận" (chỉ đơn online) ──────────────────────
 // Đơn online chỉ giữ chỗ serial ("giu_hang") lúc đặt hàng — admin phải xem lại/đổi rồi
-// xác nhận ở đây trước khi đơn được đóng gói (chuyển "processing"). Serial đã giữ chỗ sẵn
-// từ lúc đặt hàng được tick trước, admin chỉ cần xác nhận hoặc đổi sang serial khác.
-const showPackModal = ref(false);
-const packOrder     = ref(null);
-const packLines     = ref([]);   // [{ ...ChiTietDonHangResponse, chosenSerialIds: Set<number> }]
-const packSerialMap = ref({});   // bienTheId -> ChiTietSanPhamResponse[]
-const packLoading   = ref(false);
-const packError     = ref('');
+// xác nhận ở đây trước khi đơn chuyển "confirmed". Sau đó bước "Đóng gói" (confirmed ->
+// processing) chỉ còn là đổi trạng thái đơn thuần. Serial đã giữ chỗ sẵn từ lúc đặt hàng
+// được tick trước, admin chỉ cần xác nhận hoặc đổi sang serial khác.
+const showXacNhanSerialModal = ref(false);
+const xacNhanOrder     = ref(null);
+const xacNhanLines     = ref([]);   // [{ ...ChiTietDonHangResponse, chosenSerialIds: Set<number> }]
+const xacNhanSerialMap = ref({});   // bienTheId -> ChiTietSanPhamResponse[]
+const xacNhanLoading   = ref(false);
+const xacNhanError     = ref('');
 
-const openPackModal = async (o) => {
-  packOrder.value = o;
-  packLines.value = [];
-  packError.value = '';
-  showPackModal.value = true;
-  packLoading.value = true;
+const openXacNhanSerialModal = async (o) => {
+  xacNhanOrder.value = o;
+  xacNhanLines.value = [];
+  xacNhanError.value = '';
+  showXacNhanSerialModal.value = true;
+  xacNhanLoading.value = true;
   try {
     const [items, reserved] = await Promise.all([
       ChiTietDonHangService.getByDonHang(o.donHangId),
@@ -1911,55 +1914,55 @@ const openPackModal = async (o) => {
     reserved.forEach((r) => {
       (reservedByLine[r.chiTietDonHangId] ??= []).push(r.chiTietId);
     });
-    packSerialMap.value = await fetchSerialMap(items.map((i) => i.bienTheId));
-    packLines.value = items.map((item) => ({
+    xacNhanSerialMap.value = await fetchSerialMap(items.map((i) => i.bienTheId));
+    xacNhanLines.value = items.map((item) => ({
       ...item,
       chosenSerialIds: new Set(reservedByLine[item.id] ?? []),
     }));
   } catch (e) {
-    packError.value = e.message;
+    xacNhanError.value = e.message;
   } finally {
-    packLoading.value = false;
+    xacNhanLoading.value = false;
   }
 };
 
 // Serial khả dụng để chọn cho 1 dòng: đang "trong_kho", hoặc đang "giu_hang" nhưng đã
 // giữ sẵn cho chính dòng này (FIFO lúc đặt hàng) — không hiện serial đang giữ cho đơn khác.
-const packAvailableSerials = (line) => {
-  const all = packSerialMap.value[line.bienTheId] ?? [];
+const xacNhanAvailableSerials = (line) => {
+  const all = xacNhanSerialMap.value[line.bienTheId] ?? [];
   return all.filter((s) => s.trangThai === 'trong_kho' || line.chosenSerialIds.has(s.chiTietId));
 };
 
-const packToggleSerial = (line, serialId) => {
+const xacNhanToggleSerial = (line, serialId) => {
   if (line.chosenSerialIds.has(serialId)) line.chosenSerialIds.delete(serialId);
   else if (line.chosenSerialIds.size < line.soLuong) line.chosenSerialIds.add(serialId);
 };
 
-const packAllLinesComplete = computed(() =>
-  packLines.value.length > 0 && packLines.value.every((l) => l.chosenSerialIds.size === l.soLuong)
+const xacNhanAllLinesComplete = computed(() =>
+  xacNhanLines.value.length > 0 && xacNhanLines.value.every((l) => l.chosenSerialIds.size === l.soLuong)
 );
 
-const confirmPack = async () => {
-  if (!packAllLinesComplete.value) return;
-  packError.value = '';
-  packLoading.value = true;
+const confirmXacNhanSerial = async () => {
+  if (!xacNhanAllLinesComplete.value) return;
+  xacNhanError.value = '';
+  xacNhanLoading.value = true;
   try {
-    const res = await DonHangService.dongGoi(packOrder.value.donHangId, {
-      lines: packLines.value.map((l) => ({
+    const res = await DonHangService.xacNhan(xacNhanOrder.value.donHangId, {
+      lines: xacNhanLines.value.map((l) => ({
         chiTietDonHangId: l.id,
         serialIds: [...l.chosenSerialIds],
       })),
     });
     if (!res.ok) {
-      packError.value = await res.text().catch(() => t('admin.errors.updateFailed', { status: res.status }));
+      xacNhanError.value = await res.text().catch(() => t('admin.errors.updateFailed', { status: res.status }));
       return;
     }
-    showPackModal.value = false;
+    showXacNhanSerialModal.value = false;
     orders.value = await DonHangService.getAll().catch(() => orders.value);
   } catch (e) {
-    packError.value = e.message;
+    xacNhanError.value = e.message;
   } finally {
-    packLoading.value = false;
+    xacNhanLoading.value = false;
   }
 };
 
@@ -2916,7 +2919,7 @@ onUnmounted(() => {
                         <button v-if="NEXT_ORDER_STATUS[o.trangThaiDonHang]" class="btn btn-sm btn-outline-success" style="font-size:0.78rem;padding:2px 8px;" @click="advanceOrderStatus(o)">
                           {{ NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].icon }} {{ t(NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].key) }}
                         </button>
-                        <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
+                        <button v-if="!['delivered','cancelled','returned'].includes(o.trangThaiDonHang)" class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
                         <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">{{ t('admin.orders.delete') }}</button>
                       </div>
                     </td>
@@ -3581,32 +3584,32 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- ══ MODAL CHỌN SERIAL TRƯỚC KHI ĐÓNG GÓI ══ -->
-        <div v-if="showPackModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="showPackModal=false">
+        <!-- ══ MODAL CHỌN SERIAL TRƯỚC KHI XÁC NHẬN ══ -->
+        <div v-if="showXacNhanSerialModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="showXacNhanSerialModal=false">
           <div class="rounded-3 p-3" style="background:var(--bg-card);width:520px;max-height:85vh;overflow-y:auto;">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <div>
                 <div class="fw-bold" style="color:var(--text-heading);">{{ t('admin.packModal.title') }}</div>
-                <div class="text-secondary" style="font-size:0.75rem;">{{ packOrder?.maDonHang }}</div>
+                <div class="text-secondary" style="font-size:0.75rem;">{{ xacNhanOrder?.maDonHang }}</div>
               </div>
-              <button class="btn-close btn-sm" @click="showPackModal=false"></button>
+              <button class="btn-close btn-sm" @click="showXacNhanSerialModal=false"></button>
             </div>
 
-            <div v-if="packLoading" class="text-secondary small text-center py-4">{{ t('admin.packModal.loading') }}</div>
+            <div v-if="xacNhanLoading" class="text-secondary small text-center py-4">{{ t('admin.packModal.loading') }}</div>
             <div v-else>
-              <div v-if="packError" class="alert alert-danger py-2 small">{{ packError }}</div>
-              <div v-for="line in packLines" :key="line.id" class="mb-3 p-2 rounded-2" style="background:var(--bg-card-inset);">
+              <div v-if="xacNhanError" class="alert alert-danger py-2 small">{{ xacNhanError }}</div>
+              <div v-for="line in xacNhanLines" :key="line.id" class="mb-3 p-2 rounded-2" style="background:var(--bg-card-inset);">
                 <div class="d-flex justify-content-between mb-1">
                   <span class="text-light">{{ productByBienThe(line.bienTheId)?.tenSanPham || line.maSku }}</span>
                   <span class="text-secondary" style="font-size:0.75rem;">{{ t('admin.packModal.selectedCount', { selected: line.chosenSerialIds.size, count: line.soLuong }) }}</span>
                 </div>
-                <div v-if="packAvailableSerials(line).length === 0" class="text-danger small">{{ t('admin.packModal.noSerialAvailable') }}</div>
+                <div v-if="xacNhanAvailableSerials(line).length === 0" class="text-danger small">{{ t('admin.packModal.noSerialAvailable') }}</div>
                 <div v-else class="d-flex flex-wrap gap-2">
-                  <button v-for="s in packAvailableSerials(line)" :key="s.chiTietId"
+                  <button v-for="s in xacNhanAvailableSerials(line)" :key="s.chiTietId"
                           class="btn btn-sm"
                           :class="line.chosenSerialIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-secondary'"
                           style="font-family:monospace;font-size:0.75rem;"
-                          @click="packToggleSerial(line, s.chiTietId)">
+                          @click="xacNhanToggleSerial(line, s.chiTietId)">
                     {{ s.soSerial }}
                   </button>
                 </div>
@@ -3614,8 +3617,8 @@ onUnmounted(() => {
             </div>
 
             <div class="d-flex justify-content-end gap-2 mt-3">
-              <button class="btn btn-sm btn-outline-secondary" @click="showPackModal=false">{{ t('admin.packModal.cancel') }}</button>
-              <button class="btn btn-sm btn-success" :disabled="!packAllLinesComplete || packLoading" @click="confirmPack">{{ t('admin.packModal.confirm') }}</button>
+              <button class="btn btn-sm btn-outline-secondary" @click="showXacNhanSerialModal=false">{{ t('admin.packModal.cancel') }}</button>
+              <button class="btn btn-sm btn-success" :disabled="!xacNhanAllLinesComplete || xacNhanLoading" @click="confirmXacNhanSerial">{{ t('admin.packModal.confirm') }}</button>
             </div>
           </div>
         </div>

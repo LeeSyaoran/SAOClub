@@ -903,12 +903,12 @@ export default {
     },
 
     packModal: {
-      title: "梱包前にシリアルを選択",
+      title: "確認前にシリアルを選択",
       loading: "読み込み中...",
       selectedCount: "{selected}/{count} 選択済み",
       noSerialAvailable: "この製品には利用可能なシリアルがありません",
       cancel: "キャンセル",
-      confirm: "梱包を確定",
+      confirm: "注文を確定",
     },
 
     placeholder: {

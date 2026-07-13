@@ -2,7 +2,7 @@ package com.example.backend.controller;
 
 import com.example.backend.entity.DonHang;
 import com.example.backend.request.DonHangRequest;
-import com.example.backend.request.DongGoiRequest;
+import com.example.backend.request.XacNhanDonHangRequest;
 import com.example.backend.request.MergeOrderRequest;
 import com.example.backend.response.DonHangResponse;
 import com.example.backend.service.DonHangService;
@@ -75,11 +75,11 @@ public class DonHangController {
         return ResponseEntity.ok().build();
     }
 
-    // Chọn serial cho từng dòng + chốt bán + chuyển sang "processing" (đóng gói) — chỉ
+    // Chọn serial cho từng dòng + chốt bán + chuyển sang "confirmed" (xác nhận) — chỉ
     // đơn online (đơn tại quầy đã chốt serial ngay lúc tạo, không qua bước này).
-    @PatchMapping("{id}/dong-goi")
-    public ResponseEntity<Void> dongGoi(@PathVariable Integer id, @Valid @RequestBody DongGoiRequest request) {
-        donHangService.dongGoi(id, request);
+    @PatchMapping("{id}/xac-nhan")
+    public ResponseEntity<Void> xacNhan(@PathVariable Integer id, @Valid @RequestBody XacNhanDonHangRequest request) {
+        donHangService.xacNhanDonHang(id, request);
         return ResponseEntity.ok().build();
     }
 

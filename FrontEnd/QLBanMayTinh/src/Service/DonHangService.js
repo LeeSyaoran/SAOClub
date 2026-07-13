@@ -33,6 +33,6 @@ export const merge = (targetId, sourceIds) =>
 
 export const addChiTiet = (body) => post('/api/chi-tiet-don-hang', body);
 
-// Chọn serial cho từng dòng + chốt bán + chuyển đơn sang "processing" (đóng gói) — chỉ
+// Chọn serial cho từng dòng + chốt bán + chuyển đơn sang "confirmed" (xác nhận) — chỉ
 // dùng cho đơn online. body: { lines: [{ chiTietDonHangId, serialIds: [...] }] }
-export const dongGoi = (donHangId, body) => patch(`/api/don-hang/${donHangId}/dong-goi`, body);
+export const xacNhan = (donHangId, body) => patch(`/api/don-hang/${donHangId}/xac-nhan`, body);

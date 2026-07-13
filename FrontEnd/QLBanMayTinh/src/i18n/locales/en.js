@@ -903,12 +903,12 @@ export default {
     },
 
     packModal: {
-      title: "Choose serial before packing",
+      title: "Choose serial before confirming",
       loading: "Loading...",
       selectedCount: "{selected}/{count} selected",
       noSerialAvailable: "No serial available for this product",
       cancel: "Cancel",
-      confirm: "Confirm packing",
+      confirm: "Confirm order",
     },
 
     placeholder: {

@@ -10,8 +10,8 @@ import com.example.backend.entity.PhieuTraHang;
 import com.example.backend.entity.PhieuBaoHanh;
 import com.example.backend.repository.*;
 import com.example.backend.request.DonHangRequest;
-import com.example.backend.request.DongGoiLineRequest;
-import com.example.backend.request.DongGoiRequest;
+import com.example.backend.request.XacNhanDonHangLineRequest;
+import com.example.backend.request.XacNhanDonHangRequest;
 import com.example.backend.response.DonHangResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -154,18 +154,20 @@ public class DonHangService {
         donHangRepository.deleteById(id);
     }
 
-    // Chọn serial cho từng dòng + chốt "da_ban" + chuyển trạng thái "processing" trong 1
+    // Chọn serial cho từng dòng + chốt "da_ban" + chuyển trạng thái "confirmed" trong 1
     // transaction — chỉ áp dụng đơn online (đơn tại quầy đã chốt serial ngay lúc tạo dòng
-    // đơn, không qua bước xác nhận/đóng gói nên không cần gọi endpoint này).
+    // đơn, không qua bước xác nhận nên không cần gọi endpoint này). Sau khi xác nhận xong,
+    // bước "đóng gói" (confirmed → processing) chỉ còn là đổi trạng thái đơn thuần, serial
+    // đã chốt xong ở đây rồi.
     @Transactional
-    public void dongGoi(Integer donHangId, DongGoiRequest request) {
+    public void xacNhanDonHang(Integer donHangId, XacNhanDonHangRequest request) {
         DonHang donHang = getById(donHangId);
         if (!"online".equals(donHang.getKenhBan()))
-            throw new IllegalArgumentException("Chỉ đơn hàng online mới cần chọn serial trước khi đóng gói");
-        if (!"confirmed".equals(donHang.getTrangThaiDonHang()))
-            throw new IllegalArgumentException("Đơn hàng phải ở trạng thái 'Đã xác nhận' mới đóng gói được");
+            throw new IllegalArgumentException("Chỉ đơn hàng online mới cần chọn serial trước khi xác nhận");
+        if (!"pending".equals(donHang.getTrangThaiDonHang()))
+            throw new IllegalArgumentException("Đơn hàng phải ở trạng thái 'Chờ xác nhận' mới xác nhận được");
 
-        for (DongGoiLineRequest line : request.getLines()) {
+        for (XacNhanDonHangLineRequest line : request.getLines()) {
             ChiTietDonHang item = chiTietDonHangRepository.findById(line.getChiTietDonHangId())
                     .orElseThrow(() -> new IllegalArgumentException("Dòng đơn hàng không tồn tại với id: " + line.getChiTietDonHangId()));
             if (!item.getDonHang().getId().equals(donHangId))
@@ -213,13 +215,13 @@ public class DonHangService {
                 chiTietDonHangSerialRepository.save(link);
             }
 
-            // Đồng bộ serial đại diện trên FK đơn — nếu admin đổi serial khác lúc đóng gói,
+            // Đồng bộ serial đại diện trên FK đơn — nếu admin đổi serial khác lúc xác nhận,
             // các nơi hiển thị dựa trên FK này (chi tiết đơn, bảo hành...) vẫn đúng.
             item.setChiTietSanPham(finalSerials.get(0));
             chiTietDonHangRepository.save(item);
         }
 
-        donHang.setTrangThaiDonHang("processing");
+        donHang.setTrangThaiDonHang("confirmed");
         donHangRepository.save(donHang);
         sseService.notifyOrderUpdate(donHangId);
     }
@@ -244,7 +246,12 @@ public class DonHangService {
         DonHang target = getById(targetId);
         for (Integer sourceId : sourceIds) {
             if (sourceId.equals(targetId)) continue;
-            getById(sourceId); // validate tồn tại trước khi thao tác
+            DonHang source = getById(sourceId);
+            // Đơn "pending" (chưa xác nhận) chưa chắc admin đã kiểm tra kỹ nội dung —
+            // gộp lúc này dễ gộp nhầm đơn khách vừa đặt lỡ tay. Bắt buộc xác nhận trước.
+            if ("pending".equals(source.getTrangThaiDonHang()))
+                throw new IllegalArgumentException(
+                        "Đơn #" + sourceId + " chưa được xác nhận, không thể gộp");
             List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(sourceId);
             for (ChiTietDonHang item : items) {
                 item.setDonHang(target);
