@@ -366,12 +366,22 @@ CREATE TABLE chi_tiet_don_hang_serial (
 );
 GO
 
+-- DB đã tồn tại từ trước (tạo bằng bản dump cũ của file này) cần chạy thêm ALTER dưới đây —
+-- CREATE TABLE ở trên chỉ áp dụng cho DB tạo mới từ đầu. Không có ALTER này, insert
+-- lich_su_ton_kho với loai_bien_dong = 'giu_hang' (đơn online giữ chỗ serial) sẽ bị SQL
+-- Server từ chối vì vi phạm CK_lsdk_loai, làm rollback toàn bộ giao dịch đặt hàng online.
+-- ALTER TABLE lich_su_ton_kho DROP CONSTRAINT CK_lsdk_loai;
+-- ALTER TABLE lich_su_ton_kho ADD CONSTRAINT CK_lsdk_loai
+--     CHECK (loai_bien_dong IN (N'nhap', N'xuat_ban', N'tra_hang', N'dieu_chinh', N'huy', N'giu_hang'));
+-- GO
+
 CREATE TABLE lich_su_ton_kho (
     lich_su_id        INT            IDENTITY(1,1) PRIMARY KEY,
     bien_the_id       INT            NOT NULL,
     chi_tiet_id       INT            NULL,
     loai_bien_dong    NVARCHAR(30)   NOT NULL
-        CONSTRAINT CK_lsdk_loai CHECK (loai_bien_dong IN (N'nhap', N'xuat_ban', N'tra_hang', N'dieu_chinh', N'huy')),
+        -- "giu_hang": giữ chỗ serial cho đơn online lúc đặt hàng, trước khi đóng gói chốt "da_ban".
+        CONSTRAINT CK_lsdk_loai CHECK (loai_bien_dong IN (N'nhap', N'xuat_ban', N'tra_hang', N'dieu_chinh', N'huy', N'giu_hang')),
     so_luong_thay_doi INT            NOT NULL,
     don_hang_id       INT            NULL,
     phieu_nhap_id     INT            NULL,

@@ -58,12 +58,16 @@ nếu donHang.kenhBan == "online":
     FIFO chọn đủ soLuong serial trong_kho (như logic hiện tại)
     mỗi serial: trangThai = "giu_hang"
     lưu (chiTietDonHang, serial) vào ChiTietDonHangSerial cho từng serial
-    KHÔNG set ChiTietDonHang.chiTietSanPham (để null)
+    VẪN set ChiTietDonHang.chiTietSanPham = serial đại diện (serial đầu tiên) — không để null,
+    để các nơi hiển thị dựa trên FK này (chi tiết đơn, bảo hành...) vẫn có dữ liệu trước khi
+    đóng gói; bảng join mới mới là nguồn đầy đủ khi so_luong > 1
 ngược lại (in_store / khác):
     giữ nguyên 100% logic hiện tại (chiTietId chỉ định tay hoặc FIFO, set "da_ban", gán FK đơn)
 ```
 
-Lịch sử tồn kho (`LichSuTonKho`, field `loaiBienDong` là chuỗi tự do, không phải enum cứng trong code): nhánh online ghi `loaiBienDong = "giu_hang"` thay vì `"xuat_ban"` — đây là lúc trigger DB `trg_CapNhatTonKhoThucTe` thực sự trừ tồn kho thực tế (serial rời khỏi `trong_kho`). Lúc đóng gói (`giu_hang` → `da_ban`), serial không quay lại `trong_kho` nên trigger không chạy lại — không cần ghi thêm dòng `LichSuTonKho` mới ở bước này (không có biến động số lượng tồn kho thực tế nào để log).
+Lịch sử tồn kho (`LichSuTonKho`, field `loaiBienDong`): nhánh online ghi `loaiBienDong = "giu_hang"` thay vì `"xuat_ban"` — đây là lúc trigger DB `trg_CapNhatTonKhoThucTe` thực sự trừ tồn kho thực tế (serial rời khỏi `trong_kho`). Lúc đóng gói (`giu_hang` → `da_ban`), serial không quay lại `trong_kho` nên trigger không chạy lại — không cần ghi thêm dòng `LichSuTonKho` mới ở bước này (không có biến động số lượng tồn kho thực tế nào để log).
+
+**Lưu ý quan trọng (phát hiện ở whole-branch review, đã sửa):** `loaiBienDong` **không phải** chuỗi tự do — cột `loai_bien_dong` có ràng buộc `CHECK` (`CK_lsdk_loai`) trong `Database/QLBanMayTinh.sql`, chỉ cho phép `nhap|xuat_ban|tra_hang|dieu_chinh|huy`. Giá trị `"giu_hang"` phải được thêm vào danh sách cho phép trong constraint này, nếu không insert sẽ bị SQL Server từ chối và toàn bộ giao dịch đặt hàng online sẽ rollback.
 
 ### Endpoint mới: `PATCH /api/don-hang/{id}/dong-goi`
 
@@ -119,7 +123,7 @@ Cả `advanceOrderStatus` (nút "📦 Đóng gói" nhanh trên bảng) và `save
 
 Thêm test ở tầng service cho nhánh logic mới (theo pattern test hiện có trong repo, nếu có; nếu chưa có test nào cho tầng service thì viết 1 test đơn giản không cần framework phức tạp):
 
-1. Đặt đơn online, `soLuong = 2` → xác nhận 2 serial được đánh `giu_hang` và liên kết đúng qua bảng join, field `ChiTietDonHang.chiTietSanPham` vẫn `null`.
+1. Đặt đơn online, `soLuong = 2` → xác nhận 2 serial được đánh `giu_hang` và liên kết đúng qua bảng join, field `ChiTietDonHang.chiTietSanPham` được gán serial đại diện (serial đầu tiên).
 2. Gọi `dong-goi` với đúng serial đã giữ chỗ → xác nhận serial chuyển `da_ban`, đơn chuyển `processing`.
 3. Gọi `dong-goi` thiếu serial cho 1 dòng → xác nhận bị từ chối, trạng thái đơn không đổi.
 4. Hủy đơn đang ở trạng thái đã giữ chỗ (`giu_hang`) → xác nhận serial quay lại `trong_kho`.
