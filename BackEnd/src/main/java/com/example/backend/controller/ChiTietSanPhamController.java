@@ -3,6 +3,7 @@ package com.example.backend.controller;
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.request.ChiTietSanPhamRequest;
 import com.example.backend.response.ChiTietSanPhamResponse;
+import com.example.backend.response.WarrantyStatusResponse;
 import com.example.backend.service.ChiTietSanPhamService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,5 +52,12 @@ public class ChiTietSanPhamController {
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         chiTietSanPhamService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Serial đã bán còn trong hạn bảo hành (tính từ ngày giao thực tế) — serial hết hạn
+    // tự động không còn xuất hiện ở đây.
+    @GetMapping("con-bao-hanh")
+    public List<WarrantyStatusResponse> getStillUnderWarranty() {
+        return chiTietSanPhamService.getStillUnderWarranty();
     }
 }

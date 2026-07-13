@@ -25,3 +25,24 @@ export const orderStatusIcon = (s) => {
   if (s === 'returned')   return '↩️';
   return '●';
 };
+
+// Trạng thái THANH TOÁN (khác trạng thái đơn hàng ở trên) — dùng chung cho bảng đơn hàng
+// admin, modal chi tiết đơn, và thẻ đơn hàng bên trang khách (trước đây mỗi chỗ hiển thị
+// khác nhau: có chỗ hiện đúng nhãn tiếng Việt, có chỗ hiện thẳng chuỗi "unpaid"/"paid" thô).
+export const paymentStatusLabel = (s) => t(`admin.paymentStatus.${s}`);
+
+export const paymentStatusColor = (s) => {
+  if (s === 'unpaid')   return { bg: 'rgba(148,163,184,0.15)', text: '#94a3b8' };
+  if (s === 'partial')  return { bg: 'rgba(250,204,21,0.15)',  text: '#facc15' };
+  if (s === 'paid')     return { bg: 'rgba(34,197,94,0.15)',   text: '#22c55e' };
+  if (s === 'refunded') return { bg: 'rgba(139,92,246,0.15)',  text: '#a78bfa' };
+  return { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af' };
+};
+
+export const paymentStatusIcon = (s) => {
+  if (s === 'unpaid')   return '⏳';
+  if (s === 'partial')  return '💰';
+  if (s === 'paid')     return '✅';
+  if (s === 'refunded') return '↩️';
+  return '●';
+};

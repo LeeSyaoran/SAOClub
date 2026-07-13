@@ -19,7 +19,7 @@ public class ChiTietSanPham {
     @Column(name = "chi_tiet_id")
     private Integer chiTietId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bien_the_id", nullable = false)
     private BienTheSanPham bienThe;
 

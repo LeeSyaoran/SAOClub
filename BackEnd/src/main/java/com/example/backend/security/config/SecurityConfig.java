@@ -70,6 +70,8 @@ public class SecurityConfig {
                 // Public: đăng nhập, đăng ký
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/khach-hang/register").permitAll()
+                .requestMatchers("/api/khach-hang/tim-theo-sdt").permitAll()
+                .requestMatchers("/api/khach-hang/khach-vang-lai").permitAll()
 
                 // Public: xem sản phẩm, danh mục (khách chưa đăng nhập vẫn xem được)
                 .requestMatchers("/api/san-pham/**").permitAll()

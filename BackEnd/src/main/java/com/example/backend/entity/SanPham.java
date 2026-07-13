@@ -22,15 +22,15 @@ public class SanPham {
     @Column(name = "ten_san_pham", length = 200)
     private String tenSanPham;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "thuong_hieu_id", nullable = false)
     private ThuongHieu thuongHieu;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "danh_muc_id", nullable = false)
     private DanhMuc danhMuc;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nha_cung_cap_id")
     private NhaCungCap nhaCungCap;
 

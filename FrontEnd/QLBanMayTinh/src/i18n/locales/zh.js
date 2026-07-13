@@ -341,7 +341,7 @@ export default {
     points: "{points} 积分",
     tabOrders: "当前订单",
     tabHistory: "购买历史",
-    tabPending: "待确认",
+    tabPending: "处理中",
     tabShipping: "配送中",
     tabCompleted: "已完成",
     tabCancelled: "已取消/退货",

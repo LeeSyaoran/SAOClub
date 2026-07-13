@@ -32,4 +32,7 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
     ORDER BY sp.sanPhamId
     """)
     List<BienTheSanPhamResponse> hienThiBienTheSanPham();
+
+    // Toàn bộ biến thể của 1 sản phẩm — dùng khi xóa cả sản phẩm (SanPhamService.deleteSanPham).
+    List<BienTheSanPham> findBySanPham_SanPhamId(Integer sanPhamId);
 }

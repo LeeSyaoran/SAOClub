@@ -341,7 +341,7 @@ export default {
     points: "{points} ポイント",
     tabOrders: "進行中の注文",
     tabHistory: "購入履歴",
-    tabPending: "確認待ち",
+    tabPending: "処理中",
     tabShipping: "配送中",
     tabCompleted: "完了",
     tabCancelled: "キャンセル/返品",

@@ -5,7 +5,7 @@
 // Emit ra: go-home, add-to-cart (App.vue sở hữu giỏ hàng, xem xem sản phẩm rồi
 // mua lại sẽ báo lên App.vue thêm hộ)
 // ========================================================
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { AuthStore, setSession } from "../stores/index.js";
 import { I18nStore, t } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
@@ -23,10 +23,13 @@ const auth = AuthStore;
 // Tách theo trạng thái kiểu Shopee thay vì gộp chung "hiện tại/lịch sử"
 const activeTab = ref("pending"); // 'pending' | 'shipping' | 'completed' | 'cancelled' | 'settings'
 
-// Nhóm trạng thái đơn hàng (trangThaiDonHang) ứng với từng tab
+// Nhóm trạng thái đơn hàng (trangThaiDonHang) ứng với từng tab — "processing" (đang đóng
+// gói) vẫn nằm ở tab "Chờ xác nhận" (chưa giao cho shipper), chỉ chuyển sang tab "Đang
+// giao" khi admin bấm "Giao hàng" (trangThaiDonHang -> shipping). Xem AdminPage.vue
+// advanceOrderStatus() cho luồng cập nhật phía admin.
 const TAB_STATUS_GROUPS = {
-  pending:   ["pending", "confirmed"],
-  shipping:  ["processing", "shipping"],
+  pending:   ["pending", "confirmed", "processing"],
+  shipping:  ["shipping"],
   completed: ["delivered"],
   cancelled: ["cancelled", "returned"],
 };
@@ -94,14 +97,12 @@ const viewProductDetail = (item) => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [allOrders, allProducts] = await Promise.all([
-      DonHangService.getAll().catch(() => []),
+    const [myOrders, allProducts] = await Promise.all([
+      DonHangService.getByKhachHang(auth.user?.id).catch(() => []),
       SanPhamService.getAll().catch(() => []),
     ]);
     products.value = allProducts;
-    orders.value = allOrders
-      .filter(o => o.khachHangId === auth.user?.id)
-      .sort((a, b) => new Date(b.ngayDat) - new Date(a.ngayDat));
+    orders.value = myOrders.sort((a, b) => new Date(b.ngayDat) - new Date(a.ngayDat));
 
     const entries = await Promise.all(
       orders.value.map(async (o) => [
@@ -117,9 +118,9 @@ const fetchData = async () => {
 
 // ── Trạng thái đơn hàng: nhãn + màu (dùng chung — xem src/utils/orderStatus.js) ──
 
-// Map trạng thái đơn hàng → bước trên timeline (0..3)
+// Map trạng thái đơn hàng → bước trên timeline (0..4)
 const orderStep = (s) => ({
-  pending: 0, confirmed: 1, processing: 1, shipping: 2, delivered: 3,
+  pending: 0, confirmed: 1, processing: 2, shipping: 3, delivered: 4,
 })[s] ?? 0;
 
 const formatPrice = (v) =>
@@ -183,10 +184,15 @@ const saveProfile = async () => {
   }
 };
 
+// Admin đổi trạng thái đơn ở tab khác -> trang này tự tải lại, khỏi cần F5.
+let orderSse = null;
 onMounted(() => {
   fetchData();
   fetchProfile();
+  orderSse = new EventSource(`/api/don-hang/events?token=${encodeURIComponent(auth.user?.token ?? '')}`);
+  orderSse.addEventListener('order-updated', () => { fetchData(); });
 });
+onUnmounted(() => { if (orderSse) orderSse.close(); });
 </script>
 
 <template>

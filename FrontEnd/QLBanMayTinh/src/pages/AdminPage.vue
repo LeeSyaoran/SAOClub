@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, reactive } from "vue";
 import { AuthStore, clearSession } from "../stores/index.js";
 import { t } from "../i18n/index.js";
-import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
+import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon } from "../utils/orderStatus.js";
+import { nowLocalIso } from "../utils/datetime.js";
 import * as SanPhamService   from "../Service/SanPhamService.js";
 import * as BienTheSanPhamService from "../Service/BienTheSanPhamService.js";
 import * as KhachHangService from "../Service/KhachHangService.js";
@@ -14,11 +15,16 @@ import * as DanhMucService         from "../Service/DanhMucService.js";
 import * as DmService              from "../Service/DmService.js";
 import * as ChiTietSanPhamService  from "../Service/ChiTietSanPhamService.js";
 import * as ChiTietDonHangService  from "../Service/ChiTietDonHangService.js";
+import * as PhieuNhapKhoService    from "../Service/PhieuNhapKhoService.js";
+import * as ChiTietPhieuNhapService from "../Service/ChiTietPhieuNhapService.js";
+import * as DashboardService       from "../Service/DashboardService.js";
+import * as XLSX from "xlsx";
 import DonutChart from "../components/common/DonutChart.vue";
 import BarChart   from "../components/common/BarChart.vue";
 import GaugeChart from "../components/common/GaugeChart.vue";
 import TrendChart from "../components/common/TrendChart.vue";
 import ConfirmDialog from "../components/common/ConfirmDialog.vue";
+import SearchSelect from "../components/common/SearchSelect.vue";
 import { askConfirm } from "../stores/confirm.js";
 import { ThemeStore, toggleTheme } from "../stores/theme.js";
 import { authHeaders } from "../Service/api.js";
@@ -31,7 +37,9 @@ const showToast = (msg, type = 'error') => {
   toast.msg  = msg;
   toast.type = type;
   toast.show = true;
-  toastTimer = setTimeout(() => { toast.show = false; }, 3500);
+  // Lỗi (đặc biệt lý do chặn xóa) thường dài hơn — cho thêm thời gian đọc so với thông báo
+  // thành công ngắn gọn.
+  toastTimer = setTimeout(() => { toast.show = false; }, type === 'error' ? 6000 : 3500);
 };
 
 // ── Navigation ───────────────────────────────────────────────────────────────
@@ -39,7 +47,7 @@ const currentRole = ref("admin");
 const currentPage = ref("dashboard");
 const navigate = (page) => {
   currentPage.value = page;
-  if (page === "staff") ensureChucVuList();
+  if (page === "staff") { ensureChucVuList(); ensureStaffData(); }
 };
 const switchRole = (role) => {
   currentRole.value = role;
@@ -90,6 +98,8 @@ const customers = ref([]);
 const staff = ref([]);
 const promotions = ref([]);
 const inventory = ref([]);
+const phieuNhapList = ref([]);
+const chiTietPhieuNhapList = ref([]);
 const categories = ref([]);
 const brands = ref([]);
 const suppliers = ref([]);
@@ -222,6 +232,10 @@ const filteredGroupedProducts = computed(() => {
 // products.value co 1 dong/bien the nen dem thang se ra con so sai (vd 42 thay vi 12 san pham that)
 const totalProducts = computed(() => groupedProducts.value.length);
 const totalOrders = computed(() => orders.value.length);
+// Badge sidebar "Đơn hàng" chỉ đếm đơn hôm nay (khác totalOrders — vẫn dùng cho KPI Dashboard).
+const todayOrdersCount = computed(
+  () => orders.value.filter((o) => o.ngayDat?.slice(0, 10) === toDateInputValue(new Date())).length,
+);
 const totalCustomers = computed(() => customers.value.length);
 const totalRevenue = computed(() =>
   orders.value.reduce((s, o) => s + (Number(o.thanhTien) || 0), 0),
@@ -315,45 +329,32 @@ const weekOrderStatusChartData = computed(() =>
     color: orderStatusColor(row.status).text,
   }))
 );
-// Số lượng đã bán theo tên sản phẩm — tổng hợp từ chi tiết của toàn bộ đơn hàng,
-// để trả lời "sản phẩm nào bán chạy / bán chậm" cho Dashboard.
-const productSalesQty = ref({}); // { tenSanPham: soLuongDaBan }
+// Top 5 bán chạy/bán chậm cho Dashboard — tính bằng SUM/GROUP BY ở backend (xem
+// DashboardController), thay vì tải toàn bộ chi tiết đơn hàng (hàng nghìn dòng) về
+// JS để cộng dồn. Chỉ trả về 5+5 dòng mỗi lần thay vì toàn bộ chi_tiet_don_hang.
+const topSellingRaw = ref([]); // [{ tenSanPham, soLuongDaBan }]
+const slowSellingRaw = ref([]);
 const fetchProductSales = async () => {
-  // Gọi 1 lần duy nhất lấy toàn bộ chi tiết đơn hàng, thay vì gọi riêng cho từng đơn
-  // (với hàng nghìn đơn, gọi riêng lẻ từng cái sẽ làm treo trình duyệt/backend).
-  const details = await ChiTietDonHangService.getAll().catch(() => []);
-  const map = {};
-  details.forEach((item) => {
-    const p = products.value.find((pp) => pp.bienTheId === item.bienTheId);
-    const name = p?.tenSanPham || item.maSku || t('admin.dashboard.uncategorized');
-    map[name] = (map[name] || 0) + (item.soLuong || 0);
-  });
-  productSalesQty.value = map;
+  [topSellingRaw.value, slowSellingRaw.value] = await Promise.all([
+    DashboardService.getTopSelling(5).catch(() => []),
+    DashboardService.getSlowSelling(5).catch(() => []),
+  ]);
 };
 
-// Ghép với TOÀN BỘ tên sản phẩm (kể cả sản phẩm chưa từng bán = 0) để biểu đồ
-// "bán chậm" phản ánh đúng các sản phẩm tồn đọng, không chỉ sản phẩm đã có đơn.
-const productSalesFull = computed(() => {
-  const uniqueNames = [...new Set(products.value.map((p) => p.tenSanPham).filter(Boolean))];
-  return uniqueNames.map((name) => ({
-    name,
-    qty: productSalesQty.value[name] || 0,
-    image: products.value.find((p) => p.tenSanPham === name)?.hinhAnhChinh || '',
-  }));
-});
+const imageByProductName = computed(() => new Map(products.value.map((p) => [p.tenSanPham, p.hinhAnhChinh])));
 
 const topSellingChart = computed(() =>
-  [...productSalesFull.value]
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 5)
-    .map((r) => ({ label: r.name, value: r.qty, image: r.image, displayValue: t('admin.dashboard.unitsSold', { count: r.qty }), color: '#22c55e' }))
+  topSellingRaw.value.map((r) => ({
+    label: r.tenSanPham, value: r.soLuongDaBan, image: imageByProductName.value.get(r.tenSanPham) || '',
+    displayValue: t('admin.dashboard.unitsSold', { count: r.soLuongDaBan }), color: '#22c55e',
+  }))
 );
 
 const slowSellingChart = computed(() =>
-  [...productSalesFull.value]
-    .sort((a, b) => a.qty - b.qty)
-    .slice(0, 5)
-    .map((r) => ({ label: r.name, value: r.qty, image: r.image, displayValue: t('admin.dashboard.unitsSold', { count: r.qty }), color: '#f87171' }))
+  slowSellingRaw.value.map((r) => ({
+    label: r.tenSanPham, value: r.soLuongDaBan, image: imageByProductName.value.get(r.tenSanPham) || '',
+    displayValue: t('admin.dashboard.unitsSold', { count: r.soLuongDaBan }), color: '#f87171',
+  }))
 );
 
 // ── Gauge KPI: 3 chỉ số sức khỏe vận hành dạng % ──────────────────────────────
@@ -419,11 +420,48 @@ const lowStockItems = computed(() =>
 const outOfStockItems = computed(() =>
   inventory.value.filter(t => (t.soLuongTon ?? 0) === 0),
 );
+// "Sắp hết" (khác Hết hàng): còn hàng nhưng <= tối thiểu
+const lowStockOnlyItems = computed(() =>
+  inventory.value.filter(t => (t.soLuongTon ?? 0) > 0 && t.tonKhoToiThieu != null && t.soLuongTon <= t.tonKhoToiThieu),
+);
+const totalStockQty = computed(() => inventory.value.reduce((s, i) => s + (i.soLuongTon || 0), 0));
 
 // ── Inventory grouped by product ──────────────────────────────────────────────
+const khoTab = ref('ton-kho'); // 'ton-kho' | 'phieu-nhap' | 'bao-hanh'
+
+// ── Bảo hành: serial đã bán còn trong hạn (server tự lọc, hết hạn tự rớt khỏi danh sách) ──
+const warrantyList = ref([]);
+const warrantyLoading = ref(false);
+const warrantySearch = ref('');
+let warrantyPromise = null;
+const ensureWarrantyData = (force = false) => {
+  if (warrantyPromise && !force) return warrantyPromise;
+  warrantyLoading.value = true;
+  warrantyPromise = ChiTietSanPhamService.getUnderWarranty().catch(() => []).then((list) => {
+    warrantyList.value = list;
+    warrantyLoading.value = false;
+  });
+  return warrantyPromise;
+};
+const filteredWarranty = computed(() => {
+  const q = warrantySearch.value.trim().toLowerCase();
+  if (!q) return warrantyList.value;
+  return warrantyList.value.filter((w) =>
+    [w.soSerial, w.maSku, w.tenSanPham, w.maDonHang, w.tenKhachHang, w.soDienThoaiKhachHang]
+      .some((v) => (v || '').toLowerCase().includes(q)));
+});
+const daysUntilExpiry = (isoDate) => Math.ceil((new Date(isoDate) - new Date()) / 86400000);
 const inventorySearch = ref('');
+const inventoryStatusFilter = ref('all'); // all | out | low | ok
 const expandedGroups = ref({});
 const toggleGroup = (name) => { expandedGroups.value[name] = !expandedGroups.value[name]; };
+const allGroupsExpanded = computed(() =>
+  inventoryGrouped.value.length > 0 && inventoryGrouped.value.every(g => expandedGroups.value[g.name]),
+);
+const toggleAllGroups = () => {
+  const next = !allGroupsExpanded.value;
+  inventoryGrouped.value.forEach(g => { expandedGroups.value[g.name] = next; });
+};
 
 const inventoryGrouped = computed(() => {
   const groups = {};
@@ -440,6 +478,12 @@ const inventoryGrouped = computed(() => {
       const outCount = items.filter(i => (i.soLuongTon ?? 0) === 0).length;
       const lowCount = items.filter(i => i.soLuongTon != null && i.tonKhoToiThieu != null && i.soLuongTon > 0 && i.soLuongTon <= i.tonKhoToiThieu).length;
       return { name, items, hinhAnh: p?.hinhAnhChinh, thuongHieu: p?.thuongHieu, totalTon, outCount, lowCount };
+    })
+    .filter(g => {
+      if (inventoryStatusFilter.value === 'out') return g.outCount > 0;
+      if (inventoryStatusFilter.value === 'low') return g.lowCount > 0;
+      if (inventoryStatusFilter.value === 'ok') return g.outCount === 0 && g.lowCount === 0;
+      return true;
     });
 });
 
@@ -450,12 +494,354 @@ const stockClass = (item) => {
   return 'text-success';
 };
 
+// ── Phieu nhap kho ───────────────────────────────────────────────────────────
+let phieuNhapDataPromise = null;
+const ensurePhieuNhapData = () => {
+  if (phieuNhapDataPromise) return phieuNhapDataPromise;
+  phieuNhapDataPromise = Promise.all([
+    PhieuNhapKhoService.getAll().catch(() => []),
+    ChiTietPhieuNhapService.getAll().catch(() => []),
+    ensureProductRefData(),
+    ensureStaffData(),
+  ]).then(([pn, ct]) => {
+    phieuNhapList.value = pn;
+    chiTietPhieuNhapList.value = ct;
+  });
+  return phieuNhapDataPromise;
+};
+
+const supplierName = (id) => suppliers.value.find(s => s.nhaCungCapId === id)?.tenNhaCungCap ?? '—';
+const staffName = (id) => staff.value.find(s => s.nhanVienId === id)?.hoTen ?? '—';
+
+// Cùng tông màu với orderStatusColor() (utils/orderStatus.js) — dùng lại đúng hex
+// cho vàng/xanh lá/đỏ để nhất quán trạng thái trên toàn app.
+const phieuNhapStatusColor = (s) => {
+  if (s === 'hoan_thanh') return { bg: 'rgba(34,197,94,0.15)',  text: '#22c55e' };
+  if (s === 'huy')        return { bg: 'rgba(239,68,68,0.15)',  text: '#f87171' };
+  return                         { bg: 'rgba(250,204,21,0.15)', text: '#facc15' }; // cho_duyet
+};
+const phieuNhapStatusIcon = (s) => (s === 'hoan_thanh' ? '✅' : s === 'huy' ? '❌' : '⏳');
+
+const phieuNhapCounts = computed(() => ({
+  total: phieuNhapList.value.length,
+  choDuyet: phieuNhapList.value.filter(p => p.trangThai === 'cho_duyet').length,
+  hoanThanh: phieuNhapList.value.filter(p => p.trangThai === 'hoan_thanh').length,
+  huy: phieuNhapList.value.filter(p => p.trangThai === 'huy').length,
+}));
+
+const phieuNhapSearch = ref('');
+const phieuNhapStatusFilter = ref('');
+const filteredPhieuNhap = computed(() =>
+  phieuNhapList.value
+    .filter(p => !phieuNhapSearch.value || (p.maPhieuNhap ?? '').toLowerCase().includes(phieuNhapSearch.value.toLowerCase()))
+    .filter(p => !phieuNhapStatusFilter.value || p.trangThai === phieuNhapStatusFilter.value)
+    .sort((a, b) => new Date(b.ngayNhap) - new Date(a.ngayNhap)),
+);
+
+// San pham + bien the de chon khi tao dong phieu nhap — lay tu ton kho (da co san, khoi tai them)
+// Options dang {value,label} de dung truc tiep voi SearchSelect.
+const productOptionsForPhieuNhap = computed(() => {
+  const map = new Map();
+  for (const item of inventory.value) {
+    const sp = item.bienThe?.sanPham;
+    if (sp?.sanPhamId != null && !map.has(sp.sanPhamId)) {
+      map.set(sp.sanPhamId, { value: sp.sanPhamId, label: sp.tenSanPham ?? '' });
+    }
+  }
+  return [...map.values()];
+});
+const variantOptionsByProduct = computed(() => {
+  const map = new Map();
+  for (const item of inventory.value) {
+    const bt = item.bienThe;
+    const sanPhamId = bt?.sanPham?.sanPhamId;
+    if (sanPhamId == null || bt?.bienTheId == null) continue;
+    if (!map.has(sanPhamId)) map.set(sanPhamId, new Map());
+    const variants = map.get(sanPhamId);
+    if (!variants.has(bt.bienTheId)) {
+      const specs = [bt.mauSac, bt.cpu?.tenCpu, bt.ram?.dungLuong].filter(Boolean).join(' · ');
+      variants.set(bt.bienTheId, { value: bt.bienTheId, label: specs ? `${bt.maSku} — ${specs}` : bt.maSku });
+    }
+  }
+  return map;
+});
+const variantsForProduct = (sanPhamId) => [...(variantOptionsByProduct.value.get(Number(sanPhamId)) ?? new Map()).values()];
+const supplierOptions = computed(() => suppliers.value.map(s => ({ value: s.nhaCungCapId, label: s.tenNhaCungCap })));
+const staffOptions = computed(() => staff.value.map(s => ({ value: s.nhanVienId, label: s.hoTen })));
+
+const showPhieuNhapModal = ref(false);
+const phieuNhapFormError = ref('');
+const emptyPhieuNhapForm = () => {
+  const now = new Date();
+  const local = nowLocalIso(now).slice(0, 16);
+  return {
+    nhaCungCapId: '',
+    nhanVienId: '',
+    ngayNhap: local,
+    ghiChu: '',
+    items: [{ sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0 }],
+  };
+};
+const phieuNhapForm = reactive(emptyPhieuNhapForm());
+const phieuNhapItemsTotal = computed(() =>
+  phieuNhapForm.items.reduce((s, i) => s + (Number(i.soLuong) || 0) * (Number(i.donGia) || 0), 0),
+);
+const addPhieuNhapItemRow = () => phieuNhapForm.items.push({ sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0 });
+const removePhieuNhapItemRow = (idx) => {
+  if (phieuNhapForm.items.length > 1) {
+    phieuNhapForm.items.splice(idx, 1);
+  } else {
+    // Chỉ còn 1 dòng — không xóa hẳn (form sẽ trống hoàn toàn), reset về giá trị rỗng.
+    phieuNhapForm.items[idx] = { sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0 };
+  }
+};
+const editingPhieuNhapId = ref(null);
+const openAddPhieuNhap = () => {
+  editingPhieuNhapId.value = null;
+  Object.assign(phieuNhapForm, emptyPhieuNhapForm());
+  phieuNhapFormError.value = '';
+  showPhieuNhapModal.value = true;
+};
+// Chỉ sửa được khi còn "cho_duyet" — đã duyệt/hủy thì coi như chốt sổ, sửa lại sẽ sai đối
+// chiếu với NCC. Nạp lại đúng dữ liệu đang có: header + từng dòng chi tiết (kèm id để
+// savePhieuNhap() biết dòng nào update, dòng nào tạo mới/xóa khi lưu).
+const openEditPhieuNhap = (p) => {
+  editingPhieuNhapId.value = p.phieuNhapId;
+  const bienTheToSanPham = new Map(products.value.map(pp => [pp.bienTheId, pp.sanPhamId]));
+  const items = chiTietPhieuNhapList.value
+    .filter(c => c.phieuNhapId === p.phieuNhapId)
+    .map(c => ({
+      id: c.id,
+      sanPhamId: bienTheToSanPham.get(c.bienTheId) ?? '',
+      bienTheId: c.bienTheId,
+      soLuong: c.soLuong,
+      donGia: c.donGiaNhap,
+    }));
+  Object.assign(phieuNhapForm, {
+    nhaCungCapId: p.nhaCungCapId,
+    nhanVienId: p.nhanVienId,
+    ngayNhap: (p.ngayNhap || '').slice(0, 16),
+    ghiChu: p.ghiChu === '—' ? '' : (p.ghiChu || ''),
+    items: items.length ? items : [{ sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0 }],
+  });
+  phieuNhapFormError.value = '';
+  showPhieuNhapModal.value = true;
+};
+const savePhieuNhap = async () => {
+  phieuNhapFormError.value = '';
+  if (!phieuNhapForm.nhaCungCapId || !phieuNhapForm.nhanVienId) {
+    phieuNhapFormError.value = t('admin.phieuNhapModal.missingRequired');
+    return;
+  }
+  const items = phieuNhapForm.items.filter(i => i.bienTheId);
+  if (items.length === 0) {
+    phieuNhapFormError.value = t('admin.phieuNhapModal.missingItems');
+    return;
+  }
+  try {
+    const headerBody = {
+      nhaCungCapId: Number(phieuNhapForm.nhaCungCapId),
+      nhanVienId: Number(phieuNhapForm.nhanVienId),
+      ngayNhap: toLocalDT(phieuNhapForm.ngayNhap),
+      tongTien: phieuNhapItemsTotal.value,
+      trangThai: 'cho_duyet',
+      ghiChu: phieuNhapForm.ghiChu || '—',
+    };
+    const res = await PhieuNhapKhoService.save(editingPhieuNhapId.value, headerBody);
+    if (!res.ok) {
+      phieuNhapFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
+      return;
+    }
+    if (editingPhieuNhapId.value) {
+      // Đối chiếu dòng cũ/mới: id có sẵn -> update, không có id -> tạo mới,
+      // dòng cũ không còn trong form -> xóa.
+      const phieuNhapId = editingPhieuNhapId.value;
+      const originalIds = chiTietPhieuNhapList.value
+        .filter(c => c.phieuNhapId === phieuNhapId).map(c => c.id);
+      const keptIds = items.filter(i => i.id).map(i => i.id);
+      for (const oldId of originalIds.filter(id => !keptIds.includes(id))) {
+        await ChiTietPhieuNhapService.remove(oldId);
+      }
+      for (const i of items) {
+        const body = {
+          phieuNhapId, bienTheId: Number(i.bienTheId),
+          soLuong: Number(i.soLuong) || 0, donGiaNhap: Number(i.donGia) || 0,
+        };
+        if (i.id) await ChiTietPhieuNhapService.update(i.id, body);
+        else await ChiTietPhieuNhapService.create(body);
+      }
+    } else {
+      const created = await res.json();
+      for (const i of items) {
+        await ChiTietPhieuNhapService.create({
+          phieuNhapId: created.phieuNhapId,
+          bienTheId: Number(i.bienTheId),
+          soLuong: Number(i.soLuong) || 0,
+          donGiaNhap: Number(i.donGia) || 0,
+        });
+      }
+    }
+    // API tạo trả về entity lồng nhau (nhaCungCap/nhanVien object) khác format phẳng của
+    // getAll() (PhieuNhapKhoResponse) — tải lại danh sách thay vì tự ráp để tránh lệch dữ liệu.
+    [phieuNhapList.value, chiTietPhieuNhapList.value] = await Promise.all([
+      PhieuNhapKhoService.getAll().catch(() => phieuNhapList.value),
+      ChiTietPhieuNhapService.getAll().catch(() => chiTietPhieuNhapList.value),
+    ]);
+    showPhieuNhapModal.value = false;
+  } catch (e) {
+    phieuNhapFormError.value = e.message;
+  }
+};
+const deletePhieuNhap = async (id) => {
+  if (!(await askConfirm(t('admin.confirm.deletePhieuNhap')))) return;
+  const res = await PhieuNhapKhoService.remove(id);
+  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
+  phieuNhapList.value = phieuNhapList.value.filter(p => p.phieuNhapId !== id);
+  chiTietPhieuNhapList.value = chiTietPhieuNhapList.value.filter(c => c.phieuNhapId !== id);
+};
+
+const updatePhieuNhapStatus = async (p, trangThai) => {
+  const res = await PhieuNhapKhoService.save(p.phieuNhapId, {
+    nhaCungCapId: p.nhaCungCapId,
+    nhanVienId: p.nhanVienId,
+    ngayNhap: p.ngayNhap,
+    tongTien: p.tongTien,
+    trangThai,
+    ghiChu: p.ghiChu,
+  });
+  if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
+  const idx = phieuNhapList.value.findIndex(x => x.phieuNhapId === p.phieuNhapId);
+  if (idx !== -1) phieuNhapList.value[idx] = { ...phieuNhapList.value[idx], trangThai };
+};
+
+const showPhieuNhapDetailModal = ref(false);
+const phieuNhapDetailData = ref(null);
+const phieuNhapDetailItems = computed(() =>
+  chiTietPhieuNhapList.value.filter(c => c.phieuNhapId === phieuNhapDetailData.value?.phieuNhapId),
+);
+const openPhieuNhapDetail = (p) => {
+  phieuNhapDetailData.value = p;
+  showPhieuNhapDetailModal.value = true;
+};
+
+const printEsc = (v) => String(v ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+// In HTML qua iframe ẩn thay vì window.open('_blank') — tránh mở tab/cửa sổ mới lộ ra
+// phía sau hộp thoại in, và tránh window.print() in nguyên trang admin (sidebar, topbar...).
+const printHtmlInIframe = (html) => {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
+  iframe.onload = () => {
+    iframe.contentWindow.print();
+    setTimeout(() => document.body.removeChild(iframe), 500);
+  };
+};
+
+// In DANH SÁCH nhiều phiếu — chỉ bảng tóm tắt (báo cáo/xem nhanh cho quản lý), không
+// kèm chi tiết từng dòng hàng (kèm hết sẽ ra rất nhiều trang nếu danh sách dài).
+// Muốn xem chi tiết 1 phiếu cụ thể để đối chiếu/ký nhận thì dùng "In phiếu" trong
+// modal Chi tiết (xem printPhieuNhapDetail bên dưới).
+const printPhieuNhapList = () => {
+  const headers = ['Mã', 'Ngày nhập', 'Nhà cung cấp', 'Nhân viên', 'Tổng tiền', 'Trạng thái'];
+  const rows = filteredPhieuNhap.value.map(p => [
+    p.maPhieuNhap, formatDate(p.ngayNhap), supplierName(p.nhaCungCapId),
+    staffName(p.nhanVienId), formatPrice(p.tongTien ?? 0), statusLabel(p.trangThai),
+  ]);
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Danh sách phiếu nhập</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:24px;color:#111;}
+      h1{font-size:18px;margin-bottom:16px;}
+      table{width:100%;border-collapse:collapse;font-size:13px;}
+      th,td{border:1px solid #999;padding:6px 10px;text-align:left;}
+      th{background:#eee;}
+    </style></head><body>
+    <h1>Danh sách phiếu nhập kho</h1>
+    <table><thead><tr>${headers.map(h => `<th>${printEsc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${printEsc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+    </body></html>`;
+  printHtmlInIframe(html);
+};
+
+// In 1 PHIẾU — chứng từ đầy đủ để đối chiếu/lưu kho: thông tin phiếu, bảng chi tiết hàng,
+// tổng tiền, và 3 dòng ký tên (người lập phiếu / thủ kho / người giao hàng).
+const printPhieuNhapDetail = (p) => {
+  if (!p) return;
+  const items = chiTietPhieuNhapList.value.filter(c => c.phieuNhapId === p.phieuNhapId);
+  const itemRows = items.map((c, i) => `<tr>
+      <td class="center">${i + 1}</td>
+      <td>${printEsc(c.maSku)}</td>
+      <td class="center">${printEsc(c.soLuong)}</td>
+      <td class="right">${printEsc(formatPrice(c.donGiaNhap))}</td>
+      <td class="right">${printEsc(formatPrice(c.thanhTien))}</td>
+    </tr>`).join('') || `<tr><td colspan="5" class="center muted">Không có hàng</td></tr>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Phiếu nhập ${printEsc(p.maPhieuNhap)}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:28px;color:#111;}
+      h1{font-size:18px;margin:0 0 4px;}
+      .sub{font-size:12px;color:#555;margin-bottom:18px;}
+      .info{display:flex;justify-content:space-between;font-size:13px;margin-bottom:16px;}
+      table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:6px;}
+      th,td{border:1px solid #999;padding:6px 8px;text-align:left;}
+      th{background:#eee;}
+      .center{text-align:center;} .right{text-align:right;} .muted{color:#888;}
+      .total{text-align:right;font-weight:bold;font-size:14px;margin-bottom:40px;}
+      .signs{display:flex;justify-content:space-between;text-align:center;font-size:13px;}
+      .signs div{width:30%;}
+      .sign-line{margin-top:60px;border-top:1px solid #333;padding-top:4px;}
+    </style></head><body>
+    <h1>PHIẾU NHẬP KHO</h1>
+    <div class="sub">Số phiếu: ${printEsc(p.maPhieuNhap)}</div>
+    <div class="info">
+      <div>Ngày nhập: ${printEsc(formatDate(p.ngayNhap))}</div>
+      <div>Nhà cung cấp: ${printEsc(supplierName(p.nhaCungCapId))}</div>
+      <div>Nhân viên: ${printEsc(staffName(p.nhanVienId))}</div>
+    </div>
+    <table>
+      <thead><tr><th style="width:36px;">#</th><th>Mã SKU</th><th class="center" style="width:80px;">Số lượng</th><th class="right" style="width:120px;">Đơn giá</th><th class="right" style="width:130px;">Thành tiền</th></tr></thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+    <div class="total">Tổng tiền: ${printEsc(formatPrice(p.tongTien ?? 0))}</div>
+    <div class="signs">
+      <div>Người lập phiếu<div class="sign-line"></div></div>
+      <div>Thủ kho<div class="sign-line"></div></div>
+      <div>Người giao hàng<div class="sign-line"></div></div>
+    </div>
+    </body></html>`;
+  printHtmlInIframe(html);
+};
+
+// Xuất CSV (mở được bằng Excel) — khỏi cần thêm thư viện xlsx cho một bảng đơn giản
+const exportPhieuNhapExcel = () => {
+  const rows = [
+    ['Mã', 'Ngày nhập', 'Nhà cung cấp', 'Nhân viên', 'Tổng tiền', 'Trạng thái'],
+    ...filteredPhieuNhap.value.map(p => [
+      p.maPhieuNhap, formatDate(p.ngayNhap), supplierName(p.nhaCungCapId),
+      staffName(p.nhanVienId), p.tongTien ?? 0, statusLabel(p.trangThai),
+    ]),
+  ];
+  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `phieu-nhap-kho-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 // Chỉ tải 6 bảng chính lúc vào trang (dashboard + các bảng danh sách cần ngay).
 // 7 danh sách tham chiếu (danh mục/hãng/NCC/CPU/RAM/ổ cứng/GPU) + chức vụ
 // KHÔNG tải ở đây nữa — chỉ tải khi thực sự cần (mở form thêm/sửa sản phẩm,
 // vào trang Nhân viên), xem ensureProductRefData()/ensureChucVuList() bên dưới.
 // Với dữ liệu lớn, bớt 7-8 lệnh gọi song song này giúp trang vào nhanh hơn hẳn.
+// Nhân viên KHÔNG tải ở đây nữa — không có KPI/dashboard/POS nào cần đến staff.value,
+// chỉ tab Nhân viên và tab Phiếu nhập (staffName/staffOptions) cần, cả 2 đều lazy-load
+// qua ensureStaffData() bên dưới. products/orders/customers/promotions/inventory VẪN
+// tải eager vì dashboard KPI + POS (tìm SP, áp mã khuyến mãi, tra cứu KH) cần ngay.
 const fetchAll = async () => {
   loading.value = true;
   const safe = (p) => p.catch(() => []);
@@ -463,19 +849,26 @@ const fetchAll = async () => {
     products.value,
     orders.value,
     customers.value,
-    staff.value,
     promotions.value,
     inventory.value,
   ] = await Promise.all([
     safe(SanPhamService.getAll()),
     safe(DonHangService.getAll()),
     safe(KhachHangService.getAll()),
-    safe(NhanVienService.getAll()),
     safe(KhuyenMaiService.getAll()),
     safe(TonKhoService.getAll()),
   ]);
   loading.value = false;
   await autoMergeAllDuplicates();
+};
+
+let staffDataPromise = null;
+const ensureStaffData = () => {
+  if (staffDataPromise) return staffDataPromise;
+  staffDataPromise = NhanVienService.getAll().catch(() => []).then((list) => {
+    staff.value = list;
+  });
+  return staffDataPromise;
 };
 
 // Danh mục/hãng/NCC/CPU/RAM/ổ cứng/GPU — chỉ cần khi mở form thêm/sửa sản phẩm.
@@ -514,22 +907,32 @@ const ensureChucVuList = () => {
 };
 
 // Tự động gộp tất cả đơn cùng khách + cùng ngày khi tải trang
+// Khóa chống chạy chồng — nhiều sự kiện SSE "đơn mới" dồn dập cùng gọi hàm này cùng lúc
+// sẽ tranh nhau gộp CÙNG 1 cặp đơn: lượt thắng xóa đơn nguồn, các lượt sau gọi merge cho
+// đơn đã bị xóa → lỗi 400 "không tồn tại" lặp lại nhiều lần (đã thấy trong console).
+let isMerging = false;
 const autoMergeAllDuplicates = async () => {
-  const groups = {};
-  for (const o of orders.value) {
-    const key = `${o.khachHangId}_${o.ngayDat?.slice(0, 10)}`;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(o);
+  if (isMerging) return;
+  isMerging = true;
+  try {
+    const groups = {};
+    for (const o of orders.value) {
+      const key = `${o.khachHangId}_${o.ngayDat?.slice(0, 10)}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(o);
+    }
+    const toMerge = Object.values(groups).filter(g => g.length > 1);
+    if (toMerge.length === 0) return;
+    for (const group of toMerge) {
+      group.sort((a, b) => a.donHangId - b.donHangId);
+      const targetId = group[0].donHangId;
+      const sourceIds = group.slice(1).map(o => o.donHangId);
+      await DonHangService.merge(targetId, sourceIds).catch((e) => console.error('Gộp đơn trùng lỗi:', e));
+    }
+    orders.value = await DonHangService.getAll().catch(() => []);
+  } finally {
+    isMerging = false;
   }
-  const toMerge = Object.values(groups).filter(g => g.length > 1);
-  if (toMerge.length === 0) return;
-  for (const group of toMerge) {
-    group.sort((a, b) => a.donHangId - b.donHangId);
-    const targetId = group[0].donHangId;
-    const sourceIds = group.slice(1).map(o => o.donHangId);
-    await DonHangService.merge(targetId, sourceIds);
-  }
-  orders.value = await DonHangService.getAll().catch(() => []);
 };
 
 // ── Products: gộp theo sanPhamId cho bảng ─────────────────────────────────────
@@ -604,7 +1007,7 @@ const addSerial = async (bienTheId) => {
       bienTheId,
       soSerial: inp.soSerial.trim(),
       trangThai: 'trong_kho',
-      ngayNhapKho: new Date().toISOString().slice(0, 19),
+      ngayNhapKho: nowLocalIso(),
     });
     if (!res.ok) throw new Error(t('admin.errors.addSerialError'));
     // Chỉ refresh serial của biến thể vừa thêm
@@ -626,6 +1029,32 @@ const soSerialMoi = ref('');
 // Preview ảnh + file thực tế chờ upload
 const imagePreview  = ref('');
 const imageFilePending = ref(null);
+
+// Tag phân loại (để lọc trang khách, xem App.vue CHIP_KEYWORDS/sidebarCatsBase) — danh
+// sách cố định, chọn qua chip thay vì gõ tay để khỏi gõ sai slug làm hỏng bộ lọc.
+const PHAN_LOAI_TAG_OPTIONS = [
+  { value: 'gaming', label: 'Gaming' },
+  { value: 'van_phong', label: 'Văn phòng' },
+  { value: 'sinh_vien', label: 'Sinh viên' },
+  { value: 'do_hoa', label: 'Đồ họa' },
+  { value: 'ky_thuat', label: 'Kỹ thuật' },
+  { value: 'macbook', label: 'MacBook' },
+  { value: 'cu', label: 'Cũ' },
+  { value: 'gia_re', label: 'Giá rẻ' },
+  { value: 'linh_kien', label: 'Linh kiện' },
+];
+const toggleTag = (value) => {
+  const tags = form.phanLoaiTags.split(',').map(s => s.trim()).filter(Boolean);
+  const idx = tags.indexOf(value);
+  if (idx === -1) tags.push(value); else tags.splice(idx, 1);
+  form.phanLoaiTags = tags.join(',');
+  // Tự ghép "Phân loại Tên" (tên hiển thị) từ nhãn của các tag đang chọn — khỏi gõ lại tay.
+  form.phanLoaiTen = tags
+    .map(v => PHAN_LOAI_TAG_OPTIONS.find(o => o.value === v)?.label)
+    .filter(Boolean)
+    .join(', ');
+};
+const isTagSelected = (value) => form.phanLoaiTags.split(',').map(s => s.trim()).includes(value);
 
 const emptyForm = () => ({
   bienTheId: null,
@@ -797,7 +1226,7 @@ const saveProduct = async () => {
           bienTheId: created.bienTheId,
           soSerial: soSerialMoi.value.trim(),
           trangThai: 'trong_kho',
-          ngayNhapKho: new Date().toISOString().slice(0, 19),
+          ngayNhapKho: nowLocalIso(),
         }).catch(() => {});
       }
       showProductModal.value = false;
@@ -823,7 +1252,7 @@ const saveProduct = async () => {
     giaNhap: Number(form.giaNhap),
     trongLuongKg: form.trongLuongKg ? Number(form.trongLuongKg) : null,
     baoHanhThang: Number(form.baoHanhThang),
-    ...(editingId.value ? {} : { ngayTao: new Date().toISOString().slice(0, 19) }),
+    ...(editingId.value ? {} : { ngayTao: nowLocalIso() }),
   };
   try {
     const res = await SanPhamService.save(editingId.value, body);
@@ -841,7 +1270,7 @@ const saveProduct = async () => {
           bienTheId: newVariant.bienTheId,
           soSerial: soSerialMoi.value.trim(),
           trangThai: 'trong_kho',
-          ngayNhapKho: new Date().toISOString().slice(0, 19),
+          ngayNhapKho: nowLocalIso(),
         }).catch(() => {});
       }
     }
@@ -856,18 +1285,33 @@ const saveProduct = async () => {
 // Xoá xong không cần tải lại cả bảng — API trả 204 rỗng nên chỉ cần biết ID
 // vừa xoá là đủ để lọc khỏi mảng cục bộ (products = 1 dòng/biến thể, nên xoá
 // sản phẩm = xoá hết các dòng cùng sanPhamId).
+// Hỏi trước khi bấm xóa: sản phẩm chưa từng bán -> chỉ hỏi xác nhận đơn giản; đã có giao
+// dịch -> báo thẳng lý do không xóa được, khỏi cần hỏi "có chắc không" cho việc chắc chắn
+// sẽ thất bại.
 const deleteProduct = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deleteProduct')))) return;
+  const name = products.value.find(p => p.sanPhamId === id)?.tenSanPham ?? '';
+  const daGiaoDich = await SanPhamService.hasTransactionHistory(id).catch(() => false);
+  if (daGiaoDich) {
+    showToast(t('admin.errors.cannotDeleteProduct', { name }));
+    return;
+  }
+  if (!(await askConfirm(t('admin.confirm.deleteProductSimple', { name })))) return;
   const res = await SanPhamService.remove(id);
-  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
   products.value = products.value.filter(p => p.sanPhamId !== id);
 };
 
 // Xoá 1 biến thể (bienTheId) — dùng trong modal "Biến thể" và "Chi tiết", không xoá cả sản phẩm
 const deleteVariant = async (bienTheId) => {
-  if (!(await askConfirm(t('admin.confirm.deleteVariant')))) return;
+  const sku = products.value.find(p => p.bienTheId === bienTheId)?.maSku ?? '';
+  const daGiaoDich = await BienTheSanPhamService.hasTransactionHistory(bienTheId).catch(() => false);
+  if (daGiaoDich) {
+    showToast(t('admin.errors.cannotDeleteVariant', { sku }));
+    return;
+  }
+  if (!(await askConfirm(t('admin.confirm.deleteVariantSimple', { sku })))) return;
   const res = await BienTheSanPhamService.remove(bienTheId);
-  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
   products.value = products.value.filter(p => p.bienTheId !== bienTheId);
   variantModalList.value = variantModalList.value.filter(v => v.bienTheId !== bienTheId);
   detailModalList.value = detailModalList.value.filter(v => v.bienTheId !== bienTheId);
@@ -1351,32 +1795,41 @@ const openOrderStatus = (o) => {
   orderStatusError.value = "";
   showOrderModal.value = true;
 };
+// Dựng body PUT /don-hang/update — dùng chung cho modal "Cập nhật trạng thái" (sửa tay,
+// nhiều trường) và nút "next step" nhanh trên bảng (chỉ đổi trangThaiDonHang).
+const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGiaoDuKien, ngayGiaoThucTe }) => ({
+  khachHangId: o.khachHangId,
+  nhanVienId: o.nhanVienId ?? null,
+  khuyenMaiId: o.khuyenMaiId ?? null,
+  diaChiGiaoHangId: o.diaChiGiaoHangId ?? null,
+  diaChiGiaoHangText: o.diaChiGiaoHangText ?? null,
+  nguoiNhan: o.nguoiNhan || customerName(o.khachHangId),
+  sdtNguoiNhan:
+    o.sdtNguoiNhan ||
+    (customers.value.find((c) => c.khachHangId === o.khachHangId)
+      ?.soDienThoai ?? ""),
+  tongTien: o.tongTien ?? 0,
+  giamGia: o.giamGia ?? 0,
+  phiVanChuyen: o.phiVanChuyen ?? 0,
+  thanhTien: o.thanhTien ?? 0,
+  ngayDat: o.ngayDat?.slice(0, 19),
+  ngayGiaoDuKien: ngayGiaoDuKien || null,
+  ngayGiaoThucTe: ngayGiaoThucTe || null,
+  trangThaiDonHang,
+  trangThaiThanhToan,
+  kenhBan: o.kenhBan ?? null,
+  ghiChu: o.ghiChu ?? null,
+});
+
 const saveOrderStatus = async () => {
   orderStatusError.value = "";
   const o = editingOrder.value;
-  const body = {
-    khachHangId: o.khachHangId,
-    nhanVienId: o.nhanVienId ?? null,
-    khuyenMaiId: o.khuyenMaiId ?? null,
-    diaChiGiaoHangId: o.diaChiGiaoHangId ?? null,
-    diaChiGiaoHangText: o.diaChiGiaoHangText ?? null,
-    nguoiNhan: o.nguoiNhan || customerName(o.khachHangId),
-    sdtNguoiNhan:
-      o.sdtNguoiNhan ||
-      (customers.value.find((c) => c.khachHangId === o.khachHangId)
-        ?.soDienThoai ?? ""),
-    tongTien: o.tongTien ?? 0,
-    giamGia: o.giamGia ?? 0,
-    phiVanChuyen: o.phiVanChuyen ?? 0,
-    thanhTien: o.thanhTien ?? 0,
-    ngayDat: o.ngayDat?.slice(0, 19),
-    ngayGiaoDuKien: orderStatusForm.ngayGiaoDuKien || null,
-    ngayGiaoThucTe: orderStatusForm.ngayGiaoThucTe || null,
+  const body = buildOrderUpdateBody(o, {
     trangThaiDonHang: orderStatusForm.trangThaiDonHang,
     trangThaiThanhToan: orderStatusForm.trangThaiThanhToan,
-    kenhBan: o.kenhBan ?? null,
-    ghiChu: o.ghiChu ?? null,
-  };
+    ngayGiaoDuKien: orderStatusForm.ngayGiaoDuKien,
+    ngayGiaoThucTe: orderStatusForm.ngayGiaoThucTe,
+  });
   try {
     const res = await DonHangService.update(o.donHangId, body);
     if (!res.ok) {
@@ -1390,31 +1843,101 @@ const saveOrderStatus = async () => {
   }
 };
 
+// Quy trình xử lý đơn thực tế: chờ xác nhận -> đã xác nhận -> đang đóng gói -> đang vận
+// chuyển -> đã giao. Nút "bước tiếp theo" trên bảng đơn hàng đi đúng theo thứ tự này,
+// khỏi phải mở modal chọn tay mỗi lần chỉ để nhích 1 bước — mở modal vẫn dùng được cho
+// các trường hợp khác (hủy đơn, sửa ngày giao...).
+const NEXT_ORDER_STATUS = { pending: 'confirmed', confirmed: 'processing', processing: 'shipping', shipping: 'delivered' };
+const NEXT_ORDER_STATUS_LABEL = {
+  pending:    { icon: '✅', key: 'admin.orders.nextConfirm' },
+  confirmed:  { icon: '📦', key: 'admin.orders.nextPack' },
+  processing: { icon: '🚚', key: 'admin.orders.nextShip' },
+  shipping:   { icon: '🎉', key: 'admin.orders.nextComplete' },
+};
+const advanceOrderStatus = async (o) => {
+  const next = NEXT_ORDER_STATUS[o.trangThaiDonHang];
+  if (!next) return;
+  const body = buildOrderUpdateBody(o, {
+    trangThaiDonHang: next,
+    trangThaiThanhToan: o.trangThaiThanhToan,
+    ngayGiaoDuKien: o.ngayGiaoDuKien,
+    // Chuyển sang "delivered" mà chưa có ngày khách nhận hàng -> tự đóng dấu thời điểm này.
+    ngayGiaoThucTe: next === 'delivered' && !o.ngayGiaoThucTe
+      ? nowLocalIso()
+      : o.ngayGiaoThucTe,
+  });
+  const res = await DonHangService.update(o.donHangId, body);
+  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.updateFailed', { status: res.status }))); return; }
+  // Tải lại ngay thay vì tự ráp state cục bộ — chắc chắn đúng dữ liệu server, không phụ
+  // thuộc việc SSE (chỉ để đồng bộ các tab/khách hàng khác) có tới kịp hay không.
+  orders.value = await DonHangService.getAll().catch(() => orders.value);
+};
+
 // ── Inventory stock edit ──────────────────────────────────────────────────────
 const showStockModal = ref(false);
 const editingStock = ref(null);
-const stockForm = reactive({ soLuongTon: 0, soLuongGiu: 0, tonKhoToiThieu: 0 });
+// soLuongTon KHÔNG sửa tay được nữa — chỉ tăng khi nhập serial mới (xem newSerials),
+// khớp đúng thực tế: mỗi máy nhập kho phải có 1 serial, số lượng = số serial đang "trong_kho".
+const stockForm = reactive({ soLuongGiu: 0, tonKhoToiThieu: 0, newSerials: [''] });
 
 const openEditStock = (item) => {
   editingStock.value = item;
-  stockForm.soLuongTon = item.soLuongTon ?? 0;
   stockForm.soLuongGiu = item.soLuongGiu ?? 0;
   stockForm.tonKhoToiThieu = item.tonKhoToiThieu ?? 0;
+  stockForm.newSerials = [''];
   showStockModal.value = true;
+};
+const addStockSerialRow = () => stockForm.newSerials.push('');
+const removeStockSerialRow = (idx) => {
+  if (stockForm.newSerials.length > 1) stockForm.newSerials.splice(idx, 1);
+  else stockForm.newSerials[idx] = '';
+};
+// Nhập hàng loạt từ file — .xlsx/.xls đọc qua thư viện xlsx (mọi ô có dữ liệu, không
+// phân biệt hàng/cột), .csv/.txt đọc thẳng dạng text (mỗi serial 1 dòng hoặc cách nhau
+// bằng dấu phẩy) — khỏi phải gõ/dán tay từng dòng.
+const importSerialsFromFile = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  let parsed;
+  if (ext === 'xlsx' || ext === 'xls') {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+    parsed = rows.flat().map((v) => String(v ?? '').trim()).filter(Boolean);
+  } else {
+    const text = await file.text();
+    parsed = text.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+  }
+  const existing = stockForm.newSerials.filter(Boolean);
+  stockForm.newSerials = [...existing, ...parsed].length ? [...existing, ...parsed] : [''];
+  e.target.value = '';
 };
 const saveStock = async () => {
   const item = editingStock.value;
-  const body = {
-    soLuongTon: Number(stockForm.soLuongTon),
-    soLuongGiu: Number(stockForm.soLuongGiu),
-    tonKhoToiThieu: Number(stockForm.tonKhoToiThieu),
-  };
+  const bienTheId = item.bienThe?.bienTheId;
   try {
-    const res = await TonKhoService.update(item.tonKhoId, body);
+    // 1) Thêm từng serial mới — mỗi cái tự tăng soLuongTon ở server (trigger DB tính lại
+    // từ số serial "trong_kho", không phải giá trị FE gửi lên).
+    const serials = stockForm.newSerials.map((s) => s.trim()).filter(Boolean);
+    for (const soSerial of serials) {
+      const res = await ChiTietSanPhamService.create({
+        bienTheId, soSerial, trangThai: 'trong_kho',
+        ngayNhapKho: nowLocalIso(),
+      });
+      if (!res.ok) { showToast(t('admin.errors.addSerialError')); return; }
+    }
+    // 2) Đang giữ / tồn kho tối thiểu — 2 field còn lại được sửa tay bình thường.
+    const res = await TonKhoService.update(item.tonKhoId, {
+      soLuongGiu: Number(stockForm.soLuongGiu),
+      tonKhoToiThieu: Number(stockForm.tonKhoToiThieu),
+    });
     if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
     showStockModal.value = false;
+    // Lấy lại đúng dòng vừa đổi để có soLuongTon mới nhất do server tính.
+    const updated = await TonKhoService.getByBienThe(bienTheId).catch(() => null);
     const idx = inventory.value.findIndex((i) => i.tonKhoId === item.tonKhoId);
-    if (idx !== -1) inventory.value[idx] = { ...inventory.value[idx], ...body };
+    if (idx !== -1 && updated) inventory.value[idx] = updated;
   } catch (e) {
     showToast(e.message);
   }
@@ -1451,7 +1974,7 @@ const addStockSerial = async () => {
       bienTheId,
       soSerial: stockDetailNewSerial.value.trim(),
       trangThai: 'trong_kho',
-      ngayNhapKho: new Date().toISOString().slice(0, 19),
+      ngayNhapKho: nowLocalIso(),
     });
     if (!res.ok) throw new Error(t('admin.errors.addSerialError'));
     stockDetailSerials.value = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
@@ -1465,6 +1988,22 @@ const addStockSerial = async () => {
     stockDetailNewSerial.value = '';
   } catch(e) { showToast(e.message); }
   finally { stockDetailSaving.value = false; }
+};
+
+// Xóa serial thêm nhầm — chỉ cho phép khi đang "trong_kho" (server chặn nếu đã bán/đã dùng).
+const removeStockSerial = async (chiTietId) => {
+  if (!(await askConfirm(t('admin.confirm.deleteSerial')))) return;
+  const bienTheId = stockDetailItem.value?.bienThe?.bienTheId;
+  try {
+    const res = await ChiTietSanPhamService.remove(chiTietId);
+    if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteSerialError'))); return; }
+    stockDetailSerials.value = stockDetailSerials.value.filter((s) => s.chiTietId !== chiTietId);
+    const updatedStock = await TonKhoService.getByBienThe(bienTheId).catch(() => null);
+    if (updatedStock) {
+      const idx = inventory.value.findIndex((i) => i.tonKhoId === updatedStock.tonKhoId);
+      if (idx !== -1) inventory.value[idx] = updatedStock;
+    }
+  } catch (e) { showToast(e.message); }
 };
 
 const stockDetailStatusLabel = (s) => t(`admin.statusLabel.${s}`);
@@ -1741,7 +2280,7 @@ const posPlaceOrder = async () => {
       khuyenMaiId: posAppliedPromo.value?.khuyenMaiId ?? null,
       tongTien: posCartTotal.value, giamGia: posGiamGia.value,
       phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
-      ngayDat: new Date().toISOString().slice(0, 19),
+      ngayDat: nowLocalIso(),
       trangThaiDonHang: "confirmed", trangThaiThanhToan: "paid", kenhBan: "in_store",
     });
     if (!orderRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(orderRes) }));
@@ -1766,14 +2305,29 @@ const posPlaceOrder = async () => {
 let orderSse = null;
 
 onMounted(async () => {
-  await fetchAll();
-  await fetchProductSales();
+  // try/catch riêng — nếu fetchAll()/fetchProductSales() lỗi (throw) mà không có try/catch
+  // ở đây, phần mở SSE bên dưới sẽ KHÔNG BAO GIỜ chạy tới (await bị chặn ngang), khiến admin
+  // mất real-time vĩnh viễn dù F5 lại bao nhiêu lần cũng vậy.
+  try {
+    await fetchAll();
+    await fetchProductSales();
+  } catch (e) {
+    console.error('fetchAll/fetchProductSales lỗi khi vào trang:', e);
+  }
+
   // EventSource không gửi được header Authorization → truyền JWT qua query string
   orderSse = new EventSource(`/api/don-hang/events?token=${encodeURIComponent(AuthStore.user?.token ?? '')}`);
+  orderSse.onerror = (e) => console.error('Kết nối SSE (đơn hàng real-time) lỗi:', e);
   orderSse.addEventListener('new-order', async () => {
     orders.value = await DonHangService.getAll().catch(() => []);
     await autoMergeAllDuplicates();
     await fetchProductSales();
+  });
+  // Đơn hàng đổi trạng thái — từ tab admin khác, hoặc từ chính tab này (advanceOrderStatus/
+  // saveOrderStatus không tự patch state cục bộ, dựa hẳn vào đây để khỏi trùng 2 nguồn dữ
+  // liệu) — tải lại danh sách, khỏi cần F5.
+  orderSse.addEventListener('order-updated', async () => {
+    orders.value = await DonHangService.getAll().catch(() => []);
   });
 });
 
@@ -1829,7 +2383,7 @@ onUnmounted(() => {
         <div class="adm-nav" :class="{active: currentPage==='orders'}" @click="navigate('orders')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
           {{ t('admin.sidebar.orders') }}
-          <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ totalOrders }}</span>
+          <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ todayOrdersCount }}</span>
         </div>
         <div class="adm-nav" :class="{active: currentPage==='customers'}" @click="navigate('customers')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
@@ -2159,11 +2713,13 @@ onUnmounted(() => {
           <div v-else class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
               <thead><tr>
+                <th style="width:40px;">{{ t('admin.common.stt') }}</th>
                 <th>{{ t('admin.products.colName') }}</th><th>{{ t('admin.products.colBrand') }}</th><th>{{ t('admin.products.colCategory') }}</th>
                 <th>{{ t('admin.products.colVariant') }}</th><th>{{ t('admin.products.colPriceFrom') }}</th><th>{{ t('admin.products.colStatus') }}</th><th>{{ t('admin.products.colAction') }}</th>
               </tr></thead>
               <tbody>
-                <tr v-for="p in filteredGroupedProducts" :key="p.sanPhamId">
+                <tr v-for="(p, idx) in filteredGroupedProducts" :key="p.sanPhamId">
+                  <td class="text-secondary">{{ idx + 1 }}</td>
                   <td>{{ p.tenSanPham }}</td>
                   <td>{{ p.tenThuongHieu }}</td>
                   <td>{{ p.tenDanhMuc }}</td>
@@ -2179,7 +2735,7 @@ onUnmounted(() => {
                     </div>
                   </td>
                 </tr>
-                <tr v-if="filteredGroupedProducts.length===0"><td colspan="7" class="text-center text-secondary">{{ t('admin.products.empty') }}</td></tr>
+                <tr v-if="filteredGroupedProducts.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.products.empty') }}</td></tr>
               </tbody>
             </table>
           </div>
@@ -2240,9 +2796,10 @@ onUnmounted(() => {
             <div v-if="loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
             <div v-else class="table-responsive">
               <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-                <thead><tr><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
+                <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
                 <tbody>
-                  <tr v-for="o in filteredOrders" :key="o.donHangId">
+                  <tr v-for="(o, idx) in filteredOrders" :key="o.donHangId">
+                    <td class="text-secondary">{{ idx + 1 }}</td>
                     <td class="text-secondary">#{{ o.donHangId }}</td>
                     <td>{{ customerName(o.khachHangId) }}</td>
                     <td>{{ formatPrice(o.thanhTien) }}</td>
@@ -2251,7 +2808,12 @@ onUnmounted(() => {
                         {{ orderStatusIcon(o.trangThaiDonHang) }} {{ orderStatusLabel(o.trangThaiDonHang) }}
                       </span>
                     </td>
-                    <td><span class="badge" :class="o.trangThaiThanhToan==='paid'?'bg-success':'bg-secondary'">{{ o.trangThaiThanhToan||'—' }}</span></td>
+                    <td>
+                      <span v-if="o.trangThaiThanhToan" class="badge" :style="{ background: paymentStatusColor(o.trangThaiThanhToan).bg, color: paymentStatusColor(o.trangThaiThanhToan).text }">
+                        {{ paymentStatusIcon(o.trangThaiThanhToan) }} {{ paymentStatusLabel(o.trangThaiThanhToan) }}
+                      </span>
+                      <span v-else class="text-secondary">—</span>
+                    </td>
                     <td>
                       {{ formatDate(o.ngayDat) }}
                       <div v-if="o.ngayGiaoThucTe" class="text-success" style="font-size:0.72rem;">
@@ -2261,6 +2823,9 @@ onUnmounted(() => {
                     <td>
                       <div class="d-flex gap-1">
                         <button class="btn btn-sm btn-outline-info"    style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
+                        <button v-if="NEXT_ORDER_STATUS[o.trangThaiDonHang]" class="btn btn-sm btn-outline-success" style="font-size:0.78rem;padding:2px 8px;" @click="advanceOrderStatus(o)">
+                          {{ NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].icon }} {{ t(NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].key) }}
+                        </button>
                         <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
                         <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">{{ t('admin.orders.delete') }}</button>
                       </div>
@@ -2285,9 +2850,10 @@ onUnmounted(() => {
           <div v-if="loading" class="text-secondary small">{{ t('admin.customers.loading') }}</div>
           <div v-else class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th>{{ t('admin.customers.colFullName') }}</th><th>{{ t('admin.customers.colPhone') }}</th><th>{{ t('admin.customers.colEmail') }}</th><th>{{ t('admin.customers.colCustomerType') }}</th><th>{{ t('admin.customers.colPoints') }}</th><th>{{ t('admin.customers.colStatus') }}</th><th>{{ t('admin.customers.colAction') }}</th></tr></thead>
+              <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.customers.colFullName') }}</th><th>{{ t('admin.customers.colPhone') }}</th><th>{{ t('admin.customers.colEmail') }}</th><th>{{ t('admin.customers.colCustomerType') }}</th><th>{{ t('admin.customers.colPoints') }}</th><th>{{ t('admin.customers.colStatus') }}</th><th>{{ t('admin.customers.colAction') }}</th></tr></thead>
               <tbody>
-                <tr v-for="c in filteredCustomers" :key="c.khachHangId">
+                <tr v-for="(c, idx) in filteredCustomers" :key="c.khachHangId">
+                  <td class="text-secondary">{{ idx + 1 }}</td>
                   <td>{{ c.hoTen }}</td>
                   <td class="text-secondary">{{ c.soDienThoai }}</td>
                   <td class="text-secondary">{{ c.email }}</td>
@@ -2301,7 +2867,7 @@ onUnmounted(() => {
                     </div>
                   </td>
                 </tr>
-                <tr v-if="filteredCustomers.length===0"><td colspan="7" class="text-center text-secondary">{{ t('admin.customers.empty') }}</td></tr>
+                <tr v-if="filteredCustomers.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.customers.empty') }}</td></tr>
               </tbody>
             </table>
           </div>
@@ -2309,11 +2875,83 @@ onUnmounted(() => {
 
         <!-- ── Kho hang ── -->
         <section v-show="currentPage === 'inventory'">
+          <!-- Tabs -->
+          <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-sm fw-bold" :class="khoTab==='ton-kho' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                    @click="khoTab='ton-kho'">📦 {{ t('admin.inventory.tabStock') }}</button>
+            <button class="btn btn-sm fw-bold" :class="khoTab==='phieu-nhap' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                    @click="khoTab='phieu-nhap'; ensurePhieuNhapData()">📋 {{ t('admin.inventory.tabReceipts') }}</button>
+            <button class="btn btn-sm fw-bold" :class="khoTab==='bao-hanh' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                    @click="khoTab='bao-hanh'; ensureWarrantyData()">🛡️ {{ t('admin.inventory.tabWarranty') }}</button>
+          </div>
+
+          <!-- ══ TAB: TON KHO ══ -->
+          <template v-if="khoTab==='ton-kho'">
+          <div class="row g-3 mb-3">
+            <div class="col-6 col-xl-3">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body d-flex align-items-center gap-3">
+                  <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width:44px;height:44px;background:rgba(96,165,250,0.15);font-size:1.3rem;">📦</div>
+                  <div>
+                    <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalSku') }}</div>
+                    <div class="fw-bold" style="font-size:1.55rem;">{{ inventory.length }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-xl-3">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body d-flex align-items-center gap-3">
+                  <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width:44px;height:44px;background:rgba(52,211,153,0.15);font-size:1.3rem;">📊</div>
+                  <div>
+                    <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalStock') }}</div>
+                    <div class="fw-bold" style="font-size:1.55rem;">{{ totalStockQty }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-xl-3">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body d-flex align-items-center gap-3">
+                  <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width:44px;height:44px;background:rgba(250,204,21,0.15);font-size:1.3rem;">⚠️</div>
+                  <div>
+                    <div class="text-secondary small mb-1">{{ t('admin.inventory.statLowStock') }}</div>
+                    <div class="fw-bold" :style="lowStockOnlyItems.length?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ lowStockOnlyItems.length }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-xl-3">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body d-flex align-items-center gap-3">
+                  <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">🚫</div>
+                  <div>
+                    <div class="text-secondary small mb-1">{{ t('admin.inventory.statOutOfStock') }}</div>
+                    <div class="fw-bold" :style="outOfStockItems.length?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ outOfStockItems.length }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Summary + Search -->
           <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
             <span class="text-secondary small">{{ t('admin.inventory.summary', { groups: inventoryGrouped.length, skus: inventory.length }) }}</span>
-            <span v-if="outOfStockItems.length" class="badge bg-danger">● {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
-            <span v-if="lowStockItems.length" class="badge bg-warning text-dark">⚠ {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
+            <span v-if="outOfStockItems.length" class="badge" style="background:rgba(244,63,94,0.15);color:#f87171;">🚫 {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
+            <span v-if="lowStockItems.length" class="badge" style="background:rgba(250,204,21,0.15);color:#facc15;">⚠️ {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
+            <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 10px;" @click="toggleAllGroups">
+              {{ allGroupsExpanded ? '▲ ' + t('admin.inventory.collapseAll') : '▼ ' + t('admin.inventory.expandAll') }}
+            </button>
+            <select v-model="inventoryStatusFilter" class="form-select form-select-sm" style="width:auto;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.8rem;">
+              <option value="all">{{ t('admin.inventory.filterAll') }}</option>
+              <option value="out">{{ t('admin.inventory.filterOut') }}</option>
+              <option value="low">{{ t('admin.inventory.filterLow') }}</option>
+              <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
+            </select>
             <div class="ms-auto" style="min-width:200px;">
               <input v-model="inventorySearch" class="form-control form-control-sm"
                      :placeholder="t('admin.inventory.searchPlaceholder')"
@@ -2344,9 +2982,9 @@ onUnmounted(() => {
                   </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                  <span v-if="group.outCount" class="badge bg-danger" style="font-size:0.7rem;">{{ group.outCount }} {{ t('admin.inventory.outOfStock') }}</span>
-                  <span v-else-if="group.lowCount" class="badge bg-warning text-dark" style="font-size:0.7rem;">{{ group.lowCount }} {{ t('admin.inventory.lowStock') }}</span>
-                  <span v-else class="badge bg-success" style="font-size:0.7rem;">{{ t('admin.inventory.ok') }}</span>
+                  <span v-if="group.outCount" class="badge" style="font-size:0.7rem;background:rgba(244,63,94,0.15);color:#f87171;">🚫 {{ group.outCount }} {{ t('admin.inventory.outOfStock') }}</span>
+                  <span v-else-if="group.lowCount" class="badge" style="font-size:0.7rem;background:rgba(250,204,21,0.15);color:#facc15;">⚠️ {{ group.lowCount }} {{ t('admin.inventory.lowStock') }}</span>
+                  <span v-else class="badge" style="font-size:0.7rem;background:rgba(34,197,94,0.15);color:#22c55e;">✅ {{ t('admin.inventory.ok') }}</span>
                   <span class="text-secondary" style="font-size:0.75rem;width:12px;text-align:center;">{{ expandedGroups[group.name] ? '▲' : '▼' }}</span>
                 </div>
               </div>
@@ -2385,10 +3023,10 @@ onUnmounted(() => {
                         <div class="d-flex gap-1">
                           <button class="btn btn-sm btn-outline-info"
                                   style="font-size:0.72rem;padding:2px 8px;"
-                                  @click.stop="openStockDetail(item)">{{ t('admin.inventory.detail') }}</button>
+                                  @click.stop="openStockDetail(item)">🔍 {{ t('admin.inventory.detail') }}</button>
                           <button class="btn btn-sm btn-outline-warning"
                                   style="font-size:0.72rem;padding:2px 8px;"
-                                  @click.stop="openEditStock(item)">{{ t('admin.inventory.update') }}</button>
+                                  @click.stop="openEditStock(item)">✏️ {{ t('admin.inventory.update') }}</button>
                         </div>
                       </td>
                     </tr>
@@ -2399,6 +3037,167 @@ onUnmounted(() => {
 
             <div v-if="inventoryGrouped.length === 0" class="text-secondary small text-center py-5">{{ t('admin.inventory.empty') }}</div>
           </div>
+          </template>
+
+          <!-- ══ TAB: PHIEU NHAP ══ -->
+          <template v-else-if="khoTab==='phieu-nhap'">
+          <div class="row g-3 mb-3">
+            <div class="col-6 col-xl-3">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body d-flex align-items-center gap-3">
+                  <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width:44px;height:44px;background:rgba(167,139,250,0.15);font-size:1.3rem;">📋</div>
+                  <div>
+                    <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statTotal') }}</div>
+                    <div class="fw-bold" style="font-size:1.55rem;">{{ phieuNhapCounts.total }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-xl-3">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body d-flex align-items-center gap-3">
+                  <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width:44px;height:44px;background:rgba(250,204,21,0.15);font-size:1.3rem;">⏳</div>
+                  <div>
+                    <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statPending') }}</div>
+                    <div class="fw-bold" :style="phieuNhapCounts.choDuyet?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.choDuyet }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-xl-3">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body d-flex align-items-center gap-3">
+                  <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width:44px;height:44px;background:rgba(34,197,94,0.15);font-size:1.3rem;">✅</div>
+                  <div>
+                    <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statDone') }}</div>
+                    <div class="fw-bold" style="font-size:1.55rem;color:#22c55e;">{{ phieuNhapCounts.hoanThanh }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-xl-3">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body d-flex align-items-center gap-3">
+                  <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">❌</div>
+                  <div>
+                    <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statCancelled') }}</div>
+                    <div class="fw-bold" :style="phieuNhapCounts.huy?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.huy }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <input v-model="phieuNhapSearch" class="form-control form-control-sm" style="max-width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
+                   :placeholder="t('admin.phieuNhap.searchPlaceholder')" />
+            <select v-model="phieuNhapStatusFilter" class="form-select form-select-sm" style="width:auto;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.8rem;">
+              <option value="">{{ t('admin.inventory.filterAll') }}</option>
+              <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
+              <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
+              <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
+            </select>
+            <div class="ms-auto d-flex gap-2">
+              <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapList">🖨️ {{ t('admin.phieuNhap.printPdf') }}</button>
+              <button class="btn btn-sm btn-outline-success" @click="exportPhieuNhapExcel">📥 {{ t('admin.phieuNhap.exportExcel') }}</button>
+              <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPhieuNhap">➕ {{ t('admin.phieuNhap.add') }}</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr>
+                <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+                <th>{{ t('admin.phieuNhap.colCode') }}</th>
+                <th>{{ t('admin.phieuNhap.colDate') }}</th>
+                <th>{{ t('admin.phieuNhap.colSupplier') }}</th>
+                <th>{{ t('admin.phieuNhap.colStaff') }}</th>
+                <th>{{ t('admin.phieuNhap.colTotal') }}</th>
+                <th>{{ t('admin.phieuNhap.colStatus') }}</th>
+                <th>{{ t('admin.phieuNhap.colAction') }}</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(p, idx) in filteredPhieuNhap" :key="p.phieuNhapId">
+                  <td class="text-secondary">{{ idx + 1 }}</td>
+                  <td class="text-secondary" style="font-family:monospace;">{{ p.maPhieuNhap }}</td>
+                  <td>{{ formatDate(p.ngayNhap) }}</td>
+                  <td>{{ supplierName(p.nhaCungCapId) }}</td>
+                  <td>{{ staffName(p.nhanVienId) }}</td>
+                  <td>{{ formatPrice(p.tongTien) }}</td>
+                  <td>
+                    <span class="badge" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
+                      {{ phieuNhapStatusIcon(p.trangThai) }} {{ statusLabel(p.trangThai) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="d-flex gap-1">
+                      <button class="btn btn-sm btn-outline-info" style="font-size:0.72rem;padding:2px 8px;" @click="openPhieuNhapDetail(p)">🔍 {{ t('admin.phieuNhap.viewDetail') }}</button>
+                      <template v-if="p.trangThai==='cho_duyet'">
+                        <button class="btn btn-sm btn-outline-success" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'hoan_thanh')">✔️ {{ t('admin.phieuNhap.approve') }}</button>
+                        <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'huy')">✖️ {{ t('admin.phieuNhap.cancel') }}</button>
+                        <button class="btn btn-sm btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" @click="openEditPhieuNhap(p)">✏️ {{ t('admin.phieuNhap.editAction') }}</button>
+                        <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="deletePhieuNhap(p.phieuNhapId)">🗑️ {{ t('admin.phieuNhap.deleteAction') }}</button>
+                      </template>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="filteredPhieuNhap.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.phieuNhap.empty') }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          </template>
+
+          <!-- ══ TAB: BAO HANH ══ -->
+          <template v-else>
+          <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <span class="text-secondary small">{{ filteredWarranty.length }} {{ t('admin.warranty.countSuffix') }}</span>
+            <span class="badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;font-size:0.72rem;">📅 {{ t('admin.warranty.today') }}: {{ formatDate(new Date()) }}</span>
+            <input v-model="warrantySearch" class="form-control form-control-sm ms-auto" style="max-width:260px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
+                   :placeholder="t('admin.warranty.searchPlaceholder')" />
+          </div>
+          <div v-if="warrantyLoading" class="text-secondary small text-center py-5">{{ t('admin.warranty.loading') }}</div>
+          <div v-else class="table-responsive">
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr>
+                <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+                <th>{{ t('admin.warranty.colSerial') }}</th>
+                <th>{{ t('admin.warranty.colProduct') }}</th>
+                <th>{{ t('admin.warranty.colCustomer') }}</th>
+                <th>{{ t('admin.warranty.colPhone') }}</th>
+                <th>{{ t('admin.warranty.colOrder') }}</th>
+                <th>{{ t('admin.warranty.colDelivered') }}</th>
+                <th>{{ t('admin.warranty.colExpires') }}</th>
+                <th>{{ t('admin.warranty.colRemaining') }}</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(w, idx) in filteredWarranty" :key="w.chiTietId">
+                  <td class="text-secondary">{{ idx + 1 }}</td>
+                  <td class="text-secondary" style="font-family:monospace;">{{ w.soSerial }}</td>
+                  <td>{{ w.tenSanPham }} <span class="text-secondary" style="font-size:0.75rem;">({{ w.maSku }})</span></td>
+                  <td>{{ w.tenKhachHang }}</td>
+                  <td class="text-secondary">{{ w.soDienThoaiKhachHang }}</td>
+                  <td class="text-secondary" style="font-family:monospace;">{{ w.maDonHang }}</td>
+                  <td>{{ formatDate(w.ngayGiaoThucTe) }}</td>
+                  <td>{{ formatDate(w.ngayHetBaoHanh) }}</td>
+                  <td>
+                    <span class="badge" :style="daysUntilExpiry(w.ngayHetBaoHanh) <= 30
+                      ? { background: 'rgba(248,113,113,0.15)', color: '#f87171' }
+                      : daysUntilExpiry(w.ngayHetBaoHanh) <= 90
+                        ? { background: 'rgba(250,204,21,0.15)', color: '#facc15' }
+                        : { background: 'rgba(34,197,94,0.15)', color: '#22c55e' }">
+                      {{ t('admin.warranty.daysLeft', { count: daysUntilExpiry(w.ngayHetBaoHanh) }) }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="filteredWarranty.length===0"><td colspan="9" class="text-center text-secondary">{{ t('admin.warranty.empty') }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          </template>
         </section>
 
         <!-- ── Khuyen mai ── -->
@@ -2410,9 +3209,10 @@ onUnmounted(() => {
           <div v-if="loading" class="text-secondary small">{{ t('admin.promotions.loading') }}</div>
           <div v-else class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th>{{ t('admin.promotions.colCode') }}</th><th>{{ t('admin.promotions.colName') }}</th><th>{{ t('admin.promotions.colType') }}</th><th>{{ t('admin.promotions.colValue') }}</th><th>{{ t('admin.promotions.colStart') }}</th><th>{{ t('admin.promotions.colEnd') }}</th><th>{{ t('admin.promotions.colUsed') }}</th><th>{{ t('admin.promotions.colStatus') }}</th><th>{{ t('admin.promotions.colAction') }}</th></tr></thead>
+              <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.promotions.colCode') }}</th><th>{{ t('admin.promotions.colName') }}</th><th>{{ t('admin.promotions.colType') }}</th><th>{{ t('admin.promotions.colValue') }}</th><th>{{ t('admin.promotions.colStart') }}</th><th>{{ t('admin.promotions.colEnd') }}</th><th>{{ t('admin.promotions.colUsed') }}</th><th>{{ t('admin.promotions.colStatus') }}</th><th>{{ t('admin.promotions.colAction') }}</th></tr></thead>
               <tbody>
-                <tr v-for="p in promotions" :key="p.khuyenMaiId">
+                <tr v-for="(p, idx) in promotions" :key="p.khuyenMaiId">
+                  <td class="text-secondary">{{ idx + 1 }}</td>
                   <td class="text-secondary">{{ p.maKhuyenMai }}</td>
                   <td>{{ p.tenKhuyenMai }}</td>
                   <td>{{ p.loai==='percent'?t('admin.promotions.typePercent'):t('admin.promotions.typeFixed') }}</td>
@@ -2443,9 +3243,10 @@ onUnmounted(() => {
           <div v-if="loading" class="text-secondary small">{{ t('admin.staff.loading') }}</div>
           <div v-else class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th>{{ t('admin.staff.colFullName') }}</th><th>{{ t('admin.staff.colPhone') }}</th><th>{{ t('admin.staff.colEmail') }}</th><th>{{ t('admin.staff.colPosition') }}</th><th>{{ t('admin.staff.colUsername') }}</th><th>{{ t('admin.staff.colBaseSalary') }}</th><th>{{ t('admin.staff.colStatus') }}</th><th>{{ t('admin.staff.colAction') }}</th></tr></thead>
+              <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.staff.colFullName') }}</th><th>{{ t('admin.staff.colPhone') }}</th><th>{{ t('admin.staff.colEmail') }}</th><th>{{ t('admin.staff.colPosition') }}</th><th>{{ t('admin.staff.colUsername') }}</th><th>{{ t('admin.staff.colBaseSalary') }}</th><th>{{ t('admin.staff.colStatus') }}</th><th>{{ t('admin.staff.colAction') }}</th></tr></thead>
               <tbody>
-                <tr v-for="s in staff" :key="s.nhanVienId">
+                <tr v-for="(s, idx) in staff" :key="s.nhanVienId">
+                  <td class="text-secondary">{{ idx + 1 }}</td>
                   <td>{{ s.hoTen }}</td>
                   <td class="text-secondary">{{ s.soDienThoai }}</td>
                   <td class="text-secondary">{{ s.email }}</td>
@@ -2898,7 +3699,12 @@ onUnmounted(() => {
             </div>
             <div class="col-6">
               <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagsLabel') }} <span class="text-warning small">{{ t('admin.productModal.tagsHint') }}</span></label>
-              <input v-model="form.phanLoaiTags" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.tagsPlaceholder')" />
+              <div class="d-flex flex-wrap gap-2">
+                <button v-for="opt in PHAN_LOAI_TAG_OPTIONS" :key="opt.value" type="button"
+                        class="btn btn-sm" :class="isTagSelected(opt.value) ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
+                        style="font-size:0.75rem;padding:3px 12px;border-radius:999px;"
+                        @click="toggleTag(opt.value)">{{ opt.label }}</button>
+              </div>
             </div>
             <div class="col-6">
               <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagNameLabel') }} <span class="text-muted small">{{ t('admin.productModal.tagNameHint') }}</span></label>
@@ -3135,6 +3941,149 @@ onUnmounted(() => {
     </div>
   </div>
 
+  <!-- ══ MODAL TAO PHIEU NHAP ══ -->
+  <div v-if="showPhieuNhapModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showPhieuNhapModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:860px;max-width:96vw;max-height:90vh;">
+      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+        <span>{{ editingPhieuNhapId ? t('admin.phieuNhapModal.titleEdit') : t('admin.phieuNhapModal.title') }}</span>
+        <button class="btn-close btn-close-white btn-sm" @click="showPhieuNhapModal=false"></button>
+      </div>
+      <div class="overflow-y-auto p-4">
+        <div v-if="phieuNhapFormError" class="alert alert-danger small py-2 mb-3">{{ phieuNhapFormError }}</div>
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label small text-secondary">{{ t('admin.phieuNhapModal.supplierLabel') }}</label>
+            <SearchSelect v-model="phieuNhapForm.nhaCungCapId" :options="supplierOptions" :placeholder="t('admin.phieuNhapModal.selectPlaceholder')" />
+          </div>
+          <div class="col-6">
+            <label class="form-label small text-secondary">{{ t('admin.phieuNhapModal.staffLabel') }}</label>
+            <SearchSelect v-model="phieuNhapForm.nhanVienId" :options="staffOptions" :placeholder="t('admin.phieuNhapModal.selectPlaceholder')" />
+          </div>
+          <div class="col-6">
+            <label class="form-label small text-secondary">{{ t('admin.phieuNhapModal.dateLabel') }}</label>
+            <input v-model="phieuNhapForm.ngayNhap" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
+          </div>
+          <div class="col-6">
+            <label class="form-label small text-secondary">{{ t('admin.phieuNhapModal.noteLabel') }}</label>
+            <input v-model="phieuNhapForm.ghiChu" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
+          </div>
+        </div>
+
+        <div class="fw-semibold small text-secondary mb-2">{{ t('admin.phieuNhapModal.itemsLabel') }}</div>
+        <div class="d-flex gap-2 mb-1">
+          <label class="form-label small text-secondary mb-0" style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colProduct') }}</label>
+          <label class="form-label small text-secondary mb-0" style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colVariant') }}</label>
+          <label class="form-label small text-secondary mb-0" style="flex:0 0 80px;">{{ t('admin.phieuNhapModal.colQty') }}</label>
+          <label class="form-label small text-secondary mb-0" style="flex:0 0 110px;">{{ t('admin.phieuNhapModal.colPrice') }}</label>
+          <span style="flex:0 0 34px;"></span>
+        </div>
+        <div class="d-flex flex-column gap-2 mb-2">
+          <div v-for="(row, idx) in phieuNhapForm.items" :key="idx" class="d-flex gap-2 align-items-center">
+            <div style="flex:2 1 0;min-width:0;">
+              <SearchSelect v-model="row.sanPhamId" @update:model-value="row.bienTheId=''"
+                            :options="productOptionsForPhieuNhap"
+                            :placeholder="t('admin.phieuNhapModal.selectProductPlaceholder')" />
+            </div>
+            <div style="flex:2 1 0;min-width:0;">
+              <SearchSelect v-model="row.bienTheId" :disabled="!row.sanPhamId"
+                            :options="variantsForProduct(row.sanPhamId)"
+                            :placeholder="t('admin.phieuNhapModal.selectVariantPlaceholder')" />
+            </div>
+            <input v-model="row.soLuong" type="number" min="1" class="form-control form-control-sm" style="flex:0 0 80px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.qtyPlaceholder')" />
+            <input v-model="row.donGia" type="number" min="0" class="form-control form-control-sm" style="flex:0 0 110px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.unitPricePlaceholder')" />
+            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;flex:0 0 34px;" @click="removePhieuNhapItemRow(idx)">✕</button>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-outline-warning mb-3" @click="addPhieuNhapItemRow">{{ t('admin.phieuNhapModal.addRow') }}</button>
+
+        <div class="d-flex justify-content-end fw-bold" style="font-size:1.05rem;">
+          {{ t('admin.phieuNhapModal.totalLabel') }} {{ formatPrice(phieuNhapItemsTotal) }}
+        </div>
+      </div>
+      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
+        <button class="btn btn-sm btn-outline-secondary" @click="showPhieuNhapModal=false">{{ t('admin.phieuNhapModal.cancel') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="savePhieuNhap">{{ editingPhieuNhapId ? t('admin.phieuNhapModal.saveEdit') : t('admin.phieuNhapModal.save') }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CHI TIET PHIEU NHAP ══ -->
+  <div v-if="showPhieuNhapDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showPhieuNhapDetailModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:680px;max-width:96vw;max-height:90vh;">
+
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);" v-if="phieuNhapDetailData">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+               style="width:40px;height:40px;background:rgba(167,139,250,0.15);font-size:1.2rem;">📋</div>
+          <div>
+            <div class="fw-bold" style="font-size:0.95rem;color:var(--text-heading);">
+              {{ t('admin.phieuNhapDetailModal.title') }}
+              <span class="text-secondary ms-1" style="font-size:0.8rem;font-family:monospace;">{{ phieuNhapDetailData.maPhieuNhap }}</span>
+            </div>
+            <div class="text-secondary" style="font-size:0.78rem;">{{ supplierName(phieuNhapDetailData.nhaCungCapId) }} · {{ formatDate(phieuNhapDetailData.ngayNhap) }}</div>
+          </div>
+        </div>
+        <button class="btn-close btn-close-white btn-sm" @click="showPhieuNhapDetailModal=false"></button>
+      </div>
+
+      <div class="overflow-y-auto flex-grow-1" v-if="phieuNhapDetailData">
+        <!-- Info chips -->
+        <div class="d-flex flex-wrap gap-2 p-3" style="border-bottom:1px solid var(--border-color-soft);">
+          <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
+            🏢 <span class="text-secondary">{{ t('admin.phieuNhap.colSupplier') }}:</span> <span class="text-light fw-semibold">{{ supplierName(phieuNhapDetailData.nhaCungCapId) }}</span>
+          </span>
+          <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
+            👤 <span class="text-secondary">{{ t('admin.phieuNhap.colStaff') }}:</span> <span class="text-light fw-semibold">{{ staffName(phieuNhapDetailData.nhanVienId) }}</span>
+          </span>
+          <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
+            📅 <span class="text-secondary">{{ t('admin.phieuNhap.colDate') }}:</span> <span class="text-light fw-semibold">{{ formatDate(phieuNhapDetailData.ngayNhap) }}</span>
+          </span>
+          <span class="badge d-flex align-items-center" :style="{ background: phieuNhapStatusColor(phieuNhapDetailData.trangThai).bg, color: phieuNhapStatusColor(phieuNhapDetailData.trangThai).text }">
+            {{ phieuNhapStatusIcon(phieuNhapDetailData.trangThai) }} {{ statusLabel(phieuNhapDetailData.trangThai) }}
+          </span>
+          <div v-if="phieuNhapDetailData.ghiChu" class="w-100 text-secondary small fst-italic" style="padding-left:2px;">📝 {{ phieuNhapDetailData.ghiChu }}</div>
+        </div>
+
+        <!-- Danh sach hang -->
+        <div class="p-3">
+          <table class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
+            <thead>
+              <tr style="background:var(--bg-input);">
+                <th class="px-3 py-2 text-secondary" style="font-weight:600;">{{ t('admin.inventory.colSku') }}</th>
+                <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:80px;">{{ t('admin.phieuNhapModal.qtyPlaceholder') }}</th>
+                <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:130px;">{{ t('admin.phieuNhapModal.unitPricePlaceholder') }}</th>
+                <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:140px;">{{ t('admin.phieuNhapModal.totalLabel') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in phieuNhapDetailItems" :key="c.id" style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-2 text-secondary" style="font-family:monospace;">{{ c.maSku }}</td>
+                <td class="px-3 py-2 text-center fw-bold" style="color:var(--text-heading);">{{ c.soLuong }}</td>
+                <td class="px-3 py-2 text-end text-secondary">{{ formatPrice(c.donGiaNhap) }}</td>
+                <td class="px-3 py-2 text-end fw-semibold" style="color:var(--accent-fg);">{{ formatPrice(c.thanhTien) }}</td>
+              </tr>
+              <tr v-if="phieuNhapDetailItems.length===0"><td colspan="4" class="text-center text-secondary py-4">{{ t('admin.phieuNhap.empty') }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer: tong ket -->
+      <div v-if="phieuNhapDetailData" class="px-4 py-3 d-flex justify-content-between align-items-center" style="border-top:1px solid var(--border-color-soft);background:var(--bg-card-alt);">
+        <span class="text-secondary small">{{ phieuNhapDetailItems.length }} {{ t('admin.inventory.colSku') }}</span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-secondary small">{{ t('admin.phieuNhapModal.totalLabel') }}</span>
+          <span class="fw-bold" style="font-size:1.15rem;color:var(--accent-fg);">{{ formatPrice(phieuNhapDetailData.tongTien) }}</span>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end gap-2 p-3 pt-0" v-if="phieuNhapDetailData">
+        <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapDetail(phieuNhapDetailData)">🖨️ {{ t('admin.phieuNhap.printPdf') }}</button>
+        <button class="btn btn-sm btn-outline-secondary" @click="showPhieuNhapDetailModal=false">{{ t('admin.promoModal.cancel') }}</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ MODAL THEM SAN PHAM CHI TIET ══ -->
   <div v-if="showAddItemDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
        style="background:var(--bg-overlay);z-index:1070;" @click.self="showAddItemDetailModal=false">
@@ -3362,8 +4311,8 @@ onUnmounted(() => {
         </div>
         <div class="d-flex justify-content-between small">
           <span class="text-secondary">{{ t('admin.orderDetailModal.paymentStatus') }}</span>
-          <span class="badge" :class="orderDetailData.trangThaiThanhToan==='paid'?'bg-success':'bg-secondary'">
-            {{ orderDetailData.trangThaiThanhToan }}
+          <span class="badge" :style="{ background: paymentStatusColor(orderDetailData.trangThaiThanhToan).bg, color: paymentStatusColor(orderDetailData.trangThaiThanhToan).text }">
+            {{ paymentStatusIcon(orderDetailData.trangThaiThanhToan) }} {{ orderDetailData.trangThaiThanhToan ? paymentStatusLabel(orderDetailData.trangThaiThanhToan) : '—' }}
           </span>
         </div>
         <div v-if="orderDetailData.ngayGiaoDuKien" class="d-flex justify-content-between small">
@@ -3477,7 +4426,7 @@ onUnmounted(() => {
 
   <!-- ══ MODAL TON KHO ══ -->
   <div v-if="showStockModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showStockModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:420px;max-width:95vw;max-height:90vh;">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:480px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ t('admin.stockModal.title') }}</span>
         <button class="btn-close btn-close-white btn-sm" @click="showStockModal=false"></button>
@@ -3487,9 +4436,30 @@ onUnmounted(() => {
           {{ editingStock.bienThe?.sanPham?.tenSanPham??'—' }} — {{ t('admin.stockModal.skuLabel') }} <strong>{{ editingStock.bienThe?.maSku??'—' }}</strong>
         </div>
         <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.stockModal.stockLabel') }}</label><input v-model="stockForm.soLuongTon" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6">
+            <label class="form-label small text-secondary">{{ t('admin.stockModal.stockLabel') }}</label>
+            <div class="form-control form-control-sm d-flex align-items-center" style="background:var(--bg-hover); color:var(--text-secondary); border-color:var(--border-color-strong)">{{ editingStock?.soLuongTon ?? 0 }}</div>
+            <div class="text-secondary" style="font-size:0.72rem;">{{ t('admin.stockModal.stockHint') }}</div>
+          </div>
           <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.stockModal.heldLabel') }}</label><input v-model="stockForm.soLuongGiu" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
           <div class="col-12"><label class="form-label small text-secondary">{{ t('admin.stockModal.minStockLabel') }}</label><input v-model="stockForm.tonKhoToiThieu" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="form-label small text-secondary mb-0">{{ t('admin.stockModal.newSerialsLabel') }}</label>
+              <label class="btn btn-sm btn-outline-info" style="padding:2px 10px;font-size:0.72rem;cursor:pointer;">
+                📂 {{ t('admin.stockModal.importFromFile') }}
+                <input type="file" accept=".csv,.txt,.xlsx,.xls" class="d-none" @change="importSerialsFromFile" />
+              </label>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <div v-for="(s, idx) in stockForm.newSerials" :key="idx" class="d-flex gap-2 align-items-center">
+                <input v-model="stockForm.newSerials[idx]" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.stockModal.serialPlaceholder')" />
+                <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" @click="removeStockSerialRow(idx)">✕</button>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-outline-warning mt-2" @click="addStockSerialRow">{{ t('admin.stockModal.addSerialRow') }}</button>
+            <div class="text-secondary mt-1" style="font-size:0.72rem;">{{ t('admin.stockModal.importHint') }}</div>
+          </div>
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
@@ -3557,6 +4527,7 @@ onUnmounted(() => {
               <th class="px-4 py-2 text-secondary" style="font-weight:500;">{{ t('admin.stockDetailModal.colSerial') }}</th>
               <th class="px-4 py-2 text-secondary" style="font-weight:500;">{{ t('admin.stockDetailModal.colImportDate') }}</th>
               <th class="px-4 py-2 text-secondary" style="font-weight:500;">{{ t('admin.stockDetailModal.colStatus') }}</th>
+              <th class="px-4 py-2 text-secondary" style="font-weight:500;width:60px;"></th>
             </tr>
           </thead>
           <tbody>
@@ -3572,30 +4543,36 @@ onUnmounted(() => {
                   :title="stockDetailStatusLabel(s.trangThai)"
                 ></span>
               </td>
+              <td class="px-4 py-2">
+                <button v-if="s.trangThai==='trong_kho'" class="btn btn-sm btn-outline-danger" style="padding:1px 7px;font-size:0.72rem;" :title="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)">✕</button>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
     </div>
+  </div>
 
-    <!-- Dialog xác nhận dùng chung (thay window.confirm()) -->
-    <ConfirmDialog />
+  <!-- Dialog xác nhận + toast dùng chung toàn trang — PHẢI nằm ngoài mọi v-if của modal cụ
+       thể, nếu không component sẽ không tồn tại trong DOM khi modal đó đang đóng, khiến
+       askConfirm()/showToast() gọi ra nhưng không có gì hiển thị (Promise của askConfirm
+       treo mãi, code gọi nó bị kẹt không chạy tiếp). -->
+  <ConfirmDialog />
 
     <!-- Toast thông báo lỗi/thành công (thay window.alert()) -->
     <Transition name="adm-toast-slide">
       <div v-if="toast.show"
-           class="position-fixed d-flex align-items-center gap-2 px-4 py-3 rounded-3 fw-semibold small shadow-lg"
-           style="top:24px; right:24px; z-index:9999; min-width:260px; max-width:380px; pointer-events:none;"
+           class="position-fixed d-flex align-items-start gap-2 px-4 py-3 rounded-3 fw-semibold small shadow-lg"
+           style="top:24px; right:24px; z-index:9999; min-width:260px; max-width:440px; pointer-events:none; line-height:1.4;"
            :style="toast.type === 'success'
              ? 'background:var(--state-success,#16a34a); color:#fff;'
              : 'background:var(--state-danger,#dc2626); color:#fff;'"
            role="status" aria-live="polite">
         <span style="font-size:1.1rem; flex-shrink:0;">{{ toast.type === 'success' ? '✓' : '✕' }}</span>
-        {{ toast.msg }}
+        <span>{{ toast.msg }}</span>
       </div>
     </Transition>
-  </div>
 </template>
 
 <style scoped>

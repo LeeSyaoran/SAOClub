@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.PhieuNhapKho;
+import com.example.backend.repository.ChiTietPhieuNhapRepository;
 import com.example.backend.repository.NhaCungCapRepository;
 import com.example.backend.repository.NhanVienRepository;
 import com.example.backend.repository.PhieuNhapKhoRepository;
@@ -9,6 +10,7 @@ import com.example.backend.response.PhieuNhapKhoResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,6 +23,8 @@ public class PhieuNhapKhoService {
     private NhaCungCapRepository nhaCungCapRepository;
     @Autowired
     private NhanVienRepository nhanVienRepository;
+    @Autowired
+    private ChiTietPhieuNhapRepository chiTietPhieuNhapRepository;
 
     public List<PhieuNhapKhoResponse> hienThiPhieuNhapKho() {
         return phieuNhapKhoRepository.hienThiPhieuNhapKho();
@@ -50,9 +54,13 @@ public class PhieuNhapKhoService {
         return phieuNhapKhoRepository.save(entity);
     }
 
+    // Xóa cả dòng chi tiết trước rồi mới xóa phiếu — phiếu nhập không cascade sang tồn kho/serial
+    // (chỉ là chứng từ chi phí đối chiếu NCC), nên xóa an toàn, chỉ cần dọn FK chi_tiet_phieu_nhap.
+    @Transactional
     public void delete(Integer id) {
         if (!phieuNhapKhoRepository.existsById(id))
             throw new IllegalArgumentException("Phiếu nhập kho không tồn tại với id: " + id);
+        chiTietPhieuNhapRepository.deleteByPhieuNhapKho_PhieuNhapId(id);
         phieuNhapKhoRepository.deleteById(id);
     }
 }

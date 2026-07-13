@@ -97,19 +97,25 @@
           <!-- Thông tin khách hàng -->
           <div>
             <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.customerHeading') }}</div>
-            <div class="d-flex gap-2 mb-2">
-              <input v-model="checkoutForm.soDienThoai"
-                     class="form-control form-control-sm"
-                     style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-                     :placeholder="t('checkout.phonePlaceholder')" @keyup.enter="lookupCustomer" />
-              <button class="btn btn-sm btn-outline-warning flex-shrink-0 px-3" style="border-radius:10px;" @click="lookupCustomer">{{ t('checkout.find') }}</button>
+            <!-- Đã đăng nhập: đã biết chắc là khách hàng nào, khỏi cần tìm theo SĐT nữa -->
+            <div v-if="isLoggedInCustomer" class="small p-2 rounded-3 mb-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
+              {{ t('checkout.loggedInAs') }} <strong>{{ checkoutForm.hoTen }}</strong> · {{ checkoutForm.soDienThoai }}
             </div>
-            <div v-if="foundCustomer" class="small p-2 rounded-3 mb-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
-              {{ t('checkout.foundCustomer') }} <strong>{{ foundCustomer.hoTen }}</strong>
-            </div>
-            <div v-else-if="checkoutForm.soDienThoai" class="small p-2 rounded-3 mb-2" style="background:var(--bg-card-alt); color:var(--text-secondary);">
-              {{ t('checkout.newCustomer') }}
-            </div>
+            <template v-else>
+              <div class="d-flex gap-2 mb-2">
+                <input v-model="checkoutForm.soDienThoai"
+                       class="form-control form-control-sm"
+                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                       :placeholder="t('checkout.phonePlaceholder')" @keyup.enter="lookupCustomer" />
+                <button class="btn btn-sm btn-outline-warning flex-shrink-0 px-3" style="border-radius:10px;" @click="lookupCustomer">{{ t('checkout.find') }}</button>
+              </div>
+              <div v-if="foundCustomer" class="small p-2 rounded-3 mb-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
+                {{ t('checkout.foundCustomer') }} <strong>{{ foundCustomer.hoTen }}</strong>
+              </div>
+              <div v-else-if="checkoutForm.soDienThoai" class="small p-2 rounded-3 mb-2" style="background:var(--bg-card-alt); color:var(--text-secondary);">
+                {{ t('checkout.newCustomer') }}
+              </div>
+            </template>
             <div class="row g-2">
               <div class="col-6">
                 <input v-model="checkoutForm.hoTen" class="form-control form-control-sm"
@@ -139,20 +145,32 @@
                        :placeholder="t('checkout.receiverPhonePlaceholder')" />
               </div>
             </div>
-            <input v-model="checkoutForm.diaChiGiaoHangText" class="form-control form-control-sm"
-                   style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-                   :placeholder="t('checkout.addressPlaceholder')" />
+            <AddressPicker v-model="checkoutForm.diaChiGiaoHangText" :placeholder="t('checkout.addressPlaceholder')" />
           </div>
 
           <!-- Mã khuyến mãi -->
           <div>
             <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.promoHeading') }}</div>
-            <div class="d-flex gap-2">
-              <input v-model="checkoutForm.maKhuyenMai" class="form-control form-control-sm"
-                     style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-                     :placeholder="t('checkout.promoPlaceholder')" @keyup.enter="applyPromo" />
-              <button class="btn btn-sm btn-outline-warning flex-shrink-0 px-3" style="border-radius:10px;" @click="applyPromo">{{ t('checkout.apply') }}</button>
+
+            <!-- Mã đang áp dụng được cho đơn này, giảm nhiều nhất xếp trước -->
+            <div v-if="eligiblePromos.length" class="d-flex flex-column gap-2 mb-2">
+              <div v-for="(p, idx) in eligiblePromos" :key="p.khuyenMaiId"
+                   class="d-flex align-items-center justify-content-between p-2 rounded-3"
+                   style="cursor:pointer;border:1px solid;"
+                   :style="appliedPromo?.khuyenMaiId===p.khuyenMaiId ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                   @click="selectPromo(p)">
+                <div class="min-width-0">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold small" style="color:var(--text-heading);">{{ p.maKhuyenMai }}</span>
+                    <span v-if="idx===0" class="badge" style="background:rgba(250,204,21,0.15);color:#facc15;font-size:0.63rem;">🔥 {{ t('checkout.bestPromo') }}</span>
+                  </div>
+                  <div class="text-truncate" style="font-size:11px;color:var(--text-secondary);">{{ p.tenKhuyenMai }}</div>
+                </div>
+                <div class="text-warning fw-bold small flex-shrink-0 ms-2">− {{ formatPrice(p.discount) }}</div>
+              </div>
             </div>
+
+            <div v-if="eligiblePromos.length === 0" class="small px-1" style="color:var(--text-secondary);">{{ t('checkout.noPromo') }}</div>
             <div v-if="promoMsg" class="small mt-2 px-1" :class="appliedPromo ? 'text-success' : 'text-danger'">{{ promoMsg }}</div>
           </div>
 
@@ -320,6 +338,8 @@
 import { ref, reactive, computed, watch } from 'vue';
 import { t } from '../../i18n/index.js';
 import { AuthStore } from '../../stores/index.js';
+import { nowLocalIso } from '../../utils/datetime.js';
+import AddressPicker from './AddressPicker.vue';
 import * as KhachHangService from '../../Service/KhachHangService.js';
 import * as KhuyenMaiService  from '../../Service/KhuyenMaiService.js';
 import * as DonHangService    from '../../Service/DonHangService.js';
@@ -340,7 +360,6 @@ const checkoutProgress = ref('');   // Bước hiện tại trong placeOrder() �
 const checkoutError   = ref('');    // Thông báo lỗi khi checkout
 const checkoutOrderId    = ref(null);  // ID đơn hàng sau khi đặt xong
 const checkoutFinalTotal = ref(0);     // Tổng tiền lúc đặt hàng (lưu trước khi cha xóa giỏ)
-const allCustomers    = ref([]);    // Cache danh sách khách hàng
 const allPromos       = ref([]);    // Cache danh sách khuyến mãi
 const foundCustomer   = ref(null);  // Khách hàng tìm thấy qua SĐT
 const appliedPromo    = ref(null);  // Khuyến mãi đã áp dụng
@@ -368,13 +387,17 @@ const checkoutForm = reactive({
   maKhuyenMai:          '', // Mã khuyến mãi nhập vào
 });
 
+// Khách đã đăng nhập (tài khoản khach_hang) — bỏ ô tìm SĐT, đã biết chắc là ai rồi.
+const isLoggedInCustomer = computed(() => AuthStore.user?.role === 'khach_hang' && !!AuthStore.user?.soDienThoai);
+
 // Phí vận chuyển: miễn phí nếu đơn từ 300k
 const phiVanChuyen = computed(() => props.cartTotal >= 300000 ? 0 : 30000);
 
-// Tính giảm giá từ mã khuyến mãi
-const checkoutGiamGia = computed(() => {
-  const p = appliedPromo.value;
+// Số tiền 1 mã khuyến mãi cụ thể giảm được cho đơn hiện tại — dùng chung cho cả mã đang
+// áp dụng (checkoutGiamGia) lẫn để xếp hạng "giảm nhiều nhất" trong eligiblePromos.
+const calcDiscountFor = (p) => {
   if (!p) return 0;
+  if (p.donHangToiThieu && props.cartTotal < Number(p.donHangToiThieu)) return 0;
   if (p.loai === 'percent') {
     // Giảm theo % nhưng không vượt quá giaTriToiDa
     let d = props.cartTotal * Number(p.giaTri) / 100;
@@ -382,6 +405,22 @@ const checkoutGiamGia = computed(() => {
     return d;
   }
   return Number(p.giaTri) || 0; // Giảm theo số tiền cố định
+};
+const checkoutGiamGia = computed(() => calcDiscountFor(appliedPromo.value));
+
+// Mã khuyến mãi còn hiệu lực + đủ điều kiện áp dụng cho đơn hiện tại (đạt đơn tối thiểu,
+// còn hạn dùng, chưa hết lượt) — sắp xếp giảm nhiều nhất lên đầu để khách chọn nhanh,
+// khỏi phải gõ tay từng mã để dò xem cái nào lợi nhất.
+const eligiblePromos = computed(() => {
+  const now = new Date();
+  return allPromos.value
+    .filter(p => p.trangThai === 'active')
+    .filter(p => !p.ngayBatDau || new Date(p.ngayBatDau) <= now)
+    .filter(p => !p.ngayKetThuc || new Date(p.ngayKetThuc) > now)
+    .filter(p => !p.soLuongToiDa || (p.soLanDaDung ?? 0) < p.soLuongToiDa)
+    .map(p => ({ ...p, discount: calcDiscountFor(p) }))
+    .filter(p => p.discount > 0)
+    .sort((a, b) => b.discount - a.discount);
 });
 
 // Tổng tiền thanh toán cuối cùng
@@ -412,24 +451,32 @@ watch(() => props.modelValue, async (open) => {
   selectedPayment.value = 'tien_mat';
   qrImageFailed.value   = false;
   Object.keys(checkoutForm).forEach(k => { checkoutForm[k] = ''; });
-  if (!allCustomers.value.length) {
-    [allCustomers.value, allPromos.value] = await Promise.all([
-      KhachHangService.getAll().catch(() => []),
-      KhuyenMaiService.getAll().catch(() => []),
-    ]);
+  if (!allPromos.value.length) {
+    allPromos.value = await KhuyenMaiService.getAll().catch(() => []);
   }
-  // Khách đã đăng nhập: tự điền thông tin sẵn có, khỏi phải nhập lại từ đầu
+  // Khách đã đăng nhập: điền thẳng từ thông tin phiên đăng nhập (đáng tin cậy, luôn có
+  // sẵn ngay lúc login) — KHÔNG dùng KhachHangService.getAll() (chỉ nhân viên/admin được
+  // gọi, khách gọi sẽ bị 403) để dò theo SĐT như cách cũ.
   if (AuthStore.user?.role === 'khach_hang' && AuthStore.user?.soDienThoai) {
-    checkoutForm.soDienThoai = AuthStore.user.soDienThoai;
-    lookupCustomer();
+    checkoutForm.soDienThoai  = AuthStore.user.soDienThoai;
+    checkoutForm.hoTen        = AuthStore.user.hoTen || '';
+    checkoutForm.email        = AuthStore.user.email || '';
+    checkoutForm.nguoiNhan    = AuthStore.user.hoTen || '';
+    checkoutForm.sdtNguoiNhan = AuthStore.user.soDienThoai;
+    foundCustomer.value = { khachHangId: AuthStore.user.id, hoTen: AuthStore.user.hoTen };
+    // Địa chỉ không có trong phiên đăng nhập — xem hồ sơ của chính mình (endpoint tự-xem
+    // cho phép khách xem đúng bản ghi của họ), không có thì để trống, khách tự nhập.
+    const full = await KhachHangService.getById(AuthStore.user.id).catch(() => null);
+    if (full?.diaChi) checkoutForm.diaChiGiaoHangText = full.diaChi;
   }
 });
 
-// Tìm khách hàng theo số điện thoại
-const lookupCustomer = () => {
-  const c = allCustomers.value.find(
-    (x) => x.soDienThoai === checkoutForm.soDienThoai.trim()
-  );
+// Tìm khách hàng theo số điện thoại — endpoint công khai riêng cho checkout (khách vãng
+// lai chưa đăng nhập vẫn gọi được), khác getAll() (chỉ nhân viên/admin).
+const lookupCustomer = async () => {
+  const phone = checkoutForm.soDienThoai.trim();
+  if (!phone) { foundCustomer.value = null; return; }
+  const c = await KhachHangService.findByPhone(phone).catch(() => null);
   foundCustomer.value = c || null;
   if (c) {
     // Tự điền thông tin nếu tìm thấy khách hàng
@@ -455,6 +502,18 @@ const applyPromo = () => {
     appliedPromo.value = null;
     promoMsg.value     = t('checkout.promoInvalid');
   }
+};
+
+// Chọn thẳng 1 mã trong danh sách gợi ý — bấm lần nữa vào mã đang áp dụng để bỏ chọn.
+const selectPromo = (p) => {
+  if (appliedPromo.value?.khuyenMaiId === p.khuyenMaiId) {
+    checkoutForm.maKhuyenMai = '';
+    appliedPromo.value = null;
+    promoMsg.value = '';
+    return;
+  }
+  checkoutForm.maKhuyenMai = p.maKhuyenMai;
+  applyPromo();
 };
 
 // Kiểm tra thông tin bước 1 trước khi sang bước thanh toán — chặn sớm thay vì để
@@ -500,11 +559,10 @@ const placeOrder = async () => {
         diemTichLuy:  0,
         trangThai:    'active',
       };
-      const r = await KhachHangService.save(null, custBody);
+      const r = await KhachHangService.createGuest(custBody);
       if (!r.ok) throw new Error(await parseApiError(r, t('checkout.createCustomerError')));
       const newC  = await r.json();
       khachHangId = newC.khachHangId;
-      allCustomers.value = await KhachHangService.getAll().catch(() => []);
     }
 
     // Tạo đơn hàng chính
@@ -519,7 +577,7 @@ const placeOrder = async () => {
       giamGia:            checkoutGiamGia.value,
       phiVanChuyen:       phiVanChuyen.value,
       // thanhTien bỏ qua — computed column trong DB (tong_tien - giam_gia + phi_van_chuyen)
-      ngayDat:            new Date().toISOString().slice(0, 19),
+      ngayDat:            nowLocalIso(),
       trangThaiDonHang:   'pending',
       trangThaiThanhToan: 'unpaid',
       kenhBan:            'online',
@@ -545,7 +603,7 @@ const placeOrder = async () => {
           giamGiaDong: 0,
         });
         if (!itemRes.ok)
-          throw new Error(`Lỗi chi tiết đơn hàng: ${itemRes.status}`);
+          throw new Error(await parseApiError(itemRes, t('checkout.addItemError', { name: item.tenSanPham })));
       }
     } catch (e) {
       await DonHangService.remove(donHangId).catch(() => {});

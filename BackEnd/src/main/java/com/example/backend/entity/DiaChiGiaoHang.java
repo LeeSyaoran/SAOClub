@@ -19,7 +19,7 @@ public class DiaChiGiaoHang {
     @Column(name = "dia_chi_id")
     private Integer id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "khach_hang_id")
     private KhachHang khachHang;
 

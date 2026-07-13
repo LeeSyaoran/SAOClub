@@ -20,19 +20,19 @@ public class PhieuBaoHanh {
     @Column(name = "bao_hanh_id")
     private Integer baoHanhId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "don_hang_id", nullable = false)
     private DonHang donHang;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bien_the_id", nullable = false)
     private BienTheSanPham bienThe;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chi_tiet_id")
     private ChiTietSanPham chiTietSanPham;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "khach_hang_id", nullable = false)
     private KhachHang khachHang;
 

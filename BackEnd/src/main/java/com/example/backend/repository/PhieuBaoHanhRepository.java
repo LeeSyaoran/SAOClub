@@ -14,4 +14,6 @@ public interface PhieuBaoHanhRepository extends JpaRepository<PhieuBaoHanh, Inte
     List<PhieuBaoHanhResponse> hienThiPhieuBaoHanh();
 
     List<PhieuBaoHanh> findByDonHang_Id(Integer donHangId);
+
+    boolean existsByBienThe_BienTheId(Integer bienTheId);
 }

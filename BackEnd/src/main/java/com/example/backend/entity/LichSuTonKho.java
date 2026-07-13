@@ -19,11 +19,11 @@ public class LichSuTonKho {
     @Column(name = "lich_su_id")
     private Integer lichSuId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bien_the_id", nullable = false)
     private BienTheSanPham bienThe;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chi_tiet_id")
     private ChiTietSanPham chiTietSanPham;
 
@@ -33,15 +33,15 @@ public class LichSuTonKho {
     @Column(name = "so_luong_thay_doi", nullable = false)
     private Integer soLuongThayDoi;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "don_hang_id")
     private DonHang donHang;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phieu_nhap_id")
     private PhieuNhapKho phieuNhapKho;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nhan_vien_id")
     private NhanVien nhanVien;
 

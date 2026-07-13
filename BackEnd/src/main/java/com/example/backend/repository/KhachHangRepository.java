@@ -12,4 +12,6 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
 	java.util.List<KhachHangResponse> hienThiKhachHang();
 
 	boolean existsBySoDienThoai(String soDienThoai);
+
+	java.util.Optional<KhachHang> findBySoDienThoai(String soDienThoai);
 }

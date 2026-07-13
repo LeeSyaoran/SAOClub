@@ -2,11 +2,14 @@ package com.example.backend.repository;
 
 import com.example.backend.entity.DonHang;
 import com.example.backend.response.DonHangResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @Repository
 public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
@@ -20,7 +23,9 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     // Khai báo LEFT JOIN rõ ràng với alias (nv, km, dcgh)
     // Dùng alias trong SELECT thay vì path navigation (nv.nhanVienId thay vì d.nhanVien.nhanVienId)
     // khachHang NOT NULL trong DB nên dùng JOIN thường (không cần LEFT)
-    @Query("""
+    //
+    // Phân trang qua Pageable — countQuery riêng vì JPQL DTO projection không tự suy count được.
+    @Query(value = """
     SELECT new com.example.backend.response.DonHangResponse(
         d.id, d.maDonHang,
         kh.khachHangId,
@@ -37,7 +42,16 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     LEFT JOIN d.nhanVien nv
     LEFT JOIN d.khuyenMai km
     LEFT JOIN d.diaChiGiaoHang dcgh
+    WHERE (:khachHangId IS NULL OR kh.khachHangId = :khachHangId)
     ORDER BY d.ngayDat DESC
+    """,
+    countQuery = """
+    SELECT COUNT(d) FROM DonHang d JOIN d.khachHang kh
+    WHERE (:khachHangId IS NULL OR kh.khachHangId = :khachHangId)
     """)
-    List<DonHangResponse> hienThiDonHang();
+    Page<DonHangResponse> hienThiDonHang(@Param("khachHangId") Integer khachHangId, Pageable pageable);
+
+    // Tổng doanh thu cho Dashboard KPI — SUM ở SQL thay vì kéo hết don_hang về JS cộng dồn.
+    @Query("SELECT COALESCE(SUM(d.thanhTien), 0) FROM DonHang d")
+    BigDecimal sumDoanhThu();
 }

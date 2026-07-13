@@ -29,7 +29,7 @@ public class NhanVien {
     @Column(name = "email", length = 100, unique = true)
     private String email;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chuc_vu_id")
     private ChucVu chucVu;
 

@@ -341,7 +341,7 @@ export default {
     points: "{points} loyalty points",
     tabOrders: "Current orders",
     tabHistory: "Order history",
-    tabPending: "To confirm",
+    tabPending: "Processing",
     tabShipping: "Shipping",
     tabCompleted: "Completed",
     tabCancelled: "Cancelled/Returned",

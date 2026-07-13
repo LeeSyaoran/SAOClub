@@ -32,10 +32,20 @@ public class SseService {
     }
 
     public void notifyNewOrder(Integer orderId) {
+        broadcast("new-order", orderId);
+    }
+
+    // Đơn hàng đổi trạng thái/thông tin — admin (tab khác) và trang khách hàng đang mở đơn
+    // đó cùng lắng nghe để tự tải lại, khỏi phải F5 mới thấy trạng thái mới.
+    public void notifyOrderUpdate(Integer orderId) {
+        broadcast("order-updated", orderId);
+    }
+
+    private void broadcast(String eventName, Integer orderId) {
         List<SseEmitter> dead = new ArrayList<>();
         for (SseEmitter emitter : emitters) {
             try {
-                emitter.send(SseEmitter.event().name("new-order").data(orderId));
+                emitter.send(SseEmitter.event().name(eventName).data(orderId));
             } catch (Exception e) {
                 dead.add(emitter);
             }

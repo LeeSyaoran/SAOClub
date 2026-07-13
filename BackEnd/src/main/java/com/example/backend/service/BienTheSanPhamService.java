@@ -7,6 +7,7 @@ import com.example.backend.response.BienTheSanPhamResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -25,6 +26,20 @@ public class BienTheSanPhamService {
     private DmOcungRepository dmOcungRepository;
     @Autowired
     private DmGpuRepository dmGpuRepository;
+    @Autowired
+    private ChiTietSanPhamRepository chiTietSanPhamRepository;
+    @Autowired
+    private ChiTietDonHangRepository chiTietDonHangRepository;
+    @Autowired
+    private ChiTietTraHangRepository chiTietTraHangRepository;
+    @Autowired
+    private PhieuBaoHanhRepository phieuBaoHanhRepository;
+    @Autowired
+    private ChiTietPhieuNhapRepository chiTietPhieuNhapRepository;
+    @Autowired
+    private TonKhoRepository tonKhoRepository;
+    @Autowired
+    private LichSuTonKhoRepository lichSuTonKhoRepository;
 
     public List<BienTheSanPhamResponse> hienThiBienTheSanPham() {
         return bienTheSanPhamRepository.hienThiBienTheSanPham();
@@ -62,9 +77,32 @@ public class BienTheSanPhamService {
         return bienTheSanPhamRepository.save(entity);
     }
 
+    // Biến thể đã qua giao dịch chưa (đã bán/trả/bảo hành, hoặc có serial không còn
+    // "trong_kho") — dùng để FE hỏi trước khi hiện hộp thoại xóa (câu hỏi đơn giản nếu an
+    // toàn, cảnh báo rõ lý do nếu không) và để delete() tự chặn nếu ai đó gọi thẳng API.
+    public boolean hasTransactionHistory(Integer id) {
+        return chiTietDonHangRepository.existsByBienThe_BienTheId(id)
+                || chiTietTraHangRepository.existsByBienThe_BienTheId(id)
+                || phieuBaoHanhRepository.existsByBienThe_BienTheId(id)
+                || chiTietSanPhamRepository.existsByBienThe_BienTheIdAndTrangThaiNot(id, "trong_kho");
+    }
+
+    // Chỉ xóa được biến thể CHƯA từng qua giao dịch — có giao dịch rồi mà xóa sẽ làm sai
+    // lịch sử đơn hàng/bảo hành đã ghi nhận. Nếu an toàn, dọn hết dữ liệu phụ thuộc (tồn
+    // kho/serial/lịch sử/phiếu nhập của riêng biến thể này — không phải bằng chứng đã bán)
+    // trước khi xóa biến thể.
+    @Transactional
     public void delete(Integer id) {
-        if (!bienTheSanPhamRepository.existsById(id))
-            throw new IllegalArgumentException("Biến thể sản phẩm không tồn tại với id: " + id);
+        BienTheSanPham entity = getById(id);
+        if (hasTransactionHistory(id)) {
+            throw new IllegalArgumentException(
+                    "Không thể xóa biến thể \"" + entity.getMaSku() + "\": đã có lịch sử bán hàng/bảo hành. " +
+                    "Hãy chuyển trạng thái sang ngừng kinh doanh thay vì xóa.");
+        }
+        chiTietSanPhamRepository.deleteByBienThe_BienTheId(id);
+        tonKhoRepository.deleteByBienThe_BienTheId(id);
+        chiTietPhieuNhapRepository.deleteByBienThe_BienTheId(id);
+        lichSuTonKhoRepository.deleteByBienThe_BienTheId(id);
         bienTheSanPhamRepository.deleteById(id);
     }
 }

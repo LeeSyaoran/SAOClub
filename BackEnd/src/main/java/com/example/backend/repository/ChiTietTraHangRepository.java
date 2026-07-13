@@ -12,4 +12,6 @@ import java.util.List;
 public interface ChiTietTraHangRepository extends JpaRepository<ChiTietTraHang, Integer> {
     @Query("SELECT new com.example.backend.response.ChiTietTraHangResponse(c.id, c.phieuTraHang.phieuTraId, c.bienThe.bienTheId, c.bienThe.maSku, c.chiTietSanPham.chiTietId, c.soLuong, c.donGiaHoan, c.tinhTrang) FROM ChiTietTraHang c")
     List<ChiTietTraHangResponse> hienThiChiTietTraHang();
+
+    boolean existsByBienThe_BienTheId(Integer bienTheId);
 }

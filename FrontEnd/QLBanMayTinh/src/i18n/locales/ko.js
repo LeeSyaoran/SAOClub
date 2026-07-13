@@ -341,7 +341,7 @@ export default {
     points: "{points} 적립 포인트",
     tabOrders: "진행 중인 주문",
     tabHistory: "구매 내역",
-    tabPending: "확인 대기",
+    tabPending: "처리 중",
     tabShipping: "배송 중",
     tabCompleted: "완료",
     tabCancelled: "취소/반품",

@@ -23,11 +23,11 @@ public class PhieuNhapKho {
     @Column(name = "ma_phieu_nhap", length = 30, unique = true, insertable = false, updatable = false)
     private String maPhieuNhap;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nha_cung_cap_id", nullable = false)
     private NhaCungCap nhaCungCap;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nhan_vien_id")
     private NhanVien nhanVien;
 

@@ -20,7 +20,7 @@ public class BienTheSanPham {
     @Column(name = "bien_the_id")
     private Integer bienTheId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "san_pham_id", nullable = false)
     private SanPham sanPham;
 
@@ -49,19 +49,19 @@ public class BienTheSanPham {
     private String mauSac;
 
     // Phần cứng laptop — tham chiếu bảng danh mục riêng để dễ lọc/filter
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cpu_id")
     private DmCpu cpu;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ram_id")
     private DmRam ram;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "o_cung_id")
     private DmOcung oCung;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "gpu_id")
     private DmGpu gpu;
 

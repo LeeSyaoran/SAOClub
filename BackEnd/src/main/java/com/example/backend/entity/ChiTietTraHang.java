@@ -19,15 +19,15 @@ public class ChiTietTraHang {
     @Column(name = "chi_tiet_tra_id")
     private Integer id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phieu_tra_id")
     private PhieuTraHang phieuTraHang;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bien_the_id")
     private BienTheSanPham bienThe;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chi_tiet_id")
     private ChiTietSanPham chiTietSanPham;
 

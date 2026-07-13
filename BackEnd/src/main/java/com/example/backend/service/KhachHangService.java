@@ -40,6 +40,14 @@ public class KhachHangService {
         return khachHangRepository.hienThiKhachHang();
     }
 
+    // Tra cứu theo SĐT cho luồng checkout (khách vãng lai lẫn đã đăng nhập) — không kiểm
+    // tra staff-or-self như getById() vì lúc này người gọi CHƯA CHẮC đã có tài khoản/đăng
+    // nhập (khách vãng lai). Chỉ trả về đúng 1 khách khớp SĐT, không lộ toàn bộ danh sách
+    // như getAll() (vốn chỉ dành cho nhân viên/admin).
+    public KhachHang findBySoDienThoai(String soDienThoai) {
+        return khachHangRepository.findBySoDienThoai(soDienThoai).orElse(null);
+    }
+
     public KhachHang getById(Integer id) {
         KhachHang entity = khachHangRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Khách hàng không tồn tại với id: " + id));

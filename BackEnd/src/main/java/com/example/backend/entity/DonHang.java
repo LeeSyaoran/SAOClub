@@ -25,19 +25,19 @@ public class DonHang {
     @Column(name = "ma_don_hang", length = 30, insertable = false, updatable = false)
     private String maDonHang;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "khach_hang_id")
     private KhachHang khachHang;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nhan_vien_id")
     private NhanVien nhanVien;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "khuyen_mai_id")
     private KhuyenMai khuyenMai;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dia_chi_giao_hang_id")
     private DiaChiGiaoHang diaChiGiaoHang;
 

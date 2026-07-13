@@ -6,11 +6,11 @@ import com.example.backend.response.SanPhamResponse;
 import com.example.backend.service.SanPhamService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/san-pham")
@@ -19,12 +19,19 @@ public class SanPhamController {
     @Autowired
     private SanPhamService sanPhamService;
 
-    // GET /api/san-pham/hien-thi
-    // Trả về danh sách sản phẩm kèm thông tin variant (bien_the_san_pham) qua JPQL DTO query
-    // Tránh N+1 query so với dùng findAll() + serialize entity lồng nhau
+    // GET /api/san-pham/hien-thi?page=0&size=20&keyword=&danhMucId=&thuongHieuId=&trangThai=
+    // Trả về Page<SanPhamResponse> (1 dòng/variant) qua JPQL DTO query, có phân trang + lọc
+    // động ở tầng SQL — tránh tải toàn bộ bảng như trước (N+1 tránh được nhờ DTO projection,
+    // dữ liệu lớn tránh được nhờ Pageable).
     @GetMapping("hien-thi")
-    public List<SanPhamResponse> getAll() {
-        return sanPhamService.hienThiSanPham();
+    public Page<SanPhamResponse> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer danhMucId,
+            @RequestParam(required = false) Integer thuongHieuId,
+            @RequestParam(required = false) String trangThai) {
+        return sanPhamService.hienThiSanPham(keyword, danhMucId, thuongHieuId, trangThai, PageRequest.of(page, size));
     }
 
     // GET /api/san-pham/{id}
@@ -55,11 +62,18 @@ public class SanPhamController {
     }
 
     // DELETE /api/san-pham/delete/{id}
-    // Xóa sản phẩm — DB có ON DELETE CASCADE nên bien_the_san_pham liên quan tự xóa theo
-    // Trả 204 No Content (chuẩn REST cho DELETE thành công)
+    // Xóa sản phẩm + toàn bộ biến thể liên quan — chỉ thành công nếu CHƯA biến thể nào qua
+    // giao dịch (xem SanPhamService.deleteSanPham). Trả 204 No Content khi xóa thành công.
     @DeleteMapping("delete/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         sanPhamService.deleteSanPham(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // GET /api/san-pham/{id}/co-giao-dich — FE gọi trước khi hiện hộp thoại xóa, để hỏi câu
+    // đơn giản nếu an toàn hoặc báo lý do chặn nếu không, thay vì phải bấm xóa rồi mới biết.
+    @GetMapping("/{id}/co-giao-dich")
+    public boolean hasTransactionHistory(@PathVariable Integer id) {
+        return sanPhamService.hasTransactionHistory(id);
     }
 }

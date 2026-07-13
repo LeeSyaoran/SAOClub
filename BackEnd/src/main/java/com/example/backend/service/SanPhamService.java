@@ -7,7 +7,10 @@ import com.example.backend.request.SanPhamRequest;
 import com.example.backend.response.SanPhamResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,9 +36,16 @@ public class SanPhamService {
     private DmOcungRepository dmOcungRepository;
     @Autowired
     private DmGpuRepository dmGpuRepository;
+    @Autowired
+    private BienTheSanPhamService bienTheSanPhamService;
 
-    public List<SanPhamResponse> hienThiSanPham() {
-        return sanPhamRepository.hienThiSanPham();
+    // Chuỗi rỗng ("") không khớp ":keyword IS NULL" trong JPQL — chuẩn hóa về null ở đây
+    // để ô tìm kiếm trống trên frontend không vô tình lọc mất tất cả kết quả.
+    public Page<SanPhamResponse> hienThiSanPham(String keyword, Integer danhMucId,
+                                                 Integer thuongHieuId, String trangThai,
+                                                 Pageable pageable) {
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return sanPhamRepository.hienThiSanPham(kw, danhMucId, thuongHieuId, trangThai, pageable);
     }
 
     public SanPham getSanPhamById(Integer sanPhamId) {
@@ -104,9 +114,23 @@ public class SanPhamService {
         }
     }
 
+    // Sản phẩm đã có biến thể nào qua giao dịch chưa — dùng để FE hỏi trước khi hiện hộp
+    // thoại xóa.
+    public boolean hasTransactionHistory(Integer sanPhamId) {
+        return bienTheSanPhamRepository.findBySanPham_SanPhamId(sanPhamId).stream()
+                .anyMatch(bt -> bienTheSanPhamService.hasTransactionHistory(bt.getBienTheId()));
+    }
+
+    // Xóa từng biến thể trước (tái dùng guard "chưa từng giao dịch" của
+    // BienTheSanPhamService.delete() — nếu bất kỳ biến thể nào đã bán/bảo hành, toàn bộ
+    // giao dịch bị hủy, không xóa dở dang) rồi mới xóa sản phẩm.
+    @Transactional
     public void deleteSanPham(Integer sanPhamId) {
         if (!sanPhamRepository.existsById(sanPhamId)) {
             throw new IllegalArgumentException("Sản phẩm không tồn tại với id: " + sanPhamId);
+        }
+        for (BienTheSanPham bt : bienTheSanPhamRepository.findBySanPham_SanPhamId(sanPhamId)) {
+            bienTheSanPhamService.delete(bt.getBienTheId());
         }
         sanPhamRepository.deleteById(sanPhamId);
     }

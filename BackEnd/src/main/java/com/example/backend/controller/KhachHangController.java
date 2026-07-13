@@ -65,4 +65,21 @@ public class KhachHangController {
         }
     }
 
+    // Tra cứu theo SĐT cho checkout (khách vãng lai lẫn đã đăng nhập) — permitAll vì khách
+    // vãng lai chưa có JWT lúc này. Trả về null (không phải lỗi) nếu chưa có tài khoản.
+    @GetMapping("/tim-theo-sdt")
+    public KhachHang findBySoDienThoai(@RequestParam String soDienThoai) {
+        return khachHangService.findBySoDienThoai(soDienThoai);
+    }
+
+    // Tạo khách vãng lai lúc checkout (không mật khẩu/đăng nhập, khác /register cần
+    // username+password) — permitAll, nhưng ép cứng diemTichLuy=0/trangThai=active ở server,
+    // không tin 2 trường này từ client vì endpoint công khai, ai cũng gọi được.
+    @PostMapping("/khach-vang-lai")
+    public ResponseEntity<KhachHang> createGuest(@Valid @RequestBody KhachHangRequest request) {
+        request.setDiemTichLuy(0);
+        request.setTrangThai("active");
+        return ResponseEntity.status(HttpStatus.CREATED).body(khachHangService.create(request));
+    }
+
 }

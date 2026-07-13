@@ -20,7 +20,7 @@ public class ThanhToan {
     @Column(name = "thanh_toan_id")
     private Integer thanhToanId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "don_hang_id", nullable = false)
     private DonHang donHang;
 

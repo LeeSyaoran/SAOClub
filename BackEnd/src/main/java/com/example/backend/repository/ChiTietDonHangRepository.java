@@ -20,4 +20,7 @@ public interface ChiTietDonHangRepository extends JpaRepository<ChiTietDonHang, 
     // Trả về entity (không phải DTO) — dùng cho merge và recalculate
     @Query("SELECT c FROM ChiTietDonHang c WHERE c.donHang.id = ?1")
     List<ChiTietDonHang> findEntityByDonHangId(Integer donHangId);
+
+    // Biến thể đã từng bán chưa — dùng để chặn xóa biến thể/sản phẩm đã có lịch sử bán.
+    boolean existsByBienThe_BienTheId(Integer bienTheId);
 }
