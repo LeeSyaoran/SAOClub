@@ -1,4 +1,4 @@
-import { get, post, put, del, authHeaders } from './api.js';
+import { get, post, put, patch, del, authHeaders } from './api.js';
 
 // Backend giờ trả Page<DonHangResponse> — xem BackEnd/.../DonHangController.getAll().
 // getPage() trả nguyên object Page cho bảng Đơn hàng có nút Trước/Sau.
@@ -32,3 +32,7 @@ export const merge = (targetId, sourceIds) =>
   post('/api/don-hang/merge', { targetId, sourceIds });
 
 export const addChiTiet = (body) => post('/api/chi-tiet-don-hang', body);
+
+// Chọn serial cho từng dòng + chốt bán + chuyển đơn sang "processing" (đóng gói) — chỉ
+// dùng cho đơn online. body: { lines: [{ chiTietDonHangId, serialIds: [...] }] }
+export const dongGoi = (donHangId, body) => patch(`/api/don-hang/${donHangId}/dong-goi`, body);

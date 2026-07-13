@@ -30,5 +30,8 @@ export const post = (url, body) =>
 export const put = (url, body) =>
   fetch(url, { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
 
+export const patch = (url, body) =>
+  fetch(url, { method: 'PATCH', headers: headers(), body: JSON.stringify(body) });
+
 export const del = (url) =>
   fetch(url, { method: 'DELETE', headers: authHeaders() });
