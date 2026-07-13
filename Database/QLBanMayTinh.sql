@@ -353,6 +353,19 @@ CREATE TABLE chi_tiet_don_hang (
     CONSTRAINT FK_ctdh_ctsp     FOREIGN KEY (chi_tiet_id) REFERENCES chi_tiet_san_pham(chi_tiet_id)
 );
 
+-- Gắn nhiều serial cho 1 dòng đơn hàng — chi_tiet_don_hang.chi_tiet_id (FK đơn) chỉ giữ
+-- được 1 serial đại diện, bảng này là nguồn đầy đủ khi so_luong > 1. Dùng cho cả 2 kênh
+-- bán, nhưng chỉ đơn online thực sự cần luồng giữ chỗ ("giu_hang") -> chọn lại -> đóng gói.
+CREATE TABLE chi_tiet_don_hang_serial (
+    chi_tiet_don_hang_serial_id INT IDENTITY(1,1) PRIMARY KEY,
+    chi_tiet_don_hang_id        INT NOT NULL,
+    chi_tiet_id                 INT NOT NULL,
+    CONSTRAINT FK_ctdhs_ctdh FOREIGN KEY (chi_tiet_don_hang_id) REFERENCES chi_tiet_don_hang(chi_tiet_don_hang_id) ON DELETE CASCADE,
+    CONSTRAINT FK_ctdhs_ctsp FOREIGN KEY (chi_tiet_id)          REFERENCES chi_tiet_san_pham(chi_tiet_id),
+    CONSTRAINT UX_ctdhs_pair UNIQUE (chi_tiet_don_hang_id, chi_tiet_id)
+);
+GO
+
 CREATE TABLE lich_su_ton_kho (
     lich_su_id        INT            IDENTITY(1,1) PRIMARY KEY,
     bien_the_id       INT            NOT NULL,
