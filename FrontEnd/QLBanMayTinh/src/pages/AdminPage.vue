@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, reactive } from "vue";
+import { ref, computed, onMounted, onUnmounted, reactive, watch } from "vue";
 import { AuthStore, clearSession } from "../stores/index.js";
 import { t } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon } from "../utils/orderStatus.js";
@@ -330,6 +330,56 @@ const weekOrderStatusChartData = computed(() =>
     color: orderStatusColor(row.status).text,
   }))
 );
+
+// ── Báo cáo: bộ lọc khoảng thời gian (Hôm nay/Tuần này/Tháng này/Tùy chọn) ────────────
+// Dùng lại đúng quy ước ngày-tháng đã có ở tab Dashboard (toDateInputValue, so sánh
+// string 'YYYY-MM-DD') — xem weekChartFrom/weekChartTo cùng file để đối chiếu.
+const reportsDateRange = ref('week'); // 'today' | 'week' | 'month' | 'custom'
+const reportsCustomFrom = ref(toDateInputValue(new Date()));
+const reportsCustomTo   = ref(toDateInputValue(new Date()));
+
+const reportsDateFrom = computed(() => {
+  const now = new Date();
+  if (reportsDateRange.value === 'today') return toDateInputValue(now);
+  if (reportsDateRange.value === 'week') return toDateInputValue(startOfWeek(now));
+  if (reportsDateRange.value === 'month') return toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1));
+  return reportsCustomFrom.value;
+});
+const reportsDateTo = computed(() => {
+  const now = new Date();
+  if (reportsDateRange.value === 'today') return toDateInputValue(now);
+  if (reportsDateRange.value === 'week') return toDateInputValue(endOfWeek(now));
+  if (reportsDateRange.value === 'month') return toDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  return reportsCustomTo.value;
+});
+
+// Top sản phẩm bán chạy trong khoảng đã chọn — tải lại mỗi khi khoảng đổi.
+const reportsTopSelling = ref([]); // [{ tenSanPham, soLuongDaBan }]
+const loadReportsTopSelling = async () => {
+  reportsTopSelling.value = await DashboardService
+    .getTopSelling(5, reportsDateFrom.value, reportsDateTo.value)
+    .catch(() => []);
+};
+watch([reportsDateFrom, reportsDateTo], loadReportsTopSelling, { immediate: true });
+
+// Đơn hàng theo trạng thái trong khoảng đã chọn — vẫn tính từ orders đã tải sẵn (đủ
+// nhanh, không cần thêm endpoint riêng vì đây chỉ là group-by theo status, không phải
+// SUM/COUNT nặng), nhưng nay có lọc theo ngày + dùng đúng nhãn/màu trạng thái đã chốt.
+const reportsOrdersByStatus = computed(() => {
+  const map = {};
+  orders.value.forEach((o) => {
+    if (!o.ngayDat) return;
+    const d = toDateInputValue(new Date(o.ngayDat));
+    if (d < reportsDateFrom.value || d > reportsDateTo.value) return;
+    map[o.trangThaiDonHang] = (map[o.trangThaiDonHang] || 0) + 1;
+  });
+  return Object.entries(map).map(([status, count]) => ({
+    status, count,
+    label: orderStatusLabel(status),
+    color: orderStatusColor(status),
+  }));
+});
+
 // Top 5 bán chạy/bán chậm cho Dashboard — tính bằng SUM/GROUP BY ở backend (xem
 // DashboardController), thay vì tải toàn bộ chi tiết đơn hàng (hàng nghìn dòng) về
 // JS để cộng dồn. Chỉ trả về 5+5 dòng mỗi lần thay vì toàn bộ chi_tiet_don_hang.
@@ -3388,27 +3438,42 @@ onUnmounted(() => {
               </div></div>
             </div>
           </div>
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <button v-for="opt in ['today','week','month','custom']" :key="opt"
+                    class="btn btn-sm"
+                    :class="reportsDateRange===opt ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                    @click="reportsDateRange=opt">
+              {{ t(`admin.reports.dateRange${opt.charAt(0).toUpperCase()}${opt.slice(1)}`) }}
+            </button>
+            <template v-if="reportsDateRange==='custom'">
+              <span class="text-secondary small">{{ t('admin.reports.dateFrom') }}</span>
+              <input type="date" v-model="reportsCustomFrom" class="form-control form-control-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+              <span class="text-secondary small">{{ t('admin.reports.dateTo') }}</span>
+              <input type="date" v-model="reportsCustomTo" class="form-control form-control-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+            </template>
+          </div>
           <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.ordersByStatus') }}</div>
           <div class="table-responsive mb-4">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
               <thead><tr><th>{{ t('admin.reports.colStatus') }}</th><th>{{ t('admin.reports.colQuantity') }}</th></tr></thead>
               <tbody>
-                <tr v-for="row in ordersByStatus" :key="row.status">
-                  <td><span class="badge bg-primary bg-opacity-25 text-primary">{{ row.status||t('admin.reports.noStatus') }}</span></td>
+                <tr v-for="row in reportsOrdersByStatus" :key="row.status">
+                  <td><span class="badge" :style="{ background: row.color.bg, color: row.color.text }">{{ row.label }}</span></td>
                   <td><strong>{{ row.count }}</strong></td>
                 </tr>
-                <tr v-if="ordersByStatus.length===0"><td colspan="2" class="text-center text-secondary">{{ t('admin.reports.emptyOrders') }}</td></tr>
+                <tr v-if="reportsOrdersByStatus.length===0"><td colspan="2" class="text-center text-secondary">{{ t('admin.reports.emptyOrders') }}</td></tr>
               </tbody>
             </table>
           </div>
           <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.topProducts') }}</div>
           <div class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th>{{ t('admin.reports.colIndex') }}</th><th>{{ t('admin.reports.colName') }}</th><th>{{ t('admin.reports.colBrand') }}</th><th>{{ t('admin.reports.colPrice') }}</th></tr></thead>
+              <thead><tr><th>{{ t('admin.reports.colIndex') }}</th><th>{{ t('admin.reports.colName') }}</th><th>{{ t('admin.reports.colQuantitySold') }}</th></tr></thead>
               <tbody>
-                <tr v-for="(p,i) in [...groupedProducts].sort((a,b)=>(b.maxPrice??0)-(a.maxPrice??0)).slice(0,5)" :key="p.sanPhamId">
-                  <td class="text-secondary">{{ i+1 }}</td><td>{{ p.tenSanPham }}</td><td>{{ p.tenThuongHieu }}</td><td>{{ formatPrice(p.maxPrice) }}</td>
+                <tr v-for="(p,i) in reportsTopSelling" :key="p.tenSanPham">
+                  <td class="text-secondary">{{ i+1 }}</td><td>{{ p.tenSanPham }}</td><td>{{ p.soLuongDaBan }}</td>
                 </tr>
+                <tr v-if="reportsTopSelling.length===0"><td colspan="3" class="text-center text-secondary">{{ t('admin.reports.emptyOrders') }}</td></tr>
               </tbody>
             </table>
           </div>
