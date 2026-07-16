@@ -9180,3 +9180,16 @@ LEFT JOIN (
     GROUP BY bien_the_id
 ) tinh_lai ON tk.bien_the_id = tinh_lai.bien_the_id;
 GO
+-- ============================================================
+--  15. ĐIỀN EMAIL DEMO CHO KHÁCH TẠO QUA CHECKOUT/POS LÚC TEST
+-- ============================================================
+-- Các khách này không có trong dữ liệu mẫu (tạo tay lúc test checkout/bán tại quầy),
+-- nên không thể gộp vào guard "chuc_vu rỗng" ở trên — khoá theo so_dien_thoai (unique)
+-- để chỉ update đúng những dòng này, chỉ khi email đang trống (không đè email thật đã
+-- tự nhập sau này). An toàn chạy lại nhiều lần.
+UPDATE khach_hang SET email = N'thu.hoang@gmail.com'   WHERE so_dien_thoai = '0956866705' AND (email IS NULL OR email = '');
+UPDATE khach_hang SET email = N'thuy.ho@gmail.com'     WHERE so_dien_thoai = '0915882862' AND (email IS NULL OR email = '');
+UPDATE khach_hang SET email = N'minh.vo@gmail.com'     WHERE so_dien_thoai = '0921693003' AND (email IS NULL OR email = '');
+UPDATE khach_hang SET email = N'trung.tran@gmail.com'  WHERE so_dien_thoai = '0953535249' AND (email IS NULL OR email = '');
+UPDATE khach_hang SET email = N'linh.bui@gmail.com'    WHERE so_dien_thoai = '0955286356' AND (email IS NULL OR email = '');
+GO
