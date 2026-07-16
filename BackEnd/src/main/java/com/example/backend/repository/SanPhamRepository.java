@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -86,26 +87,33 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
             @Param("trangThai") String trangThai,
             Pageable pageable);
 
-    // Xếp hạng sản phẩm bán chạy/bán chậm cho Dashboard — SUM ở SQL thay vì kéo hết
-    // chi_tiet_don_hang (hàng nghìn dòng) về JS để cộng dồn. LEFT JOIN để sản phẩm
-    // chưa từng bán vẫn xuất hiện với soLuongDaBan = 0 (cần cho biểu đồ "bán chậm").
+    // Xếp hạng sản phẩm bán chạy/bán chậm — SUM ở SQL thay vì kéo hết chi_tiet_don_hang về
+    // JS cộng dồn. LEFT JOIN để sản phẩm chưa từng bán vẫn xuất hiện với soLuongDaBan = 0
+    // (cần cho "bán chậm"). tuNgay/denNgay null = không lọc (tab Dashboard gọi không kèm
+    // ngày, giữ nguyên hành vi cũ); có giá trị = chỉ tính đơn đặt trong khoảng đó (tab Báo
+    // cáo) — dùng cho "top bán chạy", nên sản phẩm 0 đơn trong khoảng có thể bị lọc khỏi
+    // kết quả thay vì hiện 0 (chấp nhận được, không ảnh hưởng vì chỉ lấy top N bán chạy).
     @Query("""
     SELECT new com.example.backend.response.ProductSalesResponse(sp.tenSanPham, COALESCE(SUM(ct.soLuong), 0))
     FROM SanPham sp
     LEFT JOIN BienTheSanPham bt ON bt.sanPham = sp
     LEFT JOIN ChiTietDonHang ct ON ct.bienThe = bt
+    LEFT JOIN ct.donHang d
+    WHERE (:tuNgay IS NULL OR d.ngayDat >= :tuNgay) AND (:denNgay IS NULL OR d.ngayDat <= :denNgay)
     GROUP BY sp.sanPhamId, sp.tenSanPham
     ORDER BY COALESCE(SUM(ct.soLuong), 0) DESC
     """)
-    List<ProductSalesResponse> topSelling(Pageable pageable);
+    List<ProductSalesResponse> topSelling(@Param("tuNgay") LocalDateTime tuNgay, @Param("denNgay") LocalDateTime denNgay, Pageable pageable);
 
     @Query("""
     SELECT new com.example.backend.response.ProductSalesResponse(sp.tenSanPham, COALESCE(SUM(ct.soLuong), 0))
     FROM SanPham sp
     LEFT JOIN BienTheSanPham bt ON bt.sanPham = sp
     LEFT JOIN ChiTietDonHang ct ON ct.bienThe = bt
+    LEFT JOIN ct.donHang d
+    WHERE (:tuNgay IS NULL OR d.ngayDat >= :tuNgay) AND (:denNgay IS NULL OR d.ngayDat <= :denNgay)
     GROUP BY sp.sanPhamId, sp.tenSanPham
     ORDER BY COALESCE(SUM(ct.soLuong), 0) ASC
     """)
-    List<ProductSalesResponse> slowSelling(Pageable pageable);
+    List<ProductSalesResponse> slowSelling(@Param("tuNgay") LocalDateTime tuNgay, @Param("denNgay") LocalDateTime denNgay, Pageable pageable);
 }
