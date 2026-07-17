@@ -9,6 +9,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { AuthStore, setSession } from "../stores/index.js";
 import { I18nStore, t } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
+import { formatPrice as formatPriceRaw } from "../utils/formatPrice.js";
 import * as DonHangService         from "../Service/DonHangService.js";
 import * as ChiTietDonHangService  from "../Service/ChiTietDonHangService.js";
 import * as SanPhamService         from "../Service/SanPhamService.js";
@@ -123,8 +124,7 @@ const orderStep = (s) => ({
   pending: 0, confirmed: 1, processing: 2, shipping: 3, delivered: 4,
 })[s] ?? 0;
 
-const formatPrice = (v) =>
-  v == null ? "—" : new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v);
+const formatPrice = (v) => (v == null ? "—" : formatPriceRaw(v));
 
 const formatDate = (d) => {
   if (!d) return "—";

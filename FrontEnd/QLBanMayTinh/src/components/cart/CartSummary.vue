@@ -16,13 +16,11 @@
 
 <script setup>
 import { t } from '../../i18n/index.js';
+import { formatPrice } from '../../utils/formatPrice.js';
 
 defineProps({
   cartCount: { type: Number, default: 0 },
   cartTotal: { type: Number, default: 0 },
 });
 defineEmits(['checkout']);
-
-const formatPrice = (v) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v ?? 0);
 </script>

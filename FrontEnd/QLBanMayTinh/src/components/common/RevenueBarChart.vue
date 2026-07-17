@@ -52,6 +52,7 @@
 
 <script setup>
 import { ref, computed, useId } from 'vue';
+import { formatPrice } from '../../utils/formatPrice.js';
 
 const props = defineProps({
   data:        { type: Array, required: true }, // [{ ngay: 'YYYY-MM-DD', doanhThu: number }], liên tục theo đúng đơn vị granularity (đã zero-fill/gộp ở nơi gọi)
@@ -104,7 +105,6 @@ const bars = computed(() => props.data.map((d, i) => {
   };
 }));
 
-const formatPrice = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);
 // Rút gọn số cho nhãn trên biểu đồ (1.2tr, 850k) — số đủ đã có ở tooltip khi hover
 const formatCompact = (v) => {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(/\.0$/, '')}tr`;

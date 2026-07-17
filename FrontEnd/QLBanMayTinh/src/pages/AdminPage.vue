@@ -4,6 +4,7 @@ import { AuthStore, clearSession } from "../stores/index.js";
 import { t } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon } from "../utils/orderStatus.js";
 import { nowLocalIso } from "../utils/datetime.js";
+import { formatPrice as formatPriceRaw } from "../utils/formatPrice.js";
 import * as SanPhamService   from "../Service/SanPhamService.js";
 import * as BienTheSanPhamService from "../Service/BienTheSanPhamService.js";
 import * as KhachHangService from "../Service/KhachHangService.js";
@@ -118,13 +119,7 @@ const loading = ref(false);
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const statusLabel = (s) => t(`admin.statusLabel.${s}`);
 
-const formatPrice = (v) =>
-  v == null
-    ? "—"
-    : new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(v);
+const formatPrice = (v) => (v == null ? "—" : formatPriceRaw(v));
 
 const formatDate = (d) => {
   if (!d) return "—";

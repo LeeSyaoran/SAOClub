@@ -339,6 +339,7 @@ import { ref, reactive, computed, watch } from 'vue';
 import { t } from '../../i18n/index.js';
 import { AuthStore } from '../../stores/index.js';
 import { nowLocalIso } from '../../utils/datetime.js';
+import { formatPrice as formatPriceRaw } from '../../utils/formatPrice.js';
 import AddressPicker from './AddressPicker.vue';
 import * as KhachHangService from '../../Service/KhachHangService.js';
 import * as KhuyenMaiService  from '../../Service/KhuyenMaiService.js';
@@ -428,10 +429,7 @@ const checkoutTotal = computed(() =>
   Math.max(0, props.cartTotal + phiVanChuyen.value - checkoutGiamGia.value)
 );
 
-const formatPrice = (value) => {
-  if (value == null) return t('productDetail.contact');
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
-};
+const formatPrice = (value) => (value == null ? t('productDetail.contact') : formatPriceRaw(value));
 
 // Đóng bằng phím Escape — không đóng khi đang gọi API để tránh rời màn hình giữa chừng
 const onKeydown = (e) => { if (e.key === 'Escape' && !checkoutLoading.value) emit('update:modelValue', false); };

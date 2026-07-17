@@ -263,6 +263,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { t } from '../../i18n/index.js';
+import { formatPrice as formatPriceRaw } from '../../utils/formatPrice.js';
 
 const props = defineProps({
   product:  { type: Object,  required: true },
@@ -375,9 +376,7 @@ const related = computed(() => {
     .slice(0, 8);
 });
 
-const formatPrice = (v) =>
-  v == null ? t('productDetail.contact')
-  : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+const formatPrice = (v) => (v == null ? t('productDetail.contact') : formatPriceRaw(v));
 
 const row = (label, value) => (value ? { label, value } : null);
 const specGroups = computed(() => {

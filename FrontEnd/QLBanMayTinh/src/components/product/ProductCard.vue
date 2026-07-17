@@ -70,6 +70,7 @@
 
 <script setup>
 import { t } from '../../i18n/index.js';
+import { formatPrice } from '../../utils/formatPrice.js';
 
 defineProps({
   // Sản phẩm từ API /api/san-pham/hien-thi
@@ -80,7 +81,4 @@ defineProps({
 
 // Emits: click (xem chi tiết), add-to-cart (thêm nhanh — cha tự quyết định có mở trang chi tiết trước hay không)
 defineEmits(['click', 'add-to-cart']);
-
-const formatPrice = (v) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v ?? 0);
 </script>

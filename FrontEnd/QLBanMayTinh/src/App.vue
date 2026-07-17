@@ -12,6 +12,7 @@ import {
 // Import store xác thực
 import { AuthStore, setSession, clearSession } from "./stores/index.js";
 import { loadSettings } from "./stores/settings.js";
+import { formatPrice as formatPriceRaw } from "./utils/formatPrice.js";
 import { t } from "./i18n/index.js";
 
 // Import services
@@ -431,13 +432,7 @@ const removeFromCart = (bienTheId) => {
 };
 
 // Định dạng tiền tệ VND
-const formatPrice = (value) => {
-  if (value == null) return t("productDetail.contact");
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(value);
-};
+const formatPrice = (value) => (value == null ? t("productDetail.contact") : formatPriceRaw(value));
 
 // ── API: Lấy danh sách sản phẩm ──────────────────────────────────────────────
 const fetchProducts = async () => {

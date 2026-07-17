@@ -42,10 +42,8 @@
 // Props: item = { tenSanPham, hinhAnhChinh, giaBan, quantity, mauSac?, cpu? }
 // Emits: increase(item), decrease(item) — cha (App.vue) đã có sẵn updateQty(bienTheId, delta)
 import { t } from '../../i18n/index.js';
+import { formatPrice } from '../../utils/formatPrice.js';
 
 defineProps({ item: { type: Object, required: true } });
 defineEmits(['increase', 'decrease']);
-
-const formatPrice = (v) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v ?? 0);
 </script>
