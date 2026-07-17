@@ -242,6 +242,25 @@ const totalCustomers = computed(() => customers.value.length);
 const totalRevenue = computed(() =>
   orders.value.reduce((s, o) => s + (Number(o.thanhTien) || 0), 0),
 );
+// Doanh thu tháng này / cả năm — cho thẻ KPI ở tab Dashboard (khác thẻ "Tổng doanh thu"
+// lũy kế toàn thời gian ở tab Báo cáo, không đổi).
+const revenueThisMonth = computed(() => {
+  const now = new Date();
+  return orders.value.reduce((s, o) => {
+    if (!o.ngayDat) return s;
+    const d = new Date(o.ngayDat);
+    const sameMonth = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    return sameMonth ? s + (Number(o.thanhTien) || 0) : s;
+  }, 0);
+});
+const revenueThisYear = computed(() => {
+  const now = new Date();
+  return orders.value.reduce((s, o) => {
+    if (!o.ngayDat) return s;
+    const sameYear = new Date(o.ngayDat).getFullYear() === now.getFullYear();
+    return sameYear ? s + (Number(o.thanhTien) || 0) : s;
+  }, 0);
+});
 
 // ── Reports stats ─────────────────────────────────────────────────────────────
 const ordersByStatus = computed(() => {
@@ -2704,8 +2723,9 @@ onUnmounted(() => {
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                          style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">💰</div>
                     <div>
-                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalRevenue') }}</div>
-                      <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(totalRevenue) }}</div>
+                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.revenueThisMonth') }}</div>
+                      <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(revenueThisMonth) }}</div>
+                      <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.dashboard.revenueThisYear') }}: {{ formatPrice(revenueThisYear) }}</div>
                     </div>
                   </div>
                 </div>
