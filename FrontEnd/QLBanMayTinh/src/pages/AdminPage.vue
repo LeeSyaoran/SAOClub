@@ -261,6 +261,27 @@ const revenueThisYear = computed(() => {
     return sameYear ? s + (Number(o.thanhTien) || 0) : s;
   }, 0);
 });
+// So sánh doanh thu tháng này với tháng trước — lấy cùng số ngày đã trôi qua ở cả 2 tháng
+// (month-to-date vs month-to-date), KHÔNG so cả tháng trước (đủ ngày) với tháng này (mới
+// trôi qua một phần), vì như vậy tháng nào cũng bị báo "giảm" một cách giả tạo dù doanh thu
+// theo ngày không đổi.
+const revenueThisMonthDelta = computed(() => {
+  const now = new Date();
+  const cutoffDay = now.getDate();
+  const prevMonth = now.getMonth() - 1, prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const prevMonthDayCount = new Date(prevYear, (prevMonth + 12) % 12 + 1, 0).getDate();
+  const prevCutoffDay = Math.min(cutoffDay, prevMonthDayCount);
+
+  const prevMtd = orders.value.reduce((s, o) => {
+    if (!o.ngayDat) return s;
+    const d = new Date(o.ngayDat);
+    const sameMonth = d.getFullYear() === prevYear && d.getMonth() === (prevMonth + 12) % 12;
+    return sameMonth && d.getDate() <= prevCutoffDay ? s + (Number(o.thanhTien) || 0) : s;
+  }, 0);
+
+  if (prevMtd === 0) return null;
+  return Math.round(((revenueThisMonth.value - prevMtd) / prevMtd) * 100);
+});
 
 // ── Reports stats ─────────────────────────────────────────────────────────────
 const ordersByStatus = computed(() => {
@@ -2680,8 +2701,8 @@ onUnmounted(() => {
           <div v-if="loading" class="text-secondary small">{{ t('admin.dashboard.loading') }}</div>
           <template v-else>
             <!-- Stat cards -->
-            <div class="row g-3 mb-4">
-              <div class="col-6 col-xl-3">
+            <div class="row row-cols-2 row-cols-xl-5 g-3 mb-4">
+              <div>
                 <div class="card border-secondary h-100" style="background:var(--bg-hover);">
                   <div class="card-body d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -2693,7 +2714,7 @@ onUnmounted(() => {
                   </div>
                 </div>
               </div>
-              <div class="col-6 col-xl-3">
+              <div>
                 <div class="card border-secondary h-100" style="background:var(--bg-hover);">
                   <div class="card-body d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -2705,7 +2726,7 @@ onUnmounted(() => {
                   </div>
                 </div>
               </div>
-              <div class="col-6 col-xl-3">
+              <div>
                 <div class="card border-secondary h-100" style="background:var(--bg-hover);">
                   <div class="card-body d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -2717,15 +2738,33 @@ onUnmounted(() => {
                   </div>
                 </div>
               </div>
-              <div class="col-6 col-xl-3">
+              <div>
                 <div class="card border-secondary h-100" style="background:var(--bg-hover);">
                   <div class="card-body d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                          style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">💰</div>
                     <div>
-                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.revenueThisMonth') }}</div>
+                      <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="text-secondary small">{{ t('admin.dashboard.revenueThisMonth') }}</span>
+                        <span v-if="revenueThisMonthDelta !== null"
+                              class="fw-bold" style="font-size:0.7rem;"
+                              :style="{ color: revenueThisMonthDelta >= 0 ? '#22c55e' : '#f87171' }">
+                          {{ revenueThisMonthDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(revenueThisMonthDelta) }}%
+                        </span>
+                      </div>
                       <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(revenueThisMonth) }}</div>
-                      <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.dashboard.revenueThisYear') }}: {{ formatPrice(revenueThisYear) }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                  <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:44px;height:44px;background:rgba(250,204,21,0.15);font-size:1.3rem;">📅</div>
+                    <div>
+                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.revenueThisYear') }}</div>
+                      <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(revenueThisYear) }}</div>
                     </div>
                   </div>
                 </div>
