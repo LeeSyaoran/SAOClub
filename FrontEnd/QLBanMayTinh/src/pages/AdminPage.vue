@@ -21,6 +21,7 @@ import * as ChiTietPhieuNhapService from "../Service/ChiTietPhieuNhapService.js"
 import * as DashboardService       from "../Service/DashboardService.js";
 import * as XLSX from "xlsx";
 import DonutChart from "../components/common/DonutChart.vue";
+import RevenueBarChart from "../components/common/RevenueBarChart.vue";
 import BarChart   from "../components/common/BarChart.vue";
 import GaugeChart from "../components/common/GaugeChart.vue";
 import TrendChart from "../components/common/TrendChart.vue";
@@ -361,6 +362,31 @@ const loadReportsTopSelling = async () => {
     .catch(() => []);
 };
 watch([reportsDateFrom, reportsDateTo], loadReportsTopSelling, { immediate: true });
+
+// Doanh thu theo ngày trong khoảng đã chọn — cho biểu đồ cột.
+const reportsRevenueByDay = ref([]); // [{ ngay, doanhThu }]
+const loadReportsRevenueByDay = async () => {
+  reportsRevenueByDay.value = await DashboardService
+    .getRevenueByDay(reportsDateFrom.value, reportsDateTo.value)
+    .catch(() => []);
+};
+watch([reportsDateFrom, reportsDateTo], loadReportsRevenueByDay, { immediate: true });
+
+// Khách hàng nổi bật (top chi tiêu + tỷ lệ mua lại) trong khoảng đã chọn.
+const reportsCustomerReport = ref({ topKhach: [], tyLeMuaLai: 0, tongSoKhach: 0 });
+const loadReportsCustomerReport = async () => {
+  reportsCustomerReport.value = await DashboardService
+    .getCustomerReport(reportsDateFrom.value, reportsDateTo.value, 5)
+    .catch(() => ({ topKhach: [], tyLeMuaLai: 0, tongSoKhach: 0 }));
+};
+watch([reportsDateFrom, reportsDateTo], loadReportsCustomerReport, { immediate: true });
+
+const reportsRepeatRateText = computed(() => {
+  const c = reportsCustomerReport.value;
+  const repeat = Math.round(c.tyLeMuaLai * c.tongSoKhach);
+  const pct = Math.round(c.tyLeMuaLai * 100);
+  return t('admin.reports.repeatRateLabel', { repeat, total: c.tongSoKhach, pct });
+});
 
 // Đơn hàng theo trạng thái trong khoảng đã chọn — vẫn tính từ orders đã tải sẵn (đủ
 // nhanh, không cần thêm endpoint riêng vì đây chỉ là group-by theo status, không phải
@@ -3452,6 +3478,10 @@ onUnmounted(() => {
               <input type="date" v-model="reportsCustomTo" class="form-control form-control-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
             </template>
           </div>
+          <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.revenueChartTitle') }}</div>
+          <div class="card border-secondary mb-4" style="background:var(--bg-hover);"><div class="card-body">
+            <RevenueBarChart :data="reportsRevenueByDay" :empty-text="t('admin.reports.revenueChartEmpty')" />
+          </div></div>
           <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.ordersByStatus') }}</div>
           <div class="table-responsive mb-4">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
@@ -3474,6 +3504,19 @@ onUnmounted(() => {
                   <td class="text-secondary">{{ i+1 }}</td><td>{{ p.tenSanPham }}</td><td>{{ p.soLuongDaBan }}</td>
                 </tr>
                 <tr v-if="reportsTopSelling.length===0"><td colspan="3" class="text-center text-secondary">{{ t('admin.reports.emptyOrders') }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="small fw-semibold text-secondary mb-2 mt-4">{{ t('admin.reports.customersTitle') }}</div>
+          <div class="text-secondary small mb-2">{{ reportsRepeatRateText }}</div>
+          <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr><th>{{ t('admin.reports.colIndex') }}</th><th>{{ t('admin.reports.colCustomerName') }}</th><th>{{ t('admin.reports.colOrderCount') }}</th><th>{{ t('admin.reports.colTotalSpent') }}</th></tr></thead>
+              <tbody>
+                <tr v-for="(c,i) in reportsCustomerReport.topKhach" :key="c.khachHangId">
+                  <td class="text-secondary">{{ i+1 }}</td><td>{{ c.hoTen }}</td><td>{{ c.soDonHang }}</td><td>{{ formatPrice(c.tongChiTieu) }}</td>
+                </tr>
+                <tr v-if="reportsCustomerReport.topKhach.length===0"><td colspan="4" class="text-center text-secondary">{{ t('admin.reports.customersEmpty') }}</td></tr>
               </tbody>
             </table>
           </div>
