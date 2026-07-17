@@ -853,7 +853,7 @@ export default {
       dateRangeCustom: "Custom",
       dateFrom: "From",
       dateTo: "To",
-      groupByLabel: "Group by",
+      groupByLabel: "Filter by",
       groupByDay: "Day",
       groupByMonth: "Month",
       groupByYear: "Year",

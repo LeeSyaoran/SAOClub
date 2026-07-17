@@ -958,7 +958,7 @@ export default {
       dateRangeCustom: "Tùy chọn",
       dateFrom: "Từ ngày",
       dateTo: "Đến ngày",
-      groupByLabel: "Gộp theo",
+      groupByLabel: "Lọc theo",
       groupByDay: "Ngày",
       groupByMonth: "Tháng",
       groupByYear: "Năm",

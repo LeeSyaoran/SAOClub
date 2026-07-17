@@ -853,7 +853,7 @@ export default {
       dateRangeCustom: "カスタム",
       dateFrom: "開始日",
       dateTo: "終了日",
-      groupByLabel: "集計単位",
+      groupByLabel: "フィルター",
       groupByDay: "日別",
       groupByMonth: "月別",
       groupByYear: "年別",

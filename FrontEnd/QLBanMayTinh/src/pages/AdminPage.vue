@@ -55,27 +55,30 @@ const switchRole = (role) => {
   currentRole.value = role;
   currentPage.value = role === "admin" ? "dashboard" : "user-home";
 };
+// icon khớp đúng ý nghĩa icon SVG tương ứng ở sidebar (adm-icon) — hiện lại 1 lần nữa
+// cạnh tiêu đề trang cho dễ nhận biết đang ở đâu, không cần đổi cả 2 nơi khi thêm trang mới.
 const PAGE_META = {
-  dashboard: { titleKey: "admin.pageMeta.dashboard.title", subKey: "admin.pageMeta.dashboard.sub" },
-  products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub" },
-  orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub" },
-  customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub" },
-  inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub" },
-  promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub" },
-  staff: { titleKey: "admin.pageMeta.staff.title", subKey: "admin.pageMeta.staff.sub" },
-  "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub" },
-  reports: { titleKey: "admin.pageMeta.reports.title", subKey: "admin.pageMeta.reports.sub" },
-  settings: { titleKey: "admin.pageMeta.settings.title", subKey: "admin.pageMeta.settings.sub" },
-  "user-home": { titleKey: "admin.pageMeta.userHome.title", subKey: "admin.pageMeta.userHome.sub" },
-  "user-orders": { titleKey: "admin.pageMeta.userOrders.title", subKey: "admin.pageMeta.userOrders.sub" },
-  "user-browse": { titleKey: "admin.pageMeta.userBrowse.title", subKey: "admin.pageMeta.userBrowse.sub" },
-  "user-warranty": { titleKey: "admin.pageMeta.userWarranty.title", subKey: "admin.pageMeta.userWarranty.sub" },
-  "user-profile": { titleKey: "admin.pageMeta.userProfile.title", subKey: "admin.pageMeta.userProfile.sub" },
+  dashboard: { titleKey: "admin.pageMeta.dashboard.title", subKey: "admin.pageMeta.dashboard.sub", icon: "📊" },
+  products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: "💻" },
+  orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: "🧾" },
+  customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: "👥" },
+  inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: "📦" },
+  promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub", icon: "🏷️" },
+  staff: { titleKey: "admin.pageMeta.staff.title", subKey: "admin.pageMeta.staff.sub", icon: "🧑‍💼" },
+  "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: "🛒" },
+  reports: { titleKey: "admin.pageMeta.reports.title", subKey: "admin.pageMeta.reports.sub", icon: "📈" },
+  settings: { titleKey: "admin.pageMeta.settings.title", subKey: "admin.pageMeta.settings.sub", icon: "⚙️" },
+  "user-home": { titleKey: "admin.pageMeta.userHome.title", subKey: "admin.pageMeta.userHome.sub", icon: "🏠" },
+  "user-orders": { titleKey: "admin.pageMeta.userOrders.title", subKey: "admin.pageMeta.userOrders.sub", icon: "🧾" },
+  "user-browse": { titleKey: "admin.pageMeta.userBrowse.title", subKey: "admin.pageMeta.userBrowse.sub", icon: "🛍️" },
+  "user-warranty": { titleKey: "admin.pageMeta.userWarranty.title", subKey: "admin.pageMeta.userWarranty.sub", icon: "🛡️" },
+  "user-profile": { titleKey: "admin.pageMeta.userProfile.title", subKey: "admin.pageMeta.userProfile.sub", icon: "👤" },
 };
 const topbarTitle = computed(
   () => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.dashboard.title"),
 );
 const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
+const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📊");
 
 // ── User ─────────────────────────────────────────────────────────────────────
 const userDisplayName = computed(() => AuthStore.user?.hoTen ?? AuthStore.user?.username ?? "Admin");
@@ -2710,7 +2713,7 @@ onUnmounted(() => {
       <div class="d-flex align-items-center justify-content-between p-3 border-bottom"
            style="background:var(--bg-card-inset); border-color:var(--border-color)!important;">
         <div>
-          <div class="fw-bold" style="font-size:1.05rem;">{{ topbarTitle }}</div>
+          <div class="fw-bold" style="font-size:1.05rem;">{{ topbarIcon }} {{ topbarTitle }}</div>
           <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -3589,11 +3592,11 @@ onUnmounted(() => {
               </template>
             </div>
           </div>
-          <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.revenueChartTitle') }}</div>
+          <div class="small fw-semibold text-secondary mb-2">📈 {{ t('admin.reports.revenueChartTitle') }}</div>
           <div class="card border-secondary mb-4" style="background:var(--bg-hover);"><div class="card-body">
             <RevenueBarChart :data="reportsRevenueChartData" :granularity="reportsGroupBy" :empty-text="t('admin.reports.revenueChartEmpty')" />
           </div></div>
-          <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.ordersByStatus') }}</div>
+          <div class="small fw-semibold text-secondary mb-2">🍩 {{ t('admin.reports.ordersByStatus') }}</div>
           <div class="table-responsive mb-4">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
               <thead><tr><th>{{ t('admin.reports.colStatus') }}</th><th>{{ t('admin.reports.colQuantity') }}</th></tr></thead>
@@ -3606,7 +3609,7 @@ onUnmounted(() => {
               </tbody>
             </table>
           </div>
-          <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.topProducts') }}</div>
+          <div class="small fw-semibold text-secondary mb-2">🔥 {{ t('admin.reports.topProducts') }}</div>
           <div class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
               <thead><tr><th>{{ t('admin.reports.colIndex') }}</th><th>{{ t('admin.reports.colName') }}</th><th>{{ t('admin.reports.colQuantitySold') }}</th></tr></thead>
@@ -3618,7 +3621,7 @@ onUnmounted(() => {
               </tbody>
             </table>
           </div>
-          <div class="small fw-semibold text-secondary mb-2 mt-4">{{ t('admin.reports.customersTitle') }}</div>
+          <div class="small fw-semibold text-secondary mb-2 mt-4">🏆 {{ t('admin.reports.customersTitle') }}</div>
           <div class="text-secondary small mb-2">{{ reportsRepeatRateText }}</div>
           <div class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
@@ -3637,7 +3640,7 @@ onUnmounted(() => {
         <section v-show="currentPage === 'settings'">
           <div class="card border-secondary" style="background:var(--bg-hover); max-width:520px;">
             <div class="card-body">
-              <div class="fw-bold mb-3">{{ t('admin.settings.systemInfo') }}</div>
+              <div class="fw-bold mb-3">⚙️ {{ t('admin.settings.systemInfo') }}</div>
               <div v-for="row in [
                 {label:t('admin.settings.systemName'), value:'SAOPhone Admin'},
                 {label:t('admin.settings.version'), value:'1.0.0'},
@@ -3689,7 +3692,7 @@ onUnmounted(() => {
             <!-- RIGHT: gio hang POS — cong xac dinh khach hang nam o day -->
             <div class="card border-secondary d-flex flex-column overflow-hidden" style="background:var(--bg-hover);">
               <div class="card-header border-secondary d-flex justify-content-between align-items-center fw-bold">
-                <span>{{ t('admin.pos.cart') }} <span class="text-secondary fw-normal small">{{ posCart.length }} {{ t('admin.pos.cartCountSuffix') }}</span></span>
+                <span>🛒 {{ t('admin.pos.cart') }} <span class="text-secondary fw-normal small">{{ posCart.length }} {{ t('admin.pos.cartCountSuffix') }}</span></span>
                 <button class="btn btn-sm btn-outline-info position-relative" style="font-size:0.72rem;padding:2px 8px;" @click="showHeldOrders = true">
                   {{ t('admin.pos.heldOrders') }}
                   <span v-if="heldOrders.length" class="badge rounded-pill bg-warning text-dark" style="font-size:0.62rem;">{{ heldOrders.length }}</span>
@@ -4320,7 +4323,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="fw-semibold small text-secondary mb-2">{{ t('admin.phieuNhapModal.itemsLabel') }}</div>
+        <div class="fw-semibold small text-secondary mb-2">📦 {{ t('admin.phieuNhapModal.itemsLabel') }}</div>
         <div class="d-flex gap-2 mb-1">
           <label class="form-label small text-secondary mb-0" style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colProduct') }}</label>
           <label class="form-label small text-secondary mb-0" style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colVariant') }}</label>

@@ -853,7 +853,7 @@ export default {
       dateRangeCustom: "自定义",
       dateFrom: "开始日期",
       dateTo: "结束日期",
-      groupByLabel: "汇总方式",
+      groupByLabel: "筛选方式",
       groupByDay: "按天",
       groupByMonth: "按月",
       groupByYear: "按年",

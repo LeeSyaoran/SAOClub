@@ -853,7 +853,7 @@ export default {
       dateRangeCustom: "사용자 지정",
       dateFrom: "시작일",
       dateTo: "종료일",
-      groupByLabel: "집계 단위",
+      groupByLabel: "필터",
       groupByDay: "일별",
       groupByMonth: "월별",
       groupByYear: "연도별",
