@@ -11,6 +11,7 @@ import {
 
 // Import store xác thực
 import { AuthStore, setSession, clearSession } from "./stores/index.js";
+import { loadSettings } from "./stores/settings.js";
 import { t } from "./i18n/index.js";
 
 // Import services
@@ -547,6 +548,7 @@ onMounted(() => {
   loadCart(); // Khôi phục giỏ hàng đã lưu (theo tài khoản đang đăng nhập, hoặc khách vãng lai)
   fetchProducts();
   fetchApiCats();
+  loadSettings();
 });
 onBeforeUnmount(() => {
   window.removeEventListener("hashchange", onHashChange); // Dọn dẹp listener
