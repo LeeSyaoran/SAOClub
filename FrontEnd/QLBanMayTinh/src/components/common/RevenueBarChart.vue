@@ -36,10 +36,11 @@
 import { ref, computed } from 'vue';
 
 const props = defineProps({
-  data:      { type: Array, required: true }, // [{ ngay: 'YYYY-MM-DD', doanhThu: number }], liên tục từng ngày (đã zero-fill ở nơi gọi)
-  width:     { type: Number, default: 600 },
-  height:    { type: Number, default: 160 },
-  emptyText: { type: String, default: '' },
+  data:        { type: Array, required: true }, // [{ ngay: 'YYYY-MM-DD', doanhThu: number }], liên tục theo đúng đơn vị granularity (đã zero-fill/gộp ở nơi gọi)
+  width:       { type: Number, default: 600 },
+  height:      { type: Number, default: 160 },
+  emptyText:   { type: String, default: '' },
+  granularity: { type: String, default: 'day' }, // 'day' | 'month' | 'year' — chỉ ảnh hưởng cách hiển thị nhãn trục X/tooltip
 });
 
 const hoverIndex = ref(null);
@@ -61,13 +62,14 @@ const bars = computed(() => props.data.map((d, i) => {
   const value = Number(d.doanhThu) || 0;
   const barHeight = (value / maxValue.value) * (chartBottom.value - chartTop);
   const slotX = i * slotWidth.value;
-  const [, m, day] = d.ngay.split('-');
+  const [yr, m, day] = d.ngay.split('-');
+  const label = props.granularity === 'year' ? yr : props.granularity === 'month' ? `${m}/${yr}` : `${day}/${m}`;
   return {
     slotX,
     x: slotX + (slotWidth.value - barWidth.value) / 2,
     y: chartBottom.value - barHeight,
     barHeight,
-    label: `${day}/${m}`,
+    label,
   };
 }));
 

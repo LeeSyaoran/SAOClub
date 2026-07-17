@@ -425,6 +425,39 @@ const loadReportsRevenueByDay = async () => {
 };
 watch([reportsDateFrom, reportsDateTo], loadReportsRevenueByDay, { immediate: true });
 
+// Gộp theo Ngày/Tháng/Năm cho biểu đồ doanh thu — Tháng/Năm bỏ qua bộ lọc khoảng ngày ở
+// trên (xem xu hướng nhiều tháng/năm không hợp với khoảng "Hôm nay"/"Tuần này") và gộp
+// trực tiếp từ `orders` đã tải sẵn, giống cách revenueTrendChart ở tab Dashboard đang làm.
+const reportsGroupBy = ref('day'); // 'day' | 'month' | 'year'
+const reportsRevenueByMonth = computed(() => {
+  const map = {};
+  orders.value.forEach((o) => {
+    if (!o.ngayDat) return;
+    const d = new Date(o.ngayDat);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    map[key] = (map[key] || 0) + (Number(o.thanhTien) || 0);
+  });
+  return Object.entries(map)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([ngay, doanhThu]) => ({ ngay, doanhThu }));
+});
+const reportsRevenueByYear = computed(() => {
+  const map = {};
+  orders.value.forEach((o) => {
+    if (!o.ngayDat) return;
+    const key = `${new Date(o.ngayDat).getFullYear()}-01-01`;
+    map[key] = (map[key] || 0) + (Number(o.thanhTien) || 0);
+  });
+  return Object.entries(map)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([ngay, doanhThu]) => ({ ngay, doanhThu }));
+});
+const reportsRevenueChartData = computed(() => {
+  if (reportsGroupBy.value === 'month') return reportsRevenueByMonth.value;
+  if (reportsGroupBy.value === 'year') return reportsRevenueByYear.value;
+  return reportsRevenueByDay.value;
+});
+
 // Khách hàng nổi bật (top chi tiêu + tỷ lệ mua lại) trong khoảng đã chọn.
 const reportsCustomerReport = ref({ topKhach: [], tyLeMuaLai: 0, tongSoKhach: 0 });
 const loadReportsCustomerReport = async () => {
@@ -3520,6 +3553,15 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <span class="text-secondary small">{{ t('admin.reports.groupByLabel') }}:</span>
+            <button v-for="opt in ['day','month','year']" :key="opt"
+                    class="btn btn-sm"
+                    :class="reportsGroupBy===opt ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                    @click="reportsGroupBy=opt">
+              {{ t(`admin.reports.groupBy${opt.charAt(0).toUpperCase()}${opt.slice(1)}`) }}
+            </button>
+          </div>
+          <div v-if="reportsGroupBy==='day'" class="d-flex flex-wrap align-items-center gap-2 mb-3">
             <button v-for="opt in ['today','week','month','custom']" :key="opt"
                     class="btn btn-sm"
                     :class="reportsDateRange===opt ? 'btn-warning text-dark' : 'btn-outline-secondary'"
@@ -3535,7 +3577,7 @@ onUnmounted(() => {
           </div>
           <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.revenueChartTitle') }}</div>
           <div class="card border-secondary mb-4" style="background:var(--bg-hover);"><div class="card-body">
-            <RevenueBarChart :data="reportsRevenueByDay" :empty-text="t('admin.reports.revenueChartEmpty')" />
+            <RevenueBarChart :data="reportsRevenueChartData" :granularity="reportsGroupBy" :empty-text="t('admin.reports.revenueChartEmpty')" />
           </div></div>
           <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.ordersByStatus') }}</div>
           <div class="table-responsive mb-4">
