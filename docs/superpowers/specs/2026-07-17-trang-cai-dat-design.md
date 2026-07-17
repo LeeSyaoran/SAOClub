@@ -12,6 +12,7 @@ Khảo sát cho thấy:
 - `formatPrice` (định dạng tiền VNĐ) bị lặp định nghĩa ở 9 file: `AdminPage.vue`, `RevenueBarChart.vue`, `CheckoutModal.vue`, `App.vue`, `AccountPage.vue`, `ProductDetail.vue`, `ProductCard.vue`, `CartItem.vue`, `CartSummary.vue`.
 - Endpoint upload ảnh dùng chung `/api/upload/image` đã có sẵn (`UploadController.java`), đang được `AdminPage.vue:1339` gọi trực tiếp qua `fetch` cho ảnh sản phẩm — tái dùng được cho logo cửa hàng, không cần thêm endpoint upload mới.
 - Toàn bộ vai trò (admin/nhân viên/quản kho/khách hàng) đăng nhập qua chung 1 bảng `tai_khoan` (`entity/TaiKhoan.java`, cột `mat_khau_hash`) — 1 endpoint đổi mật khẩu dùng được cho mọi vai trò, xác định người dùng hiện tại qua `SecurityContextHolder` (JWT chỉ mang `username`, không mang id số).
+- **Chốt sửa khi rà lại `SecurityConfig.java`:** `/api/auth/**` đang là `permitAll()` toàn bộ (public, không cần JWT) — vì vậy endpoint đổi mật khẩu **không được đặt trong `AuthController`** như dự tính ban đầu (sẽ thành public, gọi được mà không cần đăng nhập). Đặt trong `CaiDatController` (`/api/cai-dat/doi-mat-khau`) thay vào đó — path này không nằm trong danh sách `permitAll`, tự động rơi vào `.anyRequest().authenticated()` đã có sẵn, không cần sửa `SecurityConfig`.
 
 ## Phạm vi
 
@@ -63,6 +64,7 @@ INSERT INTO cai_dat_he_thong (cai_dat_id) VALUES (1);
   - `GET ""` → `CaiDatHeThongResponse`.
   - `PUT ""` → nhận `CaiDatHeThongRequest`, trả response đã cập nhật.
   - `POST "/ap-dung-nguong-ton-kho"` → nhận `{nguong: int}`, trả `{soBienTheDaCapNhat: int}`.
+  - `POST "/doi-mat-khau"` → nhận `DoiMatKhauRequest`, đổi mật khẩu người dùng đang đăng nhập (xem lý do đặt ở đây thay vì `AuthController` ở mục Bối cảnh).
 - `TonKhoRepository` — thêm:
   ```java
   @Modifying
@@ -70,7 +72,7 @@ INSERT INTO cai_dat_he_thong (cai_dat_id) VALUES (1);
   @Query("UPDATE TonKho t SET t.tonKhoToiThieu = :nguong")
   int capNhatNguongChoTatCa(@Param("nguong") int nguong);
   ```
-- `AuthController` — thêm `POST /api/auth/doi-mat-khau`:
+- `CaiDatController.doiMatKhau()`:
   ```java
   @PostMapping("/doi-mat-khau")
   public ResponseEntity<?> doiMatKhau(@Valid @RequestBody DoiMatKhauRequest req) {
@@ -85,7 +87,7 @@ INSERT INTO cai_dat_he_thong (cai_dat_id) VALUES (1);
       return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
   }
   ```
-  (Cần `@Autowired TaiKhoanRepository`, `PasswordEncoder` — cùng bean đã dùng ở `login()`.)
+  (Cần `@Autowired TaiKhoanRepository`, `PasswordEncoder` — cùng bean `passwordEncoder()` đã dùng ở `AuthController.login()`.)
 
 ## Frontend
 
@@ -104,7 +106,7 @@ const parseOrThrow = async (res) => {
 export const getCaiDat = () => get('/api/cai-dat');
 export const updateCaiDat = (data) => put('/api/cai-dat', data).then(parseOrThrow);
 export const apDungNguongTonKho = (nguong) => post('/api/cai-dat/ap-dung-nguong-ton-kho', { nguong }).then(parseOrThrow);
-export const doiMatKhau = (matKhauCu, matKhauMoi) => post('/api/auth/doi-mat-khau', { matKhauCu, matKhauMoi }).then(parseOrThrow);
+export const doiMatKhau = (matKhauCu, matKhauMoi) => post('/api/cai-dat/doi-mat-khau', { matKhauCu, matKhauMoi }).then(parseOrThrow);
 ```
 
 ### Store mới `stores/settings.js`
@@ -165,7 +167,7 @@ Thêm khối `admin.settings.*` mới cho 5 ngôn ngữ (nhãn form, thông báo
 - `loadSettings()` lỗi mạng lúc khởi động → dùng mặc định `'vi'`/`'vi'`, không chặn app, không hiện lỗi làm phiền người dùng cuối (chỉ ảnh hưởng admin khi vào lại trang Cài đặt mới thấy tải lại được).
 - Áp dụng ngưỡng tồn kho cho 0 biến thể (kho trống) → vẫn cho bấm, trả `soBienTheDaCapNhat: 0`, không lỗi.
 - Upload logo thất bại (mạng, file quá lớn) → hiện lỗi ngay dưới ô chọn ảnh, không chặn phần còn lại của form (các field khác vẫn lưu được nếu bấm Lưu mà không đổi logo).
-- Toàn bộ endpoint mới thuộc phạm vi admin — dùng chung `SecurityConfig` hiện tại, không cần rule bảo mật mới (riêng `POST /api/auth/doi-mat-khau` áp dụng cho MỌI vai trò đã đăng nhập, không giới hạn admin, vì đặt trong `AuthController` cùng chỗ với login).
+- Toàn bộ endpoint mới nằm dưới `/api/cai-dat/**` — không nằm trong danh sách `permitAll` của `SecurityConfig`, tự động yêu cầu JWT hợp lệ qua `.anyRequest().authenticated()`, không cần sửa `SecurityConfig`. Riêng `POST /api/cai-dat/doi-mat-khau` áp dụng cho MỌI vai trò đã đăng nhập (không giới hạn admin) vì mọi vai trò cùng dùng bảng `tai_khoan`.
 
 ## Kiểm thử
 
