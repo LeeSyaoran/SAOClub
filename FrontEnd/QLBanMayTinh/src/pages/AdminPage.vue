@@ -483,16 +483,6 @@ const revenueTrendChart = computed(() => {
     });
 });
 
-// So sánh doanh thu tháng gần nhất với tháng trước đó (mũi tên xu hướng trên the KPI)
-const revenueTrendDelta = computed(() => {
-  const pts = revenueTrendChart.value;
-  if (pts.length < 2) return null;
-  const prev = pts[pts.length - 2].value;
-  const curr = pts[pts.length - 1].value;
-  if (prev === 0) return null;
-  return Math.round(((curr - prev) / prev) * 100);
-});
-
 const activeProducts = computed(
   () => products.value.filter((p) => p.trangThai === "active").length,
 );
@@ -2714,14 +2704,7 @@ onUnmounted(() => {
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                          style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">💰</div>
                     <div>
-                      <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="text-secondary small">{{ t('admin.dashboard.totalRevenue') }}</span>
-                        <span v-if="revenueTrendDelta !== null"
-                              class="fw-bold" style="font-size:0.7rem;"
-                              :style="{ color: revenueTrendDelta >= 0 ? '#22c55e' : '#f87171' }">
-                          {{ revenueTrendDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(revenueTrendDelta) }}%
-                        </span>
-                      </div>
+                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalRevenue') }}</div>
                       <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(totalRevenue) }}</div>
                     </div>
                   </div>
