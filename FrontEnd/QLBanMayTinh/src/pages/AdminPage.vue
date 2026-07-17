@@ -363,12 +363,25 @@ const loadReportsTopSelling = async () => {
 };
 watch([reportsDateFrom, reportsDateTo], loadReportsTopSelling, { immediate: true });
 
-// Doanh thu theo ngày trong khoảng đã chọn — cho biểu đồ cột.
-const reportsRevenueByDay = ref([]); // [{ ngay, doanhThu }]
+// Doanh thu theo ngày trong khoảng đã chọn — cho biểu đồ cột. API chỉ trả về những
+// ngày có đơn (SUM/GROUP BY ở SQL), nên cần điền thêm các ngày không có đơn = 0đ —
+// nếu không, khoảng nhiều ngày mà chỉ 1-2 ngày có doanh thu sẽ vẽ ra 1 cột chiếm hết
+// cả biểu đồ thay vì dải cột theo từng ngày.
+const reportsRevenueByDay = ref([]); // [{ ngay, doanhThu }], liên tục từng ngày trong khoảng
 const loadReportsRevenueByDay = async () => {
-  reportsRevenueByDay.value = await DashboardService
+  const raw = await DashboardService
     .getRevenueByDay(reportsDateFrom.value, reportsDateTo.value)
     .catch(() => []);
+  const byDay = Object.fromEntries(raw.map((r) => [r.ngay, Number(r.doanhThu) || 0]));
+  const days = [];
+  const cur = new Date(reportsDateFrom.value);
+  const end = new Date(reportsDateTo.value);
+  while (cur <= end) {
+    const key = toDateInputValue(cur);
+    days.push({ ngay: key, doanhThu: byDay[key] || 0 });
+    cur.setDate(cur.getDate() + 1);
+  }
+  reportsRevenueByDay.value = days;
 };
 watch([reportsDateFrom, reportsDateTo], loadReportsRevenueByDay, { immediate: true });
 
