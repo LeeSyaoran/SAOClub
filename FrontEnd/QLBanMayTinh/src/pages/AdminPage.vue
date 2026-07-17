@@ -3552,28 +3552,42 @@ onUnmounted(() => {
               </div></div>
             </div>
           </div>
-          <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-            <span class="text-secondary small">{{ t('admin.reports.groupByLabel') }}:</span>
-            <button v-for="opt in ['day','month','year']" :key="opt"
-                    class="btn btn-sm"
-                    :class="reportsGroupBy===opt ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-                    @click="reportsGroupBy=opt">
-              {{ t(`admin.reports.groupBy${opt.charAt(0).toUpperCase()}${opt.slice(1)}`) }}
-            </button>
-          </div>
-          <div v-if="reportsGroupBy==='day'" class="d-flex flex-wrap align-items-center gap-2 mb-3">
-            <button v-for="opt in ['today','week','month','custom']" :key="opt"
-                    class="btn btn-sm"
-                    :class="reportsDateRange===opt ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-                    @click="reportsDateRange=opt">
-              {{ t(`admin.reports.dateRange${opt.charAt(0).toUpperCase()}${opt.slice(1)}`) }}
-            </button>
-            <template v-if="reportsDateRange==='custom'">
-              <span class="text-secondary small">{{ t('admin.reports.dateFrom') }}</span>
-              <input type="date" v-model="reportsCustomFrom" class="form-control form-control-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-              <span class="text-secondary small">{{ t('admin.reports.dateTo') }}</span>
-              <input type="date" v-model="reportsCustomTo" class="form-control form-control-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-            </template>
+          <div class="d-flex flex-wrap align-items-center gap-3 mb-3 px-3 py-2 rounded-3" style="background:var(--bg-card-alt);">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-secondary small">{{ t('admin.reports.groupByLabel') }}</span>
+              <div class="d-flex align-items-center gap-1 rounded-pill p-1" style="background:var(--bg-input);">
+                <button v-for="opt in ['day','month','year']" :key="opt" type="button"
+                        class="btn btn-sm border-0 rounded-pill px-3 py-1"
+                        :style="reportsGroupBy===opt
+                          ? 'background:var(--accent);color:var(--accent-text);font-weight:600;'
+                          : 'background:transparent;color:var(--text-secondary);'"
+                        @click="reportsGroupBy=opt">
+                  {{ t(`admin.reports.groupBy${opt.charAt(0).toUpperCase()}${opt.slice(1)}`) }}
+                </button>
+              </div>
+            </div>
+            <div v-if="reportsGroupBy==='day'" class="d-flex flex-wrap align-items-center gap-2"
+                 style="border-left:1px solid var(--border-color-soft); padding-left:0.9rem;">
+              <div class="d-flex align-items-center gap-1 rounded-pill p-1" style="background:var(--bg-input);">
+                <button v-for="opt in ['today','week','month','custom']" :key="opt" type="button"
+                        class="btn btn-sm border-0 rounded-pill px-3 py-1"
+                        :style="reportsDateRange===opt
+                          ? 'background:var(--accent);color:var(--accent-text);font-weight:600;'
+                          : 'background:transparent;color:var(--text-secondary);'"
+                        @click="reportsDateRange=opt">
+                  {{ t(`admin.reports.dateRange${opt.charAt(0).toUpperCase()}${opt.slice(1)}`) }}
+                </button>
+              </div>
+              <template v-if="reportsDateRange==='custom'">
+                <input type="date" v-model="reportsCustomFrom" class="form-control form-control-sm"
+                       :aria-label="t('admin.reports.dateFrom')"
+                       style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                <span class="text-secondary small">→</span>
+                <input type="date" v-model="reportsCustomTo" class="form-control form-control-sm"
+                       :aria-label="t('admin.reports.dateTo')"
+                       style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+              </template>
+            </div>
           </div>
           <div class="small fw-semibold text-secondary mb-2">{{ t('admin.reports.revenueChartTitle') }}</div>
           <div class="card border-secondary mb-4" style="background:var(--bg-hover);"><div class="card-body">
