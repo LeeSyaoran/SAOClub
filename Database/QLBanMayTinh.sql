@@ -9318,3 +9318,30 @@ JOIN (VALUES
 ) AS v(so_dien_thoai, email) ON kh.so_dien_thoai = v.so_dien_thoai
 WHERE kh.email IS NULL OR kh.email = '';
 GO
+
+-- ============================================================
+--  CÀI ĐẶT HỆ THỐNG (singleton — luôn đúng 1 dòng, cai_dat_id = 1)
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'cai_dat_he_thong')
+BEGIN
+    CREATE TABLE cai_dat_he_thong (
+        cai_dat_id                INT            PRIMARY KEY,
+        ten_cua_hang              NVARCHAR(200)  NOT NULL DEFAULT N'SAOPhone',
+        dia_chi                   NVARCHAR(300)  NOT NULL DEFAULT N'',
+        so_dien_thoai             NVARCHAR(20)   NOT NULL DEFAULT N'',
+        email                     NVARCHAR(100)  NOT NULL DEFAULT N'',
+        ma_so_thue                NVARCHAR(20)   NOT NULL DEFAULT N'',
+        logo_url                  NVARCHAR(300)  NULL,
+        nguong_ton_kho_mac_dinh   INT            NOT NULL DEFAULT 5,
+        ngon_ngu_mac_dinh         VARCHAR(5)     NOT NULL DEFAULT 'vi'
+            CONSTRAINT CK_cai_dat_ngonngu CHECK (ngon_ngu_mac_dinh IN ('vi','en','zh','ja','ko')),
+        dinh_dang_so              VARCHAR(5)     NOT NULL DEFAULT 'vi'
+            CONSTRAINT CK_cai_dat_dinhdangso CHECK (dinh_dang_so IN ('vi','en'))
+    );
+END
+
+IF NOT EXISTS (SELECT 1 FROM cai_dat_he_thong WHERE cai_dat_id = 1)
+BEGIN
+    INSERT INTO cai_dat_he_thong (cai_dat_id) VALUES (1);
+END
+GO
