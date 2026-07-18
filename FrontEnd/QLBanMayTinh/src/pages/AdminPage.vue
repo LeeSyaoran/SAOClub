@@ -4,14 +4,11 @@ import { AuthStore, clearSession, setSession } from "../stores/index.js";
 import { t, I18nStore, LOCALES, setLocale } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon } from "../utils/orderStatus.js";
 import { nowLocalIso } from "../utils/datetime.js";
-import * as SanPhamService   from "../Service/SanPhamService.js";
-import * as BienTheSanPhamService from "../Service/BienTheSanPhamService.js";
 import * as KhachHangService from "../Service/KhachHangService.js";
 import * as NhanVienService  from "../Service/NhanVienService.js";
 import * as DonHangService   from "../Service/DonHangService.js";
 import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
 import * as TonKhoService          from "../Service/TonKhoService.js";
-import * as DanhMucService         from "../Service/DanhMucService.js";
 import * as DmService              from "../Service/DmService.js";
 import * as ChiTietSanPhamService  from "../Service/ChiTietSanPhamService.js";
 import * as ChiTietDonHangService  from "../Service/ChiTietDonHangService.js";
@@ -35,6 +32,7 @@ import { authHeaders } from "../Service/api.js";
 import { formatPrice, formatDate, formatDateTime, statusLabel, toLocalDT } from "../utils/adminFormat.js";
 import { showToast } from "../stores/toast.js";
 import ToastHost from "../components/common/ToastHost.vue";
+import ProductsTable from "../components/admin/ProductsTable.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
@@ -189,13 +187,7 @@ const inventory = computed(() => InventoryStore.items);
 const suppliers = computed(() => SuppliersStore.items);
 const phieuNhapList = ref([]);
 const chiTietPhieuNhapList = ref([]);
-const categories = ref([]);
-const brands = ref([]);
 const chucVuList = ref([]);
-const cpuList = ref([]);
-const ramList = ref([]);
-const oCungList = ref([]);
-const gpuList = ref([]);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const customerName = (id) =>
@@ -267,17 +259,6 @@ const filteredCustomers = computed(() => {
     (c.hoTen ?? '').toLowerCase().includes(q) ||
     (c.soDienThoai ?? '').includes(q) ||
     (c.email ?? '').toLowerCase().includes(q)
-  );
-});
-
-// ── Bo loc man hinh San pham ──────────────────────────────────────────────────
-const productSearch = ref("");
-const filteredGroupedProducts = computed(() => {
-  const q = productSearch.value.trim().toLowerCase();
-  if (!q) return groupedProducts.value;
-  return groupedProducts.value.filter((p) =>
-    (p.tenSanPham ?? '').toLowerCase().includes(q) ||
-    (p.tenThuongHieu ?? '').toLowerCase().includes(q)
   );
 });
 
@@ -706,7 +687,7 @@ const ensurePhieuNhapData = () => {
   phieuNhapDataPromise = Promise.all([
     PhieuNhapKhoService.getAll().catch(() => []),
     ChiTietPhieuNhapService.getAll().catch(() => []),
-    ensureProductRefData(),
+    ensureSuppliers(),
     ensureStaff(),
   ]).then(([pn, ct]) => {
     phieuNhapList.value = pn;
@@ -1039,9 +1020,9 @@ const exportPhieuNhapExcel = () => {
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 // Chỉ tải 6 bảng chính lúc vào trang (dashboard + các bảng danh sách cần ngay).
-// 7 danh sách tham chiếu (danh mục/hãng/NCC/CPU/RAM/ổ cứng/GPU) + chức vụ
-// KHÔNG tải ở đây nữa — chỉ tải khi thực sự cần (mở form thêm/sửa sản phẩm,
-// vào trang Nhân viên), xem ensureProductRefData()/ensureChucVuList() bên dưới.
+// Danh mục/hãng/CPU/RAM/ổ cứng/GPU (ensureProductRefData) đã chuyển vào
+// ProductsTable.vue (Task 3) — chỉ tab Sản phẩm cần. Chức vụ (ensureChucVuList) vẫn
+// KHÔNG tải ở đây — chỉ tải khi vào trang Nhân viên, xem ensureChucVuList() bên dưới.
 // Với dữ liệu lớn, bớt 7-8 lệnh gọi song song này giúp trang vào nhanh hơn hẳn.
 // Nhân viên KHÔNG tải ở đây nữa — không có KPI/dashboard/POS nào cần đến staff.value,
 // chỉ tab Nhân viên và tab Phiếu nhập (staffName/staffOptions) cần, cả 2 đều lazy-load
@@ -1056,31 +1037,6 @@ const fetchAll = async () => {
     refreshInventory(),
   ]);
   await autoMergeAllDuplicates();
-};
-
-// Danh mục/hãng/CPU/RAM/ổ cứng/GPU — chỉ cần khi mở form thêm/sửa sản phẩm.
-// Tải 1 lần, cache lại (promise dùng chung để 2 lần gọi gần nhau không tải trùng).
-// NCC giờ tải qua ensureSuppliers() (stores/suppliers.js) — dùng chung với các trang khác.
-let productRefDataPromise = null;
-const ensureProductRefData = () => {
-  if (productRefDataPromise) return productRefDataPromise;
-  productRefDataPromise = Promise.all([
-    DanhMucService.getAll().catch(() => []),
-    DmService.getThuongHieu().catch(() => []),
-    DmService.getCpu().catch(() => []),
-    DmService.getRam().catch(() => []),
-    DmService.getOCung().catch(() => []),
-    DmService.getGpu().catch(() => []),
-    ensureSuppliers(),
-  ]).then(([cat, br, cpu, ram, oc, gpu]) => {
-    categories.value = cat;
-    brands.value = br;
-    cpuList.value = cpu;
-    ramList.value = ram;
-    oCungList.value = oc;
-    gpuList.value = gpu;
-  });
-  return productRefDataPromise;
 };
 
 // Chức vụ — cần cho cả bảng Nhân viên (chucVuName) lẫn form thêm/sửa nhân viên.
@@ -1138,20 +1094,9 @@ const groupedProducts = computed(() => {
   return [...map.values()];
 });
 
-// ── Variant detail modal ───────────────────────────────────────────────────────
-const showVariantModal   = ref(false);
-const variantModalName   = ref('');
-const variantModalList   = ref([]);
-const variantSerialMap   = ref({});   // bienTheId → serial[]
-const variantSerialLoad  = ref(false);
-const serialInputs       = ref({});   // bienTheId → { soSerial, saving }
-
-const showDetailModal  = ref(false);
-const detailModalName  = ref('');
-const detailModalList  = ref([]);
-const detailSerialMap  = ref({});  // bienTheId → serial[]
-
-// Helper: fetch serial của nhiều bienTheId song song → { bienTheId: serial[] }
+// Helper: fetch serial của nhiều bienTheId song song → { bienTheId: serial[] } — dùng bởi
+// openXacNhanSerialModal() (xác nhận đơn online). Trước Task 3 còn dùng chung với modal
+// "Chi tiết sản phẩm" (giờ đã chuyển vào ProductDetailModal.vue, có bản sao riêng ở đó).
 const fetchSerialMap = async (bienTheIds) => {
   const results = await Promise.all(
     bienTheIds.map(id => ChiTietSanPhamService.getByBienThe(id).catch(() => []))
@@ -1159,349 +1104,6 @@ const fetchSerialMap = async (bienTheIds) => {
   const map = {};
   bienTheIds.forEach((id, i) => { map[id] = results[i]; });
   return map;
-};
-
-const openDetail = async (sanPhamId, name) => {
-  detailModalName.value = name;
-  const list = products.value.filter(p => p.sanPhamId === sanPhamId);
-  detailModalList.value = list;
-  detailSerialMap.value = {};
-  showDetailModal.value = true;
-  detailSerialMap.value = await fetchSerialMap(list.map(v => v.bienTheId));
-};
-
-const openVariants = async (sanPhamId, name) => {
-  variantModalName.value = name;
-  const list = products.value.filter(p => p.sanPhamId === sanPhamId);
-  variantModalList.value = list;
-  variantSerialMap.value = {};
-  const inputs = {};
-  list.forEach(v => { inputs[v.bienTheId] = { soSerial: '', saving: false }; });
-  serialInputs.value = inputs;
-  showVariantModal.value = true;
-
-  variantSerialLoad.value = true;
-  variantSerialMap.value = await fetchSerialMap(list.map(v => v.bienTheId));
-  variantSerialLoad.value = false;
-};
-
-const addSerial = async (bienTheId) => {
-  const inp = serialInputs.value[bienTheId];
-  if (!inp?.soSerial?.trim()) return;
-  inp.saving = true;
-  try {
-    const res = await ChiTietSanPhamService.create({
-      bienTheId,
-      soSerial: inp.soSerial.trim(),
-      trangThai: 'trong_kho',
-      ngayNhapKho: nowLocalIso(),
-    });
-    if (!res.ok) throw new Error(t('admin.errors.addSerialError'));
-    // Chỉ refresh serial của biến thể vừa thêm
-    const updated = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
-    variantSerialMap.value = { ...variantSerialMap.value, [bienTheId]: updated };
-    inp.soSerial = '';
-  } finally {
-    inp.saving = false;
-  }
-};
-
-// ── Products CRUD ─────────────────────────────────────────────────────────────
-const showProductModal = ref(false);
-const editingId = ref(null);
-const formError = ref("");
-
-// Serial number cho lần tạo mới
-const soSerialMoi = ref('');
-// Preview ảnh + file thực tế chờ upload
-const imagePreview  = ref('');
-const imageFilePending = ref(null);
-
-// Tag phân loại (để lọc trang khách, xem App.vue CHIP_KEYWORDS/sidebarCatsBase) — danh
-// sách cố định, chọn qua chip thay vì gõ tay để khỏi gõ sai slug làm hỏng bộ lọc.
-const PHAN_LOAI_TAG_OPTIONS = [
-  { value: 'gaming', label: 'Gaming' },
-  { value: 'van_phong', label: 'Văn phòng' },
-  { value: 'sinh_vien', label: 'Sinh viên' },
-  { value: 'do_hoa', label: 'Đồ họa' },
-  { value: 'ky_thuat', label: 'Kỹ thuật' },
-  { value: 'macbook', label: 'MacBook' },
-  { value: 'cu', label: 'Cũ' },
-  { value: 'gia_re', label: 'Giá rẻ' },
-  { value: 'linh_kien', label: 'Linh kiện' },
-];
-const toggleTag = (value) => {
-  const tags = form.phanLoaiTags.split(',').map(s => s.trim()).filter(Boolean);
-  const idx = tags.indexOf(value);
-  if (idx === -1) tags.push(value); else tags.splice(idx, 1);
-  form.phanLoaiTags = tags.join(',');
-  // Tự ghép "Phân loại Tên" (tên hiển thị) từ nhãn của các tag đang chọn — khỏi gõ lại tay.
-  form.phanLoaiTen = tags
-    .map(v => PHAN_LOAI_TAG_OPTIONS.find(o => o.value === v)?.label)
-    .filter(Boolean)
-    .join(', ');
-};
-const isTagSelected = (value) => form.phanLoaiTags.split(',').map(s => s.trim()).includes(value);
-
-const emptyForm = () => ({
-  bienTheId: null,
-  tenSanPham: "",
-  thuongHieuId: null,
-  danhMucId: null,
-  nhaCungCapId: null,
-  loaiSanPham: "",
-  maSku: "",
-  cpuId: null,
-  ramId: null,
-  oCungId: null,
-  gpuId: null,
-  kichThuocManHinh: "",
-  heDieuHanh: "",
-  pin: "",
-  trongLuongKg: "",
-  mauSac: "",
-  giaBan: "",
-  giaNhap: "",
-  baoHanhThang: "",
-  moTa: "",
-  hinhAnhChinh: "",
-  trangThai: "active",
-  phanLoaiTags: "",
-  phanLoaiTen: "",
-});
-const form = reactive(emptyForm());
-
-const resetImageState = () => {
-  imagePreview.value = '';
-  imageFilePending.value = null;
-};
-
-const openAdd = async () => {
-  await ensureProductRefData();
-  Object.assign(form, emptyForm());
-  editingId.value = null;
-  addVariantMode.value = false;
-  addVariantSanPhamId.value = null;
-  formError.value = "";
-  soSerialMoi.value = '';
-  resetImageState();
-  showProductModal.value = true;
-};
-
-// Thêm biến thể mới (màu/cấu hình khác) cho một sản phẩm ĐÃ TỒN TẠI —
-// dùng lại modal Sản phẩm nhưng ẩn phần thông tin định danh sản phẩm (tên/hãng/danh mục...)
-// vì những field đó dùng chung cho mọi biến thể, không tạo lại. POST thẳng tới
-// /api/bien-the-san-pham (bienTheSanPhamId mới) thay vì /api/san-pham (tránh tạo sanPhamId trùng lặp).
-const addVariantMode      = ref(false);
-const addVariantSanPhamId = ref(null);
-const addVariantSanPhamName = ref('');
-
-const openAddVariant = async () => {
-  await ensureProductRefData();
-  Object.assign(form, emptyForm());
-  const first = detailModalList.value[0];
-  form.tenSanPham  = detailModalName.value;
-  form.thuongHieuId = first?.thuongHieuId ?? null;
-  form.danhMucId    = first?.danhMucId ?? null;
-  form.loaiSanPham  = first?.loaiSanPham ?? '';
-  editingId.value = null;
-  addVariantMode.value = true;
-  addVariantSanPhamId.value = first?.sanPhamId ?? null;
-  addVariantSanPhamName.value = detailModalName.value;
-  formError.value = "";
-  soSerialMoi.value = '';
-  resetImageState();
-  showDetailModal.value = false;
-  showProductModal.value = true;
-};
-const openEdit = async (p) => {
-  await ensureProductRefData();
-  Object.assign(form, {
-    bienTheId: p.bienTheId,
-    tenSanPham: p.tenSanPham,
-    thuongHieuId: p.thuongHieuId,
-    danhMucId: p.danhMucId,
-    nhaCungCapId: p.nhaCungCapId,
-    loaiSanPham: p.loaiSanPham,
-    maSku: p.maSku,
-    cpuId: cpuList.value.find((c) => c.tenCpu === p.cpu)?.cpuId ?? null,
-    ramId: ramList.value.find((r) => r.dungLuong === p.ram)?.ramId ?? null,
-    oCungId:
-      oCungList.value.find((o) => o.loaiOcung === p.oCung)?.oCungId ?? null,
-    gpuId: gpuList.value.find((g) => g.tenGpu === p.gpu)?.gpuId ?? null,
-    kichThuocManHinh: p.kichThuocManHinh,
-    heDieuHanh: p.heDieuHanh,
-    pin: p.pin,
-    trongLuongKg: p.trongLuongKg,
-    mauSac: p.mauSac,
-    giaBan: p.giaBan,
-    giaNhap: p.giaNhap,
-    baoHanhThang: p.baoHanhThang,
-    moTa: p.moTa,
-    hinhAnhChinh: p.hinhAnhChinh,
-    trangThai: p.trangThai,
-    phanLoaiTags: p.phanLoaiTags ?? "",
-    phanLoaiTen: p.phanLoaiTen ?? "",
-  });
-  editingId.value = p.sanPhamId;
-  addVariantMode.value = false;
-  addVariantSanPhamId.value = null;
-  formError.value = "";
-  imagePreview.value = p.hinhAnhChinh || '';
-  imageFilePending.value = null;
-  showProductModal.value = true;
-};
-
-const handleImageFile = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  imageFilePending.value = file;
-  imagePreview.value = URL.createObjectURL(file);
-};
-
-const saveProduct = async () => {
-  formError.value = "";
-
-  // Upload ảnh trước nếu có file mới chọn
-  if (imageFilePending.value) {
-    const fd = new FormData();
-    fd.append('file', imageFilePending.value);
-    try {
-      const upRes = await fetch('/api/upload/image', { method: 'POST', headers: authHeaders(), body: fd });
-      if (upRes.ok) {
-        const upData = await upRes.json();
-        form.hinhAnhChinh = upData.url;
-      } else {
-        formError.value = t('admin.errors.uploadFailed', { status: upRes.status });
-        return;
-      }
-    } catch (e) {
-      formError.value = t('admin.errors.uploadError', { message: e.message });
-      return;
-    }
-  }
-
-  if (addVariantMode.value) {
-    if (!form.maSku.trim()) { formError.value = t('admin.errors.skuRequired'); return; }
-    const variantBody = {
-      sanPhamId: addVariantSanPhamId.value,
-      maSku: form.maSku,
-      giaNhap: Number(form.giaNhap),
-      giaBan: Number(form.giaBan),
-      baoHanhThang: Number(form.baoHanhThang) || 0,
-      hinhAnhBienThe: form.hinhAnhChinh,
-      trangThai: form.trangThai,
-      mauSac: form.mauSac,
-      cpuId: form.cpuId ? Number(form.cpuId) : null,
-      ramId: form.ramId ? Number(form.ramId) : null,
-      oCungId: form.oCungId ? Number(form.oCungId) : null,
-      gpuId: form.gpuId ? Number(form.gpuId) : null,
-      kichThuocManHinh: form.kichThuocManHinh,
-      heDieuHanh: form.heDieuHanh,
-      pin: form.pin,
-      trongLuongKg: form.trongLuongKg ? Number(form.trongLuongKg) : null,
-    };
-    try {
-      const res = await BienTheSanPhamService.create(variantBody);
-      if (!res.ok) {
-        formError.value = t('admin.errors.saveFailed', { status: res.status, text: await res.text() });
-        return;
-      }
-      const created = await res.json();
-      if (soSerialMoi.value.trim()) {
-        await ChiTietSanPhamService.create({
-          bienTheId: created.bienTheId,
-          soSerial: soSerialMoi.value.trim(),
-          trangThai: 'trong_kho',
-          ngayNhapKho: nowLocalIso(),
-        }).catch(() => {});
-      }
-      showProductModal.value = false;
-      resetImageState();
-      await refreshProducts();
-      await openDetail(addVariantSanPhamId.value, addVariantSanPhamName.value);
-    } catch (e) {
-      formError.value = e.message;
-    }
-    return;
-  }
-
-  const body = {
-    ...form,
-    thuongHieuId: Number(form.thuongHieuId),
-    danhMucId: Number(form.danhMucId),
-    nhaCungCapId: form.nhaCungCapId ? Number(form.nhaCungCapId) : null,
-    cpuId: form.cpuId ? Number(form.cpuId) : null,
-    ramId: form.ramId ? Number(form.ramId) : null,
-    oCungId: form.oCungId ? Number(form.oCungId) : null,
-    gpuId: form.gpuId ? Number(form.gpuId) : null,
-    giaBan: Number(form.giaBan),
-    giaNhap: Number(form.giaNhap),
-    trongLuongKg: form.trongLuongKg ? Number(form.trongLuongKg) : null,
-    baoHanhThang: Number(form.baoHanhThang),
-    ...(editingId.value ? {} : { ngayTao: nowLocalIso() }),
-  };
-  try {
-    const res = await SanPhamService.save(editingId.value, body);
-    if (!res.ok) {
-      formError.value = t('admin.errors.saveFailed', { status: res.status, text: await res.text() });
-      return;
-    }
-
-    // Nếu tạo mới + có serial → tìm bienTheId vừa tạo rồi POST chi_tiet
-    if (!editingId.value && soSerialMoi.value.trim()) {
-      const newList = await SanPhamService.getAll().catch(() => []);
-      const newVariant = [...newList].reverse().find(p => p.maSku === form.maSku);
-      if (newVariant) {
-        await ChiTietSanPhamService.create({
-          bienTheId: newVariant.bienTheId,
-          soSerial: soSerialMoi.value.trim(),
-          trangThai: 'trong_kho',
-          ngayNhapKho: nowLocalIso(),
-        }).catch(() => {});
-      }
-    }
-
-    showProductModal.value = false;
-    resetImageState();
-    await refreshProducts();
-  } catch (e) {
-    formError.value = e.message;
-  }
-};
-// Xoá xong không cần tải lại cả bảng — API trả 204 rỗng nên chỉ cần biết ID
-// vừa xoá là đủ để lọc khỏi mảng cục bộ (products = 1 dòng/biến thể, nên xoá
-// sản phẩm = xoá hết các dòng cùng sanPhamId).
-// Hỏi trước khi bấm xóa: sản phẩm chưa từng bán -> chỉ hỏi xác nhận đơn giản; đã có giao
-// dịch -> báo thẳng lý do không xóa được, khỏi cần hỏi "có chắc không" cho việc chắc chắn
-// sẽ thất bại.
-const deleteProduct = async (id) => {
-  const name = products.value.find(p => p.sanPhamId === id)?.tenSanPham ?? '';
-  const daGiaoDich = await SanPhamService.hasTransactionHistory(id).catch(() => false);
-  if (daGiaoDich) {
-    showToast(t('admin.errors.cannotDeleteProduct', { name }));
-    return;
-  }
-  if (!(await askConfirm(t('admin.confirm.deleteProductSimple', { name })))) return;
-  const res = await SanPhamService.remove(id);
-  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
-  await refreshProducts();
-};
-
-// Xoá 1 biến thể (bienTheId) — dùng trong modal "Biến thể" và "Chi tiết", không xoá cả sản phẩm
-const deleteVariant = async (bienTheId) => {
-  const sku = products.value.find(p => p.bienTheId === bienTheId)?.maSku ?? '';
-  const daGiaoDich = await BienTheSanPhamService.hasTransactionHistory(bienTheId).catch(() => false);
-  if (daGiaoDich) {
-    showToast(t('admin.errors.cannotDeleteVariant', { sku }));
-    return;
-  }
-  if (!(await askConfirm(t('admin.confirm.deleteVariantSimple', { sku })))) return;
-  const res = await BienTheSanPhamService.remove(bienTheId);
-  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
-  await refreshProducts();
-  variantModalList.value = variantModalList.value.filter(v => v.bienTheId !== bienTheId);
-  detailModalList.value = detailModalList.value.filter(v => v.bienTheId !== bienTheId);
 };
 
 // ── Customers CRUD ────────────────────────────────────────────────────────────
@@ -1945,6 +1547,13 @@ const autoMergeOrders = async () => {
 };
 
 // Mo chi tiet 1 bien the cu the (khong load tat ca bien the cung san pham)
+// ⚠️ TẠM THỜI BỊ HỎNG sau Task 3: detailModalName/detailModalList/detailSerialMap/
+// showDetailModal đã chuyển thành state nội bộ của ProductDetailModal.vue (sở hữu bởi
+// ProductsTable.vue), không còn tồn tại ở AdminPage.vue nữa. Nút "Chi tiết" trên dòng sản
+// phẩm trong modal đơn hàng (xem template ~openVariantDetail) sẽ lỗi khi bấm cho tới khi
+// Task 5 (OrdersTable.vue) tự dựng <ProductDetailModal> riêng và sửa hàm này để dùng
+// sanPhamId/sanPhamName qua props thay vì các ref đã xóa — xem ghi chú Task 5 trong kế
+// hoạch (docs/superpowers/plans/2026-07-18-shared-admin-components.md).
 const openVariantDetail = (bienTheId) => {
   const v = productByBienThe(bienTheId);
   if (!v) return;
@@ -3103,43 +2712,7 @@ onUnmounted(() => {
 
         <!-- ── San pham ── -->
         <section v-show="currentPage === 'products'">
-          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <span class="text-secondary small">{{ filteredGroupedProducts.length }}/{{ groupedProducts.length }} {{ t('admin.products.countSuffix') }}</span>
-            <div class="d-flex gap-2 flex-wrap">
-              <input v-model="productSearch" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.products.searchPlaceholder')" />
-              <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAdd">{{ t('admin.products.add') }}</button>
-            </div>
-          </div>
-          <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.products.loading') }}</div>
-          <div v-else class="table-responsive">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr>
-                <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-                <th>{{ t('admin.products.colName') }}</th><th>{{ t('admin.products.colBrand') }}</th><th>{{ t('admin.products.colCategory') }}</th>
-                <th>{{ t('admin.products.colVariant') }}</th><th>{{ t('admin.products.colPriceFrom') }}</th><th>{{ t('admin.products.colStatus') }}</th><th>{{ t('admin.products.colAction') }}</th>
-              </tr></thead>
-              <tbody>
-                <tr v-for="(p, idx) in filteredGroupedProducts" :key="p.sanPhamId">
-                  <td class="text-secondary">{{ idx + 1 }}</td>
-                  <td>{{ p.tenSanPham }}</td>
-                  <td>{{ p.tenThuongHieu }}</td>
-                  <td>{{ p.tenDanhMuc }}</td>
-                  <td class="text-center">
-                    <span class="badge bg-secondary">{{ p.variantCount }}</span>
-                  </td>
-                  <td>{{ formatPrice(p.minPrice) }}</td>
-                  <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(p.trangThai) }}</span></td>
-                  <td>
-                    <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem; padding:2px 8px;" @click="openDetail(p.sanPhamId, p.tenSanPham)">{{ t('admin.products.detail') }}</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteProduct(p.sanPhamId)">{{ t('admin.products.delete') }}</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="filteredGroupedProducts.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.products.empty') }}</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <ProductsTable />
         </section>
 
         <!-- ── Don hang ── -->
@@ -4175,336 +3748,6 @@ onUnmounted(() => {
       </div><!-- /content -->
     </main>
   </div><!-- /dashboard-shell -->
-
-  <!-- ══ MODAL SAN PHAM ══ -->
-  <div v-if="showProductModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showProductModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:860px;max-width:96vw;max-height:92vh;">
-
-      <!-- Header -->
-      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color);">
-        <div>
-          <div class="fw-bold text-light" style="font-size:1rem;">{{ addVariantMode ? t('admin.variantModal.addVariant') : (editingId ? t('admin.productModal.titleEdit') : t('admin.productModal.titleAdd')) }}</div>
-          <div v-if="addVariantMode" class="text-secondary" style="font-size:0.72rem;margin-top:2px;">{{ addVariantSanPhamName }}</div>
-          <div v-else-if="editingId" class="text-secondary" style="font-size:0.72rem;margin-top:2px;">{{ t('admin.productModal.idLabel') }} {{ editingId }}</div>
-        </div>
-        <button class="btn-close btn-close-white btn-sm" @click="showProductModal=false"></button>
-      </div>
-
-      <!-- Body -->
-      <div class="overflow-y-auto px-4 py-3" style="gap:0;">
-        <div v-if="formError" class="alert alert-danger small py-2 mb-3">{{ formError }}</div>
-
-        <!-- ── Thong tin co ban ── -->
-        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">{{ t('admin.productModal.sectionBasic') }}</div>
-        <div class="rounded-3 p-3 mb-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
-          <div class="row g-3">
-            <div class="col-8" v-if="!addVariantMode">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.nameLabel') }}</label>
-              <input v-model="form.tenSanPham" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.namePlaceholder')" />
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.skuLabel') }}</label>
-              <input v-model="form.maSku" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); font-family:monospace;" :placeholder="t('admin.productModal.skuPlaceholder')" />
-            </div>
-            <div class="col-3" v-if="!addVariantMode">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.typeLabel') }}</label>
-              <select v-model="form.loaiSanPham" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option value="" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
-                <option value="LAPTOP">{{ t('admin.productModal.typeLaptop') }}</option>
-                <option value="PHU_KIEN">{{ t('admin.productModal.typeAccessory') }}</option>
-              </select>
-            </div>
-            <div class="col-3">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.statusLabel') }}</label>
-              <select v-model="form.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option value="active">{{ t('admin.productModal.statusActive') }}</option>
-                <option value="inactive">{{ t('admin.productModal.statusInactive') }}</option>
-                <option value="ngung_kin_doanh">{{ t('admin.productModal.statusDiscontinued') }}</option>
-              </select>
-            </div>
-            <div class="col-3">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.colorLabel') }}</label>
-              <input v-model="form.mauSac" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.colorPlaceholder')" />
-            </div>
-            <div class="col-3">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.warrantyLabel') }}</label>
-              <input v-model="form.baoHanhThang" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
-            </div>
-            <template v-if="!addVariantMode">
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.brandLabel') }}</label>
-              <select v-model="form.thuongHieuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
-                <option v-for="b in brands" :key="b.thuongHieuId" :value="b.thuongHieuId">{{ b.tenThuongHieu }}</option>
-              </select>
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.categoryLabel') }}</label>
-              <select v-model="form.danhMucId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
-                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.tenDanhMuc }}</option>
-              </select>
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.supplierLabel') }}</label>
-              <select v-model="form.nhaCungCapId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">{{ s.tenNhaCungCap }}</option>
-              </select>
-            </div>
-            </template>
-          </div>
-        </div>
-
-        <!-- ── Cau hinh ky thuat ── -->
-        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">{{ t('admin.productModal.sectionTech') }}</div>
-        <div class="rounded-3 p-3 mb-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
-          <div class="row g-3">
-            <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.cpuLabel') }}</label>
-              <select v-model="form.cpuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="c in cpuList" :key="c.cpuId" :value="c.cpuId">{{ c.tenCpu }}</option>
-              </select>
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.gpuLabel') }}</label>
-              <select v-model="form.gpuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="g in gpuList" :key="g.gpuId" :value="g.gpuId">{{ g.tenGpu }}</option>
-              </select>
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.ramLabel') }}</label>
-              <select v-model="form.ramId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="r in ramList" :key="r.ramId" :value="r.ramId">{{ r.dungLuong }}</option>
-              </select>
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.storageLabel') }}</label>
-              <select v-model="form.oCungId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="o in oCungList" :key="o.oCungId" :value="o.oCungId">{{ o.loaiOcung }}</option>
-              </select>
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.screenLabel') }}</label>
-              <input v-model="form.kichThuocManHinh" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.screenPlaceholder')" />
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.osLabel') }}</label>
-              <input v-model="form.heDieuHanh" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.osPlaceholder')" />
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.batteryLabel') }}</label>
-              <input v-model="form.pin" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.batteryPlaceholder')" />
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.weightLabel') }}</label>
-              <input v-model="form.trongLuongKg" type="number" step="0.1" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
-            </div>
-          </div>
-        </div>
-
-        <!-- ── Gia ca ── -->
-        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">{{ t('admin.productModal.sectionPrice') }}</div>
-        <div class="rounded-3 p-3 mb-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
-          <div class="row g-3">
-            <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.priceSellLabel') }}</label>
-              <input v-model="form.giaBan" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.priceBuyLabel') }}</label>
-              <input v-model="form.giaNhap" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
-            </div>
-          </div>
-        </div>
-
-        <!-- ── Hinh anh, mo ta, phan loai ── -->
-        <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">{{ t('admin.productModal.sectionMedia') }}</div>
-        <div class="rounded-3 p-3 mb-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.imageLabel') }}</label>
-              <div class="d-flex align-items-center gap-3">
-                <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:110px;height:88px;cursor:pointer;flex-shrink:0;overflow:hidden;background:var(--bg-card-inset);">
-                  <img v-if="imagePreview" :src="imagePreview" style="width:110px;height:88px;object-fit:contain;" />
-                  <template v-else>
-                    <span style="font-size:1.4rem;">&#128247;</span>
-                    <span style="font-size:0.68rem;margin-top:4px;">{{ t('admin.productModal.imageClickToChoose') }}</span>
-                  </template>
-                  <input type="file" accept="image/*" class="d-none" @change="handleImageFile" />
-                </label>
-                <div v-if="imageFilePending" class="text-warning" style="font-size:0.75rem;">{{ imageFilePending.name }}</div>
-                <div v-else class="text-secondary" style="font-size:0.75rem;">{{ t('admin.productModal.imageFormats') }}</div>
-              </div>
-            </div>
-            <template v-if="!addVariantMode">
-            <div class="col-12">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.descLabel') }}</label>
-              <textarea v-model="form.moTa" rows="3" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"></textarea>
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagsLabel') }} <span class="text-warning small">{{ t('admin.productModal.tagsHint') }}</span></label>
-              <div class="d-flex flex-wrap gap-2">
-                <button v-for="opt in PHAN_LOAI_TAG_OPTIONS" :key="opt.value" type="button"
-                        class="btn btn-sm" :class="isTagSelected(opt.value) ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
-                        style="font-size:0.75rem;padding:3px 12px;border-radius:999px;"
-                        @click="toggleTag(opt.value)">{{ opt.label }}</button>
-              </div>
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagNameLabel') }} <span class="text-muted small">{{ t('admin.productModal.tagNameHint') }}</span></label>
-              <input v-model="form.phanLoaiTen" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.tagNamePlaceholder')" />
-            </div>
-            </template>
-          </div>
-        </div>
-
-        <!-- ── Serial (chi khi them moi) ── -->
-        <div v-if="!editingId">
-          <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:var(--accent-fg);">{{ t('admin.productModal.sectionSerial') }}</div>
-          <div class="rounded-3 p-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
-            <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.serialLabel') }} <span class="text-danger">*</span></label>
-            <input v-model="soSerialMoi" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); font-family:monospace;" :placeholder="t('admin.productModal.serialPlaceholder')" />
-            <div class="text-secondary mt-1" style="font-size:0.72rem;">{{ t('admin.productModal.serialHint') }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="d-flex justify-content-end gap-2 px-4 py-3" style="border-top:1px solid var(--border-color);">
-        <button class="btn btn-sm btn-outline-secondary px-3" @click="showProductModal=false">{{ t('admin.productModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold px-4" @click="saveProduct">{{ addVariantMode ? t('admin.variantModal.addVariant') : (editingId ? t('admin.productModal.update') : t('admin.productModal.addNew')) }}</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ MODAL BIEN THE SAN PHAM ══ -->
-  <div v-if="showVariantModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1050;" @click.self="showVariantModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:960px;max-width:96vw;max-height:90vh;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ t('admin.variantModal.titlePrefix') }} {{ variantModalName }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showVariantModal=false"></button>
-      </div>
-      <div class="overflow-y-auto p-3">
-        <!-- moi bien the la 1 card -->
-        <div v-for="v in variantModalList" :key="v.bienTheId" class="mb-3 rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
-          <!-- header bien the -->
-          <div class="d-flex align-items-center gap-3 px-3 py-2 justify-content-between" style="background:var(--bg-input);">
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-              <span class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</span>
-              <span class="badge rounded-pill" style="font-size:0.72rem;background:var(--border-color-strong);color:var(--text-primary);">{{ v.mauSac }}</span>
-              <span class="text-light" style="font-size:0.82rem;">{{ v.cpu }} · {{ v.ram }} · {{ v.oCung }}</span>
-              <span class="text-secondary" style="font-size:0.8rem;">{{ v.kichThuocManHinh }}</span>
-              <span class="fw-bold text-warning" style="font-size:0.88rem;">{{ formatPrice(v.giaBan) }}</span>
-              <span class="badge" :class="v.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.7rem;">{{ statusLabel(v.trangThai) }}</span>
-            </div>
-            <div class="d-flex gap-2 flex-shrink-0">
-              <button class="btn btn-sm btn-outline-warning" style="font-size:0.75rem;padding:2px 8px;" @click="showVariantModal=false; openEdit(v)">{{ t('admin.variantModal.edit') }}</button>
-              <button class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;padding:2px 8px;" @click="deleteVariant(v.bienTheId)">{{ t('admin.products.delete') }}</button>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ MODAL CHI TIET SAN PHAM ══ -->
-  <div v-if="showDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1060;" @click.self="showDetailModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:1100px;max-width:97vw;max-height:92vh;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ t('admin.detailModal.titlePrefix') }} {{ detailModalName }}</span>
-        <div class="d-flex align-items-center gap-2">
-          <button class="btn btn-sm btn-warning text-dark fw-bold" style="font-size:0.78rem;" @click="openAddVariant">{{ t('admin.variantModal.addVariant') }}</button>
-          <button class="btn-close btn-close-white btn-sm" @click="showDetailModal=false"></button>
-        </div>
-      </div>
-      <div class="overflow-y-auto p-3">
-        <div v-for="v in detailModalList" :key="v.bienTheId" class="mb-4 rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
-          <!-- Header bien the -->
-          <div class="d-flex align-items-center justify-content-between gap-3 p-3" style="background:var(--bg-input);">
-            <div class="d-flex align-items-center gap-3">
-              <img v-if="v.hinhAnhChinh" :src="v.hinhAnhChinh" style="width:72px;height:54px;object-fit:contain;background:var(--bg-card-inset);border-radius:6px;padding:4px;" />
-              <span v-else style="font-size:2rem;width:72px;text-align:center;">💻</span>
-              <div>
-                <div class="fw-bold text-light" style="font-size:0.95rem;">{{ v.tenSanPham }}</div>
-                <div class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</div>
-              </div>
-            </div>
-            <div class="d-flex gap-2 flex-shrink-0">
-              <button class="btn btn-sm btn-outline-warning" style="font-size:0.75rem;padding:3px 12px;" @click="showDetailModal=false; openEdit(v)">{{ t('admin.detailModal.edit') }}</button>
-              <button class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;padding:3px 12px;" @click="deleteVariant(v.bienTheId)">{{ t('admin.products.delete') }}</button>
-            </div>
-          </div>
-          <!-- Bang thong tin 4 cot (label | value | label | value) -->
-          <table class="w-100 mb-0" style="border-collapse:collapse;font-size:0.8rem;">
-            <tbody>
-              <tr style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.brand') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.tenThuongHieu }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.category') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.tenDanhMuc }}</td>
-              </tr>
-              <tr style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.supplier') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.tenNhaCungCap }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.productType') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.loaiSanPham }}</td>
-              </tr>
-              <tr style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.priceSell') }}</td>
-                <td class="px-3 py-1 fw-bold" style="background:var(--bg-card);color:var(--accent-fg);">{{ formatPrice(v.giaBan) }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.priceBuy') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ formatPrice(v.giaNhap) }}</td>
-              </tr>
-              <tr style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.warranty') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.baoHanhThang ? v.baoHanhThang + ' ' + t('admin.detailModal.months') : '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.color') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.mauSac }}</td>
-              </tr>
-              <tr style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.status') }}</td>
-                <td class="px-3 py-1" style="background:var(--bg-card);">
-                  <span class="badge" :class="v.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.7rem;">{{ statusLabel(v.trangThai) }}</span>
-                </td>
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.cpu') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.cpu || '—' }}</td>
-              </tr>
-              <tr style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.ram') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.ram || '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.storage') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.oCung || '—' }}</td>
-              </tr>
-              <tr style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.gpu') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.gpu || '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.screen') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.kichThuocManHinh || '—' }}</td>
-              </tr>
-              <tr style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.os') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.heDieuHanh || '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.battery') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.pin || '—' }}</td>
-              </tr>
-              <tr style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.weight') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.trongLuongKg ? v.trongLuongKg + ' ' + t('admin.detailModal.kg') : '—' }}</td>
-                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.classification') }}</td>
-                <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.phanLoaiTen || '—' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- ══ MODAL KHACH HANG ══ -->
   <div v-if="showCustomerModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="closeCustomerModal()">
