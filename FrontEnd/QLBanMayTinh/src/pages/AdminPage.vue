@@ -23,6 +23,8 @@ import * as DashboardService       from "../Service/DashboardService.js";
 import * as XLSX from "xlsx";
 import DonutChart from "../components/common/DonutChart.vue";
 import RevenueBarChart from "../components/common/RevenueBarChart.vue";
+import * as CaiDatService from "../Service/CaiDatService.js";
+import { SettingsStore } from "../stores/settings.js";
 import BarChart   from "../components/common/BarChart.vue";
 import GaugeChart from "../components/common/GaugeChart.vue";
 import TrendChart from "../components/common/TrendChart.vue";
@@ -2545,6 +2547,88 @@ const posPlaceOrder = async () => {
   }
 };
 
+// ── Cài đặt: đổi mật khẩu ──────────────────────────────────────────────────────
+const cdMatKhauCu = ref('');
+const cdMatKhauMoi = ref('');
+const cdMatKhauXacNhan = ref('');
+const cdMatKhauError = ref('');
+const cdMatKhauSuccess = ref('');
+const cdMatKhauLoading = ref(false);
+
+const doiMatKhauSubmit = async () => {
+  cdMatKhauError.value = '';
+  cdMatKhauSuccess.value = '';
+  if (cdMatKhauMoi.value !== cdMatKhauXacNhan.value) {
+    cdMatKhauError.value = t('admin.settings.passwordMismatch');
+    return;
+  }
+  cdMatKhauLoading.value = true;
+  try {
+    await CaiDatService.doiMatKhau(cdMatKhauCu.value, cdMatKhauMoi.value);
+    cdMatKhauSuccess.value = t('admin.settings.passwordChanged');
+    cdMatKhauCu.value = '';
+    cdMatKhauMoi.value = '';
+    cdMatKhauXacNhan.value = '';
+  } catch (e) {
+    cdMatKhauError.value = e.message || String(e);
+  } finally {
+    cdMatKhauLoading.value = false;
+  }
+};
+
+// ── Cài đặt: thông tin cửa hàng ─────────────────────────────────────────────────
+const cdForm = reactive({
+  tenCuaHang: '', diaChi: '', soDienThoai: '', email: '', maSoThue: '', logoUrl: '',
+});
+const cdLogoPreview = ref('');
+const cdLogoFilePending = ref(null);
+const cdStoreSaving = ref(false);
+const cdStoreSaved = ref(false);
+
+watch(() => SettingsStore.loaded, (loaded) => {
+  if (!loaded) return;
+  cdForm.tenCuaHang = SettingsStore.tenCuaHang;
+  cdForm.diaChi = SettingsStore.diaChi;
+  cdForm.soDienThoai = SettingsStore.soDienThoai;
+  cdForm.email = SettingsStore.email;
+  cdForm.maSoThue = SettingsStore.maSoThue;
+  cdForm.logoUrl = SettingsStore.logoUrl;
+  cdLogoPreview.value = SettingsStore.logoUrl || '';
+}, { immediate: true });
+
+const handleLogoFile = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  cdLogoFilePending.value = file;
+  cdLogoPreview.value = URL.createObjectURL(file);
+};
+
+const saveStoreInfo = async () => {
+  cdStoreSaving.value = true;
+  cdStoreSaved.value = false;
+  try {
+    if (cdLogoFilePending.value) {
+      const fd = new FormData();
+      fd.append('file', cdLogoFilePending.value);
+      const upRes = await fetch('/api/upload/image', { method: 'POST', headers: authHeaders(), body: fd });
+      if (upRes.ok) {
+        const upData = await upRes.json();
+        cdForm.logoUrl = upData.url;
+      }
+    }
+    const updated = await CaiDatService.updateCaiDat({
+      tenCuaHang: cdForm.tenCuaHang, diaChi: cdForm.diaChi, soDienThoai: cdForm.soDienThoai,
+      email: cdForm.email, maSoThue: cdForm.maSoThue, logoUrl: cdForm.logoUrl,
+      ngonNguMacDinh: SettingsStore.ngonNguMacDinh, dinhDangSo: SettingsStore.dinhDangSo,
+    });
+    Object.assign(SettingsStore, updated);
+    cdLogoFilePending.value = null;
+    cdStoreSaved.value = true;
+  } finally {
+    cdStoreSaving.value = false;
+  }
+};
+
 let orderSse = null;
 
 onMounted(async () => {
@@ -3633,22 +3717,73 @@ onUnmounted(() => {
 
         <!-- ── Cai dat ── -->
         <section v-show="currentPage === 'settings'">
-          <div class="card border-secondary" style="background:var(--bg-hover); max-width:520px;">
-            <div class="card-body">
-              <div class="fw-bold mb-3">⚙️ {{ t('admin.settings.systemInfo') }}</div>
-              <div v-for="row in [
-                {label:t('admin.settings.systemName'), value:'SAOPhone Admin'},
-                {label:t('admin.settings.version'), value:'1.0.0'},
-                {label:t('admin.settings.backendApi'), value:'http://localhost:8080'},
-                {label:t('admin.settings.database'), value:'SQL Server — QLBanMayTinh'},
-              ]" :key="row.label"
-                   class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
-                <span class="text-secondary">{{ row.label }}</span>
-                <span>{{ row.value }}</span>
+          <div class="row g-3">
+            <!-- Đổi mật khẩu -->
+            <div class="col-12 col-xl-6">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body">
+                  <div class="fw-bold mb-3">🔑 {{ t('admin.settings.changePasswordTitle') }}</div>
+                  <div class="mb-2">
+                    <label class="form-label small text-secondary mb-1">{{ t('admin.settings.currentPassword') }}</label>
+                    <input type="password" v-model="cdMatKhauCu" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small text-secondary mb-1">{{ t('admin.settings.newPassword') }}</label>
+                    <input type="password" v-model="cdMatKhauMoi" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small text-secondary mb-1">{{ t('admin.settings.confirmNewPassword') }}</label>
+                    <input type="password" v-model="cdMatKhauXacNhan" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                  </div>
+                  <div v-if="cdMatKhauError" class="text-danger small mb-2">{{ cdMatKhauError }}</div>
+                  <div v-if="cdMatKhauSuccess" class="text-success small mb-2">{{ cdMatKhauSuccess }}</div>
+                  <button class="btn btn-warning btn-sm" :disabled="cdMatKhauLoading || !cdMatKhauCu || !cdMatKhauMoi" @click="doiMatKhauSubmit">
+                    {{ t('admin.settings.changePasswordButton') }}
+                  </button>
+                </div>
               </div>
-              <div class="d-flex justify-content-between align-items-center py-2 small">
-                <span class="text-secondary">{{ t('admin.settings.status') }}</span>
-                <span class="badge bg-success">{{ t('admin.settings.active') }}</span>
+            </div>
+
+            <!-- Thông tin cửa hàng -->
+            <div class="col-12 col-xl-6">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body">
+                  <div class="fw-bold mb-3">🏪 {{ t('admin.settings.storeInfoTitle') }}</div>
+                  <div class="d-flex align-items-center gap-3 mb-3">
+                    <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:88px;height:70px;cursor:pointer;flex-shrink:0;overflow:hidden;background:var(--bg-card-inset);">
+                      <img v-if="cdLogoPreview" :src="cdLogoPreview" style="width:88px;height:70px;object-fit:contain;" />
+                      <span v-else style="font-size:1.3rem;">🖼️</span>
+                      <input type="file" accept="image/*" class="d-none" @change="handleLogoFile" />
+                    </label>
+                    <span class="text-secondary small">{{ t('admin.settings.storeLogo') }}</span>
+                  </div>
+                  <div class="row g-2 mb-3">
+                    <div class="col-12">
+                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storeName') }}</label>
+                      <input v-model="cdForm.tenCuaHang" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storeAddress') }}</label>
+                      <input v-model="cdForm.diaChi" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storePhone') }}</label>
+                      <input v-model="cdForm.soDienThoai" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storeEmail') }}</label>
+                      <input v-model="cdForm.email" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storeTaxCode') }}</label>
+                      <input v-model="cdForm.maSoThue" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                    </div>
+                  </div>
+                  <div v-if="cdStoreSaved" class="text-success small mb-2">{{ t('admin.settings.saved') }}</div>
+                  <button class="btn btn-warning btn-sm" :disabled="cdStoreSaving" @click="saveStoreInfo">
+                    {{ t('admin.settings.saveButton') }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
