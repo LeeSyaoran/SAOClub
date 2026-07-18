@@ -31,8 +31,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorMap, HttpStatus.BAD_REQUEST);
     }
 
-    // Lỗi nghiệp vụ tự ném (không tồn tại, trùng dữ liệu...) — message viết sẵn, an toàn để hiển thị
-    @ExceptionHandler({IllegalArgumentException.class, UsernameNotFoundException.class})
+    // Lỗi nghiệp vụ tự ném (không tồn tại, trùng dữ liệu, trạng thái không hợp lệ...) — message viết sẵn, an toàn để hiển thị
+    @ExceptionHandler({IllegalArgumentException.class, UsernameNotFoundException.class, IllegalStateException.class})
     public ResponseEntity<?> handlerBusinessErrors(RuntimeException e) {
         return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
