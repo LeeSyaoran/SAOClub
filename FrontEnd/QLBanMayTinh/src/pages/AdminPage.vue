@@ -4,7 +4,6 @@ import { AuthStore, clearSession, setSession } from "../stores/index.js";
 import { t, I18nStore, LOCALES, setLocale } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon } from "../utils/orderStatus.js";
 import { nowLocalIso } from "../utils/datetime.js";
-import * as KhachHangService from "../Service/KhachHangService.js";
 import * as NhanVienService  from "../Service/NhanVienService.js";
 import * as DonHangService   from "../Service/DonHangService.js";
 import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
@@ -33,6 +32,7 @@ import { formatPrice, formatDate, formatDateTime, statusLabel, toLocalDT } from 
 import { showToast } from "../stores/toast.js";
 import ToastHost from "../components/common/ToastHost.vue";
 import ProductsTable from "../components/admin/ProductsTable.vue";
+import CustomersTable from "../components/admin/CustomersTable.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
@@ -249,18 +249,6 @@ const openOrderHistory = () => { orderViewMode.value = 'history-dates'; };
 const openHistoryDay = (dateKey) => { historySelectedDate.value = dateKey; orderViewMode.value = 'history-day'; };
 const backToToday = () => { orderViewMode.value = 'today'; historySelectedDate.value = null; };
 const backToDateList = () => { orderViewMode.value = 'history-dates'; historySelectedDate.value = null; };
-
-// ── Bo loc man hinh Khach hang ────────────────────────────────────────────────
-const customerSearch = ref("");
-const filteredCustomers = computed(() => {
-  const q = customerSearch.value.trim().toLowerCase();
-  if (!q) return customers.value;
-  return customers.value.filter((c) =>
-    (c.hoTen ?? '').toLowerCase().includes(q) ||
-    (c.soDienThoai ?? '').includes(q) ||
-    (c.email ?? '').toLowerCase().includes(q)
-  );
-});
 
 // ── Dashboard stats ───────────────────────────────────────────────────────────
 // Dem so san pham PHAN BIET (theo sanPhamId), khong phai so dong bien the tho —
@@ -1106,93 +1094,9 @@ const fetchSerialMap = async (bienTheIds) => {
   return map;
 };
 
-// ── Customers CRUD ────────────────────────────────────────────────────────────
-const showCustomerModal = ref(false);
-const editingCustomerId = ref(null);
-const customerFormError = ref("");
-const emptyCustomerForm = () => ({
-  hoTen: "",
-  soDienThoai: "",
-  email: "",
-  diaChi: "",
-  loaiKhach: "ca_nhan",
-  tenCongTy: "",
-  maSoThue: "",
-  diemTichLuy: 0,
-  trangThai: "active",
-});
-const customerForm = reactive(emptyCustomerForm());
-
-const openAddCustomer = () => {
-  Object.assign(customerForm, emptyCustomerForm());
-  editingCustomerId.value = null;
-  customerFormError.value = "";
-  showCustomerModal.value = true;
-};
-const openEditCustomer = (c) => {
-  Object.assign(customerForm, {
-    hoTen: c.hoTen,
-    soDienThoai: c.soDienThoai,
-    email: c.email ?? "",
-    diaChi: c.diaChi ?? "",
-    loaiKhach: c.loaiKhach ?? "ca_nhan",
-    tenCongTy: c.tenCongTy ?? "",
-    maSoThue: c.maSoThue ?? "",
-    diemTichLuy: c.diemTichLuy ?? 0,
-    trangThai: c.trangThai ?? "active",
-  });
-  editingCustomerId.value = c.khachHangId;
-  customerFormError.value = "";
-  posOpeningCustomerFromPos.value = false;
-  showCustomerModal.value = true;
-};
-const closeCustomerModal = () => {
-  showCustomerModal.value = false;
-  posOpeningCustomerFromPos.value = false;
-};
-const saveCustomer = async () => {
-  customerFormError.value = "";
-  const body = {
-    ...customerForm,
-    diemTichLuy: Number(customerForm.diemTichLuy),
-  };
-  try {
-    const res = await KhachHangService.save(editingCustomerId.value, body);
-    if (!res.ok) {
-      customerFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
-      return;
-    }
-    showCustomerModal.value = false;
-    // Khách hàng là entity phẳng (không join tên qua ID) nên vá cục bộ an toàn,
-    // khỏi phải tải lại cả bảng khách hàng.
-    if (editingCustomerId.value) {
-      const idx = customers.value.findIndex((c) => c.khachHangId === editingCustomerId.value);
-      if (idx !== -1) customers.value[idx] = { ...customers.value[idx], ...body };
-    } else {
-      await refreshCustomers();
-    }
-    // Neu modal nay duoc mo tu luong tao hoa don POS (khach chua co trong he thong) —
-    // tu dong gan khach vua tao lam khach hang cho hoa don dang tao, roi cho phep them SP.
-    if (posOpeningCustomerFromPos.value) {
-      posOpeningCustomerFromPos.value = false;
-      const newCust = customers.value.find((c) => c.soDienThoai === body.soDienThoai);
-      if (newCust) {
-        posFoundCust.value = newCust;
-        posPhoneNotFound.value = false;
-        posError.value = '';
-        posStage.value = 'selling';
-      }
-    }
-  } catch (e) {
-    customerFormError.value = e.message;
-  }
-};
-const deleteCustomer = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deleteCustomer')))) return;
-  const res = await KhachHangService.remove(id);
-  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  await refreshCustomers();
-};
+// ── Customers CRUD — đã chuyển vào components/admin/CustomersTable.vue +
+// CustomerFormModal.vue (Task 4). Xem ghi chú "TẠM THỜI BỊ HỎNG" tại
+// posConfirmCreateCustomer() bên dưới (mục POS) về hệ quả cho luồng POS.
 
 // ── Staff CRUD ────────────────────────────────────────────────────────────────
 const showStaffModal = ref(false);
@@ -2132,6 +2036,13 @@ const posCancelCreateCustomer = () => {
 
 // Mo lai chinh modal "Them khach hang" cua muc Quan ly khach hang (khong tao UI moi) —
 // chi khac la sau khi luu thanh cong se tu gan lam khach hang cho hoa don POS dang tao.
+// ⚠️ TẠM THỜI BỊ HỎNG sau Task 4: openAddCustomer()/customerForm đã chuyển thành state
+// nội bộ của CustomerFormModal.vue (sở hữu bởi CustomersTable.vue), không còn tồn tại ở
+// AdminPage.vue nữa — bấm nút "Có, tạo khách hàng mới" ở luồng POS sẽ lỗi cho tới khi
+// Task 6 (PosPanel.vue) tự dựng <CustomerFormModal> riêng cho khu vực POS và sửa hàm này
+// để gọi customerModalRef.value.openForCreate({ soDienThoai: posPhone.value.trim() }) qua
+// template ref mới đó, rồi lắng nghe @saved để gán posFoundCust/posStage như hành vi cũ —
+// xem ghi chú Task 6 trong kế hoạch (docs/superpowers/plans/2026-07-18-shared-admin-components.md).
 const posConfirmCreateCustomer = () => {
   posOpeningCustomerFromPos.value = true;
   openAddCustomer();
@@ -2814,37 +2725,7 @@ onUnmounted(() => {
 
         <!-- ── Khach hang ── -->
         <section v-show="currentPage === 'customers'">
-          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <span class="text-secondary small">{{ filteredCustomers.length }}/{{ totalCustomers }} {{ t('admin.customers.countSuffix') }}</span>
-            <div class="d-flex gap-2 flex-wrap">
-              <input v-model="customerSearch" class="form-control form-control-sm" style="width:240px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.customers.searchPlaceholder')" />
-              <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddCustomer">{{ t('admin.customers.add') }}</button>
-            </div>
-          </div>
-          <div v-if="CustomersStore.loading" class="text-secondary small">{{ t('admin.customers.loading') }}</div>
-          <div v-else class="table-responsive">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.customers.colFullName') }}</th><th>{{ t('admin.customers.colPhone') }}</th><th>{{ t('admin.customers.colEmail') }}</th><th>{{ t('admin.customers.colCustomerType') }}</th><th>{{ t('admin.customers.colPoints') }}</th><th>{{ t('admin.customers.colStatus') }}</th><th>{{ t('admin.customers.colAction') }}</th></tr></thead>
-              <tbody>
-                <tr v-for="(c, idx) in filteredCustomers" :key="c.khachHangId">
-                  <td class="text-secondary">{{ idx + 1 }}</td>
-                  <td>{{ c.hoTen }}</td>
-                  <td class="text-secondary">{{ c.soDienThoai }}</td>
-                  <td class="text-secondary">{{ c.email }}</td>
-                  <td>{{ c.loaiKhach||'—' }}</td>
-                  <td>{{ c.diemTichLuy??0 }}</td>
-                  <td><span class="badge" :class="c.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(c.trangThai) }}</span></td>
-                  <td>
-                    <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditCustomer(c)">{{ t('admin.customers.edit') }}</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteCustomer(c.khachHangId)">{{ t('admin.customers.delete') }}</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="filteredCustomers.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.customers.empty') }}</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <CustomersTable />
         </section>
 
         <!-- ── Kho hang ── -->
@@ -3748,34 +3629,6 @@ onUnmounted(() => {
       </div><!-- /content -->
     </main>
   </div><!-- /dashboard-shell -->
-
-  <!-- ══ MODAL KHACH HANG ══ -->
-  <div v-if="showCustomerModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="closeCustomerModal()">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:560px;max-width:95vw;max-height:90vh;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ editingCustomerId?t('admin.customerModal.titleEdit'):t('admin.customerModal.titleAdd') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="closeCustomerModal()"></button>
-      </div>
-      <div class="overflow-y-auto p-4">
-        <div v-if="customerFormError" class="alert alert-danger small py-2 mb-3">{{ customerFormError }}</div>
-        <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.fullNameLabel') }}</label><input v-model="customerForm.hoTen" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.phoneLabel') }}</label><input v-model="customerForm.soDienThoai" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.emailLabel') }}</label><input v-model="customerForm.email" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.typeLabel') }}</label><select v-model="customerForm.loaiKhach" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="ca_nhan">{{ t('admin.customerModal.typePersonal') }}</option><option value="doanh_nghiep">{{ t('admin.customerModal.typeBusiness') }}</option></select></div>
-          <div class="col-12"><label class="form-label small text-secondary">{{ t('admin.customerModal.addressLabel') }}</label><input v-model="customerForm.diaChi" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.companyNameLabel') }}</label><input v-model="customerForm.tenCongTy" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.taxCodeLabel') }}</label><input v-model="customerForm.maSoThue" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.pointsLabel') }}</label><input v-model="customerForm.diemTichLuy" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.customerModal.statusLabel') }}</label><select v-model="customerForm.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="active">{{ t('admin.customerModal.statusActive') }}</option><option value="inactive">{{ t('admin.customerModal.statusLocked') }}</option></select></div>
-        </div>
-      </div>
-      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="closeCustomerModal()">{{ t('admin.customerModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveCustomer">{{ editingCustomerId?t('admin.customerModal.update'):t('admin.customerModal.addNew') }}</button>
-      </div>
-    </div>
-  </div>
 
   <!-- ══ MODAL NHAN VIEN ══ -->
   <div v-if="showStaffModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showStaffModal=false">
