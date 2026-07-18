@@ -2657,6 +2657,8 @@ const apDungNguongTonKhoSubmit = async () => {
     // showToast(msg, type) đã có sẵn (AdminPage.vue:35-45), dùng lại thay vì alert() —
     // toàn bộ thông báo thành công/lỗi khác trong trang admin đều qua đường này.
     showToast(t('admin.settings.applyToAllDone', { count: res.soBienTheDaCapNhat }), 'success');
+  } catch (e) {
+    showToast(e.message || String(e), 'error');
   } finally {
     cdApplyingThreshold.value = false;
   }
@@ -2667,13 +2669,17 @@ const apDungNguongTonKhoSubmit = async () => {
 // đổi dropdown trước lúc đó sẽ gửi chuỗi rỗng đè lên dữ liệu thật; (2) đổi ngôn ngữ không
 // nên vô tình lưu luôn các trường thông tin cửa hàng đang gõ dở nhưng chưa bấm Lưu.
 const saveAppearancePrefs = async () => {
-  const updated = await CaiDatService.updateCaiDat({
-    tenCuaHang: SettingsStore.tenCuaHang, diaChi: SettingsStore.diaChi,
-    soDienThoai: SettingsStore.soDienThoai, email: SettingsStore.email,
-    maSoThue: SettingsStore.maSoThue, logoUrl: SettingsStore.logoUrl,
-    ngonNguMacDinh: SettingsStore.ngonNguMacDinh, dinhDangSo: SettingsStore.dinhDangSo,
-  });
-  Object.assign(SettingsStore, updated);
+  try {
+    const updated = await CaiDatService.updateCaiDat({
+      tenCuaHang: SettingsStore.tenCuaHang, diaChi: SettingsStore.diaChi,
+      soDienThoai: SettingsStore.soDienThoai, email: SettingsStore.email,
+      maSoThue: SettingsStore.maSoThue, logoUrl: SettingsStore.logoUrl,
+      ngonNguMacDinh: SettingsStore.ngonNguMacDinh, dinhDangSo: SettingsStore.dinhDangSo,
+    });
+    Object.assign(SettingsStore, updated);
+  } catch (e) {
+    showToast(e.message || String(e), 'error');
+  }
 };
 
 let orderSse = null;
