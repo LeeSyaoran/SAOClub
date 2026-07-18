@@ -39,3 +39,11 @@ export const t = (key, vars) => {
   if (!vars) return msg;
   return Object.keys(vars).reduce((s, k) => s.replaceAll(`{${k}}`, vars[k]), msg);
 };
+
+// Áp dụng ngôn ngữ mặc định hệ thống (Cài đặt) CHỈ khi người dùng chưa từng tự chọn ngôn
+// ngữ ở trình duyệt này (chưa có key trong localStorage) — không ghi đè lựa chọn đã có.
+export const applySystemDefaultLocale = (code) => {
+  if (!localStorage.getItem(STORAGE_KEY) && MESSAGES[code]) {
+    setLocale(code);
+  }
+};

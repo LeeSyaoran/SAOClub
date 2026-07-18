@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, reactive, watch } from "vue";
 import { AuthStore, clearSession } from "../stores/index.js";
-import { t } from "../i18n/index.js";
+import { t, I18nStore, LOCALES, setLocale } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon } from "../utils/orderStatus.js";
 import { nowLocalIso } from "../utils/datetime.js";
 import { formatPrice as formatPriceRaw } from "../utils/formatPrice.js";
@@ -2635,6 +2635,47 @@ const saveStoreInfo = async () => {
   }
 };
 
+// ── Cài đặt: ngưỡng cảnh báo tồn kho ─────────────────────────────────────────────
+const cdNguongTonKho = ref(5);
+watch(() => SettingsStore.loaded, (loaded) => {
+  if (loaded) cdNguongTonKho.value = SettingsStore.nguongTonKhoMacDinh;
+}, { immediate: true });
+const cdApplyingThreshold = ref(false);
+
+const apDungNguongTonKhoSubmit = async () => {
+  const count = inventory.value.length;
+  const ok = await askConfirm(t('admin.settings.applyToAllConfirm', { nguong: cdNguongTonKho.value, count }));
+  if (!ok) return;
+  cdApplyingThreshold.value = true;
+  try {
+    const res = await CaiDatService.apDungNguongTonKho(cdNguongTonKho.value);
+    SettingsStore.nguongTonKhoMacDinh = cdNguongTonKho.value;
+    // Không có loader tồn-kho-riêng-lẻ trong file này — inventory chỉ được tải lại cùng
+    // 1 lượt với products/orders/customers/promotions qua fetchAll() (AdminPage.vue:1001-1019),
+    // dùng lại đúng hàm đó để bảng/cảnh báo hết hàng cập nhật ngay.
+    await fetchAll();
+    // showToast(msg, type) đã có sẵn (AdminPage.vue:35-45), dùng lại thay vì alert() —
+    // toàn bộ thông báo thành công/lỗi khác trong trang admin đều qua đường này.
+    showToast(t('admin.settings.applyToAllDone', { count: res.soBienTheDaCapNhat }), 'success');
+  } finally {
+    cdApplyingThreshold.value = false;
+  }
+};
+
+// Lưu ngôn ngữ mặc định / định dạng số ngay khi đổi dropdown — đọc field từ SettingsStore
+// (không phải cdForm) vì 2 lý do: (1) cdForm chỉ được điền sau khi SettingsStore.loaded,
+// đổi dropdown trước lúc đó sẽ gửi chuỗi rỗng đè lên dữ liệu thật; (2) đổi ngôn ngữ không
+// nên vô tình lưu luôn các trường thông tin cửa hàng đang gõ dở nhưng chưa bấm Lưu.
+const saveAppearancePrefs = async () => {
+  const updated = await CaiDatService.updateCaiDat({
+    tenCuaHang: SettingsStore.tenCuaHang, diaChi: SettingsStore.diaChi,
+    soDienThoai: SettingsStore.soDienThoai, email: SettingsStore.email,
+    maSoThue: SettingsStore.maSoThue, logoUrl: SettingsStore.logoUrl,
+    ngonNguMacDinh: SettingsStore.ngonNguMacDinh, dinhDangSo: SettingsStore.dinhDangSo,
+  });
+  Object.assign(SettingsStore, updated);
+};
+
 let orderSse = null;
 
 onMounted(async () => {
@@ -3790,6 +3831,84 @@ onUnmounted(() => {
                   <button class="btn btn-warning btn-sm" :disabled="cdStoreSaving" @click="saveStoreInfo">
                     {{ t('admin.settings.saveButton') }}
                   </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ngưỡng cảnh báo tồn kho -->
+            <div class="col-12 col-xl-6">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body">
+                  <div class="fw-bold mb-3">📦 {{ t('admin.settings.lowStockThresholdTitle') }}</div>
+                  <div class="mb-3">
+                    <label class="form-label small text-secondary mb-1">{{ t('admin.settings.lowStockThresholdLabel') }}</label>
+                    <input type="number" min="0" v-model.number="cdNguongTonKho" class="form-control form-control-sm" style="width:120px;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+                  </div>
+                  <button class="btn btn-outline-warning btn-sm" :disabled="cdApplyingThreshold" @click="apDungNguongTonKhoSubmit">
+                    {{ t('admin.settings.applyToAllButton') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Giao diện & ngôn ngữ -->
+            <div class="col-12 col-xl-6">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body">
+                  <div class="fw-bold mb-3">🎨 {{ t('admin.settings.appearanceTitle') }}</div>
+                  <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
+                    <span class="text-secondary">{{ t('admin.settings.themeLabel') }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="toggleTheme">
+                      {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
+                    </button>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
+                    <span class="text-secondary">{{ t('admin.settings.languageLabel') }}</span>
+                    <select class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
+                            :value="I18nStore.locale" @change="setLocale($event.target.value)">
+                      <option v-for="loc in LOCALES" :key="loc.code" :value="loc.code">{{ loc.flag }} {{ loc.label }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
+                    <span class="text-secondary">{{ t('admin.settings.defaultLanguageLabel') }}</span>
+                    <select class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
+                            v-model="SettingsStore.ngonNguMacDinh"
+                            @change="saveAppearancePrefs">
+                      <option v-for="loc in LOCALES" :key="loc.code" :value="loc.code">{{ loc.flag }} {{ loc.label }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center py-2 small">
+                    <span class="text-secondary">{{ t('admin.settings.numberFormatLabel') }}</span>
+                    <select class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
+                            v-model="SettingsStore.dinhDangSo"
+                            @change="saveAppearancePrefs">
+                      <option value="vi">{{ t('admin.settings.numberFormatVi') }}</option>
+                      <option value="en">{{ t('admin.settings.numberFormatEn') }}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Thông tin hệ thống (giữ nguyên, tĩnh) -->
+            <div class="col-12 col-xl-6">
+              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+                <div class="card-body">
+                  <div class="fw-bold mb-3">⚙️ {{ t('admin.settings.systemInfo') }}</div>
+                  <div v-for="row in [
+                    {label:t('admin.settings.systemName'), value:'SAOPhone Admin'},
+                    {label:t('admin.settings.version'), value:'1.0.0'},
+                    {label:t('admin.settings.backendApi'), value:'http://localhost:8080'},
+                    {label:t('admin.settings.database'), value:'SQL Server — QLBanMayTinh'},
+                  ]" :key="row.label"
+                       class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
+                    <span class="text-secondary">{{ row.label }}</span>
+                    <span>{{ row.value }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center py-2 small">
+                    <span class="text-secondary">{{ t('admin.settings.status') }}</span>
+                    <span class="badge bg-success">{{ t('admin.settings.active') }}</span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -11,9 +11,9 @@ import {
 
 // Import store xác thực
 import { AuthStore, setSession, clearSession } from "./stores/index.js";
-import { loadSettings } from "./stores/settings.js";
+import { loadSettings, SettingsStore } from "./stores/settings.js";
 import { formatPrice as formatPriceRaw } from "./utils/formatPrice.js";
-import { t } from "./i18n/index.js";
+import { t, applySystemDefaultLocale } from "./i18n/index.js";
 
 // Import services
 import * as SanPhamService from "./Service/SanPhamService.js";
@@ -537,13 +537,14 @@ function onLoginSuccess(user) {
 }
 
 // ── Lifecycle hooks ───────────────────────────────────────────────────────────
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener("hashchange", onHashChange);
   window.addEventListener("popstate", onPopState);
   loadCart(); // Khôi phục giỏ hàng đã lưu (theo tài khoản đang đăng nhập, hoặc khách vãng lai)
   fetchProducts();
   fetchApiCats();
-  loadSettings();
+  await loadSettings();
+  applySystemDefaultLocale(SettingsStore.ngonNguMacDinh);
 });
 onBeforeUnmount(() => {
   window.removeEventListener("hashchange", onHashChange); // Dọn dẹp listener
