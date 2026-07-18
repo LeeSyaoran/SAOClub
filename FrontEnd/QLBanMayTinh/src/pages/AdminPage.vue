@@ -2584,6 +2584,7 @@ const cdLogoPreview = ref('');
 const cdLogoFilePending = ref(null);
 const cdStoreSaving = ref(false);
 const cdStoreSaved = ref(false);
+const cdStoreError = ref('');
 
 watch(() => SettingsStore.loaded, (loaded) => {
   if (!loaded) return;
@@ -2604,6 +2605,7 @@ const handleLogoFile = (e) => {
 };
 
 const saveStoreInfo = async () => {
+  cdStoreError.value = '';
   cdStoreSaving.value = true;
   cdStoreSaved.value = false;
   try {
@@ -2614,6 +2616,8 @@ const saveStoreInfo = async () => {
       if (upRes.ok) {
         const upData = await upRes.json();
         cdForm.logoUrl = upData.url;
+      } else {
+        throw new Error('Upload ảnh thất bại: ' + upRes.status);
       }
     }
     const updated = await CaiDatService.updateCaiDat({
@@ -2624,6 +2628,8 @@ const saveStoreInfo = async () => {
     Object.assign(SettingsStore, updated);
     cdLogoFilePending.value = null;
     cdStoreSaved.value = true;
+  } catch (e) {
+    cdStoreError.value = e.message || String(e);
   } finally {
     cdStoreSaving.value = false;
   }
@@ -3779,6 +3785,7 @@ onUnmounted(() => {
                       <input v-model="cdForm.maSoThue" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
                     </div>
                   </div>
+                  <div v-if="cdStoreError" class="text-danger small mb-2">{{ cdStoreError }}</div>
                   <div v-if="cdStoreSaved" class="text-success small mb-2">{{ t('admin.settings.saved') }}</div>
                   <button class="btn btn-warning btn-sm" :disabled="cdStoreSaving" @click="saveStoreInfo">
                     {{ t('admin.settings.saveButton') }}
