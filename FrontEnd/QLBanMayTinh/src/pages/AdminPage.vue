@@ -2714,16 +2714,10 @@ const saveAppearancePrefs = async () => {
 };
 
 // SSE đơn hàng real-time giờ dùng chung qua stores/orders.js (connectOrderEvents/
-// disconnectOrderEvents) — không còn EventSource cục bộ ở đây, và cũng không còn phân biệt
-// được 'new-order' vs 'order-updated' riêng (store chỉ lộ ra 1 refreshOrders() dùng chung cho
-// cả 2 sự kiện). Theo dõi OrdersStore.items để chạy tiếp gộp đơn trùng + làm mới biểu đồ SP
-// bán chạy mỗi khi danh sách đơn đổi (an toàn gọi lại nhiều lần: autoMergeAllDuplicates có
-// isMerging guard + tự no-op khi không có đơn trùng; fetchProductSales chỉ là refetch idempotent).
-watch(() => OrdersStore.items, async () => {
-  await autoMergeAllDuplicates();
-  await fetchProductSales();
-});
-
+// disconnectOrderEvents) — không còn EventSource cục bộ ở đây. connectOrderEvents() vẫn phân
+// biệt được 'new-order' vs 'order-updated' qua callback onNewOrder/onOrderUpdated, nên chỉ
+// gộp đơn trùng + làm mới biểu đồ SP bán chạy khi thực sự có đơn MỚI (không chạy lại trên mọi
+// thay đổi của OrdersStore.items như xoá đơn/đổi trạng thái).
 onMounted(async () => {
   // try/catch riêng — nếu fetchAll()/fetchProductSales() lỗi (throw) mà không có try/catch
   // ở đây, phần mở SSE bên dưới sẽ KHÔNG BAO GIỜ chạy tới (await bị chặn ngang), khiến admin
@@ -2735,7 +2729,9 @@ onMounted(async () => {
     console.error('fetchAll/fetchProductSales lỗi khi vào trang:', e);
   }
 
-  connectOrderEvents(AuthStore.user?.token);
+  connectOrderEvents(AuthStore.user?.token, {
+    onNewOrder: () => { autoMergeAllDuplicates(); fetchProductSales(); },
+  });
 });
 
 onUnmounted(() => {

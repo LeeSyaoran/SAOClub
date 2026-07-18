@@ -31,13 +31,13 @@ let subscriberCount = 0;
 // Gọi trong onMounted của mỗi trang dùng đơn hàng realtime (Admin/Staff). Đếm số trang đang
 // mở (subscriberCount) — chỉ mở/đóng EventSource thật khi trang cuối cùng unmount, để 2 trang
 // mở cùng lúc (hiếm nhưng có thể, vd 2 tab) không tranh nhau mở 2 kết nối SSE trùng lặp.
-export const connectOrderEvents = (token) => {
+export const connectOrderEvents = (token, { onNewOrder, onOrderUpdated } = {}) => {
   subscriberCount += 1;
   if (eventSource) return;
   eventSource = new EventSource(`/api/don-hang/events?token=${encodeURIComponent(token ?? '')}`);
   eventSource.onerror = (e) => console.error('Kết nối SSE (đơn hàng real-time) lỗi:', e);
-  eventSource.addEventListener('new-order', () => { refreshOrders(); });
-  eventSource.addEventListener('order-updated', () => { refreshOrders(); });
+  eventSource.addEventListener('new-order', () => { refreshOrders(); onNewOrder?.(); });
+  eventSource.addEventListener('order-updated', () => { refreshOrders(); onOrderUpdated?.(); });
 };
 
 export const disconnectOrderEvents = () => {
