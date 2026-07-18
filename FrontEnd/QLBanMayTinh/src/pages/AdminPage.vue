@@ -4,7 +4,6 @@ import { AuthStore, clearSession, setSession } from "../stores/index.js";
 import { t, I18nStore, LOCALES, setLocale } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon } from "../utils/orderStatus.js";
 import { nowLocalIso } from "../utils/datetime.js";
-import { formatPrice as formatPriceRaw } from "../utils/formatPrice.js";
 import * as SanPhamService   from "../Service/SanPhamService.js";
 import * as BienTheSanPhamService from "../Service/BienTheSanPhamService.js";
 import * as KhachHangService from "../Service/KhachHangService.js";
@@ -33,19 +32,9 @@ import SearchSelect from "../components/common/SearchSelect.vue";
 import { askConfirm } from "../stores/confirm.js";
 import { ThemeStore, toggleTheme } from "../stores/theme.js";
 import { authHeaders } from "../Service/api.js";
-
-// ── Toast thông báo (thay window.alert()) ──────────────────────────────────
-const toast = reactive({ show: false, msg: '', type: 'success' });
-let toastTimer = null;
-const showToast = (msg, type = 'error') => {
-  clearTimeout(toastTimer);
-  toast.msg  = msg;
-  toast.type = type;
-  toast.show = true;
-  // Lỗi (đặc biệt lý do chặn xóa) thường dài hơn — cho thêm thời gian đọc so với thông báo
-  // thành công ngắn gọn.
-  toastTimer = setTimeout(() => { toast.show = false; }, type === 'error' ? 6000 : 3500);
-};
+import { formatPrice, formatDate, formatDateTime, statusLabel, toLocalDT } from "../utils/adminFormat.js";
+import { showToast } from "../stores/toast.js";
+import ToastHost from "../components/common/ToastHost.vue";
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentPage = ref("dashboard");
@@ -199,33 +188,6 @@ const gpuList = ref([]);
 const loading = ref(false);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const statusLabel = (s) => t(`admin.statusLabel.${s}`);
-
-const formatPrice = (v) => (v == null ? "—" : formatPriceRaw(v));
-
-const formatDate = (d) => {
-  if (!d) return "—";
-  try {
-    return new Date(d).toLocaleDateString("vi-VN");
-  } catch {
-    return d;
-  }
-};
-
-// Ngày + giờ (khác formatDate — chỉ có ngày) — dùng cho ngày giao dự kiến/thực tế,
-// vì admin cần biết cả mốc giờ, không chỉ ngày.
-const formatDateTime = (d) => {
-  if (!d) return "—";
-  try {
-    return new Date(d).toLocaleString("vi-VN");
-  } catch {
-    return d;
-  }
-};
-
-const toLocalDT = (s) =>
-  s ? (s.length === 16 ? s + ":00" : s.slice(0, 19)) : null;
-
 const customerName = (id) =>
   customers.value.find((c) => c.khachHangId === id)?.hoTen ?? `KH#${id}`;
 const chucVuName = (id) =>
@@ -5265,25 +5227,10 @@ onUnmounted(() => {
        askConfirm()/showToast() gọi ra nhưng không có gì hiển thị (Promise của askConfirm
        treo mãi, code gọi nó bị kẹt không chạy tiếp). -->
   <ConfirmDialog />
-
-    <!-- Toast thông báo lỗi/thành công (thay window.alert()) -->
-    <Transition name="adm-toast-slide">
-      <div v-if="toast.show"
-           class="position-fixed d-flex align-items-start gap-2 px-4 py-3 rounded-3 fw-semibold small shadow-lg"
-           style="top:24px; right:24px; z-index:9999; min-width:260px; max-width:440px; pointer-events:none; line-height:1.4;"
-           :style="toast.type === 'success'
-             ? 'background:var(--state-success,#16a34a); color:#fff;'
-             : 'background:var(--state-danger,#dc2626); color:#fff;'"
-           role="status" aria-live="polite">
-        <span style="font-size:1.1rem; flex-shrink:0;">{{ toast.type === 'success' ? '✓' : '✕' }}</span>
-        <span>{{ toast.msg }}</span>
-      </div>
-    </Transition>
+  <ToastHost />
 </template>
 
 <style scoped>
-.adm-toast-slide-enter-active, .adm-toast-slide-leave-active { transition: transform 0.3s ease, opacity 0.25s ease; }
-.adm-toast-slide-enter-from, .adm-toast-slide-leave-to       { transform: translateX(110%); opacity: 0; }
 
 /* CSS toi thieu cho nhung gi Bootstrap khong the thay the */
 
