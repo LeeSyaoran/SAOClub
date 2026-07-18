@@ -5,10 +5,15 @@ import com.example.backend.service.TonKhoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// Tồn kho — chỉ staff (admin/nhân viên/quản kho) thao tác. Không có nơi nào trong code
+// khách hàng (checkout, AccountPage) gọi tới controller này — đã xác nhận qua grep toàn bộ
+// frontend trước khi thêm annotation.
+@PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/ton-kho")
 public class TonKhoController {

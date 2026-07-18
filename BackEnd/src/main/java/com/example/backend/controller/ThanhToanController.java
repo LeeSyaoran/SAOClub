@@ -8,10 +8,14 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// Thanh toán — chỉ staff. Hiện chưa có service/component frontend nào gọi tới controller
+// này (tính năng chưa được wire lên UI) — khoá trước theo nguyên tắc least-privilege.
+@PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/thanh-toan")
 public class ThanhToanController {

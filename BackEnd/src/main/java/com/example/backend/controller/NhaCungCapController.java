@@ -6,10 +6,13 @@ import com.example.backend.service.NhaCungCapService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// Nhà cung cấp — chỉ staff, không có nơi nào trong code khách hàng gọi tới.
+@PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/nha-cung-cap")
 public class NhaCungCapController {
