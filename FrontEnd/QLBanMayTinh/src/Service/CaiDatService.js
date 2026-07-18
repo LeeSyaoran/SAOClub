@@ -12,3 +12,4 @@ export const apDungNguongTonKho = (nguong) =>
   post('/api/cai-dat/ap-dung-nguong-ton-kho', { nguong }).then(parseOrThrow);
 export const doiMatKhau = (matKhauCu, matKhauMoi) =>
   post('/api/cai-dat/doi-mat-khau', { matKhauCu, matKhauMoi }).then(parseOrThrow);
+export const capNhatHoSo = (data) => put('/api/cai-dat/ho-so', data).then(parseOrThrow);

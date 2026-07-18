@@ -909,6 +909,14 @@ export default {
       numberFormatEn: "英語式（1,234,567 ₫）",
     },
 
+    profileMenu: {
+      editProfile: "プロフィール編集",
+      fullName: "氏名",
+      phone: "電話番号",
+      email: "メール",
+      profileSaved: "プロフィールを更新しました",
+    },
+
     pos: {
       searchPlaceholder: "商品名またはSKUで検索...",
       loading: "読み込み中...",

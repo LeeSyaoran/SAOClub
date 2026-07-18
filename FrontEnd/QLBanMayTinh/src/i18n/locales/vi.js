@@ -1014,6 +1014,14 @@ export default {
       numberFormatEn: "Kiểu Anh (1,234,567 ₫)",
     },
 
+    profileMenu: {
+      editProfile: "Chỉnh sửa hồ sơ",
+      fullName: "Họ tên",
+      phone: "Số điện thoại",
+      email: "Email",
+      profileSaved: "Đã cập nhật hồ sơ",
+    },
+
     pos: {
       searchPlaceholder: "Tìm sản phẩm theo tên hoặc SKU...",
       loading: "Đang tải...",
