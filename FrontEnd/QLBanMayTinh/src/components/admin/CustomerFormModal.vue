@@ -36,7 +36,17 @@ const openForCreate = (prefill = {}) => {
 };
 const openForEdit = (customer) => {
   editingCustomerId.value = customer.khachHangId;
-  customerForm.value = { ...emptyCustomerForm(), ...customer };
+  customerForm.value = {
+    hoTen: customer.hoTen,
+    soDienThoai: customer.soDienThoai,
+    email: customer.email ?? "",
+    diaChi: customer.diaChi ?? "",
+    loaiKhach: customer.loaiKhach ?? "ca_nhan",
+    tenCongTy: customer.tenCongTy ?? "",
+    maSoThue: customer.maSoThue ?? "",
+    diemTichLuy: customer.diemTichLuy ?? 0,
+    trangThai: customer.trangThai ?? "active",
+  };
   customerFormError.value = "";
   emit("update:modelValue", true);
 };
