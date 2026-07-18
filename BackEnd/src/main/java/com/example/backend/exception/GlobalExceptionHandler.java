@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -52,6 +53,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handlerEntityNotFound(Exception e) {
         log.warn("Data integrity error: {}", e.getMessage());
         return new ResponseEntity<>("Dữ liệu không hợp lệ hoặc liên kết không tồn tại, vui lòng kiểm tra lại", HttpStatus.BAD_REQUEST);
+    }
+
+    // Gọi sai phương thức HTTP (vd GET vào endpoint chỉ nhận POST) — lỗi phía client,
+    // không phải lỗi server: trả đúng 405 thay vì rơi xuống handlerUnexpected() bên dưới
+    // (log ERROR kèm stack trace như một lỗi thật, trả nhầm 500).
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<?> handlerMethodNotSupported(HttpRequestMethodNotSupportedException e) {
+        log.debug("Method not supported: {}", e.getMessage());
+        return new ResponseEntity<>("Phương thức không được hỗ trợ cho endpoint này", HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     // Client (trình duyệt) đã ngắt kết nối giữa chừng khi server đang ghi response
