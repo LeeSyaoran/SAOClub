@@ -1,7 +1,12 @@
 package com.example.backend.service;
 
+import com.example.backend.entity.ChucVu;
+import com.example.backend.entity.NhanVien;
 import com.example.backend.entity.TaiKhoan;
+import com.example.backend.repository.NhanVienRepository;
 import com.example.backend.repository.TaiKhoanRepository;
+import com.example.backend.request.HoSoRequest;
+import com.example.backend.response.HoSoResponse;
 import com.example.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +28,7 @@ import static org.mockito.Mockito.when;
 class AuthServiceTest {
 
     @Mock private TaiKhoanRepository taiKhoanRepository;
+    @Mock private NhanVienRepository nhanVienRepository;
     @Mock private JwtUtil jwtUtil;
     @Mock private PasswordEncoder passwordEncoder;
 
@@ -56,5 +62,45 @@ class AuthServiceTest {
 
         assertThat(tk.getMatKhauHash()).isEqualTo("hash-moi");
         verify(taiKhoanRepository).save(tk);
+    }
+
+    @Test
+    void capNhatHoSo_coNhanVien_chiSuaDungBaTruong() {
+        NhanVien nv = new NhanVien();
+        nv.setNhanVienId(7);
+        nv.setHoTen("Tên cũ");
+        nv.setSoDienThoai("0900000000");
+        nv.setEmail("cu@example.com");
+        nv.setChucVu(new ChucVu()); // giữ nguyên, không được đụng tới
+        TaiKhoan tk = new TaiKhoan();
+        tk.setUsername("admin");
+        tk.setNhanVien(nv);
+        when(taiKhoanRepository.findByUsername("admin")).thenReturn(Optional.of(tk));
+
+        HoSoRequest req = new HoSoRequest();
+        req.setHoTen("Tên mới");
+        req.setSoDienThoai("0911111111");
+        req.setEmail("moi@example.com");
+
+        HoSoResponse res = authService.capNhatHoSo("admin", req);
+
+        assertThat(res.getHoTen()).isEqualTo("Tên mới");
+        assertThat(res.getSoDienThoai()).isEqualTo("0911111111");
+        assertThat(res.getEmail()).isEqualTo("moi@example.com");
+        assertThat(nv.getChucVu()).isNotNull(); // không bị đụng tới
+        verify(nhanVienRepository).save(nv);
+    }
+
+    @Test
+    void capNhatHoSo_taiKhoanKhongCoNhanVien_nemLoi() {
+        TaiKhoan tk = new TaiKhoan();
+        tk.setUsername("khachle");
+        tk.setNhanVien(null);
+        when(taiKhoanRepository.findByUsername("khachle")).thenReturn(Optional.of(tk));
+
+        assertThatThrownBy(() -> authService.capNhatHoSo("khachle", new HoSoRequest()))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(nhanVienRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 }

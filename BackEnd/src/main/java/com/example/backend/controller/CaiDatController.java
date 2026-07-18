@@ -2,7 +2,9 @@ package com.example.backend.controller;
 
 import com.example.backend.request.CaiDatHeThongRequest;
 import com.example.backend.request.DoiMatKhauRequest;
+import com.example.backend.request.HoSoRequest;
 import com.example.backend.response.CaiDatHeThongResponse;
+import com.example.backend.response.HoSoResponse;
 import com.example.backend.service.AuthService;
 import com.example.backend.service.CaiDatHeThongService;
 import jakarta.validation.Valid;
@@ -19,8 +21,9 @@ import java.util.Map;
 // /api/cai-dat/** — KHÔNG nằm trong permitAll() của SecurityConfig, nên mọi endpoint ở đây
 // tự động yêu cầu JWT hợp lệ qua .anyRequest().authenticated() (xem SecurityConfig.java).
 // get/update/ap-dung-nguong-ton-kho chỉ admin (xem cấu hình cửa hàng, đổi ngưỡng tồn kho hàng loạt).
-// doi-mat-khau đặt ở đây (không phải AuthController) vì /api/auth/** đang permitAll() toàn bộ,
-// và CỐ Ý không giới hạn role — mọi tài khoản (admin, nhân viên, quản kho, khách hàng) đều cần đổi được mật khẩu của chính mình.
+// doi-mat-khau và ho-so đặt ở đây (không phải AuthController) vì /api/auth/** đang permitAll()
+// toàn bộ, và CỐ Ý không giới hạn role — mọi tài khoản (admin, nhân viên, quản kho, khách hàng)
+// đều cần tự đổi mật khẩu/sửa hồ sơ của chính mình.
 @RestController
 @RequestMapping("/api/cai-dat")
 public class CaiDatController {
@@ -60,5 +63,11 @@ public class CaiDatController {
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @PutMapping("/ho-so")
+    public HoSoResponse capNhatHoSo(@Valid @RequestBody HoSoRequest req) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return authService.capNhatHoSo(username, req);
     }
 }
