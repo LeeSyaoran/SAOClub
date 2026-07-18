@@ -48,15 +48,10 @@ const showToast = (msg, type = 'error') => {
 };
 
 // ── Navigation ───────────────────────────────────────────────────────────────
-const currentRole = ref("admin");
 const currentPage = ref("dashboard");
 const navigate = (page) => {
   currentPage.value = page;
   if (page === "staff") { ensureChucVuList(); ensureStaffData(); }
-};
-const switchRole = (role) => {
-  currentRole.value = role;
-  currentPage.value = role === "admin" ? "dashboard" : "user-home";
 };
 // icon khớp đúng ý nghĩa icon SVG tương ứng ở sidebar (adm-icon) — hiện lại 1 lần nữa
 // cạnh tiêu đề trang cho dễ nhận biết đang ở đâu, không cần đổi cả 2 nơi khi thêm trang mới.
@@ -71,11 +66,6 @@ const PAGE_META = {
   "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: "🛒" },
   reports: { titleKey: "admin.pageMeta.reports.title", subKey: "admin.pageMeta.reports.sub", icon: "📈" },
   settings: { titleKey: "admin.pageMeta.settings.title", subKey: "admin.pageMeta.settings.sub", icon: "⚙️" },
-  "user-home": { titleKey: "admin.pageMeta.userHome.title", subKey: "admin.pageMeta.userHome.sub", icon: "🏠" },
-  "user-orders": { titleKey: "admin.pageMeta.userOrders.title", subKey: "admin.pageMeta.userOrders.sub", icon: "🧾" },
-  "user-browse": { titleKey: "admin.pageMeta.userBrowse.title", subKey: "admin.pageMeta.userBrowse.sub", icon: "🛍️" },
-  "user-warranty": { titleKey: "admin.pageMeta.userWarranty.title", subKey: "admin.pageMeta.userWarranty.sub", icon: "🛡️" },
-  "user-profile": { titleKey: "admin.pageMeta.userProfile.title", subKey: "admin.pageMeta.userProfile.sub", icon: "👤" },
 };
 const topbarTitle = computed(
   () => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.dashboard.title"),
@@ -2735,20 +2725,8 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Chuyển role Admin / Nhan vien -->
-      <div class="d-flex gap-2 p-3 pb-2">
-        <button class="btn btn-sm flex-grow-1 fw-medium"
-                :class="currentRole==='admin' ? 'btn-warning text-dark' : 'btn-outline-secondary text-secondary'"
-                style="font-size:0.82rem; border-radius:7px;"
-                @click="switchRole('admin')">{{ t('admin.roleSwitch.admin') }}</button>
-        <button class="btn btn-sm flex-grow-1 fw-medium"
-                :class="currentRole==='user' ? 'btn-warning text-dark' : 'btn-outline-secondary text-secondary'"
-                style="font-size:0.82rem; border-radius:7px;"
-                @click="switchRole('user')">{{ t('admin.roleSwitch.staff') }}</button>
-      </div>
-
       <!-- Nav admin -->
-      <nav class="flex-grow-1 d-flex flex-column px-2 pb-2" v-show="currentRole === 'admin'">
+      <nav class="flex-grow-1 d-flex flex-column px-2 pb-2">
         <div class="adm-nav-label">{{ t('admin.sidebar.groupOverview') }}</div>
         <div class="adm-nav" :class="{active: currentPage==='dashboard'}" @click="navigate('dashboard')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zM3 11a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3z"/></svg>
@@ -2796,27 +2774,6 @@ onUnmounted(() => {
         <div class="adm-nav" :class="{active: currentPage==='settings'}" @click="navigate('settings')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
           {{ t('admin.sidebar.settings') }}
-        </div>
-      </nav>
-
-      <!-- Nav nhan vien -->
-      <nav class="flex-grow-1 d-flex flex-column px-2 pb-2" v-show="currentRole === 'user'">
-        <div class="adm-nav-label">{{ t('admin.sidebar.groupMyPage') }}</div>
-        <div class="adm-nav" :class="{active: currentPage==='user-home'}" @click="navigate('user-home')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
-          {{ t('admin.sidebar.userHome') }}
-        </div>
-        <div class="adm-nav" :class="{active: currentPage==='user-orders'}" @click="navigate('user-orders')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg>
-          {{ t('admin.sidebar.userOrders') }}
-        </div>
-        <div class="adm-nav" :class="{active: currentPage==='user-browse'}" @click="navigate('user-browse')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/></svg>
-          {{ t('admin.sidebar.userBrowse') }}
-        </div>
-        <div class="adm-nav" :class="{active: currentPage==='user-profile'}" @click="navigate('user-profile')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-          {{ t('admin.sidebar.userProfile') }}
         </div>
       </nav>
 
@@ -3895,29 +3852,6 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
-
-            <!-- Thông tin hệ thống (giữ nguyên, tĩnh) -->
-            <div class="col-12 col-xl-6">
-              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                <div class="card-body">
-                  <div class="fw-bold mb-3">⚙️ {{ t('admin.settings.systemInfo') }}</div>
-                  <div v-for="row in [
-                    {label:t('admin.settings.systemName'), value:'SAOPhone Admin'},
-                    {label:t('admin.settings.version'), value:'1.0.0'},
-                    {label:t('admin.settings.backendApi'), value:'http://localhost:8080'},
-                    {label:t('admin.settings.database'), value:'SQL Server — QLBanMayTinh'},
-                  ]" :key="row.label"
-                       class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
-                    <span class="text-secondary">{{ row.label }}</span>
-                    <span>{{ row.value }}</span>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center py-2 small">
-                    <span class="text-secondary">{{ t('admin.settings.status') }}</span>
-                    <span class="badge bg-success">{{ t('admin.settings.active') }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -4129,15 +4063,6 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-
-        <!-- ── Trang placeholder cho nhan vien ── -->
-        <section v-show="['user-home','user-orders','user-browse','user-warranty','user-profile'].includes(currentPage)"
-                 class="flex-column align-items-center justify-content-center text-secondary"
-                 style="display:flex;min-height:300px;gap:12px;">
-          <div style="font-size:2.8rem;">&#128101;</div>
-          <div class="fw-bold" style="color:var(--text-muted);font-size:1.15rem;">{{ topbarTitle }}</div>
-          <div style="font-size:0.83rem;">{{ t('admin.placeholder.userPageNote') }}</div>
-        </section>
 
       </div><!-- /content -->
     </main>
