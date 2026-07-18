@@ -594,6 +594,7 @@ export default {
       history: "Order history",
       backToToday: "← Today's orders",
       backToDateList: "‹ Date list",
+      editFromProductsTab: "Go to the Products tab to edit",
     },
 
     orderDetailModal: {

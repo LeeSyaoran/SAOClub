@@ -594,6 +594,7 @@ export default {
       history: "订单历史",
       backToToday: "← 今日订单",
       backToDateList: "‹ 日期列表",
+      editFromProductsTab: "请前往「产品」标签页进行编辑",
     },
 
     orderDetailModal: {

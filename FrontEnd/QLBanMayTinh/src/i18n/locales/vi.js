@@ -608,6 +608,7 @@ export default {
       history: "Lịch sử đơn hàng",
       backToToday: "← Đơn hôm nay",
       backToDateList: "‹ Danh sách ngày",
+      editFromProductsTab: "Vào tab Sản phẩm để chỉnh sửa",
     },
 
     orderDetailModal: {

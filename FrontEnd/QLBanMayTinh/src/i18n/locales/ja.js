@@ -594,6 +594,7 @@ export default {
       history: "注文履歴",
       backToToday: "← 本日の注文",
       backToDateList: "‹ 日付一覧",
+      editFromProductsTab: "編集するには「商品」タブへ移動してください",
     },
 
     orderDetailModal: {

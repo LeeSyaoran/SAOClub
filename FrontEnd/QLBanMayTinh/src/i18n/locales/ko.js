@@ -594,6 +594,7 @@ export default {
       history: "주문 내역",
       backToToday: "← 오늘 주문",
       backToDateList: "‹ 날짜 목록",
+      editFromProductsTab: "수정하려면 상품 탭으로 이동하세요",
     },
 
     orderDetailModal: {
