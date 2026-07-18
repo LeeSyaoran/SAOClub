@@ -35,12 +35,19 @@ import { authHeaders } from "../Service/api.js";
 import { formatPrice, formatDate, formatDateTime, statusLabel, toLocalDT } from "../utils/adminFormat.js";
 import { showToast } from "../stores/toast.js";
 import ToastHost from "../components/common/ToastHost.vue";
+import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
+import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
+import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
+import { InventoryStore, ensureInventory, refreshInventory } from "../stores/inventory.js";
+import { SuppliersStore, ensureSuppliers } from "../stores/suppliers.js";
+import { StaffStore, ensureStaff, refreshStaff } from "../stores/staff.js";
+import { PromotionsStore, ensurePromotions, refreshPromotions } from "../stores/promotions.js";
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentPage = ref("dashboard");
 const navigate = (page) => {
   currentPage.value = page;
-  if (page === "staff") { ensureChucVuList(); ensureStaffData(); }
+  if (page === "staff") { ensureChucVuList(); ensureStaff(); }
 };
 // icon khớp đúng ý nghĩa icon SVG tương ứng ở sidebar (adm-icon) — hiện lại 1 lần nữa
 // cạnh tiêu đề trang cho dễ nhận biết đang ở đâu, không cần đổi cả 2 nơi khi thêm trang mới.
@@ -169,23 +176,26 @@ const goToSettingsFromMenu = () => {
 };
 
 // ── Data refs ─────────────────────────────────────────────────────────────────
-const products = ref([]);
-const orders = ref([]);
-const customers = ref([]);
-const staff = ref([]);
-const promotions = ref([]);
-const inventory = ref([]);
+// products/orders/customers/staff/promotions/inventory/suppliers giờ sống trong stores/*.js
+// dùng chung nhiều trang — computed alias bên dưới giữ nguyên tên biến cũ để phần còn lại
+// của file (200+ chỗ đọc products.value/orders.value/...) không cần sửa. computed = read-only,
+// mọi chỗ CRUD phải gọi refreshXxx()/ensureXxx() của store thay vì gán tay vào các biến này.
+const products = computed(() => ProductsStore.items);
+const orders = computed(() => OrdersStore.items);
+const customers = computed(() => CustomersStore.items);
+const staff = computed(() => StaffStore.items);
+const promotions = computed(() => PromotionsStore.items);
+const inventory = computed(() => InventoryStore.items);
+const suppliers = computed(() => SuppliersStore.items);
 const phieuNhapList = ref([]);
 const chiTietPhieuNhapList = ref([]);
 const categories = ref([]);
 const brands = ref([]);
-const suppliers = ref([]);
 const chucVuList = ref([]);
 const cpuList = ref([]);
 const ramList = ref([]);
 const oCungList = ref([]);
 const gpuList = ref([]);
-const loading = ref(false);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const customerName = (id) =>
@@ -697,7 +707,7 @@ const ensurePhieuNhapData = () => {
     PhieuNhapKhoService.getAll().catch(() => []),
     ChiTietPhieuNhapService.getAll().catch(() => []),
     ensureProductRefData(),
-    ensureStaffData(),
+    ensureStaff(),
   ]).then(([pn, ct]) => {
     phieuNhapList.value = pn;
     chiTietPhieuNhapList.value = ct;
@@ -1035,54 +1045,36 @@ const exportPhieuNhapExcel = () => {
 // Với dữ liệu lớn, bớt 7-8 lệnh gọi song song này giúp trang vào nhanh hơn hẳn.
 // Nhân viên KHÔNG tải ở đây nữa — không có KPI/dashboard/POS nào cần đến staff.value,
 // chỉ tab Nhân viên và tab Phiếu nhập (staffName/staffOptions) cần, cả 2 đều lazy-load
-// qua ensureStaffData() bên dưới. products/orders/customers/promotions/inventory VẪN
+// qua ensureStaff() (stores/staff.js). products/orders/customers/promotions/inventory VẪN
 // tải eager vì dashboard KPI + POS (tìm SP, áp mã khuyến mãi, tra cứu KH) cần ngay.
 const fetchAll = async () => {
-  loading.value = true;
-  const safe = (p) => p.catch(() => []);
-  [
-    products.value,
-    orders.value,
-    customers.value,
-    promotions.value,
-    inventory.value,
-  ] = await Promise.all([
-    safe(SanPhamService.getAll()),
-    safe(DonHangService.getAll()),
-    safe(KhachHangService.getAll()),
-    safe(KhuyenMaiService.getAll()),
-    safe(TonKhoService.getAll()),
+  await Promise.all([
+    refreshProducts(),
+    refreshOrders(),
+    refreshCustomers(),
+    refreshPromotions(),
+    refreshInventory(),
   ]);
-  loading.value = false;
   await autoMergeAllDuplicates();
 };
 
-let staffDataPromise = null;
-const ensureStaffData = () => {
-  if (staffDataPromise) return staffDataPromise;
-  staffDataPromise = NhanVienService.getAll().catch(() => []).then((list) => {
-    staff.value = list;
-  });
-  return staffDataPromise;
-};
-
-// Danh mục/hãng/NCC/CPU/RAM/ổ cứng/GPU — chỉ cần khi mở form thêm/sửa sản phẩm.
+// Danh mục/hãng/CPU/RAM/ổ cứng/GPU — chỉ cần khi mở form thêm/sửa sản phẩm.
 // Tải 1 lần, cache lại (promise dùng chung để 2 lần gọi gần nhau không tải trùng).
+// NCC giờ tải qua ensureSuppliers() (stores/suppliers.js) — dùng chung với các trang khác.
 let productRefDataPromise = null;
 const ensureProductRefData = () => {
   if (productRefDataPromise) return productRefDataPromise;
   productRefDataPromise = Promise.all([
     DanhMucService.getAll().catch(() => []),
     DmService.getThuongHieu().catch(() => []),
-    DmService.getNhaCungCap().catch(() => []),
     DmService.getCpu().catch(() => []),
     DmService.getRam().catch(() => []),
     DmService.getOCung().catch(() => []),
     DmService.getGpu().catch(() => []),
-  ]).then(([cat, br, sup, cpu, ram, oc, gpu]) => {
+    ensureSuppliers(),
+  ]).then(([cat, br, cpu, ram, oc, gpu]) => {
     categories.value = cat;
     brands.value = br;
-    suppliers.value = sup;
     cpuList.value = cpu;
     ramList.value = ram;
     oCungList.value = oc;
@@ -1124,7 +1116,7 @@ const autoMergeAllDuplicates = async () => {
       const sourceIds = group.slice(1).map(o => o.donHangId);
       await DonHangService.merge(targetId, sourceIds).catch((e) => console.error('Gộp đơn trùng lỗi:', e));
     }
-    orders.value = await DonHangService.getAll().catch(() => []);
+    await refreshOrders();
   } finally {
     isMerging = false;
   }
@@ -1426,7 +1418,7 @@ const saveProduct = async () => {
       }
       showProductModal.value = false;
       resetImageState();
-      products.value = await SanPhamService.getAll().catch(() => []);
+      await refreshProducts();
       await openDetail(addVariantSanPhamId.value, addVariantSanPhamName.value);
     } catch (e) {
       formError.value = e.message;
@@ -1472,7 +1464,7 @@ const saveProduct = async () => {
 
     showProductModal.value = false;
     resetImageState();
-    products.value = await SanPhamService.getAll().catch(() => []);
+    await refreshProducts();
   } catch (e) {
     formError.value = e.message;
   }
@@ -1493,7 +1485,7 @@ const deleteProduct = async (id) => {
   if (!(await askConfirm(t('admin.confirm.deleteProductSimple', { name })))) return;
   const res = await SanPhamService.remove(id);
   if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
-  products.value = products.value.filter(p => p.sanPhamId !== id);
+  await refreshProducts();
 };
 
 // Xoá 1 biến thể (bienTheId) — dùng trong modal "Biến thể" và "Chi tiết", không xoá cả sản phẩm
@@ -1507,7 +1499,7 @@ const deleteVariant = async (bienTheId) => {
   if (!(await askConfirm(t('admin.confirm.deleteVariantSimple', { sku })))) return;
   const res = await BienTheSanPhamService.remove(bienTheId);
   if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
-  products.value = products.value.filter(p => p.bienTheId !== bienTheId);
+  await refreshProducts();
   variantModalList.value = variantModalList.value.filter(v => v.bienTheId !== bienTheId);
   detailModalList.value = detailModalList.value.filter(v => v.bienTheId !== bienTheId);
 };
@@ -1575,8 +1567,7 @@ const saveCustomer = async () => {
       const idx = customers.value.findIndex((c) => c.khachHangId === editingCustomerId.value);
       if (idx !== -1) customers.value[idx] = { ...customers.value[idx], ...body };
     } else {
-      const created = await res.json();
-      customers.value = [...customers.value, created];
+      await refreshCustomers();
     }
     // Neu modal nay duoc mo tu luong tao hoa don POS (khach chua co trong he thong) —
     // tu dong gan khach vua tao lam khach hang cho hoa don dang tao, roi cho phep them SP.
@@ -1598,7 +1589,7 @@ const deleteCustomer = async (id) => {
   if (!(await askConfirm(t('admin.confirm.deleteCustomer')))) return;
   const res = await KhachHangService.remove(id);
   if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  customers.value = customers.value.filter((c) => c.khachHangId !== id);
+  await refreshCustomers();
 };
 
 // ── Staff CRUD ────────────────────────────────────────────────────────────────
@@ -1656,8 +1647,7 @@ const saveStaff = async () => {
       const idx = staff.value.findIndex((s) => s.nhanVienId === editingStaffId.value);
       if (idx !== -1) staff.value[idx] = { ...staff.value[idx], ...body };
     } else {
-      const created = await res.json();
-      staff.value = [...staff.value, created];
+      await refreshStaff();
     }
   } catch (e) {
     staffFormError.value = e.message;
@@ -1667,7 +1657,7 @@ const deleteStaff = async (id) => {
   if (!(await askConfirm(t('admin.confirm.deleteStaff')))) return;
   const res = await NhanVienService.remove(id);
   if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  staff.value = staff.value.filter((s) => s.nhanVienId !== id);
+  await refreshStaff();
 };
 
 // ── Promotions CRUD ───────────────────────────────────────────────────────────
@@ -1738,8 +1728,7 @@ const savePromo = async () => {
       const idx = promotions.value.findIndex((p) => p.khuyenMaiId === editingPromoId.value);
       if (idx !== -1) promotions.value[idx] = { ...promotions.value[idx], ...body };
     } else {
-      const created = await res.json();
-      promotions.value = [...promotions.value, created];
+      await refreshPromotions();
     }
   } catch (e) {
     promoFormError.value = e.message;
@@ -1749,7 +1738,7 @@ const deletePromo = async (id) => {
   if (!(await askConfirm(t('admin.confirm.deletePromo')))) return;
   const res = await KhuyenMaiService.remove(id);
   if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  promotions.value = promotions.value.filter((p) => p.khuyenMaiId !== id);
+  await refreshPromotions();
 };
 
 // ── Orders CRUD ───────────────────────────────────────────────────────────────
@@ -1757,7 +1746,7 @@ const deleteOrder = async (id) => {
   if (!(await askConfirm(t('admin.confirm.deleteOrder')))) return;
   const res = await DonHangService.remove(id);
   if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  orders.value = orders.value.filter((o) => o.donHangId !== id);
+  await refreshOrders();
 };
 
 // ── Order detail modal (xem san pham trong don) ───────────────────────────────
@@ -1886,7 +1875,7 @@ const addItemProductGroups = computed(() => {
 });
 
 const refreshOrderDetail = async () => {
-  orders.value = await DonHangService.getAll().catch(() => []);
+  await refreshOrders();
   const updated = orders.value.find(o => o.donHangId === orderDetailData.value?.donHangId);
   if (updated) orderDetailData.value = updated;
   orderDetailItems.value = await ChiTietDonHangService.getByDonHang(orderDetailData.value.donHangId).catch(() => []);
@@ -2037,7 +2026,7 @@ const saveOrderStatus = async () => {
       return;
     }
     showOrderModal.value = false;
-    orders.value = await DonHangService.getAll().catch(() => []);
+    await refreshOrders();
   } catch (e) {
     orderStatusError.value = e.message;
   }
@@ -2078,7 +2067,7 @@ const advanceOrderStatus = async (o) => {
   if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.updateFailed', { status: res.status }))); return; }
   // Tải lại ngay thay vì tự ráp state cục bộ — chắc chắn đúng dữ liệu server, không phụ
   // thuộc việc SSE (chỉ để đồng bộ các tab/khách hàng khác) có tới kịp hay không.
-  orders.value = await DonHangService.getAll().catch(() => orders.value);
+  await refreshOrders();
 };
 
 // ── Modal "Chọn serial trước khi xác nhận" (chỉ đơn online) ──────────────────────
@@ -2152,7 +2141,7 @@ const confirmXacNhanSerial = async () => {
       return;
     }
     showXacNhanSerialModal.value = false;
-    orders.value = await DonHangService.getAll().catch(() => orders.value);
+    await refreshOrders();
   } catch (e) {
     xacNhanError.value = e.message;
   } finally {
@@ -2583,7 +2572,7 @@ const posPlaceOrder = async () => {
     posCart.value = []; posPhone.value = ""; posFoundCust.value = null;
     posPromoCode.value = ""; posAppliedPromo.value = null; posPromoMsg.value = "";
     posStage.value = 'start';
-    orders.value = await DonHangService.getAll().catch(() => []);
+    await refreshOrders();
   } catch (e) {
     posError.value = e.message;
   }
@@ -2724,7 +2713,16 @@ const saveAppearancePrefs = async () => {
   }
 };
 
-let orderSse = null;
+// SSE đơn hàng real-time giờ dùng chung qua stores/orders.js (connectOrderEvents/
+// disconnectOrderEvents) — không còn EventSource cục bộ ở đây, và cũng không còn phân biệt
+// được 'new-order' vs 'order-updated' riêng (store chỉ lộ ra 1 refreshOrders() dùng chung cho
+// cả 2 sự kiện). Theo dõi OrdersStore.items để chạy tiếp gộp đơn trùng + làm mới biểu đồ SP
+// bán chạy mỗi khi danh sách đơn đổi (an toàn gọi lại nhiều lần: autoMergeAllDuplicates có
+// isMerging guard + tự no-op khi không có đơn trùng; fetchProductSales chỉ là refetch idempotent).
+watch(() => OrdersStore.items, async () => {
+  await autoMergeAllDuplicates();
+  await fetchProductSales();
+});
 
 onMounted(async () => {
   // try/catch riêng — nếu fetchAll()/fetchProductSales() lỗi (throw) mà không có try/catch
@@ -2737,24 +2735,11 @@ onMounted(async () => {
     console.error('fetchAll/fetchProductSales lỗi khi vào trang:', e);
   }
 
-  // EventSource không gửi được header Authorization → truyền JWT qua query string
-  orderSse = new EventSource(`/api/don-hang/events?token=${encodeURIComponent(AuthStore.user?.token ?? '')}`);
-  orderSse.onerror = (e) => console.error('Kết nối SSE (đơn hàng real-time) lỗi:', e);
-  orderSse.addEventListener('new-order', async () => {
-    orders.value = await DonHangService.getAll().catch(() => []);
-    await autoMergeAllDuplicates();
-    await fetchProductSales();
-  });
-  // Đơn hàng đổi trạng thái — từ tab admin khác, hoặc từ chính tab này (advanceOrderStatus/
-  // saveOrderStatus không tự patch state cục bộ, dựa hẳn vào đây để khỏi trùng 2 nguồn dữ
-  // liệu) — tải lại danh sách, khỏi cần F5.
-  orderSse.addEventListener('order-updated', async () => {
-    orders.value = await DonHangService.getAll().catch(() => []);
-  });
+  connectOrderEvents(AuthStore.user?.token);
 });
 
 onUnmounted(() => {
-  if (orderSse) orderSse.close();
+  disconnectOrderEvents();
 });
 </script>
 
@@ -2894,7 +2879,7 @@ onUnmounted(() => {
 
         <!-- ── Dashboard ── -->
         <section v-show="currentPage === 'dashboard'">
-          <div v-if="loading" class="text-secondary small">{{ t('admin.dashboard.loading') }}</div>
+          <div v-if="ProductsStore.loading || OrdersStore.loading || CustomersStore.loading || InventoryStore.loading" class="text-secondary small">{{ t('admin.dashboard.loading') }}</div>
           <template v-else>
             <!-- Stat cards -->
             <div class="row g-3 mb-4">
@@ -3129,7 +3114,7 @@ onUnmounted(() => {
               <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAdd">{{ t('admin.products.add') }}</button>
             </div>
           </div>
-          <div v-if="loading" class="text-secondary small">{{ t('admin.products.loading') }}</div>
+          <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.products.loading') }}</div>
           <div v-else class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
               <thead><tr>
@@ -3170,7 +3155,7 @@ onUnmounted(() => {
               <span class="fw-bold" style="color:var(--text-heading);">{{ t('admin.orders.history') }}</span>
               <button class="btn btn-sm btn-outline-secondary" @click="backToToday">{{ t('admin.orders.backToToday') }}</button>
             </div>
-            <div v-if="loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
+            <div v-if="OrdersStore.loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
             <div v-else class="d-flex flex-column gap-2">
               <div v-for="d in orderDatesGrouped" :key="d.dateKey"
                    class="d-flex justify-content-between align-items-center px-3 py-3 rounded-3"
@@ -3213,7 +3198,7 @@ onUnmounted(() => {
                 <button v-if="orderViewMode==='today'" class="btn btn-sm btn-outline-warning" @click="openOrderHistory">{{ t('admin.orders.history') }}</button>
               </div>
             </div>
-            <div v-if="loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
+            <div v-if="OrdersStore.loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
             <div v-else class="table-responsive">
               <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
                 <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
@@ -3267,7 +3252,7 @@ onUnmounted(() => {
               <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddCustomer">{{ t('admin.customers.add') }}</button>
             </div>
           </div>
-          <div v-if="loading" class="text-secondary small">{{ t('admin.customers.loading') }}</div>
+          <div v-if="CustomersStore.loading" class="text-secondary small">{{ t('admin.customers.loading') }}</div>
           <div v-else class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
               <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.customers.colFullName') }}</th><th>{{ t('admin.customers.colPhone') }}</th><th>{{ t('admin.customers.colEmail') }}</th><th>{{ t('admin.customers.colCustomerType') }}</th><th>{{ t('admin.customers.colPoints') }}</th><th>{{ t('admin.customers.colStatus') }}</th><th>{{ t('admin.customers.colAction') }}</th></tr></thead>
@@ -3379,7 +3364,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div v-if="loading" class="text-secondary small py-4 text-center">{{ t('admin.inventory.loading') }}</div>
+          <div v-if="InventoryStore.loading" class="text-secondary small py-4 text-center">{{ t('admin.inventory.loading') }}</div>
           <div v-else class="d-flex flex-column gap-2">
 
             <div v-for="group in inventoryGrouped" :key="group.name"
@@ -3626,7 +3611,7 @@ onUnmounted(() => {
             <span class="text-secondary small">{{ promotions.length }} {{ t('admin.promotions.countSuffix') }}</span>
             <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPromo">{{ t('admin.promotions.add') }}</button>
           </div>
-          <div v-if="loading" class="text-secondary small">{{ t('admin.promotions.loading') }}</div>
+          <div v-if="PromotionsStore.loading" class="text-secondary small">{{ t('admin.promotions.loading') }}</div>
           <div v-else class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
               <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.promotions.colCode') }}</th><th>{{ t('admin.promotions.colName') }}</th><th>{{ t('admin.promotions.colType') }}</th><th>{{ t('admin.promotions.colValue') }}</th><th>{{ t('admin.promotions.colStart') }}</th><th>{{ t('admin.promotions.colEnd') }}</th><th>{{ t('admin.promotions.colUsed') }}</th><th>{{ t('admin.promotions.colStatus') }}</th><th>{{ t('admin.promotions.colAction') }}</th></tr></thead>
@@ -3660,7 +3645,7 @@ onUnmounted(() => {
             <span class="text-secondary small">{{ staff.length }} {{ t('admin.staff.countSuffix') }}</span>
             <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddStaff">{{ t('admin.staff.add') }}</button>
           </div>
-          <div v-if="loading" class="text-secondary small">{{ t('admin.staff.loading') }}</div>
+          <div v-if="StaffStore.loading" class="text-secondary small">{{ t('admin.staff.loading') }}</div>
           <div v-else class="table-responsive">
             <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
               <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.staff.colFullName') }}</th><th>{{ t('admin.staff.colPhone') }}</th><th>{{ t('admin.staff.colEmail') }}</th><th>{{ t('admin.staff.colPosition') }}</th><th>{{ t('admin.staff.colUsername') }}</th><th>{{ t('admin.staff.colBaseSalary') }}</th><th>{{ t('admin.staff.colStatus') }}</th><th>{{ t('admin.staff.colAction') }}</th></tr></thead>
@@ -3935,7 +3920,7 @@ onUnmounted(() => {
               <input v-model="posSearch" class="form-control form-control-sm"
                      style="background:var(--bg-hover); border-color:var(--border-color-strong); color:var(--text-primary);"
                      :placeholder="t('admin.pos.searchPlaceholder')" />
-              <div v-if="loading" class="text-secondary small">{{ t('admin.pos.loading') }}</div>
+              <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.pos.loading') }}</div>
               <div v-else class="row g-2 overflow-y-auto">
                 <div v-for="p in posProducts" :key="p.bienTheId" class="col-6 col-xl-4">
                   <div class="card h-100 border-secondary" style="background:var(--bg-hover);">
