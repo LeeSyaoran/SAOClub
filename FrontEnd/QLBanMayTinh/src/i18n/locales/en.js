@@ -905,7 +905,7 @@ export default {
       languageLabel: "Current language",
       defaultLanguageLabel: "Default language on login",
       numberFormatLabel: "Number format",
-      numberFormatVi: "Vietnamese style (1,234,567 ₫)",
+      numberFormatVi: "Vietnamese style (1.234.567 ₫)",
       numberFormatEn: "English style (1,234,567 ₫)",
     },
 
