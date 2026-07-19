@@ -10,6 +10,7 @@ import PosPanel from "../components/admin/PosPanel.vue";
 import OrdersTable from "../components/admin/OrdersTable.vue";
 import CustomersTable from "../components/admin/CustomersTable.vue";
 import ProductsTable from "../components/admin/ProductsTable.vue";
+import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import { OrdersStore, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers } from "../stores/customers.js";
 
@@ -21,6 +22,7 @@ const PAGE_META = {
   "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: "🛒" },
   orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: "🧾" },
   customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: "👥" },
+  "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
   products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: "💻" },
 };
 const topbarTitle = computed(() => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.banHang.title"));
@@ -82,6 +84,10 @@ onUnmounted(() => {
           {{ t('admin.sidebar.customers') }}
           <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ totalCustomers }}</span>
         </div>
+        <div class="adm-nav" :class="{active: currentPage==='tra-hang'}" @click="navigate('tra-hang')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 3.293a1 1 0 010 1.414L7.414 7H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          {{ t('admin.sidebar.traHang') }}
+        </div>
         <div class="adm-nav" :class="{active: currentPage==='products'}" @click="navigate('products')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
           {{ t('admin.sidebar.products') }}
@@ -115,6 +121,7 @@ onUnmounted(() => {
         <section v-show="currentPage === 'ban-hang'"><PosPanel /></section>
         <section v-show="currentPage === 'orders'"><OrdersTable :can-delete="false" /></section>
         <section v-show="currentPage === 'customers'"><CustomersTable /></section>
+        <section v-show="currentPage === 'tra-hang'"><ReturnsPanel /></section>
         <section v-show="currentPage === 'products'"><ProductsTable :readonly="true" /></section>
       </div>
     </main>
