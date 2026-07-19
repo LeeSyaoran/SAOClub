@@ -559,11 +559,11 @@ onBeforeUnmount(() => {
     <!-- ══════════════════════════════════════════════════════
         TRANG ADMIN — chỉ hiển thị khi URL có #admin VÀ là admin
     ══════════════════════════════════════════════════════ -->
-    <AdminPage v-if="isAdminHash && auth.user?.role === 'admin'" />
+    <AdminPage v-if="isAdminHash && ['admin', 'quan_kho'].includes(auth.user?.role)" />
 
     <!-- Thông báo từ chối quyền truy cập -->
     <section
-      v-else-if="isAdminHash && auth.user?.role !== 'admin'"
+      v-else-if="isAdminHash && !['admin', 'quan_kho'].includes(auth.user?.role)"
       class="d-flex align-items-center justify-content-center"
       style="min-height: 100vh; background: var(--bg-page)"
     >
