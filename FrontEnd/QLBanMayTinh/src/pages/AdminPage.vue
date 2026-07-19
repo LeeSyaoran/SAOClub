@@ -28,6 +28,7 @@ import CustomersTable from "../components/admin/CustomersTable.vue";
 import OrdersTable from "../components/admin/OrdersTable.vue";
 import PosPanel from "../components/admin/PosPanel.vue";
 import InventoryPanel from "../components/admin/InventoryPanel.vue";
+import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
@@ -50,6 +51,7 @@ const PAGE_META = {
   orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: "🧾" },
   customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: "👥" },
   inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: "📦" },
+  "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
   promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub", icon: "🏷️" },
   staff: { titleKey: "admin.pageMeta.staff.title", subKey: "admin.pageMeta.staff.sub", icon: "🧑‍💼" },
   "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: "🛒" },
@@ -910,6 +912,10 @@ onUnmounted(() => {
           {{ t('admin.sidebar.inventory') }}
           <span v-if="lowStockItems.length" class="badge bg-danger ms-auto" style="font-size:0.68rem;">{{ lowStockItems.length }}</span>
         </div>
+        <div class="adm-nav" :class="{active: currentPage==='tra-hang'}" @click="navigate('tra-hang')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 3.293a1 1 0 010 1.414L7.414 7H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          {{ t('admin.sidebar.traHang') }}
+        </div>
         <div class="adm-nav" :class="{active: currentPage==='promotions'}" @click="navigate('promotions')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clip-rule="evenodd"/><path d="M9 11H3v5a2 2 0 002 2h4v-7zm2 7h4a2 2 0 002-2v-5h-6v7z"/></svg>
           {{ t('admin.sidebar.promotions') }}
@@ -1269,6 +1275,8 @@ onUnmounted(() => {
           </div>
           </div>
         </section>
+
+        <section v-show="currentPage === 'tra-hang'"><ReturnsPanel :can-pick-staff="true" /></section>
 
         <!-- ── Khuyen mai ── -->
         <section v-show="currentPage === 'promotions'">
