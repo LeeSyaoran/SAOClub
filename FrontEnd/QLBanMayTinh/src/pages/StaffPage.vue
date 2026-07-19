@@ -1,0 +1,146 @@
+<script setup>
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { AuthStore } from "../stores/index.js";
+import { t } from "../i18n/index.js";
+import { ThemeStore, toggleTheme } from "../stores/theme.js";
+import ConfirmDialog from "../components/common/ConfirmDialog.vue";
+import ToastHost from "../components/common/ToastHost.vue";
+import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
+import PosPanel from "../components/admin/PosPanel.vue";
+import OrdersTable from "../components/admin/OrdersTable.vue";
+import CustomersTable from "../components/admin/CustomersTable.vue";
+import ProductsTable from "../components/admin/ProductsTable.vue";
+import { OrdersStore, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
+import { CustomersStore, ensureCustomers } from "../stores/customers.js";
+
+// ── Navigation — mac dinh vao thang Ban hang (viec chinh hang ngay cua nhan vien) ──
+const currentPage = ref("ban-hang");
+const navigate = (page) => { currentPage.value = page; };
+
+const PAGE_META = {
+  "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: "🛒" },
+  orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: "🧾" },
+  customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: "👥" },
+  products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: "💻" },
+};
+const topbarTitle = computed(() => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.banHang.title"));
+const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
+const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "🛒");
+
+// ── Badge sidebar: don hang hom nay, tong khach hang — doc thang tu store, khong
+// can qua AdminPage.vue vi trang nay doc lap hoan toan ──
+const toDateInputValue = (d) => {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+const todayOrdersCount = computed(
+  () => OrdersStore.items.filter((o) => o.ngayDat?.slice(0, 10) === toDateInputValue(new Date())).length,
+);
+const totalCustomers = computed(() => CustomersStore.items.length);
+
+onMounted(() => {
+  ensureCustomers();
+  connectOrderEvents(AuthStore.user?.token);
+});
+onUnmounted(() => {
+  disconnectOrderEvents();
+});
+</script>
+
+<template>
+  <!-- Layout chinh: sidebar ben trai + main content ben phai — dong bo AdminPage.vue -->
+  <div class="d-flex overflow-hidden" style="height:100vh; background:var(--bg-page-alt); color:var(--text-primary); font-family:'Nunito Sans',sans-serif;">
+
+    <!-- ══════════ SIDEBAR ══════════ -->
+    <aside class="d-flex flex-column border-end flex-shrink-0"
+           style="width:240px; background:var(--bg-card-inset); border-color:var(--border-color)!important; overflow-y:auto;">
+
+      <!-- Logo -->
+      <div class="d-flex align-items-center gap-2 p-3 border-bottom"
+           style="border-color:var(--border-color-soft)!important;">
+        <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
+             style="width:38px;height:38px;background:var(--accent);color:var(--accent-text);font-size:0.8rem;">SAO</div>
+        <div>
+          <div class="fw-bold" style="font-size:0.95rem;">{{ t('admin.brand.name') }}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">{{ t('admin.brand.tagline') }}</div>
+        </div>
+      </div>
+
+      <!-- Nav staff -->
+      <nav class="flex-grow-1 d-flex flex-column px-2 pb-2">
+        <div class="adm-nav" :class="{active: currentPage==='ban-hang'}" @click="navigate('ban-hang')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C4.328 11.142 4 11.574 4 12a2 2 0 002 2h10a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 4H6.28l-.31-1.243A1 1 0 005 2H3z"/><path d="M16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
+          {{ t('admin.sidebar.banHang') }}
+        </div>
+        <div class="adm-nav" :class="{active: currentPage==='orders'}" @click="navigate('orders')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+          {{ t('admin.sidebar.orders') }}
+          <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ todayOrdersCount }}</span>
+        </div>
+        <div class="adm-nav" :class="{active: currentPage==='customers'}" @click="navigate('customers')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
+          {{ t('admin.sidebar.customers') }}
+          <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ totalCustomers }}</span>
+        </div>
+        <div class="adm-nav" :class="{active: currentPage==='products'}" @click="navigate('products')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          {{ t('admin.sidebar.products') }}
+        </div>
+      </nav>
+
+      <UserProfileMenu :show-settings-link="false" />
+    </aside><!-- /sidebar -->
+
+    <!-- ══════════ MAIN CONTENT ══════════ -->
+    <main class="flex-grow-1 d-flex flex-column overflow-hidden">
+
+      <!-- Topbar -->
+      <div class="d-flex align-items-center justify-content-between p-3 border-bottom"
+           style="background:var(--bg-card-inset); border-color:var(--border-color)!important;">
+        <div>
+          <div class="fw-bold" style="font-size:1.05rem;">{{ topbarIcon }} {{ topbarTitle }}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
+        </div>
+        <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
+                style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1rem;"
+                :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+                :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+                @click="toggleTheme">
+          {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
+        </button>
+      </div>
+
+      <!-- Noi dung -->
+      <div class="flex-grow-1 overflow-y-auto p-3">
+        <section v-show="currentPage === 'ban-hang'"><PosPanel /></section>
+        <section v-show="currentPage === 'orders'"><OrdersTable :can-delete="false" /></section>
+        <section v-show="currentPage === 'customers'"><CustomersTable /></section>
+        <section v-show="currentPage === 'products'"><ProductsTable :readonly="true" /></section>
+      </div>
+    </main>
+  </div>
+
+  <ConfirmDialog />
+  <ToastHost />
+</template>
+
+<style scoped>
+/* Nav item: dong bo AdminPage.vue (.adm-nav/.adm-icon/.adm-nav-label) — CSS scoped
+   khong ke thua qua bien gioi component nen phai copy lai o day. */
+.adm-nav {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.87rem;
+  color: var(--text-primary);
+  transition: background 0.12s, color 0.12s;
+  user-select: none;
+}
+.adm-nav:hover { background: var(--bg-hover); color: var(--text-heading); }
+.adm-nav.active { background: rgba(244,63,94,0.12); color: var(--accent-fg); }
+.adm-nav.active .adm-icon { opacity: 1; }
+.adm-icon { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.75; }
+</style>
