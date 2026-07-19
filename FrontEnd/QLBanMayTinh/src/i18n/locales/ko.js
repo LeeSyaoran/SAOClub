@@ -339,6 +339,7 @@ export default {
   account: {
     myAccount: "내 계정",
     points: "{points} 적립 포인트",
+    walletBalance: "지갑 잔액: {amount}",
     tabOrders: "진행 중인 주문",
     tabHistory: "구매 내역",
     tabPending: "처리 중",
@@ -405,6 +406,7 @@ export default {
       logout: "로그아웃",
       suppliers: "공급업체",
       inventoryHistory: "재고 이력",
+      traHang: "반품",
     },
 
     pageMeta: {
@@ -425,6 +427,7 @@ export default {
       userProfile:  { title: "프로필",     sub: "계정 정보" },
       suppliers:        { title: "공급업체",   sub: "공급업체 관리" },
       inventoryHistory:  { title: "재고 이력", sub: "재고 변동 이력" },
+      traHang:           { title: "반품", sub: "반품 전표 관리" },
     },
 
     userRole: {
@@ -747,6 +750,66 @@ export default {
       nameRequired: "공급업체명을 입력해 주세요",
     },
 
+    returns: {
+      countSuffix: "건의 반품",
+      add: "+ 반품 등록",
+      loading: "로딩 중...",
+      colId: "반품 번호",
+      colOrder: "주문",
+      colCustomer: "고객",
+      colAmount: "환불 금액",
+      colHinhThucHoan: "환불 방식",
+      colStatus: "상태",
+      colAction: "작업",
+      edit: "수정",
+      view: "보기",
+      delete: "삭제",
+      empty: "반품 내역이 없습니다",
+      searchPlaceholder: "반품 번호, 고객 검색...",
+    },
+
+    returnStatus: {
+      cho_xu_ly: "처리 대기",
+      da_xu_ly: "처리 완료",
+      tu_choi: "거부됨",
+    },
+
+    hinhThucHoan: {
+      tien_mat: "현금",
+      vi: "지갑",
+    },
+
+    returnModal: {
+      titleAdd: "반품 등록",
+      titleEdit: "반품 상세",
+      orderLabel: "주문 *",
+      orderSearchPlaceholder: "주문 번호, 고객명, 전화번호로 검색...",
+      orderSearchEmpty: "일치하는 주문이 없습니다",
+      changeOrder: "주문 변경",
+      staffLabel: "처리 담당자",
+      reasonLabel: "반품 사유 *",
+      dateLabel: "반품일",
+      statusLabel: "상태",
+      amountLabel: "환불 금액",
+      hinhThucHoanLabel: "환불 방식",
+      customerPresentLabel: "고객이 매장에 있음",
+      noteLabel: "메모",
+      lineItemsTitle: "반품 상품",
+      colProduct: "상품",
+      colSku: "SKU",
+      colBought: "구매 수량",
+      colReturnQty: "반품 수량",
+      colCondition: "상태",
+      conditionGood: "양호",
+      conditionBad: "불량/손상",
+      orderRequired: "주문을 선택해 주세요",
+      reasonRequired: "반품 사유를 입력해 주세요",
+      lineRequired: "반품할 상품을 1개 이상 선택해 주세요",
+      cancel: "취소",
+      save: "저장",
+      close: "닫기",
+    },
+
     inventory: {
       searchPlaceholder: "상품 검색...",
       loading: "로딩 중...",
@@ -1042,6 +1105,7 @@ export default {
       removeItemFromOrder: "이 상품을 주문에서 삭제하시겠습니까?",
       mergeOrders: "같은 날짜의 주문 {count}건을 주문 #{id}에 병합하시겠습니까?",
       deleteSupplier: "이 공급업체를 삭제하시겠습니까?",
+      deleteReturn: "이 반품 전표를 삭제할까요?",
     },
 
     errors: {

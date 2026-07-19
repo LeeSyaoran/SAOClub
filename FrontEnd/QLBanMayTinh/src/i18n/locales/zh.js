@@ -339,6 +339,7 @@ export default {
   account: {
     myAccount: "我的账户",
     points: "{points} 积分",
+    walletBalance: "钱包余额：{amount}",
     tabOrders: "当前订单",
     tabHistory: "购买历史",
     tabPending: "处理中",
@@ -405,6 +406,7 @@ export default {
       logout: "退出登录",
       suppliers: "供应商",
       inventoryHistory: "库存历史",
+      traHang: "退货",
     },
 
     pageMeta: {
@@ -425,6 +427,7 @@ export default {
       userProfile:  { title: "个人资料",   sub: "账户信息" },
       suppliers:        { title: "供应商",   sub: "管理供应商" },
       inventoryHistory:  { title: "库存历史", sub: "库存变动历史" },
+      traHang:           { title: "退货", sub: "管理退货单" },
     },
 
     userRole: {
@@ -747,6 +750,66 @@ export default {
       nameRequired: "请输入供应商名称",
     },
 
+    returns: {
+      countSuffix: "个退货单",
+      add: "+ 创建退货单",
+      loading: "加载中...",
+      colId: "退货单号",
+      colOrder: "订单",
+      colCustomer: "客户",
+      colAmount: "退款金额",
+      colHinhThucHoan: "退款方式",
+      colStatus: "状态",
+      colAction: "操作",
+      edit: "编辑",
+      view: "查看",
+      delete: "删除",
+      empty: "暂无退货单",
+      searchPlaceholder: "搜索退货单号、客户...",
+    },
+
+    returnStatus: {
+      cho_xu_ly: "待处理",
+      da_xu_ly: "已处理",
+      tu_choi: "已拒绝",
+    },
+
+    hinhThucHoan: {
+      tien_mat: "现金",
+      vi: "钱包",
+    },
+
+    returnModal: {
+      titleAdd: "创建退货单",
+      titleEdit: "退货单详情",
+      orderLabel: "订单 *",
+      orderSearchPlaceholder: "按订单号、客户姓名、电话搜索...",
+      orderSearchEmpty: "未找到匹配订单",
+      changeOrder: "更换订单",
+      staffLabel: "处理员工",
+      reasonLabel: "退货原因 *",
+      dateLabel: "退货日期",
+      statusLabel: "状态",
+      amountLabel: "退款金额",
+      hinhThucHoanLabel: "退款方式",
+      customerPresentLabel: "客户在店",
+      noteLabel: "备注",
+      lineItemsTitle: "退货商品",
+      colProduct: "商品",
+      colSku: "SKU",
+      colBought: "购买数量",
+      colReturnQty: "退货数量",
+      colCondition: "状况",
+      conditionGood: "良好",
+      conditionBad: "故障/损坏",
+      orderRequired: "请选择订单",
+      reasonRequired: "请输入退货原因",
+      lineRequired: "请至少选择1件退货商品",
+      cancel: "取消",
+      save: "保存",
+      close: "关闭",
+    },
+
     inventory: {
       searchPlaceholder: "搜索商品...",
       loading: "加载中...",
@@ -1042,6 +1105,7 @@ export default {
       removeItemFromOrder: "从订单中移除该商品？",
       mergeOrders: "将同一天的 {count} 个订单合并到订单 #{id}？",
       deleteSupplier: "删除此供应商？",
+      deleteReturn: "确定删除此退货单？",
     },
 
     errors: {

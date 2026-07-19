@@ -339,6 +339,7 @@ export default {
   account: {
     myAccount: "マイアカウント",
     points: "{points} ポイント",
+    walletBalance: "ウォレット残高: {amount}",
     tabOrders: "進行中の注文",
     tabHistory: "購入履歴",
     tabPending: "処理中",
@@ -405,6 +406,7 @@ export default {
       logout: "ログアウト",
       suppliers: "サプライヤー",
       inventoryHistory: "在庫履歴",
+      traHang: "返品",
     },
 
     pageMeta: {
@@ -425,6 +427,7 @@ export default {
       userProfile:  { title: "プロフィール", sub: "アカウント情報" },
       suppliers:        { title: "サプライヤー",   sub: "サプライヤー管理" },
       inventoryHistory:  { title: "在庫履歴", sub: "在庫変動履歴" },
+      traHang:           { title: "返品", sub: "返品伝票管理" },
     },
 
     userRole: {
@@ -747,6 +750,66 @@ export default {
       nameRequired: "サプライヤー名を入力してください",
     },
 
+    returns: {
+      countSuffix: "件の返品",
+      add: "+ 返品を作成",
+      loading: "読み込み中...",
+      colId: "返品番号",
+      colOrder: "注文",
+      colCustomer: "顧客",
+      colAmount: "返金額",
+      colHinhThucHoan: "返金方法",
+      colStatus: "状態",
+      colAction: "操作",
+      edit: "編集",
+      view: "表示",
+      delete: "削除",
+      empty: "返品はまだありません",
+      searchPlaceholder: "返品番号、顧客名で検索...",
+    },
+
+    returnStatus: {
+      cho_xu_ly: "処理待ち",
+      da_xu_ly: "処理済み",
+      tu_choi: "却下",
+    },
+
+    hinhThucHoan: {
+      tien_mat: "現金",
+      vi: "ウォレット",
+    },
+
+    returnModal: {
+      titleAdd: "返品を作成",
+      titleEdit: "返品の詳細",
+      orderLabel: "注文 *",
+      orderSearchPlaceholder: "注文番号、顧客名、電話番号で検索...",
+      orderSearchEmpty: "一致する注文が見つかりません",
+      changeOrder: "注文を変更",
+      staffLabel: "担当者",
+      reasonLabel: "返品理由 *",
+      dateLabel: "返品日",
+      statusLabel: "状態",
+      amountLabel: "返金額",
+      hinhThucHoanLabel: "返金方法",
+      customerPresentLabel: "顧客が来店中",
+      noteLabel: "備考",
+      lineItemsTitle: "返品商品",
+      colProduct: "商品",
+      colSku: "SKU",
+      colBought: "購入数量",
+      colReturnQty: "返品数量",
+      colCondition: "状態",
+      conditionGood: "良好",
+      conditionBad: "不良/破損",
+      orderRequired: "注文を選択してください",
+      reasonRequired: "返品理由を入力してください",
+      lineRequired: "返品する商品を1つ以上選択してください",
+      cancel: "キャンセル",
+      save: "保存",
+      close: "閉じる",
+    },
+
     inventory: {
       searchPlaceholder: "商品を検索...",
       loading: "読み込み中...",
@@ -1042,6 +1105,7 @@ export default {
       removeItemFromOrder: "この商品を注文から削除しますか？",
       mergeOrders: "同日の {count} 件の注文を注文 #{id} に統合しますか？",
       deleteSupplier: "このサプライヤーを削除しますか？",
+      deleteReturn: "この返品伝票を削除しますか？",
     },
 
     errors: {

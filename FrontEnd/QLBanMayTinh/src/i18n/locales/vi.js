@@ -349,6 +349,7 @@ export default {
   account: {
     myAccount: "Tài khoản của tôi",
     points: "{points} điểm tích lũy",
+    walletBalance: "Số dư ví: {amount}",
     tabOrders: "Đơn hàng hiện tại",
     tabHistory: "Lịch sử mua hàng",
     tabPending: "Đang xử lý",
@@ -415,6 +416,7 @@ export default {
       logout: "Đăng xuất",
       suppliers: "Nhà cung cấp",
       inventoryHistory: "Lịch sử tồn kho",
+      traHang: "Trả hàng",
     },
 
     pageMeta: {
@@ -435,6 +437,7 @@ export default {
       userProfile:  { title: "Hồ sơ",                   sub: "Thông tin tài khoản" },
       suppliers:        { title: "Nhà cung cấp",   sub: "Quản lý nhà cung cấp" },
       inventoryHistory:  { title: "Lịch sử tồn kho", sub: "Lịch sử biến động tồn kho" },
+      traHang:           { title: "Trả hàng", sub: "Quản lý phiếu trả hàng" },
     },
 
     userRole: {
@@ -759,6 +762,66 @@ export default {
       contactLabel: "Người liên hệ",
       statusLabel: "Trạng thái",
       nameRequired: "Vui lòng nhập tên nhà cung cấp",
+    },
+
+    returns: {
+      countSuffix: "phiếu trả hàng",
+      add: "+ Tạo phiếu trả hàng",
+      loading: "Đang tải...",
+      colId: "Mã phiếu",
+      colOrder: "Đơn hàng",
+      colCustomer: "Khách hàng",
+      colAmount: "Số tiền hoàn",
+      colHinhThucHoan: "Hình thức hoàn",
+      colStatus: "Trạng thái",
+      colAction: "Thao tác",
+      edit: "Sửa",
+      view: "Xem",
+      delete: "Xóa",
+      empty: "Chưa có phiếu trả hàng",
+      searchPlaceholder: "Tìm mã phiếu, khách hàng...",
+    },
+
+    returnStatus: {
+      cho_xu_ly: "Chờ xử lý",
+      da_xu_ly: "Đã xử lý",
+      tu_choi: "Từ chối",
+    },
+
+    hinhThucHoan: {
+      tien_mat: "Tiền mặt",
+      vi: "Ví điện tử",
+    },
+
+    returnModal: {
+      titleAdd: "Tạo phiếu trả hàng",
+      titleEdit: "Chi tiết phiếu trả hàng",
+      orderLabel: "Đơn hàng *",
+      orderSearchPlaceholder: "Tìm theo mã đơn, tên khách, SĐT...",
+      orderSearchEmpty: "Không tìm thấy đơn hàng",
+      changeOrder: "Đổi đơn hàng",
+      staffLabel: "Nhân viên xử lý",
+      reasonLabel: "Lý do trả hàng *",
+      dateLabel: "Ngày trả",
+      statusLabel: "Trạng thái",
+      amountLabel: "Số tiền hoàn",
+      hinhThucHoanLabel: "Hình thức hoàn",
+      customerPresentLabel: "Khách có mặt tại cửa hàng",
+      noteLabel: "Ghi chú",
+      lineItemsTitle: "Sản phẩm trả",
+      colProduct: "Sản phẩm",
+      colSku: "SKU",
+      colBought: "SL đã mua",
+      colReturnQty: "SL trả",
+      colCondition: "Tình trạng",
+      conditionGood: "Tốt",
+      conditionBad: "Lỗi/Hỏng",
+      orderRequired: "Vui lòng chọn đơn hàng",
+      reasonRequired: "Vui lòng nhập lý do trả hàng",
+      lineRequired: "Vui lòng chọn ít nhất 1 sản phẩm cần trả",
+      cancel: "Hủy",
+      save: "Lưu",
+      close: "Đóng",
     },
 
     inventory: {
@@ -1150,6 +1213,7 @@ export default {
       deleteSerial: "Xóa serial này khỏi hệ thống? Chỉ dùng khi thêm nhầm.",
       deletePhieuNhap: "Xóa phiếu nhập này? Toàn bộ dòng chi tiết trong phiếu sẽ mất theo.",
       deleteSupplier: "Xóa nhà cung cấp này?",
+      deleteReturn: "Xóa phiếu trả hàng này?",
     },
 
     errors: {

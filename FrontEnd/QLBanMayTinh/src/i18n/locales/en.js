@@ -339,6 +339,7 @@ export default {
   account: {
     myAccount: "My Account",
     points: "{points} loyalty points",
+    walletBalance: "Wallet balance: {amount}",
     tabOrders: "Current orders",
     tabHistory: "Order history",
     tabPending: "Processing",
@@ -405,6 +406,7 @@ export default {
       logout: "Sign out",
       suppliers: "Suppliers",
       inventoryHistory: "Inventory history",
+      traHang: "Returns",
     },
 
     pageMeta: {
@@ -425,6 +427,7 @@ export default {
       userProfile:  { title: "Profile",         sub: "Account information" },
       suppliers:        { title: "Suppliers",   sub: "Manage suppliers" },
       inventoryHistory:  { title: "Inventory history", sub: "Stock movement history" },
+      traHang:           { title: "Returns", sub: "Manage product returns" },
     },
 
     userRole: {
@@ -747,6 +750,66 @@ export default {
       nameRequired: "Please enter the supplier name",
     },
 
+    returns: {
+      countSuffix: "returns",
+      add: "+ Create return",
+      loading: "Loading...",
+      colId: "Return ID",
+      colOrder: "Order",
+      colCustomer: "Customer",
+      colAmount: "Refund amount",
+      colHinhThucHoan: "Refund method",
+      colStatus: "Status",
+      colAction: "Action",
+      edit: "Edit",
+      view: "View",
+      delete: "Delete",
+      empty: "No returns yet",
+      searchPlaceholder: "Search return ID, customer...",
+    },
+
+    returnStatus: {
+      cho_xu_ly: "Pending",
+      da_xu_ly: "Processed",
+      tu_choi: "Rejected",
+    },
+
+    hinhThucHoan: {
+      tien_mat: "Cash",
+      vi: "Wallet",
+    },
+
+    returnModal: {
+      titleAdd: "Create return",
+      titleEdit: "Return details",
+      orderLabel: "Order *",
+      orderSearchPlaceholder: "Search order ID, customer name, phone...",
+      orderSearchEmpty: "No matching order",
+      changeOrder: "Change order",
+      staffLabel: "Handled by",
+      reasonLabel: "Return reason *",
+      dateLabel: "Return date",
+      statusLabel: "Status",
+      amountLabel: "Refund amount",
+      hinhThucHoanLabel: "Refund method",
+      customerPresentLabel: "Customer is present in store",
+      noteLabel: "Note",
+      lineItemsTitle: "Returned items",
+      colProduct: "Product",
+      colSku: "SKU",
+      colBought: "Qty bought",
+      colReturnQty: "Qty returned",
+      colCondition: "Condition",
+      conditionGood: "Good",
+      conditionBad: "Faulty",
+      orderRequired: "Please select an order",
+      reasonRequired: "Please enter a return reason",
+      lineRequired: "Please select at least 1 item to return",
+      cancel: "Cancel",
+      save: "Save",
+      close: "Close",
+    },
+
     inventory: {
       searchPlaceholder: "Search products...",
       loading: "Loading...",
@@ -1042,6 +1105,7 @@ export default {
       removeItemFromOrder: "Remove this product from the order?",
       mergeOrders: "Merge {count} orders from the same day into order #{id}?",
       deleteSupplier: "Delete this supplier?",
+      deleteReturn: "Delete this return?",
     },
 
     errors: {
