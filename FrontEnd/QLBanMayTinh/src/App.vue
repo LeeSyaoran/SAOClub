@@ -563,7 +563,7 @@ onBeforeUnmount(() => {
 
     <!-- Thông báo từ chối quyền truy cập -->
     <section
-      v-else-if="isAdminHash && !auth.isAdmin"
+      v-else-if="isAdminHash && auth.user?.role !== 'admin'"
       class="d-flex align-items-center justify-content-center"
       style="min-height: 100vh; background: var(--bg-page)"
     >
