@@ -639,3 +639,13 @@ const deleteVariant = async (bienTheId) => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Bootstrap .text-light hardcode mau trang co dinh — ghi de theo theme hien tai (dung
+   tren nen the/card, khong phai nen mau thuong hieu co dinh, nen an toan khi ghi de
+   theo bien theme). Scoped rieng cho component nay vi CSS scoped khong ke thua qua bien
+   gioi component. */
+.text-light {
+  color: var(--text-primary) !important;
+}
+</style>

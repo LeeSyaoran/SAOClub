@@ -1688,6 +1688,4 @@ onUnmounted(() => {
   padding: 10px 8px 3px;
 }
 
-/* Row do trong bang ton kho khi san pham sap het */
-.row-warn td { background: rgba(224,82,82,0.06) !important; }
 </style>
