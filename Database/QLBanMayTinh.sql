@@ -503,6 +503,18 @@ BEGIN
     );
 END
 
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('khach_hang') AND name = 'so_du_vi')
+BEGIN
+    ALTER TABLE khach_hang ADD so_du_vi DECIMAL(18,0) NOT NULL DEFAULT 0
+        CONSTRAINT CK_kh_sodu_vi CHECK (so_du_vi >= 0);
+END
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('phieu_tra_hang') AND name = 'hinh_thuc_hoan')
+BEGIN
+    ALTER TABLE phieu_tra_hang ADD hinh_thuc_hoan NVARCHAR(20) NOT NULL DEFAULT N'vi'
+        CONSTRAINT CK_pth_hinhthuchoan CHECK (hinh_thuc_hoan IN (N'tien_mat', N'vi'));
+END
+
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_tra_hang')
 BEGIN
     CREATE TABLE chi_tiet_tra_hang (
