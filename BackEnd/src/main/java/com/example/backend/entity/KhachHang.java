@@ -3,6 +3,7 @@ package com.example.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -42,6 +43,9 @@ public class KhachHang {
 
     @Column(name = "diem_tich_luy", nullable = false)
     private Integer diemTichLuy;
+
+    @Column(name = "so_du_vi", precision = 18, scale = 0)
+    private BigDecimal soDuVi;
 
     @Column(name = "trang_thai", length = 20)
     private String trangThai;

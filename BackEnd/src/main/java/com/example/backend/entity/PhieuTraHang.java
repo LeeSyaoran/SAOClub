@@ -40,6 +40,9 @@ public class PhieuTraHang {
     @Column(name = "so_tien_hoan", precision = 18, scale = 2)
     private BigDecimal soTienHoan;
 
+    @Column(name = "hinh_thuc_hoan", length = 20)
+    private String hinhThucHoan;
+
     @Column(name = "ghi_chu", length = 500)
     private String ghiChu;
 }

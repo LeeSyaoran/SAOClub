@@ -33,6 +33,10 @@ public class PhieuTraHangRequest {
     @PositiveOrZero(message = "Số tiền hoàn phải lớn hơn hoặc bằng 0")
     private BigDecimal soTienHoan;
 
+    @NotBlank(message = "Hình thức hoàn không được để trống")
+    @Pattern(regexp = "tien_mat|vi", message = "Hình thức hoàn phải là 'tien_mat' hoặc 'vi'")
+    private String hinhThucHoan;
+
     @NotBlank(message = "Ghi chú không được để trống")
     private String ghiChu;
 }

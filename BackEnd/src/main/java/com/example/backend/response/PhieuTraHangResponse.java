@@ -20,5 +20,6 @@ public class PhieuTraHangResponse {
     private LocalDateTime ngayTra;
     private String trangThai;
     private BigDecimal soTienHoan;
+    private String hinhThucHoan;
     private String ghiChu;
 }

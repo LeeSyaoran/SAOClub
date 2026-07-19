@@ -21,6 +21,7 @@ public class KhachHangResponse {
     private String tenCongTy;
     private String maSoThue;
     private Integer diemTichLuy;
+    private java.math.BigDecimal soDuVi;
     private String trangThai;
     private LocalDateTime ngayTao;
 }

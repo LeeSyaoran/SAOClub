@@ -59,6 +59,7 @@ public class KhachHangService {
     public KhachHang create(KhachHangRequest request) {
         KhachHang entity = new KhachHang();
         BeanUtils.copyProperties(request, entity);
+        entity.setSoDuVi(java.math.BigDecimal.ZERO);
         entity.setNgayTao(LocalDateTime.now());
         return khachHangRepository.save(entity);
     }
@@ -117,6 +118,7 @@ public class KhachHangService {
         entity.setDiaChi(request.getDiaChi());
         entity.setDiemTichLuy(0);
         entity.setTrangThai("active");
+        entity.setSoDuVi(java.math.BigDecimal.ZERO);
         entity.setLoaiKhach("ca_nhan");
         entity.setNgayTao(LocalDateTime.now());
         KhachHang savedKh = khachHangRepository.save(entity);
