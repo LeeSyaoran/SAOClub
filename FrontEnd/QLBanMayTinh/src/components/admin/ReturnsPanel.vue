@@ -4,7 +4,7 @@ import { t } from "../../i18n/index.js";
 import * as PhieuTraHangService from "../../Service/PhieuTraHangService.js";
 import * as ChiTietTraHangService from "../../Service/ChiTietTraHangService.js";
 import * as ChiTietDonHangService from "../../Service/ChiTietDonHangService.js";
-import { formatPrice, formatDate } from "../../utils/adminFormat.js";
+import { formatPrice } from "../../utils/adminFormat.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";

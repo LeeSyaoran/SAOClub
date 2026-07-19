@@ -122,4 +122,73 @@ class PhieuTraHangServiceTest {
         assertThat(kh.getSoDuVi()).isEqualByComparingTo(BigDecimal.valueOf(100_000));
         verify(khachHangRepository, never()).save(any());
     }
+
+    // ── Guard: chặn sửa các trường tiền-liên-quan sau khi đã hoàn tiền qua ví ──────
+
+    private PhieuTraHang phieuDaCongViQua(Integer donHangId) {
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(1);
+        kh.setSoDuVi(BigDecimal.valueOf(100_000));
+
+        DonHang donHang = new DonHang();
+        donHang.setId(donHangId);
+        donHang.setKhachHang(kh);
+
+        PhieuTraHang phieu = new PhieuTraHang();
+        phieu.setPhieuTraId(5);
+        phieu.setDonHang(donHang);
+        phieu.setTrangThai("da_xu_ly");
+        phieu.setHinhThucHoan("vi");
+        phieu.setSoTienHoan(BigDecimal.valueOf(50_000));
+        phieu.setLyDo("Hàng lỗi");
+        phieu.setGhiChu("—");
+
+        when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
+        return phieu;
+    }
+
+    @Test
+    void update_daCongViQua_doiTrangThai_nemLoi() {
+        phieuDaCongViQua(9);
+
+        PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));
+        req.setTrangThai("tu_choi");
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.update(5, req));
+
+        verify(phieuTraHangRepository, never()).save(any());
+        verify(khachHangRepository, never()).save(any());
+    }
+
+    @Test
+    void update_daCongViQua_doiSoTienHoan_nemLoi() {
+        phieuDaCongViQua(9);
+
+        PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(70_000));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.update(5, req));
+
+        verify(phieuTraHangRepository, never()).save(any());
+        verify(khachHangRepository, never()).save(any());
+    }
+
+    @Test
+    void update_daCongViQua_suaGhiChu_thanhCong_khongCongViLanNua() {
+        PhieuTraHang phieu = phieuDaCongViQua(9);
+        KhachHang kh = phieu.getDonHang().getKhachHang();
+
+        when(donHangRepository.getReferenceById(9)).thenReturn(phieu.getDonHang());
+        when(phieuTraHangRepository.save(phieu)).thenReturn(phieu);
+
+        PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));
+        req.setGhiChu("Ghi chú mới");
+
+        service.update(5, req);
+
+        assertThat(phieu.getGhiChu()).isEqualTo("Ghi chú mới");
+        assertThat(kh.getSoDuVi()).isEqualByComparingTo(BigDecimal.valueOf(100_000));
+        verify(khachHangRepository, never()).save(any());
+    }
 }

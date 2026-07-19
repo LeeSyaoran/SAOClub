@@ -53,6 +53,7 @@ public class PhieuTraHangService {
     public PhieuTraHang update(Integer id, PhieuTraHangRequest request) {
         PhieuTraHang entity = getById(id);
         String trangThaiCu = entity.getTrangThai();
+        chanSuaSauKhiDaCongVi(entity, request);
         BeanUtils.copyProperties(request, entity, "phieuTraId", "donHangId", "nhanVienId");
         entity.setDonHang(donHangRepository.getReferenceById(request.getDonHangId()));
         entity.setNhanVien(request.getNhanVienId() != null
@@ -60,6 +61,26 @@ public class PhieuTraHangService {
         PhieuTraHang saved = phieuTraHangRepository.save(entity);
         congViNeuVuaHoanTat(trangThaiCu, saved);
         return saved;
+    }
+
+    // Guard: một khi phiếu đã hoàn tiền qua ví (trang_thai="da_xu_ly" + hinh_thuc_hoan="vi"),
+    // chặn sửa trangThai/hinhThucHoan/soTienHoan — 3 trường này quyết định số dư ví, sửa "ngầm"
+    // sẽ làm lệch ví (không có bảng ledger để đối soát lại). Các trường khác (lyDo, ghiChu,
+    // nhanVienId, ngayTra) vẫn sửa tự do.
+    private void chanSuaSauKhiDaCongVi(PhieuTraHang entity, PhieuTraHangRequest request) {
+        boolean daCongViQua = "da_xu_ly".equals(entity.getTrangThai()) && "vi".equals(entity.getHinhThucHoan());
+        if (!daCongViQua) return;
+
+        boolean doiTrangThai = !"da_xu_ly".equals(request.getTrangThai());
+        boolean doiHinhThucHoan = !"vi".equals(request.getHinhThucHoan());
+        boolean doiSoTienHoan = entity.getSoTienHoan() == null
+                ? request.getSoTienHoan() != null
+                : entity.getSoTienHoan().compareTo(request.getSoTienHoan()) != 0;
+
+        if (doiTrangThai || doiHinhThucHoan || doiSoTienHoan) {
+            throw new IllegalArgumentException(
+                    "Phiếu đã hoàn tiền qua ví — không thể đổi trạng thái/hình thức hoàn/số tiền hoàn nữa");
+        }
     }
 
     // Cộng tiền vào ví khách hàng khi phiếu VỪA chuyển sang "da_xu_ly" (trạng thái cũ khác
