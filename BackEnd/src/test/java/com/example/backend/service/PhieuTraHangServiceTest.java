@@ -175,6 +175,20 @@ class PhieuTraHangServiceTest {
     }
 
     @Test
+    void update_daCongViQua_doiHinhThucHoan_nemLoi() {
+        phieuDaCongViQua(9);
+
+        PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));
+        req.setHinhThucHoan("tien_mat");
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.update(5, req));
+
+        verify(phieuTraHangRepository, never()).save(any());
+        verify(khachHangRepository, never()).save(any());
+    }
+
+    @Test
     void update_daCongViQua_suaGhiChu_thanhCong_khongCongViLanNua() {
         PhieuTraHang phieu = phieuDaCongViQua(9);
         KhachHang kh = phieu.getDonHang().getKhachHang();
