@@ -8,6 +8,7 @@ import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import InventoryPanel from "../components/admin/InventoryPanel.vue";
 import SupplierManager from "../components/admin/SupplierManager.vue";
 import InventoryHistoryPanel from "../components/admin/InventoryHistoryPanel.vue";
+import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 
 // ── Navigation — mac dinh vao thang Kho hang (viec chinh hang ngay cua quan ly kho) ──
 const currentPage = ref("inventory");
@@ -17,6 +18,7 @@ const PAGE_META = {
   inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: "📦" },
   suppliers: { titleKey: "admin.pageMeta.suppliers.title", subKey: "admin.pageMeta.suppliers.sub", icon: "🚚" },
   inventoryHistory: { titleKey: "admin.pageMeta.inventoryHistory.title", subKey: "admin.pageMeta.inventoryHistory.sub", icon: "📜" },
+  traHang: { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
 };
 const topbarTitle = computed(() => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.inventory.title"));
 const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
@@ -56,6 +58,10 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
           {{ t('admin.sidebar.inventoryHistory') }}
         </div>
+        <div class="adm-nav" :class="{active: currentPage==='traHang'}" @click="navigate('traHang')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 3.293a1 1 0 010 1.414L7.414 7H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          {{ t('admin.sidebar.traHang') }}
+        </div>
       </nav>
 
       <UserProfileMenu :show-settings-link="false" />
@@ -85,6 +91,7 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
         <section v-show="currentPage === 'inventory'"><InventoryPanel /></section>
         <section v-show="currentPage === 'suppliers'"><SupplierManager /></section>
         <section v-show="currentPage === 'inventoryHistory'"><InventoryHistoryPanel /></section>
+        <section v-show="currentPage === 'traHang'"><ReturnsPanel :readonly="true" /></section>
       </div>
     </main>
   </div>
