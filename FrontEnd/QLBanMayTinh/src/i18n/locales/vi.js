@@ -728,6 +728,35 @@ export default {
       addNew: "Thêm mới",
     },
 
+    suppliers: {
+      countSuffix: "nhà cung cấp",
+      add: "+ Thêm nhà cung cấp",
+      loading: "Đang tải...",
+      colName: "Tên nhà cung cấp",
+      colPhone: "Điện thoại",
+      colEmail: "Email",
+      colContact: "Người liên hệ",
+      colStatus: "Trạng thái",
+      colAction: "Thao tác",
+      edit: "Sửa",
+      delete: "Xóa",
+      empty: "Chưa có nhà cung cấp",
+      searchPlaceholder: "Tìm tên, SĐT, email...",
+    },
+
+    supplierModal: {
+      titleEdit: "Cập nhật nhà cung cấp",
+      titleAdd: "Thêm nhà cung cấp mới",
+      nameLabel: "Tên nhà cung cấp *",
+      phoneLabel: "Điện thoại",
+      emailLabel: "Email",
+      addressLabel: "Địa chỉ",
+      taxCodeLabel: "Mã số thuế",
+      contactLabel: "Người liên hệ",
+      statusLabel: "Trạng thái",
+      nameRequired: "Vui lòng nhập tên nhà cung cấp",
+    },
+
     inventory: {
       tabStock: "Tồn kho",
       tabReceipts: "Phiếu nhập",
@@ -1097,6 +1126,7 @@ export default {
       mergeOrders: "Gộp {count} đơn hàng cùng ngày vào đơn #{id}?",
       deleteSerial: "Xóa serial này khỏi hệ thống? Chỉ dùng khi thêm nhầm.",
       deletePhieuNhap: "Xóa phiếu nhập này? Toàn bộ dòng chi tiết trong phiếu sẽ mất theo.",
+      deleteSupplier: "Xóa nhà cung cấp này?",
     },
 
     errors: {

@@ -714,6 +714,35 @@ export default {
       addNew: "新增",
     },
 
+    suppliers: {
+      countSuffix: "个供应商",
+      add: "+ 添加供应商",
+      loading: "加载中...",
+      colName: "供应商名称",
+      colPhone: "电话",
+      colEmail: "邮箱",
+      colContact: "联系人",
+      colStatus: "状态",
+      colAction: "操作",
+      edit: "编辑",
+      delete: "删除",
+      empty: "暂无供应商",
+      searchPlaceholder: "搜索名称、电话、邮箱...",
+    },
+
+    supplierModal: {
+      titleEdit: "更新供应商",
+      titleAdd: "添加新供应商",
+      nameLabel: "供应商名称 *",
+      phoneLabel: "电话",
+      emailLabel: "邮箱",
+      addressLabel: "地址",
+      taxCodeLabel: "税号",
+      contactLabel: "联系人",
+      statusLabel: "状态",
+      nameRequired: "请输入供应商名称",
+    },
+
     inventory: {
       searchPlaceholder: "搜索商品...",
       loading: "加载中...",
@@ -989,6 +1018,7 @@ export default {
       deleteOrder: "确定要删除该订单吗？此操作无法撤销。",
       removeItemFromOrder: "从订单中移除该商品？",
       mergeOrders: "将同一天的 {count} 个订单合并到订单 #{id}？",
+      deleteSupplier: "删除此供应商？",
     },
 
     errors: {

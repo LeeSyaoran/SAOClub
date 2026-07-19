@@ -1,14 +1,22 @@
 import { reactive } from "vue";
-import * as DmService from "../Service/DmService.js";
+import * as NhaCungCapService from "../Service/NhaCungCapService.js";
 
 export const SuppliersStore = reactive({ items: [], loading: false, loaded: false });
 
 let suppliersPromise = null;
 export const ensureSuppliers = () => {
   if (suppliersPromise) return suppliersPromise;
-  suppliersPromise = DmService.getNhaCungCap().catch(() => []).then((list) => {
-    SuppliersStore.items = list;
-    SuppliersStore.loaded = true;
-  });
+  suppliersPromise = refreshSuppliers();
   return suppliersPromise;
+};
+
+export const refreshSuppliers = async () => {
+  SuppliersStore.loading = true;
+  try {
+    SuppliersStore.items = await NhaCungCapService.getAll().catch(() => []);
+    SuppliersStore.loaded = true;
+  } finally {
+    SuppliersStore.loading = false;
+  }
+  return SuppliersStore.items;
 };

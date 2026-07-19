@@ -714,6 +714,35 @@ export default {
       addNew: "追加",
     },
 
+    suppliers: {
+      countSuffix: "件のサプライヤー",
+      add: "+ サプライヤーを追加",
+      loading: "読み込み中...",
+      colName: "サプライヤー名",
+      colPhone: "電話番号",
+      colEmail: "メール",
+      colContact: "担当者",
+      colStatus: "ステータス",
+      colAction: "操作",
+      edit: "編集",
+      delete: "削除",
+      empty: "サプライヤーがまだありません",
+      searchPlaceholder: "名前・電話番号・メールで検索...",
+    },
+
+    supplierModal: {
+      titleEdit: "サプライヤーを更新",
+      titleAdd: "新しいサプライヤーを追加",
+      nameLabel: "サプライヤー名 *",
+      phoneLabel: "電話番号",
+      emailLabel: "メール",
+      addressLabel: "住所",
+      taxCodeLabel: "税番号",
+      contactLabel: "担当者",
+      statusLabel: "ステータス",
+      nameRequired: "サプライヤー名を入力してください",
+    },
+
     inventory: {
       searchPlaceholder: "商品を検索...",
       loading: "読み込み中...",
@@ -989,6 +1018,7 @@ export default {
       deleteOrder: "この注文を削除してもよろしいですか？この操作は取り消せません。",
       removeItemFromOrder: "この商品を注文から削除しますか？",
       mergeOrders: "同日の {count} 件の注文を注文 #{id} に統合しますか？",
+      deleteSupplier: "このサプライヤーを削除しますか？",
     },
 
     errors: {

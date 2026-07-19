@@ -714,6 +714,35 @@ export default {
       addNew: "Add",
     },
 
+    suppliers: {
+      countSuffix: "suppliers",
+      add: "+ Add supplier",
+      loading: "Loading...",
+      colName: "Supplier name",
+      colPhone: "Phone",
+      colEmail: "Email",
+      colContact: "Contact person",
+      colStatus: "Status",
+      colAction: "Action",
+      edit: "Edit",
+      delete: "Delete",
+      empty: "No suppliers yet",
+      searchPlaceholder: "Search name, phone, email...",
+    },
+
+    supplierModal: {
+      titleEdit: "Update supplier",
+      titleAdd: "Add new supplier",
+      nameLabel: "Supplier name *",
+      phoneLabel: "Phone",
+      emailLabel: "Email",
+      addressLabel: "Address",
+      taxCodeLabel: "Tax code",
+      contactLabel: "Contact person",
+      statusLabel: "Status",
+      nameRequired: "Please enter the supplier name",
+    },
+
     inventory: {
       searchPlaceholder: "Search products...",
       loading: "Loading...",
@@ -989,6 +1018,7 @@ export default {
       deleteOrder: "Are you sure you want to delete this order? This action cannot be undone.",
       removeItemFromOrder: "Remove this product from the order?",
       mergeOrders: "Merge {count} orders from the same day into order #{id}?",
+      deleteSupplier: "Delete this supplier?",
     },
 
     errors: {

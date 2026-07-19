@@ -714,6 +714,35 @@ export default {
       addNew: "추가",
     },
 
+    suppliers: {
+      countSuffix: "개 공급업체",
+      add: "+ 공급업체 추가",
+      loading: "로딩 중...",
+      colName: "공급업체명",
+      colPhone: "전화번호",
+      colEmail: "이메일",
+      colContact: "담당자",
+      colStatus: "상태",
+      colAction: "작업",
+      edit: "수정",
+      delete: "삭제",
+      empty: "등록된 공급업체가 없습니다",
+      searchPlaceholder: "이름, 전화번호, 이메일 검색...",
+    },
+
+    supplierModal: {
+      titleEdit: "공급업체 수정",
+      titleAdd: "새 공급업체 추가",
+      nameLabel: "공급업체명 *",
+      phoneLabel: "전화번호",
+      emailLabel: "이메일",
+      addressLabel: "주소",
+      taxCodeLabel: "사업자번호",
+      contactLabel: "담당자",
+      statusLabel: "상태",
+      nameRequired: "공급업체명을 입력해 주세요",
+    },
+
     inventory: {
       searchPlaceholder: "상품 검색...",
       loading: "로딩 중...",
@@ -989,6 +1018,7 @@ export default {
       deleteOrder: "이 주문을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
       removeItemFromOrder: "이 상품을 주문에서 삭제하시겠습니까?",
       mergeOrders: "같은 날짜의 주문 {count}건을 주문 #{id}에 병합하시겠습니까?",
+      deleteSupplier: "이 공급업체를 삭제하시겠습니까?",
     },
 
     errors: {
