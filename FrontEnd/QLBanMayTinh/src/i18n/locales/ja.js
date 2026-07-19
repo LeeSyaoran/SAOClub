@@ -761,6 +761,25 @@ export default {
       empty: "データがありません",
     },
 
+    inventoryHistory: {
+      countSuffix: "件の変動",
+      loading: "読み込み中...",
+      searchPlaceholder: "SKU・メモで検索...",
+      allTypes: "すべての種類",
+      typeNhap: "入庫",
+      typeXuatBan: "販売",
+      typeTraHang: "返品",
+      typeDieuChinh: "調整",
+      typeHuy: "キャンセル",
+      typeGiuHang: "保留",
+      colDate: "日時",
+      colSku: "SKU",
+      colType: "変動種類",
+      colQty: "数量",
+      colNote: "メモ",
+      empty: "在庫変動履歴はまだありません",
+    },
+
     stockModal: {
       title: "在庫を更新",
       skuLabel: "SKU：",

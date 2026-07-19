@@ -761,6 +761,25 @@ export default {
       empty: "데이터가 없습니다",
     },
 
+    inventoryHistory: {
+      countSuffix: "건의 변동 내역",
+      loading: "로딩 중...",
+      searchPlaceholder: "SKU, 메모 검색...",
+      allTypes: "전체 유형",
+      typeNhap: "입고",
+      typeXuatBan: "판매",
+      typeTraHang: "반품",
+      typeDieuChinh: "조정",
+      typeHuy: "취소",
+      typeGiuHang: "홀드",
+      colDate: "일시",
+      colSku: "SKU",
+      colType: "변동 유형",
+      colQty: "수량",
+      colNote: "메모",
+      empty: "재고 변동 내역이 없습니다",
+    },
+
     stockModal: {
       title: "재고 수정",
       skuLabel: "SKU:",

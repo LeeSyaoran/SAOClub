@@ -788,6 +788,25 @@ export default {
       empty: "Không có dữ liệu",
     },
 
+    inventoryHistory: {
+      countSuffix: "lượt biến động",
+      loading: "Đang tải...",
+      searchPlaceholder: "Tìm SKU, ghi chú...",
+      allTypes: "Tất cả loại",
+      typeNhap: "Nhập kho",
+      typeXuatBan: "Xuất bán",
+      typeTraHang: "Trả hàng",
+      typeDieuChinh: "Điều chỉnh",
+      typeHuy: "Hủy",
+      typeGiuHang: "Giữ hàng",
+      colDate: "Thời gian",
+      colSku: "SKU",
+      colType: "Loại biến động",
+      colQty: "Số lượng",
+      colNote: "Ghi chú",
+      empty: "Chưa có lịch sử biến động",
+    },
+
     phieuNhap: {
       statTotal: "Tổng phiếu",
       statPending: "Chờ duyệt",

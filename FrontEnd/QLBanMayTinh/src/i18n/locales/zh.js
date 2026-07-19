@@ -761,6 +761,25 @@ export default {
       empty: "暂无数据",
     },
 
+    inventoryHistory: {
+      countSuffix: "条变动记录",
+      loading: "加载中...",
+      searchPlaceholder: "搜索 SKU、备注...",
+      allTypes: "全部类型",
+      typeNhap: "入库",
+      typeXuatBan: "售出",
+      typeTraHang: "退货",
+      typeDieuChinh: "调整",
+      typeHuy: "取消",
+      typeGiuHang: "锁定",
+      colDate: "时间",
+      colSku: "SKU",
+      colType: "变动类型",
+      colQty: "数量",
+      colNote: "备注",
+      empty: "暂无库存变动记录",
+    },
+
     stockModal: {
       title: "更新库存",
       skuLabel: "SKU：",

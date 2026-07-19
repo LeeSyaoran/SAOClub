@@ -761,6 +761,25 @@ export default {
       empty: "No data",
     },
 
+    inventoryHistory: {
+      countSuffix: "movements",
+      loading: "Loading...",
+      searchPlaceholder: "Search SKU, note...",
+      allTypes: "All types",
+      typeNhap: "Stock in",
+      typeXuatBan: "Sold",
+      typeTraHang: "Returned",
+      typeDieuChinh: "Adjusted",
+      typeHuy: "Cancelled",
+      typeGiuHang: "Held",
+      colDate: "Date",
+      colSku: "SKU",
+      colType: "Movement type",
+      colQty: "Quantity",
+      colNote: "Note",
+      empty: "No inventory movements yet",
+    },
+
     stockModal: {
       title: "Update stock",
       skuLabel: "SKU:",
