@@ -403,6 +403,8 @@ export default {
       userBrowse: "商品を見る",
       userProfile: "プロフィール",
       logout: "ログアウト",
+      suppliers: "サプライヤー",
+      inventoryHistory: "在庫履歴",
     },
 
     pageMeta: {
@@ -421,6 +423,8 @@ export default {
       userBrowse:   { title: "商品を見る",   sub: "商品を探す" },
       userWarranty: { title: "保証",         sub: "保証管理" },
       userProfile:  { title: "プロフィール", sub: "アカウント情報" },
+      suppliers:        { title: "サプライヤー",   sub: "サプライヤー管理" },
+      inventoryHistory:  { title: "在庫履歴", sub: "在庫変動履歴" },
     },
 
     userRole: {

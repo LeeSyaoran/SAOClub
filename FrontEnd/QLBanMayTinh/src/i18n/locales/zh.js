@@ -403,6 +403,8 @@ export default {
       userBrowse: "购物",
       userProfile: "个人资料",
       logout: "退出登录",
+      suppliers: "供应商",
+      inventoryHistory: "库存历史",
     },
 
     pageMeta: {
@@ -421,6 +423,8 @@ export default {
       userBrowse:   { title: "购物",       sub: "探索商品" },
       userWarranty: { title: "保修",       sub: "管理保修" },
       userProfile:  { title: "个人资料",   sub: "账户信息" },
+      suppliers:        { title: "供应商",   sub: "管理供应商" },
+      inventoryHistory:  { title: "库存历史", sub: "库存变动历史" },
     },
 
     userRole: {

@@ -413,6 +413,8 @@ export default {
       userBrowse: "Mua sắm",
       userProfile: "Hồ sơ",
       logout: "Đăng xuất",
+      suppliers: "Nhà cung cấp",
+      inventoryHistory: "Lịch sử tồn kho",
     },
 
     pageMeta: {
@@ -431,6 +433,8 @@ export default {
       userBrowse:   { title: "Mua sắm",                 sub: "Khám phá sản phẩm" },
       userWarranty: { title: "Bảo hành",                sub: "Quản lý bảo hành" },
       userProfile:  { title: "Hồ sơ",                   sub: "Thông tin tài khoản" },
+      suppliers:        { title: "Nhà cung cấp",   sub: "Quản lý nhà cung cấp" },
+      inventoryHistory:  { title: "Lịch sử tồn kho", sub: "Lịch sử biến động tồn kho" },
     },
 
     userRole: {

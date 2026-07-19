@@ -403,6 +403,8 @@ export default {
       userBrowse: "쇼핑하기",
       userProfile: "프로필",
       logout: "로그아웃",
+      suppliers: "공급업체",
+      inventoryHistory: "재고 이력",
     },
 
     pageMeta: {
@@ -421,6 +423,8 @@ export default {
       userBrowse:   { title: "쇼핑하기",   sub: "상품 둘러보기" },
       userWarranty: { title: "보증",       sub: "보증 관리" },
       userProfile:  { title: "프로필",     sub: "계정 정보" },
+      suppliers:        { title: "공급업체",   sub: "공급업체 관리" },
+      inventoryHistory:  { title: "재고 이력", sub: "재고 변동 이력" },
     },
 
     userRole: {

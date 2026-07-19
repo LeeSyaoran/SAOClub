@@ -403,6 +403,8 @@ export default {
       userBrowse: "Browse",
       userProfile: "Profile",
       logout: "Sign out",
+      suppliers: "Suppliers",
+      inventoryHistory: "Inventory history",
     },
 
     pageMeta: {
@@ -421,6 +423,8 @@ export default {
       userBrowse:   { title: "Browse",          sub: "Explore products" },
       userWarranty: { title: "Warranty",        sub: "Manage warranty" },
       userProfile:  { title: "Profile",         sub: "Account information" },
+      suppliers:        { title: "Suppliers",   sub: "Manage suppliers" },
+      inventoryHistory:  { title: "Inventory history", sub: "Stock movement history" },
     },
 
     userRole: {
