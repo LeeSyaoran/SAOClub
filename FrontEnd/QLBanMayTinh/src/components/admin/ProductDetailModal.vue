@@ -13,6 +13,7 @@ const props = defineProps({
   modelValue: { type: Boolean, default: false },
   sanPhamId: { type: [Number, String], default: null },
   sanPhamName: { type: String, default: "" },
+  readonly: { type: Boolean, default: false },
 });
 const emit = defineEmits(["update:modelValue", "edit-requested"]);
 
@@ -62,7 +63,7 @@ const requestDeleteVariant = (bienTheId) => {
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ t('admin.detailModal.titlePrefix') }} {{ sanPhamName }}</span>
         <div class="d-flex align-items-center gap-2">
-          <button class="btn btn-sm btn-warning text-dark fw-bold" style="font-size:0.78rem;" @click="requestAddVariant">{{ t('admin.variantModal.addVariant') }}</button>
+          <button v-if="!readonly" class="btn btn-sm btn-warning text-dark fw-bold" style="font-size:0.78rem;" @click="requestAddVariant">{{ t('admin.variantModal.addVariant') }}</button>
           <button class="btn-close btn-close-white btn-sm" @click="close"></button>
         </div>
       </div>
@@ -78,7 +79,7 @@ const requestDeleteVariant = (bienTheId) => {
                 <div class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</div>
               </div>
             </div>
-            <div class="d-flex gap-2 flex-shrink-0">
+            <div v-if="!readonly" class="d-flex gap-2 flex-shrink-0">
               <button class="btn btn-sm btn-outline-warning" style="font-size:0.75rem;padding:3px 12px;" @click="requestEdit(v)">{{ t('admin.detailModal.edit') }}</button>
               <button class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;padding:3px 12px;" @click="requestDeleteVariant(v.bienTheId)">{{ t('admin.products.delete') }}</button>
             </div>

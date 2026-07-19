@@ -5,6 +5,7 @@ import { t } from "../../i18n/index.js";
 import * as CaiDatService from "../../Service/CaiDatService.js";
 
 const emit = defineEmits(["navigate-settings"]);
+const props = defineProps({ showSettingsLink: { type: Boolean, default: true } });
 
 // ── User ─────────────────────────────────────────────────────────────────────
 const userDisplayName = computed(() => AuthStore.user?.hoTen ?? AuthStore.user?.username ?? "Admin");
@@ -126,7 +127,7 @@ const goToSettingsFromMenu = () => {
       <button class="btn btn-sm w-100 text-start rounded-0 border-0" style="color:var(--text-primary);" @click="openQuickPasswordModal">
         {{ t('admin.settings.changePasswordTitle') }}
       </button>
-      <button class="btn btn-sm w-100 text-start rounded-0 border-0" style="color:var(--text-primary);" @click="goToSettingsFromMenu">
+      <button v-if="showSettingsLink" class="btn btn-sm w-100 text-start rounded-0 border-0" style="color:var(--text-primary);" @click="goToSettingsFromMenu">
         {{ t('admin.sidebar.settings') }}
       </button>
     </div>

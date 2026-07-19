@@ -16,6 +16,8 @@ import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 
+const props = defineProps({ canDelete: { type: Boolean, default: true } });
+
 onMounted(() => { ensureOrders(); ensureCustomers(); ensureProducts(); });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -600,7 +602,7 @@ const confirmXacNhanSerial = async () => {
                   {{ NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].icon }} {{ t(NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].key) }}
                 </button>
                 <button v-if="!['delivered','cancelled','returned'].includes(o.trangThaiDonHang)" class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
-                <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">{{ t('admin.orders.delete') }}</button>
+                <button v-if="canDelete" class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">{{ t('admin.orders.delete') }}</button>
               </div>
             </td>
           </tr>

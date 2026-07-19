@@ -15,6 +15,8 @@ import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/pro
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 
+const props = defineProps({ readonly: { type: Boolean, default: false } });
+
 onMounted(() => { ensureProducts(); });
 
 const suppliers = computed(() => SuppliersStore.items);
@@ -392,7 +394,7 @@ const deleteVariant = async (bienTheId) => {
     <span class="text-secondary small">{{ filteredGroupedProducts.length }}/{{ groupedProducts.length }} {{ t('admin.products.countSuffix') }}</span>
     <div class="d-flex gap-2 flex-wrap">
       <input v-model="productSearch" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.products.searchPlaceholder')" />
-      <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAdd">{{ t('admin.products.add') }}</button>
+      <button v-if="!readonly" class="btn btn-sm btn-warning text-dark fw-bold" @click="openAdd">{{ t('admin.products.add') }}</button>
     </div>
   </div>
   <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.products.loading') }}</div>
@@ -417,7 +419,7 @@ const deleteVariant = async (bienTheId) => {
           <td>
             <div class="d-flex gap-1">
               <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem; padding:2px 8px;" @click="openDetail(p.sanPhamId, p.tenSanPham)">{{ t('admin.products.detail') }}</button>
-              <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteProduct(p.sanPhamId)">{{ t('admin.products.delete') }}</button>
+              <button v-if="!readonly" class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteProduct(p.sanPhamId)">{{ t('admin.products.delete') }}</button>
             </div>
           </td>
         </tr>
@@ -430,6 +432,7 @@ const deleteVariant = async (bienTheId) => {
     v-model="showDetailModal"
     :san-pham-id="detailModalSanPhamId"
     :san-pham-name="detailModalSanPhamName"
+    :readonly="readonly"
     @edit-requested="onDetailEditRequested"
   />
 
