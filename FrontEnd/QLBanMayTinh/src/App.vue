@@ -23,6 +23,7 @@ import * as AuthService from "./Service/AuthService.js";
 // Import các component trang
 import AdminPage from "./pages/AdminPage.vue";
 import StaffPage from "./pages/StaffPage.vue";
+import WarehouseManagementPage from "./pages/WarehouseManagementPage.vue";
 import AccountPage from "./pages/AccountPage.vue";
 import LoginForm from "./components/auth/LoginForm.vue";
 import RegisterForm from "./components/auth/RegisterForm.vue";
@@ -49,6 +50,9 @@ const isAdminHash = computed(() => currentHash.value === "#admin");
 
 // Computed: kiểm tra có đang ở route nhân viên không
 const isStaffHash = computed(() => currentHash.value === "#staff");
+
+// Computed: kiểm tra có đang ở route quản lý kho không
+const isKhoHash = computed(() => currentHash.value === "#kho");
 
 // Computed: kiểm tra có đang ở route tài khoản khách hàng không
 const isAccountHash = computed(() => currentHash.value === "#account");
@@ -532,8 +536,7 @@ function goAccount() {
 function onLoginSuccess(user) {
   setSession(user);
   loadCart(); // Khôi phục giỏ hàng đã lưu của tài khoản này (nếu có)
-  // quan_kho tạm thời vẫn về #admin — WarehouseManagementPage chưa xây (Plan 4).
-  const ROLE_HASH = { admin: "#admin", nhan_vien: "#staff", quan_kho: "#admin" };
+  const ROLE_HASH = { admin: "#admin", nhan_vien: "#staff", quan_kho: "#kho" };
   window.location.hash = ROLE_HASH[user.role] ?? "";
 }
 
@@ -559,11 +562,11 @@ onBeforeUnmount(() => {
     <!-- ══════════════════════════════════════════════════════
         TRANG ADMIN — chỉ hiển thị khi URL có #admin VÀ là admin
     ══════════════════════════════════════════════════════ -->
-    <AdminPage v-if="isAdminHash && ['admin', 'quan_kho'].includes(auth.user?.role)" />
+    <AdminPage v-if="isAdminHash && auth.user?.role === 'admin'" />
 
     <!-- Thông báo từ chối quyền truy cập -->
     <section
-      v-else-if="isAdminHash && !['admin', 'quan_kho'].includes(auth.user?.role)"
+      v-else-if="isAdminHash && auth.user?.role !== 'admin'"
       class="d-flex align-items-center justify-content-center"
       style="min-height: 100vh; background: var(--bg-page)"
     >
@@ -596,6 +599,37 @@ onBeforeUnmount(() => {
     <!-- Thông báo từ chối quyền truy cập (staff) -->
     <section
       v-else-if="isStaffHash && auth.user?.role !== 'nhan_vien'"
+      class="d-flex align-items-center justify-content-center"
+      style="min-height: 100vh; background: var(--bg-page)"
+    >
+      <div
+        class="text-center d-flex flex-column align-items-center gap-3"
+        style="color: var(--text-primary)"
+      >
+        <div style="font-size: 3rem">🔒</div>
+        <h2 class="fw-black mb-0" style="font-size: 1.5rem">
+          {{ t("adminAccess.title") }}
+        </h2>
+        <p class="mb-0" style="color: var(--text-secondary)">
+          {{ t("adminAccess.desc") }}
+        </p>
+        <button
+          class="btn btn-warning fw-bold rounded-pill px-4 py-2"
+          @click="goHome"
+        >
+          {{ t("common.goHome") }}
+        </button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════
+        TRANG QUẢN LÝ KHO — chỉ hiển thị khi URL có #kho VÀ đúng role quan_kho
+    ══════════════════════════════════════════════════════ -->
+    <WarehouseManagementPage v-else-if="isKhoHash && auth.user?.role === 'quan_kho'" />
+
+    <!-- Thông báo từ chối quyền truy cập (kho) -->
+    <section
+      v-else-if="isKhoHash && auth.user?.role !== 'quan_kho'"
       class="d-flex align-items-center justify-content-center"
       style="min-height: 100vh; background: var(--bg-page)"
     >
