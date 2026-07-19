@@ -227,6 +227,12 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
              style="background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.25); color:var(--accent-fg); font-size:12px; white-space:nowrap;">
           🎁 {{ t('account.points', { points: profile.diemTichLuy ?? 0 }) }}
         </div>
+
+        <!-- So du vi -->
+        <div v-if="profile" class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-bold"
+             style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.25); color:#22c55e; font-size:12px; white-space:nowrap;">
+          💰 {{ t('account.walletBalance', { amount: formatPrice(profile.soDuVi ?? 0) }) }}
+        </div>
       </div>
     </header>
 
