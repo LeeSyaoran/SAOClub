@@ -81,6 +81,7 @@ const STATUS_COLOR = {
   da_ban: '#94a3b8',
   loi_bao_hanh: '#fb923c',
   da_tra_hang: '#38bdf8',
+  da_su_dung: '#a78bfa',
 };
 const statusColor = (s) => STATUS_COLOR[s] ?? '#6b7280';
 const statusLabel = (s) => t(`admin.statusLabel.${s}`);
