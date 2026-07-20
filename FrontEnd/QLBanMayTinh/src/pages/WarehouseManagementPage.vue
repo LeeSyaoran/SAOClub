@@ -9,6 +9,7 @@ import InventoryPanel from "../components/admin/InventoryPanel.vue";
 import SupplierManager from "../components/admin/SupplierManager.vue";
 import InventoryHistoryPanel from "../components/admin/InventoryHistoryPanel.vue";
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
+import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
 
 // ── Navigation — mac dinh vao thang Kho hang (viec chinh hang ngay cua quan ly kho) ──
 const currentPage = ref("inventory");
@@ -19,6 +20,7 @@ const PAGE_META = {
   suppliers: { titleKey: "admin.pageMeta.suppliers.title", subKey: "admin.pageMeta.suppliers.sub", icon: "🚚" },
   inventoryHistory: { titleKey: "admin.pageMeta.inventoryHistory.title", subKey: "admin.pageMeta.inventoryHistory.sub", icon: "📜" },
   traHang: { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
+  warrantyClaims: { titleKey: "admin.pageMeta.warrantyClaims.title", subKey: "admin.pageMeta.warrantyClaims.sub", icon: "🛡️" },
 };
 const topbarTitle = computed(() => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.inventory.title"));
 const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
@@ -62,6 +64,10 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 3.293a1 1 0 010 1.414L7.414 7H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
           {{ t('admin.sidebar.traHang') }}
         </div>
+        <div class="adm-nav" :class="{active: currentPage==='warrantyClaims'}" @click="navigate('warrantyClaims')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          {{ t('admin.sidebar.warrantyClaims') }}
+        </div>
       </nav>
 
       <UserProfileMenu :show-settings-link="false" />
@@ -92,6 +98,7 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
         <section v-show="currentPage === 'suppliers'"><SupplierManager /></section>
         <section v-show="currentPage === 'inventoryHistory'"><InventoryHistoryPanel /></section>
         <section v-show="currentPage === 'traHang'"><ReturnsPanel :readonly="true" /></section>
+        <section v-show="currentPage === 'warrantyClaims'"><WarrantyPanel /></section>
       </div>
     </main>
   </div>
