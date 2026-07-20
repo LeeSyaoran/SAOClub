@@ -17,13 +17,17 @@ public class WarrantyStatusResponse {
     private String maDonHang;
     private String tenKhachHang;
     private String soDienThoaiKhachHang;
+    private Integer donHangId;
+    private Integer bienTheId;
+    private Integer khachHangId;
     // Tính ở service (ngayGiaoThucTe + baoHanhThang tháng) — không lấy được thẳng bằng JPQL
     // constructor-expression nên để trống ở đây, set sau khi query xong.
     private LocalDateTime ngayHetBaoHanh;
 
     public WarrantyStatusResponse(Integer chiTietId, String soSerial, String maSku, String tenSanPham,
                                    Integer baoHanhThang, LocalDateTime ngayGiaoThucTe, String maDonHang,
-                                   String tenKhachHang, String soDienThoaiKhachHang) {
+                                   String tenKhachHang, String soDienThoaiKhachHang,
+                                   Integer donHangId, Integer bienTheId, Integer khachHangId) {
         this.chiTietId = chiTietId;
         this.soSerial = soSerial;
         this.maSku = maSku;
@@ -33,5 +37,8 @@ public class WarrantyStatusResponse {
         this.maDonHang = maDonHang;
         this.tenKhachHang = tenKhachHang;
         this.soDienThoaiKhachHang = soDienThoaiKhachHang;
+        this.donHangId = donHangId;
+        this.bienTheId = bienTheId;
+        this.khachHangId = khachHangId;
     }
 }

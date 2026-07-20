@@ -33,7 +33,8 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     @Query("""
     SELECT new com.example.backend.response.WarrantyStatusResponse(
         c.chiTietId, c.soSerial, bt.maSku, sp.tenSanPham, bt.baoHanhThang,
-        d.ngayGiaoThucTe, d.maDonHang, kh.hoTen, kh.soDienThoai
+        d.ngayGiaoThucTe, d.maDonHang, kh.hoTen, kh.soDienThoai,
+        d.id, bt.bienTheId, kh.khachHangId
     )
     FROM ChiTietSanPham c
     JOIN c.bienThe bt
