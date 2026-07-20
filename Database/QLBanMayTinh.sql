@@ -1934,6 +1934,90 @@ DROP TABLE #MapTraHang;
 GO
 
 -- ============================================================
+--  13c. PHIẾU BẢO HÀNH DEMO
+-- ============================================================
+-- Random ~5% đơn "delivered" thành có phiếu bảo hành — đa dạng trạng thái xử lý
+-- (con_bao_hanh/dang_xu_ly/da_xu_ly/het_bao_hanh/tu_choi) để có sẵn dữ liệu demo. Sản
+-- phẩm bảo hành = dòng chi_tiet_don_hang đầu tiên (id nhỏ nhất) của đơn đó — không gán
+-- chi_tiet_id (serial cụ thể) vì đơn demo không theo dõi serial theo từng đơn. ngay_mua
+-- lấy từ ngay_dat của đơn (đơn demo không có ngay_giao_thuc_te), ngay_het_bh = ngay_mua +
+-- 12-24 tháng ngẫu nhiên. phieu_bao_hanh không có cột nhân viên xử lý nên không cần bảng
+-- tạm kiểu #NhanVienSo như mục 13b.
+--
+-- Vật chất hoá NEWID() vào bảng tạm thật (#DonBaoHanh) trước khi CROSS APPLY/lọc — cùng
+-- lý do đã ghi ở mục 13b (tránh SQL Server tính lại NEWID() nhiều lần cho cùng 1 dòng).
+IF OBJECT_ID('tempdb..#DonBaoHanh') IS NOT NULL DROP TABLE #DonBaoHanh;
+IF OBJECT_ID('tempdb..#PhieuBaoHanh') IS NOT NULL DROP TABLE #PhieuBaoHanh;
+
+SELECT don_hang_id, khach_hang_id, ngay_dat,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 100 AS roll_chon,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 6 AS roll_loi,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 100 AS roll_trangthai,
+       12 + ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 13 AS so_thang_bh,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 14 AS roll_ngay_tiepnhan,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 5 AS roll_ngay_traklach,
+       300000 + ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 1700000 AS roll_chiphi
+INTO #DonBaoHanh
+FROM don_hang
+WHERE trang_thai_don_hang = N'delivered';
+
+SELECT
+    d.don_hang_id, d.khach_hang_id,
+    ct.bien_the_id,
+    d.ngay_dat AS ngay_mua,
+    DATEADD(MONTH, d.so_thang_bh, d.ngay_dat) AS ngay_het_bh,
+    CASE d.roll_loi
+         WHEN 0 THEN N'Máy không lên nguồn'
+         WHEN 1 THEN N'Pin sạc không vào, đèn báo pin không sáng'
+         WHEN 2 THEN N'Màn hình bị sọc, ám màu'
+         WHEN 3 THEN N'Bàn phím một số phím không nhận tín hiệu'
+         WHEN 4 THEN N'Ổ cứng phát ra tiếng kêu lạ'
+         ELSE N'Wifi chập chờn, hay bị rớt mạng'
+    END AS mo_ta_loi,
+    CASE
+        WHEN d.roll_trangthai < 30 THEN N'con_bao_hanh'
+        WHEN d.roll_trangthai < 55 THEN N'dang_xu_ly'
+        WHEN d.roll_trangthai < 80 THEN N'da_xu_ly'
+        WHEN d.roll_trangthai < 90 THEN N'het_bao_hanh'
+        ELSE N'tu_choi'
+    END AS trang_thai,
+    d.roll_ngay_tiepnhan, d.roll_ngay_traklach, d.roll_chiphi
+INTO #PhieuBaoHanh
+FROM #DonBaoHanh d
+CROSS APPLY (
+    SELECT TOP 1 bien_the_id
+    FROM chi_tiet_don_hang
+    WHERE don_hang_id = d.don_hang_id
+    ORDER BY chi_tiet_don_hang_id
+) ct
+WHERE d.roll_chon < 5;
+
+INSERT INTO phieu_bao_hanh (don_hang_id, bien_the_id, khach_hang_id, ngay_mua, ngay_het_bh,
+                             ngay_tiep_nhan, ngay_tra_khach, mo_ta_loi, ket_qua_xu_ly, trang_thai,
+                             chi_phi_phat_sinh, ghi_chu)
+SELECT
+    p.don_hang_id, p.bien_the_id, p.khach_hang_id, p.ngay_mua, p.ngay_het_bh,
+    CASE WHEN p.trang_thai IN (N'dang_xu_ly', N'da_xu_ly', N'het_bao_hanh', N'tu_choi')
+         THEN DATEADD(DAY, p.roll_ngay_tiepnhan, p.ngay_mua) ELSE NULL END,
+    CASE WHEN p.trang_thai IN (N'da_xu_ly', N'het_bao_hanh', N'tu_choi')
+         THEN DATEADD(DAY, p.roll_ngay_tiepnhan + p.roll_ngay_traklach, p.ngay_mua) ELSE NULL END,
+    p.mo_ta_loi,
+    CASE p.trang_thai
+         WHEN N'da_xu_ly' THEN N'Đã sửa chữa/thay thế linh kiện, bàn giao lại cho khách'
+         WHEN N'het_bao_hanh' THEN N'Từ chối — máy đã hết hạn bảo hành theo hóa đơn'
+         WHEN N'tu_choi' THEN N'Từ chối — lỗi không thuộc diện bảo hành'
+         ELSE NULL
+    END,
+    p.trang_thai,
+    CASE WHEN p.trang_thai = N'da_xu_ly' THEN p.roll_chiphi ELSE 0 END,
+    N'Dữ liệu demo'
+FROM #PhieuBaoHanh p;
+
+DROP TABLE #DonBaoHanh;
+DROP TABLE #PhieuBaoHanh;
+GO
+
+-- ============================================================
 --  14. NÂNG TỒN KHO DEMO (mỗi biến thể ~20-30 máy, trừ 1 biến thể sắp hết hàng)
 -- ============================================================
 -- Đồng bộ ton_kho TRƯỚC — nhiều biến thể ngoài Dell đang bị lệch (so_luong_ton_thuc_te
