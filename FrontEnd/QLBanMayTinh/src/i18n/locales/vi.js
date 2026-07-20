@@ -882,6 +882,7 @@ export default {
       tabStock: "Tồn kho",
       tabReceipts: "Phiếu nhập",
       tabWarranty: "Bảo hành",
+      tabSerial: "Serial",
       statTotalSku: "Tổng SKU",
       statTotalStock: "Tổng tồn",
       statLowStock: "Sắp hết",
@@ -932,6 +933,7 @@ export default {
       cancel: "Hủy",
       save: "Lưu",
       nameRequired: "Vui lòng nhập {label}",
+      serialRequired: "Vui lòng nhập ít nhất 1 số serial cho {label} mới",
     },
 
     serialManager: {
@@ -959,6 +961,9 @@ export default {
       save: "Lưu",
       serialRequired: "Vui lòng nhập số serial",
       variantRequired: "Vui lòng chọn sản phẩm/biến thể",
+      colLoai: "Loại",
+      specPlaceholder: "Chọn linh kiện...",
+      specRequired: "Vui lòng chọn linh kiện",
     },
 
     inventoryHistory: {
@@ -1354,6 +1359,7 @@ export default {
       da_ban: "Đã bán",
       loi_bao_hanh: "Bảo hành",
       da_tra_hang: "Đã trả hàng",
+      da_su_dung: "Đã sử dụng",
       cho_duyet: "Chờ duyệt",
       hoan_thanh: "Hoàn thành",
       huy: "Đã hủy",

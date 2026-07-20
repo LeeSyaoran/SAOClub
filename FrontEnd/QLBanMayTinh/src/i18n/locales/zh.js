@@ -880,6 +880,7 @@ export default {
       detail: "详情",
       update: "更新",
       empty: "暂无数据",
+      tabSerial: "序列号",
     },
 
     productsTabs: {
@@ -905,6 +906,7 @@ export default {
       cancel: "取消",
       save: "保存",
       nameRequired: "请输入{label}",
+      serialRequired: "请为新{label}至少输入1个序列号",
     },
 
     serialManager: {
@@ -932,6 +934,9 @@ export default {
       save: "保存",
       serialRequired: "请输入序列号",
       variantRequired: "请选择产品/型号",
+      colLoai: "类型",
+      specPlaceholder: "选择配件...",
+      specRequired: "请选择配件",
     },
 
     inventoryHistory: {
@@ -1241,6 +1246,7 @@ export default {
       da_ban: "已售",
       loi_bao_hanh: "保修中",
       da_tra_hang: "已退货",
+      da_su_dung: "已使用",
     },
   },
 };

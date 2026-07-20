@@ -880,6 +880,7 @@ export default {
       detail: "Details",
       update: "Update",
       empty: "No data",
+      tabSerial: "Serial",
     },
 
     productsTabs: {
@@ -905,6 +906,7 @@ export default {
       cancel: "Cancel",
       save: "Save",
       nameRequired: "Please enter {label}",
+      serialRequired: "Please enter at least 1 serial number for the new {label}",
     },
 
     serialManager: {
@@ -932,6 +934,9 @@ export default {
       save: "Save",
       serialRequired: "Please enter the serial number",
       variantRequired: "Please select a product/variant",
+      colLoai: "Type",
+      specPlaceholder: "Select component...",
+      specRequired: "Please select a component",
     },
 
     inventoryHistory: {
@@ -1241,6 +1246,7 @@ export default {
       da_ban: "Sold",
       loi_bao_hanh: "Warranty",
       da_tra_hang: "Returned",
+      da_su_dung: "Used",
     },
   },
 };

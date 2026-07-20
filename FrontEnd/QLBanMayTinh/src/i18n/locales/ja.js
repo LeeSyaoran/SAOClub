@@ -880,6 +880,7 @@ export default {
       detail: "詳細",
       update: "更新",
       empty: "データがありません",
+      tabSerial: "シリアル",
     },
 
     productsTabs: {
@@ -905,6 +906,7 @@ export default {
       cancel: "キャンセル",
       save: "保存",
       nameRequired: "{label}を入力してください",
+      serialRequired: "新しい{label}にシリアル番号を1つ以上入力してください",
     },
 
     serialManager: {
@@ -932,6 +934,9 @@ export default {
       save: "保存",
       serialRequired: "シリアル番号を入力してください",
       variantRequired: "商品/バリエーションを選択してください",
+      colLoai: "種類",
+      specPlaceholder: "パーツを選択...",
+      specRequired: "パーツを選択してください",
     },
 
     inventoryHistory: {
@@ -1241,6 +1246,7 @@ export default {
       da_ban: "販売済み",
       loi_bao_hanh: "保証中",
       da_tra_hang: "返品済み",
+      da_su_dung: "使用済み",
     },
   },
 };

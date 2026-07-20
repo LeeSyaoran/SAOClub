@@ -880,6 +880,7 @@ export default {
       detail: "상세",
       update: "수정",
       empty: "데이터가 없습니다",
+      tabSerial: "시리얼",
     },
 
     productsTabs: {
@@ -905,6 +906,7 @@ export default {
       cancel: "취소",
       save: "저장",
       nameRequired: "{label}을(를) 입력해 주세요",
+      serialRequired: "새 {label}에 시리얼 번호를 1개 이상 입력해 주세요",
     },
 
     serialManager: {
@@ -932,6 +934,9 @@ export default {
       save: "저장",
       serialRequired: "시리얼 번호를 입력해 주세요",
       variantRequired: "제품/옵션을 선택해 주세요",
+      colLoai: "종류",
+      specPlaceholder: "부품 선택...",
+      specRequired: "부품을 선택해 주세요",
     },
 
     inventoryHistory: {
@@ -1241,6 +1246,7 @@ export default {
       da_ban: "판매 완료",
       loi_bao_hanh: "보증 중",
       da_tra_hang: "반품 완료",
+      da_su_dung: "사용됨",
     },
   },
 };
