@@ -281,6 +281,82 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_ctsp_serial')
     CREATE UNIQUE INDEX UX_ctsp_serial ON chi_tiet_san_pham(so_serial);
 GO
 
+-- Serial linh kiện rời (CPU/RAM/GPU/Ổ cứng) — CHỈ để truy vết bảo hành/nhập kho nội bộ,
+-- KHÔNG bán rời (không có giá bán, không gắn đơn hàng) nên trạng thái khác chi_tiet_san_pham:
+-- trong_kho (còn hàng) / da_su_dung (đã lắp vào máy, không theo dõi lắp vào máy nào cụ thể)
+-- / loi_bao_hanh (lỗi, cần đổi trả nhà cung cấp).
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_cpu')
+BEGIN
+    CREATE TABLE chi_tiet_cpu (
+        chi_tiet_cpu_id INT           IDENTITY(1,1) PRIMARY KEY,
+        cpu_id          INT           NOT NULL,
+        so_serial       VARCHAR(100)  NOT NULL,
+        trang_thai      NVARCHAR(30)  NOT NULL DEFAULT N'trong_kho'
+            CONSTRAINT CK_ctcpu_trangthai CHECK (trang_thai IN (N'trong_kho', N'da_su_dung', N'loi_bao_hanh')),
+        ngay_nhap_kho   DATETIME      NOT NULL DEFAULT GETDATE(),
+        ghi_chu         NVARCHAR(255) NULL,
+        CONSTRAINT FK_ctcpu_cpu FOREIGN KEY (cpu_id) REFERENCES dm_cpu(cpu_id) ON DELETE CASCADE
+    );
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_ctcpu_serial')
+    CREATE UNIQUE INDEX UX_ctcpu_serial ON chi_tiet_cpu(so_serial);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_ram')
+BEGIN
+    CREATE TABLE chi_tiet_ram (
+        chi_tiet_ram_id INT           IDENTITY(1,1) PRIMARY KEY,
+        ram_id          INT           NOT NULL,
+        so_serial       VARCHAR(100)  NOT NULL,
+        trang_thai      NVARCHAR(30)  NOT NULL DEFAULT N'trong_kho'
+            CONSTRAINT CK_ctram_trangthai CHECK (trang_thai IN (N'trong_kho', N'da_su_dung', N'loi_bao_hanh')),
+        ngay_nhap_kho   DATETIME      NOT NULL DEFAULT GETDATE(),
+        ghi_chu         NVARCHAR(255) NULL,
+        CONSTRAINT FK_ctram_ram FOREIGN KEY (ram_id) REFERENCES dm_ram(ram_id) ON DELETE CASCADE
+    );
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_ctram_serial')
+    CREATE UNIQUE INDEX UX_ctram_serial ON chi_tiet_ram(so_serial);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_gpu')
+BEGIN
+    CREATE TABLE chi_tiet_gpu (
+        chi_tiet_gpu_id INT           IDENTITY(1,1) PRIMARY KEY,
+        gpu_id          INT           NOT NULL,
+        so_serial       VARCHAR(100)  NOT NULL,
+        trang_thai      NVARCHAR(30)  NOT NULL DEFAULT N'trong_kho'
+            CONSTRAINT CK_ctgpu_trangthai CHECK (trang_thai IN (N'trong_kho', N'da_su_dung', N'loi_bao_hanh')),
+        ngay_nhap_kho   DATETIME      NOT NULL DEFAULT GETDATE(),
+        ghi_chu         NVARCHAR(255) NULL,
+        CONSTRAINT FK_ctgpu_gpu FOREIGN KEY (gpu_id) REFERENCES dm_gpu(gpu_id) ON DELETE CASCADE
+    );
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_ctgpu_serial')
+    CREATE UNIQUE INDEX UX_ctgpu_serial ON chi_tiet_gpu(so_serial);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_o_cung')
+BEGIN
+    CREATE TABLE chi_tiet_o_cung (
+        chi_tiet_o_cung_id INT           IDENTITY(1,1) PRIMARY KEY,
+        o_cung_id          INT           NOT NULL,
+        so_serial          VARCHAR(100)  NOT NULL,
+        trang_thai         NVARCHAR(30)  NOT NULL DEFAULT N'trong_kho'
+            CONSTRAINT CK_ctocung_trangthai CHECK (trang_thai IN (N'trong_kho', N'da_su_dung', N'loi_bao_hanh')),
+        ngay_nhap_kho      DATETIME      NOT NULL DEFAULT GETDATE(),
+        ghi_chu            NVARCHAR(255) NULL,
+        CONSTRAINT FK_ctocung_ocung FOREIGN KEY (o_cung_id) REFERENCES dm_o_cung(o_cung_id) ON DELETE CASCADE
+    );
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_ctocung_serial')
+    CREATE UNIQUE INDEX UX_ctocung_serial ON chi_tiet_o_cung(so_serial);
+GO
+
 -- ============================================================
 --  6. KHUYẾN MÃI & ĐỊA CHỈ GIAO HÀNG
 -- ============================================================
