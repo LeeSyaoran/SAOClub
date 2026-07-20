@@ -15,9 +15,11 @@ import java.time.LocalDateTime;
 public class PhieuBaoHanhResponse {
     private Integer baoHanhId;
     private Integer donHangId;
-    private Integer sanPhamId;
+    private Integer bienTheId;
+    private String maSku;
     private Integer khachHangId;
-    private String serialNumber;
+    private Integer chiTietId;
+    private String soSerial;
     private LocalDateTime ngayMua;
     private LocalDateTime ngayHetBh;
     private LocalDateTime ngayTiepNhan;

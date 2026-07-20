@@ -17,14 +17,13 @@ public class PhieuBaoHanhRequest {
     @NotNull(message = "Đơn hàng không được để trống")
     private Integer donHangId;
 
-    @NotNull(message = "Sản phẩm không được để trống")
-    private Integer sanPhamId;
+    @NotNull(message = "Biến thể sản phẩm không được để trống")
+    private Integer bienTheId;
 
     @NotNull(message = "Khách hàng không được để trống")
     private Integer khachHangId;
 
-    @NotBlank(message = "Serial number không được để trống")
-    private String serialNumber;
+    private Integer chiTietId;
 
     @NotNull(message = "Ngày mua không được để trống")
     private LocalDateTime ngayMua;
@@ -32,16 +31,13 @@ public class PhieuBaoHanhRequest {
     @NotNull(message = "Ngày hết bảo hành không được để trống")
     private LocalDateTime ngayHetBh;
 
-    @NotNull(message = "Ngày tiếp nhận không được để trống")
     private LocalDateTime ngayTiepNhan;
 
-    @NotNull(message = "Ngày trả khách không được để trống")
     private LocalDateTime ngayTraKhach;
 
     @NotBlank(message = "Mô tả lỗi không được để trống")
     private String moTaLoi;
 
-    @NotBlank(message = "Kết quả xử lý không được để trống")
     private String ketQuaXuLy;
 
     @NotBlank(message = "Trạng thái không được để trống")

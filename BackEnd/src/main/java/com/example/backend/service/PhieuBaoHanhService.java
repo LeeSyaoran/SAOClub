@@ -21,6 +21,8 @@ public class PhieuBaoHanhService {
     private BienTheSanPhamRepository bienTheSanPhamRepository;
     @Autowired
     private KhachHangRepository khachHangRepository;
+    @Autowired
+    private ChiTietSanPhamRepository chiTietSanPhamRepository;
 
     public List<PhieuBaoHanhResponse> hienThiPhieuBaoHanh() {
         return phieuBaoHanhRepository.hienThiPhieuBaoHanh();
@@ -35,22 +37,23 @@ public class PhieuBaoHanhService {
         PhieuBaoHanh entity = new PhieuBaoHanh();
         // BeanUtils copies: ngayMua, ngayHetBh, ngayTiepNhan, ngayTraKhach,
         //                   moTaLoi, ketQuaXuLy, trangThai, chiPhiPhatSinh, ghiChu
-        // Bỏ qua: donHangId, sanPhamId (dùng làm bienTheId), khachHangId, serialNumber (không có trong entity)
-        BeanUtils.copyProperties(request, entity, "donHangId", "sanPhamId", "khachHangId");
+        BeanUtils.copyProperties(request, entity, "donHangId", "bienTheId", "khachHangId", "chiTietId");
         entity.setDonHang(donHangRepository.getReferenceById(request.getDonHangId()));
-        // Request dùng sanPhamId nhưng entity cần bienThe (bienTheId)
-        // — sanPhamId trong request thực tế là bienTheId
-        entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getSanPhamId()));
+        entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
         entity.setKhachHang(khachHangRepository.getReferenceById(request.getKhachHangId()));
+        entity.setChiTietSanPham(request.getChiTietId() != null
+                ? chiTietSanPhamRepository.getReferenceById(request.getChiTietId()) : null);
         return phieuBaoHanhRepository.save(entity);
     }
 
     public PhieuBaoHanh update(Integer id, PhieuBaoHanhRequest request) {
         PhieuBaoHanh entity = getById(id);
-        BeanUtils.copyProperties(request, entity, "baoHanhId", "donHangId", "sanPhamId", "khachHangId");
+        BeanUtils.copyProperties(request, entity, "baoHanhId", "donHangId", "bienTheId", "khachHangId", "chiTietId");
         entity.setDonHang(donHangRepository.getReferenceById(request.getDonHangId()));
-        entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getSanPhamId()));
+        entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
         entity.setKhachHang(khachHangRepository.getReferenceById(request.getKhachHangId()));
+        entity.setChiTietSanPham(request.getChiTietId() != null
+                ? chiTietSanPhamRepository.getReferenceById(request.getChiTietId()) : null);
         return phieuBaoHanhRepository.save(entity);
     }
 
