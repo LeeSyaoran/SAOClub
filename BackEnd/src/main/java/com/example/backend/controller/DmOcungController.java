@@ -5,6 +5,7 @@ import com.example.backend.repository.DmOcungRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
 // Danh mục ổ cứng — dữ liệu tham chiếu đơn giản, không cần service riêng
 @RestController
 @RequestMapping("/api/dm-o-cung")
+@PreAuthorize("hasRole('ADMIN')")
 public class DmOcungController {
 
     @Autowired
