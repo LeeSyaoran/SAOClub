@@ -1829,6 +1829,111 @@ GO
 GO
 
 -- ============================================================
+--  13b. PHIẾU TRẢ HÀNG + VÍ KHÁCH HÀNG DEMO
+-- ============================================================
+-- Random ~5% đơn "delivered" (vừa sinh ở mục 13) thành có phiếu trả hàng — đa dạng
+-- trạng thái (da_xu_ly/cho_xu_ly/tu_choi) và hình thức hoàn (vi/tien_mat) để có sẵn dữ
+-- liệu demo cho tính năng Trả hàng + Ví khách hàng mỗi lần chạy lại file. Sản phẩm trả =
+-- dòng chi_tiet_don_hang đầu tiên (id nhỏ nhất) của đơn đó — không gán chi_tiet_id
+-- (serial cụ thể) vì đơn demo không theo dõi serial theo từng đơn.
+--
+-- Random dùng NEWID() trực tiếp trong SELECT list, VẬT CHẤT HOÁ ngay vào bảng tạm thật
+-- (#DonDaGiao) trước khi JOIN/lọc tiếp — đúng bài học đã rút ra ở mục 13: nếu chỉ dùng
+-- CTE (không vật chất hoá) rồi JOIN/CROSS APPLY/WHERE lên các cột NEWID() của nó, SQL
+-- Server có thể tính lại các cột NEWID() nhiều lần cho cùng 1 dòng logic (từng thực tế
+-- gặp lỗi trùng khoá ở #MapTraHang khi thử theo cách CTE thuần). CROSS APPLY
+-- chi_tiet_don_hang bên dưới có tương quan (WHERE don_hang_id = dg.don_hang_id) nên an
+-- toàn dù không vật chất hoá riêng.
+IF OBJECT_ID('tempdb..#NhanVienSo') IS NOT NULL DROP TABLE #NhanVienSo;
+IF OBJECT_ID('tempdb..#DonDaGiao') IS NOT NULL DROP TABLE #DonDaGiao;
+IF OBJECT_ID('tempdb..#DonTra') IS NOT NULL DROP TABLE #DonTra;
+IF OBJECT_ID('tempdb..#MapTraHang') IS NOT NULL DROP TABLE #MapTraHang;
+
+DECLARE @SoNhanVien2 INT = (SELECT COUNT(*) FROM nhan_vien);
+
+SELECT nhan_vien_id, ROW_NUMBER() OVER (ORDER BY nhan_vien_id) AS rn
+INTO #NhanVienSo
+FROM nhan_vien;
+
+SELECT don_hang_id,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 100 AS roll_chon,
+       1 + ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % @SoNhanVien2 AS nhan_vien_rn,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 5 AS roll_lydo,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 100 AS roll_trangthai,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 100 AS roll_hinhthuc,
+       ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 14 AS roll_ngay
+INTO #DonDaGiao
+FROM don_hang
+WHERE trang_thai_don_hang = N'delivered';
+
+SELECT
+    dg.don_hang_id, nv.nhan_vien_id,
+    ct.bien_the_id, ct.don_gia, ct.so_luong,
+    CASE dg.roll_lydo
+         WHEN 0 THEN N'Sản phẩm không đúng mô tả đặt hàng'
+         WHEN 1 THEN N'Máy bị lỗi, không lên nguồn'
+         WHEN 2 THEN N'Khách đổi ý, không có lỗi sản phẩm'
+         WHEN 3 THEN N'Màn hình có điểm chết'
+         ELSE N'Giao nhầm phiên bản/màu sắc'
+    END AS ly_do,
+    CASE
+        WHEN dg.roll_trangthai < 55 THEN N'da_xu_ly'
+        WHEN dg.roll_trangthai < 80 THEN N'cho_xu_ly'
+        ELSE N'tu_choi'
+    END AS trang_thai,
+    CASE WHEN dg.roll_hinhthuc < 60 THEN N'vi' ELSE N'tien_mat' END AS hinh_thuc_hoan,
+    DATEADD(DAY, -dg.roll_ngay, CAST(GETDATE() AS DATETIME)) AS ngay_tra
+INTO #DonTra
+FROM #DonDaGiao dg
+JOIN #NhanVienSo nv ON nv.rn = dg.nhan_vien_rn
+CROSS APPLY (
+    SELECT TOP 1 bien_the_id, don_gia, so_luong
+    FROM chi_tiet_don_hang
+    WHERE don_hang_id = dg.don_hang_id
+    ORDER BY chi_tiet_don_hang_id
+) ct
+WHERE dg.roll_chon < 5;
+
+CREATE TABLE #MapTraHang (don_hang_id INT PRIMARY KEY, phieu_tra_id INT);
+
+MERGE phieu_tra_hang AS tgt
+USING #DonTra AS src
+ON 1 = 0
+WHEN NOT MATCHED THEN
+    INSERT (don_hang_id, nhan_vien_id, ly_do, ngay_tra, trang_thai, so_tien_hoan, hinh_thuc_hoan, ghi_chu)
+    VALUES (src.don_hang_id, src.nhan_vien_id, src.ly_do, src.ngay_tra, src.trang_thai,
+            CASE WHEN src.trang_thai = N'tu_choi' THEN 0 ELSE src.don_gia * src.so_luong END,
+            src.hinh_thuc_hoan, N'Dữ liệu demo')
+OUTPUT src.don_hang_id, inserted.phieu_tra_id INTO #MapTraHang(don_hang_id, phieu_tra_id);
+
+INSERT INTO chi_tiet_tra_hang (phieu_tra_id, bien_the_id, so_luong, don_gia_hoan, tinh_trang)
+SELECT m.phieu_tra_id, s.bien_the_id, s.so_luong, s.don_gia,
+       CASE WHEN ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 100 < 40 THEN N'loi' ELSE N'tot' END
+FROM #MapTraHang m
+JOIN #DonTra s ON s.don_hang_id = m.don_hang_id;
+
+-- Đồng bộ ví: logic cộng ví (PhieuTraHangService.congViNeuVuaHoanTat) chỉ chạy khi đi
+-- qua tầng ứng dụng Java lúc tạo/sửa phiếu qua API — INSERT thẳng bằng SQL ở đây không
+-- tự kích hoạt, nên phải tự đồng bộ so_du_vi = tổng so_tien_hoan các phiếu da_xu_ly+vi
+-- của khách đó. Khách không có phiếu nào qua ví thì giữ nguyên so_du_vi = 0 mặc định.
+UPDATE kh
+SET so_du_vi = tong.so_tien
+FROM khach_hang kh
+JOIN (
+    SELECT d.khach_hang_id, SUM(p.so_tien_hoan) AS so_tien
+    FROM phieu_tra_hang p
+    JOIN don_hang d ON d.don_hang_id = p.don_hang_id
+    WHERE p.trang_thai = N'da_xu_ly' AND p.hinh_thuc_hoan = N'vi'
+    GROUP BY d.khach_hang_id
+) tong ON tong.khach_hang_id = kh.khach_hang_id;
+
+DROP TABLE #NhanVienSo;
+DROP TABLE #DonDaGiao;
+DROP TABLE #DonTra;
+DROP TABLE #MapTraHang;
+GO
+
+-- ============================================================
 --  14. NÂNG TỒN KHO DEMO (mỗi biến thể ~20-30 máy, trừ 1 biến thể sắp hết hàng)
 -- ============================================================
 -- Đồng bộ ton_kho TRƯỚC — nhiều biến thể ngoài Dell đang bị lệch (so_luong_ton_thuc_te
