@@ -29,6 +29,8 @@ import PosPanel from "../components/admin/PosPanel.vue";
 import InventoryPanel from "../components/admin/InventoryPanel.vue";
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
+import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
+import SerialManager from "../components/admin/SerialManager.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
@@ -434,6 +436,7 @@ const outOfStockItems = computed(() =>
 // Thay cho khoTab cũ (giờ đã chuyển hẳn vào InventoryPanel.vue) — trang này chỉ còn
 // đúng 2 lựa chọn: "kho" (InventoryPanel — gồm Tồn kho + Phiếu nhập) và "bao-hanh".
 const inventoryMainTab = ref('kho');
+const productsMainTab = ref('sanPham');
 
 // khoTab + toàn bộ state/hàm của tab Tồn kho (inventorySearch, inventoryGrouped,
 // getVariantInfo, stockClass...) và tab Phiếu nhập kho (ensurePhieuNhapData,
@@ -1176,7 +1179,33 @@ onUnmounted(() => {
 
         <!-- ── San pham ── -->
         <section v-show="currentPage === 'products'">
-          <ProductsTable />
+          <ul class="nav nav-tabs mb-3">
+            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='sanPham'}" @click="productsMainTab='sanPham'">{{ t('admin.productsTabs.sanPham') }}</button></li>
+            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='cpu'}" @click="productsMainTab='cpu'">{{ t('admin.productsTabs.cpu') }}</button></li>
+            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='ram'}" @click="productsMainTab='ram'">{{ t('admin.productsTabs.ram') }}</button></li>
+            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='gpu'}" @click="productsMainTab='gpu'">{{ t('admin.productsTabs.gpu') }}</button></li>
+            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='oCung'}" @click="productsMainTab='oCung'">{{ t('admin.productsTabs.oCung') }}</button></li>
+            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='serial'}" @click="productsMainTab='serial'">{{ t('admin.productsTabs.serial') }}</button></li>
+          </ul>
+
+          <div v-show="productsMainTab==='sanPham'">
+            <ProductsTable />
+          </div>
+          <div v-show="productsMainTab==='cpu'">
+            <DmCategoryTable :service="DmService.DmCpuService" id-field="cpuId" name-field="tenCpu" :label="t('admin.productsTabs.cpu')" :name-label="t('admin.productsTabs.cpu')" />
+          </div>
+          <div v-show="productsMainTab==='ram'">
+            <DmCategoryTable :service="DmService.DmRamService" id-field="ramId" name-field="dungLuong" :label="t('admin.productsTabs.ram')" :name-label="t('admin.productsTabs.ram')" />
+          </div>
+          <div v-show="productsMainTab==='gpu'">
+            <DmCategoryTable :service="DmService.DmGpuService" id-field="gpuId" name-field="tenGpu" :label="t('admin.productsTabs.gpu')" :name-label="t('admin.productsTabs.gpu')" />
+          </div>
+          <div v-show="productsMainTab==='oCung'">
+            <DmCategoryTable :service="DmService.DmOCungService" id-field="oCungId" name-field="loaiOcung" :label="t('admin.productsTabs.oCung')" :name-label="t('admin.productsTabs.oCung')" />
+          </div>
+          <div v-show="productsMainTab==='serial'">
+            <SerialManager />
+          </div>
         </section>
 
         <!-- ── Don hang ── -->
