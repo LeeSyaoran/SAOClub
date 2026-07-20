@@ -22,4 +22,5 @@ public class ChiTietSanPhamRequest {
 
     private String trangThai;
     private LocalDateTime ngayNhapKho;
+    private String ghiChu;
 }

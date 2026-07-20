@@ -31,4 +31,7 @@ public class ChiTietSanPham {
 
     @Column(name = "ngay_nhap_kho")
     private LocalDateTime ngayNhapKho;
+
+    @Column(name = "ghi_chu", length = 255)
+    private String ghiChu;
 }

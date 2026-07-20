@@ -18,4 +18,5 @@ public class ChiTietSanPhamResponse {
     private String soSerial;
     private String trangThai;
     private LocalDateTime ngayNhapKho;
+    private String ghiChu;
 }

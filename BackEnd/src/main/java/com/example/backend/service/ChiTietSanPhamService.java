@@ -37,7 +37,7 @@ public class ChiTietSanPhamService {
 
     public ChiTietSanPham create(ChiTietSanPhamRequest request) {
         ChiTietSanPham entity = new ChiTietSanPham();
-        // BeanUtils copies: soSerial, soImei, trangThai, ngayNhapKho
+        // BeanUtils copies: soSerial, trangThai, ngayNhapKho, ghiChu
         BeanUtils.copyProperties(request, entity, "bienTheId");
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
         return chiTietSanPhamRepository.save(entity);
