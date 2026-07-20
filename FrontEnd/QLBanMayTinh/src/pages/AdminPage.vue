@@ -7,6 +7,7 @@ import * as NhanVienService  from "../Service/NhanVienService.js";
 import * as DonHangService   from "../Service/DonHangService.js";
 import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
 import * as DmService              from "../Service/DmService.js";
+import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../Service/ChiTietLinhKienService.js";
 import * as DashboardService       from "../Service/DashboardService.js";
 import DonutChart from "../components/common/DonutChart.vue";
 import RevenueBarChart from "../components/common/RevenueBarChart.vue";
@@ -1185,26 +1186,22 @@ onUnmounted(() => {
             <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='ram'}" @click="productsMainTab='ram'">{{ t('admin.productsTabs.ram') }}</button></li>
             <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='gpu'}" @click="productsMainTab='gpu'">{{ t('admin.productsTabs.gpu') }}</button></li>
             <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='oCung'}" @click="productsMainTab='oCung'">{{ t('admin.productsTabs.oCung') }}</button></li>
-            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='serial'}" @click="productsMainTab='serial'">{{ t('admin.productsTabs.serial') }}</button></li>
           </ul>
 
           <div v-show="productsMainTab==='sanPham'">
             <ProductsTable />
           </div>
           <div v-show="productsMainTab==='cpu'">
-            <DmCategoryTable :service="DmService.DmCpuService" id-field="cpuId" name-field="tenCpu" :label="t('admin.productsTabs.cpu')" :name-label="t('admin.productsTabs.cpu')" />
+            <DmCategoryTable :service="DmService.DmCpuService" id-field="cpuId" name-field="tenCpu" :label="t('admin.productsTabs.cpu')" :name-label="t('admin.productsTabs.cpu')" :serial-service="ChiTietCpuService" serial-field-name="cpuId" />
           </div>
           <div v-show="productsMainTab==='ram'">
-            <DmCategoryTable :service="DmService.DmRamService" id-field="ramId" name-field="dungLuong" :label="t('admin.productsTabs.ram')" :name-label="t('admin.productsTabs.ram')" />
+            <DmCategoryTable :service="DmService.DmRamService" id-field="ramId" name-field="dungLuong" :label="t('admin.productsTabs.ram')" :name-label="t('admin.productsTabs.ram')" :serial-service="ChiTietRamService" serial-field-name="ramId" />
           </div>
           <div v-show="productsMainTab==='gpu'">
-            <DmCategoryTable :service="DmService.DmGpuService" id-field="gpuId" name-field="tenGpu" :label="t('admin.productsTabs.gpu')" :name-label="t('admin.productsTabs.gpu')" />
+            <DmCategoryTable :service="DmService.DmGpuService" id-field="gpuId" name-field="tenGpu" :label="t('admin.productsTabs.gpu')" :name-label="t('admin.productsTabs.gpu')" :serial-service="ChiTietGpuService" serial-field-name="gpuId" />
           </div>
           <div v-show="productsMainTab==='oCung'">
-            <DmCategoryTable :service="DmService.DmOCungService" id-field="oCungId" name-field="loaiOcung" :label="t('admin.productsTabs.oCung')" :name-label="t('admin.productsTabs.oCung')" />
-          </div>
-          <div v-show="productsMainTab==='serial'">
-            <SerialManager />
+            <DmCategoryTable :service="DmService.DmOCungService" id-field="oCungId" name-field="loaiOcung" :label="t('admin.productsTabs.oCung')" :name-label="t('admin.productsTabs.oCung')" :serial-service="ChiTietOCungService" serial-field-name="oCungId" />
           </div>
         </section>
 
@@ -1227,6 +1224,9 @@ onUnmounted(() => {
             <li class="nav-item">
               <button class="nav-link" :class="{active: inventoryMainTab==='bao-hanh'}" @click="inventoryMainTab='bao-hanh'">🛡️ {{ t('admin.inventory.tabWarranty') }}</button>
             </li>
+            <li class="nav-item">
+              <button class="nav-link" :class="{active: inventoryMainTab==='serial'}" @click="inventoryMainTab='serial'">🔢 {{ t('admin.inventory.tabSerial') }}</button>
+            </li>
           </ul>
 
           <div v-show="inventoryMainTab==='kho'">
@@ -1236,6 +1236,11 @@ onUnmounted(() => {
           <!-- ══ TAB: BAO HANH ══ -->
           <div v-show="inventoryMainTab==='bao-hanh'">
             <WarrantyPanel />
+          </div>
+
+          <!-- ══ TAB: SERIAL ══ -->
+          <div v-show="inventoryMainTab==='serial'">
+            <SerialManager />
           </div>
         </section>
 
