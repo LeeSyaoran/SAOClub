@@ -407,6 +407,7 @@ export default {
       suppliers: "공급업체",
       inventoryHistory: "재고 이력",
       traHang: "반품",
+      warrantyClaims: "보증 신청서",
     },
 
     pageMeta: {
@@ -428,6 +429,7 @@ export default {
       suppliers:        { title: "공급업체",   sub: "공급업체 관리" },
       inventoryHistory:  { title: "재고 이력", sub: "재고 변동 이력" },
       traHang:           { title: "반품", sub: "반품 전표 관리" },
+      warrantyClaims:    { title: "보증 신청서", sub: "보증 접수 및 처리" },
     },
 
     userRole: {
@@ -810,6 +812,54 @@ export default {
       close: "닫기",
     },
 
+    warrantyClaims: {
+      countSuffix: "건의 보증 신청서",
+      loading: "로딩 중...",
+      colId: "신청서 번호",
+      colProduct: "상품",
+      colSerial: "시리얼",
+      colCustomer: "고객",
+      colOrder: "주문",
+      colReceived: "접수일",
+      colReturned: "반환일",
+      colCost: "추가 비용",
+      colStatus: "상태",
+      colAction: "작업",
+      edit: "수정",
+      delete: "삭제",
+      empty: "보증 신청서가 없습니다",
+      searchPlaceholder: "신청서 번호, 고객, 시리얼 검색...",
+    },
+
+    warrantyClaimStatus: {
+      con_bao_hanh: "접수됨",
+      dang_xu_ly: "처리 중",
+      da_xu_ly: "고객에게 반환됨",
+      het_bao_hanh: "거부됨 - 기간 만료",
+      tu_choi: "거부됨",
+    },
+
+    warrantyClaimModal: {
+      titleAdd: "보증 신청서 작성",
+      titleEdit: "보증 신청서 상세",
+      productLabel: "상품",
+      serialLabel: "시리얼",
+      customerLabel: "고객",
+      orderLabel: "주문",
+      purchaseDateLabel: "구매일",
+      expiryDateLabel: "보증 만료일",
+      receivedDateLabel: "접수일",
+      returnedDateLabel: "반환일",
+      faultLabel: "고장 설명",
+      resultLabel: "처리 결과",
+      statusLabel: "상태",
+      costLabel: "추가 비용",
+      noteLabel: "메모",
+      faultRequired: "고장 설명을 입력해 주세요",
+      cancel: "취소",
+      save: "저장",
+    },
+
     inventory: {
       searchPlaceholder: "상품 검색...",
       loading: "로딩 중...",
@@ -1106,6 +1156,7 @@ export default {
       mergeOrders: "같은 날짜의 주문 {count}건을 주문 #{id}에 병합하시겠습니까?",
       deleteSupplier: "이 공급업체를 삭제하시겠습니까?",
       deleteReturn: "이 반품 전표를 삭제할까요?",
+      deleteWarrantyClaim: "이 보증 신청서를 삭제할까요?",
     },
 
     errors: {

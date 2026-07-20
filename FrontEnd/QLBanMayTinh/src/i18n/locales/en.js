@@ -407,6 +407,7 @@ export default {
       suppliers: "Suppliers",
       inventoryHistory: "Inventory history",
       traHang: "Returns",
+      warrantyClaims: "Warranty claims",
     },
 
     pageMeta: {
@@ -428,6 +429,7 @@ export default {
       suppliers:        { title: "Suppliers",   sub: "Manage suppliers" },
       inventoryHistory:  { title: "Inventory history", sub: "Stock movement history" },
       traHang:           { title: "Returns", sub: "Manage product returns" },
+      warrantyClaims:    { title: "Warranty claims", sub: "Receive and process warranty claims" },
     },
 
     userRole: {
@@ -810,6 +812,54 @@ export default {
       close: "Close",
     },
 
+    warrantyClaims: {
+      countSuffix: "warranty claims",
+      loading: "Loading...",
+      colId: "Claim ID",
+      colProduct: "Product",
+      colSerial: "Serial",
+      colCustomer: "Customer",
+      colOrder: "Order",
+      colReceived: "Received date",
+      colReturned: "Returned date",
+      colCost: "Extra cost",
+      colStatus: "Status",
+      colAction: "Action",
+      edit: "Edit",
+      delete: "Delete",
+      empty: "No warranty claims yet",
+      searchPlaceholder: "Search claim ID, customer, serial...",
+    },
+
+    warrantyClaimStatus: {
+      con_bao_hanh: "Just received",
+      dang_xu_ly: "Processing",
+      da_xu_ly: "Returned to customer",
+      het_bao_hanh: "Rejected - expired",
+      tu_choi: "Rejected",
+    },
+
+    warrantyClaimModal: {
+      titleAdd: "Create warranty claim",
+      titleEdit: "Warranty claim details",
+      productLabel: "Product",
+      serialLabel: "Serial",
+      customerLabel: "Customer",
+      orderLabel: "Order",
+      purchaseDateLabel: "Purchase date",
+      expiryDateLabel: "Warranty expiry",
+      receivedDateLabel: "Received date",
+      returnedDateLabel: "Returned date",
+      faultLabel: "Fault description",
+      resultLabel: "Processing result",
+      statusLabel: "Status",
+      costLabel: "Extra cost",
+      noteLabel: "Note",
+      faultRequired: "Please enter a fault description",
+      cancel: "Cancel",
+      save: "Save",
+    },
+
     inventory: {
       searchPlaceholder: "Search products...",
       loading: "Loading...",
@@ -1106,6 +1156,7 @@ export default {
       mergeOrders: "Merge {count} orders from the same day into order #{id}?",
       deleteSupplier: "Delete this supplier?",
       deleteReturn: "Delete this return?",
+      deleteWarrantyClaim: "Delete this warranty claim?",
     },
 
     errors: {

@@ -407,6 +407,7 @@ export default {
       suppliers: "供应商",
       inventoryHistory: "库存历史",
       traHang: "退货",
+      warrantyClaims: "保修单",
     },
 
     pageMeta: {
@@ -428,6 +429,7 @@ export default {
       suppliers:        { title: "供应商",   sub: "管理供应商" },
       inventoryHistory:  { title: "库存历史", sub: "库存变动历史" },
       traHang:           { title: "退货", sub: "管理退货单" },
+      warrantyClaims:    { title: "保修单", sub: "接收并处理保修申请" },
     },
 
     userRole: {
@@ -810,6 +812,54 @@ export default {
       close: "关闭",
     },
 
+    warrantyClaims: {
+      countSuffix: "个保修单",
+      loading: "加载中...",
+      colId: "保修单号",
+      colProduct: "商品",
+      colSerial: "序列号",
+      colCustomer: "客户",
+      colOrder: "订单",
+      colReceived: "接收日期",
+      colReturned: "归还日期",
+      colCost: "额外费用",
+      colStatus: "状态",
+      colAction: "操作",
+      edit: "编辑",
+      delete: "删除",
+      empty: "暂无保修单",
+      searchPlaceholder: "搜索保修单号、客户、序列号...",
+    },
+
+    warrantyClaimStatus: {
+      con_bao_hanh: "刚接收",
+      dang_xu_ly: "处理中",
+      da_xu_ly: "已归还客户",
+      het_bao_hanh: "拒绝 - 已过保",
+      tu_choi: "已拒绝",
+    },
+
+    warrantyClaimModal: {
+      titleAdd: "创建保修单",
+      titleEdit: "保修单详情",
+      productLabel: "商品",
+      serialLabel: "序列号",
+      customerLabel: "客户",
+      orderLabel: "订单",
+      purchaseDateLabel: "购买日期",
+      expiryDateLabel: "保修到期日",
+      receivedDateLabel: "接收日期",
+      returnedDateLabel: "归还日期",
+      faultLabel: "故障描述",
+      resultLabel: "处理结果",
+      statusLabel: "状态",
+      costLabel: "额外费用",
+      noteLabel: "备注",
+      faultRequired: "请输入故障描述",
+      cancel: "取消",
+      save: "保存",
+    },
+
     inventory: {
       searchPlaceholder: "搜索商品...",
       loading: "加载中...",
@@ -1106,6 +1156,7 @@ export default {
       mergeOrders: "将同一天的 {count} 个订单合并到订单 #{id}？",
       deleteSupplier: "删除此供应商？",
       deleteReturn: "确定删除此退货单？",
+      deleteWarrantyClaim: "确定删除此保修单？",
     },
 
     errors: {

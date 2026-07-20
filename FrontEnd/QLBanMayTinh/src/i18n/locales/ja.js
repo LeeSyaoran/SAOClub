@@ -407,6 +407,7 @@ export default {
       suppliers: "サプライヤー",
       inventoryHistory: "在庫履歴",
       traHang: "返品",
+      warrantyClaims: "保証申請",
     },
 
     pageMeta: {
@@ -428,6 +429,7 @@ export default {
       suppliers:        { title: "サプライヤー",   sub: "サプライヤー管理" },
       inventoryHistory:  { title: "在庫履歴", sub: "在庫変動履歴" },
       traHang:           { title: "返品", sub: "返品伝票管理" },
+      warrantyClaims:    { title: "保証申請", sub: "保証の受付と処理" },
     },
 
     userRole: {
@@ -810,6 +812,54 @@ export default {
       close: "閉じる",
     },
 
+    warrantyClaims: {
+      countSuffix: "件の保証申請",
+      loading: "読み込み中...",
+      colId: "申請番号",
+      colProduct: "商品",
+      colSerial: "シリアル",
+      colCustomer: "顧客",
+      colOrder: "注文",
+      colReceived: "受付日",
+      colReturned: "返却日",
+      colCost: "追加費用",
+      colStatus: "状態",
+      colAction: "操作",
+      edit: "編集",
+      delete: "削除",
+      empty: "保証申請はまだありません",
+      searchPlaceholder: "申請番号、顧客、シリアルで検索...",
+    },
+
+    warrantyClaimStatus: {
+      con_bao_hanh: "受付済み",
+      dang_xu_ly: "処理中",
+      da_xu_ly: "顧客へ返却済み",
+      het_bao_hanh: "却下 - 期限切れ",
+      tu_choi: "却下",
+    },
+
+    warrantyClaimModal: {
+      titleAdd: "保証申請を作成",
+      titleEdit: "保証申請の詳細",
+      productLabel: "商品",
+      serialLabel: "シリアル",
+      customerLabel: "顧客",
+      orderLabel: "注文",
+      purchaseDateLabel: "購入日",
+      expiryDateLabel: "保証期限",
+      receivedDateLabel: "受付日",
+      returnedDateLabel: "返却日",
+      faultLabel: "故障内容",
+      resultLabel: "処理結果",
+      statusLabel: "状態",
+      costLabel: "追加費用",
+      noteLabel: "備考",
+      faultRequired: "故障内容を入力してください",
+      cancel: "キャンセル",
+      save: "保存",
+    },
+
     inventory: {
       searchPlaceholder: "商品を検索...",
       loading: "読み込み中...",
@@ -1106,6 +1156,7 @@ export default {
       mergeOrders: "同日の {count} 件の注文を注文 #{id} に統合しますか？",
       deleteSupplier: "このサプライヤーを削除しますか？",
       deleteReturn: "この返品伝票を削除しますか？",
+      deleteWarrantyClaim: "この保証申請を削除しますか？",
     },
 
     errors: {

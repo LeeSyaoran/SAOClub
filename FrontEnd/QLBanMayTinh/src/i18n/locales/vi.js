@@ -417,6 +417,7 @@ export default {
       suppliers: "Nhà cung cấp",
       inventoryHistory: "Lịch sử tồn kho",
       traHang: "Trả hàng",
+      warrantyClaims: "Phiếu bảo hành",
     },
 
     pageMeta: {
@@ -438,6 +439,7 @@ export default {
       suppliers:        { title: "Nhà cung cấp",   sub: "Quản lý nhà cung cấp" },
       inventoryHistory:  { title: "Lịch sử tồn kho", sub: "Lịch sử biến động tồn kho" },
       traHang:           { title: "Trả hàng", sub: "Quản lý phiếu trả hàng" },
+      warrantyClaims:    { title: "Phiếu bảo hành", sub: "Tiếp nhận và xử lý bảo hành" },
     },
 
     userRole: {
@@ -824,6 +826,54 @@ export default {
       close: "Đóng",
     },
 
+    warrantyClaims: {
+      countSuffix: "phiếu bảo hành",
+      loading: "Đang tải...",
+      colId: "Mã phiếu",
+      colProduct: "Sản phẩm",
+      colSerial: "Serial",
+      colCustomer: "Khách hàng",
+      colOrder: "Đơn hàng",
+      colReceived: "Ngày tiếp nhận",
+      colReturned: "Ngày trả khách",
+      colCost: "Chi phí phát sinh",
+      colStatus: "Trạng thái",
+      colAction: "Thao tác",
+      edit: "Sửa",
+      delete: "Xóa",
+      empty: "Chưa có phiếu bảo hành",
+      searchPlaceholder: "Tìm mã phiếu, khách hàng, serial...",
+    },
+
+    warrantyClaimStatus: {
+      con_bao_hanh: "Mới tiếp nhận",
+      dang_xu_ly: "Đang xử lý",
+      da_xu_ly: "Đã trả khách",
+      het_bao_hanh: "Từ chối - hết hạn",
+      tu_choi: "Từ chối",
+    },
+
+    warrantyClaimModal: {
+      titleAdd: "Tạo phiếu bảo hành",
+      titleEdit: "Chi tiết phiếu bảo hành",
+      productLabel: "Sản phẩm",
+      serialLabel: "Serial",
+      customerLabel: "Khách hàng",
+      orderLabel: "Đơn hàng",
+      purchaseDateLabel: "Ngày mua",
+      expiryDateLabel: "Hết hạn bảo hành",
+      receivedDateLabel: "Ngày tiếp nhận",
+      returnedDateLabel: "Ngày trả khách",
+      faultLabel: "Mô tả lỗi",
+      resultLabel: "Kết quả xử lý",
+      statusLabel: "Trạng thái",
+      costLabel: "Chi phí phát sinh",
+      noteLabel: "Ghi chú",
+      faultRequired: "Vui lòng nhập mô tả lỗi",
+      cancel: "Hủy",
+      save: "Lưu",
+    },
+
     inventory: {
       tabStock: "Tồn kho",
       tabReceipts: "Phiếu nhập",
@@ -973,6 +1023,8 @@ export default {
       colExpires: "Hết hạn",
       colRemaining: "Còn lại",
       daysLeft: "còn {count} ngày",
+      colAction: "Thao tác",
+      createClaim: "Tạo phiếu bảo hành",
     },
 
     promotions: {
@@ -1214,6 +1266,7 @@ export default {
       deletePhieuNhap: "Xóa phiếu nhập này? Toàn bộ dòng chi tiết trong phiếu sẽ mất theo.",
       deleteSupplier: "Xóa nhà cung cấp này?",
       deleteReturn: "Xóa phiếu trả hàng này?",
+      deleteWarrantyClaim: "Xóa phiếu bảo hành này?",
     },
 
     errors: {
