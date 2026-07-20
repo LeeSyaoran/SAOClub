@@ -7,7 +7,6 @@ import * as NhanVienService  from "../Service/NhanVienService.js";
 import * as DonHangService   from "../Service/DonHangService.js";
 import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
 import * as DmService              from "../Service/DmService.js";
-import * as ChiTietSanPhamService  from "../Service/ChiTietSanPhamService.js";
 import * as DashboardService       from "../Service/DashboardService.js";
 import DonutChart from "../components/common/DonutChart.vue";
 import RevenueBarChart from "../components/common/RevenueBarChart.vue";
@@ -29,6 +28,7 @@ import OrdersTable from "../components/admin/OrdersTable.vue";
 import PosPanel from "../components/admin/PosPanel.vue";
 import InventoryPanel from "../components/admin/InventoryPanel.vue";
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
+import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
@@ -434,29 +434,6 @@ const outOfStockItems = computed(() =>
 // Thay cho khoTab cũ (giờ đã chuyển hẳn vào InventoryPanel.vue) — trang này chỉ còn
 // đúng 2 lựa chọn: "kho" (InventoryPanel — gồm Tồn kho + Phiếu nhập) và "bao-hanh".
 const inventoryMainTab = ref('kho');
-
-// ── Bảo hành: serial đã bán còn trong hạn (server tự lọc, hết hạn tự rớt khỏi danh sách) ──
-const warrantyList = ref([]);
-const warrantyLoading = ref(false);
-const warrantySearch = ref('');
-let warrantyPromise = null;
-const ensureWarrantyData = (force = false) => {
-  if (warrantyPromise && !force) return warrantyPromise;
-  warrantyLoading.value = true;
-  warrantyPromise = ChiTietSanPhamService.getUnderWarranty().catch(() => []).then((list) => {
-    warrantyList.value = list;
-    warrantyLoading.value = false;
-  });
-  return warrantyPromise;
-};
-const filteredWarranty = computed(() => {
-  const q = warrantySearch.value.trim().toLowerCase();
-  if (!q) return warrantyList.value;
-  return warrantyList.value.filter((w) =>
-    [w.soSerial, w.maSku, w.tenSanPham, w.maDonHang, w.tenKhachHang, w.soDienThoaiKhachHang]
-      .some((v) => (v || '').toLowerCase().includes(q)));
-});
-const daysUntilExpiry = (isoDate) => Math.ceil((new Date(isoDate) - new Date()) / 86400000);
 
 // khoTab + toàn bộ state/hàm của tab Tồn kho (inventorySearch, inventoryGrouped,
 // getVariantInfo, stockClass...) và tab Phiếu nhập kho (ensurePhieuNhapData,
@@ -1219,7 +1196,7 @@ onUnmounted(() => {
               <button class="nav-link" :class="{active: inventoryMainTab==='kho'}" @click="inventoryMainTab='kho'">📦 {{ t('admin.inventory.tabStock') }} / {{ t('admin.inventory.tabReceipts') }}</button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='bao-hanh'}" @click="inventoryMainTab='bao-hanh'; ensureWarrantyData()">🛡️ {{ t('admin.inventory.tabWarranty') }}</button>
+              <button class="nav-link" :class="{active: inventoryMainTab==='bao-hanh'}" @click="inventoryMainTab='bao-hanh'">🛡️ {{ t('admin.inventory.tabWarranty') }}</button>
             </li>
           </ul>
 
@@ -1229,50 +1206,7 @@ onUnmounted(() => {
 
           <!-- ══ TAB: BAO HANH ══ -->
           <div v-show="inventoryMainTab==='bao-hanh'">
-          <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-            <span class="text-secondary small">{{ filteredWarranty.length }} {{ t('admin.warranty.countSuffix') }}</span>
-            <span class="badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;font-size:0.72rem;">📅 {{ t('admin.warranty.today') }}: {{ formatDate(new Date()) }}</span>
-            <input v-model="warrantySearch" class="form-control form-control-sm ms-auto" style="max-width:260px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
-                   :placeholder="t('admin.warranty.searchPlaceholder')" />
-          </div>
-          <div v-if="warrantyLoading" class="text-secondary small text-center py-5">{{ t('admin.warranty.loading') }}</div>
-          <div v-else class="table-responsive">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr>
-                <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-                <th>{{ t('admin.warranty.colSerial') }}</th>
-                <th>{{ t('admin.warranty.colProduct') }}</th>
-                <th>{{ t('admin.warranty.colCustomer') }}</th>
-                <th>{{ t('admin.warranty.colPhone') }}</th>
-                <th>{{ t('admin.warranty.colOrder') }}</th>
-                <th>{{ t('admin.warranty.colDelivered') }}</th>
-                <th>{{ t('admin.warranty.colExpires') }}</th>
-                <th>{{ t('admin.warranty.colRemaining') }}</th>
-              </tr></thead>
-              <tbody>
-                <tr v-for="(w, idx) in filteredWarranty" :key="w.chiTietId">
-                  <td class="text-secondary">{{ idx + 1 }}</td>
-                  <td class="text-secondary" style="font-family:monospace;">{{ w.soSerial }}</td>
-                  <td>{{ w.tenSanPham }} <span class="text-secondary" style="font-size:0.75rem;">({{ w.maSku }})</span></td>
-                  <td>{{ w.tenKhachHang }}</td>
-                  <td class="text-secondary">{{ w.soDienThoaiKhachHang }}</td>
-                  <td class="text-secondary" style="font-family:monospace;">{{ w.maDonHang }}</td>
-                  <td>{{ formatDate(w.ngayGiaoThucTe) }}</td>
-                  <td>{{ formatDate(w.ngayHetBaoHanh) }}</td>
-                  <td>
-                    <span class="badge" :style="daysUntilExpiry(w.ngayHetBaoHanh) <= 30
-                      ? { background: 'rgba(248,113,113,0.15)', color: '#f87171' }
-                      : daysUntilExpiry(w.ngayHetBaoHanh) <= 90
-                        ? { background: 'rgba(250,204,21,0.15)', color: '#facc15' }
-                        : { background: 'rgba(34,197,94,0.15)', color: '#22c55e' }">
-                      {{ t('admin.warranty.daysLeft', { count: daysUntilExpiry(w.ngayHetBaoHanh) }) }}
-                    </span>
-                  </td>
-                </tr>
-                <tr v-if="filteredWarranty.length===0"><td colspan="9" class="text-center text-secondary">{{ t('admin.warranty.empty') }}</td></tr>
-              </tbody>
-            </table>
-          </div>
+            <WarrantyPanel />
           </div>
         </section>
 
