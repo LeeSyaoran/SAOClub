@@ -408,6 +408,7 @@ export default {
       inventoryHistory: "Inventory history",
       traHang: "Returns",
       warrantyClaims: "Warranty claims",
+      serial: "Serial",
     },
 
     pageMeta: {
@@ -430,6 +431,7 @@ export default {
       inventoryHistory:  { title: "Inventory history", sub: "Stock movement history" },
       traHang:           { title: "Returns", sub: "Manage product returns" },
       warrantyClaims:    { title: "Warranty claims", sub: "Receive and process warranty claims" },
+      serial:            { title: "Serial management", sub: "View, add, edit, delete device serials" },
     },
 
     userRole: {
@@ -880,6 +882,58 @@ export default {
       empty: "No data",
     },
 
+    productsTabs: {
+      sanPham: "Products",
+      cpu: "CPU",
+      ram: "RAM",
+      gpu: "GPU",
+      oCung: "Storage",
+      serial: "Serial",
+    },
+
+    dmCategory: {
+      countSuffix: "{label}",
+      searchPlaceholder: "Search {label}...",
+      add: "+ Add {label}",
+      loading: "Loading...",
+      colAction: "Actions",
+      edit: "Edit",
+      delete: "Delete",
+      empty: "No {label} yet",
+      titleAdd: "Add {label}",
+      titleEdit: "Edit {label}",
+      cancel: "Cancel",
+      save: "Save",
+      nameRequired: "Please enter {label}",
+    },
+
+    serialManager: {
+      searchPlaceholder: "Search serial, SKU, product name...",
+      add: "+ Add serial",
+      loading: "Loading...",
+      colVariant: "Product / SKU",
+      colSerial: "Serial number",
+      colStatus: "Status",
+      colDate: "Stock-in date",
+      colNote: "Note",
+      colAction: "Actions",
+      edit: "Edit",
+      delete: "Delete",
+      empty: "No serial yet",
+      titleAdd: "Add serial",
+      titleEdit: "Edit serial",
+      variantLabel: "Product / variant",
+      variantPlaceholder: "Select product...",
+      serialLabel: "Serial number",
+      statusLabel: "Status",
+      dateLabel: "Stock-in date",
+      noteLabel: "Note",
+      cancel: "Cancel",
+      save: "Save",
+      serialRequired: "Please enter the serial number",
+      variantRequired: "Please select a product/variant",
+    },
+
     inventoryHistory: {
       countSuffix: "movements",
       loading: "Loading...",
@@ -1159,6 +1213,7 @@ export default {
       deleteSupplier: "Delete this supplier?",
       deleteReturn: "Delete this return?",
       deleteWarrantyClaim: "Delete this warranty claim?",
+      deleteDmItem: "Delete this {label}?",
     },
 
     errors: {

@@ -408,6 +408,7 @@ export default {
       inventoryHistory: "재고 이력",
       traHang: "반품",
       warrantyClaims: "보증 신청서",
+      serial: "시리얼",
     },
 
     pageMeta: {
@@ -430,6 +431,7 @@ export default {
       inventoryHistory:  { title: "재고 이력", sub: "재고 변동 이력" },
       traHang:           { title: "반품", sub: "반품 전표 관리" },
       warrantyClaims:    { title: "보증 신청서", sub: "보증 접수 및 처리" },
+      serial:            { title: "시리얼 관리", sub: "기기 시리얼 조회/추가/수정/삭제" },
     },
 
     userRole: {
@@ -880,6 +882,58 @@ export default {
       empty: "데이터가 없습니다",
     },
 
+    productsTabs: {
+      sanPham: "제품",
+      cpu: "CPU",
+      ram: "RAM",
+      gpu: "GPU",
+      oCung: "저장장치",
+      serial: "시리얼",
+    },
+
+    dmCategory: {
+      countSuffix: "{label}",
+      searchPlaceholder: "{label} 검색...",
+      add: "+ {label} 추가",
+      loading: "불러오는 중...",
+      colAction: "작업",
+      edit: "수정",
+      delete: "삭제",
+      empty: "등록된 {label}이(가) 없습니다",
+      titleAdd: "{label} 추가",
+      titleEdit: "{label} 수정",
+      cancel: "취소",
+      save: "저장",
+      nameRequired: "{label}을(를) 입력해 주세요",
+    },
+
+    serialManager: {
+      searchPlaceholder: "시리얼, SKU, 제품명 검색...",
+      add: "+ 시리얼 추가",
+      loading: "불러오는 중...",
+      colVariant: "제품 / SKU",
+      colSerial: "시리얼 번호",
+      colStatus: "상태",
+      colDate: "입고일",
+      colNote: "메모",
+      colAction: "작업",
+      edit: "수정",
+      delete: "삭제",
+      empty: "등록된 시리얼이 없습니다",
+      titleAdd: "시리얼 추가",
+      titleEdit: "시리얼 수정",
+      variantLabel: "제품 / 옵션",
+      variantPlaceholder: "제품 선택...",
+      serialLabel: "시리얼 번호",
+      statusLabel: "상태",
+      dateLabel: "입고일",
+      noteLabel: "메모",
+      cancel: "취소",
+      save: "저장",
+      serialRequired: "시리얼 번호를 입력해 주세요",
+      variantRequired: "제품/옵션을 선택해 주세요",
+    },
+
     inventoryHistory: {
       countSuffix: "건의 변동 내역",
       loading: "로딩 중...",
@@ -1159,6 +1213,7 @@ export default {
       deleteSupplier: "이 공급업체를 삭제하시겠습니까?",
       deleteReturn: "이 반품 전표를 삭제할까요?",
       deleteWarrantyClaim: "이 보증 신청서를 삭제할까요?",
+      deleteDmItem: "이 {label}을(를) 삭제할까요?",
     },
 
     errors: {

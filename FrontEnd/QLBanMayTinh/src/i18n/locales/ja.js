@@ -408,6 +408,7 @@ export default {
       inventoryHistory: "在庫履歴",
       traHang: "返品",
       warrantyClaims: "保証申請",
+      serial: "シリアル",
     },
 
     pageMeta: {
@@ -430,6 +431,7 @@ export default {
       inventoryHistory:  { title: "在庫履歴", sub: "在庫変動履歴" },
       traHang:           { title: "返品", sub: "返品伝票管理" },
       warrantyClaims:    { title: "保証申請", sub: "保証の受付と処理" },
+      serial:            { title: "シリアル管理", sub: "機器シリアルの閲覧・追加・編集・削除" },
     },
 
     userRole: {
@@ -880,6 +882,58 @@ export default {
       empty: "データがありません",
     },
 
+    productsTabs: {
+      sanPham: "商品",
+      cpu: "CPU",
+      ram: "RAM",
+      gpu: "GPU",
+      oCung: "ストレージ",
+      serial: "シリアル",
+    },
+
+    dmCategory: {
+      countSuffix: "{label}",
+      searchPlaceholder: "{label}を検索...",
+      add: "+ {label}を追加",
+      loading: "読み込み中...",
+      colAction: "操作",
+      edit: "編集",
+      delete: "削除",
+      empty: "{label}はまだありません",
+      titleAdd: "{label}を追加",
+      titleEdit: "{label}を編集",
+      cancel: "キャンセル",
+      save: "保存",
+      nameRequired: "{label}を入力してください",
+    },
+
+    serialManager: {
+      searchPlaceholder: "シリアル、SKU、商品名で検索...",
+      add: "+ シリアルを追加",
+      loading: "読み込み中...",
+      colVariant: "商品 / SKU",
+      colSerial: "シリアル番号",
+      colStatus: "状態",
+      colDate: "入庫日",
+      colNote: "備考",
+      colAction: "操作",
+      edit: "編集",
+      delete: "削除",
+      empty: "シリアルはまだありません",
+      titleAdd: "シリアルを追加",
+      titleEdit: "シリアルを編集",
+      variantLabel: "商品 / バリエーション",
+      variantPlaceholder: "商品を選択...",
+      serialLabel: "シリアル番号",
+      statusLabel: "状態",
+      dateLabel: "入庫日",
+      noteLabel: "備考",
+      cancel: "キャンセル",
+      save: "保存",
+      serialRequired: "シリアル番号を入力してください",
+      variantRequired: "商品/バリエーションを選択してください",
+    },
+
     inventoryHistory: {
       countSuffix: "件の変動",
       loading: "読み込み中...",
@@ -1159,6 +1213,7 @@ export default {
       deleteSupplier: "このサプライヤーを削除しますか？",
       deleteReturn: "この返品伝票を削除しますか？",
       deleteWarrantyClaim: "この保証申請を削除しますか？",
+      deleteDmItem: "この{label}を削除しますか？",
     },
 
     errors: {

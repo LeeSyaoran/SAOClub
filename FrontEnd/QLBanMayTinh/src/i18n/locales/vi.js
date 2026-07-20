@@ -418,6 +418,7 @@ export default {
       inventoryHistory: "Lịch sử tồn kho",
       traHang: "Trả hàng",
       warrantyClaims: "Phiếu bảo hành",
+      serial: "Serial",
     },
 
     pageMeta: {
@@ -440,6 +441,7 @@ export default {
       inventoryHistory:  { title: "Lịch sử tồn kho", sub: "Lịch sử biến động tồn kho" },
       traHang:           { title: "Trả hàng", sub: "Quản lý phiếu trả hàng" },
       warrantyClaims:    { title: "Phiếu bảo hành", sub: "Tiếp nhận và xử lý bảo hành" },
+      serial:            { title: "Quản lý Serial", sub: "Xem, thêm, sửa, xóa serial máy" },
     },
 
     userRole: {
@@ -907,6 +909,58 @@ export default {
       empty: "Không có dữ liệu",
     },
 
+    productsTabs: {
+      sanPham: "Sản phẩm",
+      cpu: "CPU",
+      ram: "RAM",
+      gpu: "GPU",
+      oCung: "Ổ cứng",
+      serial: "Serial",
+    },
+
+    dmCategory: {
+      countSuffix: "{label}",
+      searchPlaceholder: "Tìm {label}...",
+      add: "+ Thêm {label}",
+      loading: "Đang tải...",
+      colAction: "Thao tác",
+      edit: "Sửa",
+      delete: "Xóa",
+      empty: "Chưa có {label} nào",
+      titleAdd: "Thêm {label}",
+      titleEdit: "Sửa {label}",
+      cancel: "Hủy",
+      save: "Lưu",
+      nameRequired: "Vui lòng nhập {label}",
+    },
+
+    serialManager: {
+      searchPlaceholder: "Tìm serial, SKU, tên sản phẩm...",
+      add: "+ Thêm serial",
+      loading: "Đang tải...",
+      colVariant: "Sản phẩm / SKU",
+      colSerial: "Số serial",
+      colStatus: "Trạng thái",
+      colDate: "Ngày nhập kho",
+      colNote: "Ghi chú",
+      colAction: "Thao tác",
+      edit: "Sửa",
+      delete: "Xóa",
+      empty: "Chưa có serial nào",
+      titleAdd: "Thêm serial",
+      titleEdit: "Sửa serial",
+      variantLabel: "Sản phẩm / biến thể",
+      variantPlaceholder: "Chọn sản phẩm...",
+      serialLabel: "Số serial",
+      statusLabel: "Trạng thái",
+      dateLabel: "Ngày nhập kho",
+      noteLabel: "Ghi chú",
+      cancel: "Hủy",
+      save: "Lưu",
+      serialRequired: "Vui lòng nhập số serial",
+      variantRequired: "Vui lòng chọn sản phẩm/biến thể",
+    },
+
     inventoryHistory: {
       countSuffix: "lượt biến động",
       loading: "Đang tải...",
@@ -1269,6 +1323,7 @@ export default {
       deleteSupplier: "Xóa nhà cung cấp này?",
       deleteReturn: "Xóa phiếu trả hàng này?",
       deleteWarrantyClaim: "Xóa phiếu bảo hành này?",
+      deleteDmItem: "Xóa {label} này?",
     },
 
     errors: {

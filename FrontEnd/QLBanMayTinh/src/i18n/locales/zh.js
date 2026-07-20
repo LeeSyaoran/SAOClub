@@ -408,6 +408,7 @@ export default {
       inventoryHistory: "库存历史",
       traHang: "退货",
       warrantyClaims: "保修单",
+      serial: "序列号",
     },
 
     pageMeta: {
@@ -430,6 +431,7 @@ export default {
       inventoryHistory:  { title: "库存历史", sub: "库存变动历史" },
       traHang:           { title: "退货", sub: "管理退货单" },
       warrantyClaims:    { title: "保修单", sub: "接收并处理保修申请" },
+      serial:            { title: "序列号管理", sub: "查看、添加、编辑、删除设备序列号" },
     },
 
     userRole: {
@@ -880,6 +882,58 @@ export default {
       empty: "暂无数据",
     },
 
+    productsTabs: {
+      sanPham: "产品",
+      cpu: "CPU",
+      ram: "内存",
+      gpu: "显卡",
+      oCung: "硬盘",
+      serial: "序列号",
+    },
+
+    dmCategory: {
+      countSuffix: "{label}",
+      searchPlaceholder: "搜索{label}...",
+      add: "+ 添加{label}",
+      loading: "加载中...",
+      colAction: "操作",
+      edit: "编辑",
+      delete: "删除",
+      empty: "暂无{label}",
+      titleAdd: "添加{label}",
+      titleEdit: "编辑{label}",
+      cancel: "取消",
+      save: "保存",
+      nameRequired: "请输入{label}",
+    },
+
+    serialManager: {
+      searchPlaceholder: "搜索序列号、SKU、产品名称...",
+      add: "+ 添加序列号",
+      loading: "加载中...",
+      colVariant: "产品 / SKU",
+      colSerial: "序列号",
+      colStatus: "状态",
+      colDate: "入库日期",
+      colNote: "备注",
+      colAction: "操作",
+      edit: "编辑",
+      delete: "删除",
+      empty: "暂无序列号",
+      titleAdd: "添加序列号",
+      titleEdit: "编辑序列号",
+      variantLabel: "产品 / 型号",
+      variantPlaceholder: "选择产品...",
+      serialLabel: "序列号",
+      statusLabel: "状态",
+      dateLabel: "入库日期",
+      noteLabel: "备注",
+      cancel: "取消",
+      save: "保存",
+      serialRequired: "请输入序列号",
+      variantRequired: "请选择产品/型号",
+    },
+
     inventoryHistory: {
       countSuffix: "条变动记录",
       loading: "加载中...",
@@ -1159,6 +1213,7 @@ export default {
       deleteSupplier: "删除此供应商？",
       deleteReturn: "确定删除此退货单？",
       deleteWarrantyClaim: "确定删除此保修单？",
+      deleteDmItem: "确定删除此{label}？",
     },
 
     errors: {
