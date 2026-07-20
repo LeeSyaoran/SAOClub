@@ -1,0 +1,22 @@
+import { reactive } from "vue";
+import * as PhieuBaoHanhService from "../Service/PhieuBaoHanhService.js";
+
+export const BaoHanhStore = reactive({ items: [], loading: false, loaded: false });
+
+let baoHanhPromise = null;
+export const ensureBaoHanh = () => {
+  if (baoHanhPromise) return baoHanhPromise;
+  baoHanhPromise = refreshBaoHanh();
+  return baoHanhPromise;
+};
+
+export const refreshBaoHanh = async () => {
+  BaoHanhStore.loading = true;
+  try {
+    BaoHanhStore.items = await PhieuBaoHanhService.getAll().catch(() => []);
+    BaoHanhStore.loaded = true;
+  } finally {
+    BaoHanhStore.loading = false;
+  }
+  return BaoHanhStore.items;
+};
