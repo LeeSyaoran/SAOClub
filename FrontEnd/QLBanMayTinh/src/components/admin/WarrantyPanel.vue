@@ -120,11 +120,17 @@ const openEdit = (p) => {
 const saveClaim = async () => {
   formError.value = "";
   if (!form.value.donHangId || !form.value.bienTheId || !form.value.khachHangId) {
-    formError.value = t('admin.warrantyClaimModal.faultRequired');
+    formError.value = t('admin.warrantyClaimModal.missingInfo');
     return;
   }
   if (!form.value.moTaLoi.trim()) {
     formError.value = t('admin.warrantyClaimModal.faultRequired');
+    return;
+  }
+  const ngayMuaValid = form.value.ngayMua && !isNaN(new Date(form.value.ngayMua).getTime());
+  const ngayHetBhValid = form.value.ngayHetBh && !isNaN(new Date(form.value.ngayHetBh).getTime());
+  if (!ngayMuaValid || !ngayHetBhValid) {
+    formError.value = t('admin.warrantyClaimModal.datesRequired');
     return;
   }
   try {

@@ -856,6 +856,8 @@ export default {
       costLabel: "追加費用",
       noteLabel: "備考",
       faultRequired: "故障内容を入力してください",
+      missingInfo: "注文/商品/顧客情報が不足しています。保証リストから選び直してください",
+      datesRequired: "購入日と保証期限の両方を入力してください",
       cancel: "キャンセル",
       save: "保存",
     },

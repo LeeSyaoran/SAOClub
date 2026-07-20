@@ -856,6 +856,8 @@ export default {
       costLabel: "추가 비용",
       noteLabel: "메모",
       faultRequired: "고장 설명을 입력해 주세요",
+      missingInfo: "주문/상품/고객 정보가 없습니다. 보증 목록에서 다시 선택해 주세요",
+      datesRequired: "구매일과 보증 만료일을 모두 입력해 주세요",
       cancel: "취소",
       save: "저장",
     },

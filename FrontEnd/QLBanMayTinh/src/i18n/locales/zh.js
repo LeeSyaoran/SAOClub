@@ -856,6 +856,8 @@ export default {
       costLabel: "额外费用",
       noteLabel: "备注",
       faultRequired: "请输入故障描述",
+      missingInfo: "缺少订单/商品/客户信息，请从保修列表重新选择",
+      datesRequired: "请输入购买日期和保修到期日",
       cancel: "取消",
       save: "保存",
     },

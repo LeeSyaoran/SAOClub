@@ -870,6 +870,8 @@ export default {
       costLabel: "Chi phí phát sinh",
       noteLabel: "Ghi chú",
       faultRequired: "Vui lòng nhập mô tả lỗi",
+      missingInfo: "Thiếu thông tin đơn hàng/sản phẩm/khách hàng, vui lòng chọn lại từ danh sách còn hạn bảo hành",
+      datesRequired: "Vui lòng nhập đầy đủ ngày mua và ngày hết bảo hành",
       cancel: "Hủy",
       save: "Lưu",
     },

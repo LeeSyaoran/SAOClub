@@ -856,6 +856,8 @@ export default {
       costLabel: "Extra cost",
       noteLabel: "Note",
       faultRequired: "Please enter a fault description",
+      missingInfo: "Missing order/product/customer info, please select again from the warranty list",
+      datesRequired: "Please enter both the purchase date and warranty expiry date",
       cancel: "Cancel",
       save: "Save",
     },
