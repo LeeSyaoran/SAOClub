@@ -39,6 +39,8 @@ import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/cus
 import { InventoryStore, ensureInventory, refreshInventory } from "../stores/inventory.js";
 import { StaffStore, ensureStaff, refreshStaff } from "../stores/staff.js";
 import { PromotionsStore, ensurePromotions, refreshPromotions } from "../stores/promotions.js";
+import { DoiThuongStore, ensureDoiThuong, refreshDoiThuong } from "../stores/doiThuong.js";
+import * as DmDoiThuongService from "../Service/DmDoiThuongService.js";
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentPage = ref("dashboard");
@@ -56,6 +58,7 @@ const PAGE_META = {
   inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: "📦" },
   "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
   promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub", icon: "🏷️" },
+  "doi-thuong": { titleKey: "admin.pageMeta.doiThuong.title", subKey: "admin.pageMeta.doiThuong.sub", icon: "🎁" },
   staff: { titleKey: "admin.pageMeta.staff.title", subKey: "admin.pageMeta.staff.sub", icon: "🧑‍💼" },
   "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: "🛒" },
   reports: { titleKey: "admin.pageMeta.reports.title", subKey: "admin.pageMeta.reports.sub", icon: "📈" },
@@ -77,6 +80,7 @@ const orders = computed(() => OrdersStore.items);
 const customers = computed(() => CustomersStore.items);
 const staff = computed(() => StaffStore.items);
 const promotions = computed(() => PromotionsStore.items);
+const rewards = computed(() => DoiThuongStore.items);
 const inventory = computed(() => InventoryStore.items);
 const chucVuList = ref([]);
 
@@ -461,6 +465,7 @@ const fetchAll = async () => {
     refreshCustomers(),
     refreshPromotions(),
     refreshInventory(),
+    refreshDoiThuong(),
   ]);
   await autoMergeAllDuplicates();
 };
@@ -675,6 +680,73 @@ const deletePromo = async (id) => {
   const res = await KhuyenMaiService.remove(id);
   if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
   await refreshPromotions();
+};
+
+// ── Rewards (Đổi thưởng) CRUD ─────────────────────────────────────────────────
+const showRewardModal = ref(false);
+const editingRewardId = ref(null);
+const rewardFormError = ref("");
+const emptyRewardForm = () => ({
+  ten: "",
+  moTa: "",
+  diemCan: "",
+  loai: "percent",
+  giaTri: "",
+  giaTriToiDa: "",
+  trangThai: "active",
+});
+const rewardForm = reactive(emptyRewardForm());
+
+const openAddReward = () => {
+  Object.assign(rewardForm, emptyRewardForm());
+  editingRewardId.value = null;
+  rewardFormError.value = "";
+  showRewardModal.value = true;
+};
+const openEditReward = (r) => {
+  Object.assign(rewardForm, {
+    ten: r.ten,
+    moTa: r.moTa ?? "",
+    diemCan: r.diemCan ?? "",
+    loai: r.loai ?? "percent",
+    giaTri: r.giaTri ?? "",
+    giaTriToiDa: r.giaTriToiDa ?? "",
+    trangThai: r.trangThai ?? "active",
+  });
+  editingRewardId.value = r.doiThuongId;
+  rewardFormError.value = "";
+  showRewardModal.value = true;
+};
+const saveReward = async () => {
+  rewardFormError.value = "";
+  const body = {
+    ...rewardForm,
+    diemCan: rewardForm.diemCan ? Number(rewardForm.diemCan) : null,
+    giaTri: rewardForm.giaTri ? Number(rewardForm.giaTri) : null,
+    giaTriToiDa: rewardForm.giaTriToiDa ? Number(rewardForm.giaTriToiDa) : null,
+  };
+  try {
+    const res = await DmDoiThuongService.save(editingRewardId.value, body);
+    if (!res.ok) {
+      rewardFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
+      return;
+    }
+    showRewardModal.value = false;
+    if (editingRewardId.value) {
+      const idx = rewards.value.findIndex((r) => r.doiThuongId === editingRewardId.value);
+      if (idx !== -1) rewards.value[idx] = { ...rewards.value[idx], ...body };
+    } else {
+      await refreshDoiThuong();
+    }
+  } catch (e) {
+    rewardFormError.value = e.message;
+  }
+};
+const deleteReward = async (id) => {
+  if (!(await askConfirm(t('admin.confirm.deleteReward')))) return;
+  const res = await DmDoiThuongService.remove(id);
+  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
+  await refreshDoiThuong();
 };
 
 // ── Orders CRUD/detail/status/serial-confirm — đã chuyển vào
@@ -900,6 +972,10 @@ onUnmounted(() => {
         <div class="adm-nav" :class="{active: currentPage==='promotions'}" @click="navigate('promotions')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clip-rule="evenodd"/><path d="M9 11H3v5a2 2 0 002 2h4v-7zm2 7h4a2 2 0 002-2v-5h-6v7z"/></svg>
           {{ t('admin.sidebar.promotions') }}
+        </div>
+        <div class="adm-nav" :class="{active: currentPage==='doi-thuong'}" @click="navigate('doi-thuong')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clip-rule="evenodd"/><path d="M9 11H3v5a2 2 0 002 2h4v-7zm2 7h4a2 2 0 002-2v-5h-6v7z"/></svg>
+          {{ t('admin.sidebar.rewards') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='ban-hang'}" @click="navigate('ban-hang')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C4.328 11.142 4 11.574 4 12a2 2 0 002 2h10a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 4H6.28l-.31-1.243A1 1 0 005 2H3z"/><path d="M16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
@@ -1280,6 +1356,37 @@ onUnmounted(() => {
           </div>
         </section>
 
+        <!-- ── Doi thuong ── -->
+        <section v-show="currentPage === 'doi-thuong'">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-secondary small">{{ rewards.length }} {{ t('admin.rewards.countSuffix') }}</span>
+            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddReward">{{ t('admin.rewards.add') }}</button>
+          </div>
+          <div v-if="DoiThuongStore.loading" class="text-secondary small">{{ t('admin.rewards.loading') }}</div>
+          <div v-else class="table-responsive">
+            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+              <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.rewards.colName') }}</th><th>{{ t('admin.rewards.colPoints') }}</th><th>{{ t('admin.rewards.colType') }}</th><th>{{ t('admin.rewards.colValue') }}</th><th>{{ t('admin.rewards.colStatus') }}</th><th>{{ t('admin.rewards.colAction') }}</th></tr></thead>
+              <tbody>
+                <tr v-for="(r, idx) in rewards" :key="r.doiThuongId">
+                  <td class="text-secondary">{{ idx + 1 }}</td>
+                  <td>{{ r.ten }}</td>
+                  <td>{{ r.diemCan }}</td>
+                  <td>{{ r.loai==='percent'?t('admin.rewards.typePercent'):t('admin.rewards.typeFixed') }}</td>
+                  <td>{{ r.loai==='percent'?`${r.giaTri}%`:formatPrice(r.giaTri) }}</td>
+                  <td><span class="badge" :class="r.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(r.trangThai) }}</span></td>
+                  <td>
+                    <div class="d-flex gap-1">
+                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditReward(r)">{{ t('admin.rewards.edit') }}</button>
+                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteReward(r.doiThuongId)">{{ t('admin.rewards.delete') }}</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="rewards.length===0"><td colspan="7" class="text-center text-secondary">{{ t('admin.rewards.empty') }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <!-- ── Nhan vien ── -->
         <section v-show="currentPage === 'staff'">
           <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1613,6 +1720,32 @@ onUnmounted(() => {
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
         <button class="btn btn-sm btn-outline-secondary" @click="showPromoModal=false">{{ t('admin.promoModal.cancel') }}</button>
         <button class="btn btn-sm btn-warning text-dark fw-bold" @click="savePromo">{{ editingPromoId?t('admin.promoModal.update'):t('admin.promoModal.addNew') }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL DOI THUONG ══ -->
+  <div v-if="showRewardModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showRewardModal=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:620px;max-width:95vw;max-height:90vh;">
+      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+        <span>{{ editingRewardId?t('admin.rewardModal.titleEdit'):t('admin.rewardModal.titleAdd') }}</span>
+        <button class="btn-close btn-close-white btn-sm" @click="showRewardModal=false"></button>
+      </div>
+      <div class="overflow-y-auto p-4">
+        <div v-if="rewardFormError" class="alert alert-danger small py-2 mb-3">{{ rewardFormError }}</div>
+        <div class="row g-3">
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.nameLabel') }}</label><input v-model="rewardForm.ten" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.pointsLabel') }}</label><input v-model="rewardForm.diemCan" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-12"><label class="form-label small text-secondary">{{ t('admin.rewardModal.descLabel') }}</label><textarea v-model="rewardForm.moTa" rows="2" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"></textarea></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.typeLabel') }}</label><select v-model="rewardForm.loai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="percent">{{ t('admin.rewardModal.typePercent') }}</option><option value="fixed">{{ t('admin.rewardModal.typeFixed') }}</option></select></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ rewardForm.loai==='percent'?t('admin.rewardModal.valueLabelPercent'):t('admin.rewardModal.valueLabelFixed') }}</label><input v-model="rewardForm.giaTri" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.maxDiscountLabel') }}</label><input v-model="rewardForm.giaTriToiDa" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
+          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.statusLabel') }}</label><select v-model="rewardForm.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="active">{{ t('admin.rewardModal.statusActive') }}</option><option value="inactive">{{ t('admin.rewardModal.statusStopped') }}</option></select></div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
+        <button class="btn btn-sm btn-outline-secondary" @click="showRewardModal=false">{{ t('admin.rewardModal.cancel') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveReward">{{ editingRewardId?t('admin.rewardModal.update'):t('admin.rewardModal.addNew') }}</button>
       </div>
     </div>
   </div>
