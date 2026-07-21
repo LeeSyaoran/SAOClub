@@ -1,11 +1,17 @@
 HELP.md
 target/
+*.log
 
 ### Secrets — không commit ###
 application-local.properties
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+### Impeccable — cache/pending, không phải config thật ###
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.impeccable/config.local.json
 
 ### STS ###
 .apt_generated
