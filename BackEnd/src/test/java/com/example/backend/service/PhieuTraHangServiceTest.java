@@ -388,4 +388,35 @@ class PhieuTraHangServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
         verify(phieuTraHangRepository, never()).save(any());
     }
+
+    @Test
+    void taoYeuCau_trungChiTietDonHang_congDonVuotSoDaMua_biChan() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 42)));
+
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(42);
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+        donHang.setTrangThaiDonHang("delivered");
+        donHang.setNgayGiaoThucTe(LocalDateTime.now().minusDays(1));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
+
+        ChiTietDonHang dong = new ChiTietDonHang();
+        dong.setId(100);
+        dong.setDonHang(donHang);
+        dong.setSoLuong(3);
+        dong.setDonGia(BigDecimal.valueOf(500_000));
+        when(chiTietDonHangRepository.findById(100)).thenReturn(Optional.of(dong));
+
+        // Mỗi dòng riêng lẻ (2) vẫn <= số đã mua (3), nhưng cộng dồn (2+2=4) thì vượt.
+        YeuCauTraHangRequest req = new YeuCauTraHangRequest(9, "Không vừa ý",
+                List.of(new DongTraRequest(100, 2), new DongTraRequest(100, 2)));
+
+        assertThatThrownBy(() -> service.taoYeuCauTuKhachHang(req))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(phieuTraHangRepository, never()).save(any());
+    }
 }

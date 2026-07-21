@@ -160,16 +160,27 @@ public class PhieuTraHangService {
         if (coPhieuActive)
             throw new IllegalArgumentException("Đơn này đã có yêu cầu trả hàng đang xử lý");
 
+        // Cộng dồn số lượng trả theo từng chiTietDonHangId trước khi kiểm tra — nếu client
+        // gửi cùng 1 dòng đơn hàng nhiều lần, tổng các lần đó không được vượt số đã mua
+        // (kiểm từng lần riêng lẻ sẽ lọt trường hợp 2 dòng cộng lại vượt số đã mua).
+        java.util.Map<Integer, Integer> tongSoLuongTheoDong = new java.util.HashMap<>();
+        for (DongTraRequest d : request.getDongTra())
+            tongSoLuongTheoDong.merge(d.getChiTietDonHangId(), d.getSoLuong(), Integer::sum);
+        for (var entry : tongSoLuongTheoDong.entrySet()) {
+            ChiTietDonHang item = chiTietDonHangRepository.findById(entry.getKey())
+                    .orElseThrow(() -> new IllegalArgumentException("Dòng đơn hàng không tồn tại với id: " + entry.getKey()));
+            if (!item.getDonHang().getId().equals(donHang.getId()))
+                throw new IllegalArgumentException("Dòng #" + item.getId() + " không thuộc đơn hàng này");
+            if (entry.getValue() > item.getSoLuong())
+                throw new IllegalArgumentException(
+                        "Dòng #" + item.getId() + " chỉ mua " + item.getSoLuong() + ", không thể trả " + entry.getValue());
+        }
+
         List<ChiTietTraHang> dongTraHang = new ArrayList<>();
         BigDecimal tongTienHoan = BigDecimal.ZERO;
         for (DongTraRequest d : request.getDongTra()) {
             ChiTietDonHang item = chiTietDonHangRepository.findById(d.getChiTietDonHangId())
                     .orElseThrow(() -> new IllegalArgumentException("Dòng đơn hàng không tồn tại với id: " + d.getChiTietDonHangId()));
-            if (!item.getDonHang().getId().equals(donHang.getId()))
-                throw new IllegalArgumentException("Dòng #" + item.getId() + " không thuộc đơn hàng này");
-            if (d.getSoLuong() > item.getSoLuong())
-                throw new IllegalArgumentException(
-                        "Dòng #" + item.getId() + " chỉ mua " + item.getSoLuong() + ", không thể trả " + d.getSoLuong());
 
             ChiTietTraHang dong = new ChiTietTraHang();
             dong.setBienThe(item.getBienThe());
