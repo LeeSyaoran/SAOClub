@@ -86,4 +86,9 @@ public class DonHang {
 
     @Column(name = "ghi_chu", length = 500)
     private String ghiChu;
+
+    // Nhập tay bởi nhân viên/admin khi chuyển đơn sang "shipping" — text tự do, không phải
+    // mã tra cứu thật của đơn vị vận chuyển.
+    @Column(name = "ma_van_don", length = 50)
+    private String maVanDon;
 }

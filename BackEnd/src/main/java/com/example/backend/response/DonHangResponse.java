@@ -33,4 +33,5 @@ public class DonHangResponse {
     private String trangThaiThanhToan;
     private String kenhBan;
     private String ghiChu;
+    private String maVanDon;
 }

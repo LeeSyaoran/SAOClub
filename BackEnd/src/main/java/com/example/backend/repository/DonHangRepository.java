@@ -38,7 +38,7 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
         d.nguoiNhan, d.sdtNguoiNhan,
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
-        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu
+        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon
     )
     FROM DonHang d
     JOIN d.khachHang kh

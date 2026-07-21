@@ -64,4 +64,6 @@ public class DonHangRequest {
     private String kenhBan;
 
     private String ghiChu;
+
+    private String maVanDon;
 }
