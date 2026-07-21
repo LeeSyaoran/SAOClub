@@ -3,16 +3,25 @@ package com.example.backend.service;
 import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.entity.ChiTietSanPham;
+import com.example.backend.entity.ChucVu;
 import com.example.backend.entity.DonHang;
+import com.example.backend.entity.KhachHang;
 import com.example.backend.entity.LichSuDonHang;
+import com.example.backend.entity.TaiKhoan;
 import com.example.backend.repository.*;
 import com.example.backend.request.XacNhanDonHangLineRequest;
 import com.example.backend.request.XacNhanDonHangRequest;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +29,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,9 +53,48 @@ class DonHangServiceTest {
     @Mock private ChiTietSanPhamRepository chiTietSanPhamRepository;
     @Mock private ChiTietDonHangSerialRepository chiTietDonHangSerialRepository;
     @Mock private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
+    @Mock private TaiKhoanRepository taiKhoanRepository;
 
     @InjectMocks
     private DonHangService service;
+
+    @BeforeEach
+    void setUpSecurity() {
+        SecurityContext context = mock(SecurityContext.class);
+        SecurityContextHolder.setContext(context);
+    }
+
+    @AfterEach
+    void tearDownSecurity() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void loginAs(String username) {
+        Authentication auth = mock(Authentication.class);
+        lenient().when(auth.getName()).thenReturn(username);
+        when(SecurityContextHolder.getContext().getAuthentication()).thenReturn(auth);
+    }
+
+    private TaiKhoan taiKhoanKhachHang(String username, Integer khachHangId) {
+        ChucVu chucVu = new ChucVu();
+        chucVu.setMaChucVu("khach_hang");
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(khachHangId);
+        TaiKhoan tk = new TaiKhoan();
+        tk.setUsername(username);
+        tk.setChucVu(chucVu);
+        tk.setKhachHang(kh);
+        return tk;
+    }
+
+    private TaiKhoan taiKhoanStaff(String username) {
+        ChucVu chucVu = new ChucVu();
+        chucVu.setMaChucVu("nhan_vien");
+        TaiKhoan tk = new TaiKhoan();
+        tk.setUsername(username);
+        tk.setChucVu(chucVu);
+        return tk;
+    }
 
     private DonHang donHangOnlinePending() {
         DonHang d = new DonHang();
@@ -269,5 +319,57 @@ class DonHangServiceTest {
 
         verify(phieuGiamGiaCaNhanRepository, never()).findWithLockByPhieuId(any());
         verify(phieuGiamGiaCaNhanRepository, never()).save(any());
+    }
+
+    private DonHang donHangCuaKhach(Integer donHangId, Integer khachHangId) {
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(khachHangId);
+        DonHang d = new DonHang();
+        d.setId(donHangId);
+        d.setKhachHang(kh);
+        return d;
+    }
+
+    @Test
+    void delete_khongPhaiChuDon_biTuChoi() {
+        loginAs("khach2");
+        when(taiKhoanRepository.findByUsername("khach2")).thenReturn(Optional.of(taiKhoanKhachHang("khach2", 99)));
+
+        DonHang d = donHangCuaKhach(1, 1);
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+
+        assertThatThrownBy(() -> service.delete(1))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(donHangRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void delete_laChuDon_xoaThanhCong() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+
+        DonHang d = donHangCuaKhach(1, 1);
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+        when(chiTietDonHangRepository.findEntityByDonHangId(1)).thenReturn(List.of());
+        when(lichSuTonKhoRepository.findByDonHang_Id(1)).thenReturn(List.of());
+
+        service.delete(1);
+
+        verify(donHangRepository).deleteById(1);
+    }
+
+    @Test
+    void delete_laStaff_xoaDuocDonKhachKhac() {
+        loginAs("nv1");
+        when(taiKhoanRepository.findByUsername("nv1")).thenReturn(Optional.of(taiKhoanStaff("nv1")));
+
+        DonHang d = donHangCuaKhach(1, 55);
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+        when(chiTietDonHangRepository.findEntityByDonHangId(1)).thenReturn(List.of());
+        when(lichSuTonKhoRepository.findByDonHang_Id(1)).thenReturn(List.of());
+
+        service.delete(1);
+
+        verify(donHangRepository).deleteById(1);
     }
 }

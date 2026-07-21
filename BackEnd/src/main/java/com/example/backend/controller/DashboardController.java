@@ -7,6 +7,7 @@ import com.example.backend.response.RevenueByDayResponse;
 import com.example.backend.service.DashboardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,6 +20,8 @@ import java.util.List;
 
 // Endpoint tổng hợp cho Dashboard + Báo cáo admin — SUM/COUNT/GROUP BY chạy ở SQL, thay vì
 // tải toàn bộ san_pham/don_hang/chi_tiet_don_hang về trình duyệt rồi cộng dồn bằng JS.
+// Chứa doanh thu + thông tin khách hàng chi tiêu nhiều — chỉ staff được xem.
+@PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/dashboard")
 public class DashboardController {
