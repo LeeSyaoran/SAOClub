@@ -10,6 +10,7 @@ import com.example.backend.entity.LichSuTonKho;
 import com.example.backend.entity.PhieuTraHang;
 import com.example.backend.entity.PhieuBaoHanh;
 import com.example.backend.entity.PhieuGiamGiaCaNhan;
+import com.example.backend.entity.TaiKhoan;
 import com.example.backend.repository.*;
 import com.example.backend.request.DonHangRequest;
 import com.example.backend.request.XacNhanDonHangLineRequest;
@@ -19,6 +20,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,6 +66,8 @@ public class DonHangService {
     private ChiTietDonHangSerialRepository chiTietDonHangSerialRepository;
     @Autowired
     private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
+    @Autowired
+    private TaiKhoanRepository taiKhoanRepository;
 
     public Page<DonHangResponse> hienThiDonHang(Integer khachHangId, Pageable pageable) {
         return donHangRepository.hienThiDonHang(khachHangId, pageable);
@@ -171,15 +176,33 @@ public class DonHangService {
     // Xoá đơn hàng — trước tiên xoá các dòng chi tiết + lịch sử tồn kho (FK) và trả
     // seri đã bán về "trong_kho" (trigger DB tự cộng lại tồn kho), nếu không sẽ vỡ FK
     // khi đơn đã có sản phẩm, và tồn kho sẽ bị lệch vì seri vẫn coi như đã bán.
+    // Giữ mở cho khách tự gọi (CheckoutModal.vue rollback đơn vừa tạo lỡ tạo dòng chi tiết
+    // lỗi) — nhưng phải kiểm tra chủ đơn, nếu không bất kỳ khách đăng nhập nào cũng xoá
+    // được đơn của người khác chỉ bằng cách đoán id.
     @Transactional
     public void delete(Integer id) {
-        if (!donHangRepository.existsById(id))
-            throw new IllegalArgumentException("Đơn hàng không tồn tại với id: " + id);
+        DonHang donHang = donHangRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại với id: " + id));
+        if (!isStaffOrOwner(donHang.getKhachHang().getKhachHangId()))
+            throw new AccessDeniedException("Không có quyền xóa đơn hàng này");
 
         releaseSerialsToStock(id);
         chiTietDonHangRepository.deleteAll(chiTietDonHangRepository.findEntityByDonHangId(id));
         lichSuTonKhoRepository.deleteAll(lichSuTonKhoRepository.findByDonHang_Id(id));
         donHangRepository.deleteById(id);
+    }
+
+    // ── Kiểm tra quyền: nhân viên/admin/quản kho xoá được mọi đơn, khách chỉ xoá đơn của mình ──
+    private TaiKhoan currentAccount() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return taiKhoanRepository.findByUsername(username).orElse(null);
+    }
+
+    private boolean isStaffOrOwner(Integer khachHangId) {
+        TaiKhoan tk = currentAccount();
+        if (tk == null) return false;
+        if (!"khach_hang".equals(tk.getChucVu().getMaChucVu())) return true;
+        return tk.getKhachHang() != null && khachHangId.equals(tk.getKhachHang().getKhachHangId());
     }
 
     // Chọn serial cho từng dòng + chốt "da_ban" + chuyển trạng thái "confirmed" trong 1

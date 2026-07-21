@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -45,6 +46,9 @@ public class SanPhamController {
     // Tạo sản phẩm mới — service sẽ tạo cả SanPham lẫn BienTheSanPham trong cùng một request
     // @Valid kích hoạt validation từ annotation trong SanPhamRequest
     // Trả 201 Created + body SanPham (có sanPhamId) để frontend biết ID mới tạo
+    // Chỉ staff — trước đây permitAll ở SecurityConfig không giới hạn method nên ai cũng
+    // POST/PUT/DELETE được mà không cần đăng nhập.
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PostMapping
     public ResponseEntity<SanPham> create(@Valid @RequestBody SanPhamRequest request) {
         SanPham created = sanPhamService.createSanPham(request);
@@ -54,6 +58,7 @@ public class SanPhamController {
     // PUT /api/san-pham/update/{id}
     // Cập nhật SanPham + BienTheSanPham (nếu request có bienTheId)
     // Trả 200 OK không có body (đã update thành công)
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PutMapping("update/{id}")
     public ResponseEntity<Void> update(@PathVariable Integer id,
                                        @Valid @RequestBody SanPhamRequest request) {
@@ -64,6 +69,7 @@ public class SanPhamController {
     // DELETE /api/san-pham/delete/{id}
     // Xóa sản phẩm + toàn bộ biến thể liên quan — chỉ thành công nếu CHƯA biến thể nào qua
     // giao dịch (xem SanPhamService.deleteSanPham). Trả 204 No Content khi xóa thành công.
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @DeleteMapping("delete/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         sanPhamService.deleteSanPham(id);

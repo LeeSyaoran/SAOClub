@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,12 +30,16 @@ public class BienTheSanPhamController {
         return bienTheSanPhamService.getById(id);
     }
 
-    // POST — service xử lý FK: sanPham, cpu, ram, oCung, gpu
+    // POST — service xử lý FK: sanPham, cpu, ram, oCung, gpu. Chỉ staff — request chứa
+    // giaBan/giaNhap (giá vốn, dữ liệu tài chính nội bộ), trước đây bất kỳ khách hàng đăng
+    // nhập nào cũng sửa được vì không có @PreAuthorize.
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PostMapping
     public ResponseEntity<BienTheSanPham> create(@Valid @RequestBody BienTheSanPhamRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(bienTheSanPhamService.create(request));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PutMapping("update/{id}")
     public ResponseEntity<Void> update(@PathVariable Integer id,
                                        @Valid @RequestBody BienTheSanPhamRequest request) {
@@ -42,6 +47,7 @@ public class BienTheSanPhamController {
         return ResponseEntity.ok().build();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @DeleteMapping("delete/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         bienTheSanPhamService.delete(id);

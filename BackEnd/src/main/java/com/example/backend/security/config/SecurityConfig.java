@@ -73,10 +73,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/khach-hang/tim-theo-sdt").permitAll()
                 .requestMatchers("/api/khach-hang/khach-vang-lai").permitAll()
 
-                // Public: xem sản phẩm, danh mục (khách chưa đăng nhập vẫn xem được)
-                .requestMatchers("/api/san-pham/**").permitAll()
-                .requestMatchers("/api/danh-muc/**").permitAll()
-                .requestMatchers("/api/thuong-hieu/**").permitAll()
+                // Public: CHỈ xem sản phẩm, danh mục (khách chưa đăng nhập vẫn xem được) — trước
+                // đây permitAll không giới hạn method, nên POST/PUT/DELETE cũng đi qua mà không
+                // cần JWT. Ghi/sửa/xoá vẫn phải qua @PreAuthorize staff-only ở từng controller.
+                .requestMatchers(HttpMethod.GET, "/api/san-pham/**", "/api/danh-muc/**", "/api/thuong-hieu/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/dm-cpu/**", "/api/dm-ram/**", "/api/dm-gpu/**", "/api/dm-o-cung/**").permitAll()
 
                 // Còn lại: bắt buộc đăng nhập (JWT hợp lệ) — phân quyền chi tiết theo role
