@@ -2199,3 +2199,49 @@ BEGIN
     INSERT INTO cai_dat_he_thong (cai_dat_id) VALUES (1);
 END
 GO
+
+-- ============================================================
+--  Mã vận đơn & Lịch sử trạng thái đơn hàng
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('don_hang') AND name = 'ma_van_don')
+BEGIN
+    ALTER TABLE don_hang ADD ma_van_don VARCHAR(50) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'lich_su_don_hang')
+BEGIN
+    CREATE TABLE lich_su_don_hang (
+        lich_su_id     INT           IDENTITY(1,1) PRIMARY KEY,
+        don_hang_id    INT           NOT NULL,
+        trang_thai_cu  NVARCHAR(30)  NULL,
+        trang_thai_moi NVARCHAR(30)  NOT NULL,
+        thoi_gian      DATETIME      NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT FK_lsdh_don_hang FOREIGN KEY (don_hang_id) REFERENCES don_hang(don_hang_id) ON DELETE CASCADE
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_lsdh_don_hang')
+    CREATE INDEX IX_lsdh_don_hang ON lich_su_don_hang(don_hang_id, thoi_gian);
+GO
+
+-- Tự ghi log mỗi khi trạng thái đơn đổi — chỗ duy nhất phát sinh log, không cần backend
+-- Java can thiệp, không sợ thiếu dòng nếu sau này có thêm đường cập nhật trạng thái khác.
+CREATE OR ALTER TRIGGER trg_don_hang_log_trangthai
+ON don_hang
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF UPDATE(trang_thai_don_hang)
+    BEGIN
+        INSERT INTO lich_su_don_hang (don_hang_id, trang_thai_cu, trang_thai_moi, thoi_gian)
+        SELECT i.don_hang_id, d.trang_thai_don_hang, i.trang_thai_don_hang, GETDATE()
+        FROM inserted i
+        JOIN deleted d ON d.don_hang_id = i.don_hang_id
+        WHERE d.trang_thai_don_hang <> i.trang_thai_don_hang;
+    END
+END
+GO
+GO
