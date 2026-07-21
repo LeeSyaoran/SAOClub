@@ -78,6 +78,12 @@ public class ChiTietDonHangService {
 
     @Transactional
     public ChiTietDonHang create(ChiTietDonHangRequest request) {
+        // Trước đây không kiểm tra chủ đơn — khách hàng đăng nhập bất kỳ có thể đoán donHangId
+        // của người khác rồi thêm dòng vào đơn đó. Tái dùng đúng logic staff-or-owner đã có
+        // sẵn cho getByDonHangId().
+        if (!isStaffOrOwner(request.getDonHangId()))
+            throw new AccessDeniedException("Không có quyền thêm sản phẩm vào đơn hàng này");
+
         ChiTietDonHang entity = new ChiTietDonHang();
         // BeanUtils copies: soLuong, donGia, giamGiaDong, ghiChu
         // Bỏ qua: donHangId, bienTheId, chiTietId (khác tên với entity)

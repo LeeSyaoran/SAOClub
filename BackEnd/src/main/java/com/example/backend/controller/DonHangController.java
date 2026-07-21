@@ -45,7 +45,9 @@ public class DonHangController {
     }
 
     // POST — service xử lý các FK: khachHang, nhanVien, khuyenMai, diaChiGiaoHang.
-    // Giữ mở — CheckoutModal.vue gọi khi khách đặt hàng.
+    // Giữ mở ở tầng route — CheckoutModal.vue gọi khi khách đặt hàng — nhưng service tự ép
+    // khachHangId về đúng chủ tài khoản đang gọi nếu là khách hàng (chỉ staff mới được tạo
+    // đơn hộ người khác bằng khachHangId tự chọn trong request).
     @PostMapping
     public ResponseEntity<DonHang> create(@Valid @RequestBody DonHangRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(donHangService.create(request));
