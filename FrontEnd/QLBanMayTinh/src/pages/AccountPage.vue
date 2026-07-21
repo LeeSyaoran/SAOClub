@@ -118,20 +118,23 @@ const fetchData = async () => {
     products.value = allProducts;
     orders.value = myOrders.sort((a, b) => new Date(b.ngayDat) - new Date(a.ngayDat));
 
-    const entries = await Promise.all(
-      orders.value.map(async (o) => [
-        o.donHangId,
-        await ChiTietDonHangService.getByDonHang(o.donHangId).catch(() => []),
-      ])
-    );
+    const [entries, historyEntries] = await Promise.all([
+      Promise.all(
+        orders.value.map(async (o) => [
+          o.donHangId,
+          await ChiTietDonHangService.getByDonHang(o.donHangId).catch(() => []),
+        ])
+      ),
+      Promise.all(
+        orders.value.map(async (o) => [
+          o.donHangId,
+          ["shipping", "delivered"].includes(o.trangThaiDonHang)
+            ? await LichSuDonHangService.getByDonHang(o.donHangId).catch(() => [])
+            : [],
+        ])
+      ),
+    ]);
     itemsByOrder.value = Object.fromEntries(entries);
-
-    const historyEntries = await Promise.all(
-      orders.value.map(async (o) => [
-        o.donHangId,
-        await LichSuDonHangService.getByDonHang(o.donHangId).catch(() => []),
-      ])
-    );
     historyByOrder.value = Object.fromEntries(historyEntries);
   } finally {
     loading.value = false;
