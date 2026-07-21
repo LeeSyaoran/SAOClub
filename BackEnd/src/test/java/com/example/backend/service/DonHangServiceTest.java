@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +40,7 @@ class DonHangServiceTest {
     @Mock private LichSuDonHangRepository lichSuDonHangRepository;
     @Mock private ChiTietSanPhamRepository chiTietSanPhamRepository;
     @Mock private ChiTietDonHangSerialRepository chiTietDonHangSerialRepository;
+    @Mock private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
 
     @InjectMocks
     private DonHangService service;
@@ -192,5 +194,42 @@ class DonHangServiceTest {
 
         assertThat(log.getDonHangId()).isEqualTo(1);
         verify(lichSuDonHangRepository).save(log);
+    }
+
+    @Test
+    void create_coPhieuGiamGiaCaNhan_danhDauDaSuDung() {
+        com.example.backend.entity.KhachHang kh = new com.example.backend.entity.KhachHang();
+        kh.setKhachHangId(1);
+        when(khachHangRepository.getReferenceById(1)).thenReturn(kh);
+
+        DonHang saved = new DonHang();
+        saved.setId(10);
+        saved.setKhachHang(kh);
+        when(donHangRepository.save(any(DonHang.class))).thenReturn(saved);
+
+        com.example.backend.entity.PhieuGiamGiaCaNhan phieu = new com.example.backend.entity.PhieuGiamGiaCaNhan();
+        phieu.setPhieuId(7);
+        phieu.setKhachHang(kh);
+        phieu.setDaSuDung(false);
+        phieu.setNgayHetHan(java.time.LocalDateTime.now().plusDays(10));
+        when(phieuGiamGiaCaNhanRepository.findById(7)).thenReturn(Optional.of(phieu));
+
+        com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
+        req.setKhachHangId(1);
+        req.setTrangThaiDonHang("pending");
+        req.setTrangThaiThanhToan("unpaid");
+        req.setNguoiNhan("A");
+        req.setSdtNguoiNhan("0900000000");
+        req.setTongTien(java.math.BigDecimal.ZERO);
+        req.setGiamGia(java.math.BigDecimal.ZERO);
+        req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
+        req.setNgayDat(java.time.LocalDateTime.now());
+        req.setPhieuGiamGiaCaNhanId(7);
+
+        service.create(req);
+
+        assertThat(phieu.getDaSuDung()).isTrue();
+        assertThat(phieu.getDonHang()).isEqualTo(saved);
+        verify(phieuGiamGiaCaNhanRepository).save(phieu);
     }
 }

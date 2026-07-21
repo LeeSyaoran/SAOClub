@@ -9,6 +9,7 @@ import com.example.backend.entity.ThanhToan;
 import com.example.backend.entity.LichSuTonKho;
 import com.example.backend.entity.PhieuTraHang;
 import com.example.backend.entity.PhieuBaoHanh;
+import com.example.backend.entity.PhieuGiamGiaCaNhan;
 import com.example.backend.repository.*;
 import com.example.backend.request.DonHangRequest;
 import com.example.backend.request.XacNhanDonHangLineRequest;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -59,6 +61,8 @@ public class DonHangService {
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
     @Autowired
     private ChiTietDonHangSerialRepository chiTietDonHangSerialRepository;
+    @Autowired
+    private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
 
     public Page<DonHangResponse> hienThiDonHang(Integer khachHangId, Pageable pageable) {
         return donHangRepository.hienThiDonHang(khachHangId, pageable);
@@ -89,6 +93,21 @@ public class DonHangService {
             entity.setDiaChiGiaoHang(diaChiGiaoHangRepository.getReferenceById(request.getDiaChiGiaoHangId()));
 
         DonHang saved = donHangRepository.save(entity);
+
+        if (request.getPhieuGiamGiaCaNhanId() != null) {
+            PhieuGiamGiaCaNhan phieu = phieuGiamGiaCaNhanRepository.findById(request.getPhieuGiamGiaCaNhanId())
+                    .orElseThrow(() -> new IllegalArgumentException("Voucher không tồn tại"));
+            if (!phieu.getKhachHang().getKhachHangId().equals(saved.getKhachHang().getKhachHangId()))
+                throw new IllegalArgumentException("Voucher không thuộc về khách hàng này");
+            if (Boolean.TRUE.equals(phieu.getDaSuDung()))
+                throw new IllegalArgumentException("Voucher đã được sử dụng");
+            if (LocalDateTime.now().isAfter(phieu.getNgayHetHan()))
+                throw new IllegalArgumentException("Voucher đã hết hạn");
+            phieu.setDaSuDung(true);
+            phieu.setDonHang(saved);
+            phieuGiamGiaCaNhanRepository.save(phieu);
+        }
+
         sseService.notifyNewOrder(saved.getId());
         return saved;
     }
