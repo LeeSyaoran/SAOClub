@@ -352,6 +352,7 @@ export default {
     products: "件商品",
     expectedDelivery: "预计送达",
     actualDelivery: "已签收",
+    buyAgain: "再次购买",
     ordersEmptyTitle: "暂无处理中的订单",
     ordersEmptyDesc: "您刚下的订单将显示在这里。",
     historyEmptyTitle: "暂无历史订单",

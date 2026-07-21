@@ -95,6 +95,16 @@ const viewProductDetail = (item) => {
   if (product) selectedProductDetail.value = product;
 };
 
+// "Mua lại" cả đơn — thêm từng dòng vào giỏ đúng số lượng đã mua trước đó.
+// addToCart (App.vue) cộng dồn +1 mỗi lần gọi nên emit đúng soLuong lần.
+const buyAgainOrder = (o) => {
+  for (const item of itemsByOrder.value[o.donHangId] || []) {
+    const product = productByBienThe(item.bienTheId);
+    if (!product) continue;
+    for (let i = 0; i < item.soLuong; i++) emit("add-to-cart", product);
+  }
+};
+
 const fetchData = async () => {
   loading.value = true;
   try {
@@ -386,6 +396,12 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
                   {{ orderStatusLabel(o.trangThaiDonHang) }}
                 </span>
                 <span class="fw-black" style="color:var(--accent-fg); font-size:0.95rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
+                <button v-if="o.trangThaiDonHang === 'delivered'"
+                        class="btn btn-sm fw-bold rounded-pill px-3"
+                        style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
+                        @click.stop="buyAgainOrder(o)">
+                  🔁 {{ t('account.buyAgain') }}
+                </button>
                 <span style="color:var(--text-secondary); font-size:0.8rem;">{{ expandedHistoryOrders.has(o.donHangId) ? '▲' : '▼' }}</span>
               </div>
             </div>

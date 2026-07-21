@@ -362,6 +362,7 @@ export default {
     products: "sản phẩm",
     expectedDelivery: "Dự kiến giao",
     actualDelivery: "Đã nhận hàng",
+    buyAgain: "Mua lại",
     ordersEmptyTitle: "Không có đơn hàng đang xử lý",
     ordersEmptyDesc: "Các đơn hàng bạn vừa đặt sẽ xuất hiện tại đây.",
     historyEmptyTitle: "Chưa có đơn hàng nào trong lịch sử",

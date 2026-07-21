@@ -352,6 +352,7 @@ export default {
     products: "点の商品",
     expectedDelivery: "配送予定日",
     actualDelivery: "受取済み",
+    buyAgain: "再購入",
     ordersEmptyTitle: "処理中の注文はありません",
     ordersEmptyDesc: "ご注文いただいた商品はこちらに表示されます。",
     historyEmptyTitle: "履歴に注文がまだありません",

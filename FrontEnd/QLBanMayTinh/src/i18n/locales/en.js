@@ -352,6 +352,7 @@ export default {
     products: "items",
     expectedDelivery: "Expected delivery",
     actualDelivery: "Received",
+    buyAgain: "Buy Again",
     ordersEmptyTitle: "No orders in progress",
     ordersEmptyDesc: "Orders you just placed will appear here.",
     historyEmptyTitle: "No orders in history yet",

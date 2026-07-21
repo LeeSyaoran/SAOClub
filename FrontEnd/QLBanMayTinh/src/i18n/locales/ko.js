@@ -352,6 +352,7 @@ export default {
     products: "개 상품",
     expectedDelivery: "예상 배송일",
     actualDelivery: "수령 완료",
+    buyAgain: "재구매",
     ordersEmptyTitle: "처리 중인 주문이 없습니다",
     ordersEmptyDesc: "방금 주문하신 내역이 여기에 표시됩니다.",
     historyEmptyTitle: "구매 내역이 아직 없습니다",
