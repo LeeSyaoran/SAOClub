@@ -10,7 +10,8 @@ import java.util.List;
 
 @Repository
 public interface PhieuTraHangRepository extends JpaRepository<PhieuTraHang, Integer> {
-    @Query("SELECT new com.example.backend.response.PhieuTraHangResponse(p.phieuTraId, p.donHang.id, p.nhanVien.nhanVienId, p.lyDo, p.ngayTra, p.trangThai, p.soTienHoan, p.hinhThucHoan, p.ghiChu) FROM PhieuTraHang p")
+    @Query("SELECT new com.example.backend.response.PhieuTraHangResponse(p.phieuTraId, p.donHang.id, nv.nhanVienId, p.lyDo, p.ngayTra, p.trangThai, p.soTienHoan, p.hinhThucHoan, p.ghiChu) " +
+           "FROM PhieuTraHang p LEFT JOIN p.nhanVien nv")
     List<PhieuTraHangResponse> hienThiPhieuTraHang();
 
     List<PhieuTraHang> findByDonHang_Id(Integer donHangId);

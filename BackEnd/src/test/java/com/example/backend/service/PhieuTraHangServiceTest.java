@@ -1,24 +1,41 @@
 package com.example.backend.service;
 
+import com.example.backend.entity.ChiTietDonHang;
+import com.example.backend.entity.ChiTietTraHang;
+import com.example.backend.entity.ChucVu;
 import com.example.backend.entity.DonHang;
 import com.example.backend.entity.KhachHang;
 import com.example.backend.entity.PhieuTraHang;
+import com.example.backend.entity.TaiKhoan;
+import com.example.backend.repository.ChiTietDonHangRepository;
+import com.example.backend.repository.ChiTietTraHangRepository;
 import com.example.backend.repository.DonHangRepository;
 import com.example.backend.repository.KhachHangRepository;
 import com.example.backend.repository.NhanVienRepository;
 import com.example.backend.repository.PhieuTraHangRepository;
+import com.example.backend.repository.TaiKhoanRepository;
+import com.example.backend.request.DongTraRequest;
 import com.example.backend.request.PhieuTraHangRequest;
+import com.example.backend.request.YeuCauTraHangRequest;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,9 +45,41 @@ class PhieuTraHangServiceTest {
     @Mock private DonHangRepository donHangRepository;
     @Mock private NhanVienRepository nhanVienRepository;
     @Mock private KhachHangRepository khachHangRepository;
+    @Mock private ChiTietDonHangRepository chiTietDonHangRepository;
+    @Mock private ChiTietTraHangRepository chiTietTraHangRepository;
+    @Mock private TaiKhoanRepository taiKhoanRepository;
 
     @InjectMocks
     private PhieuTraHangService service;
+
+    @BeforeEach
+    void setUpSecurity() {
+        SecurityContext context = mock(SecurityContext.class);
+        SecurityContextHolder.setContext(context);
+    }
+
+    @AfterEach
+    void tearDownSecurity() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void loginAs(String username) {
+        Authentication auth = mock(Authentication.class);
+        lenient().when(auth.getName()).thenReturn(username);
+        when(SecurityContextHolder.getContext().getAuthentication()).thenReturn(auth);
+    }
+
+    private TaiKhoan taiKhoanKhachHang(String username, Integer khachHangId) {
+        ChucVu chucVu = new ChucVu();
+        chucVu.setMaChucVu("khach_hang");
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(khachHangId);
+        TaiKhoan tk = new TaiKhoan();
+        tk.setUsername(username);
+        tk.setChucVu(chucVu);
+        tk.setKhachHang(kh);
+        return tk;
+    }
 
     private PhieuTraHangRequest requestDaXuLyQuaVi(Integer donHangId, BigDecimal soTien) {
         PhieuTraHangRequest r = new PhieuTraHangRequest();
@@ -204,5 +253,139 @@ class PhieuTraHangServiceTest {
         assertThat(phieu.getGhiChu()).isEqualTo("Ghi chú mới");
         assertThat(kh.getSoDuVi()).isEqualByComparingTo(BigDecimal.valueOf(100_000));
         verify(khachHangRepository, never()).save(any());
+    }
+
+    // ── Khách hàng tự gửi yêu cầu trả hàng ──────
+
+    @Test
+    void taoYeuCau_hopLe_taoPhieuChoXuLyHoanVi() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 42)));
+
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(42);
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+        donHang.setTrangThaiDonHang("delivered");
+        donHang.setNgayGiaoThucTe(LocalDateTime.now().minusDays(2));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
+
+        ChiTietDonHang dong = new ChiTietDonHang();
+        dong.setId(100);
+        dong.setDonHang(donHang);
+        dong.setSoLuong(2);
+        dong.setDonGia(BigDecimal.valueOf(500_000));
+        when(chiTietDonHangRepository.findById(100)).thenReturn(Optional.of(dong));
+
+        when(phieuTraHangRepository.save(any(PhieuTraHang.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        YeuCauTraHangRequest req = new YeuCauTraHangRequest(9, "Không vừa ý", List.of(new DongTraRequest(100, 1)));
+
+        PhieuTraHang saved = service.taoYeuCauTuKhachHang(req);
+
+        assertThat(saved.getTrangThai()).isEqualTo("cho_xu_ly");
+        assertThat(saved.getHinhThucHoan()).isEqualTo("vi");
+        assertThat(saved.getNhanVien()).isNull();
+        assertThat(saved.getSoTienHoan()).isEqualByComparingTo(BigDecimal.valueOf(500_000));
+        verify(chiTietTraHangRepository).save(any(ChiTietTraHang.class));
+    }
+
+    @Test
+    void taoYeuCau_donKhongPhaiCuaMinh_biTuChoi() {
+        loginAs("khach2");
+        when(taiKhoanRepository.findByUsername("khach2")).thenReturn(Optional.of(taiKhoanKhachHang("khach2", 43)));
+
+        KhachHang chuDon = new KhachHang();
+        chuDon.setKhachHangId(42);
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(chuDon);
+        donHang.setTrangThaiDonHang("delivered");
+        donHang.setNgayGiaoThucTe(LocalDateTime.now().minusDays(2));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+
+        YeuCauTraHangRequest req = new YeuCauTraHangRequest(9, "Không vừa ý", List.of(new DongTraRequest(100, 1)));
+
+        assertThatThrownBy(() -> service.taoYeuCauTuKhachHang(req))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(phieuTraHangRepository, never()).save(any());
+    }
+
+    @Test
+    void taoYeuCau_quaHan7Ngay_biChan() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 42)));
+
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(42);
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+        donHang.setTrangThaiDonHang("delivered");
+        donHang.setNgayGiaoThucTe(LocalDateTime.now().minusDays(8));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+
+        YeuCauTraHangRequest req = new YeuCauTraHangRequest(9, "Không vừa ý", List.of(new DongTraRequest(100, 1)));
+
+        assertThatThrownBy(() -> service.taoYeuCauTuKhachHang(req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("7 ngày");
+        verify(phieuTraHangRepository, never()).save(any());
+    }
+
+    @Test
+    void taoYeuCau_donCoPhieuChoXuLyRoi_biChanTaoTrung() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 42)));
+
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(42);
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+        donHang.setTrangThaiDonHang("delivered");
+        donHang.setNgayGiaoThucTe(LocalDateTime.now().minusDays(1));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+
+        PhieuTraHang phieuCu = new PhieuTraHang();
+        phieuCu.setTrangThai("cho_xu_ly");
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of(phieuCu));
+
+        YeuCauTraHangRequest req = new YeuCauTraHangRequest(9, "Không vừa ý", List.of(new DongTraRequest(100, 1)));
+
+        assertThatThrownBy(() -> service.taoYeuCauTuKhachHang(req))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(phieuTraHangRepository, never()).save(any());
+    }
+
+    @Test
+    void taoYeuCau_soLuongVuotSoDaMua_biChan() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 42)));
+
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(42);
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+        donHang.setTrangThaiDonHang("delivered");
+        donHang.setNgayGiaoThucTe(LocalDateTime.now().minusDays(1));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
+
+        ChiTietDonHang dong = new ChiTietDonHang();
+        dong.setId(100);
+        dong.setDonHang(donHang);
+        dong.setSoLuong(1);
+        dong.setDonGia(BigDecimal.valueOf(500_000));
+        when(chiTietDonHangRepository.findById(100)).thenReturn(Optional.of(dong));
+
+        YeuCauTraHangRequest req = new YeuCauTraHangRequest(9, "Không vừa ý", List.of(new DongTraRequest(100, 2)));
+
+        assertThatThrownBy(() -> service.taoYeuCauTuKhachHang(req))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(phieuTraHangRepository, never()).save(any());
     }
 }
