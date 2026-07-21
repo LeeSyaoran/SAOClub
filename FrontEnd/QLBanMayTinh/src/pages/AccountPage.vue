@@ -14,7 +14,9 @@ import * as DonHangService         from "../Service/DonHangService.js";
 import * as ChiTietDonHangService  from "../Service/ChiTietDonHangService.js";
 import * as SanPhamService         from "../Service/SanPhamService.js";
 import * as KhachHangService       from "../Service/KhachHangService.js";
+import * as LichSuDonHangService   from "../Service/LichSuDonHangService.js";
 import OrderStatusTimeline from "../components/order/OrderStatusTimeline.vue";
+import OrderTrackingLog from "../components/order/OrderTrackingLog.vue";
 import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
 
@@ -47,6 +49,7 @@ const TABS = computed(() => [
 const orders      = ref([]);   // toàn bộ đơn hàng của khách hàng này
 const products    = ref([]);   // danh sách bienThe/sanPham (để map ảnh + tên)
 const itemsByOrder = ref({});  // { [donHangId]: ChiTietDonHangResponse[] }
+const historyByOrder = ref({});  // { [donHangId]: LichSuDonHangResponse[] }
 const loading      = ref(false);
 
 // Số đơn theo từng tab — hiện badge trên tab dù đang xem tab khác
@@ -122,6 +125,14 @@ const fetchData = async () => {
       ])
     );
     itemsByOrder.value = Object.fromEntries(entries);
+
+    const historyEntries = await Promise.all(
+      orders.value.map(async (o) => [
+        o.donHangId,
+        await LichSuDonHangService.getByDonHang(o.donHangId).catch(() => []),
+      ])
+    );
+    historyByOrder.value = Object.fromEntries(historyEntries);
   } finally {
     loading.value = false;
   }
@@ -324,6 +335,12 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
               <span v-if="o.ngayGiaoThucTe">✅ {{ t('account.actualDelivery') }}: {{ formatDate(o.ngayGiaoThucTe) }}</span>
             </div>
 
+            <!-- Mã vận đơn + lịch sử trạng thái -->
+            <OrderTrackingLog v-if="o.trangThaiDonHang === 'shipping'"
+                               :ma-van-don="o.maVanDon || ''"
+                               :history="historyByOrder[o.donHangId] || []"
+                               class="mb-3" />
+
             <!-- Danh sách sản phẩm trong đơn -->
             <div class="d-flex flex-column gap-2">
               <div v-for="item in itemsByOrder[o.donHangId] || []" :key="item.id"
@@ -426,6 +443,10 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
                 <span class="text-secondary" style="font-size:12px;">x{{ item.soLuong }}</span>
                 <span class="fw-semibold" style="color:var(--accent-fg); font-size:12.5px; min-width:100px; text-align:right;">{{ formatPrice(item.thanhTien) }}</span>
               </div>
+              <OrderTrackingLog v-if="o.trangThaiDonHang === 'delivered'"
+                                 :ma-van-don="o.maVanDon || ''"
+                                 :history="historyByOrder[o.donHangId] || []"
+                                 class="mt-2" />
             </div>
           </div>
         </div>
