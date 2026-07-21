@@ -2262,14 +2262,21 @@ BEGIN
     SET NOCOUNT ON;
     IF UPDATE(trang_thai_don_hang)
     BEGIN
+        -- Cộng dồn theo GROUP BY khach_hang_id trước khi UPDATE — 1 câu UPDATE...FROM...JOIN
+        -- trực tiếp trên "many" side chỉ lấy được giá trị từ 1 dòng khớp bất kỳ khi 1 khách có
+        -- nhiều đơn cùng chuyển "delivered" trong cùng 1 batch, làm mất điểm âm thầm.
         UPDATE kh
-        SET kh.diem_tich_luy = kh.diem_tich_luy + FLOOR(i.thanh_tien / 10000)
+        SET kh.diem_tich_luy = kh.diem_tich_luy + x.diem_cong
         FROM khach_hang kh
-        JOIN inserted i ON i.khach_hang_id = kh.khach_hang_id
-        JOIN deleted d ON d.don_hang_id = i.don_hang_id
-        WHERE i.trang_thai_don_hang = N'delivered'
-          AND d.trang_thai_don_hang <> N'delivered'
-          AND i.da_cong_diem = 0;
+        JOIN (
+            SELECT i.khach_hang_id, SUM(FLOOR(i.thanh_tien / 10000)) AS diem_cong
+            FROM inserted i
+            JOIN deleted d ON d.don_hang_id = i.don_hang_id
+            WHERE i.trang_thai_don_hang = N'delivered'
+              AND d.trang_thai_don_hang <> N'delivered'
+              AND i.da_cong_diem = 0
+            GROUP BY i.khach_hang_id
+        ) x ON x.khach_hang_id = kh.khach_hang_id;
 
         UPDATE don_hang SET da_cong_diem = 1
         WHERE don_hang_id IN (
