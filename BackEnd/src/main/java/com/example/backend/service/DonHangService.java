@@ -4,6 +4,7 @@ import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.entity.ChiTietDonHangSerial;
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.DonHang;
+import com.example.backend.entity.LichSuDonHang;
 import com.example.backend.entity.ThanhToan;
 import com.example.backend.entity.LichSuTonKho;
 import com.example.backend.entity.PhieuTraHang;
@@ -52,6 +53,8 @@ public class DonHangService {
     private PhieuTraHangRepository phieuTraHangRepository;
     @Autowired
     private PhieuBaoHanhRepository phieuBaoHanhRepository;
+    @Autowired
+    private LichSuDonHangRepository lichSuDonHangRepository;
     @Autowired
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
     @Autowired
@@ -275,6 +278,10 @@ public class DonHangService {
             for (PhieuBaoHanh pbh : phieuBaoHanhRepository.findByDonHang_Id(sourceId)) {
                 pbh.setDonHang(target);
                 phieuBaoHanhRepository.save(pbh);
+            }
+            for (LichSuDonHang lsdh : lichSuDonHangRepository.findByDonHangId(sourceId)) {
+                lsdh.setDonHangId(target.getId());
+                lichSuDonHangRepository.save(lsdh);
             }
             donHangRepository.deleteById(sourceId);
         }

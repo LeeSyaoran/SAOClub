@@ -4,6 +4,7 @@ import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.DonHang;
+import com.example.backend.entity.LichSuDonHang;
 import com.example.backend.repository.*;
 import com.example.backend.request.XacNhanDonHangLineRequest;
 import com.example.backend.request.XacNhanDonHangRequest;
@@ -18,6 +19,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +36,7 @@ class DonHangServiceTest {
     @Mock private LichSuTonKhoRepository lichSuTonKhoRepository;
     @Mock private PhieuTraHangRepository phieuTraHangRepository;
     @Mock private PhieuBaoHanhRepository phieuBaoHanhRepository;
+    @Mock private LichSuDonHangRepository lichSuDonHangRepository;
     @Mock private ChiTietSanPhamRepository chiTietSanPhamRepository;
     @Mock private ChiTietDonHangSerialRepository chiTietDonHangSerialRepository;
 
@@ -160,5 +163,34 @@ class DonHangServiceTest {
         assertThatThrownBy(() -> service.mergeOrders(1, List.of(2)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("chưa được xác nhận");
+    }
+
+    @Test
+    void mergeOrders_hopLe_chuyenLichSuDonHangSangDonDich() {
+        DonHang target = new DonHang();
+        target.setId(1);
+        target.setTrangThaiDonHang("confirmed");
+        DonHang source = new DonHang();
+        source.setId(2);
+        source.setTrangThaiDonHang("confirmed");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(target));
+        when(donHangRepository.findById(2)).thenReturn(Optional.of(source));
+        when(chiTietDonHangRepository.findEntityByDonHangId(2)).thenReturn(List.of());
+        when(chiTietDonHangRepository.findEntityByDonHangId(1)).thenReturn(List.of());
+        when(thanhToanRepository.findByDonHang_Id(2)).thenReturn(List.of());
+        when(lichSuTonKhoRepository.findByDonHang_Id(2)).thenReturn(List.of());
+        when(phieuTraHangRepository.findByDonHang_Id(2)).thenReturn(List.of());
+        when(phieuBaoHanhRepository.findByDonHang_Id(2)).thenReturn(List.of());
+
+        LichSuDonHang log = new LichSuDonHang();
+        log.setLichSuId(9);
+        log.setDonHangId(2);
+        log.setTrangThaiMoi("confirmed");
+        when(lichSuDonHangRepository.findByDonHangId(2)).thenReturn(List.of(log));
+
+        service.mergeOrders(1, List.of(2));
+
+        assertThat(log.getDonHangId()).isEqualTo(1);
+        verify(lichSuDonHangRepository).save(log);
     }
 }
