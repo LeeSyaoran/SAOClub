@@ -15,8 +15,10 @@ import * as ChiTietDonHangService  from "../Service/ChiTietDonHangService.js";
 import * as SanPhamService         from "../Service/SanPhamService.js";
 import * as KhachHangService       from "../Service/KhachHangService.js";
 import * as LichSuDonHangService   from "../Service/LichSuDonHangService.js";
+import * as PhieuTraHangService    from "../Service/PhieuTraHangService.js";
 import OrderStatusTimeline from "../components/order/OrderStatusTimeline.vue";
 import OrderTrackingLog from "../components/order/OrderTrackingLog.vue";
+import ReturnRequestModal from "../components/order/ReturnRequestModal.vue";
 import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
 
@@ -37,6 +39,33 @@ const TAB_STATUS_GROUPS = {
   cancelled: ["cancelled", "returned"],
 };
 
+// Đơn có phiếu trả hàng đang active (chờ xử lý/đã xử lý) — luôn hiện ở tab "Đã hủy/Trả
+// hàng" bất kể trangThaiDonHang thực tế (thường vẫn là "delivered", vì phiếu trả hàng
+// không tự đổi trạng thái đơn — nhân viên tự bấm đổi riêng nếu muốn).
+const hasActiveReturn = (donHangId) =>
+  (returnsByOrder.value[donHangId] || []).some(r => r.trangThai === 'cho_xu_ly' || r.trangThai === 'da_xu_ly');
+
+const orderTabId = (o) => {
+  if (hasActiveReturn(o.donHangId)) return 'cancelled';
+  for (const [tabId, statuses] of Object.entries(TAB_STATUS_GROUPS)) {
+    if (statuses.includes(o.trangThaiDonHang)) return tabId;
+  }
+  return null;
+};
+
+// Còn trong hạn 7 ngày kể từ khi nhận hàng, và đơn chưa có phiếu trả hàng active.
+const canRequestReturn = (o) => {
+  if (o.trangThaiDonHang !== 'delivered' || hasActiveReturn(o.donHangId) || !o.ngayGiaoThucTe) return false;
+  return Date.now() <= new Date(o.ngayGiaoThucTe).getTime() + 7 * 24 * 60 * 60 * 1000;
+};
+
+const RETURN_STATUS_LABEL = { cho_xu_ly: 'account.returnStatusPending', da_xu_ly: 'account.returnStatusDone', tu_choi: 'account.returnStatusRejected' };
+const RETURN_STATUS_COLOR = {
+  cho_xu_ly: { bg: 'rgba(250,204,21,0.15)', text: '#facc15' },
+  da_xu_ly:  { bg: 'rgba(34,197,94,0.15)',  text: '#22c55e' },
+  tu_choi:   { bg: 'rgba(239,68,68,0.15)',  text: '#f87171' },
+};
+
 const TABS = computed(() => [
   { id: "pending",   icon: "🕐", label: t("account.tabPending") },
   { id: "shipping",  icon: "🚚", label: t("account.tabShipping") },
@@ -50,32 +79,31 @@ const orders      = ref([]);   // toàn bộ đơn hàng của khách hàng này
 const products    = ref([]);   // danh sách bienThe/sanPham (để map ảnh + tên)
 const itemsByOrder = ref({});  // { [donHangId]: ChiTietDonHangResponse[] }
 const historyByOrder = ref({});  // { [donHangId]: LichSuDonHangResponse[] }
+const returnsByOrder = ref({});  // { [donHangId]: PhieuTraHangResponse[] }
+const returnModalOrder = ref(null);  // đơn đang mở modal trả hàng (null = đóng)
 const loading      = ref(false);
 
 // Số đơn theo từng tab — hiện badge trên tab dù đang xem tab khác
 const tabOrderCounts = computed(() => {
   const counts = { pending: 0, shipping: 0, completed: 0, cancelled: 0 };
   orders.value.forEach(o => {
-    for (const [tabId, statuses] of Object.entries(TAB_STATUS_GROUPS)) {
-      if (statuses.includes(o.trangThaiDonHang)) { counts[tabId]++; break; }
-    }
+    const tabId = orderTabId(o);
+    if (tabId && tabId in counts) counts[tabId]++;
   });
   return counts;
 });
 
 // Đơn thuộc tab "Chờ xác nhận" / "Đang giao" — hiện dạng thẻ đầy đủ + timeline
 const currentOrders = computed(() => {
-  const statuses = TAB_STATUS_GROUPS[activeTab.value];
-  return (activeTab.value === 'pending' || activeTab.value === 'shipping') && statuses
-    ? orders.value.filter(o => statuses.includes(o.trangThaiDonHang))
+  return (activeTab.value === 'pending' || activeTab.value === 'shipping')
+    ? orders.value.filter(o => orderTabId(o) === activeTab.value)
     : [];
 });
 
 // Đơn thuộc tab "Hoàn tất" / "Đã hủy/Trả hàng" — hiện dạng dòng gọn, bấm mở xem sản phẩm
 const historyOrders = computed(() => {
-  const statuses = TAB_STATUS_GROUPS[activeTab.value];
-  return (activeTab.value === 'completed' || activeTab.value === 'cancelled') && statuses
-    ? orders.value.filter(o => statuses.includes(o.trangThaiDonHang))
+  return (activeTab.value === 'completed' || activeTab.value === 'cancelled')
+    ? orders.value.filter(o => orderTabId(o) === activeTab.value)
     : [];
 });
 
@@ -134,6 +162,14 @@ const fetchData = async () => {
     ]);
     itemsByOrder.value = Object.fromEntries(entries);
     historyByOrder.value = Object.fromEntries(historyEntries);
+
+    const returnEntries = await Promise.all(
+      orders.value.map(async (o) => [
+        o.donHangId,
+        await PhieuTraHangService.getByDonHang(o.donHangId).catch(() => []),
+      ])
+    );
+    returnsByOrder.value = Object.fromEntries(returnEntries);
   } finally {
     loading.value = false;
   }
@@ -422,6 +458,12 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
                         @click.stop="buyAgainOrder(o)">
                   🔁 {{ t('account.buyAgain') }}
                 </button>
+                <button v-if="canRequestReturn(o)"
+                        class="btn btn-sm fw-bold rounded-pill px-3"
+                        style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
+                        @click.stop="returnModalOrder = o">
+                  ↩️ {{ t('account.requestReturn') }}
+                </button>
                 <span style="color:var(--text-secondary); font-size:0.8rem;">{{ expandedHistoryOrders.has(o.donHangId) ? '▲' : '▼' }}</span>
               </div>
             </div>
@@ -450,6 +492,18 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
                                  :ma-van-don="o.maVanDon || ''"
                                  :history="historyByOrder[o.donHangId] || []"
                                  class="mt-2" />
+              <div v-if="(returnsByOrder[o.donHangId] || []).length" class="rounded-3 mt-2 p-2 d-flex flex-column gap-2" style="background:var(--bg-card-alt);">
+                <div v-for="r in returnsByOrder[o.donHangId]" :key="r.phieuTraId" class="d-flex flex-column gap-1">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge px-2 py-1 rounded-pill fw-semibold"
+                          :style="{ background: RETURN_STATUS_COLOR[r.trangThai]?.bg, color: RETURN_STATUS_COLOR[r.trangThai]?.text }">
+                      {{ t(RETURN_STATUS_LABEL[r.trangThai]) }}
+                    </span>
+                    <span style="font-size:11px; color:var(--text-secondary);">{{ formatPrice(r.soTienHoan) }}</span>
+                  </div>
+                  <div style="font-size:12px; color:var(--text-primary);">{{ r.lyDo }}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -529,4 +583,11 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
     @add-to-cart="p => { emit('add-to-cart', p); selectedProductDetail = null; }"
     @open-product="p => selectedProductDetail = p"
   />
+
+  <!-- Yêu cầu trả hàng — chọn sản phẩm + số lượng muốn trả -->
+  <ReturnRequestModal v-if="returnModalOrder"
+                       :order="returnModalOrder"
+                       :items="itemsByOrder[returnModalOrder.donHangId] || []"
+                       @close="returnModalOrder = null"
+                       @submitted="returnModalOrder = null; fetchData();" />
 </template>
