@@ -44,14 +44,14 @@
 import { computed } from 'vue';
 import { t } from '../../i18n/index.js';
 
-// currentStep: 0 = đặt hàng, 1 = xác nhận, 2 = đang đóng gói, 3 = đang giao, 4 = hoàn tất
+// currentStep: 0 = đặt hàng, 1 = xác nhận, 2 = đang đóng gói. Từ đây trở đi trạng thái
+// đơn chuyển tab (Đang giao / Hoàn tất) thay vì thêm bước trên timeline — xem
+// TAB_STATUS_GROUPS + OrderTrackingLog.vue ở AccountPage.vue.
 defineProps({ currentStep: { type: Number, default: 0 } });
 
 const steps = computed(() => [
   { title: t('orderStatus.timeline.placedTitle'),    desc: t('orderStatus.timeline.placedDesc'),    icon: '📝' },
   { title: t('orderStatus.timeline.confirmedTitle'), desc: t('orderStatus.timeline.confirmedDesc'), icon: '✅' },
   { title: t('orderStatus.timeline.packingTitle'),   desc: t('orderStatus.timeline.packingDesc'),   icon: '📦' },
-  { title: t('orderStatus.timeline.shippingTitle'),  desc: t('orderStatus.timeline.shippingDesc'),  icon: '🚚' },
-  { title: t('orderStatus.timeline.deliveredTitle'), desc: t('orderStatus.timeline.deliveredDesc'), icon: '🎉' },
 ]);
 </script>
