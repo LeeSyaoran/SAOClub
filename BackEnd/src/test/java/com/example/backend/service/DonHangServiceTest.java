@@ -20,6 +20,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -232,5 +233,41 @@ class DonHangServiceTest {
         assertThat(phieu.getDonHang()).isEqualTo(saved);
         verify(phieuGiamGiaCaNhanRepository).findWithLockByPhieuId(7);
         verify(phieuGiamGiaCaNhanRepository).save(phieu);
+    }
+
+    @Test
+    void create_coCaKhuyenMaiVaPhieuGiamGiaCaNhan_biChan() {
+        com.example.backend.entity.KhachHang kh = new com.example.backend.entity.KhachHang();
+        kh.setKhachHangId(1);
+        when(khachHangRepository.getReferenceById(1)).thenReturn(kh);
+
+        com.example.backend.entity.KhuyenMai km = new com.example.backend.entity.KhuyenMai();
+        km.setKhuyenMaiId(3);
+        when(khuyenMaiRepository.getReferenceById(3)).thenReturn(km);
+
+        DonHang saved = new DonHang();
+        saved.setId(10);
+        saved.setKhachHang(kh);
+        when(donHangRepository.save(any(DonHang.class))).thenReturn(saved);
+
+        com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
+        req.setKhachHangId(1);
+        req.setKhuyenMaiId(3);
+        req.setTrangThaiDonHang("pending");
+        req.setTrangThaiThanhToan("unpaid");
+        req.setNguoiNhan("A");
+        req.setSdtNguoiNhan("0900000000");
+        req.setTongTien(java.math.BigDecimal.ZERO);
+        req.setGiamGia(java.math.BigDecimal.ZERO);
+        req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
+        req.setNgayDat(java.time.LocalDateTime.now());
+        req.setPhieuGiamGiaCaNhanId(7);
+
+        assertThatThrownBy(() -> service.create(req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("đồng thời");
+
+        verify(phieuGiamGiaCaNhanRepository, never()).findWithLockByPhieuId(any());
+        verify(phieuGiamGiaCaNhanRepository, never()).save(any());
     }
 }

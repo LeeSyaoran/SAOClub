@@ -96,6 +96,11 @@ public class DonHangService {
         DonHang saved = donHangRepository.save(entity);
 
         if (request.getPhieuGiamGiaCaNhanId() != null) {
+            // Chặn dùng đồng thời mã khuyến mãi công khai + voucher cá nhân — giữ đúng quy tắc
+            // "chỉ 1 trong 2" đã chốt ở checkout, không chỉ dựa vào UI (client có thể gửi request
+            // tay kèm cả 2 id).
+            if (request.getKhuyenMaiId() != null)
+                throw new IllegalArgumentException("Không thể dùng đồng thời mã khuyến mãi và voucher cá nhân");
             PhieuGiamGiaCaNhan phieu = phieuGiamGiaCaNhanRepository.findWithLockByPhieuId(request.getPhieuGiamGiaCaNhanId())
                     .orElseThrow(() -> new IllegalArgumentException("Voucher không tồn tại"));
             if (!phieu.getKhachHang().getKhachHangId().equals(saved.getKhachHang().getKhachHangId()))
