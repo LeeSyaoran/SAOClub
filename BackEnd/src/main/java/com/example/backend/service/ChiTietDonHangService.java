@@ -5,17 +5,21 @@ import com.example.backend.entity.ChiTietDonHangSerial;
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.DonHang;
 import com.example.backend.entity.LichSuTonKho;
+import com.example.backend.entity.TaiKhoan;
 import com.example.backend.repository.BienTheSanPhamRepository;
 import com.example.backend.repository.ChiTietDonHangRepository;
 import com.example.backend.repository.ChiTietDonHangSerialRepository;
 import com.example.backend.repository.ChiTietSanPhamRepository;
 import com.example.backend.repository.DonHangRepository;
 import com.example.backend.repository.LichSuTonKhoRepository;
+import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.request.ChiTietDonHangRequest;
 import com.example.backend.response.ChiTietDonHangResponse;
 import com.example.backend.response.ChiTietDonHangSerialResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,13 +41,34 @@ public class ChiTietDonHangService {
     private LichSuTonKhoRepository lichSuTonKhoRepository;
     @Autowired
     private ChiTietDonHangSerialRepository chiTietDonHangSerialRepository;
+    @Autowired
+    private TaiKhoanRepository taiKhoanRepository;
 
     public List<ChiTietDonHangResponse> hienThiChiTietDonHang() {
         return chiTietDonHangRepository.hienThiChiTietDonHang();
     }
 
     public List<ChiTietDonHangResponse> getByDonHangId(Integer donHangId) {
+        if (!isStaffOrOwner(donHangId))
+            throw new AccessDeniedException("Không có quyền xem đơn hàng này");
         return chiTietDonHangRepository.findByDonHangId(donHangId);
+    }
+
+    // ── Kiểm tra quyền: nhân viên/admin/quản kho xem tất cả, khách chỉ xem đơn của chính mình ──
+    private TaiKhoan currentAccount() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return taiKhoanRepository.findByUsername(username).orElse(null);
+    }
+
+    private boolean isStaffOrOwner(Integer donHangId) {
+        DonHang donHang = donHangRepository.findById(donHangId)
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại với id: " + donHangId));
+        TaiKhoan tk = currentAccount();
+        if (tk == null) return false;
+        if (!"khach_hang".equals(tk.getChucVu().getMaChucVu())) return true;
+        return tk.getKhachHang() != null
+                && donHang.getKhachHang() != null
+                && tk.getKhachHang().getKhachHangId().equals(donHang.getKhachHang().getKhachHangId());
     }
 
     public ChiTietDonHang getById(Integer id) {
