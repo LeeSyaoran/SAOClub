@@ -411,6 +411,7 @@ export default {
       used: "Đã dùng",
       available: "Còn hiệu lực",
       myVouchersEmpty: "Bạn chưa đổi voucher nào.",
+      redeemError: "Không thể kết nối để đổi thưởng, vui lòng thử lại.",
     },
   },
 

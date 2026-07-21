@@ -401,6 +401,7 @@ export default {
       used: "사용됨",
       available: "사용 가능",
       myVouchersEmpty: "아직 교환한 바우처가 없습니다.",
+      redeemError: "교환하지 못했습니다. 다시 시도해 주세요.",
     },
   },
 

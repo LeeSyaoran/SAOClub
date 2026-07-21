@@ -401,6 +401,7 @@ export default {
       used: "已使用",
       available: "可使用",
       myVouchersEmpty: "您还没有兑换任何优惠券。",
+      redeemError: "兑换失败，请重试。",
     },
   },
 

@@ -401,6 +401,7 @@ export default {
       used: "使用済み",
       available: "利用可能",
       myVouchersEmpty: "まだクーポンを交換していません。",
+      redeemError: "交換に失敗しました。もう一度お試しください。",
     },
   },
 

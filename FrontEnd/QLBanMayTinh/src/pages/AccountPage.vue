@@ -236,6 +236,8 @@ const redeemReward = async (r) => {
     if (!res.ok) { redeemError.value = await res.text().catch(() => res.statusText); return; }
     myVouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi().catch(() => []);
     await fetchProfile(); // cập nhật lại số điểm hiện tại trên badge header
+  } catch (e) {
+    redeemError.value = e.message || t("account.rewards.redeemError");
   } finally {
     redeemingId.value = null;
   }

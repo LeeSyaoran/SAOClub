@@ -401,6 +401,7 @@ export default {
       used: "Used",
       available: "Available",
       myVouchersEmpty: "You haven't redeemed any vouchers yet.",
+      redeemError: "Couldn't connect to redeem this reward, please try again.",
     },
   },
 
