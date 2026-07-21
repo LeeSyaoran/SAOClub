@@ -1,4 +1,4 @@
-USE master;
+﻿USE master;
 GO
 
 -- Luôn DROP + tạo lại database mỗi lần chạy file — SINGLE_USER trước để đá hết
