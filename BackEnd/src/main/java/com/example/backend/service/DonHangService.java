@@ -73,6 +73,7 @@ public class DonHangService {
                 .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại với id: " + id));
     }
 
+    @Transactional
     public DonHang create(DonHangRequest request) {
         DonHang entity = new DonHang();
         // BeanUtils copies: maDonHang, diaChiGiaoHangText, nguoiNhan, sdtNguoiNhan,
@@ -95,7 +96,7 @@ public class DonHangService {
         DonHang saved = donHangRepository.save(entity);
 
         if (request.getPhieuGiamGiaCaNhanId() != null) {
-            PhieuGiamGiaCaNhan phieu = phieuGiamGiaCaNhanRepository.findById(request.getPhieuGiamGiaCaNhanId())
+            PhieuGiamGiaCaNhan phieu = phieuGiamGiaCaNhanRepository.findWithLockByPhieuId(request.getPhieuGiamGiaCaNhanId())
                     .orElseThrow(() -> new IllegalArgumentException("Voucher không tồn tại"));
             if (!phieu.getKhachHang().getKhachHangId().equals(saved.getKhachHang().getKhachHangId()))
                 throw new IllegalArgumentException("Voucher không thuộc về khách hàng này");

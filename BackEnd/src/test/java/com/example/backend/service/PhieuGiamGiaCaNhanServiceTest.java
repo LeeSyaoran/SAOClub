@@ -62,7 +62,7 @@ class PhieuGiamGiaCaNhanServiceTest {
         tk.setChucVu(chucVu);
         tk.setKhachHang(kh);
         when(taiKhoanRepository.findByUsername(username)).thenReturn(Optional.of(tk));
-        when(khachHangRepository.findById(khachHangId)).thenReturn(Optional.of(kh));
+        lenient().when(khachHangRepository.findWithLockByKhachHangId(khachHangId)).thenReturn(Optional.of(kh));
     }
 
     private DmDoiThuong doiThuongActive(Integer id, Integer diemCan) {
@@ -88,6 +88,7 @@ class PhieuGiamGiaCaNhanServiceTest {
         assertThat(saved.getDaSuDung()).isFalse();
         assertThat(saved.getLoai()).isEqualTo("fixed");
         assertThat(saved.getGiaTri()).isEqualByComparingTo(java.math.BigDecimal.valueOf(50_000));
+        verify(khachHangRepository).findWithLockByKhachHangId(42);
         verify(khachHangRepository).save(any(KhachHang.class));
     }
 

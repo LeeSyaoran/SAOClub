@@ -35,11 +35,15 @@ public class PhieuGiamGiaCaNhanService {
         return taiKhoanRepository.findByUsername(username).orElse(null);
     }
 
-    private KhachHang currentKhachHang() {
+    private Integer currentKhachHangId() {
         TaiKhoan tk = currentAccount();
         if (tk == null || tk.getKhachHang() == null)
             throw new AccessDeniedException("Chỉ khách hàng mới đổi được điểm thưởng");
-        return khachHangRepository.findById(tk.getKhachHang().getKhachHangId())
+        return tk.getKhachHang().getKhachHangId();
+    }
+
+    private KhachHang currentKhachHang() {
+        return khachHangRepository.findById(currentKhachHangId())
                 .orElseThrow(() -> new IllegalArgumentException("Khách hàng không tồn tại"));
     }
 
@@ -50,7 +54,10 @@ public class PhieuGiamGiaCaNhanService {
         if (!"active".equals(doiThuong.getTrangThai()))
             throw new IllegalArgumentException("Phần thưởng này hiện không khả dụng");
 
-        KhachHang khachHang = currentKhachHang();
+        // Khóa ghi để đọc số dư điểm mới nhất — chặn 2 request đổi điểm đồng thời cùng
+        // đọc trùng số dư rồi cùng trừ (double-spend điểm).
+        KhachHang khachHang = khachHangRepository.findWithLockByKhachHangId(currentKhachHangId())
+                .orElseThrow(() -> new IllegalArgumentException("Khách hàng không tồn tại"));
         if (khachHang.getDiemTichLuy() < doiThuong.getDiemCan())
             throw new IllegalArgumentException("Không đủ điểm để đổi phần thưởng này");
 

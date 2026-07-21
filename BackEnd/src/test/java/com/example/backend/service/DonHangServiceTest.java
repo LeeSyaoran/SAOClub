@@ -212,7 +212,7 @@ class DonHangServiceTest {
         phieu.setKhachHang(kh);
         phieu.setDaSuDung(false);
         phieu.setNgayHetHan(java.time.LocalDateTime.now().plusDays(10));
-        when(phieuGiamGiaCaNhanRepository.findById(7)).thenReturn(Optional.of(phieu));
+        when(phieuGiamGiaCaNhanRepository.findWithLockByPhieuId(7)).thenReturn(Optional.of(phieu));
 
         com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
         req.setKhachHangId(1);
@@ -230,6 +230,7 @@ class DonHangServiceTest {
 
         assertThat(phieu.getDaSuDung()).isTrue();
         assertThat(phieu.getDonHang()).isEqualTo(saved);
+        verify(phieuGiamGiaCaNhanRepository).findWithLockByPhieuId(7);
         verify(phieuGiamGiaCaNhanRepository).save(phieu);
     }
 }

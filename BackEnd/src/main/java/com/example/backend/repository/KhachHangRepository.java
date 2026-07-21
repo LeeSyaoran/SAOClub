@@ -2,12 +2,19 @@ package com.example.backend.repository;
 
 import com.example.backend.entity.KhachHang;
 import com.example.backend.response.KhachHangResponse;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
+	// Khóa ghi (PESSIMISTIC_WRITE) — chặn 2 request đổi điểm đồng thời của cùng 1 khách
+	// hàng đọc trùng số dư điểm rồi cùng trừ (chỉ có tác dụng trong 1 transaction đang mở).
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	java.util.Optional<KhachHang> findWithLockByKhachHangId(Integer khachHangId);
+
 	@Query("SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao) FROM KhachHang k")
 	java.util.List<KhachHangResponse> hienThiKhachHang();
 
