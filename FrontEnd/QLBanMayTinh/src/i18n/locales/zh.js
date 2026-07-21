@@ -668,6 +668,8 @@ export default {
       paymentLabel: "支付状态",
       expectedDeliveryLabel: "预计送达日",
       actualDeliveryLabel: "客户签收日",
+      trackingCodeLabel: "运单号",
+      trackingCodePlaceholder: "例如：GHN1234567890",
       cancel: "取消",
       save: "保存",
       status: {

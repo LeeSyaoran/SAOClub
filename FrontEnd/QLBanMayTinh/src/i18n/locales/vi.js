@@ -682,6 +682,8 @@ export default {
       paymentLabel: "Trạng thái thanh toán",
       expectedDeliveryLabel: "Ngày dự kiến giao",
       actualDeliveryLabel: "Ngày khách nhận hàng",
+      trackingCodeLabel: "Mã vận đơn",
+      trackingCodePlaceholder: "VD: GHN1234567890",
       cancel: "Hủy",
       save: "Lưu",
       status: {

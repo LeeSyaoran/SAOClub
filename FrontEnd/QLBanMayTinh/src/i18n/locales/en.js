@@ -668,6 +668,8 @@ export default {
       paymentLabel: "Payment status",
       expectedDeliveryLabel: "Expected delivery",
       actualDeliveryLabel: "Received by customer",
+      trackingCodeLabel: "Tracking code",
+      trackingCodePlaceholder: "e.g. GHN1234567890",
       cancel: "Cancel",
       save: "Save",
       status: {

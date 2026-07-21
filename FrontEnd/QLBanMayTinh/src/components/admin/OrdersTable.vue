@@ -336,6 +336,7 @@ const orderStatusForm = reactive({
   trangThaiThanhToan: "",
   ngayGiaoDuKien: "", // Ngày dự kiến giao hàng
   ngayGiaoThucTe: "", // Ngày khách nhận hàng thực tế
+  maVanDon: "",        // Mã vận đơn — nhân viên/admin nhập tay khi chuyển sang "Đang giao"
 });
 
 const openOrderStatus = (o) => {
@@ -344,12 +345,13 @@ const openOrderStatus = (o) => {
   orderStatusForm.trangThaiThanhToan = o.trangThaiThanhToan ?? "";
   orderStatusForm.ngayGiaoDuKien = o.ngayGiaoDuKien?.slice(0, 16) ?? "";
   orderStatusForm.ngayGiaoThucTe = o.ngayGiaoThucTe?.slice(0, 16) ?? "";
+  orderStatusForm.maVanDon = o.maVanDon ?? "";
   orderStatusError.value = "";
   showOrderModal.value = true;
 };
 // Dựng body PUT /don-hang/update — dùng chung cho modal "Cập nhật trạng thái" (sửa tay,
 // nhiều trường) và nút "next step" nhanh trên bảng (chỉ đổi trangThaiDonHang).
-const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGiaoDuKien, ngayGiaoThucTe }) => ({
+const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGiaoDuKien, ngayGiaoThucTe, maVanDon }) => ({
   khachHangId: o.khachHangId,
   nhanVienId: o.nhanVienId ?? null,
   khuyenMaiId: o.khuyenMaiId ?? null,
@@ -371,6 +373,7 @@ const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGia
   trangThaiThanhToan,
   kenhBan: o.kenhBan ?? null,
   ghiChu: o.ghiChu ?? null,
+  maVanDon: maVanDon || null,
 });
 
 const saveOrderStatus = async () => {
@@ -386,6 +389,7 @@ const saveOrderStatus = async () => {
     trangThaiThanhToan: orderStatusForm.trangThaiThanhToan,
     ngayGiaoDuKien: orderStatusForm.ngayGiaoDuKien,
     ngayGiaoThucTe: orderStatusForm.ngayGiaoThucTe,
+    maVanDon: orderStatusForm.maVanDon,
   });
   try {
     const res = await DonHangService.update(o.donHangId, body);
@@ -422,6 +426,12 @@ const advanceOrderStatus = async (o) => {
     await openXacNhanSerialModal(o);
     return;
   }
+  // Chuyển sang "Đang giao" bắt buộc dừng lại nhập mã vận đơn — mở modal thay vì 1-click.
+  if (next === 'shipping') {
+    openOrderStatus(o);
+    orderStatusForm.trangThaiDonHang = 'shipping';
+    return;
+  }
   const body = buildOrderUpdateBody(o, {
     trangThaiDonHang: next,
     trangThaiThanhToan: o.trangThaiThanhToan,
@@ -430,6 +440,7 @@ const advanceOrderStatus = async (o) => {
     ngayGiaoThucTe: next === 'delivered' && !o.ngayGiaoThucTe
       ? nowLocalIso()
       : o.ngayGiaoThucTe,
+    maVanDon: o.maVanDon,
   });
   const res = await DonHangService.update(o.donHangId, body);
   if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.updateFailed', { status: res.status }))); return; }
@@ -932,6 +943,7 @@ const confirmXacNhanSerial = async () => {
         </div>
         <div class="d-flex flex-column gap-3">
           <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.statusLabel') }}</label><select v-model="orderStatusForm.trangThaiDonHang" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="pending">{{ t('admin.orderStatusModal.status.pending') }}</option><option value="confirmed">{{ t('admin.orderStatusModal.status.confirmed') }}</option><option value="processing">{{ t('admin.orderStatusModal.status.processing') }}</option><option value="shipping">{{ t('admin.orderStatusModal.status.shipping') }}</option><option value="delivered">{{ t('admin.orderStatusModal.status.delivered') }}</option><option value="cancelled">{{ t('admin.orderStatusModal.status.cancelled') }}</option><option value="returned">{{ t('admin.orderStatusModal.status.returned') }}</option></select></div>
+          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.trackingCodeLabel') }}</label><input v-model="orderStatusForm.maVanDon" type="text" class="form-control form-control-sm" :placeholder="t('admin.orderStatusModal.trackingCodePlaceholder')" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
           <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.paymentLabel') }}</label><select v-model="orderStatusForm.trangThaiThanhToan" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="unpaid">{{ t('admin.paymentStatus.unpaid') }}</option><option value="partial">{{ t('admin.paymentStatus.partial') }}</option><option value="paid">{{ t('admin.paymentStatus.paid') }}</option><option value="refunded">{{ t('admin.paymentStatus.refunded') }}</option></select></div>
           <div class="row g-2">
             <div class="col-6">
