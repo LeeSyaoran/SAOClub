@@ -236,6 +236,7 @@ export default {
     createCustomerError: "Could not create customer account",
     createOrderError: "Could not create order",
     promoHeading: "Promo code",
+    voucherHeading: "Your vouchers",
     promoPlaceholder: "Enter discount code (if any)",
     apply: "Apply",
     promoSuccess: "Applied successfully: {name}",

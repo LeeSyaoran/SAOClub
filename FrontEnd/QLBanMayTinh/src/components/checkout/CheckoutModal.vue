@@ -174,6 +174,21 @@
             <div v-if="promoMsg" class="small mt-2 px-1" :class="appliedPromo ? 'text-success' : 'text-danger'">{{ promoMsg }}</div>
           </div>
 
+          <!-- Voucher cá nhân (đổi từ điểm) -->
+          <div v-if="isLoggedInCustomer && eligibleVouchers.length">
+            <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.voucherHeading') }}</div>
+            <div class="d-flex flex-column gap-2">
+              <div v-for="v in eligibleVouchers" :key="v.phieuId"
+                   class="d-flex align-items-center justify-content-between p-2 rounded-3"
+                   style="cursor:pointer;border:1px solid;"
+                   :style="appliedVoucher?.phieuId===v.phieuId ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                   @click="selectVoucher(v)">
+                <span class="fw-bold small" style="color:var(--text-heading);">{{ v.maPhieu }}</span>
+                <div class="text-warning fw-bold small flex-shrink-0 ms-2">− {{ formatPrice(v.discount) }}</div>
+              </div>
+            </div>
+          </div>
+
           <!-- Tổng tiền -->
           <div class="p-3 rounded-3 d-flex flex-column gap-2" style="background:var(--bg-card-alt);border:1px solid var(--border-color-soft);">
             <div class="d-flex justify-content-between small" style="color:var(--text-secondary);">
@@ -344,6 +359,7 @@ import AddressPicker from './AddressPicker.vue';
 import * as KhachHangService from '../../Service/KhachHangService.js';
 import * as KhuyenMaiService  from '../../Service/KhuyenMaiService.js';
 import * as DonHangService    from '../../Service/DonHangService.js';
+import * as PhieuGiamGiaCaNhanService from '../../Service/PhieuGiamGiaCaNhanService.js';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -365,6 +381,8 @@ const allPromos       = ref([]);    // Cache danh sách khuyến mãi
 const foundCustomer   = ref(null);  // Khách hàng tìm thấy qua SĐT
 const appliedPromo    = ref(null);  // Khuyến mãi đã áp dụng
 const promoMsg        = ref('');    // Thông báo kết quả áp dụng mã
+const myVouchers      = ref([]);    // voucher cá nhân còn dùng được của khách đang checkout
+const appliedVoucher  = ref(null);  // voucher cá nhân đang chọn (loại trừ với appliedPromo)
 const selectedPayment = ref('tien_mat'); // 'tien_mat' | 'qr' | 'chuyen_khoan'
 
 // VietQR — tạo QR code thật từ API vietqr.io
@@ -407,7 +425,7 @@ const calcDiscountFor = (p) => {
   }
   return Number(p.giaTri) || 0; // Giảm theo số tiền cố định
 };
-const checkoutGiamGia = computed(() => calcDiscountFor(appliedPromo.value));
+const checkoutGiamGia = computed(() => calcDiscountFor(appliedPromo.value) + calcDiscountFor(appliedVoucher.value));
 
 // Mã khuyến mãi còn hiệu lực + đủ điều kiện áp dụng cho đơn hiện tại (đạt đơn tối thiểu,
 // còn hạn dùng, chưa hết lượt) — sắp xếp giảm nhiều nhất lên đầu để khách chọn nhanh,
@@ -423,6 +441,26 @@ const eligiblePromos = computed(() => {
     .filter(p => p.discount > 0)
     .sort((a, b) => b.discount - a.discount);
 });
+
+// Voucher cá nhân còn dùng được — chưa dùng, chưa hết hạn. Không lọc theo donHangToiThieu
+// (voucher cá nhân không có trường này, khác khuyen_mai).
+const eligibleVouchers = computed(() => {
+  const now = new Date();
+  return myVouchers.value
+    .filter(v => !v.daSuDung && new Date(v.ngayHetHan) > now)
+    .map(v => ({ ...v, discount: calcDiscountFor(v) }))
+    .filter(v => v.discount > 0)
+    .sort((a, b) => b.discount - a.discount);
+});
+
+// Chọn voucher cá nhân — loại trừ với mã khuyến mãi công khai (chỉ dùng 1 trong 2).
+const selectVoucher = (v) => {
+  if (appliedVoucher.value?.phieuId === v.phieuId) { appliedVoucher.value = null; return; }
+  appliedVoucher.value = v;
+  appliedPromo.value = null;
+  checkoutForm.maKhuyenMai = '';
+  promoMsg.value = '';
+};
 
 // Tổng tiền thanh toán cuối cùng
 const checkoutTotal = computed(() =>
@@ -472,6 +510,10 @@ watch(() => props.modelValue, async (open) => {
   if (!allPromos.value.length) {
     allPromos.value = await KhuyenMaiService.getAll().catch(() => []);
   }
+  appliedVoucher.value = null;
+  if (isLoggedInCustomer.value) {
+    myVouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi().catch(() => []);
+  }
   await fillFromLoggedInAccount();
 });
 
@@ -516,6 +558,7 @@ const applyPromo = () => {
 
 // Chọn thẳng 1 mã trong danh sách gợi ý — bấm lần nữa vào mã đang áp dụng để bỏ chọn.
 const selectPromo = (p) => {
+  appliedVoucher.value = null;
   if (appliedPromo.value?.khuyenMaiId === p.khuyenMaiId) {
     checkoutForm.maKhuyenMai = '';
     appliedPromo.value = null;
@@ -583,6 +626,7 @@ const placeOrder = async () => {
       sdtNguoiNhan:       checkoutForm.sdtNguoiNhan,
       diaChiGiaoHangText: checkoutForm.diaChiGiaoHangText,
       khuyenMaiId:        appliedPromo.value?.khuyenMaiId ?? null,
+      phieuGiamGiaCaNhanId: appliedVoucher.value?.phieuId ?? null,
       tongTien:           props.cartTotal,
       giamGia:            checkoutGiamGia.value,
       phiVanChuyen:       phiVanChuyen.value,

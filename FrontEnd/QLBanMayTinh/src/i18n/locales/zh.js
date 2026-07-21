@@ -236,6 +236,7 @@ export default {
     createCustomerError: "无法创建客户账户",
     createOrderError: "无法创建订单",
     promoHeading: "优惠码",
+    voucherHeading: "您的优惠券",
     promoPlaceholder: "输入优惠码（如有）",
     apply: "应用",
     promoSuccess: "应用成功：{name}",

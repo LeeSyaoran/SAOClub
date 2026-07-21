@@ -244,6 +244,7 @@ export default {
     createOrderError: "Không thể tạo đơn hàng",
     addItemError: "Không thể thêm \"{name}\" vào đơn",
     promoHeading: "Mã khuyến mãi",
+    voucherHeading: "Voucher của bạn",
     bestPromo: "Tốt nhất",
     noPromo: "Hiện chưa có mã khuyến mãi nào áp dụng được cho đơn này",
     promoPlaceholder: "Nhập mã giảm giá (nếu có)",

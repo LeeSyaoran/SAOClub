@@ -236,6 +236,7 @@ export default {
     createCustomerError: "고객 계정을 생성할 수 없습니다",
     createOrderError: "주문을 생성할 수 없습니다",
     promoHeading: "프로모션 코드",
+    voucherHeading: "내 바우처",
     promoPlaceholder: "할인 코드 입력 (있는 경우)",
     apply: "적용",
     promoSuccess: "적용 완료: {name}",

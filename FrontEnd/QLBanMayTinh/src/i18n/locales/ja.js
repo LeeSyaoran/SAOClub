@@ -236,6 +236,7 @@ export default {
     createCustomerError: "顧客アカウントを作成できませんでした",
     createOrderError: "注文を作成できませんでした",
     promoHeading: "プロモコード",
+    voucherHeading: "あなたのバウチャー",
     promoPlaceholder: "割引コードを入力（お持ちの場合）",
     apply: "適用",
     promoSuccess: "適用しました：{name}",
