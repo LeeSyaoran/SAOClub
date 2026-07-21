@@ -48,7 +48,9 @@ public class ChiTietDonHangController {
         return chiTietDonHangService.getSerialsByDonHangId(donHangId);
     }
 
-    // Giữ mở — CheckoutModal.vue gọi khi khách đặt hàng (tạo từng dòng chi tiết đơn).
+    // Giữ mở ở tầng route — CheckoutModal.vue gọi khi khách đặt hàng (tạo từng dòng chi tiết
+    // đơn) — nhưng service kiểm tra chủ đơn (isStaffOrOwner), khách không thêm được dòng vào
+    // đơn của người khác.
     @PostMapping
     public ResponseEntity<Void> create(@Valid @RequestBody ChiTietDonHangRequest request) {
         chiTietDonHangService.create(request);

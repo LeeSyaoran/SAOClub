@@ -89,7 +89,7 @@ public class DonHangService {
         BeanUtils.copyProperties(request, entity,
                 "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId");
 
-        entity.setKhachHang(khachHangRepository.getReferenceById(request.getKhachHangId()));
+        entity.setKhachHang(khachHangRepository.getReferenceById(resolveKhachHangIdForCreate(request.getKhachHangId())));
         // nhanVienId nullable: nhân viên không bắt buộc (đơn hàng online)
         if (request.getNhanVienId() != null)
             entity.setNhanVien(nhanVienRepository.getReferenceById(request.getNhanVienId()));
@@ -203,6 +203,20 @@ public class DonHangService {
         if (tk == null) return false;
         if (!"khach_hang".equals(tk.getChucVu().getMaChucVu())) return true;
         return tk.getKhachHang() != null && khachHangId.equals(tk.getKhachHang().getKhachHangId());
+    }
+
+    // Khách hàng đăng nhập không được tự ý gửi khachHangId của người khác lên (IDOR — tạo
+    // đơn hộ/đốt voucher của khách khác) — luôn ép về đúng chủ tài khoản đang gọi. Staff thì
+    // giữ nguyên khachHangId từ request vì đơn tại quầy/hộ khách vãng lai do staff tạo thay.
+    private Integer resolveKhachHangIdForCreate(Integer requestedKhachHangId) {
+        TaiKhoan tk = currentAccount();
+        if (tk == null)
+            throw new AccessDeniedException("Không xác định được người dùng");
+        if (!"khach_hang".equals(tk.getChucVu().getMaChucVu()))
+            return requestedKhachHangId;
+        if (tk.getKhachHang() == null)
+            throw new AccessDeniedException("Tài khoản chưa liên kết khách hàng");
+        return tk.getKhachHang().getKhachHangId();
     }
 
     // Chọn serial cho từng dòng + chốt "da_ban" + chuyển trạng thái "confirmed" trong 1

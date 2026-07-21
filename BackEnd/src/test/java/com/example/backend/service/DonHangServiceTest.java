@@ -249,6 +249,9 @@ class DonHangServiceTest {
 
     @Test
     void create_coPhieuGiamGiaCaNhan_danhDauDaSuDung() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+
         com.example.backend.entity.KhachHang kh = new com.example.backend.entity.KhachHang();
         kh.setKhachHangId(1);
         when(khachHangRepository.getReferenceById(1)).thenReturn(kh);
@@ -287,6 +290,9 @@ class DonHangServiceTest {
 
     @Test
     void create_coCaKhuyenMaiVaPhieuGiamGiaCaNhan_biChan() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+
         com.example.backend.entity.KhachHang kh = new com.example.backend.entity.KhachHang();
         kh.setKhachHangId(1);
         when(khachHangRepository.getReferenceById(1)).thenReturn(kh);
@@ -371,5 +377,58 @@ class DonHangServiceTest {
         service.delete(1);
 
         verify(donHangRepository).deleteById(1);
+    }
+
+    @Test
+    void create_khachSpoofKhachHangIdNguoiKhac_biGhiDeVeChinhMinh() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+
+        KhachHang minh = new KhachHang();
+        minh.setKhachHangId(1);
+        when(khachHangRepository.getReferenceById(1)).thenReturn(minh);
+        when(donHangRepository.save(any(DonHang.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
+        req.setKhachHangId(999); // giả mạo id của khách khác
+        req.setTrangThaiDonHang("pending");
+        req.setTrangThaiThanhToan("unpaid");
+        req.setNguoiNhan("A");
+        req.setSdtNguoiNhan("0900000000");
+        req.setTongTien(java.math.BigDecimal.ZERO);
+        req.setGiamGia(java.math.BigDecimal.ZERO);
+        req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
+        req.setNgayDat(java.time.LocalDateTime.now());
+
+        service.create(req);
+
+        verify(khachHangRepository).getReferenceById(1);
+        verify(khachHangRepository, never()).getReferenceById(999);
+    }
+
+    @Test
+    void create_staffTaoDonHoKhach_dungKhachHangIdTuRequest() {
+        loginAs("nv1");
+        when(taiKhoanRepository.findByUsername("nv1")).thenReturn(Optional.of(taiKhoanStaff("nv1")));
+
+        KhachHang khach = new KhachHang();
+        khach.setKhachHangId(77);
+        when(khachHangRepository.getReferenceById(77)).thenReturn(khach);
+        when(donHangRepository.save(any(DonHang.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
+        req.setKhachHangId(77);
+        req.setTrangThaiDonHang("pending");
+        req.setTrangThaiThanhToan("unpaid");
+        req.setNguoiNhan("A");
+        req.setSdtNguoiNhan("0900000000");
+        req.setTongTien(java.math.BigDecimal.ZERO);
+        req.setGiamGia(java.math.BigDecimal.ZERO);
+        req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
+        req.setNgayDat(java.time.LocalDateTime.now());
+
+        service.create(req);
+
+        verify(khachHangRepository).getReferenceById(77);
     }
 }
