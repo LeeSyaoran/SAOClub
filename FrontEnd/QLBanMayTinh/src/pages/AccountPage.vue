@@ -99,12 +99,10 @@ const viewProductDetail = (item) => {
 };
 
 // "Mua lại" cả đơn — thêm từng dòng vào giỏ đúng số lượng đã mua trước đó.
-// addToCart (App.vue) cộng dồn +1 mỗi lần gọi nên emit đúng soLuong lần.
 const buyAgainOrder = (o) => {
   for (const item of itemsByOrder.value[o.donHangId] || []) {
     const product = productByBienThe(item.bienTheId);
-    if (!product) continue;
-    for (let i = 0; i < item.soLuong; i++) emit("add-to-cart", product);
+    if (product) emit("add-to-cart", product, item.soLuong);
   }
 };
 
@@ -143,9 +141,11 @@ const fetchData = async () => {
 
 // ── Trạng thái đơn hàng: nhãn + màu (dùng chung — xem src/utils/orderStatus.js) ──
 
-// Map trạng thái đơn hàng → bước trên timeline (0..4)
+// Map trạng thái đơn hàng → bước trên timeline (0..2 — timeline chỉ còn Đặt/Xác nhận/Đóng
+// gói). Đơn đã sang "shipping"/"delivered" luôn hiện đủ 3 bước hoàn tất vì phần vận
+// chuyển/giao hàng đã chuyển sang thể hiện qua tab + OrderTrackingLog thay vì timeline.
 const orderStep = (s) => ({
-  pending: 0, confirmed: 1, processing: 2, shipping: 3, delivered: 4,
+  pending: 0, confirmed: 1, processing: 2, shipping: 2, delivered: 2,
 })[s] ?? 0;
 
 const formatPrice = (v) => (v == null ? "—" : formatPriceRaw(v));

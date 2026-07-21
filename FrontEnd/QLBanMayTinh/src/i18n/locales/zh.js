@@ -284,6 +284,7 @@ export default {
     cannotConnect: "无法连接到服务器。",
     welcomeUser: "欢迎您，{name}！",
     loggedOut: "已成功退出登录。",
+    addedToCart: "已将{name}加入购物车。",
   },
 
   adminAccess: {

@@ -455,16 +455,19 @@ const fetchProducts = async () => {
   }
 };
 
-// Thêm sản phẩm vào giỏ — dùng bienTheId để phân biệt đúng biến thể
-const addToCart = (product) => {
+// Thêm sản phẩm vào giỏ — dùng bienTheId để phân biệt đúng biến thể. Có toast
+// báo vì 1 số nơi gọi hàm này (vd nút "Mua lại" ở AccountPage) không có icon
+// giỏ hàng trong header để khách tự nhận biết đã thêm thành công hay chưa.
+const addToCart = (product, qty = 1) => {
   const existing = cart.value.find(
     (item) => item.bienTheId === product.bienTheId,
   );
   if (existing) {
-    existing.quantity += 1;
+    existing.quantity += qty;
   } else {
-    cart.value.push({ ...product, quantity: 1 });
+    cart.value.push({ ...product, quantity: qty });
   }
+  showToast(t("toast.addedToCart", { name: product.tenSanPham }), "success");
 };
 
 // Bấm "Thêm vào giỏ" trên thẻ sản phẩm ở lưới: nếu sản phẩm có nhiều biến thể

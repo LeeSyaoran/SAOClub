@@ -284,6 +284,7 @@ export default {
     cannotConnect: "서버에 연결할 수 없습니다.",
     welcomeUser: "{name}님, 환영합니다!",
     loggedOut: "로그아웃되었습니다.",
+    addedToCart: "{name}이(가) 장바구니에 담겼습니다.",
   },
 
   adminAccess: {

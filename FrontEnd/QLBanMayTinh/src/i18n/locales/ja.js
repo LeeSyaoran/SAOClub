@@ -284,6 +284,7 @@ export default {
     cannotConnect: "サーバーに接続できませんでした。",
     welcomeUser: "ようこそ、{name}様！",
     loggedOut: "ログアウトしました。",
+    addedToCart: "{name}をカートに追加しました。",
   },
 
   adminAccess: {

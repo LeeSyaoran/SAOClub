@@ -294,6 +294,7 @@ export default {
     cannotConnect: "Không thể kết nối đến máy chủ.",
     welcomeUser: "Xin chào, {name}!",
     loggedOut: "Đã đăng xuất thành công.",
+    addedToCart: "Đã thêm {name} vào giỏ hàng.",
   },
 
   adminAccess: {

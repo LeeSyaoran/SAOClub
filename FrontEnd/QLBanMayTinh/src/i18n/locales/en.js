@@ -284,6 +284,7 @@ export default {
     cannotConnect: "Could not connect to the server.",
     welcomeUser: "Welcome, {name}!",
     loggedOut: "Signed out successfully.",
+    addedToCart: "Added {name} to cart.",
   },
 
   adminAccess: {
