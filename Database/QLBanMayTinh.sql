@@ -2244,3 +2244,81 @@ BEGIN
     END
 END
 GO
+
+-- ============================================================
+--  Tích điểm mua hàng & Đổi điểm lấy voucher
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('don_hang') AND name = 'da_cong_diem')
+BEGIN
+    ALTER TABLE don_hang ADD da_cong_diem BIT NOT NULL DEFAULT 0;
+END
+GO
+
+CREATE OR ALTER TRIGGER trg_don_hang_cong_diem
+ON don_hang
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF UPDATE(trang_thai_don_hang)
+    BEGIN
+        UPDATE kh
+        SET kh.diem_tich_luy = kh.diem_tich_luy + FLOOR(i.thanh_tien / 10000)
+        FROM khach_hang kh
+        JOIN inserted i ON i.khach_hang_id = kh.khach_hang_id
+        JOIN deleted d ON d.don_hang_id = i.don_hang_id
+        WHERE i.trang_thai_don_hang = N'delivered'
+          AND d.trang_thai_don_hang <> N'delivered'
+          AND i.da_cong_diem = 0;
+
+        UPDATE don_hang SET da_cong_diem = 1
+        WHERE don_hang_id IN (
+            SELECT i.don_hang_id FROM inserted i JOIN deleted d ON d.don_hang_id = i.don_hang_id
+            WHERE i.trang_thai_don_hang = N'delivered' AND d.trang_thai_don_hang <> N'delivered' AND i.da_cong_diem = 0
+        );
+    END
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'dm_doi_thuong')
+BEGIN
+    CREATE TABLE dm_doi_thuong (
+        doi_thuong_id   INT            IDENTITY(1,1) PRIMARY KEY,
+        ten             NVARCHAR(150)  NOT NULL,
+        mo_ta           NVARCHAR(500)  NULL,
+        diem_can        INT            NOT NULL CONSTRAINT CK_ddt_diemcan CHECK (diem_can > 0),
+        loai            NVARCHAR(20)   NOT NULL CONSTRAINT CK_ddt_loai CHECK (loai IN (N'percent', N'fixed')),
+        gia_tri         DECIMAL(18,0)  NOT NULL CONSTRAINT CK_ddt_giatri CHECK (gia_tri > 0),
+        CONSTRAINT CK_ddt_percent_max100 CHECK (loai <> N'percent' OR gia_tri <= 100),
+        gia_tri_toi_da  DECIMAL(18,0)  NULL,
+        trang_thai      NVARCHAR(20)   NOT NULL DEFAULT N'active'
+            CONSTRAINT CK_ddt_trangthai CHECK (trang_thai IN (N'active', N'inactive')),
+        ngay_tao        DATETIME       NOT NULL DEFAULT GETDATE()
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'phieu_giam_gia_ca_nhan')
+BEGIN
+    CREATE TABLE phieu_giam_gia_ca_nhan (
+        phieu_id       INT            IDENTITY(1,1) PRIMARY KEY,
+        khach_hang_id  INT            NOT NULL,
+        doi_thuong_id  INT            NULL,
+        ma_phieu       VARCHAR(50)    NOT NULL UNIQUE DEFAULT UPPER(LEFT(REPLACE(CAST(NEWID() AS VARCHAR(36)), '-', ''), 12)),
+        loai           NVARCHAR(20)   NOT NULL CONSTRAINT CK_pggcn_loai CHECK (loai IN (N'percent', N'fixed')),
+        gia_tri        DECIMAL(18,0)  NOT NULL,
+        gia_tri_toi_da DECIMAL(18,0)  NULL,
+        da_su_dung     BIT            NOT NULL DEFAULT 0,
+        ngay_doi       DATETIME       NOT NULL DEFAULT GETDATE(),
+        ngay_het_han   DATETIME       NOT NULL,
+        don_hang_id    INT            NULL,
+        CONSTRAINT FK_pggcn_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
+        CONSTRAINT FK_pggcn_doi_thuong FOREIGN KEY (doi_thuong_id) REFERENCES dm_doi_thuong(doi_thuong_id),
+        CONSTRAINT FK_pggcn_don_hang   FOREIGN KEY (don_hang_id)   REFERENCES don_hang(don_hang_id)
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_pggcn_khach_hang')
+    CREATE INDEX IX_pggcn_khach_hang ON phieu_giam_gia_ca_nhan(khach_hang_id, da_su_dung);
+GO
