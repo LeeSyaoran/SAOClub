@@ -389,6 +389,19 @@ export default {
       saveErrorPrefix: "Could not save changes.",
       loadError: "Could not load account information.",
     },
+    rewards: {
+      heading: "Points & Vouchers",
+      subtitle: "You have {points} points",
+      catalogHeading: "Redeem points for vouchers",
+      pointsCost: "{points} points",
+      redeemButton: "Redeem",
+      catalogEmpty: "No rewards available to redeem yet.",
+      myVouchersHeading: "Redeemed vouchers",
+      expiresOn: "Expires: {date}",
+      used: "Used",
+      available: "Available",
+      myVouchersEmpty: "You haven't redeemed any vouchers yet.",
+    },
   },
 
   admin: {

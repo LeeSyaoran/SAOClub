@@ -389,6 +389,19 @@ export default {
       saveErrorPrefix: "変更を保存できませんでした。",
       loadError: "アカウント情報を読み込めませんでした。",
     },
+    rewards: {
+      heading: "ポイント＆クーポン",
+      subtitle: "現在の保有ポイント：{points}",
+      catalogHeading: "ポイントをクーポンと交換",
+      pointsCost: "{points} ポイント",
+      redeemButton: "交換する",
+      catalogEmpty: "現在交換可能な特典はありません。",
+      myVouchersHeading: "交換済みクーポン",
+      expiresOn: "有効期限：{date}",
+      used: "使用済み",
+      available: "利用可能",
+      myVouchersEmpty: "まだクーポンを交換していません。",
+    },
   },
 
   admin: {

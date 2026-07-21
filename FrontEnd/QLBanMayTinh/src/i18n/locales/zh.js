@@ -389,6 +389,19 @@ export default {
       saveErrorPrefix: "无法保存更改。",
       loadError: "无法加载账户信息。",
     },
+    rewards: {
+      heading: "积分与优惠券",
+      subtitle: "您当前拥有 {points} 积分",
+      catalogHeading: "用积分兑换优惠券",
+      pointsCost: "{points} 积分",
+      redeemButton: "兑换",
+      catalogEmpty: "暂无可兑换的奖励。",
+      myVouchersHeading: "已兑换的优惠券",
+      expiresOn: "有效期至：{date}",
+      used: "已使用",
+      available: "可使用",
+      myVouchersEmpty: "您还没有兑换任何优惠券。",
+    },
   },
 
   admin: {

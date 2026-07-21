@@ -389,6 +389,19 @@ export default {
       saveErrorPrefix: "변경사항을 저장할 수 없습니다.",
       loadError: "계정 정보를 불러올 수 없습니다.",
     },
+    rewards: {
+      heading: "포인트 & 바우처",
+      subtitle: "현재 보유 포인트: {points}",
+      catalogHeading: "포인트로 바우처 교환",
+      pointsCost: "{points} 포인트",
+      redeemButton: "교환",
+      catalogEmpty: "교환 가능한 보상이 아직 없습니다.",
+      myVouchersHeading: "교환한 바우처",
+      expiresOn: "유효기간: {date}",
+      used: "사용됨",
+      available: "사용 가능",
+      myVouchersEmpty: "아직 교환한 바우처가 없습니다.",
+    },
   },
 
   admin: {

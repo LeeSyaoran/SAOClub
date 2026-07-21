@@ -16,6 +16,8 @@ import * as SanPhamService         from "../Service/SanPhamService.js";
 import * as KhachHangService       from "../Service/KhachHangService.js";
 import * as LichSuDonHangService   from "../Service/LichSuDonHangService.js";
 import * as PhieuTraHangService    from "../Service/PhieuTraHangService.js";
+import * as DmDoiThuongService         from "../Service/DmDoiThuongService.js";
+import * as PhieuGiamGiaCaNhanService  from "../Service/PhieuGiamGiaCaNhanService.js";
 import OrderStatusTimeline from "../components/order/OrderStatusTimeline.vue";
 import OrderTrackingLog from "../components/order/OrderTrackingLog.vue";
 import ReturnRequestModal from "../components/order/ReturnRequestModal.vue";
@@ -199,6 +201,12 @@ const profileError   = ref("");
 const profileSuccess = ref("");
 const profileForm = ref({ hoTen: "", soDienThoai: "", email: "", diaChi: "" });
 
+// ── Điểm & Voucher: danh mục phần thưởng đổi được + voucher cá nhân đã đổi ──
+const rewards       = ref([]);   // danh mục phần thưởng đổi được
+const myVouchers     = ref([]);  // voucher cá nhân đã đổi
+const redeemingId    = ref(null); // đang gọi API đổi thưởng cho id nào (disable nút, tránh double-click)
+const redeemError    = ref("");
+
 const fetchProfile = async () => {
   if (!auth.user?.id) return;
   profileLoading.value = true;
@@ -211,10 +219,25 @@ const fetchProfile = async () => {
       email:        profile.value.email ?? "",
       diaChi:       profile.value.diaChi ?? "",
     };
+    rewards.value = await DmDoiThuongService.getAll().catch(() => []);
+    myVouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi().catch(() => []);
   } catch (e) {
     profileError.value = e.message || t("account.settings.loadError");
   } finally {
     profileLoading.value = false;
+  }
+};
+
+const redeemReward = async (r) => {
+  redeemError.value = "";
+  redeemingId.value = r.doiThuongId;
+  try {
+    const res = await PhieuGiamGiaCaNhanService.doiThuong(r.doiThuongId);
+    if (!res.ok) { redeemError.value = await res.text().catch(() => res.statusText); return; }
+    myVouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi().catch(() => []);
+    await fetchProfile(); // cập nhật lại số điểm hiện tại trên badge header
+  } finally {
+    redeemingId.value = null;
   }
 };
 
@@ -511,6 +534,53 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
 
       <!-- ══ Tab: Cài đặt tài khoản ══ -->
       <div v-else class="d-flex flex-column gap-3 mx-auto" style="max-width:640px;">
+
+        <!-- Điểm & Voucher -->
+        <div class="rounded-4 p-4" style="background:var(--bg-card); border:1px solid var(--border-color); box-shadow:0 4px 18px var(--shadow-color);">
+          <div class="d-flex align-items-center gap-2 mb-4">
+            <span style="font-size:1.3rem;">🎁</span>
+            <div>
+              <h5 class="fw-black mb-0" style="color:var(--text-heading);">{{ t('account.rewards.heading') }}</h5>
+              <div style="color:var(--text-secondary); font-size:11.5px;">{{ t('account.rewards.subtitle', { points: profile?.diemTichLuy ?? 0 }) }}</div>
+            </div>
+          </div>
+
+          <div v-if="redeemError" class="alert alert-danger small py-2 mb-3">{{ redeemError }}</div>
+
+          <div class="mb-2 small fw-semibold" style="color:var(--text-secondary);">{{ t('account.rewards.catalogHeading') }}</div>
+          <div class="d-flex flex-column gap-2 mb-4">
+            <div v-for="r in rewards.filter(x => x.trangThai === 'active')" :key="r.doiThuongId"
+                 class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background:var(--bg-card-inset);">
+              <div>
+                <div class="fw-semibold" style="font-size:13px; color:var(--text-primary);">{{ r.ten }}</div>
+                <div style="font-size:11px; color:var(--text-secondary);">{{ t('account.rewards.pointsCost', { points: r.diemCan }) }}</div>
+              </div>
+              <button class="btn btn-sm fw-bold rounded-pill px-3"
+                      :disabled="(profile?.diemTichLuy ?? 0) < r.diemCan || redeemingId === r.doiThuongId"
+                      style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
+                      @click="redeemReward(r)">
+                {{ t('account.rewards.redeemButton') }}
+              </button>
+            </div>
+            <div v-if="rewards.filter(x => x.trangThai === 'active').length === 0" class="small" style="color:var(--text-secondary);">{{ t('account.rewards.catalogEmpty') }}</div>
+          </div>
+
+          <div class="mb-2 small fw-semibold" style="color:var(--text-secondary);">{{ t('account.rewards.myVouchersHeading') }}</div>
+          <div class="d-flex flex-column gap-2">
+            <div v-for="v in myVouchers" :key="v.phieuId"
+                 class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background:var(--bg-card-inset);">
+              <div>
+                <div class="fw-bold" style="font-size:12.5px; color:var(--text-primary);">{{ v.maPhieu }}</div>
+                <div style="font-size:11px; color:var(--text-secondary);">{{ t('account.rewards.expiresOn', { date: formatDate(v.ngayHetHan) }) }}</div>
+              </div>
+              <span class="badge px-2 py-1 rounded-pill fw-semibold"
+                    :style="v.daSuDung ? 'background:rgba(107,114,128,0.15);color:#9ca3af;' : 'background:rgba(34,197,94,0.15);color:#22c55e;'">
+                {{ v.daSuDung ? t('account.rewards.used') : t('account.rewards.available') }}
+              </span>
+            </div>
+            <div v-if="myVouchers.length === 0" class="small" style="color:var(--text-secondary);">{{ t('account.rewards.myVouchersEmpty') }}</div>
+          </div>
+        </div>
 
         <!-- Thông tin cá nhân -->
         <div class="rounded-4 p-4" style="background:var(--bg-card); border:1px solid var(--border-color); box-shadow:0 4px 18px var(--shadow-color);">

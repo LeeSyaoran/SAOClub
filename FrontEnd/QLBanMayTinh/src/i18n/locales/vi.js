@@ -399,6 +399,19 @@ export default {
       saveErrorPrefix: "Không thể lưu thay đổi.",
       loadError: "Không thể tải thông tin tài khoản.",
     },
+    rewards: {
+      heading: "Điểm & Voucher",
+      subtitle: "Bạn đang có {points} điểm",
+      catalogHeading: "Đổi điểm lấy voucher",
+      pointsCost: "{points} điểm",
+      redeemButton: "Đổi",
+      catalogEmpty: "Chưa có phần thưởng nào để đổi.",
+      myVouchersHeading: "Voucher đã đổi",
+      expiresOn: "Hạn dùng: {date}",
+      used: "Đã dùng",
+      available: "Còn hiệu lực",
+      myVouchersEmpty: "Bạn chưa đổi voucher nào.",
+    },
   },
 
   admin: {
