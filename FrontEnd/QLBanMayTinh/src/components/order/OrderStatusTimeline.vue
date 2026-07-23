@@ -44,14 +44,35 @@
 import { computed } from 'vue';
 import { t } from '../../i18n/index.js';
 
-// currentStep: 0 = đặt hàng, 1 = xác nhận, 2 = đang đóng gói. Từ đây trở đi trạng thái
-// đơn chuyển tab (Đang giao / Hoàn tất) thay vì thêm bước trên timeline — xem
-// TAB_STATUS_GROUPS + OrderTrackingLog.vue ở AccountPage.vue.
-defineProps({ currentStep: { type: Number, default: 0 } });
+// Nhận thẳng trạng thái đơn (status) thay vì số bước — timeline tự chọn hiển thị bộ 3
+// bước "Đặt/Xác nhận/Đóng gói" (đơn còn ở tab "Chờ xác nhận") hay bộ 3 bước "Gửi hàng/
+// Đang giao/Đã giao" (đơn đã sang tab "Đang giao"), xem TAB_STATUS_GROUPS ở
+// AccountPage.vue. Đơn "delivered" không render component này nữa (chuyển sang dạng
+// dòng gọn trong tab "Hoàn tất"), nên PRE_SHIP/POST_SHIP chỉ cần phủ tới lúc đó.
+const props = defineProps({ status: { type: String, default: 'pending' } });
 
-const steps = computed(() => [
+const PRE_SHIP  = ['pending', 'confirmed', 'processing'];
+const POST_SHIP = ['shipping', 'out_for_delivery', 'delivered'];
+
+const isPostShip = computed(() => POST_SHIP.includes(props.status));
+
+const steps = computed(() => isPostShip.value ? [
+  { title: t('orderStatus.timeline.shippingTitle'),        desc: t('orderStatus.timeline.shippingDesc'),        icon: '📤' },
+  { title: t('orderStatus.timeline.outForDeliveryTitle'),  desc: t('orderStatus.timeline.outForDeliveryDesc'),  icon: '🛵' },
+  { title: t('orderStatus.timeline.deliveredTitle'),       desc: t('orderStatus.timeline.deliveredDesc'),       icon: '🎉' },
+] : [
   { title: t('orderStatus.timeline.placedTitle'),    desc: t('orderStatus.timeline.placedDesc'),    icon: '📝' },
   { title: t('orderStatus.timeline.confirmedTitle'), desc: t('orderStatus.timeline.confirmedDesc'), icon: '✅' },
   { title: t('orderStatus.timeline.packingTitle'),   desc: t('orderStatus.timeline.packingDesc'),   icon: '📦' },
 ]);
+
+const currentStep = computed(() => {
+  const list = isPostShip.value ? POST_SHIP : PRE_SHIP;
+  const idx = list.indexOf(props.status);
+  // Trạng thái không thuộc phase nào (vd "processing" vẫn nằm pre-ship) → idx tìm thấy
+  // bình thường; nếu không tìm thấy (không nên xảy ra trong 2 tab dùng component này)
+  // mặc định về bước cuối của phase hiện tại thay vì bước đầu, an toàn hơn khi có trạng
+  // thái mới phát sinh sau này mà quên cập nhật danh sách trên.
+  return idx === -1 ? list.length - 1 : idx;
+});
 </script>

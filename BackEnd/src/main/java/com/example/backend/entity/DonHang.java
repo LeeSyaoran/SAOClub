@@ -72,7 +72,8 @@ public class DonHang {
     @Column(name = "ngay_giao_thuc_te")
     private LocalDateTime ngayGiaoThucTe;
 
-    // Giá trị: "pending" | "processing" | "shipping" | "delivered" | "cancelled"
+    // Giá trị: "pending" | "confirmed" | "processing" | "shipping" | "out_for_delivery" |
+    //          "delivered" | "cancelled" | "returned"
     @Column(name = "trang_thai_don_hang", length = 30)
     private String trangThaiDonHang;
 
