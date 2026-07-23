@@ -269,7 +269,13 @@ public class DonHangService {
                     chiTietSanPhamRepository.save(link.getChiTietSanPham());
                 }
             }
+            // flush() ngay sau xoá — nếu không, Hibernate mặc định chạy INSERT trước DELETE lúc
+            // commit (thứ tự flush cố định, không theo thứ tự gọi trong code Java), nên bản ghi
+            // mới ở dưới (cùng cặp donHangId+serialId với bản vừa xoá — ví dụ xác nhận lại đúng
+            // serial đã giữ chỗ sẵn từ lúc đặt hàng) sẽ đụng UNIQUE constraint UX_ctdhs_pair
+            // trước khi DELETE kịp chạy, ra lỗi DataIntegrityViolationException.
             chiTietDonHangSerialRepository.deleteByChiTietDonHang_Id(item.getId());
+            chiTietDonHangSerialRepository.flush();
 
             for (ChiTietSanPham serial : finalSerials) {
                 serial.setTrangThai("da_ban");

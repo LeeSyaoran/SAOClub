@@ -36,7 +36,7 @@ const activeTab = ref("pending"); // 'pending' | 'shipping' | 'completed' | 'can
 // advanceOrderStatus() cho luồng cập nhật phía admin.
 const TAB_STATUS_GROUPS = {
   pending:   ["pending", "confirmed", "processing"],
-  shipping:  ["shipping"],
+  shipping:  ["shipping", "out_for_delivery"],
   completed: ["delivered"],
   cancelled: ["cancelled", "returned"],
 };
@@ -156,7 +156,7 @@ const fetchData = async () => {
       Promise.all(
         orders.value.map(async (o) => [
           o.donHangId,
-          ["shipping", "delivered"].includes(o.trangThaiDonHang)
+          ["shipping", "out_for_delivery", "delivered"].includes(o.trangThaiDonHang)
             ? await LichSuDonHangService.getByDonHang(o.donHangId).catch(() => [])
             : [],
         ])
@@ -178,13 +178,7 @@ const fetchData = async () => {
 };
 
 // ── Trạng thái đơn hàng: nhãn + màu (dùng chung — xem src/utils/orderStatus.js) ──
-
-// Map trạng thái đơn hàng → bước trên timeline (0..2 — timeline chỉ còn Đặt/Xác nhận/Đóng
-// gói). Đơn đã sang "shipping"/"delivered" luôn hiện đủ 3 bước hoàn tất vì phần vận
-// chuyển/giao hàng đã chuyển sang thể hiện qua tab + OrderTrackingLog thay vì timeline.
-const orderStep = (s) => ({
-  pending: 0, confirmed: 1, processing: 2, shipping: 2, delivered: 2,
-})[s] ?? 0;
+// OrderStatusTimeline.vue giờ nhận thẳng trangThaiDonHang, tự chọn bộ bước phù hợp.
 
 const formatPrice = (v) => (v == null ? "—" : formatPriceRaw(v));
 
@@ -389,7 +383,7 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
 
             <!-- Timeline -->
             <div class="rounded-3 p-2 p-md-3 mb-3" style="background:var(--bg-card-alt);">
-              <OrderStatusTimeline :current-step="orderStep(o.trangThaiDonHang)" />
+              <OrderStatusTimeline :status="o.trangThaiDonHang" />
             </div>
 
             <!-- Ngày giao dự kiến / ngày nhận hàng thực tế -->
@@ -400,7 +394,7 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
             </div>
 
             <!-- Mã vận đơn + lịch sử trạng thái -->
-            <OrderTrackingLog v-if="o.trangThaiDonHang === 'shipping'"
+            <OrderTrackingLog v-if="['shipping', 'out_for_delivery'].includes(o.trangThaiDonHang)"
                                :ma-van-don="o.maVanDon || ''"
                                :history="historyByOrder[o.donHangId] || []"
                                class="mb-3" />

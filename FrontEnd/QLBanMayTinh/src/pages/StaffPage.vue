@@ -13,10 +13,16 @@ import ProductsTable from "../components/admin/ProductsTable.vue";
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import { OrdersStore, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers } from "../stores/customers.js";
+import { refreshReturns } from "../stores/returns.js";
 
 // ── Navigation — mac dinh vao thang Ban hang (viec chinh hang ngay cua nhan vien) ──
 const currentPage = ref("ban-hang");
-const navigate = (page) => { currentPage.value = page; };
+const navigate = (page) => {
+  currentPage.value = page;
+  // ReturnsPanel.vue chỉ tải dữ liệu 1 lần lúc mount — làm mới lại mỗi lần vào tab để
+  // thấy yêu cầu trả hàng khách vừa gửi (xem AdminPage.vue navigate() cùng lý do).
+  if (page === "tra-hang") refreshReturns();
+};
 
 const PAGE_META = {
   "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: "🛒" },

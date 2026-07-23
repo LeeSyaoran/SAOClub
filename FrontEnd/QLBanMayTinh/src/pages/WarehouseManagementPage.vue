@@ -11,10 +11,16 @@ import InventoryHistoryPanel from "../components/admin/InventoryHistoryPanel.vue
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
 import SerialManager from "../components/admin/SerialManager.vue";
+import { refreshReturns } from "../stores/returns.js";
 
 // ── Navigation — mac dinh vao thang Kho hang (viec chinh hang ngay cua quan ly kho) ──
 const currentPage = ref("inventory");
-const navigate = (page) => { currentPage.value = page; };
+const navigate = (page) => {
+  currentPage.value = page;
+  // ReturnsPanel.vue chỉ tải dữ liệu 1 lần lúc mount — làm mới lại mỗi lần vào tab để
+  // thấy yêu cầu trả hàng khách vừa gửi (xem AdminPage.vue navigate() cùng lý do).
+  if (page === "traHang") refreshReturns();
+};
 
 const PAGE_META = {
   inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: "📦" },

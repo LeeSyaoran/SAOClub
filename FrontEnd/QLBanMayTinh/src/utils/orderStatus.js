@@ -8,6 +8,7 @@ export const orderStatusColor = (s) => {
   if (s === 'confirmed')  return { bg: 'rgba(59,130,246,0.15)',  text: '#60a5fa' };
   if (s === 'processing') return { bg: 'rgba(250,204,21,0.15)',  text: '#facc15' };
   if (s === 'shipping')   return { bg: 'rgba(139,92,246,0.15)',  text: '#a78bfa' };
+  if (s === 'out_for_delivery') return { bg: 'rgba(56,189,248,0.15)', text: '#38bdf8' };
   if (s === 'delivered')  return { bg: 'rgba(34,197,94,0.15)',   text: '#22c55e' };
   if (s === 'cancelled')  return { bg: 'rgba(239,68,68,0.15)',   text: '#f87171' };
   if (s === 'returned')   return { bg: 'rgba(251,146,60,0.15)',  text: '#fb923c' };
@@ -20,6 +21,7 @@ export const orderStatusIcon = (s) => {
   if (s === 'confirmed')  return '✅';
   if (s === 'processing') return '📦';
   if (s === 'shipping')   return '🚚';
+  if (s === 'out_for_delivery') return '🛵';
   if (s === 'delivered')  return '🎉';
   if (s === 'cancelled')  return '❌';
   if (s === 'returned')   return '↩️';

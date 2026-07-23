@@ -404,16 +404,20 @@ const saveOrderStatus = async () => {
   }
 };
 
-// Quy trình xử lý đơn thực tế: chờ xác nhận -> đã xác nhận -> đang đóng gói -> đang vận
-// chuyển -> đã giao. Nút "bước tiếp theo" trên bảng đơn hàng đi đúng theo thứ tự này,
-// khỏi phải mở modal chọn tay mỗi lần chỉ để nhích 1 bước — mở modal vẫn dùng được cho
-// các trường hợp khác (hủy đơn, sửa ngày giao...).
-const NEXT_ORDER_STATUS = { pending: 'confirmed', confirmed: 'processing', processing: 'shipping', shipping: 'delivered' };
+// Quy trình xử lý đơn thực tế: chờ xác nhận -> đã xác nhận -> đang đóng gói -> đã gửi
+// hàng -> đang giao -> đã giao. Nút "bước tiếp theo" trên bảng đơn hàng đi đúng theo thứ
+// tự này, khỏi phải mở modal chọn tay mỗi lần chỉ để nhích 1 bước — mở modal vẫn dùng
+// được cho các trường hợp khác (hủy đơn, sửa ngày giao...).
+const NEXT_ORDER_STATUS = {
+  pending: 'confirmed', confirmed: 'processing', processing: 'shipping',
+  shipping: 'out_for_delivery', out_for_delivery: 'delivered',
+};
 const NEXT_ORDER_STATUS_LABEL = {
-  pending:    { icon: '✅', key: 'admin.orders.nextConfirm' },
-  confirmed:  { icon: '📦', key: 'admin.orders.nextPack' },
-  processing: { icon: '🚚', key: 'admin.orders.nextShip' },
-  shipping:   { icon: '🎉', key: 'admin.orders.nextComplete' },
+  pending:          { icon: '✅', key: 'admin.orders.nextConfirm' },
+  confirmed:        { icon: '📦', key: 'admin.orders.nextPack' },
+  processing:       { icon: '🚚', key: 'admin.orders.nextShip' },
+  shipping:         { icon: '🛵', key: 'admin.orders.nextOutForDelivery' },
+  out_for_delivery: { icon: '🎉', key: 'admin.orders.nextComplete' },
 };
 const advanceOrderStatus = async (o) => {
   const next = NEXT_ORDER_STATUS[o.trangThaiDonHang];
@@ -426,7 +430,7 @@ const advanceOrderStatus = async (o) => {
     await openXacNhanSerialModal(o);
     return;
   }
-  // Chuyển sang "Đang giao" bắt buộc dừng lại nhập mã vận đơn — mở modal thay vì 1-click.
+  // Chuyển sang "Đã gửi hàng" bắt buộc dừng lại nhập mã vận đơn — mở modal thay vì 1-click.
   if (next === 'shipping') {
     openOrderStatus(o);
     orderStatusForm.trangThaiDonHang = 'shipping';
@@ -434,7 +438,12 @@ const advanceOrderStatus = async (o) => {
   }
   const body = buildOrderUpdateBody(o, {
     trangThaiDonHang: next,
-    trangThaiThanhToan: o.trangThaiThanhToan,
+    // Giao hàng hoàn tất mà thanh toán vẫn "chưa thanh toán" -> tự chuyển "đã thanh toán"
+    // (đơn ở đây mặc định thu tiền khi giao — COD). "partial"/"paid"/"refunded" giữ nguyên,
+    // chỉ tự động hoá đúng 1 chiều unpaid -> paid, không đụng các trạng thái staff đã set tay.
+    trangThaiThanhToan: next === 'delivered' && o.trangThaiThanhToan === 'unpaid'
+      ? 'paid'
+      : o.trangThaiThanhToan,
     ngayGiaoDuKien: o.ngayGiaoDuKien,
     // Chuyển sang "delivered" mà chưa có ngày khách nhận hàng -> tự đóng dấu thời điểm này.
     ngayGiaoThucTe: next === 'delivered' && !o.ngayGiaoThucTe
@@ -496,8 +505,12 @@ const xacNhanAvailableSerials = (line) => {
 };
 
 const xacNhanToggleSerial = (line, serialId) => {
-  if (line.chosenSerialIds.has(serialId)) line.chosenSerialIds.delete(serialId);
-  else if (line.chosenSerialIds.size < line.soLuong) line.chosenSerialIds.add(serialId);
+  if (line.chosenSerialIds.has(serialId)) { line.chosenSerialIds.delete(serialId); return; }
+  // Dòng chỉ cần 1 serial: bấm serial khác thay luôn cái đang chọn (kiểu radio) — nếu
+  // không, đã chọn đủ 1/1 thì bấm serial khác không có tác dụng, phải bỏ tích cái cũ
+  // trước mới chọn được cái mới.
+  if (line.soLuong === 1) { line.chosenSerialIds.clear(); line.chosenSerialIds.add(serialId); return; }
+  if (line.chosenSerialIds.size < line.soLuong) line.chosenSerialIds.add(serialId);
 };
 
 const xacNhanAllLinesComplete = computed(() =>
@@ -567,6 +580,7 @@ const confirmXacNhanSerial = async () => {
           <option value="confirmed">{{ orderStatusLabel('confirmed') }}</option>
           <option value="processing">{{ orderStatusLabel('processing') }}</option>
           <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
+          <option value="out_for_delivery">{{ orderStatusLabel('out_for_delivery') }}</option>
           <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
           <option value="cancelled">{{ orderStatusLabel('cancelled') }}</option>
           <option value="returned">{{ orderStatusLabel('returned') }}</option>
@@ -942,7 +956,7 @@ const confirmXacNhanSerial = async () => {
           {{ t('admin.orderStatusModal.orderPrefix') }}{{ editingOrder.donHangId }} — {{ t('admin.orderStatusModal.customerLabel') }} <strong>{{ customerName(editingOrder.khachHangId) }}</strong>
         </div>
         <div class="d-flex flex-column gap-3">
-          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.statusLabel') }}</label><select v-model="orderStatusForm.trangThaiDonHang" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="pending">{{ t('admin.orderStatusModal.status.pending') }}</option><option value="confirmed">{{ t('admin.orderStatusModal.status.confirmed') }}</option><option value="processing">{{ t('admin.orderStatusModal.status.processing') }}</option><option value="shipping">{{ t('admin.orderStatusModal.status.shipping') }}</option><option value="delivered">{{ t('admin.orderStatusModal.status.delivered') }}</option><option value="cancelled">{{ t('admin.orderStatusModal.status.cancelled') }}</option><option value="returned">{{ t('admin.orderStatusModal.status.returned') }}</option></select></div>
+          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.statusLabel') }}</label><select v-model="orderStatusForm.trangThaiDonHang" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="pending">{{ t('admin.orderStatusModal.status.pending') }}</option><option value="confirmed">{{ t('admin.orderStatusModal.status.confirmed') }}</option><option value="processing">{{ t('admin.orderStatusModal.status.processing') }}</option><option value="shipping">{{ t('admin.orderStatusModal.status.shipping') }}</option><option value="out_for_delivery">{{ t('admin.orderStatusModal.status.out_for_delivery') }}</option><option value="delivered">{{ t('admin.orderStatusModal.status.delivered') }}</option><option value="cancelled">{{ t('admin.orderStatusModal.status.cancelled') }}</option><option value="returned">{{ t('admin.orderStatusModal.status.returned') }}</option></select></div>
           <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.trackingCodeLabel') }}</label><input v-model="orderStatusForm.maVanDon" type="text" class="form-control form-control-sm" :placeholder="t('admin.orderStatusModal.trackingCodePlaceholder')" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
           <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.paymentLabel') }}</label><select v-model="orderStatusForm.trangThaiThanhToan" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="unpaid">{{ t('admin.paymentStatus.unpaid') }}</option><option value="partial">{{ t('admin.paymentStatus.partial') }}</option><option value="paid">{{ t('admin.paymentStatus.paid') }}</option><option value="refunded">{{ t('admin.paymentStatus.refunded') }}</option></select></div>
           <div class="row g-2">

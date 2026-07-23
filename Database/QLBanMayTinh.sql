@@ -2329,3 +2329,15 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_pggcn_khach_hang')
     CREATE INDEX IX_pggcn_khach_hang ON phieu_giam_gia_ca_nhan(khach_hang_id, da_su_dung);
 GO
+
+-- ============================================================
+--  Trạng thái đơn hàng "out_for_delivery" — xen giữa shipping và delivered, cho phép
+--  timeline khách hàng tách rõ "đã gửi hàng" và "đang giao hàng". Drop-rồi-add (không
+--  gói trong CREATE TABLE) nên chạy lại file bao nhiêu lần trên DB đã có sẵn cũng an toàn.
+-- ============================================================
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_dh_trangthai')
+    ALTER TABLE don_hang DROP CONSTRAINT CK_dh_trangthai;
+ALTER TABLE don_hang ADD CONSTRAINT CK_dh_trangthai
+    CHECK (trang_thai_don_hang IN (N'pending', N'confirmed', N'processing', N'shipping', N'out_for_delivery', N'delivered', N'cancelled', N'returned'));
+GO
+GO

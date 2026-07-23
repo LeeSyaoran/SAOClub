@@ -40,6 +40,7 @@ import { InventoryStore, ensureInventory, refreshInventory } from "../stores/inv
 import { StaffStore, ensureStaff, refreshStaff } from "../stores/staff.js";
 import { PromotionsStore, ensurePromotions, refreshPromotions } from "../stores/promotions.js";
 import { DoiThuongStore, ensureDoiThuong, refreshDoiThuong } from "../stores/doiThuong.js";
+import { refreshReturns } from "../stores/returns.js";
 import * as DmDoiThuongService from "../Service/DmDoiThuongService.js";
 
 // ── Navigation ───────────────────────────────────────────────────────────────
@@ -47,6 +48,10 @@ const currentPage = ref("dashboard");
 const navigate = (page) => {
   currentPage.value = page;
   if (page === "staff") { ensureChucVuList(); ensureStaff(); }
+  // ReturnsPanel.vue chỉ tải dữ liệu 1 lần lúc mount (v-show giữ nguyên component, không
+  // tự huỷ/tạo lại theo tab) — khách gửi yêu cầu trả hàng mới sau khi admin đã mở trang sẽ
+  // không tự hiện nếu không làm mới lại mỗi lần vào tab này.
+  if (page === "tra-hang") refreshReturns();
 };
 // icon khớp đúng ý nghĩa icon SVG tương ứng ở sidebar (adm-icon) — hiện lại 1 lần nữa
 // cạnh tiêu đề trang cho dễ nhận biết đang ở đâu, không cần đổi cả 2 nơi khi thêm trang mới.
