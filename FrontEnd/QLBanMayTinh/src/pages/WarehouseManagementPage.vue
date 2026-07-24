@@ -11,6 +11,9 @@ import InventoryHistoryPanel from "../components/admin/InventoryHistoryPanel.vue
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
 import SerialManager from "../components/admin/SerialManager.vue";
+import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
+import * as DmService from "../Service/DmService.js";
+import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../Service/ChiTietLinhKienService.js";
 import { refreshReturns } from "../stores/returns.js";
 
 // ── Navigation — mac dinh vao thang Kho hang (viec chinh hang ngay cua quan ly kho) ──
@@ -29,6 +32,10 @@ const PAGE_META = {
   traHang: { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
   warrantyClaims: { titleKey: "admin.pageMeta.warrantyClaims.title", subKey: "admin.pageMeta.warrantyClaims.sub", icon: "🛡️" },
   serial: { titleKey: "admin.pageMeta.serial.title", subKey: "admin.pageMeta.serial.sub", icon: "🔢" },
+  cpu: { titleKey: "admin.pageMeta.cpu.title", subKey: "admin.pageMeta.cpu.sub", icon: "🧠" },
+  ram: { titleKey: "admin.pageMeta.ram.title", subKey: "admin.pageMeta.ram.sub", icon: "💾" },
+  gpu: { titleKey: "admin.pageMeta.gpu.title", subKey: "admin.pageMeta.gpu.sub", icon: "🎮" },
+  oCung: { titleKey: "admin.pageMeta.oCung.title", subKey: "admin.pageMeta.oCung.sub", icon: "💽" },
 };
 const topbarTitle = computed(() => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.inventory.title"));
 const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
@@ -80,6 +87,23 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zm3 2a1 1 0 100 2h.01a1 1 0 100-2H6zm3 0a1 1 0 100 2h.01a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>
           {{ t('admin.sidebar.serial') }}
         </div>
+        <div class="adm-nav-label">{{ t('admin.sidebar.groupComponents') }}</div>
+        <div class="adm-nav" :class="{active: currentPage==='cpu'}" @click="navigate('cpu')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm3 3v6h8V7H6z" clip-rule="evenodd"/></svg>
+          {{ t('admin.productsTabs.cpu') }}
+        </div>
+        <div class="adm-nav" :class="{active: currentPage==='ram'}" @click="navigate('ram')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm3 1a1 1 0 000 2h1a1 1 0 100-2H5zm4 0a1 1 0 100 2h1a1 1 0 100-2H9zm4 0a1 1 0 100 2h1a1 1 0 100-2h-1z" clip-rule="evenodd"/></svg>
+          {{ t('admin.productsTabs.ram') }}
+        </div>
+        <div class="adm-nav" :class="{active: currentPage==='gpu'}" @click="navigate('gpu')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm5 6a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+          {{ t('admin.productsTabs.gpu') }}
+        </div>
+        <div class="adm-nav" :class="{active: currentPage==='oCung'}" @click="navigate('oCung')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a7 7 0 100 14 7 7 0 000-14zm1 4a1 1 0 10-2 0v3a1 1 0 00.293.707l2 2a1 1 0 001.414-1.414L11 8.586V7z" clip-rule="evenodd"/></svg>
+          {{ t('admin.productsTabs.oCung') }}
+        </div>
       </nav>
 
       <UserProfileMenu :show-settings-link="false" />
@@ -112,6 +136,18 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
         <section v-show="currentPage === 'traHang'"><ReturnsPanel :readonly="true" /></section>
         <section v-show="currentPage === 'warrantyClaims'"><WarrantyPanel /></section>
         <section v-show="currentPage === 'serial'"><SerialManager /></section>
+        <section v-show="currentPage === 'cpu'">
+          <DmCategoryTable :service="DmService.DmCpuService" id-field="cpuId" name-field="tenCpu" :label="t('admin.productsTabs.cpu')" :name-label="t('admin.productsTabs.cpu')" :serial-service="ChiTietCpuService" serial-field-name="cpuId" />
+        </section>
+        <section v-show="currentPage === 'ram'">
+          <DmCategoryTable :service="DmService.DmRamService" id-field="ramId" name-field="dungLuong" :label="t('admin.productsTabs.ram')" :name-label="t('admin.productsTabs.ram')" :serial-service="ChiTietRamService" serial-field-name="ramId" />
+        </section>
+        <section v-show="currentPage === 'gpu'">
+          <DmCategoryTable :service="DmService.DmGpuService" id-field="gpuId" name-field="tenGpu" :label="t('admin.productsTabs.gpu')" :name-label="t('admin.productsTabs.gpu')" :serial-service="ChiTietGpuService" serial-field-name="gpuId" />
+        </section>
+        <section v-show="currentPage === 'oCung'">
+          <DmCategoryTable :service="DmService.DmOCungService" id-field="oCungId" name-field="loaiOcung" :label="t('admin.productsTabs.oCung')" :name-label="t('admin.productsTabs.oCung')" :serial-service="ChiTietOCungService" serial-field-name="oCungId" />
+        </section>
       </div>
     </main>
   </div>
@@ -139,4 +175,12 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
 .adm-nav.active { background: rgba(244,63,94,0.12); color: var(--accent-fg); }
 .adm-nav.active .adm-icon { opacity: 1; }
 .adm-icon { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.75; }
+.adm-nav-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #555;
+  text-transform: uppercase;
+  padding: 10px 8px 3px;
+}
 </style>

@@ -448,6 +448,7 @@ export default {
       traHang: "Returns",
       warrantyClaims: "Warranty claims",
       serial: "Serial",
+      groupComponents: "Components",
     },
 
     pageMeta: {
@@ -472,6 +473,10 @@ export default {
       traHang:           { title: "Returns", sub: "Manage product returns" },
       warrantyClaims:    { title: "Warranty claims", sub: "Receive and process warranty claims" },
       serial:            { title: "Serial management", sub: "View, add, edit, delete device serials" },
+      cpu:               { title: "CPU", sub: "Manage CPU catalog" },
+      ram:               { title: "RAM", sub: "Manage RAM catalog" },
+      gpu:               { title: "GPU", sub: "Manage GPU catalog" },
+      oCung:             { title: "Storage", sub: "Manage storage catalog" },
     },
 
     userRole: {
@@ -596,6 +601,27 @@ export default {
       titlePrefix: "Variants:",
       edit: "Edit",
       addVariant: "+ Add variant",
+      pickProductLabel: "Select product",
+      pickProductPlaceholder: "Search product name...",
+      pickProductEmpty: "No product found",
+      changeProduct: "Change product",
+    },
+
+    variants: {
+      countSuffix: "variants",
+      add: "+ Add variant",
+      loading: "Loading...",
+      colSku: "SKU",
+      colProduct: "Product",
+      colConfig: "Configuration",
+      colColor: "Color",
+      colPriceSell: "Price",
+      colStatus: "Status",
+      colAction: "Actions",
+      edit: "Edit",
+      delete: "Delete",
+      empty: "No variants yet",
+      searchPlaceholder: "Search product name, SKU...",
     },
 
     detailModal: {
@@ -645,7 +671,6 @@ export default {
       history: "Order history",
       backToToday: "← Today's orders",
       backToDateList: "‹ Date list",
-      editFromProductsTab: "Go to the Products tab to edit",
     },
 
     orderDetailModal: {
@@ -928,6 +953,7 @@ export default {
 
     productsTabs: {
       sanPham: "Products",
+      bienThe: "Variants",
       cpu: "CPU",
       ram: "RAM",
       gpu: "GPU",

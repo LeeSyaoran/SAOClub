@@ -456,6 +456,7 @@ export default {
       traHang: "Trả hàng",
       warrantyClaims: "Phiếu bảo hành",
       serial: "Serial",
+      groupComponents: "Linh kiện",
     },
 
     pageMeta: {
@@ -480,6 +481,10 @@ export default {
       traHang:           { title: "Trả hàng", sub: "Quản lý phiếu trả hàng" },
       warrantyClaims:    { title: "Phiếu bảo hành", sub: "Tiếp nhận và xử lý bảo hành" },
       serial:            { title: "Quản lý Serial", sub: "Xem, thêm, sửa, xóa serial máy" },
+      cpu:               { title: "CPU", sub: "Quản lý danh mục CPU" },
+      ram:               { title: "RAM", sub: "Quản lý danh mục RAM" },
+      gpu:               { title: "GPU", sub: "Quản lý danh mục GPU" },
+      oCung:             { title: "Ổ cứng", sub: "Quản lý danh mục ổ cứng" },
     },
 
     userRole: {
@@ -604,6 +609,27 @@ export default {
       titlePrefix: "Biến thể:",
       edit: "Sửa",
       addVariant: "+ Thêm biến thể",
+      pickProductLabel: "Chọn sản phẩm",
+      pickProductPlaceholder: "Tìm tên sản phẩm...",
+      pickProductEmpty: "Không tìm thấy sản phẩm",
+      changeProduct: "Đổi sản phẩm",
+    },
+
+    variants: {
+      countSuffix: "biến thể",
+      add: "+ Thêm biến thể",
+      loading: "Đang tải...",
+      colSku: "SKU",
+      colProduct: "Sản phẩm",
+      colConfig: "Cấu hình",
+      colColor: "Màu",
+      colPriceSell: "Giá bán",
+      colStatus: "Trạng thái",
+      colAction: "Thao tác",
+      edit: "Sửa",
+      delete: "Xóa",
+      empty: "Chưa có biến thể",
+      searchPlaceholder: "Tìm tên sản phẩm, SKU...",
     },
 
     detailModal: {
@@ -658,7 +684,6 @@ export default {
       history: "Lịch sử đơn hàng",
       backToToday: "← Đơn hôm nay",
       backToDateList: "‹ Danh sách ngày",
-      editFromProductsTab: "Vào tab Sản phẩm để chỉnh sửa",
     },
 
     orderDetailModal: {
@@ -954,6 +979,7 @@ export default {
 
     productsTabs: {
       sanPham: "Sản phẩm",
+      bienThe: "Biến thể",
       cpu: "CPU",
       ram: "RAM",
       gpu: "GPU",

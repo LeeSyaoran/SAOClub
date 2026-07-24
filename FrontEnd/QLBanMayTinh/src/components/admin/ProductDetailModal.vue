@@ -7,15 +7,13 @@ import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
 
 // ── Modal "Chi tiết sản phẩm" (xem toàn bộ biến thể của 1 sản phẩm) — dùng chung
 // bởi ProductsTable.vue (sở hữu) và OrdersTable.vue (xem 1 biến thể trong đơn hàng).
-// Chỉ XEM — không tự sửa/thêm/xóa, mọi thao tác đóng modal rồi báo ra ngoài qua
-// edit-requested để component cha (nơi giữ form sửa sản phẩm) tự xử lý.
+// Thuần XEM — sửa/thêm/xóa biến thể giờ ở tab "Biến thể" riêng (BienTheTable.vue).
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   sanPhamId: { type: [Number, String], default: null },
   sanPhamName: { type: String, default: "" },
-  readonly: { type: Boolean, default: false },
 });
-const emit = defineEmits(["update:modelValue", "edit-requested"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const detailModalList = ref([]);
 const detailSerialMap = ref({}); // bienTheId → serial[] (không hiển thị trong template, giữ nguyên fetch như bản gốc)
@@ -42,19 +40,6 @@ watch(
 );
 
 const close = () => emit("update:modelValue", false);
-
-const requestEdit = (product) => {
-  close();
-  emit("edit-requested", { action: "edit", product });
-};
-const requestAddVariant = () => {
-  close();
-  emit("edit-requested", { action: "addVariant", sanPhamId: props.sanPhamId, sanPhamName: props.sanPhamName });
-};
-const requestDeleteVariant = (bienTheId) => {
-  close();
-  emit("edit-requested", { action: "deleteVariant", bienTheId });
-};
 </script>
 
 <template>
@@ -63,7 +48,6 @@ const requestDeleteVariant = (bienTheId) => {
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ t('admin.detailModal.titlePrefix') }} {{ sanPhamName }}</span>
         <div class="d-flex align-items-center gap-2">
-          <button v-if="!readonly" class="btn btn-sm btn-warning text-dark fw-bold" style="font-size:0.78rem;" @click="requestAddVariant">{{ t('admin.variantModal.addVariant') }}</button>
           <button class="btn-close btn-close-white btn-sm" @click="close"></button>
         </div>
       </div>
@@ -78,10 +62,6 @@ const requestDeleteVariant = (bienTheId) => {
                 <div class="fw-bold text-light" style="font-size:0.95rem;">{{ v.tenSanPham }}</div>
                 <div class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</div>
               </div>
-            </div>
-            <div v-if="!readonly" class="d-flex gap-2 flex-shrink-0">
-              <button class="btn btn-sm btn-outline-warning" style="font-size:0.75rem;padding:3px 12px;" @click="requestEdit(v)">{{ t('admin.detailModal.edit') }}</button>
-              <button class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;padding:3px 12px;" @click="requestDeleteVariant(v.bienTheId)">{{ t('admin.products.delete') }}</button>
             </div>
           </div>
           <!-- Bang thong tin 4 cot (label | value | label | value) -->

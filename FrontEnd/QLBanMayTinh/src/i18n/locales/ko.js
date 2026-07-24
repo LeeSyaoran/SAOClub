@@ -448,6 +448,7 @@ export default {
       traHang: "반품",
       warrantyClaims: "보증 신청서",
       serial: "시리얼",
+      groupComponents: "부품",
     },
 
     pageMeta: {
@@ -472,6 +473,10 @@ export default {
       traHang:           { title: "반품", sub: "반품 전표 관리" },
       warrantyClaims:    { title: "보증 신청서", sub: "보증 접수 및 처리" },
       serial:            { title: "시리얼 관리", sub: "기기 시리얼 조회/추가/수정/삭제" },
+      cpu:               { title: "CPU", sub: "CPU 카탈로그 관리" },
+      ram:               { title: "RAM", sub: "RAM 카탈로그 관리" },
+      gpu:               { title: "GPU", sub: "GPU 카탈로그 관리" },
+      oCung:             { title: "저장장치", sub: "저장장치 카탈로그 관리" },
     },
 
     userRole: {
@@ -596,6 +601,27 @@ export default {
       titlePrefix: "옵션:",
       edit: "수정",
       addVariant: "+ 옵션 추가",
+      pickProductLabel: "제품 선택",
+      pickProductPlaceholder: "제품명 검색...",
+      pickProductEmpty: "제품을 찾을 수 없습니다",
+      changeProduct: "제품 변경",
+    },
+
+    variants: {
+      countSuffix: "개 옵션",
+      add: "+ 옵션 추가",
+      loading: "로딩 중...",
+      colSku: "SKU",
+      colProduct: "제품",
+      colConfig: "사양",
+      colColor: "색상",
+      colPriceSell: "판매가",
+      colStatus: "상태",
+      colAction: "작업",
+      edit: "수정",
+      delete: "삭제",
+      empty: "옵션이 없습니다",
+      searchPlaceholder: "제품명, SKU 검색...",
     },
 
     detailModal: {
@@ -645,7 +671,6 @@ export default {
       history: "주문 내역",
       backToToday: "← 오늘 주문",
       backToDateList: "‹ 날짜 목록",
-      editFromProductsTab: "수정하려면 상품 탭으로 이동하세요",
     },
 
     orderDetailModal: {
@@ -928,6 +953,7 @@ export default {
 
     productsTabs: {
       sanPham: "제품",
+      bienThe: "옵션",
       cpu: "CPU",
       ram: "RAM",
       gpu: "GPU",

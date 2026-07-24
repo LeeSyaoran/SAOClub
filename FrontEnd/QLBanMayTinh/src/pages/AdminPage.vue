@@ -6,8 +6,9 @@ import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/or
 import * as NhanVienService  from "../Service/NhanVienService.js";
 import * as DonHangService   from "../Service/DonHangService.js";
 import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
+// DmService vẫn cần cho getChucVu() (tab Nhân viên) — CPU/RAM/GPU/Ổ cứng đã chuyển sang
+// WarehouseManagementPage.vue nên bỏ import ChiTietCpuService/RamService/GpuService/OCungService.
 import * as DmService              from "../Service/DmService.js";
-import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../Service/ChiTietLinhKienService.js";
 import * as DashboardService       from "../Service/DashboardService.js";
 import DonutChart from "../components/common/DonutChart.vue";
 import RevenueBarChart from "../components/common/RevenueBarChart.vue";
@@ -30,7 +31,7 @@ import PosPanel from "../components/admin/PosPanel.vue";
 import InventoryPanel from "../components/admin/InventoryPanel.vue";
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
-import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
+import BienTheTable from "../components/admin/BienTheTable.vue";
 import SerialManager from "../components/admin/SerialManager.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
@@ -1263,26 +1264,14 @@ onUnmounted(() => {
         <section v-show="currentPage === 'products'">
           <ul class="nav nav-tabs mb-3">
             <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='sanPham'}" @click="productsMainTab='sanPham'">{{ t('admin.productsTabs.sanPham') }}</button></li>
-            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='cpu'}" @click="productsMainTab='cpu'">{{ t('admin.productsTabs.cpu') }}</button></li>
-            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='ram'}" @click="productsMainTab='ram'">{{ t('admin.productsTabs.ram') }}</button></li>
-            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='gpu'}" @click="productsMainTab='gpu'">{{ t('admin.productsTabs.gpu') }}</button></li>
-            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='oCung'}" @click="productsMainTab='oCung'">{{ t('admin.productsTabs.oCung') }}</button></li>
+            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='bienThe'}" @click="productsMainTab='bienThe'">{{ t('admin.productsTabs.bienThe') }}</button></li>
           </ul>
 
           <div v-show="productsMainTab==='sanPham'">
             <ProductsTable />
           </div>
-          <div v-show="productsMainTab==='cpu'">
-            <DmCategoryTable :service="DmService.DmCpuService" id-field="cpuId" name-field="tenCpu" :label="t('admin.productsTabs.cpu')" :name-label="t('admin.productsTabs.cpu')" :serial-service="ChiTietCpuService" serial-field-name="cpuId" />
-          </div>
-          <div v-show="productsMainTab==='ram'">
-            <DmCategoryTable :service="DmService.DmRamService" id-field="ramId" name-field="dungLuong" :label="t('admin.productsTabs.ram')" :name-label="t('admin.productsTabs.ram')" :serial-service="ChiTietRamService" serial-field-name="ramId" />
-          </div>
-          <div v-show="productsMainTab==='gpu'">
-            <DmCategoryTable :service="DmService.DmGpuService" id-field="gpuId" name-field="tenGpu" :label="t('admin.productsTabs.gpu')" :name-label="t('admin.productsTabs.gpu')" :serial-service="ChiTietGpuService" serial-field-name="gpuId" />
-          </div>
-          <div v-show="productsMainTab==='oCung'">
-            <DmCategoryTable :service="DmService.DmOCungService" id-field="oCungId" name-field="loaiOcung" :label="t('admin.productsTabs.oCung')" :name-label="t('admin.productsTabs.oCung')" :serial-service="ChiTietOCungService" serial-field-name="oCungId" />
+          <div v-show="productsMainTab==='bienThe'">
+            <BienTheTable />
           </div>
         </section>
 

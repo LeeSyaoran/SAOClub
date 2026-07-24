@@ -448,6 +448,7 @@ export default {
       traHang: "退货",
       warrantyClaims: "保修单",
       serial: "序列号",
+      groupComponents: "配件",
     },
 
     pageMeta: {
@@ -472,6 +473,10 @@ export default {
       traHang:           { title: "退货", sub: "管理退货单" },
       warrantyClaims:    { title: "保修单", sub: "接收并处理保修申请" },
       serial:            { title: "序列号管理", sub: "查看、添加、编辑、删除设备序列号" },
+      cpu:               { title: "CPU", sub: "管理CPU目录" },
+      ram:               { title: "RAM", sub: "管理RAM目录" },
+      gpu:               { title: "GPU", sub: "管理GPU目录" },
+      oCung:             { title: "存储", sub: "管理存储目录" },
     },
 
     userRole: {
@@ -596,6 +601,27 @@ export default {
       titlePrefix: "规格：",
       edit: "编辑",
       addVariant: "+ 添加规格",
+      pickProductLabel: "选择产品",
+      pickProductPlaceholder: "搜索产品名称...",
+      pickProductEmpty: "未找到产品",
+      changeProduct: "更换产品",
+    },
+
+    variants: {
+      countSuffix: "个变体",
+      add: "+ 添加变体",
+      loading: "加载中...",
+      colSku: "SKU",
+      colProduct: "产品",
+      colConfig: "配置",
+      colColor: "颜色",
+      colPriceSell: "售价",
+      colStatus: "状态",
+      colAction: "操作",
+      edit: "编辑",
+      delete: "删除",
+      empty: "暂无变体",
+      searchPlaceholder: "搜索产品名称、SKU...",
     },
 
     detailModal: {
@@ -645,7 +671,6 @@ export default {
       history: "订单历史",
       backToToday: "← 今日订单",
       backToDateList: "‹ 日期列表",
-      editFromProductsTab: "请前往「产品」标签页进行编辑",
     },
 
     orderDetailModal: {
@@ -928,6 +953,7 @@ export default {
 
     productsTabs: {
       sanPham: "产品",
+      bienThe: "变体",
       cpu: "CPU",
       ram: "内存",
       gpu: "显卡",
