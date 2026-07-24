@@ -13,7 +13,7 @@ import java.util.List;
 // Danh mục CPU — dữ liệu tham chiếu đơn giản, không cần service riêng
 @RestController
 @RequestMapping("/api/dm-cpu")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 public class DmCpuController {
 
     @Autowired

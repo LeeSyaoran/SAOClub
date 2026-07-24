@@ -13,7 +13,7 @@ import java.util.List;
 // Danh mục GPU — dữ liệu tham chiếu đơn giản, không cần service riêng
 @RestController
 @RequestMapping("/api/dm-gpu")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 public class DmGpuController {
 
     @Autowired

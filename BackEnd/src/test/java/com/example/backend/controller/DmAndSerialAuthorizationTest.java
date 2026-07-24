@@ -5,37 +5,36 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// 5 controller nay truoc task nay KHONG co bat ky @PreAuthorize nao (mo cho moi role da
-// dang nhap, ke ca khach hang). Da xac nhan (grep) chi ChiTietSanPhamService.js va
-// DmService.js tung goi toi cac endpoint nay, ca 2 deu chi dung o phia admin — khoa an toan.
+// 4 controller Dm* khoa cho ADMIN/NHAN_VIEN/QUAN_KHO (truoc day chi ADMIN — qua hep, staff
+// khong CRUD duoc CPU/RAM/GPU/O cung o trang Kho hang). ChiTietSanPhamController giu nguyen.
 class DmAndSerialAuthorizationTest {
 
     @Test
     void dmCpuController_khoaChoAdmin() {
         PreAuthorize pa = DmCpuController.class.getAnnotation(PreAuthorize.class);
         assertThat(pa).isNotNull();
-        assertThat(pa.value()).isEqualTo("hasRole('ADMIN')");
+        assertThat(pa.value()).isEqualTo("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')");
     }
 
     @Test
     void dmRamController_khoaChoAdmin() {
         PreAuthorize pa = DmRamController.class.getAnnotation(PreAuthorize.class);
         assertThat(pa).isNotNull();
-        assertThat(pa.value()).isEqualTo("hasRole('ADMIN')");
+        assertThat(pa.value()).isEqualTo("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')");
     }
 
     @Test
     void dmGpuController_khoaChoAdmin() {
         PreAuthorize pa = DmGpuController.class.getAnnotation(PreAuthorize.class);
         assertThat(pa).isNotNull();
-        assertThat(pa.value()).isEqualTo("hasRole('ADMIN')");
+        assertThat(pa.value()).isEqualTo("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')");
     }
 
     @Test
     void dmOcungController_khoaChoAdmin() {
         PreAuthorize pa = DmOcungController.class.getAnnotation(PreAuthorize.class);
         assertThat(pa).isNotNull();
-        assertThat(pa.value()).isEqualTo("hasRole('ADMIN')");
+        assertThat(pa.value()).isEqualTo("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')");
     }
 
     @Test

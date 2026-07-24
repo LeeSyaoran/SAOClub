@@ -113,7 +113,7 @@ class ChiTietDonHangServiceTest {
 
         BienTheSanPham bienThe = new BienTheSanPham();
         bienThe.setBienTheId(10);
-        when(bienTheSanPhamRepository.getReferenceById(10)).thenReturn(bienThe);
+        when(bienTheSanPhamRepository.findById(10)).thenReturn(Optional.of(bienThe));
 
         ChiTietSanPham s1 = serialTrongKho(100, bienThe);
         ChiTietSanPham s2 = serialTrongKho(101, bienThe);
@@ -142,7 +142,7 @@ class ChiTietDonHangServiceTest {
 
         BienTheSanPham bienThe = new BienTheSanPham();
         bienThe.setBienTheId(20);
-        when(bienTheSanPhamRepository.getReferenceById(20)).thenReturn(bienThe);
+        when(bienTheSanPhamRepository.findById(20)).thenReturn(Optional.of(bienThe));
 
         ChiTietSanPham s1 = serialTrongKho(200, bienThe);
         when(chiTietSanPhamRepository.findByBienThe_BienTheIdAndTrangThaiOrderByNgayNhapKhoAsc(20, "trong_kho"))
@@ -156,6 +156,32 @@ class ChiTietDonHangServiceTest {
 
         assertThat(s1.getTrangThai()).isEqualTo("da_ban");
         verify(chiTietDonHangSerialRepository, times(1)).save(any(ChiTietDonHangSerial.class));
+    }
+
+    @Test
+    void create_serialChonTayDaBiGanChoDonKhac_biTuChoi() {
+        loginAs("nv1");
+        when(taiKhoanRepository.findByUsername("nv1")).thenReturn(Optional.of(taiKhoanStaff("nv1")));
+
+        DonHang donHang = donHangCuaKhach(2, "in_store", 99);
+        when(donHangRepository.findById(2)).thenReturn(Optional.of(donHang));
+        when(donHangRepository.getReferenceById(2)).thenReturn(donHang);
+
+        BienTheSanPham bienThe = new BienTheSanPham();
+        bienThe.setBienTheId(20);
+        when(bienTheSanPhamRepository.findById(20)).thenReturn(Optional.of(bienThe));
+
+        // Serial da bi don khac gianh mat ("giu_hang") giua luc nhan vien mo modal chon va
+        // luc bam xac nhan — findByIdForUpdate() phai tra ve dung trang thai moi nhat.
+        ChiTietSanPham s1 = serialTrongKho(300, bienThe);
+        s1.setTrangThai("giu_hang");
+        when(chiTietSanPhamRepository.findByIdForUpdate(300)).thenReturn(Optional.of(s1));
+
+        ChiTietDonHangRequest request = new ChiTietDonHangRequest(2, 20, 300, 1, BigDecimal.TEN, BigDecimal.ZERO, null);
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(chiTietDonHangRepository, never()).save(any());
     }
 
     @Test

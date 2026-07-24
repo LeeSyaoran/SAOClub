@@ -13,7 +13,7 @@ import java.util.List;
 // Danh mục RAM — dữ liệu tham chiếu đơn giản, không cần service riêng
 @RestController
 @RequestMapping("/api/dm-ram")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 public class DmRamController {
 
     @Autowired

@@ -9,6 +9,7 @@ import com.example.backend.response.WarrantyStatusResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -43,8 +44,21 @@ public class ChiTietSanPhamService {
         return chiTietSanPhamRepository.save(entity);
     }
 
+    @Transactional
     public ChiTietSanPham update(Integer id, ChiTietSanPhamRequest request) {
-        ChiTietSanPham entity = getById(id);
+        ChiTietSanPham entity;
+        // Giữ chỗ tại POS ("trong_kho" -> "giu_hang") là bước 2 nhân viên/2 tab có thể cùng
+        // lúc chọn trùng 1 serial (xem PosPanel.vue setSerialTrangThai) — khóa PESSIMISTIC_WRITE
+        // + kiểm tra lại trạng thái hiện tại ngay trong transaction trước khi ghi đè. Các chỉnh
+        // sửa khác (sửa ghi chú, đổi trạng thái mục đích khác...) không cần khóa.
+        if ("giu_hang".equals(request.getTrangThai())) {
+            entity = chiTietSanPhamRepository.findByIdForUpdate(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Chi tiết sản phẩm không tồn tại với id: " + id));
+            if (!"trong_kho".equals(entity.getTrangThai()))
+                throw new IllegalArgumentException("Serial này vừa được giữ/bán bởi giao dịch khác, vui lòng chọn serial khác");
+        } else {
+            entity = getById(id);
+        }
         BeanUtils.copyProperties(request, entity, "chiTietId", "bienTheId");
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
         return chiTietSanPhamRepository.save(entity);

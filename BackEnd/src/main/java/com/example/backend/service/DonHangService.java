@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -69,13 +70,28 @@ public class DonHangService {
     @Autowired
     private TaiKhoanRepository taiKhoanRepository;
 
+    // Trước đây không kiểm tra chủ đơn — khách hàng đăng nhập bất kỳ có thể tự truyền
+    // khachHangId của người khác trên URL để xem đơn hàng người khác. Ép về đúng chủ tài
+    // khoản đang gọi nếu là khách hàng, staff giữ nguyên (kể cả null = xem toàn bộ).
     public Page<DonHangResponse> hienThiDonHang(Integer khachHangId, Pageable pageable) {
-        return donHangRepository.hienThiDonHang(khachHangId, pageable);
+        return donHangRepository.hienThiDonHang(resolveKhachHangIdForList(khachHangId), pageable);
     }
 
     public DonHang getById(Integer id) {
         return donHangRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại với id: " + id));
+    }
+
+    // Dùng riêng cho GET /api/don-hang/{id} (route giữ mở cho mọi role đã đăng nhập, kể cả
+    // khách hàng) — trước đây không kiểm tra chủ đơn, khách hàng bất kỳ có thể đoán id rồi
+    // xem đơn của người khác (IDOR). Các luồng nội bộ khác (update/xacNhan/merge/recalculate)
+    // đã staff-only ở tầng controller nên dùng thẳng getById() thường, không cần kiểm tra lại
+    // (tránh NPE/lỗi khi gọi nội bộ không qua request HTTP có sẵn security context của khách).
+    public DonHang getByIdChoNguoiXem(Integer id) {
+        DonHang donHang = getById(id);
+        if (!isStaffOrOwner(donHang.getKhachHang().getKhachHangId()))
+            throw new AccessDeniedException("Không có quyền xem đơn hàng này");
+        return donHang;
     }
 
     @Transactional
@@ -123,10 +139,36 @@ public class DonHangService {
         return saved;
     }
 
+    // Trạng thái đơn hàng đi 1 chiều theo đúng luồng xử lý thực tế (xem NEXT_ORDER_STATUS ở
+    // OrdersTable.vue): pending -> confirmed -> processing -> shipping -> out_for_delivery ->
+    // delivered, có thể "cancelled" ở bất kỳ bước nào trước khi giao, và chỉ đơn "delivered"
+    // mới đánh dấu được "returned". Trước đây update() nhận thẳng trangThaiDonHang bất kỳ từ
+    // request — modal "Cập nhật trạng thái" (OrdersTable.vue) cho chọn tự do mọi trạng thái,
+    // nhân viên (hoặc tài khoản bị chiếm) có thể chuyển lùi tuỳ ý (vd shipping -> pending),
+    // làm sai lệch tồn kho/lịch sử/trigger tích điểm vốn chỉ tính đúng 1 lần theo 1 chiều.
+    private static final Map<String, Set<String>> CHUYEN_TRANG_THAI_DON_HANG = Map.of(
+            "pending",          Set.of("confirmed", "cancelled"),
+            "confirmed",        Set.of("processing", "cancelled"),
+            "processing",       Set.of("shipping", "cancelled"),
+            "shipping",         Set.of("out_for_delivery", "cancelled"),
+            "out_for_delivery", Set.of("delivered", "cancelled"),
+            "delivered",        Set.of("returned"),
+            "cancelled",        Set.of(),
+            "returned",         Set.of()
+    );
+
+    private void kiemTraChuyenTrangThai(String trangThaiCu, String trangThaiMoi) {
+        if (trangThaiCu == null || trangThaiMoi == null || trangThaiCu.equals(trangThaiMoi)) return;
+        if (!CHUYEN_TRANG_THAI_DON_HANG.getOrDefault(trangThaiCu, Set.of()).contains(trangThaiMoi))
+            throw new IllegalArgumentException(
+                    "Không thể chuyển trạng thái đơn hàng từ \"" + trangThaiCu + "\" sang \"" + trangThaiMoi + "\"");
+    }
+
     @Transactional
     public DonHang update(Integer id, DonHangRequest request) {
         DonHang entity = getById(id);
         String oldStatus = entity.getTrangThaiDonHang();
+        kiemTraChuyenTrangThai(oldStatus, request.getTrangThaiDonHang());
         BeanUtils.copyProperties(request, entity,
                 "id", "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId");
 
@@ -209,6 +251,20 @@ public class DonHangService {
     // đơn hộ/đốt voucher của khách khác) — luôn ép về đúng chủ tài khoản đang gọi. Staff thì
     // giữ nguyên khachHangId từ request vì đơn tại quầy/hộ khách vãng lai do staff tạo thay.
     private Integer resolveKhachHangIdForCreate(Integer requestedKhachHangId) {
+        TaiKhoan tk = currentAccount();
+        if (tk == null)
+            throw new AccessDeniedException("Không xác định được người dùng");
+        if (!"khach_hang".equals(tk.getChucVu().getMaChucVu()))
+            return requestedKhachHangId;
+        if (tk.getKhachHang() == null)
+            throw new AccessDeniedException("Tài khoản chưa liên kết khách hàng");
+        return tk.getKhachHang().getKhachHangId();
+    }
+
+    // Khách hàng đăng nhập không được tự ý truyền khachHangId của người khác trên query param
+    // để xem đơn người khác (IDOR) — ép về đúng chủ tài khoản đang gọi. Staff giữ nguyên
+    // (kể cả null = xem toàn bộ đơn hệ thống).
+    private Integer resolveKhachHangIdForList(Integer requestedKhachHangId) {
         TaiKhoan tk = currentAccount();
         if (tk == null)
             throw new AccessDeniedException("Không xác định được người dùng");
