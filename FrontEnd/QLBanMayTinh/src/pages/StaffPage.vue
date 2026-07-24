@@ -10,6 +10,7 @@ import PosPanel from "../components/admin/PosPanel.vue";
 import OrdersTable from "../components/admin/OrdersTable.vue";
 import CustomersTable from "../components/admin/CustomersTable.vue";
 import ProductsTable from "../components/admin/ProductsTable.vue";
+import BienTheTable from "../components/admin/BienTheTable.vue";
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import { OrdersStore, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers } from "../stores/customers.js";
@@ -17,6 +18,7 @@ import { refreshReturns } from "../stores/returns.js";
 
 // ── Navigation — mac dinh vao thang Ban hang (viec chinh hang ngay cua nhan vien) ──
 const currentPage = ref("ban-hang");
+const productsMainTab = ref("sanPham");
 const navigate = (page) => {
   currentPage.value = page;
   // ReturnsPanel.vue chỉ tải dữ liệu 1 lần lúc mount — làm mới lại mỗi lần vào tab để
@@ -128,7 +130,14 @@ onUnmounted(() => {
         <section v-show="currentPage === 'orders'"><OrdersTable :can-delete="false" /></section>
         <section v-show="currentPage === 'customers'"><CustomersTable /></section>
         <section v-show="currentPage === 'tra-hang'"><ReturnsPanel /></section>
-        <section v-show="currentPage === 'products'"><ProductsTable :readonly="true" /></section>
+        <section v-show="currentPage === 'products'">
+          <ul class="nav nav-tabs mb-3">
+            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='sanPham'}" @click="productsMainTab='sanPham'">{{ t('admin.productsTabs.sanPham') }}</button></li>
+            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='bienThe'}" @click="productsMainTab='bienThe'">{{ t('admin.productsTabs.bienThe') }}</button></li>
+          </ul>
+          <div v-show="productsMainTab==='sanPham'"><ProductsTable :readonly="true" /></div>
+          <div v-show="productsMainTab==='bienThe'"><BienTheTable :readonly="true" /></div>
+        </section>
       </div>
     </main>
   </div>
