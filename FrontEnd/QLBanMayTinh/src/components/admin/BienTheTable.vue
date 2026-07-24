@@ -146,8 +146,11 @@ const distinctProducts = computed(() => {
 });
 const searchedProducts = computed(() => {
   const q = variantProductSearch.value.trim().toLowerCase();
-  if (!q) return [];
-  return distinctProducts.value.filter(p => (p.tenSanPham ?? '').toLowerCase().includes(q)).slice(0, 10);
+  // Không gõ gì -> liệt kê sẵn toàn bộ sản phẩm (số lượng sản phẩm nhỏ, không cần bắt gõ
+  // trước mới thấy như ReturnsPanel.vue's order picker — đơn hàng nhiều hơn hẳn nên phải
+  // bắt gõ, sản phẩm thì không).
+  const list = q ? distinctProducts.value.filter(p => (p.tenSanPham ?? '').toLowerCase().includes(q)) : distinctProducts.value;
+  return list.slice(0, 30);
 });
 
 const openAddVariantFlow = async () => {
@@ -385,7 +388,7 @@ const deleteVariant = async (bienTheId) => {
       <div v-if="addVariantMode && !addVariantSanPhamId" class="overflow-y-auto px-4 py-3">
         <label class="form-label small text-secondary mb-1">{{ t('admin.variantModal.pickProductLabel') }}</label>
         <input v-model="variantProductSearch" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" :placeholder="t('admin.variantModal.pickProductPlaceholder')" />
-        <div v-if="variantProductSearch.trim()" class="mt-1 rounded-2 overflow-hidden" style="max-height:220px;overflow-y:auto;border:1px solid var(--border-color-soft);">
+        <div class="mt-1 rounded-2 overflow-hidden" style="max-height:220px;overflow-y:auto;border:1px solid var(--border-color-soft);">
           <div v-for="p in searchedProducts" :key="p.sanPhamId" class="p-2" style="cursor:pointer;" @click="pickProductForVariant(p)">
             {{ p.tenSanPham }} <span class="text-secondary" style="font-size:0.75rem;">— {{ p.tenThuongHieu }}</span>
           </div>
