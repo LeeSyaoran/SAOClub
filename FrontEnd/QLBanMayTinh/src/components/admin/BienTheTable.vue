@@ -66,7 +66,10 @@ const filteredVariants = computed(() => {
     (p.maSku ?? '').toLowerCase().includes(q)
   );
 });
-const configLabel = (p) => [p.cpu, p.ram, p.oCung].filter(Boolean).join(' · ') || '—';
+// Bỏ tiền tố hãng CPU (Intel Core/AMD Ryzen) — dư thừa, không cần trong bảng liệt kê gọn,
+// tên đầy đủ vẫn hiện nguyên trong ProductDetailModal.vue lúc xem chi tiết.
+const shortCpu = (cpu) => cpu?.replace(/^(Intel Core|AMD Ryzen)\s+/i, '') ?? '';
+const configLabel = (p) => [shortCpu(p.cpu), p.ram, p.oCung].filter(Boolean).join(' · ') || '—';
 
 // ── Modal them/sua bien the ───────────────────────────────────────────────────────────
 const showVariantModal = ref(false);
@@ -336,26 +339,26 @@ const deleteVariant = async (bienTheId) => {
   </div>
   <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.variants.loading') }}</div>
   <div v-else class="table-responsive">
-    <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+    <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft); font-size:0.82rem;">
       <thead><tr>
-        <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-        <th>{{ t('admin.variants.colSku') }}</th><th>{{ t('admin.variants.colProduct') }}</th>
-        <th>{{ t('admin.variants.colConfig') }}</th><th>{{ t('admin.variants.colColor') }}</th>
-        <th>{{ t('admin.variants.colPriceSell') }}</th><th>{{ t('admin.variants.colStatus') }}</th><th>{{ t('admin.variants.colAction') }}</th>
+        <th style="width:36px;">{{ t('admin.common.stt') }}</th>
+        <th style="width:150px;">{{ t('admin.variants.colSku') }}</th><th style="width:220px;">{{ t('admin.variants.colProduct') }}</th>
+        <th>{{ t('admin.variants.colConfig') }}</th><th style="width:100px;">{{ t('admin.variants.colColor') }}</th>
+        <th style="width:120px;">{{ t('admin.variants.colPriceSell') }}</th><th style="width:100px;">{{ t('admin.variants.colStatus') }}</th><th style="width:110px;">{{ t('admin.variants.colAction') }}</th>
       </tr></thead>
       <tbody>
         <tr v-for="(p, idx) in filteredVariants" :key="p.bienTheId">
           <td class="text-secondary">{{ idx + 1 }}</td>
-          <td class="text-secondary" style="font-family:monospace;">{{ p.maSku }}</td>
-          <td>{{ p.tenSanPham }}</td>
-          <td class="text-secondary">{{ configLabel(p) }}</td>
-          <td>{{ p.mauSac || '—' }}</td>
-          <td>{{ formatPrice(p.giaBan) }}</td>
-          <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(p.trangThai) }}</span></td>
+          <td class="text-secondary text-truncate" style="font-family:monospace; font-size:0.76rem; max-width:150px;" :title="p.maSku">{{ p.maSku }}</td>
+          <td class="text-truncate" style="max-width:220px;" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
+          <td class="text-secondary text-truncate" style="max-width:260px;" :title="configLabel(p)">{{ configLabel(p) }}</td>
+          <td class="text-truncate" style="max-width:100px;">{{ p.mauSac || '—' }}</td>
+          <td class="text-nowrap">{{ formatPrice(p.giaBan) }}</td>
+          <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.72rem;">{{ statusLabel(p.trangThai) }}</span></td>
           <td>
             <div class="d-flex gap-1">
-              <button v-if="!readonly" class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEdit(p)">{{ t('admin.variants.edit') }}</button>
-              <button v-if="!readonly" class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteVariant(p.bienTheId)">{{ t('admin.variants.delete') }}</button>
+              <button v-if="!readonly" class="btn btn-sm btn-outline-warning" style="font-size:0.72rem; padding:2px 7px;" @click="openEdit(p)">{{ t('admin.variants.edit') }}</button>
+              <button v-if="!readonly" class="btn btn-sm btn-outline-danger"  style="font-size:0.72rem; padding:2px 7px;" @click="deleteVariant(p.bienTheId)">{{ t('admin.variants.delete') }}</button>
             </div>
           </td>
         </tr>
