@@ -170,6 +170,10 @@ class PhieuTraHangServiceTest {
         phieu.setPhieuTraId(5);
         phieu.setDonHang(donHang);
         phieu.setTrangThai("da_xu_ly"); // đã xử lý từ trước
+        // Khớp đúng giá trị requestDaXuLyQuaVi() gửi lên (hinhThucHoan="vi", soTienHoan=50_000)
+        // — không đổi trường tiền-liên-quan nào nên qua được guard chanSuaSauKhiDaCongVi().
+        phieu.setHinhThucHoan("vi");
+        phieu.setSoTienHoan(BigDecimal.valueOf(50_000));
 
         when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
         when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
@@ -239,6 +243,38 @@ class PhieuTraHangServiceTest {
 
         PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));
         req.setHinhThucHoan("tien_mat");
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.update(5, req));
+
+        verify(phieuTraHangRepository, never()).save(any());
+        verify(khachHangRepository, never()).save(any());
+    }
+
+    // Phieu tien_mat da xu ly cung phai bi khoa nhu phieu vi — truoc day guard chi ap dung
+    // khi hinhThucHoan="vi", phieu tien_mat co the doi lui trang_thai roi luu lai "da_xu_ly"
+    // de tru diem tich luy 2 lan cho cung 1 lan hoan thuc te (xem truHoiDiemNeuVuaHoanTat).
+    @Test
+    void update_daXuLyRoiTienMat_doiTrangThai_nemLoi() {
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(1);
+        kh.setDiemTichLuy(20);
+
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+
+        PhieuTraHang phieu = new PhieuTraHang();
+        phieu.setPhieuTraId(5);
+        phieu.setDonHang(donHang);
+        phieu.setTrangThai("da_xu_ly");
+        phieu.setHinhThucHoan("tien_mat");
+        phieu.setSoTienHoan(BigDecimal.valueOf(50_000));
+        when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
+
+        PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));
+        req.setHinhThucHoan("tien_mat");
+        req.setTrangThai("cho_xu_ly"); // thu doi lui de sau do luu lai "da_xu_ly"
 
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
                 () -> service.update(5, req));

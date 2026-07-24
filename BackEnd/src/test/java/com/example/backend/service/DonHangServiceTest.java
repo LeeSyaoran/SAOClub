@@ -158,7 +158,7 @@ class DonHangServiceTest {
         serial.setBienThe(bienThe);
         serial.setSoSerial("SN-100");
         serial.setTrangThai("trong_kho");
-        when(chiTietSanPhamRepository.findById(100)).thenReturn(Optional.of(serial));
+        when(chiTietSanPhamRepository.findByIdForUpdate(100)).thenReturn(Optional.of(serial));
 
         XacNhanDonHangRequest req = new XacNhanDonHangRequest(List.of(new XacNhanDonHangLineRequest(5, List.of(100))));
 

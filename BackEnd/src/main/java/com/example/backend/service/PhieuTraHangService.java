@@ -115,23 +115,26 @@ public class PhieuTraHangService {
                             + ") vượt quá số tiền đơn hàng đã thanh toán (" + gioiHan + ")");
     }
 
-    // Guard: một khi phiếu đã hoàn tiền qua ví (trang_thai="da_xu_ly" + hinh_thuc_hoan="vi"),
-    // chặn sửa trangThai/hinhThucHoan/soTienHoan — 3 trường này quyết định số dư ví, sửa "ngầm"
-    // sẽ làm lệch ví (không có bảng ledger để đối soát lại). Các trường khác (lyDo, ghiChu,
-    // nhanVienId, ngayTra) vẫn sửa tự do.
+    // Guard: một khi phiếu đã xử lý xong ("da_xu_ly"), chặn sửa trangThai/hinhThucHoan/
+    // soTienHoan — 3 trường này quyết định số dư ví (chỉ hinhThucHoan="vi") VÀ điểm tích lũy
+    // bị trừ (cả "vi" lẫn "tien_mat", xem truHoiDiemNeuVuaHoanTat), sửa "ngầm" rồi lưu lại sẽ
+    // làm lệch ví/điểm hoặc cộng/trừ trùng lần 2 (không có bảng ledger để đối soát lại). Trước
+    // đây chỉ chặn khi hinhThucHoan="vi" — phiếu "tien_mat" đã da_xu_ly vẫn đổi lui về
+    // "cho_xu_ly" rồi lưu lại "da_xu_ly" được, trừ điểm 2 lần cho cùng 1 lần hoàn thực tế. Các
+    // trường khác (lyDo, ghiChu, nhanVienId, ngayTra) vẫn sửa tự do.
     private void chanSuaSauKhiDaCongVi(PhieuTraHang entity, PhieuTraHangRequest request) {
-        boolean daCongViQua = "da_xu_ly".equals(entity.getTrangThai()) && "vi".equals(entity.getHinhThucHoan());
-        if (!daCongViQua) return;
+        boolean daXuLyRoi = "da_xu_ly".equals(entity.getTrangThai());
+        if (!daXuLyRoi) return;
 
         boolean doiTrangThai = !"da_xu_ly".equals(request.getTrangThai());
-        boolean doiHinhThucHoan = !"vi".equals(request.getHinhThucHoan());
+        boolean doiHinhThucHoan = !java.util.Objects.equals(entity.getHinhThucHoan(), request.getHinhThucHoan());
         boolean doiSoTienHoan = entity.getSoTienHoan() == null
                 ? request.getSoTienHoan() != null
                 : entity.getSoTienHoan().compareTo(request.getSoTienHoan()) != 0;
 
         if (doiTrangThai || doiHinhThucHoan || doiSoTienHoan) {
             throw new IllegalArgumentException(
-                    "Phiếu đã hoàn tiền qua ví — không thể đổi trạng thái/hình thức hoàn/số tiền hoàn nữa");
+                    "Phiếu đã xử lý xong (đã cộng ví và/hoặc trừ điểm tích lũy) — không thể đổi trạng thái/hình thức hoàn/số tiền hoàn nữa");
         }
     }
 

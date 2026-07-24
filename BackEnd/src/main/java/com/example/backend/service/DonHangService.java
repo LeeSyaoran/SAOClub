@@ -308,7 +308,10 @@ public class DonHangService {
 
             List<ChiTietSanPham> finalSerials = new ArrayList<>();
             for (Integer serialId : serialIds) {
-                ChiTietSanPham serial = chiTietSanPhamRepository.findById(serialId)
+                // Khoá PESSIMISTIC_WRITE — cùng lỗi race condition đã sửa ở ChiTietDonHangService.
+                // create() (2 nhân viên/2 tab cùng lúc xác nhận, cùng chọn trùng 1 serial): trước
+                // đây dùng findById() thường, đọc xong mới kiểm tra trạng thái thì đã trễ.
+                ChiTietSanPham serial = chiTietSanPhamRepository.findByIdForUpdate(serialId)
                         .orElseThrow(() -> new IllegalArgumentException("Serial không tồn tại với id: " + serialId));
                 if (!serial.getBienThe().getBienTheId().equals(item.getBienThe().getBienTheId()))
                     throw new IllegalArgumentException("Serial " + serial.getSoSerial() + " không thuộc đúng sản phẩm của dòng #" + item.getId());
