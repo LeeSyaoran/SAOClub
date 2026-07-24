@@ -41,7 +41,7 @@ public class DonHangController {
 
     @GetMapping("/{id}")
     public DonHang getById(@PathVariable Integer id) {
-        return donHangService.getById(id);
+        return donHangService.getByIdChoNguoiXem(id);
     }
 
     // POST — service xử lý các FK: khachHang, nhanVien, khuyenMai, diaChiGiaoHang.

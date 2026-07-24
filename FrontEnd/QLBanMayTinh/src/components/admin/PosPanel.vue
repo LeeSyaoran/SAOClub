@@ -290,11 +290,20 @@ const posPlaceOrder = async () => {
     if (!orderRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(orderRes) }));
     const created = await orderRes.json();
     const donHangId = created.id ?? created.donHangId;
-    for (const item of posCart.value) {
-      const ctRes = await DonHangService.addChiTiet({
-        donHangId, bienTheId: item.bienTheId, chiTietId: item.chiTietId, soLuong: item.soLuong, donGia: item.giaBan, giamGiaDong: 0,
-      });
-      if (!ctRes.ok) throw new Error(t('admin.errors.addProductError', { message: await ctRes.text() }));
+    // Don vua tao da danh dau "paid"/"confirmed" ngay (xem DonHangService.create) — neu 1 dong
+    // gan hang loi giua chung (vd het hang, serial vua bi don khac gianh mat), phai xoa luon don
+    // vua tao thay vi de lai 1 don "da thanh toan" nhung thieu san pham. Mirror dung pattern da
+    // dung o CheckoutModal.vue.
+    try {
+      for (const item of posCart.value) {
+        const ctRes = await DonHangService.addChiTiet({
+          donHangId, bienTheId: item.bienTheId, chiTietId: item.chiTietId, soLuong: item.soLuong, donGia: item.giaBan, giamGiaDong: 0,
+        });
+        if (!ctRes.ok) throw new Error(t('admin.errors.addProductError', { message: await ctRes.text() }));
+      }
+    } catch (e) {
+      await DonHangService.remove(donHangId).catch(() => {});
+      throw e;
     }
     posSuccess.value = true;
     posCart.value = []; posPhone.value = ""; posFoundCust.value = null;

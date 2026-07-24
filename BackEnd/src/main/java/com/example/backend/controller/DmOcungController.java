@@ -13,7 +13,7 @@ import java.util.List;
 // Danh mục ổ cứng — dữ liệu tham chiếu đơn giản, không cần service riêng
 @RestController
 @RequestMapping("/api/dm-o-cung")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 public class DmOcungController {
 
     @Autowired

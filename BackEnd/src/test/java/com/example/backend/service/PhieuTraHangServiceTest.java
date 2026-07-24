@@ -99,6 +99,7 @@ class PhieuTraHangServiceTest {
         KhachHang kh = new KhachHang();
         kh.setKhachHangId(1);
         kh.setSoDuVi(BigDecimal.valueOf(100_000));
+        kh.setDiemTichLuy(20);
 
         DonHang donHang = new DonHang();
         donHang.setId(9);
@@ -110,13 +111,16 @@ class PhieuTraHangServiceTest {
         phieu.setTrangThai("cho_xu_ly");
 
         when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
-        when(donHangRepository.getReferenceById(9)).thenReturn(donHang);
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
         when(phieuTraHangRepository.save(phieu)).thenReturn(phieu);
 
         service.update(5, requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000)));
 
         assertThat(kh.getSoDuVi()).isEqualByComparingTo(BigDecimal.valueOf(150_000));
-        verify(khachHangRepository).save(kh);
+        // Hoàn 50.000 -> trừ lại đúng floor(50000/10000) = 5 điểm đã cộng khi giao hàng trước đó.
+        assertThat(kh.getDiemTichLuy()).isEqualTo(15);
+        verify(khachHangRepository, times(2)).save(kh);
     }
 
     @Test
@@ -124,6 +128,7 @@ class PhieuTraHangServiceTest {
         KhachHang kh = new KhachHang();
         kh.setKhachHangId(1);
         kh.setSoDuVi(BigDecimal.valueOf(100_000));
+        kh.setDiemTichLuy(20);
 
         DonHang donHang = new DonHang();
         donHang.setId(9);
@@ -135,7 +140,8 @@ class PhieuTraHangServiceTest {
         phieu.setTrangThai("cho_xu_ly");
 
         when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
-        when(donHangRepository.getReferenceById(9)).thenReturn(donHang);
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
         when(phieuTraHangRepository.save(phieu)).thenReturn(phieu);
 
         PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));
@@ -144,7 +150,10 @@ class PhieuTraHangServiceTest {
         service.update(5, req);
 
         assertThat(kh.getSoDuVi()).isEqualByComparingTo(BigDecimal.valueOf(100_000));
-        verify(khachHangRepository, never()).save(any());
+        // Hoàn tiền mặt không đụng ví, nhưng vẫn phải trừ lại điểm tích lũy đã cộng khi giao
+        // hàng — điểm gắn với đơn đã trả, không phụ thuộc hình thức hoàn tiền lần này.
+        assertThat(kh.getDiemTichLuy()).isEqualTo(15);
+        verify(khachHangRepository, times(1)).save(kh);
     }
 
     @Test
@@ -161,9 +170,14 @@ class PhieuTraHangServiceTest {
         phieu.setPhieuTraId(5);
         phieu.setDonHang(donHang);
         phieu.setTrangThai("da_xu_ly"); // đã xử lý từ trước
+        // Khớp đúng giá trị requestDaXuLyQuaVi() gửi lên (hinhThucHoan="vi", soTienHoan=50_000)
+        // — không đổi trường tiền-liên-quan nào nên qua được guard chanSuaSauKhiDaCongVi().
+        phieu.setHinhThucHoan("vi");
+        phieu.setSoTienHoan(BigDecimal.valueOf(50_000));
 
         when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
-        when(donHangRepository.getReferenceById(9)).thenReturn(donHang);
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
         when(phieuTraHangRepository.save(phieu)).thenReturn(phieu);
 
         service.update(5, requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000)));
@@ -237,12 +251,45 @@ class PhieuTraHangServiceTest {
         verify(khachHangRepository, never()).save(any());
     }
 
+    // Phieu tien_mat da xu ly cung phai bi khoa nhu phieu vi — truoc day guard chi ap dung
+    // khi hinhThucHoan="vi", phieu tien_mat co the doi lui trang_thai roi luu lai "da_xu_ly"
+    // de tru diem tich luy 2 lan cho cung 1 lan hoan thuc te (xem truHoiDiemNeuVuaHoanTat).
+    @Test
+    void update_daXuLyRoiTienMat_doiTrangThai_nemLoi() {
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(1);
+        kh.setDiemTichLuy(20);
+
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+
+        PhieuTraHang phieu = new PhieuTraHang();
+        phieu.setPhieuTraId(5);
+        phieu.setDonHang(donHang);
+        phieu.setTrangThai("da_xu_ly");
+        phieu.setHinhThucHoan("tien_mat");
+        phieu.setSoTienHoan(BigDecimal.valueOf(50_000));
+        when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
+
+        PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));
+        req.setHinhThucHoan("tien_mat");
+        req.setTrangThai("cho_xu_ly"); // thu doi lui de sau do luu lai "da_xu_ly"
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.update(5, req));
+
+        verify(phieuTraHangRepository, never()).save(any());
+        verify(khachHangRepository, never()).save(any());
+    }
+
     @Test
     void update_daCongViQua_suaGhiChu_thanhCong_khongCongViLanNua() {
         PhieuTraHang phieu = phieuDaCongViQua(9);
         KhachHang kh = phieu.getDonHang().getKhachHang();
 
-        when(donHangRepository.getReferenceById(9)).thenReturn(phieu.getDonHang());
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(phieu.getDonHang()));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of(phieu));
         when(phieuTraHangRepository.save(phieu)).thenReturn(phieu);
 
         PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));

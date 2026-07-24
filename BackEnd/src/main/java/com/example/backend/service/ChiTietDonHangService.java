@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.entity.ChiTietDonHangSerial;
 import com.example.backend.entity.ChiTietSanPham;
@@ -85,22 +86,36 @@ public class ChiTietDonHangService {
             throw new AccessDeniedException("Không có quyền thêm sản phẩm vào đơn hàng này");
 
         ChiTietDonHang entity = new ChiTietDonHang();
-        // BeanUtils copies: soLuong, donGia, giamGiaDong, ghiChu
-        // Bỏ qua: donHangId, bienTheId, chiTietId (khác tên với entity)
-        BeanUtils.copyProperties(request, entity, "donHangId", "bienTheId", "chiTietId");
+        // BeanUtils copies: soLuong, ghiChu — donGia/giamGiaDong KHÔNG copy từ request nữa,
+        // xem lý do bên dưới (giá đóng băng theo DB, không tin giá client gửi lên).
+        BeanUtils.copyProperties(request, entity, "donHangId", "bienTheId", "chiTietId", "donGia", "giamGiaDong");
 
         DonHang donHang = donHangRepository.getReferenceById(request.getDonHangId());
         entity.setDonHang(donHang);
-        entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
+        BienTheSanPham bienThe = bienTheSanPhamRepository.findById(request.getBienTheId())
+                .orElseThrow(() -> new IllegalArgumentException("Biến thể không tồn tại với id: " + request.getBienTheId()));
+        entity.setBienThe(bienThe);
+
+        // Giá đóng băng: luôn lấy don_gia từ giá bán hiện tại trong DB, không tin donGia client
+        // gửi lên — trước đây BeanUtils copy thẳng donGia từ request, khách tự sửa payload
+        // (vd DevTools) có thể mua giá bất kỳ. Chưa nơi nào trong frontend gửi giamGiaDong khác
+        // 0 lúc tạo dòng mới (chiết khấu chỉ chỉnh được sau qua update(), vốn đã staff-only),
+        // nên khoá luôn giamGiaDong = 0 ở bước tạo cho đồng bộ.
+        entity.setDonGia(bienThe.getGiaBan());
+        entity.setGiamGiaDong(java.math.BigDecimal.ZERO);
 
         // Gán serial cụ thể cho dòng đơn hàng này + trừ tồn kho.
         // ChiTietSanPham.trangThai chuyển khỏi "trong_kho" sẽ tự kích hoạt trigger
         // trg_CapNhatTonKhoThucTe trừ ton_kho.so_luong_ton_thuc_te tương ứng.
         List<ChiTietSanPham> assignedSerials;
         if (request.getChiTietId() != null) {
-            // Đã chỉ định seri cụ thể (vd: nhân viên chọn tay tại quầy)
-            ChiTietSanPham chosen = chiTietSanPhamRepository.findById(request.getChiTietId())
+            // Đã chỉ định seri cụ thể (vd: nhân viên chọn tay tại quầy). Khóa PESSIMISTIC_WRITE +
+            // kiểm tra lại trạng thái ngay trong transaction — trước đây dùng findById() thường,
+            // 2 request cùng lúc (double-click, 2 nhân viên) có thể cùng gán trùng 1 serial đã bán.
+            ChiTietSanPham chosen = chiTietSanPhamRepository.findByIdForUpdate(request.getChiTietId())
                     .orElseThrow(() -> new IllegalArgumentException("Serial không tồn tại với id: " + request.getChiTietId()));
+            if (!"trong_kho".equals(chosen.getTrangThai()))
+                throw new IllegalArgumentException("Serial này đã được gán cho đơn khác, vui lòng chọn serial khác");
             entity.setChiTietSanPham(chosen);
             assignedSerials = List.of(chosen);
         } else {
