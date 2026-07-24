@@ -91,6 +91,7 @@ const openDetail = (sanPhamId, name) => {
 // xem tab "Biến thể") ───────────────────────────────────────────────────────────────
 const showProductModal = ref(false);
 const formError = ref("");
+const saving = ref(false);
 
 // Serial number cho lan tao moi
 const soSerialMoi = ref('');
@@ -175,6 +176,9 @@ const handleImageFile = (e) => {
 
 const saveProduct = async () => {
   formError.value = "";
+  if (saving.value) return;
+  saving.value = true;
+  try {
 
   // Upload anh truoc neu co file moi chon
   if (imageFilePending.value) {
@@ -236,6 +240,9 @@ const saveProduct = async () => {
     await refreshProducts();
   } catch (e) {
     formError.value = e.message;
+  }
+  } finally {
+    saving.value = false;
   }
 };
 // Xoa xong khong can tai lai ca bang — API tra 204 rong nen chi can biet ID
@@ -498,7 +505,7 @@ const deleteProduct = async (id) => {
       <!-- Footer -->
       <div class="d-flex justify-content-end gap-2 px-4 py-3" style="border-top:1px solid var(--border-color);">
         <button class="btn btn-sm btn-outline-secondary px-3" @click="showProductModal=false">{{ t('admin.productModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold px-4" @click="saveProduct">{{ t('admin.productModal.addNew') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold px-4" :disabled="saving" @click="saveProduct">{{ t('admin.productModal.addNew') }}</button>
       </div>
     </div>
   </div>

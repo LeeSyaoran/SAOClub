@@ -40,6 +40,7 @@ const showModal = ref(false);
 const editingId = ref(null);
 const formError = ref("");
 const formValue = ref("");
+const saving = ref(false);
 
 const newSerials = ref(['']);
 const addSerialRow = () => newSerials.value.push('');
@@ -94,6 +95,8 @@ const saveItem = async () => {
     formError.value = t('admin.dmCategory.serialRequired', { label: props.nameLabel });
     return;
   }
+  if (saving.value) return;
+  saving.value = true;
   try {
     const body = { [props.nameField]: formValue.value.trim() };
     const res = await props.service.save(editingId.value, body);
@@ -121,6 +124,8 @@ const saveItem = async () => {
     await load();
   } catch (e) {
     formError.value = e.message;
+  } finally {
+    saving.value = false;
   }
 };
 
@@ -200,7 +205,7 @@ const deleteItem = async (id) => {
       </div>
       <div class="d-flex justify-content-end gap-2">
         <button class="btn btn-sm btn-outline-secondary" @click="showModal=false">{{ t('admin.dmCategory.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveItem">{{ t('admin.dmCategory.save') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="saving" @click="saveItem">{{ t('admin.dmCategory.save') }}</button>
       </div>
     </div>
   </div>

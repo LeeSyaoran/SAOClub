@@ -4,6 +4,14 @@ import * as NhanVienService from "../Service/NhanVienService.js";
 export const StaffStore = reactive({ items: [], loading: false, loaded: false });
 
 let staffPromise = null;
+
+// Xem resetProducts() ở stores/products.js — cùng lý do reset khi đổi tài khoản cùng tab.
+export const resetStaff = () => {
+  staffPromise = null;
+  StaffStore.items = [];
+  StaffStore.loaded = false;
+};
+
 export const ensureStaff = () => {
   if (staffPromise) return staffPromise;
   staffPromise = NhanVienService.getAll().catch(() => []).then((list) => {

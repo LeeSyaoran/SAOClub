@@ -52,7 +52,8 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
         bt.trangThai,
         sp.ngayTao,
         bt.phanLoaiTags,
-        bt.phanLoaiTen
+        bt.phanLoaiTen,
+        (SELECT COUNT(c) FROM ChiTietSanPham c WHERE c.bienThe = bt AND c.trangThai = 'trong_kho')
     )
     FROM BienTheSanPham bt
     JOIN bt.sanPham sp
@@ -100,6 +101,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
     LEFT JOIN ChiTietDonHang ct ON ct.bienThe = bt
     LEFT JOIN ct.donHang d
     WHERE (:tuNgay IS NULL OR d.ngayDat >= :tuNgay) AND (:denNgay IS NULL OR d.ngayDat <= :denNgay)
+      AND (d.trangThaiDonHang IS NULL OR d.trangThaiDonHang <> 'cancelled')
     GROUP BY sp.sanPhamId, sp.tenSanPham
     ORDER BY COALESCE(SUM(ct.soLuong), 0) DESC
     """)
@@ -112,6 +114,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
     LEFT JOIN ChiTietDonHang ct ON ct.bienThe = bt
     LEFT JOIN ct.donHang d
     WHERE (:tuNgay IS NULL OR d.ngayDat >= :tuNgay) AND (:denNgay IS NULL OR d.ngayDat <= :denNgay)
+      AND (d.trangThaiDonHang IS NULL OR d.trangThaiDonHang <> 'cancelled')
     GROUP BY sp.sanPhamId, sp.tenSanPham
     ORDER BY COALESCE(SUM(ct.soLuong), 0) ASC
     """)

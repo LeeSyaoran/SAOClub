@@ -1,8 +1,10 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.ThuongHieu;
+import com.example.backend.request.ThuongHieuRequest;
 import com.example.backend.response.ThuongHieuResponse;
 import com.example.backend.service.ThuongHieuService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,14 +32,14 @@ public class ThuongHieuController {
 
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PostMapping
-    public ResponseEntity<ThuongHieu> create(@RequestBody ThuongHieu item) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(thuongHieuService.create(item));
+    public ResponseEntity<ThuongHieu> create(@Valid @RequestBody ThuongHieuRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(thuongHieuService.create(request));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PutMapping("update/{id}")
-    public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody ThuongHieu item) {
-        thuongHieuService.update(id, item);
+    public ResponseEntity<Void> update(@PathVariable Integer id, @Valid @RequestBody ThuongHieuRequest request) {
+        thuongHieuService.update(id, request);
         return ResponseEntity.ok().build();
     }
 

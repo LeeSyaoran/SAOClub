@@ -33,7 +33,20 @@ public class PhieuBaoHanhService {
                 .orElseThrow(() -> new IllegalArgumentException("Phiếu bảo hành không tồn tại với id: " + id));
     }
 
+    // Trước đây không kiểm tra thứ tự các mốc ngày — có thể lưu ngày hết bảo hành sớm hơn
+    // ngày mua, hoặc ngày trả khách sớm hơn ngày tiếp nhận sửa, do nhập tay sai hoặc bug UI.
+    private void kiemTraKhoangNgayHopLe(PhieuBaoHanhRequest request) {
+        if (!request.getNgayHetBh().isAfter(request.getNgayMua()))
+            throw new IllegalArgumentException("Ngày hết bảo hành phải sau ngày mua");
+        if (request.getNgayTiepNhan() != null && request.getNgayTiepNhan().isBefore(request.getNgayMua()))
+            throw new IllegalArgumentException("Ngày tiếp nhận không thể trước ngày mua");
+        if (request.getNgayTraKhach() != null && request.getNgayTiepNhan() != null
+                && request.getNgayTraKhach().isBefore(request.getNgayTiepNhan()))
+            throw new IllegalArgumentException("Ngày trả khách không thể trước ngày tiếp nhận");
+    }
+
     public PhieuBaoHanh create(PhieuBaoHanhRequest request) {
+        kiemTraKhoangNgayHopLe(request);
         PhieuBaoHanh entity = new PhieuBaoHanh();
         // BeanUtils copies: ngayMua, ngayHetBh, ngayTiepNhan, ngayTraKhach,
         //                   moTaLoi, ketQuaXuLy, trangThai, chiPhiPhatSinh, ghiChu
@@ -47,6 +60,7 @@ public class PhieuBaoHanhService {
     }
 
     public PhieuBaoHanh update(Integer id, PhieuBaoHanhRequest request) {
+        kiemTraKhoangNgayHopLe(request);
         PhieuBaoHanh entity = getById(id);
         BeanUtils.copyProperties(request, entity, "baoHanhId", "donHangId", "bienTheId", "khachHangId", "chiTietId");
         entity.setDonHang(donHangRepository.getReferenceById(request.getDonHangId()));

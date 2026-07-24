@@ -24,6 +24,7 @@ const posCart = ref([]);
 const posPhone = ref("");
 const posFoundCust = ref(null);
 const posError = ref("");
+const posPlacing = ref(false);
 const posSuccess = ref(false);
 const posPromoCode = ref("");
 const posAppliedPromo = ref(null);
@@ -273,6 +274,8 @@ const posPlaceOrder = async () => {
   // Khach hang bat buoc phai duoc xac dinh (co san hoac tao moi) TRUOC khi co san pham
   // trong gio (theo luong posStage) nen o day luon phai co san posFoundCust.
   if (!posFoundCust.value) { posError.value = t('admin.pos.phoneRequired'); return; }
+  if (posPlacing.value) return;
+  posPlacing.value = true;
   posError.value = "";
   posSuccess.value = false;
   try {
@@ -312,6 +315,8 @@ const posPlaceOrder = async () => {
     await refreshOrders();
   } catch (e) {
     posError.value = e.message;
+  } finally {
+    posPlacing.value = false;
   }
 };
 </script>
@@ -430,7 +435,7 @@ const posPlaceOrder = async () => {
         <div class="d-flex gap-2">
           <button class="btn btn-sm btn-outline-secondary" @click="posReset">{{ t('admin.pos.reset') }}</button>
           <button class="btn btn-sm btn-outline-info" :disabled="!posCart.length" @click="posHoldOrder">{{ t('admin.pos.holdOrder') }}</button>
-          <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" :disabled="posStage !== 'selling' || !posCart.length" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
+          <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" :disabled="posStage !== 'selling' || !posCart.length || posPlacing" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
         </div>
       </div>
       </template>

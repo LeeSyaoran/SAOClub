@@ -4,6 +4,14 @@ import * as NhaCungCapService from "../Service/NhaCungCapService.js";
 export const SuppliersStore = reactive({ items: [], loading: false, loaded: false });
 
 let suppliersPromise = null;
+
+// Xem resetProducts() ở stores/products.js — cùng lý do reset khi đổi tài khoản cùng tab.
+export const resetSuppliers = () => {
+  suppliersPromise = null;
+  SuppliersStore.items = [];
+  SuppliersStore.loaded = false;
+};
+
 export const ensureSuppliers = () => {
   if (suppliersPromise) return suppliersPromise;
   suppliersPromise = refreshSuppliers();

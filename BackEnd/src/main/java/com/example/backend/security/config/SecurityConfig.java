@@ -1,6 +1,7 @@
 package com.example.backend.security.config;
 
 import com.example.backend.security.jwt.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -64,6 +65,18 @@ public class SecurityConfig {
 
             // Stateless: không tạo session HTTP
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+            // Không cấu hình 2 handler này thì Spring Security mặc định trả 403 cho CẢ 2
+            // trường hợp (thiếu/hết hạn token LẪN không đủ quyền) — frontend không phân biệt
+            // được "cần đăng nhập lại" với "đúng đăng nhập nhưng sai vai trò" để tự đăng xuất
+            // đúng lúc. Tách rõ: 401 = chưa xác thực (JwtAuthFilter không set được Authentication
+            // vì thiếu/hết hạn token), 403 = đã xác thực nhưng @PreAuthorize từ chối.
+            .exceptionHandling(e -> e
+                .authenticationEntryPoint((req, res, ex) ->
+                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Chưa đăng nhập hoặc phiên đã hết hạn"))
+                .accessDeniedHandler((req, res, ex) ->
+                    res.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền truy cập"))
+            )
 
             // Phân quyền endpoint
             .authorizeHttpRequests(s -> s

@@ -291,6 +291,9 @@ export default {
     welcomeUser: "{name}님, 환영합니다!",
     loggedOut: "로그아웃되었습니다.",
     addedToCart: "{name}이(가) 장바구니에 담겼습니다.",
+    outOfStock: "{name}은(는) 현재 품절입니다.",
+    maxStockReached: "{name} 재고가 {ton}개 남았습니다.",
+    sessionExpired: "세션이 만료되었습니다. 다시 로그인해 주세요.",
   },
 
   adminAccess: {
