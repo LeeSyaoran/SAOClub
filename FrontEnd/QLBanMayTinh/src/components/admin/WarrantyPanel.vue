@@ -266,7 +266,7 @@ const deleteClaim = async (id) => {
     <div class="rounded-3 p-3" style="background:var(--bg-card);width:560px;max-width:96vw;max-height:90vh;overflow-y:auto;">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="fw-bold" style="color:var(--text-heading);">{{ editingId ? t('admin.warrantyClaimModal.titleEdit') : t('admin.warrantyClaimModal.titleAdd') }}</div>
-        <button class="btn-close btn-close-white btn-sm" @click="showModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showModal=false"></button>
       </div>
       <div v-if="formError" class="alert alert-danger small py-2 mb-2">{{ formError }}</div>
 

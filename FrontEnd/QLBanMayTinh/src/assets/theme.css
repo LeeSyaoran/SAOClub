@@ -10,6 +10,16 @@
    sửa từng file.
 ════════════════════════════════════════════════════════════════════ */
 
+:root {
+  /* Màu trạng thái ngữ nghĩa (toast thành công/lỗi...) — cố định, KHÔNG đổi theo
+     theme sáng/tối, giống cách utils/orderStatus.js đã cố định màu trạng thái đơn
+     hàng độc lập với --accent/--accent-2 (xanh/đỏ semantic không nên đổi theo
+     thương hiệu). ToastHost.vue trước đây dùng var(--state-danger, #dc2626) —
+     biến chưa từng được khai báo ở đâu nên luôn rơi về giá trị fallback cứng. */
+  --state-success: #16a34a;
+  --state-danger:  #dc2626;
+}
+
 :root,
 [data-theme="dark"] {
   /* Nền/viền trung tính đã giảm bớt chroma tím (~45%) so với bản đầu —
@@ -114,3 +124,16 @@ body {
 .text-warning { color: var(--accent-fg) !important; }
 .border-warning { border-color: var(--accent) !important; }
 .bg-warning { background-color: var(--accent) !important; color: var(--accent-text) !important; }
+
+/* ── prefers-reduced-motion (PRODUCT.md yêu cầu) — 1 chỗ duy nhất áp dụng cho
+   MỌI animation/transition trong app (Bootstrap lẫn CSS tự viết), khỏi phải
+   sửa từng component. Không tắt hẳn (display:none dễ vỡ layout phụ thuộc
+   animation để lộ ra) — rút gần về 0 để coi như tức thời. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

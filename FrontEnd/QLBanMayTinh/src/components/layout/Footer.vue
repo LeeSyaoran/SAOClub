@@ -108,6 +108,7 @@
             <!-- Facebook -->
             <a href="#" class="d-flex align-items-center justify-content-center rounded-circle text-decoration-none"
                style="width:32px; height:32px; background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-secondary);"
+               :aria-label="t('footer.facebookLabel')"
                @mouseenter="e => e.currentTarget.style.color='var(--accent)'"
                @mouseleave="e => e.currentTarget.style.color='var(--text-secondary)'">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -117,6 +118,7 @@
             <!-- YouTube -->
             <a href="#" class="d-flex align-items-center justify-content-center rounded-circle text-decoration-none"
                style="width:32px; height:32px; background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-secondary);"
+               :aria-label="t('footer.youtubeLabel')"
                @mouseenter="e => e.currentTarget.style.color='var(--accent)'"
                @mouseleave="e => e.currentTarget.style.color='var(--text-secondary)'">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -126,6 +128,7 @@
             <!-- Instagram -->
             <a href="#" class="d-flex align-items-center justify-content-center rounded-circle text-decoration-none"
                style="width:32px; height:32px; background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-secondary);"
+               :aria-label="t('footer.instagramLabel')"
                @mouseenter="e => e.currentTarget.style.color='var(--accent)'"
                @mouseleave="e => e.currentTarget.style.color='var(--text-secondary)'">
               <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

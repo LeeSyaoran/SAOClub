@@ -388,7 +388,7 @@ const deleteVariant = async (bienTheId) => {
           <div v-if="addVariantMode && addVariantSanPhamName" class="text-secondary" style="font-size:0.72rem;margin-top:2px;">{{ addVariantSanPhamName }}</div>
           <div v-else-if="editingId" class="text-secondary" style="font-size:0.72rem;margin-top:2px;">{{ t('admin.productModal.idLabel') }} {{ editingId }}</div>
         </div>
-        <button class="btn-close btn-close-white btn-sm" @click="showVariantModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showVariantModal=false"></button>
       </div>
 
       <!-- Buoc 1 (chi khi them moi): chon san pham -->

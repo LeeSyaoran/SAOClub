@@ -8,7 +8,8 @@
             :disabled="disabled"
             :class="{ 'text-secondary': !selectedLabel }"
             style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong);"
-            @click="toggle">
+            role="combobox" aria-haspopup="listbox" :aria-expanded="open"
+            @click="toggle" @keydown="onTriggerKeydown">
       <span class="text-truncate">{{ selectedLabel || placeholder }}</span>
     </button>
 
@@ -21,14 +22,13 @@
         <input v-if="options.length > 6" v-model="query" ref="searchEl"
                class="form-control form-control-sm m-2"
                style="width:auto;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong);"
-               :placeholder="t('common.searchPlaceholder')" @click.stop />
-        <div class="overflow-y-auto" style="max-height:240px;">
-          <div v-for="opt in filteredOptions" :key="opt.value"
-               class="px-3 py-2 small"
+               :placeholder="t('common.searchPlaceholder')" @click.stop @keydown="onTriggerKeydown" />
+        <div class="overflow-y-auto" role="listbox" style="max-height:240px;">
+          <div v-for="(opt, idx) in filteredOptions" :key="opt.value" ref="optionEls"
+               class="px-3 py-2 small" role="option" :aria-selected="opt.value === modelValue"
                style="cursor:pointer;white-space:normal;"
-               :style="opt.value === modelValue ? { background: 'var(--accent)', color: 'var(--accent-text)' } : {}"
-               @mouseenter="$event.currentTarget.style.background = opt.value===modelValue ? '' : 'var(--bg-hover)'"
-               @mouseleave="$event.currentTarget.style.background = opt.value===modelValue ? 'var(--accent)' : ''"
+               :style="(opt.value === modelValue || idx === highlightedIndex) ? { background: 'var(--accent)', color: 'var(--accent-text)' } : {}"
+               @mouseenter="highlightedIndex = idx"
                @click="select(opt.value)">
             {{ opt.label }}
           </div>
@@ -56,6 +56,8 @@ const query = ref('');
 const rootEl = ref(null);
 const panelEl = ref(null);
 const searchEl = ref(null);
+const optionEls = ref([]);
+const highlightedIndex = ref(-1);
 const panelPos = reactive({ top: 0, left: 0, width: 0 });
 
 const selectedLabel = computed(() => props.options.find(o => o.value === props.modelValue)?.label ?? '');
@@ -63,6 +65,10 @@ const filteredOptions = computed(() => {
   if (!query.value) return props.options;
   const q = query.value.toLowerCase();
   return props.options.filter(o => o.label.toLowerCase().includes(q));
+});
+// Gõ tìm lọc lại danh sách — chỉ số đang bôi đen của lần gõ trước không còn đúng nữa.
+watch(filteredOptions, () => {
+  highlightedIndex.value = filteredOptions.value.findIndex(o => o.value === props.modelValue);
 });
 
 const updatePanelPos = () => {
@@ -78,6 +84,7 @@ const toggle = () => {
   open.value = !open.value;
   if (open.value) {
     query.value = '';
+    highlightedIndex.value = filteredOptions.value.findIndex(o => o.value === props.modelValue);
     updatePanelPos();
     nextTick(() => searchEl.value?.focus());
   }
@@ -85,6 +92,39 @@ const toggle = () => {
 const select = (value) => {
   emit('update:modelValue', value);
   open.value = false;
+  rootEl.value?.querySelector('button')?.focus();
+};
+
+// Điều hướng bàn phím — trước đây chỉ bấm chuột chọn được, không thao tác được bằng
+// bàn phím (Tab vào nút thì mở/đóng được nhờ semantics <button> gốc, nhưng vào trong danh
+// sách option thì bó tay vì các dòng chỉ là <div> thường, không nhận phím mũi tên/Enter).
+const moveHighlight = (delta) => {
+  const len = filteredOptions.value.length;
+  if (len === 0) return;
+  highlightedIndex.value = (highlightedIndex.value + delta + len) % len;
+  nextTick(() => optionEls.value[highlightedIndex.value]?.scrollIntoView({ block: 'nearest' }));
+};
+const onTriggerKeydown = (e) => {
+  if (!open.value) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggle();
+    }
+    return;
+  }
+  if (e.key === 'ArrowDown') { e.preventDefault(); moveHighlight(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); moveHighlight(-1); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    const opt = filteredOptions.value[highlightedIndex.value];
+    if (opt) select(opt.value);
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    open.value = false;
+    rootEl.value?.querySelector('button')?.focus();
+  } else if (e.key === 'Tab') {
+    open.value = false;
+  }
 };
 
 // Modal cha cuộn được trong lúc panel mở → toa do cu thanh sai vi tri, dong panel cho don gian.

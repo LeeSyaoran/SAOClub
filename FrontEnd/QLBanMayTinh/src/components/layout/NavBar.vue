@@ -245,37 +245,39 @@ const activeCategory = ref('all-laptop');
 // Giá trị người dùng nhập vào ô tìm kiếm
 const searchValue = ref('');
 
-// Danh sách các loại laptop trong mega dropdown (tiêu đề dịch theo t(), tên hãng/tag giữ nguyên tiếng Việt)
+// Danh sách các loại laptop trong mega dropdown — tiêu đề VÀ tag (marketing copy) đều dịch
+// theo t() (trước đây tag hardcode tiếng Việt, đổi ngôn ngữ vẫn hiện tiếng Việt giữa các nhãn
+// đã dịch xung quanh). brands là tên hãng/thương hiệu — giữ nguyên, không dịch.
 const categories = computed(() => [
   {
     id: 'all-laptop',
     title: t('nav.catAll'),
     brands: ['ASUS', 'Lenovo', 'MacBook (Apple)', 'MSI', 'Acer', 'HP', 'Dell', 'Gigabyte', 'LG'],
-    tags: ['Laptop bán chạy nhất', 'Máy mới về 2026', 'Xả kho máy trưng bày', 'Hỗ trợ trả góp 0%']
+    tags: t('nav.catAllTags')
   },
   {
     id: 'gaming',
     title: t('nav.catGaming'),
     brands: ['ASUS ROG / TUF', 'Lenovo Legion / LOQ', 'MSI Gaming', 'Acer Predator / Nitro', 'Gigabyte Gaming', 'Dell Alienware'],
-    tags: ['Card RTX 40 Series', 'Màn hình 144Hz - 240Hz', 'Tản nhiệt chuyên dụng', 'Cấu hình khủng']
+    tags: t('nav.catGamingTags')
   },
   {
     id: 'office',
     title: t('nav.catOffice'),
     brands: ['ASUS Vivobook', 'Lenovo IdeaPad', 'HP Pavilion / ProBook', 'Dell Inspiron', 'Acer Aspire'],
-    tags: ['Giá rẻ dưới 15 triệu', 'Bàn phím gõ êm', 'Pin trâu trên 8 tiếng', 'Màn hình chống chói']
+    tags: t('nav.catOfficeTags')
   },
   {
     id: 'premium',
     title: t('nav.catPremium'),
     brands: ['MacBook Air / Pro', 'ASUS Zenbook', 'Lenovo Yoga / Slim', 'HP Envy / Spectre', 'Dell XPS', 'LG Gram'],
-    tags: ['Vỏ nhôm nguyên khối', 'Trọng lượng dưới 1.2kg', 'Màn hình OLED / Retina', 'Nhận diện khuôn mặt']
+    tags: t('nav.catPremiumTags')
   },
   {
     id: 'creator',
     title: t('nav.catCreator'),
     brands: ['MacBook Pro M-Series', 'ASUS ProArt', 'Lenovo ThinkPad P-Series', 'MSI Creator', 'Dell Precision'],
-    tags: ['Màn hình chuẩn màu DCI-P3', 'RAM khủng từ 32GB', 'Tối ưu phần mềm Adobe/CAD', 'Xử lý dữ liệu AI chuyên sâu']
+    tags: t('nav.catCreatorTags')
   }
 ]);
 </script>

@@ -12,6 +12,7 @@ export default {
     continueShopping: "Tiếp tục mua sắm",
     searchPlaceholder: "Tìm kiếm...",
     noResults: "Không tìm thấy kết quả",
+    remove: "Xóa",
   },
 
   theme: {
@@ -40,10 +41,15 @@ export default {
     login: "Đăng nhập",
     logout: "Đăng xuất",
     catAll: "Tất cả thương hiệu Laptop",
+    catAllTags: ["Laptop bán chạy nhất", "Máy mới về 2026", "Xả kho máy trưng bày", "Hỗ trợ trả góp 0%"],
     catGaming: "Laptop Gaming / Đồ họa nặng",
+    catGamingTags: ["Card RTX 40 Series", "Màn hình 144Hz - 240Hz", "Tản nhiệt chuyên dụng", "Cấu hình khủng"],
     catOffice: "Laptop Văn phòng - Học tập",
+    catOfficeTags: ["Giá rẻ dưới 15 triệu", "Bàn phím gõ êm", "Pin trâu trên 8 tiếng", "Màn hình chống chói"],
     catPremium: "Cao cấp - Mỏng nhẹ - Sang trọng",
+    catPremiumTags: ["Vỏ nhôm nguyên khối", "Trọng lượng dưới 1.2kg", "Màn hình OLED / Retina", "Nhận diện khuôn mặt"],
     catCreator: "Đồ họa chuyên nghiệp - Kỹ thuật AI",
+    catCreatorTags: ["Màn hình chuẩn màu DCI-P3", "RAM khủng từ 32GB", "Tối ưu phần mềm Adobe/CAD", "Xử lý dữ liệu AI chuyên sâu"],
     brandsHeading: "Hãng sản xuất chính",
     tagsHeading: "Phân khúc nổi bật",
   },
@@ -63,6 +69,9 @@ export default {
     subscribe: "ĐĂNG KÝ NGAY",
     policyHeading: "Chính sách & Hỗ trợ",
     connectHeading: "Kết nối với SAOPHONE",
+    facebookLabel: "Facebook",
+    youtubeLabel: "YouTube",
+    instagramLabel: "Instagram",
     appHeading: "Tải ứng dụng hệ thống",
     seoPhoneHeading: "Điện thoại di động",
     seoPhoneText: "iPhone 17 Pro Max, Samsung Galaxy S26 Ultra, Oppo Find X9 Ultra, Xiaomi 14T.",
@@ -302,6 +311,7 @@ export default {
     outOfStock: "{name} hiện đã hết hàng.",
     maxStockReached: "Chỉ còn {ton} sản phẩm {name} trong kho.",
     sessionExpired: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
+    buyAgainUnavailable: "Không thể thêm vào giỏ: {names} đã ngừng kinh doanh hoặc không còn tồn tại.",
   },
 
   adminAccess: {

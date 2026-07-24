@@ -158,7 +158,7 @@ const goToSettingsFromMenu = () => {
     <div class="rounded-3 p-3" style="background:var(--bg-card);width:420px;max-width:94vw;">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="fw-bold" style="color:var(--text-heading);">{{ t('admin.profileMenu.editProfile') }}</div>
-        <button class="btn-close btn-close-white btn-sm" @click="showEditProfileModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showEditProfileModal=false"></button>
       </div>
       <div class="mb-2">
         <label class="form-label small text-secondary mb-1">{{ t('admin.profileMenu.fullName') }}</label>
@@ -186,7 +186,7 @@ const goToSettingsFromMenu = () => {
     <div class="rounded-3 p-3" style="background:var(--bg-card);width:420px;max-width:94vw;">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="fw-bold" style="color:var(--text-heading);">{{ t('admin.settings.changePasswordTitle') }}</div>
-        <button class="btn-close btn-close-white btn-sm" @click="showQuickPasswordModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showQuickPasswordModal=false"></button>
       </div>
       <div class="mb-2">
         <label class="form-label small text-secondary mb-1">{{ t('admin.settings.currentPassword') }}</label>
