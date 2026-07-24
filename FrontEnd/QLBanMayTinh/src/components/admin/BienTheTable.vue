@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import * as SanPhamService from "../../Service/SanPhamService.js";
@@ -13,6 +13,10 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
+
+// Không dựa vào ProductsTable.vue (tab anh em) đã tải sẵn ProductsStore — self-contained,
+// đúng pattern ensureX() dùng chung toàn app (no-op nếu đã tải/đang tải).
+onMounted(() => { ensureProducts(); });
 
 // Danh sách PHẲNG mọi biến thể (sửa/thêm/xóa trực tiếp) — tách ra khỏi ProductsTable.vue
 // (vốn trước đây phải mở "Chi tiết sản phẩm" rồi mới sửa được 1 biến thể) để đứng ngang
