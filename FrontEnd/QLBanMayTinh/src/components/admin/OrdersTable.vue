@@ -318,13 +318,6 @@ const openVariantDetail = (bienTheId) => {
   showDetailModal.value = true;
 };
 
-// Nut "Sua" trong ProductDetailModal khong co y nghia nghiep vu ro rang khi mo tu Orders
-// (sua san pham la viec cua tab San pham) — chi goi y chuyen tab thay vi tu xu ly sua/them/
-// xoa bien the tai day.
-const onDetailEditRequested = () => {
-  showToast(t('admin.orders.editFromProductsTab'), 'info');
-};
-
 // ── Order status helpers (dùng chung — xem src/utils/orderStatus.js) ──────────
 
 // ── Orders status update ──────────────────────────────────────────────────────
@@ -1021,7 +1014,6 @@ const confirmXacNhanSerial = async () => {
     v-model="showDetailModal"
     :san-pham-id="detailModalSanPhamId"
     :san-pham-name="detailModalSanPhamName"
-    @edit-requested="onDetailEditRequested"
   />
 </template>
 

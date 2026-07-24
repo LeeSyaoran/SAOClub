@@ -448,6 +448,7 @@ export default {
       traHang: "返品",
       warrantyClaims: "保証申請",
       serial: "シリアル",
+      groupComponents: "部品",
     },
 
     pageMeta: {
@@ -472,6 +473,10 @@ export default {
       traHang:           { title: "返品", sub: "返品伝票管理" },
       warrantyClaims:    { title: "保証申請", sub: "保証の受付と処理" },
       serial:            { title: "シリアル管理", sub: "機器シリアルの閲覧・追加・編集・削除" },
+      cpu:               { title: "CPU", sub: "CPUカタログの管理" },
+      ram:               { title: "RAM", sub: "RAMカタログの管理" },
+      gpu:               { title: "GPU", sub: "GPUカタログの管理" },
+      oCung:             { title: "ストレージ", sub: "ストレージカタログの管理" },
     },
 
     userRole: {
@@ -596,6 +601,27 @@ export default {
       titlePrefix: "バリエーション：",
       edit: "編集",
       addVariant: "+ バリエーション追加",
+      pickProductLabel: "商品を選択",
+      pickProductPlaceholder: "商品名で検索...",
+      pickProductEmpty: "商品が見つかりません",
+      changeProduct: "商品を変更",
+    },
+
+    variants: {
+      countSuffix: "件のバリエーション",
+      add: "+ バリエーション追加",
+      loading: "読み込み中...",
+      colSku: "SKU",
+      colProduct: "商品",
+      colConfig: "スペック",
+      colColor: "カラー",
+      colPriceSell: "販売価格",
+      colStatus: "ステータス",
+      colAction: "操作",
+      edit: "編集",
+      delete: "削除",
+      empty: "バリエーションがありません",
+      searchPlaceholder: "商品名、SKUで検索...",
     },
 
     detailModal: {
@@ -645,7 +671,6 @@ export default {
       history: "注文履歴",
       backToToday: "← 本日の注文",
       backToDateList: "‹ 日付一覧",
-      editFromProductsTab: "編集するには「商品」タブへ移動してください",
     },
 
     orderDetailModal: {
@@ -928,6 +953,7 @@ export default {
 
     productsTabs: {
       sanPham: "商品",
+      bienThe: "バリエーション",
       cpu: "CPU",
       ram: "RAM",
       gpu: "GPU",
