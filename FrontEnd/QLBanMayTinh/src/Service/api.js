@@ -27,6 +27,11 @@ const kiemTraHetPhien = (r) => {
     resetAllStores();
     showToast(t('toast.sessionExpired'), 'error');
     window.location.hash = '';
+    // Cờ này chỉ để gộp nhiều request 401 xảy ra gần như đồng thời (cùng 1 lần hết phiên,
+    // vd trang có vài fetch song song) thành 1 lần xử lý — KHÔNG phải khóa vĩnh viễn cho cả
+    // tab. Không tự reset thì lần hết phiên thứ 2 (sau khi đăng nhập lại trong cùng tab, vd
+    // ca làm dài, JWT hết hạn lần nữa) sẽ bị bỏ qua hoàn toàn, không tự đăng xuất nữa.
+    setTimeout(() => { dangDangXuatDoHetPhien = false; }, 2000);
   }
   return r;
 };
