@@ -166,8 +166,21 @@ public class ChiTietDonHangService {
         return saved;
     }
 
+    // Nếu sửa dòng đổi sang serial khác (hoặc bỏ hẳn serial) — trả serial CŨ về "trong_kho"
+    // trước, cùng lý do như delete() phía dưới. Không tự đặt trạng thái cho serial MỚI được
+    // chọn (giu_hang/da_ban tùy kênh bán) — hiện chưa có nơi nào trong frontend gọi update()
+    // này, chỉ vá đúng phần chắc chắn đúng (trả cái cũ), tránh đoán sai logic chưa từng chạy.
+    @Transactional
     public ChiTietDonHang update(Integer id, ChiTietDonHangRequest request) {
         ChiTietDonHang entity = getById(id);
+        ChiTietSanPham serialCu = entity.getChiTietSanPham();
+        boolean doiSerial = serialCu != null
+                && (request.getChiTietId() == null || !serialCu.getChiTietId().equals(request.getChiTietId()));
+        if (doiSerial) {
+            serialCu.setTrangThai("trong_kho");
+            chiTietSanPhamRepository.save(serialCu);
+        }
+
         BeanUtils.copyProperties(request, entity, "id", "donHangId", "bienTheId", "chiTietId");
 
         entity.setDonHang(donHangRepository.getReferenceById(request.getDonHangId()));
@@ -178,9 +191,22 @@ public class ChiTietDonHangService {
         return chiTietDonHangRepository.save(entity);
     }
 
+    // Trước đây xóa thẳng dòng đơn hàng mà không trả serial đã gán (giu_hang/da_ban) về lại
+    // "trong_kho" — serial kẹt vĩnh viễn ở trạng thái đã bán dù dòng đơn đã bị xóa, làm tồn
+    // kho thực tế sai lệch âm thầm. Mirror đúng logic DonHangService.releaseSerialsToStock()
+    // nhưng chỉ cho 1 dòng thay vì cả đơn. chi_tiet_don_hang_serial tự xóa theo (ON DELETE
+    // CASCADE) khi xóa dòng, chỉ cần đọc trước để biết serial nào cần trả.
+    @Transactional
     public void delete(Integer id) {
-        if (!chiTietDonHangRepository.existsById(id))
-            throw new IllegalArgumentException("Chi tiết đơn hàng không tồn tại với id: " + id);
+        ChiTietDonHang entity = getById(id);
+        if (entity.getChiTietSanPham() != null) {
+            entity.getChiTietSanPham().setTrangThai("trong_kho");
+            chiTietSanPhamRepository.save(entity.getChiTietSanPham());
+        }
+        for (ChiTietDonHangSerial link : chiTietDonHangSerialRepository.findByChiTietDonHang_Id(id)) {
+            link.getChiTietSanPham().setTrangThai("trong_kho");
+            chiTietSanPhamRepository.save(link.getChiTietSanPham());
+        }
         chiTietDonHangRepository.deleteById(id);
     }
 

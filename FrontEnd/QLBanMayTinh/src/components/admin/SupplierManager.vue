@@ -25,6 +25,7 @@ const filteredSuppliers = computed(() => {
 const showModal = ref(false);
 const editingId = ref(null);
 const formError = ref("");
+const saving = ref(false);
 const emptyForm = () => ({
   tenNhaCungCap: "",
   soDienThoai: "",
@@ -63,6 +64,8 @@ const saveSupplier = async () => {
     formError.value = t('admin.supplierModal.nameRequired');
     return;
   }
+  if (saving.value) return;
+  saving.value = true;
   try {
     const res = await NhaCungCapService.save(editingId.value, form.value);
     if (!res.ok) {
@@ -73,6 +76,8 @@ const saveSupplier = async () => {
     await refreshSuppliers();
   } catch (e) {
     formError.value = e.message;
+  } finally {
+    saving.value = false;
   }
 };
 
@@ -165,7 +170,7 @@ const deleteSupplier = async (id) => {
       </div>
       <div class="d-flex justify-content-end gap-2">
         <button class="btn btn-sm btn-outline-secondary" @click="showModal=false">{{ t('admin.productModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveSupplier">{{ editingId ? t('admin.productModal.update') : t('admin.productModal.addNew') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="saving" @click="saveSupplier">{{ editingId ? t('admin.productModal.update') : t('admin.productModal.addNew') }}</button>
       </div>
     </div>
   </div>

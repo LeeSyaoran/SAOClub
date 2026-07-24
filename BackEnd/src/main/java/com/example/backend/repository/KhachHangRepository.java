@@ -29,7 +29,7 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
 	@Query("""
 	SELECT new com.example.backend.response.CustomerSpendingResponse(kh.khachHangId, kh.hoTen, COUNT(d), SUM(d.thanhTien))
 	FROM DonHang d JOIN d.khachHang kh
-	WHERE d.ngayDat >= :tuNgay AND d.ngayDat <= :denNgay
+	WHERE d.ngayDat >= :tuNgay AND d.ngayDat <= :denNgay AND d.trangThaiDonHang <> 'cancelled'
 	GROUP BY kh.khachHangId, kh.hoTen
 	ORDER BY SUM(d.thanhTien) DESC
 	""")

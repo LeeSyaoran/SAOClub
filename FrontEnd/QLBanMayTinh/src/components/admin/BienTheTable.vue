@@ -75,6 +75,7 @@ const configLabel = (p) => [shortCpu(p.cpu), p.ram, p.oCung].filter(Boolean).joi
 const showVariantModal = ref(false);
 const editingId = ref(null); // sanPhamId dang sua (null = dang them bien the moi)
 const formError = ref("");
+const saving = ref(false);
 const soSerialMoi = ref('');
 const imagePreview  = ref('');
 const imageFilePending = ref(null);
@@ -226,6 +227,9 @@ const handleImageFile = (e) => {
 
 const saveVariant = async () => {
   formError.value = "";
+  if (saving.value) return;
+  saving.value = true;
+  try {
 
   if (imageFilePending.value) {
     const fd = new FormData();
@@ -315,6 +319,9 @@ const saveVariant = async () => {
     await refreshProducts();
   } catch (e) {
     formError.value = e.message;
+  }
+  } finally {
+    saving.value = false;
   }
 };
 
@@ -588,7 +595,7 @@ const deleteVariant = async (bienTheId) => {
       <!-- Footer -->
       <div v-if="!addVariantMode || addVariantSanPhamId" class="d-flex justify-content-end gap-2 px-4 py-3" style="border-top:1px solid var(--border-color);">
         <button class="btn btn-sm btn-outline-secondary px-3" @click="showVariantModal=false">{{ t('admin.productModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold px-4" @click="saveVariant">{{ addVariantMode ? t('admin.variantModal.addVariant') : t('admin.productModal.update') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold px-4" :disabled="saving" @click="saveVariant">{{ addVariantMode ? t('admin.variantModal.addVariant') : t('admin.productModal.update') }}</button>
       </div>
     </div>
   </div>

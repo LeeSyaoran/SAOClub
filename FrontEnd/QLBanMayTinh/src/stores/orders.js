@@ -8,6 +8,14 @@ import * as DonHangService from "../Service/DonHangService.js";
 export const OrdersStore = reactive({ items: [], loading: false, loaded: false });
 
 let ordersPromise = null;
+
+// Xem resetProducts() ở stores/products.js — cùng lý do reset khi đổi tài khoản cùng tab.
+export const resetOrders = () => {
+  ordersPromise = null;
+  OrdersStore.items = [];
+  OrdersStore.loaded = false;
+};
+
 export const ensureOrders = () => {
   if (ordersPromise) return ordersPromise;
   ordersPromise = refreshOrders();

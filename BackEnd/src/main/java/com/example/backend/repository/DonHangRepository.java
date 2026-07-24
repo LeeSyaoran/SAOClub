@@ -55,7 +55,9 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     Page<DonHangResponse> hienThiDonHang(@Param("khachHangId") Integer khachHangId, Pageable pageable);
 
     // Tổng doanh thu cho Dashboard KPI — SUM ở SQL thay vì kéo hết don_hang về JS cộng dồn.
-    @Query("SELECT COALESCE(SUM(d.thanhTien), 0) FROM DonHang d")
+    // Loại đơn "cancelled" — đơn đã hủy không phải doanh thu thật, trước đây tính gộp làm
+    // sai lệch KPI.
+    @Query("SELECT COALESCE(SUM(d.thanhTien), 0) FROM DonHang d WHERE d.trangThaiDonHang <> 'cancelled'")
     BigDecimal sumDoanhThu();
 
     // Doanh thu gộp theo ngày trong khoảng — dùng cho biểu đồ cột "Doanh thu theo thời
@@ -64,7 +66,7 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     @Query("""
     SELECT new com.example.backend.response.RevenueByDayResponse(CAST(d.ngayDat AS java.time.LocalDate), SUM(d.thanhTien))
     FROM DonHang d
-    WHERE d.ngayDat >= :tuNgay AND d.ngayDat <= :denNgay
+    WHERE d.ngayDat >= :tuNgay AND d.ngayDat <= :denNgay AND d.trangThaiDonHang <> 'cancelled'
     GROUP BY CAST(d.ngayDat AS java.time.LocalDate)
     ORDER BY CAST(d.ngayDat AS java.time.LocalDate)
     """)

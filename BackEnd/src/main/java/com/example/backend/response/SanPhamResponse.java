@@ -42,4 +42,5 @@ public class SanPhamResponse {
     private LocalDateTime ngayTao;
     private String phanLoaiTags;
     private String phanLoaiTen;
+    private Long soLuongTon;
 }

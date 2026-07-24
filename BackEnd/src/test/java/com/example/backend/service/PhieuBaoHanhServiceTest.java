@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -77,5 +78,30 @@ class PhieuBaoHanhServiceTest {
         service.create(req);
 
         verify(bienTheSanPhamRepository).getReferenceById(42);
+    }
+
+    @Test
+    void create_ngayHetBhSomHonNgayMua_biChan() {
+        PhieuBaoHanhRequest req = requestCoBan();
+        req.setNgayMua(LocalDateTime.now());
+        req.setNgayHetBh(LocalDateTime.now().minusDays(1));
+
+        assertThatThrownBy(() -> service.create(req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("sau ngày mua");
+        verify(phieuBaoHanhRepository, never()).save(any());
+    }
+
+    @Test
+    void create_ngayTraKhachSomHonNgayTiepNhan_biChan() {
+        PhieuBaoHanhRequest req = requestCoBan();
+        LocalDateTime now = LocalDateTime.now();
+        req.setNgayTiepNhan(now);
+        req.setNgayTraKhach(now.minusDays(1));
+
+        assertThatThrownBy(() -> service.create(req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("trước ngày tiếp nhận");
+        verify(phieuBaoHanhRepository, never()).save(any());
     }
 }

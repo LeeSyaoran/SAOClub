@@ -198,4 +198,29 @@ class ChiTietDonHangServiceTest {
                 .isInstanceOf(AccessDeniedException.class);
         verify(chiTietDonHangRepository, never()).save(any());
     }
+
+    @Test
+    void delete_traLaiSerialDaiDienVaCacSerialTrongBangJoinVeTrongKho() {
+        BienTheSanPham bienThe = new BienTheSanPham();
+        bienThe.setBienTheId(10);
+
+        ChiTietSanPham repSerial = serialTrongKho(100, bienThe);
+        repSerial.setTrangThai("da_ban");
+        ChiTietDonHang entity = new ChiTietDonHang();
+        entity.setId(5);
+        entity.setChiTietSanPham(repSerial);
+        when(chiTietDonHangRepository.findById(5)).thenReturn(Optional.of(entity));
+
+        ChiTietSanPham extraSerial = serialTrongKho(101, bienThe);
+        extraSerial.setTrangThai("da_ban");
+        ChiTietDonHangSerial link = new ChiTietDonHangSerial();
+        link.setChiTietSanPham(extraSerial);
+        when(chiTietDonHangSerialRepository.findByChiTietDonHang_Id(5)).thenReturn(List.of(link));
+
+        service.delete(5);
+
+        assertThat(repSerial.getTrangThai()).isEqualTo("trong_kho");
+        assertThat(extraSerial.getTrangThai()).isEqualTo("trong_kho");
+        verify(chiTietDonHangRepository).deleteById(5);
+    }
 }

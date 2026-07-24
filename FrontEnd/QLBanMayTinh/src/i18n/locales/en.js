@@ -291,6 +291,9 @@ export default {
     welcomeUser: "Welcome, {name}!",
     loggedOut: "Signed out successfully.",
     addedToCart: "Added {name} to cart.",
+    outOfStock: "{name} is currently out of stock.",
+    maxStockReached: "Only {ton} of {name} left in stock.",
+    sessionExpired: "Your session has expired, please log in again.",
   },
 
   adminAccess: {

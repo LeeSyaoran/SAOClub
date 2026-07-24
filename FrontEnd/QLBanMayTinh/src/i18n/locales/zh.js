@@ -291,6 +291,9 @@ export default {
     welcomeUser: "欢迎您，{name}！",
     loggedOut: "已成功退出登录。",
     addedToCart: "已将{name}加入购物车。",
+    outOfStock: "{name}目前已售罄。",
+    maxStockReached: "{name}库存仅剩{ton}件。",
+    sessionExpired: "登录已过期，请重新登录。",
   },
 
   adminAccess: {

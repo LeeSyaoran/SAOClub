@@ -89,6 +89,7 @@ const statusLabel = (s) => t(`admin.statusLabel.${s}`);
 const showModal = ref(false);
 const editingId = ref(null);
 const formError = ref("");
+const saving = ref(false);
 const emptyForm = () => ({
   loai: 'sanPham',
   specId: '',
@@ -147,6 +148,8 @@ const saveSerial = async () => {
     return;
   }
   if (!form.value.soSerial.trim()) { formError.value = t('admin.serialManager.serialRequired'); return; }
+  if (saving.value) return;
+  saving.value = true;
   try {
     const common = {
       soSerial: form.value.soSerial.trim(),
@@ -175,6 +178,8 @@ const saveSerial = async () => {
     await load();
   } catch (e) {
     formError.value = e.message;
+  } finally {
+    saving.value = false;
   }
 };
 
@@ -281,7 +286,7 @@ const deleteSerial = async (item) => {
 
       <div class="d-flex justify-content-end gap-2">
         <button class="btn btn-sm btn-outline-secondary" @click="showModal=false">{{ t('admin.serialManager.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveSerial">{{ t('admin.serialManager.save') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="saving" @click="saveSerial">{{ t('admin.serialManager.save') }}</button>
       </div>
     </div>
   </div>

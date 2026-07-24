@@ -14,4 +14,7 @@ public interface ChiTietTraHangRepository extends JpaRepository<ChiTietTraHang, 
     List<ChiTietTraHangResponse> hienThiChiTietTraHang();
 
     boolean existsByBienThe_BienTheId(Integer bienTheId);
+
+    // Đối chiếu số lượng trả không vượt số đã mua — xem ChiTietTraHangService.
+    List<ChiTietTraHang> findByPhieuTraHang_PhieuTraId(Integer phieuTraId);
 }

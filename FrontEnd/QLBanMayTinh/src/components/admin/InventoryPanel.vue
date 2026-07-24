@@ -93,6 +93,7 @@ const stockClass = (item) => {
 // ── Stock Modal (them serial / sua giu hang, ton kho toi thieu) ──────────────
 const showStockModal = ref(false);
 const editingStock = ref(null);
+const stockSaving = ref(false);
 // soLuongTon KHÔNG sửa tay được nữa — chỉ tăng khi nhập serial mới (xem newSerials),
 // khớp đúng thực tế: mỗi máy nhập kho phải có 1 serial, số lượng = số serial đang "trong_kho".
 const stockForm = reactive({ soLuongGiu: 0, tonKhoToiThieu: 0, newSerials: [''] });
@@ -131,6 +132,8 @@ const importSerialsFromFile = async (e) => {
   e.target.value = '';
 };
 const saveStock = async () => {
+  if (stockSaving.value) return;
+  stockSaving.value = true;
   const item = editingStock.value;
   const bienTheId = item.bienThe?.bienTheId;
   try {
@@ -157,6 +160,8 @@ const saveStock = async () => {
     if (idx !== -1 && updated) inventory.value[idx] = updated;
   } catch (e) {
     showToast(e.message);
+  } finally {
+    stockSaving.value = false;
   }
 };
 
@@ -313,6 +318,7 @@ const staffOptions = computed(() => staff.value.map(s => ({ value: s.nhanVienId,
 
 const showPhieuNhapModal = ref(false);
 const phieuNhapFormError = ref('');
+const phieuNhapSaving = ref(false);
 const emptyPhieuNhapForm = () => {
   const now = new Date();
   const local = nowLocalIso(now).slice(0, 16);
@@ -329,6 +335,9 @@ const phieuNhapItemsTotal = computed(() =>
   phieuNhapForm.items.reduce((s, i) => s + (Number(i.soLuong) || 0) * (Number(i.donGia) || 0), 0),
 );
 const addPhieuNhapItemRow = () => phieuNhapForm.items.push({ sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0 });
+// HTML min="1" chỉ chặn nút spinner, gõ tay vẫn nhập được số âm/0 — kẹp lại ngay lúc nhập
+// (backend cũng đã chặn ở ChiTietPhieuNhapRequest, kẹp ở đây để báo sai ngay thay vì đợi lưu).
+const clampPhieuNhapSoLuong = (row) => { row.soLuong = Math.max(1, Math.trunc(Number(row.soLuong)) || 1); };
 const removePhieuNhapItemRow = (idx) => {
   if (phieuNhapForm.items.length > 1) {
     phieuNhapForm.items.splice(idx, 1);
@@ -380,6 +389,8 @@ const savePhieuNhap = async () => {
     phieuNhapFormError.value = t('admin.phieuNhapModal.missingItems');
     return;
   }
+  if (phieuNhapSaving.value) return;
+  phieuNhapSaving.value = true;
   try {
     const headerBody = {
       nhaCungCapId: Number(phieuNhapForm.nhaCungCapId),
@@ -432,6 +443,8 @@ const savePhieuNhap = async () => {
     showPhieuNhapModal.value = false;
   } catch (e) {
     phieuNhapFormError.value = e.message;
+  } finally {
+    phieuNhapSaving.value = false;
   }
 };
 const deletePhieuNhap = async (id) => {
@@ -465,6 +478,14 @@ const openPhieuNhapDetail = (p) => {
   phieuNhapDetailData.value = p;
   showPhieuNhapDetailModal.value = true;
 };
+
+// Phiếu nhập kho chỉ là chứng từ đối soát nhà cung cấp — hoàn toàn tách rời việc nhập serial
+// thật vào kho (tab "Tồn kho", vì serial là mã vật lý trên máy, hệ thống không tự bịa ra
+// được). soLuong ghi trên phiếu có thể không khớp số serial nhân viên đã thực sự nhập —
+// hiện cảnh báo đối chiếu (không chặn, vì 2 việc có thể lệch thời điểm) để nhân viên tự biết
+// còn thiếu bao nhiêu máy chưa gán serial cho đúng lô hàng này.
+const tonThucTeCuaBienThe = (bienTheId) =>
+  inventory.value.find((i) => i.bienThe?.bienTheId === bienTheId)?.soLuongTon ?? 0;
 
 const printEsc = (v) => String(v ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -900,7 +921,7 @@ const exportPhieuNhapExcel = () => {
                             :options="variantsForProduct(row.sanPhamId)"
                             :placeholder="t('admin.phieuNhapModal.selectVariantPlaceholder')" />
             </div>
-            <input v-model="row.soLuong" type="number" min="1" class="form-control form-control-sm" style="flex:0 0 80px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.qtyPlaceholder')" />
+            <input v-model="row.soLuong" type="number" min="1" class="form-control form-control-sm" style="flex:0 0 80px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.qtyPlaceholder')" @change="clampPhieuNhapSoLuong(row)" />
             <input v-model="row.donGia" type="number" min="0" class="form-control form-control-sm" style="flex:0 0 110px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.unitPricePlaceholder')" />
             <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;flex:0 0 34px;" @click="removePhieuNhapItemRow(idx)">✕</button>
           </div>
@@ -913,7 +934,7 @@ const exportPhieuNhapExcel = () => {
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
         <button class="btn btn-sm btn-outline-secondary" @click="showPhieuNhapModal=false">{{ t('admin.phieuNhapModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="savePhieuNhap">{{ editingPhieuNhapId ? t('admin.phieuNhapModal.saveEdit') : t('admin.phieuNhapModal.save') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="phieuNhapSaving" @click="savePhieuNhap">{{ editingPhieuNhapId ? t('admin.phieuNhapModal.saveEdit') : t('admin.phieuNhapModal.save') }}</button>
       </div>
     </div>
   </div>
@@ -963,6 +984,7 @@ const exportPhieuNhapExcel = () => {
               <tr style="background:var(--bg-input);">
                 <th class="px-3 py-2 text-secondary" style="font-weight:600;">{{ t('admin.inventory.colSku') }}</th>
                 <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:80px;">{{ t('admin.phieuNhapModal.qtyPlaceholder') }}</th>
+                <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:110px;">{{ t('admin.phieuNhapModal.actualStockLabel') }}</th>
                 <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:130px;">{{ t('admin.phieuNhapModal.unitPricePlaceholder') }}</th>
                 <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:140px;">{{ t('admin.phieuNhapModal.totalLabel') }}</th>
               </tr>
@@ -971,10 +993,15 @@ const exportPhieuNhapExcel = () => {
               <tr v-for="c in phieuNhapDetailItems" :key="c.id" style="border-top:1px solid var(--border-color-soft);">
                 <td class="px-3 py-2 text-secondary" style="font-family:monospace;">{{ c.maSku }}</td>
                 <td class="px-3 py-2 text-center fw-bold" style="color:var(--text-heading);">{{ c.soLuong }}</td>
+                <td class="px-3 py-2 text-center">
+                  <span :class="tonThucTeCuaBienThe(c.bienTheId) < c.soLuong ? 'text-warning' : 'text-success'" :title="t('admin.phieuNhapModal.actualStockHint')">
+                    {{ tonThucTeCuaBienThe(c.bienTheId) }}
+                  </span>
+                </td>
                 <td class="px-3 py-2 text-end text-secondary">{{ formatPrice(c.donGiaNhap) }}</td>
                 <td class="px-3 py-2 text-end fw-semibold" style="color:var(--accent-fg);">{{ formatPrice(c.thanhTien) }}</td>
               </tr>
-              <tr v-if="phieuNhapDetailItems.length===0"><td colspan="4" class="text-center text-secondary py-4">{{ t('admin.phieuNhap.empty') }}</td></tr>
+              <tr v-if="phieuNhapDetailItems.length===0"><td colspan="5" class="text-center text-secondary py-4">{{ t('admin.phieuNhap.empty') }}</td></tr>
             </tbody>
           </table>
         </div>
@@ -1035,7 +1062,7 @@ const exportPhieuNhapExcel = () => {
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
         <button class="btn btn-sm btn-outline-secondary" @click="showStockModal=false">{{ t('admin.stockModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveStock">{{ t('admin.stockModal.save') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="stockSaving" @click="saveStock">{{ t('admin.stockModal.save') }}</button>
       </div>
     </div>
   </div>

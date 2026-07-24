@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { AuthStore, clearSession, setSession } from "../../stores/index.js";
+import { resetAllStores } from "../../stores/resetAll.js";
 import { t } from "../../i18n/index.js";
 import * as CaiDatService from "../../Service/CaiDatService.js";
 
@@ -20,6 +21,7 @@ const userDisplayRole = computed(() => {
 
 const logout = () => {
   clearSession();
+  resetAllStores();
   window.location.hash = '';
 };
 

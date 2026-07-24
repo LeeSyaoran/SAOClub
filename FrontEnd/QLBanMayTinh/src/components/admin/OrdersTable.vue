@@ -324,6 +324,7 @@ const openVariantDetail = (bienTheId) => {
 const showOrderModal = ref(false);
 const editingOrder = ref(null);
 const orderStatusError = ref("");
+const orderStatusSaving = ref(false);
 const orderStatusForm = reactive({
   trangThaiDonHang: "",
   trangThaiThanhToan: "",
@@ -371,6 +372,9 @@ const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGia
 
 const saveOrderStatus = async () => {
   orderStatusError.value = "";
+  if (orderStatusSaving.value) return;
+  orderStatusSaving.value = true;
+  try {
   const o = editingOrder.value;
   if (orderStatusForm.trangThaiDonHang === 'confirmed' && o.trangThaiDonHang !== 'confirmed' && o.kenhBan === 'online') {
     showOrderModal.value = false;
@@ -384,8 +388,7 @@ const saveOrderStatus = async () => {
     ngayGiaoThucTe: orderStatusForm.ngayGiaoThucTe,
     maVanDon: orderStatusForm.maVanDon,
   });
-  try {
-    const res = await DonHangService.update(o.donHangId, body);
+  const res = await DonHangService.update(o.donHangId, body);
     if (!res.ok) {
       orderStatusError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
       return;
@@ -394,6 +397,8 @@ const saveOrderStatus = async () => {
     await refreshOrders();
   } catch (e) {
     orderStatusError.value = e.message;
+  } finally {
+    orderStatusSaving.value = false;
   }
 };
 
@@ -966,7 +971,7 @@ const confirmXacNhanSerial = async () => {
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
         <button class="btn btn-sm btn-outline-secondary" @click="showOrderModal=false">{{ t('admin.orderStatusModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveOrderStatus">{{ t('admin.orderStatusModal.save') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="orderStatusSaving" @click="saveOrderStatus">{{ t('admin.orderStatusModal.save') }}</button>
       </div>
     </div>
   </div>

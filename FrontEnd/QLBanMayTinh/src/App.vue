@@ -11,6 +11,7 @@ import {
 
 // Import store xác thực
 import { AuthStore, setSession, clearSession } from "./stores/index.js";
+import { resetAllStores } from "./stores/resetAll.js";
 import { loadSettings, SettingsStore } from "./stores/settings.js";
 import { formatPrice as formatPriceRaw } from "./utils/formatPrice.js";
 import { t, applySystemDefaultLocale } from "./i18n/index.js";
@@ -132,6 +133,7 @@ const handleModalLogin = async ({ username, password }) => {
 // ── Logout ────────────────────────────────────────────────────────────────────
 const onLogout = () => {
   clearSession();
+  resetAllStores();
   loadCart(); // Chuyển về giỏ hàng của khách vãng lai (giỏ hàng của tài khoản vẫn được lưu lại)
   showCart.value = false;
   showToast(t("toast.loggedOut"), "info");
@@ -459,15 +461,27 @@ const fetchProducts = async () => {
 // báo vì 1 số nơi gọi hàm này (vd nút "Mua lại" ở AccountPage) không có icon
 // giỏ hàng trong header để khách tự nhận biết đã thêm thành công hay chưa.
 const addToCart = (product, qty = 1) => {
+  // soLuongTon co the undefined neu API cu chua tra field nay — coi nhu khong gioi han
+  // thay vi chan nham (an toan hon la false-positive "het hang").
+  const ton = product.soLuongTon ?? Infinity;
+  if (ton <= 0) {
+    showToast(t("toast.outOfStock", { name: product.tenSanPham }), "error");
+    return;
+  }
   const existing = cart.value.find(
     (item) => item.bienTheId === product.bienTheId,
   );
-  if (existing) {
-    existing.quantity += qty;
+  const soLuongMuon = existing ? existing.quantity + qty : qty;
+  const daDatToiHan = soLuongMuon > ton;
+  const soLuongCuoi = Math.min(soLuongMuon, ton);
+  if (existing) existing.quantity = soLuongCuoi;
+  else cart.value.push({ ...product, quantity: soLuongCuoi });
+
+  if (daDatToiHan) {
+    showToast(t("toast.maxStockReached", { name: product.tenSanPham, ton }), "error");
   } else {
-    cart.value.push({ ...product, quantity: qty });
+    showToast(t("toast.addedToCart", { name: product.tenSanPham }), "success");
   }
-  showToast(t("toast.addedToCart", { name: product.tenSanPham }), "success");
 };
 
 // Bấm "Thêm vào giỏ" trên thẻ sản phẩm ở lưới: nếu sản phẩm có nhiều biến thể
@@ -485,7 +499,8 @@ const handleQuickAdd = (product) => {
 const updateQty = (bienTheId, delta) => {
   const item = cart.value.find((i) => i.bienTheId === bienTheId);
   if (!item) return;
-  const newQty = item.quantity + delta;
+  const ton = item.soLuongTon ?? Infinity;
+  const newQty = Math.min(item.quantity + delta, ton);
   if (newQty <= 0)
     cart.value = cart.value.filter((i) => i.bienTheId !== bienTheId);
   else item.quantity = newQty;

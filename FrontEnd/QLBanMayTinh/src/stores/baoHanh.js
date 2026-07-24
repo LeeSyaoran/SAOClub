@@ -4,6 +4,14 @@ import * as PhieuBaoHanhService from "../Service/PhieuBaoHanhService.js";
 export const BaoHanhStore = reactive({ items: [], loading: false, loaded: false });
 
 let baoHanhPromise = null;
+
+// Xem resetProducts() ở stores/products.js — cùng lý do reset khi đổi tài khoản cùng tab.
+export const resetBaoHanh = () => {
+  baoHanhPromise = null;
+  BaoHanhStore.items = [];
+  BaoHanhStore.loaded = false;
+};
+
 export const ensureBaoHanh = () => {
   if (baoHanhPromise) return baoHanhPromise;
   baoHanhPromise = refreshBaoHanh();

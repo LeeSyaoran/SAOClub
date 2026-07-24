@@ -2,7 +2,10 @@ package com.example.backend.service;
 
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.ChiTietTraHang;
+import com.example.backend.entity.DonHang;
+import com.example.backend.entity.PhieuTraHang;
 import com.example.backend.repository.BienTheSanPhamRepository;
+import com.example.backend.repository.ChiTietDonHangRepository;
 import com.example.backend.repository.ChiTietSanPhamRepository;
 import com.example.backend.repository.ChiTietTraHangRepository;
 import com.example.backend.repository.PhieuTraHangRepository;
@@ -27,6 +30,8 @@ public class ChiTietTraHangService {
     private BienTheSanPhamRepository bienTheSanPhamRepository;
     @Autowired
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
+    @Autowired
+    private ChiTietDonHangRepository chiTietDonHangRepository;
 
     public List<ChiTietTraHangResponse> hienThiChiTietTraHang() {
         return chiTietTraHangRepository.hienThiChiTietTraHang();
@@ -39,10 +44,14 @@ public class ChiTietTraHangService {
 
     @Transactional
     public ChiTietTraHang create(ChiTietTraHangRequest request) {
+        PhieuTraHang phieu = phieuTraHangRepository.findById(request.getPhieuTraId())
+                .orElseThrow(() -> new IllegalArgumentException("Phiếu trả hàng không tồn tại với id: " + request.getPhieuTraId()));
+        kiemTraSoLuongTraKhongVuotMua(phieu.getDonHang(), request.getBienTheId(), null, request.getSoLuong());
+
         ChiTietTraHang entity = new ChiTietTraHang();
         // BeanUtils copies: soLuong, donGiaHoan, tinhTrang
         BeanUtils.copyProperties(request, entity, "phieuTraId", "bienTheId", "chiTietId");
-        entity.setPhieuTraHang(phieuTraHangRepository.getReferenceById(request.getPhieuTraId()));
+        entity.setPhieuTraHang(phieu);
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
         // chiTietId (serial cụ thể) — optional
         if (request.getChiTietId() != null) {
@@ -67,10 +76,43 @@ public class ChiTietTraHangService {
         return s.contains("lỗi") || s.contains("loi") || s.contains("hỏng") || s.contains("hong") || s.contains("hư");
     }
 
+    // Đối chiếu số lượng trả với số lượng ĐÃ MUA thật của đơn — trước đây chỉ luồng khách tự
+    // gửi yêu cầu (PhieuTraHangService.taoYeuCauTuKhachHang) mới kiểm tra việc này, luồng nhân
+    // viên tạo trực tiếp (ReturnsPanel.vue -> ChiTietTraHangController) không kiểm tra gì cả,
+    // có thể trả vượt số máy khách thực mua (kể cả cộng dồn qua nhiều phiếu/nhiều dòng khác
+    // nhau cho cùng 1 biến thể). excludeChiTietTraId: khi sửa 1 dòng có sẵn, loại đúng dòng đó
+    // ra khỏi tổng "đã trả" trước khi cộng số lượng mới, tránh đếm trùng chính nó.
+    private void kiemTraSoLuongTraKhongVuotMua(DonHang donHang, Integer bienTheId, Integer excludeChiTietTraId, Integer soLuongMoi) {
+        if (soLuongMoi == null || soLuongMoi <= 0) return;
+
+        int tongDaMua = chiTietDonHangRepository.findEntityByDonHangId(donHang.getId()).stream()
+                .filter(item -> bienTheId.equals(item.getBienThe().getBienTheId()))
+                .mapToInt(item -> item.getSoLuong() != null ? item.getSoLuong() : 0)
+                .sum();
+
+        int tongDaTraCacDongKhac = phieuTraHangRepository.findByDonHang_Id(donHang.getId()).stream()
+                .filter(p -> !"tu_choi".equals(p.getTrangThai()))
+                .flatMap(p -> chiTietTraHangRepository.findByPhieuTraHang_PhieuTraId(p.getPhieuTraId()).stream())
+                .filter(c -> !c.getId().equals(excludeChiTietTraId))
+                .filter(c -> bienTheId.equals(c.getBienThe().getBienTheId()))
+                .mapToInt(c -> c.getSoLuong() != null ? c.getSoLuong() : 0)
+                .sum();
+
+        if (tongDaTraCacDongKhac + soLuongMoi > tongDaMua)
+            throw new IllegalArgumentException(
+                    "Số lượng trả vượt quá số đã mua — đã mua " + tongDaMua
+                            + ", đã trả " + tongDaTraCacDongKhac + ", muốn trả thêm " + soLuongMoi);
+    }
+
+    @Transactional
     public ChiTietTraHang update(Integer id, ChiTietTraHangRequest request) {
         ChiTietTraHang entity = getById(id);
+        PhieuTraHang phieu = phieuTraHangRepository.findById(request.getPhieuTraId())
+                .orElseThrow(() -> new IllegalArgumentException("Phiếu trả hàng không tồn tại với id: " + request.getPhieuTraId()));
+        kiemTraSoLuongTraKhongVuotMua(phieu.getDonHang(), request.getBienTheId(), id, request.getSoLuong());
+
         BeanUtils.copyProperties(request, entity, "id", "phieuTraId", "bienTheId", "chiTietId");
-        entity.setPhieuTraHang(phieuTraHangRepository.getReferenceById(request.getPhieuTraId()));
+        entity.setPhieuTraHang(phieu);
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
         entity.setChiTietSanPham(request.getChiTietId() != null
                 ? chiTietSanPhamRepository.getReferenceById(request.getChiTietId()) : null);

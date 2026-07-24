@@ -65,6 +65,7 @@ const filteredClaims = computed(() => {
 const showModal = ref(false);
 const editingId = ref(null);
 const formError = ref("");
+const saving = ref(false);
 const lockedInfo = ref(null); // { tenSanPham, maSku, soSerial, tenKhachHang, maDonHang } — hien thi tinh, khong sua
 
 const emptyForm = () => ({
@@ -133,6 +134,8 @@ const saveClaim = async () => {
     formError.value = t('admin.warrantyClaimModal.datesRequired');
     return;
   }
+  if (saving.value) return;
+  saving.value = true;
   try {
     const body = {
       donHangId: form.value.donHangId,
@@ -158,6 +161,8 @@ const saveClaim = async () => {
     await refreshBaoHanh();
   } catch (e) {
     formError.value = e.message;
+  } finally {
+    saving.value = false;
   }
 };
 
@@ -328,7 +333,7 @@ const deleteClaim = async (id) => {
 
       <div class="d-flex justify-content-end gap-2">
         <button class="btn btn-sm btn-outline-secondary" @click="showModal=false">{{ t('admin.warrantyClaimModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveClaim">{{ t('admin.warrantyClaimModal.save') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="saving" @click="saveClaim">{{ t('admin.warrantyClaimModal.save') }}</button>
       </div>
     </div>
   </div>

@@ -291,6 +291,9 @@ export default {
     welcomeUser: "ようこそ、{name}様！",
     loggedOut: "ログアウトしました。",
     addedToCart: "{name}をカートに追加しました。",
+    outOfStock: "{name}は現在在庫切れです。",
+    maxStockReached: "{name}の在庫は残り{ton}個です。",
+    sessionExpired: "セッションの有効期限が切れました。再度ログインしてください。",
   },
 
   adminAccess: {

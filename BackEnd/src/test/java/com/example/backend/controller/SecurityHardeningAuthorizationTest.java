@@ -1,10 +1,10 @@
 package com.example.backend.controller;
 
-import com.example.backend.entity.DanhMuc;
-import com.example.backend.entity.ThuongHieu;
 import com.example.backend.request.BienTheSanPhamRequest;
+import com.example.backend.request.DanhMucRequest;
 import com.example.backend.request.KhuyenMaiRequest;
 import com.example.backend.request.SanPhamRequest;
+import com.example.backend.request.ThuongHieuRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -100,9 +100,9 @@ class SecurityHardeningAuthorizationTest {
 
     @Test
     void danhMucController_createUpdateDelete_khoaChoAdminNhanVienQuanKho() throws NoSuchMethodException {
-        assertThat(DanhMucController.class.getMethod("create", DanhMuc.class)
+        assertThat(DanhMucController.class.getMethod("create", DanhMucRequest.class)
                 .getAnnotation(PreAuthorize.class).value()).isEqualTo(STAFF_ROLES);
-        assertThat(DanhMucController.class.getMethod("update", Integer.class, DanhMuc.class)
+        assertThat(DanhMucController.class.getMethod("update", Integer.class, DanhMucRequest.class)
                 .getAnnotation(PreAuthorize.class).value()).isEqualTo(STAFF_ROLES);
         assertThat(DanhMucController.class.getMethod("delete", Integer.class)
                 .getAnnotation(PreAuthorize.class).value()).isEqualTo(STAFF_ROLES);
@@ -110,9 +110,9 @@ class SecurityHardeningAuthorizationTest {
 
     @Test
     void thuongHieuController_createUpdateDelete_khoaChoAdminNhanVienQuanKho() throws NoSuchMethodException {
-        assertThat(ThuongHieuController.class.getMethod("create", ThuongHieu.class)
+        assertThat(ThuongHieuController.class.getMethod("create", ThuongHieuRequest.class)
                 .getAnnotation(PreAuthorize.class).value()).isEqualTo(STAFF_ROLES);
-        assertThat(ThuongHieuController.class.getMethod("update", Integer.class, ThuongHieu.class)
+        assertThat(ThuongHieuController.class.getMethod("update", Integer.class, ThuongHieuRequest.class)
                 .getAnnotation(PreAuthorize.class).value()).isEqualTo(STAFF_ROLES);
         assertThat(ThuongHieuController.class.getMethod("delete", Integer.class)
                 .getAnnotation(PreAuthorize.class).value()).isEqualTo(STAFF_ROLES);

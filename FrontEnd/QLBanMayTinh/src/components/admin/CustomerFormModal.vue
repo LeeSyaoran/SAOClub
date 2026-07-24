@@ -15,6 +15,7 @@ const emit = defineEmits(["update:modelValue", "saved"]);
 
 const editingCustomerId = ref(null);
 const customerFormError = ref("");
+const saving = ref(false);
 const emptyCustomerForm = () => ({
   hoTen: "",
   soDienThoai: "",
@@ -56,6 +57,8 @@ const close = () => emit("update:modelValue", false);
 
 const saveCustomer = async () => {
   customerFormError.value = "";
+  if (saving.value) return;
+  saving.value = true;
   const body = {
     ...customerForm.value,
     diemTichLuy: Number(customerForm.value.diemTichLuy),
@@ -83,6 +86,8 @@ const saveCustomer = async () => {
     emit("saved", saved);
   } catch (e) {
     customerFormError.value = e.message;
+  } finally {
+    saving.value = false;
   }
 };
 </script>
@@ -110,7 +115,7 @@ const saveCustomer = async () => {
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
         <button class="btn btn-sm btn-outline-secondary" @click="close">{{ t('admin.customerModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveCustomer">{{ editingCustomerId?t('admin.customerModal.update'):t('admin.customerModal.addNew') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="saving" @click="saveCustomer">{{ editingCustomerId?t('admin.customerModal.update'):t('admin.customerModal.addNew') }}</button>
       </div>
     </div>
   </div>

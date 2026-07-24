@@ -59,6 +59,7 @@ const filteredReturns = computed(() => {
 const showModal = ref(false);
 const editingId = ref(null);
 const formError = ref("");
+const saving = ref(false);
 const orderSearch = ref("");
 const selectedOrder = ref(null);
 const lineItems = ref([]); // [{ id, bienTheId, chiTietId, maSku, soSerial, donGia, soLuongDaMua, soLuongTra, tinhTrang, checked }]
@@ -91,6 +92,15 @@ const recalcSoTienHoan = () => {
   form.value.soTienHoan = lineItems.value
     .filter((l) => l.checked)
     .reduce((s, l) => s + (Number(l.donGia) || 0) * (Number(l.soLuongTra) || 0), 0);
+};
+
+// HTML min/max chỉ chặn nút mũi tên spinner, gõ tay vẫn nhập được số ngoài khoảng —
+// kẹp lại đúng [1, soLuongDaMua] mỗi khi đổi, tránh soTienHoan tính sai theo số lượng ảo
+// (backend đã chặn ở ChiTietTraHangService nhưng kẹp ở đây để báo sai ngay lúc nhập).
+const clampSoLuongTra = (l) => {
+  const n = Math.trunc(Number(l.soLuongTra)) || 1;
+  l.soLuongTra = Math.min(Math.max(n, 1), l.soLuongDaMua);
+  recalcSoTienHoan();
 };
 
 const loadOrderLines = async (donHangId, existingLines = []) => {
@@ -163,6 +173,8 @@ const saveReturn = async () => {
   const checkedLines = lineItems.value.filter((l) => l.checked);
   if (checkedLines.length === 0) { formError.value = t('admin.returnModal.lineRequired'); return; }
 
+  if (saving.value) return;
+  saving.value = true;
   try {
     const headerBody = {
       donHangId: form.value.donHangId,
@@ -209,6 +221,8 @@ const saveReturn = async () => {
     await refreshReturns();
   } catch (e) {
     formError.value = e.message;
+  } finally {
+    saving.value = false;
   }
 };
 
@@ -304,7 +318,7 @@ const deleteReturn = async (id) => {
               <td class="px-2 py-1">{{ productByBienThe(l.bienTheId)?.tenSanPham || '—' }}</td>
               <td class="px-2 py-1 text-secondary" style="font-family:monospace;">{{ l.maSku }}<span v-if="l.soSerial" class="text-info"> · SN {{ l.soSerial }}</span></td>
               <td class="px-2 py-1 text-center">{{ l.soLuongDaMua }}</td>
-              <td class="px-2 py-1 text-center"><input type="number" min="1" :max="l.soLuongDaMua" v-model.number="l.soLuongTra" :disabled="readonly || !l.checked" class="form-control form-control-sm" style="width:64px;background:var(--bg-input);color:var(--text-primary);" @change="recalcSoTienHoan" /></td>
+              <td class="px-2 py-1 text-center"><input type="number" min="1" :max="l.soLuongDaMua" v-model.number="l.soLuongTra" :disabled="readonly || !l.checked" class="form-control form-control-sm" style="width:64px;background:var(--bg-input);color:var(--text-primary);" @change="clampSoLuongTra(l)" /></td>
               <td class="px-2 py-1">
                 <select v-model="l.tinhTrang" :disabled="readonly || !l.checked" class="form-select form-select-sm" style="background:var(--bg-input);color:var(--text-primary);">
                   <option value="tot">{{ t('admin.returnModal.conditionGood') }}</option>
@@ -375,7 +389,7 @@ const deleteReturn = async (id) => {
 
       <div class="d-flex justify-content-end gap-2">
         <button class="btn btn-sm btn-outline-secondary" @click="showModal=false">{{ readonly ? t('admin.returnModal.close') : t('admin.returnModal.cancel') }}</button>
-        <button v-if="!readonly" class="btn btn-sm btn-warning text-dark fw-bold" @click="saveReturn">{{ t('admin.returnModal.save') }}</button>
+        <button v-if="!readonly" class="btn btn-sm btn-warning text-dark fw-bold" :disabled="saving" @click="saveReturn">{{ t('admin.returnModal.save') }}</button>
       </div>
     </div>
   </div>

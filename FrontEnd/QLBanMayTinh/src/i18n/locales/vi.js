@@ -299,6 +299,9 @@ export default {
     welcomeUser: "Xin chào, {name}!",
     loggedOut: "Đã đăng xuất thành công.",
     addedToCart: "Đã thêm {name} vào giỏ hàng.",
+    outOfStock: "{name} hiện đã hết hàng.",
+    maxStockReached: "Chỉ còn {ton} sản phẩm {name} trong kho.",
+    sessionExpired: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
   },
 
   adminAccess: {
@@ -1094,6 +1097,8 @@ export default {
       selectProductPlaceholder: "-- Chọn sản phẩm --",
       selectVariantPlaceholder: "-- Chọn biến thể --",
       qtyPlaceholder: "Số lượng",
+      actualStockLabel: "Tồn kho thực",
+      actualStockHint: "Số serial thực tế đang có trong kho cho biến thể này — có thể lệch với số lượng ghi trên phiếu nếu chưa nhập đủ serial ở tab Tồn kho.",
       unitPricePlaceholder: "Đơn giá",
       addRow: "+ Thêm dòng",
       totalLabel: "Tổng tiền:",
