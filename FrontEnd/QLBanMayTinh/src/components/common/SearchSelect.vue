@@ -123,7 +123,10 @@ const onTriggerKeydown = (e) => {
     open.value = false;
     rootEl.value?.querySelector('button')?.focus();
   } else if (e.key === 'Tab') {
+    // Panel teleport ra <body> nên Tab mặc định nhảy lung tung — đóng và tự trả focus về nút.
+    e.preventDefault();
     open.value = false;
+    rootEl.value?.querySelector('button')?.focus();
   }
 };
 
