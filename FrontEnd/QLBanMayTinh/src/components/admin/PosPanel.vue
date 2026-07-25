@@ -299,6 +299,12 @@ const posPlaceOrder = async () => {
     // dung o CheckoutModal.vue.
     try {
       for (const item of posCart.value) {
+        // Serial dang o "giu_hang" (tu luc chon vao gio, xem posSelectSerial) — backend chi
+        // nhan gan serial dang "trong_kho" (chong ban trung bang pessimistic lock), nen phai
+        // tra ve "trong_kho" ngay truoc khi gui de backend tu khoa + gan lai. Neu nhan vien
+        // khac vua nhanh tay gianh mat serial trong khe ho nay, backend se bao loi dung nhu
+        // thiet ke — do la hanh vi dung, khong phai bug.
+        await setSerialTrangThai(item, 'trong_kho');
         const ctRes = await DonHangService.addChiTiet({
           donHangId, bienTheId: item.bienTheId, chiTietId: item.chiTietId, soLuong: item.soLuong, donGia: item.giaBan, giamGiaDong: 0,
         });
@@ -306,6 +312,9 @@ const posPlaceOrder = async () => {
       }
     } catch (e) {
       await DonHangService.remove(donHangId).catch(() => {});
+      // Xoa xong nhung khong refresh thi danh sach don hang tren UI (da tang truoc do qua
+      // SSE "don moi") van con dong "ma" cua don vua bi xoa — refresh lai cho khop backend.
+      await refreshOrders();
       throw e;
     }
     posSuccess.value = true;
