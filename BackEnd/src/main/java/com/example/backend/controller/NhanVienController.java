@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Quản lý nhân viên — chỉ admin
+// Quản lý nhân viên — sửa/xóa chỉ admin, xem thì nới cho NHAN_VIEN/QUAN_KHO vì
+// ReturnsPanel.vue (ensureStaff()) và phiếu nhập kho cần danh sách này để chọn/hiển thị
+// tên nhân viên, dùng chung ở cả 3 trang (Admin/StaffPage/WarehouseManagementPage).
 @PreAuthorize("hasRole('ADMIN')")
 @RestController
 @RequestMapping("/api/nhan-vien")
@@ -23,11 +25,13 @@ public class NhanVienController {
     private NhanVienService nhanVienService;
 
     // GET /api/nhan-vien — DTO query với LEFT JOIN chuc_vu (tránh implicit INNER JOIN)
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @GetMapping
     public List<NhanVienResponse> getAll() {
         return nhanVienService.hienThiNhanVien();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @GetMapping("/{id}")
     public NhanVien getById(@PathVariable Integer id) {
         return nhanVienService.getById(id);
