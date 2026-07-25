@@ -65,7 +65,7 @@
                 </div>
               </div>
             </div>
-            <button class="btn-close btn-close-white mt-1" style="font-size:0.7rem;" :aria-label="t('common.close')" @click="$emit('update:modelValue', false)"></button>
+            <button class="btn-close mt-1" style="font-size:0.7rem;" :aria-label="t('common.close')" @click="$emit('update:modelValue', false)"></button>
           </div>
         </div>
 
@@ -170,7 +170,15 @@
               </div>
             </div>
 
-            <div v-if="eligiblePromos.length === 0" class="small px-1" style="color:var(--text-secondary);">{{ t('checkout.noPromo') }}</div>
+            <div v-if="eligiblePromos.length === 0" class="small px-1 mb-2" style="color:var(--text-secondary);">{{ t('checkout.noPromo') }}</div>
+
+            <!-- Nhập tay mã không nằm trong danh sách gợi ý ở trên (vd mã riêng không công khai) -->
+            <div class="d-flex gap-2">
+              <input v-model="checkoutForm.maKhuyenMai" class="form-control form-control-sm"
+                     style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                     :placeholder="t('checkout.promoPlaceholder')" @keyup.enter="applyPromo" />
+              <button class="btn btn-sm flex-shrink-0" style="background:var(--bg-hover);color:var(--text-primary);border-radius:10px;" @click="applyPromo">{{ t('checkout.apply') }}</button>
+            </div>
             <div v-if="promoMsg" class="small mt-2 px-1" :class="appliedPromo ? 'text-success' : 'text-danger'">{{ promoMsg }}</div>
           </div>
 
@@ -548,6 +556,9 @@ const applyPromo = () => {
     (x) => x.maKhuyenMai?.toUpperCase() === code && x.trangThai === 'active'
   );
   if (p) {
+    // Cùng quy tắc "chỉ 1 trong 2" như selectPromo() — backend cũng chặn dùng đồng thời
+    // mã khuyến mãi công khai + voucher cá nhân, gõ tay mã mới không phải ngoại lệ.
+    appliedVoucher.value = null;
     appliedPromo.value = p;
     promoMsg.value     = t('checkout.promoSuccess', { name: p.tenKhuyenMai });
   } else {

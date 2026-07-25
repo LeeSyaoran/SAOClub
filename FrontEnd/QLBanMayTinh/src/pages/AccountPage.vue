@@ -24,7 +24,7 @@ import ReturnRequestModal from "../components/order/ReturnRequestModal.vue";
 import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
 
-const emit = defineEmits(["go-home", "add-to-cart"]);
+const emit = defineEmits(["go-home", "add-to-cart", "buy-again-unavailable"]);
 
 const auth = AuthStore;
 // Tách theo trạng thái kiểu Shopee thay vì gộp chung "hiện tại/lịch sử"
@@ -128,12 +128,20 @@ const viewProductDetail = (item) => {
   if (product) selectedProductDetail.value = product;
 };
 
-// "Mua lại" cả đơn — thêm từng dòng vào giỏ đúng số lượng đã mua trước đó.
+// "Mua lại" cả đơn — thêm từng dòng vào giỏ đúng số lượng đã mua trước đó. Trước đây sản
+// phẩm đã ngừng kinh doanh (trangThai="inactive") hoặc đã bị xóa hẳn (productByBienThe trả
+// undefined) bị bỏ qua âm thầm, khách không biết vì sao giỏ hàng thiếu mất 1 món.
 const buyAgainOrder = (o) => {
+  const khongMuaLaiDuoc = [];
   for (const item of itemsByOrder.value[o.donHangId] || []) {
     const product = productByBienThe(item.bienTheId);
-    if (product) emit("add-to-cart", product, item.soLuong);
+    if (product && product.trangThai !== 'inactive') {
+      emit("add-to-cart", product, item.soLuong);
+    } else {
+      khongMuaLaiDuoc.push(product?.tenSanPham || item.maSku);
+    }
   }
+  if (khongMuaLaiDuoc.length > 0) emit("buy-again-unavailable", khongMuaLaiDuoc);
 };
 
 const fetchData = async () => {

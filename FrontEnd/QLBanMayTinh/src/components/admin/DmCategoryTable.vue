@@ -179,7 +179,7 @@ const deleteItem = async (id) => {
     <div class="rounded-3 p-3" style="background:var(--bg-card);width:400px;max-width:94vw;">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="fw-bold" style="color:var(--text-heading);">{{ editingId ? t('admin.dmCategory.titleEdit', { label }) : t('admin.dmCategory.titleAdd', { label }) }}</div>
-        <button class="btn-close btn-close-white btn-sm" @click="showModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showModal=false"></button>
       </div>
       <div v-if="formError" class="alert alert-danger small py-2 mb-2">{{ formError }}</div>
       <div class="mb-3">
@@ -197,7 +197,7 @@ const deleteItem = async (id) => {
         <div class="d-flex flex-column gap-2">
           <div v-for="(s, idx) in newSerials" :key="idx" class="d-flex gap-2 align-items-center">
             <input v-model="newSerials[idx]" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.stockModal.serialPlaceholder')" />
-            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" @click="removeSerialRow(idx)">✕</button>
+            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" :aria-label="t('common.remove')" @click="removeSerialRow(idx)">✕</button>
           </div>
         </div>
         <button class="btn btn-sm btn-outline-warning mt-2" @click="addSerialRow">{{ t('admin.stockModal.addSerialRow') }}</button>

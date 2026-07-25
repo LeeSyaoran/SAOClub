@@ -878,7 +878,7 @@ const exportPhieuNhapExcel = () => {
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:860px;max-width:96vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ editingPhieuNhapId ? t('admin.phieuNhapModal.titleEdit') : t('admin.phieuNhapModal.title') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showPhieuNhapModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showPhieuNhapModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="phieuNhapFormError" class="alert alert-danger small py-2 mb-3">{{ phieuNhapFormError }}</div>
@@ -923,7 +923,7 @@ const exportPhieuNhapExcel = () => {
             </div>
             <input v-model="row.soLuong" type="number" min="1" class="form-control form-control-sm" style="flex:0 0 80px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.qtyPlaceholder')" @change="clampPhieuNhapSoLuong(row)" />
             <input v-model="row.donGia" type="number" min="0" class="form-control form-control-sm" style="flex:0 0 110px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.unitPricePlaceholder')" />
-            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;flex:0 0 34px;" @click="removePhieuNhapItemRow(idx)">✕</button>
+            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;flex:0 0 34px;" :aria-label="t('common.remove')" @click="removePhieuNhapItemRow(idx)">✕</button>
           </div>
         </div>
         <button class="btn btn-sm btn-outline-warning mb-3" @click="addPhieuNhapItemRow">{{ t('admin.phieuNhapModal.addRow') }}</button>
@@ -956,7 +956,7 @@ const exportPhieuNhapExcel = () => {
             <div class="text-secondary" style="font-size:0.78rem;">{{ supplierName(phieuNhapDetailData.nhaCungCapId) }} · {{ formatDate(phieuNhapDetailData.ngayNhap) }}</div>
           </div>
         </div>
-        <button class="btn-close btn-close-white btn-sm" @click="showPhieuNhapDetailModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showPhieuNhapDetailModal=false"></button>
       </div>
 
       <div class="overflow-y-auto flex-grow-1" v-if="phieuNhapDetailData">
@@ -1027,7 +1027,7 @@ const exportPhieuNhapExcel = () => {
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:480px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ t('admin.stockModal.title') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showStockModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showStockModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="editingStock" class="small p-2 rounded-2 mb-3 text-secondary" style="background:var(--bg-hover);">
@@ -1052,7 +1052,7 @@ const exportPhieuNhapExcel = () => {
             <div class="d-flex flex-column gap-2">
               <div v-for="(s, idx) in stockForm.newSerials" :key="idx" class="d-flex gap-2 align-items-center">
                 <input v-model="stockForm.newSerials[idx]" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.stockModal.serialPlaceholder')" />
-                <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" @click="removeStockSerialRow(idx)">✕</button>
+                <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" :aria-label="t('common.remove')" @click="removeStockSerialRow(idx)">✕</button>
               </div>
             </div>
             <button class="btn btn-sm btn-outline-warning mt-2" @click="addStockSerialRow">{{ t('admin.stockModal.addSerialRow') }}</button>
@@ -1110,7 +1110,7 @@ const exportPhieuNhapExcel = () => {
             </div>
             <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.stockDetailModal.warranty') }}</div>
           </div>
-          <button class="btn-close btn-close-white btn-sm ms-2" @click="showStockDetailModal=false"></button>
+          <button class="btn-close btn-sm ms-2" :aria-label="t('common.close')" @click="showStockDetailModal=false"></button>
         </div>
       </div>
 
@@ -1142,7 +1142,7 @@ const exportPhieuNhapExcel = () => {
                 ></span>
               </td>
               <td class="px-4 py-2">
-                <button v-if="s.trangThai==='trong_kho'" class="btn btn-sm btn-outline-danger" style="padding:1px 7px;font-size:0.72rem;" :title="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)">✕</button>
+                <button v-if="s.trangThai==='trong_kho'" class="btn btn-sm btn-outline-danger" style="padding:1px 7px;font-size:0.72rem;" :title="t('admin.stockDetailModal.deleteSerial')" :aria-label="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)">✕</button>
               </td>
             </tr>
           </tbody>

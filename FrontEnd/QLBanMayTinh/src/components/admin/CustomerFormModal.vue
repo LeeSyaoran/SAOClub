@@ -97,7 +97,7 @@ const saveCustomer = async () => {
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:560px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ editingCustomerId?t('admin.customerModal.titleEdit'):t('admin.customerModal.titleAdd') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="close"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="close"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="customerFormError" class="alert alert-danger small py-2 mb-3">{{ customerFormError }}</div>

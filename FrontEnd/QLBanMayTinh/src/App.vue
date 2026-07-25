@@ -484,6 +484,12 @@ const addToCart = (product, qty = 1) => {
   }
 };
 
+// AccountPage.vue "Mua lại" — sản phẩm ngừng kinh doanh (trangThai="inactive") hoặc đã bị
+// xóa hẳn trước đây bị bỏ qua âm thầm, không báo gì cho khách biết vì sao giỏ thiếu món.
+const onBuyAgainUnavailable = (names) => {
+  showToast(t("toast.buyAgainUnavailable", { names: names.join(", ") }), "error");
+};
+
 // Bấm "Thêm vào giỏ" trên thẻ sản phẩm ở lưới: nếu sản phẩm có nhiều biến thể
 // thì mở trang chi tiết để khách chọn cấu hình/màu trước, không thêm nhầm
 // biến thể giá thấp nhất đang hiển thị đại diện trên thẻ.
@@ -678,6 +684,7 @@ onBeforeUnmount(() => {
       v-else-if="isAccountHash && auth.user && !auth.isAdmin"
       @go-home="goHome"
       @add-to-cart="addToCart"
+      @buy-again-unavailable="onBuyAgainUnavailable"
     />
 
     <!-- Chưa đăng nhập (hoặc là tài khoản staff) mà vào #account -->

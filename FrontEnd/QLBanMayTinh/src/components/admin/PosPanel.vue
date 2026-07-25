@@ -402,7 +402,7 @@ const posPlaceOrder = async () => {
           </div>
           <div class="d-flex align-items-center gap-1 flex-shrink-0">
             <button class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
-                    @click="posRemove(item.chiTietId)">✕</button>
+                    :aria-label="t('common.remove')" @click="posRemove(item.chiTietId)">✕</button>
           </div>
           <div class="text-warning fw-bold flex-shrink-0 text-end" style="font-size:0.8rem;min-width:72px;">{{ formatPrice(item.giaBan*item.soLuong) }}</div>
         </div>
@@ -450,7 +450,7 @@ const posPlaceOrder = async () => {
           <div>{{ t('admin.pos.chooseSerial') }}</div>
           <div class="text-secondary fw-normal" style="font-size:0.75rem;">{{ serialPickerProduct?.tenSanPham }} — {{ serialPickerProduct?.maSku }}</div>
         </div>
-        <button class="btn-close btn-close-white btn-sm" @click="showSerialPicker=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showSerialPicker=false"></button>
       </div>
       <div class="overflow-y-auto p-3 d-flex flex-column gap-2">
         <div v-if="serialPickerLoading" class="text-secondary small text-center py-4">{{ t('admin.pos.loading') }}</div>
@@ -471,7 +471,7 @@ const posPlaceOrder = async () => {
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:520px;max-width:95vw;max-height:80vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ t('admin.pos.heldOrders') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showHeldOrders=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showHeldOrders=false"></button>
       </div>
       <div class="overflow-y-auto p-3 d-flex flex-column gap-2">
         <div v-if="heldOrders.length===0" class="text-secondary small text-center py-4">{{ t('admin.pos.noHeldOrders') }}</div>

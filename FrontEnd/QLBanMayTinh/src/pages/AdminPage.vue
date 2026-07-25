@@ -1667,7 +1667,7 @@ onUnmounted(() => {
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:560px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ editingStaffId?t('admin.staffModal.titleEdit'):t('admin.staffModal.titleAdd') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showStaffModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showStaffModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="staffFormError" class="alert alert-danger small py-2 mb-3">{{ staffFormError }}</div>
@@ -1694,7 +1694,7 @@ onUnmounted(() => {
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:620px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ editingPromoId?t('admin.promoModal.titleEdit'):t('admin.promoModal.titleAdd') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showPromoModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showPromoModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="promoFormError" class="alert alert-danger small py-2 mb-3">{{ promoFormError }}</div>
@@ -1723,7 +1723,7 @@ onUnmounted(() => {
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:620px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ editingRewardId?t('admin.rewardModal.titleEdit'):t('admin.rewardModal.titleAdd') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showRewardModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showRewardModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="rewardFormError" class="alert alert-danger small py-2 mb-3">{{ rewardFormError }}</div>

@@ -643,7 +643,7 @@ const confirmXacNhanSerial = async () => {
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--bg-input);">
         <span class="text-secondary" style="font-size:0.8rem;">{{ t('admin.addItemDetailModal.chooseProduct') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showAddItemDetailModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showAddItemDetailModal=false"></button>
       </div>
 
       <!-- Body -->
@@ -778,7 +778,7 @@ const confirmXacNhanSerial = async () => {
             {{ customerName(orderDetailData?.khachHangId) }} · {{ formatDate(orderDetailData?.ngayDat) }}
           </div>
         </div>
-        <button class="btn-close btn-close-white btn-sm" @click="showOrderDetailModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showOrderDetailModal=false"></button>
       </div>
 
       <!-- Toan bo body scroll cung nhau -->
@@ -946,7 +946,7 @@ const confirmXacNhanSerial = async () => {
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:460px;max-width:95vw;max-height:90vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ t('admin.orderStatusModal.title') }}</span>
-        <button class="btn-close btn-close-white btn-sm" @click="showOrderModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showOrderModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="orderStatusError" class="alert alert-danger small py-2 mb-3">{{ orderStatusError }}</div>
@@ -984,7 +984,7 @@ const confirmXacNhanSerial = async () => {
           <div class="fw-bold" style="color:var(--text-heading);">{{ t('admin.packModal.title') }}</div>
           <div class="text-secondary" style="font-size:0.75rem;">{{ xacNhanOrder?.maDonHang }}</div>
         </div>
-        <button class="btn-close btn-sm" @click="showXacNhanSerialModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showXacNhanSerialModal=false"></button>
       </div>
 
       <div v-if="xacNhanLoading" class="text-secondary small text-center py-4">{{ t('admin.packModal.loading') }}</div>

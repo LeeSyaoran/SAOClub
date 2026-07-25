@@ -48,7 +48,7 @@ const close = () => emit("update:modelValue", false);
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <span>{{ t('admin.detailModal.titlePrefix') }} {{ sanPhamName }}</span>
         <div class="d-flex align-items-center gap-2">
-          <button class="btn-close btn-close-white btn-sm" @click="close"></button>
+          <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="close"></button>
         </div>
       </div>
       <div class="overflow-y-auto p-3">

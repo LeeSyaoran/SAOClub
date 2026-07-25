@@ -319,7 +319,7 @@ const deleteProduct = async (id) => {
         <div>
           <div class="fw-bold text-light" style="font-size:1rem;">{{ t('admin.productModal.titleAdd') }}</div>
         </div>
-        <button class="btn-close btn-close-white btn-sm" @click="showProductModal=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showProductModal=false"></button>
       </div>
 
       <!-- Body -->
