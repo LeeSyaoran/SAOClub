@@ -438,6 +438,7 @@ export default {
     spinButton: "지금 돌리기",
     spinning: "돌리는 중...",
     missSlice: "다음 기회에",
+    noPrizesSlice: "이용 가능한 쿠폰 없음",
     notEnoughPoints: "스핀에 필요한 포인트가 부족합니다.",
     loadError: "룰렛 정보를 불러오지 못했습니다.",
     spinError: "지금은 돌릴 수 없습니다. 다시 시도해 주세요.",

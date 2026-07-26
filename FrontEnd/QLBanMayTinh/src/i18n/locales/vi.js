@@ -438,6 +438,7 @@ export default {
     spinButton: "Quay ngay",
     spinning: "Đang quay...",
     missSlice: "Chúc may mắn lần sau",
+    noPrizesSlice: "Không có phiếu giảm giá nào",
     notEnoughPoints: "Bạn chưa đủ điểm để quay.",
     loadError: "Không tải được thông tin vòng quay, vui lòng thử lại.",
     spinError: "Không thể quay lúc này, vui lòng thử lại.",

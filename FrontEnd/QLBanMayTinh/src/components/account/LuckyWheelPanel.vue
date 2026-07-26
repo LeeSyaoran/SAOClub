@@ -31,7 +31,11 @@ const anglePerSlice = computed(() => 360 / sliceCount.value);
 const SLICE_COLORS = ['#f43f5e', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
 
 const sliceLabel = (index) => {
-  if (index === khuyenMaiKhaDung.value.length) return t('wheel.missSlice');
+  if (index === khuyenMaiKhaDung.value.length) {
+    // Ô duy nhất khi không có khuyến mãi nào (không phải "trượt" giữa nhiều lựa chọn thật)
+    // — chữ khác với ô "trượt" thông thường để không gây hiểu lầm là còn cơ hội trúng.
+    return khuyenMaiKhaDung.value.length === 0 ? t('wheel.noPrizesSlice') : t('wheel.missSlice');
+  }
   const km = khuyenMaiKhaDung.value[index];
   return km.loai === 'percent' ? `-${km.giaTri}%` : `-${formatPrice(km.giaTri)}`;
 };
@@ -42,6 +46,9 @@ const sliceCenterAngle = (i) => (i * anglePerSlice.value + anglePerSlice.value /
 // Ô nằm ở nửa dưới bánh xe (góc 90°-270°) sẽ khiến chữ bị xoay lộn ngược nếu chỉ xoay
 // theo đúng góc định vị — xoay thêm 180° tại chỗ (không đổi vị trí) để chữ luôn đọc được.
 const sliceLabelTransform = (i) => {
+  // Chỉ 1 ô (không có khuyến mãi nào) = cả vòng tròn — chữ nằm đúng giữa tâm, không dịch
+  // ra rìa như khi chia nhiều ô thật.
+  if (sliceCount.value === 1) return '';
   const angle = sliceCenterAngle(i);
   const flip = angle > 90 && angle < 270 ? 180 : 0;
   return `rotate(${angle}deg) translateY(-100px) rotate(${flip}deg)`;

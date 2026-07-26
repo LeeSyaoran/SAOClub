@@ -438,6 +438,7 @@ export default {
     spinButton: "今すぐスピン",
     spinning: "スピン中...",
     missSlice: "残念、また次回",
+    noPrizesSlice: "利用可能なクーポンなし",
     notEnoughPoints: "スピンに必要なポイントが不足しています。",
     loadError: "ホイール情報の読み込みに失敗しました。",
     spinError: "現在スピンできません。もう一度お試しください。",

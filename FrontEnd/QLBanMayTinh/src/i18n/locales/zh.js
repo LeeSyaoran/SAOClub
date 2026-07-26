@@ -438,6 +438,7 @@ export default {
     spinButton: "立即抽奖",
     spinning: "抽奖中...",
     missSlice: "祝下次好运",
+    noPrizesSlice: "暂无可用优惠券",
     notEnoughPoints: "积分不足，无法抽奖。",
     loadError: "转盘信息加载失败，请重试。",
     spinError: "暂时无法抽奖，请重试。",

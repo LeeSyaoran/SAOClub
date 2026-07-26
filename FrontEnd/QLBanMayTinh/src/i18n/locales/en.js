@@ -438,6 +438,7 @@ export default {
     spinButton: "Spin now",
     spinning: "Spinning...",
     missSlice: "Better luck next time",
+    noPrizesSlice: "No vouchers available",
     notEnoughPoints: "You don't have enough points to spin.",
     loadError: "Couldn't load the wheel, please try again.",
     spinError: "Couldn't spin right now, please try again.",
