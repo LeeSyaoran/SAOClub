@@ -18,6 +18,7 @@ import com.example.backend.response.KetQuaQuayResponse;
 import com.example.backend.response.KhuyenMaiResponse;
 import com.example.backend.response.LichSuQuayResponse;
 import com.example.backend.response.PhieuGiamGiaCaNhanResponse;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,6 +39,7 @@ public class VongQuayService {
     @Autowired private KhachHangRepository khachHangRepository;
     @Autowired private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
     @Autowired private TaiKhoanRepository taiKhoanRepository;
+    @Autowired private EntityManager entityManager;
 
     private static final Random RANDOM = new Random();
 
@@ -127,10 +129,10 @@ public class VongQuayService {
         phieu.setNgayDoi(LocalDateTime.now());
         phieu.setNgayHetHan(LocalDateTime.now().plusDays(30));
         PhieuGiamGiaCaNhan savedPhieu = phieuGiamGiaCaNhanRepository.save(phieu);
-        // Hibernate không tự động re-read DB-generated DEFAULT column (maPhieu),
-        // nên phải refetch để lấy giá trị thực từ DB trước khi trả response.
-        savedPhieu = phieuGiamGiaCaNhanRepository.findById(savedPhieu.getPhieuId())
-                .orElseThrow(() -> new IllegalStateException("Không tìm thấy phiếu vừa tạo"));
+        // Hibernate không tự động re-read DB-generated DEFAULT column (maPhieu).
+        // Trong @Transactional, findById() chỉ trả cached object — phải dùng entityManager.refresh()
+        // để buộc Hibernate SELECT lại từ DB và update fields của object hiện tại.
+        entityManager.refresh(savedPhieu);
 
         lichSu.setKetQua("trung");
         lichSu.setKhuyenMai(trung);
