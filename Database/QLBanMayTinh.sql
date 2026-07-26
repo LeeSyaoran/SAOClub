@@ -2326,6 +2326,34 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'cau_hinh_vong_quay')
+BEGIN
+    CREATE TABLE cau_hinh_vong_quay (
+        id             INT            NOT NULL PRIMARY KEY CHECK (id = 1),
+        diem_moi_luot  INT            NOT NULL CHECK (diem_moi_luot > 0),
+        ty_le_truot    INT            NOT NULL CHECK (ty_le_truot BETWEEN 0 AND 100),
+        ngay_cap_nhat  DATETIME       NOT NULL DEFAULT GETDATE()
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'lich_su_quay')
+BEGIN
+    CREATE TABLE lich_su_quay (
+        id                         INT      IDENTITY(1,1) PRIMARY KEY,
+        khach_hang_id              INT      NOT NULL,
+        ngay_quay                  DATETIME NOT NULL DEFAULT GETDATE(),
+        ket_qua                    NVARCHAR(10) NOT NULL CONSTRAINT CK_lsq_ket_qua CHECK (ket_qua IN (N'trung', N'truot')),
+        khuyen_mai_id              INT      NULL,
+        phieu_giam_gia_ca_nhan_id  INT      NULL,
+        diem_da_tru                INT      NOT NULL,
+        CONSTRAINT FK_lsq_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
+        CONSTRAINT FK_lsq_khuyen_mai FOREIGN KEY (khuyen_mai_id) REFERENCES khuyen_mai(khuyen_mai_id),
+        CONSTRAINT FK_lsq_phieu FOREIGN KEY (phieu_giam_gia_ca_nhan_id) REFERENCES phieu_giam_gia_ca_nhan(phieu_id)
+    );
+END
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_pggcn_khach_hang')
     CREATE INDEX IX_pggcn_khach_hang ON phieu_giam_gia_ca_nhan(khach_hang_id, da_su_dung);
 GO
