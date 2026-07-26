@@ -70,19 +70,21 @@ const onSpin = async () => {
   spinError.value = '';
   try {
     const res = await VongQuayService.quay();
-    const targetIndex = res.ketQua === 'truot'
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    const targetIndex = data.ketQua === 'truot'
       ? khuyenMaiKhaDung.value.length
-      : khuyenMaiKhaDung.value.findIndex(k => k.khuyenMaiId === res.khuyenMai.khuyenMaiId);
+      : khuyenMaiKhaDung.value.findIndex(k => k.khuyenMaiId === data.khuyenMai.khuyenMaiId);
     const slice = anglePerSlice.value;
     const targetAngleInCircle = 360 - (targetIndex * slice + slice / 2);
     // Quay thêm 5 vòng trọn rồi dừng đúng giữa ô targetIndex — trừ phần dư hiện tại để luôn
     // quay THEO CHIỀU THUẬN, không giật ngược khi rotation hiện tại lệch pha.
     rotation.value += 5 * 360 + targetAngleInCircle - (rotation.value % 360);
-    lastResult.value = res;
+    lastResult.value = data;
     setTimeout(() => {
       spinning.value = false;
       showResultModal.value = true;
-      emit('spun', res.diemConLai);
+      emit('spun', data.diemConLai);
     }, 4000); // khớp đúng transition 4s ở CSS bên dưới
   } catch (e) {
     spinning.value = false;
