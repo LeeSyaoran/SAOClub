@@ -1212,7 +1212,11 @@ const saveWheelConfig = async () => {
   wheelConfigSaving.value = true;
   wheelConfigError.value = "";
   try {
-    await VongQuayService.capNhatCauHinh(wheelConfig.value);
+    // capNhatCauHinh() dùng put() (Service/api.js) — trả về Response THÔ, không tự parse
+    // JSON và không tự throw khi !ok (khác get()). Phải tự kiểm tra res.ok, nếu không lỗi
+    // lưu (vd validate 400 do nhập điểm/lượt <=0) sẽ bị nuốt im lặng, admin tưởng đã lưu.
+    const res = await VongQuayService.capNhatCauHinh(wheelConfig.value);
+    if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
   } catch (e) {
     wheelConfigError.value = e.message || t("admin.wheelConfig.saveError");
   } finally {
