@@ -6,6 +6,7 @@ import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/or
 import * as NhanVienService  from "../Service/NhanVienService.js";
 import * as DonHangService   from "../Service/DonHangService.js";
 import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
+import * as VongQuayService from "../Service/VongQuayService.js";
 // DmService vẫn cần cho getChucVu() (tab Nhân viên) — CPU/RAM/GPU/Ổ cứng đã chuyển sang
 // WarehouseManagementPage.vue nên bỏ import ChiTietCpuService/RamService/GpuService/OCungService.
 import * as DmService              from "../Service/DmService.js";
@@ -86,6 +87,34 @@ const orders = computed(() => OrdersStore.items);
 const customers = computed(() => CustomersStore.items);
 const staff = computed(() => StaffStore.items);
 const promotions = computed(() => PromotionsStore.items);
+// Cấu hình vòng quay may mắn — không dùng store riêng vì chỉ 1 dòng dữ liệu phẳng, chỉ
+// dùng ở đúng section này (khác các store khác dùng chung nhiều nơi).
+const wheelConfig = ref({ diemMoiLuot: 0, tyLeTruot: 0 });
+const wheelConfigSaving = ref(false);
+const wheelConfigError = ref("");
+const loadWheelConfig = async () => {
+  try {
+    const res = await VongQuayService.getCauHinh();
+    wheelConfig.value = { diemMoiLuot: res.diemMoiLuot, tyLeTruot: res.tyLeTruot };
+  } catch (e) {
+    wheelConfigError.value = e.message || t("admin.wheelConfig.loadError");
+  }
+};
+const saveWheelConfig = async () => {
+  wheelConfigSaving.value = true;
+  wheelConfigError.value = "";
+  try {
+    // capNhatCauHinh() dùng put() (Service/api.js) — trả về Response THÔ, không tự parse
+    // JSON và không tự throw khi !ok (khác get()). Phải tự kiểm tra res.ok, nếu không lỗi
+    // lưu (vd validate 400 do nhập điểm/lượt <=0) sẽ bị nuốt im lặng, admin tưởng đã lưu.
+    const res = await VongQuayService.capNhatCauHinh(wheelConfig.value);
+    if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
+  } catch (e) {
+    wheelConfigError.value = e.message || t("admin.wheelConfig.saveError");
+  } finally {
+    wheelConfigSaving.value = false;
+  }
+};
 const rewards = computed(() => DoiThuongStore.items);
 const inventory = computed(() => InventoryStore.items);
 const chucVuList = ref([]);
@@ -910,6 +939,7 @@ onMounted(async () => {
   try {
     await fetchAll();
     await fetchProductSales();
+    await loadWheelConfig();
   } catch (e) {
     console.error('fetchAll/fetchProductSales lỗi khi vào trang:', e);
   }
@@ -1318,6 +1348,20 @@ onUnmounted(() => {
 
         <!-- ── Khuyen mai ── -->
         <section v-show="currentPage === 'promotions'">
+          <div class="d-flex align-items-center flex-wrap gap-3 p-3 mb-3 rounded-3"
+               style="background:var(--bg-card-inset); border:1px solid var(--border-color);">
+            <span class="fw-bold small">{{ t('admin.wheelConfig.title') }}</span>
+            <label class="small text-secondary mb-0">{{ t('admin.wheelConfig.pointsPerSpin') }}</label>
+            <input v-model.number="wheelConfig.diemMoiLuot" type="number" min="1"
+                   class="form-control form-control-sm" style="width:90px;" />
+            <label class="small text-secondary mb-0">{{ t('admin.wheelConfig.missRate') }}</label>
+            <input v-model.number="wheelConfig.tyLeTruot" type="number" min="0" max="100"
+                   class="form-control form-control-sm" style="width:70px;" />
+            <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="wheelConfigSaving" @click="saveWheelConfig">
+              {{ t('admin.wheelConfig.save') }}
+            </button>
+            <span v-if="wheelConfigError" class="text-danger small">{{ wheelConfigError }}</span>
+          </div>
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="text-secondary small">{{ promotions.length }} {{ t('admin.promotions.countSuffix') }}</span>
             <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPromo">{{ t('admin.promotions.add') }}</button>
