@@ -109,6 +109,7 @@ const saveWheelConfig = async () => {
     // lưu (vd validate 400 do nhập điểm/lượt <=0) sẽ bị nuốt im lặng, admin tưởng đã lưu.
     const res = await VongQuayService.capNhatCauHinh(wheelConfig.value);
     if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
+    showToast(t("admin.wheelConfig.saveSuccess"), "success");
   } catch (e) {
     wheelConfigError.value = e.message || t("admin.wheelConfig.saveError");
   } finally {

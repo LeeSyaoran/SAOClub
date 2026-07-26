@@ -1242,6 +1242,7 @@ export default {
       pointsPerSpin: "스핀당 포인트",
       missRate: "꽝 확률 %",
       save: "저장",
+      saveSuccess: "룰렛 설정이 저장되었습니다",
       loadError: "설정을 불러오지 못했습니다",
       saveError: "저장에 실패했습니다. 다시 시도해 주세요",
     },

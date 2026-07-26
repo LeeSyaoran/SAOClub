@@ -1242,6 +1242,7 @@ export default {
       pointsPerSpin: "每次抽奖所需积分",
       missRate: "未中奖概率 %",
       save: "保存",
+      saveSuccess: "转盘设置已保存",
       loadError: "设置加载失败",
       saveError: "保存失败，请重试",
     },

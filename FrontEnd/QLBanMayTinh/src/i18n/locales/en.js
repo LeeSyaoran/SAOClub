@@ -1242,6 +1242,7 @@ export default {
       pointsPerSpin: "Points per spin",
       missRate: "Miss rate %",
       save: "Save",
+      saveSuccess: "Wheel settings saved",
       loadError: "Couldn't load wheel settings",
       saveError: "Couldn't save settings, please try again",
     },

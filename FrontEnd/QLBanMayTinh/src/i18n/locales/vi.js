@@ -1242,6 +1242,7 @@ export default {
       pointsPerSpin: "Điểm/lượt quay",
       missRate: "% Trượt",
       save: "Lưu",
+      saveSuccess: "Đã lưu cấu hình vòng quay",
       loadError: "Không tải được cấu hình vòng quay",
       saveError: "Lưu cấu hình thất bại, vui lòng thử lại",
     },

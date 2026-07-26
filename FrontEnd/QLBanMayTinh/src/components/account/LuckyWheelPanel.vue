@@ -36,6 +36,17 @@ const sliceLabel = (index) => {
   return km.loai === 'percent' ? `-${km.giaTri}%` : `-${formatPrice(km.giaTri)}`;
 };
 
+// Góc giữa ô i, chuẩn hoá về [0, 360) — dùng để định vị VÀ để quyết định có cần lật chữ.
+const sliceCenterAngle = (i) => (i * anglePerSlice.value + anglePerSlice.value / 2) % 360;
+
+// Ô nằm ở nửa dưới bánh xe (góc 90°-270°) sẽ khiến chữ bị xoay lộn ngược nếu chỉ xoay
+// theo đúng góc định vị — xoay thêm 180° tại chỗ (không đổi vị trí) để chữ luôn đọc được.
+const sliceLabelTransform = (i) => {
+  const angle = sliceCenterAngle(i);
+  const flip = angle > 90 && angle < 270 ? 180 : 0;
+  return `rotate(${angle}deg) translateY(-100px) rotate(${flip}deg)`;
+};
+
 const wheelBackground = computed(() => {
   const n = sliceCount.value;
   const stops = [];
@@ -106,7 +117,7 @@ const onSpin = async () => {
           <div v-for="(_, i) in sliceCount" :key="i"
                class="position-absolute top-50 start-50 fw-bold text-white text-center"
                style="width:120px; margin-left:-60px; margin-top:-10px; font-size:12px; text-shadow:0 1px 3px rgba(0,0,0,0.5);"
-               :style="{ transform: `rotate(${i * anglePerSlice + anglePerSlice / 2}deg) translateY(-100px)` }">
+               :style="{ transform: sliceLabelTransform(i) }">
             {{ sliceLabel(i) }}
           </div>
         </div>

@@ -1242,6 +1242,7 @@ export default {
       pointsPerSpin: "1回あたりのポイント",
       missRate: "はずれ率 %",
       save: "保存",
+      saveSuccess: "ホイール設定を保存しました",
       loadError: "設定の読み込みに失敗しました",
       saveError: "保存に失敗しました。もう一度お試しください",
     },
