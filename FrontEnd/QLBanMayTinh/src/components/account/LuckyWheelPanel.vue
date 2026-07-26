@@ -46,7 +46,8 @@ const wheelBackground = computed(() => {
   return `conic-gradient(${stops.join(', ')})`;
 });
 
-const canSpin = computed(() => !loading.value && !spinning.value && props.points >= diemMoiLuot.value);
+const canSpin = computed(() => !loading.value && !spinning.value
+  && khuyenMaiKhaDung.value.length > 0 && props.points >= diemMoiLuot.value);
 
 const loadConfig = async () => {
   loading.value = true;
@@ -96,6 +97,7 @@ const onSpin = async () => {
 <template>
   <div class="d-flex flex-column align-items-center gap-4 py-4">
     <div v-if="loadError" class="alert alert-danger small">{{ loadError }}</div>
+    <div v-else-if="khuyenMaiKhaDung.length === 0" class="alert alert-secondary small">{{ t('wheel.noPrizesAvailable') }}</div>
     <template v-else>
       <div class="position-relative" style="width:280px; height:280px;">
         <div class="position-absolute top-0 start-50 translate-middle-x" style="z-index:2; font-size:28px; margin-top:-14px;">🔻</div>

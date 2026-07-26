@@ -17,6 +17,7 @@ public interface KhuyenMaiRepository extends JpaRepository<KhuyenMai, Integer> {
     // cho cả việc vẽ vòng quay (GET cau-hinh) lẫn random chọn thưởng (POST quay), tránh 2 nơi
     // lặp lại điều kiện lọc.
     @Query("SELECT k FROM KhuyenMai k WHERE k.trangThai = 'active' " +
-           "AND k.ngayBatDau <= CURRENT_TIMESTAMP AND k.ngayKetThuc >= CURRENT_TIMESTAMP")
+           "AND k.ngayBatDau <= CURRENT_TIMESTAMP AND k.ngayKetThuc >= CURRENT_TIMESTAMP " +
+           "AND k.donHangToiThieu IS NULL")
     List<KhuyenMai> findActiveKhaDung();
 }

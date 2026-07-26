@@ -447,6 +447,7 @@ export default {
     winCode: "Voucher code: {code}",
     missTitle: "Better luck next time!",
     missDesc: "No prize this time — try again on your next spin.",
+    noPrizesAvailable: "No prizes available right now, please check back later.",
   },
 
   admin: {

@@ -447,6 +447,7 @@ export default {
     winCode: "优惠券代码：{code}",
     missTitle: "祝下次好运！",
     missDesc: "这次没有中奖，欢迎下次再来试试。",
+    noPrizesAvailable: "暂无可用奖品，请稍后再来查看。",
   },
 
   admin: {

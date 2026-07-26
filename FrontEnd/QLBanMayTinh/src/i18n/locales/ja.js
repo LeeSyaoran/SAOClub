@@ -447,6 +447,7 @@ export default {
     winCode: "クーポンコード：{code}",
     missTitle: "残念、また次回！",
     missDesc: "今回は当選しませんでした。次のスピンをお試しください。",
+    noPrizesAvailable: "現在利用可能な賞品がありません。後でもう一度お試しください。",
   },
 
   admin: {

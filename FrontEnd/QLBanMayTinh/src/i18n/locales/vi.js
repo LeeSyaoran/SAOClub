@@ -447,6 +447,7 @@ export default {
     winCode: "Mã voucher: {code}",
     missTitle: "Chúc may mắn lần sau!",
     missDesc: "Bạn chưa trúng khuyến mãi nào lần này, hãy thử lại ở lượt sau nhé.",
+    noPrizesAvailable: "Hiện chưa có khuyến mãi nào để quay, vui lòng quay lại sau.",
   },
 
   admin: {

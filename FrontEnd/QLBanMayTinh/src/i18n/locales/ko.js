@@ -447,6 +447,7 @@ export default {
     winCode: "쿠폰 코드: {code}",
     missTitle: "다음 기회에!",
     missDesc: "이번엔 당첨되지 않았습니다. 다음 스핀에 다시 도전해 보세요.",
+    noPrizesAvailable: "현재 이용 가능한 경품이 없습니다. 나중에 다시 확인해 주세요.",
   },
 
   admin: {
