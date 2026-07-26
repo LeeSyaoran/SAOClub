@@ -23,12 +23,13 @@ import OrderTrackingLog from "../components/order/OrderTrackingLog.vue";
 import ReturnRequestModal from "../components/order/ReturnRequestModal.vue";
 import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
+import LuckyWheelPanel from "../components/account/LuckyWheelPanel.vue";
 
 const emit = defineEmits(["go-home", "add-to-cart", "buy-again-unavailable"]);
 
 const auth = AuthStore;
 // Tách theo trạng thái kiểu Shopee thay vì gộp chung "hiện tại/lịch sử"
-const activeTab = ref("pending"); // 'pending' | 'shipping' | 'completed' | 'cancelled' | 'settings'
+const activeTab = ref("pending"); // 'pending' | 'shipping' | 'completed' | 'cancelled' | 'wheel' | 'settings'
 
 // Nhóm trạng thái đơn hàng (trangThaiDonHang) ứng với từng tab — "processing" (đang đóng
 // gói) vẫn nằm ở tab "Chờ xác nhận" (chưa giao cho shipper), chỉ chuyển sang tab "Đang
@@ -73,6 +74,7 @@ const TABS = computed(() => [
   { id: "shipping",  icon: "🚚", label: t("account.tabShipping") },
   { id: "completed", icon: "✅", label: t("account.tabCompleted") },
   { id: "cancelled", icon: "❌", label: t("account.tabCancelled") },
+  { id: "wheel",     icon: "🎡", label: t("account.tabWheel") },
   { id: "settings",  icon: "⚙️", label: t("account.tabSettings") },
 ]);
 
@@ -534,6 +536,11 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- ══ Tab: Vòng quay may mắn ══ -->
+      <div v-else-if="activeTab === 'wheel'" class="d-flex flex-column mx-auto" style="max-width:640px;">
+        <LuckyWheelPanel :points="profile?.diemTichLuy ?? 0" @spun="fetchProfile" />
       </div>
 
       <!-- ══ Tab: Cài đặt tài khoản ══ -->
