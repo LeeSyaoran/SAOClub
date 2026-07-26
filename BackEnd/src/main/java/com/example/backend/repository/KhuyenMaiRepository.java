@@ -12,4 +12,11 @@ import java.util.List;
 public interface KhuyenMaiRepository extends JpaRepository<KhuyenMai, Integer> {
     @Query("SELECT new com.example.backend.response.KhuyenMaiResponse(k.khuyenMaiId, k.maKhuyenMai, k.tenKhuyenMai, k.loai, k.giaTri, k.giaTriToiDa, k.donHangToiThieu, k.ngayBatDau, k.ngayKetThuc, k.soLuongToiDa, k.soLanDaDung, k.trangThai, k.ngayTao) FROM KhuyenMai k")
     List<KhuyenMaiResponse> hienThiKhuyenMai();
+
+    // Khuyến mãi đang thực sự dùng được — active + trong khoảng ngày hiệu lực. Dùng chung
+    // cho cả việc vẽ vòng quay (GET cau-hinh) lẫn random chọn thưởng (POST quay), tránh 2 nơi
+    // lặp lại điều kiện lọc.
+    @Query("SELECT k FROM KhuyenMai k WHERE k.trangThai = 'active' " +
+           "AND k.ngayBatDau <= CURRENT_TIMESTAMP AND k.ngayKetThuc >= CURRENT_TIMESTAMP")
+    List<KhuyenMai> findActiveKhaDung();
 }
