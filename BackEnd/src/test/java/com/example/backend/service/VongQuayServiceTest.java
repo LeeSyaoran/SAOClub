@@ -110,7 +110,20 @@ class VongQuayServiceTest {
         when(cauHinhRepository.findById(1)).thenReturn(Optional.of(cauHinh(100, 0)));
         when(khuyenMaiRepository.findActiveKhaDung()).thenReturn(List.of(khuyenMaiActive(7, "percent", 20)));
         when(khachHangRepository.save(any(KhachHang.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(phieuGiamGiaCaNhanRepository.save(any(PhieuGiamGiaCaNhan.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(phieuGiamGiaCaNhanRepository.save(any(PhieuGiamGiaCaNhan.class))).thenAnswer(inv -> {
+            PhieuGiamGiaCaNhan p = inv.getArgument(0);
+            p.setPhieuId(99);
+            return p;
+        });
+        PhieuGiamGiaCaNhan refetched = new PhieuGiamGiaCaNhan();
+        refetched.setPhieuId(99);
+        refetched.setLoai("percent");
+        refetched.setGiaTri(BigDecimal.valueOf(20));
+        refetched.setDaSuDung(false);
+        refetched.setNgayDoi(LocalDateTime.now());
+        refetched.setNgayHetHan(LocalDateTime.now().plusDays(30));
+        refetched.setMaPhieu("ABC123TEST");
+        when(phieuGiamGiaCaNhanRepository.findById(99)).thenReturn(Optional.of(refetched));
 
         KetQuaQuayResponse res = service.quay();
 
@@ -173,5 +186,37 @@ class VongQuayServiceTest {
         assertThatThrownBy(() -> service.quay())
                 .isInstanceOf(AccessDeniedException.class);
         verify(khachHangRepository, never()).findWithLockByKhachHangId(any());
+    }
+
+    @Test
+    void quay_trung_maPhieuLayTuBanGhiDaRefetchKhongPhaiTuSaveThoi() {
+        loginAsKhachHang("khach1", 42, 1000);
+        when(cauHinhRepository.findById(1)).thenReturn(Optional.of(cauHinh(100, 0)));
+        when(khuyenMaiRepository.findActiveKhaDung()).thenReturn(List.of(khuyenMaiActive(7, "percent", 20)));
+        when(khachHangRepository.save(any(KhachHang.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // save() trả về object đúng nhưng maPhieu vẫn null (insertable=false, giống Hibernate thật)
+        when(phieuGiamGiaCaNhanRepository.save(any(PhieuGiamGiaCaNhan.class))).thenAnswer(inv -> {
+            PhieuGiamGiaCaNhan p = inv.getArgument(0);
+            p.setPhieuId(77);
+            // maPhieu vẫn null — đúng hành vi của Hibernate với cột insertable=false
+            return p;
+        });
+
+        // Refetch trả về BẢN GHI THẬT với maPhieu đã được DB sinh
+        PhieuGiamGiaCaNhan refetched = new PhieuGiamGiaCaNhan();
+        refetched.setPhieuId(77);
+        refetched.setMaPhieu("REAL_CODE_FROM_DB");
+        refetched.setLoai("percent");
+        refetched.setGiaTri(BigDecimal.valueOf(20));
+        refetched.setDaSuDung(false);
+        refetched.setNgayDoi(LocalDateTime.now());
+        refetched.setNgayHetHan(LocalDateTime.now().plusDays(30));
+        when(phieuGiamGiaCaNhanRepository.findById(77)).thenReturn(Optional.of(refetched));
+
+        var res = service.quay();
+
+        // Service phải dùng maPhieu từ refetch, không phải null từ save()
+        assertThat(res.getPhieuGiamGia().getMaPhieu()).isEqualTo("REAL_CODE_FROM_DB");
     }
 }

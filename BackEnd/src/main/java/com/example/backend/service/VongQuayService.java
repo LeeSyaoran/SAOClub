@@ -127,6 +127,10 @@ public class VongQuayService {
         phieu.setNgayDoi(LocalDateTime.now());
         phieu.setNgayHetHan(LocalDateTime.now().plusDays(30));
         PhieuGiamGiaCaNhan savedPhieu = phieuGiamGiaCaNhanRepository.save(phieu);
+        // Hibernate không tự động re-read DB-generated DEFAULT column (maPhieu),
+        // nên phải refetch để lấy giá trị thực từ DB trước khi trả response.
+        savedPhieu = phieuGiamGiaCaNhanRepository.findById(savedPhieu.getPhieuId())
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy phiếu vừa tạo"));
 
         lichSu.setKetQua("trung");
         lichSu.setKhuyenMai(trung);
