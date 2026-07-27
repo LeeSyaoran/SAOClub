@@ -480,7 +480,18 @@ git commit -m "feat(backend): admin point-gifting endpoint + ledger read + tests
 
 ### Task 4: Tặng voucher admin + danh sách voucher theo khách (kèm nguồn) + test
 
+> **Sửa sau khi phát hiện lỗi kế hoạch (trong lúc triển khai Task 4):** bản spec/plan gốc giả
+> định `PhieuGiamGiaCaNhan`/`PhieuGiamGiaCaNhanResponse` đã có sẵn field `donHangToiThieu` — đây
+> là do lúc viết spec, tác giả đọc trực tiếp thư mục làm việc gốc của người dùng, nơi đang có
+> thay đổi CHƯA COMMIT thêm field này (không liên quan tới tính năng này, là việc dở dang từ
+> phiên sửa lỗi vòng quay may mắn trước đó). Field đó **chưa từng được commit ở bất kỳ branch
+> nào** (`git log --all -S` xác nhận 0 kết quả). Task 4 vì vậy có thêm Step 1 mới để tự thêm cột
+> DB + field entity này trong chính nhánh feature này trước khi làm phần còn lại — theo lựa chọn
+> đã được xác nhận: "Thêm cột/field này trong nhánh feature".
+
 **Files:**
+- Modify: `Database/QLBanMayTinh.sql`
+- Modify: `BackEnd/src/main/java/com/example/backend/entity/PhieuGiamGiaCaNhan.java`
 - Create: `BackEnd/src/main/java/com/example/backend/request/TangVoucherRequest.java`
 - Modify: `BackEnd/src/main/java/com/example/backend/repository/LichSuQuayRepository.java`
 - Modify: `BackEnd/src/main/java/com/example/backend/response/PhieuGiamGiaCaNhanResponse.java`
@@ -489,9 +500,37 @@ git commit -m "feat(backend): admin point-gifting endpoint + ledger read + tests
 - Test: `BackEnd/src/test/java/com/example/backend/service/PhieuGiamGiaCaNhanServiceTest.java`
 
 **Interfaces:**
-- Produces: `PhieuGiamGiaCaNhanService.taoVoucherAdmin(Integer khachHangId, TangVoucherRequest): PhieuGiamGiaCaNhan`, `PhieuGiamGiaCaNhanService.getByKhachHangIdForAdmin(Integer): List<PhieuGiamGiaCaNhanResponse>` (mỗi phần tử có thêm field `nguon`: `"Khách tự đổi / trúng thưởng"` hoặc `"Admin tặng"`) — Task 5 gọi qua `POST /api/phieu-giam-gia-ca-nhan/tang/{khachHangId}` và `GET /api/phieu-giam-gia-ca-nhan/khach-hang/{id}`.
+- Produces: `PhieuGiamGiaCaNhanService.taoVoucherAdmin(Integer khachHangId, TangVoucherRequest): PhieuGiamGiaCaNhan`, `PhieuGiamGiaCaNhanService.getByKhachHangIdForAdmin(Integer): List<PhieuGiamGiaCaNhanResponse>` (mỗi phần tử có thêm 2 field mới so với baseline hiện có 8 field: `donHangToiThieu` (BigDecimal, đơn tối thiểu) và `nguon`: `"Khách tự đổi / trúng thưởng"` hoặc `"Admin tặng"`) — Task 5 gọi qua `POST /api/phieu-giam-gia-ca-nhan/tang/{khachHangId}` và `GET /api/phieu-giam-gia-ca-nhan/khach-hang/{id}`.
 
-- [ ] **Step 1: Viết test trước (fail vì chưa có `TangVoucherRequest`/`taoVoucherAdmin`)**
+- [ ] **Step 1: Thêm cột `don_hang_toi_thieu` vào bảng `phieu_giam_gia_ca_nhan` + field entity**
+
+`Database/QLBanMayTinh.sql` — tìm block `CREATE TABLE phieu_giam_gia_ca_nhan` (`IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'phieu_giam_gia_ca_nhan') BEGIN ... END GO`), thêm ngay sau `GO` kết thúc block đó (đây là cột MỚI cho bảng đã tồn tại, dùng ALTER idempotent, không sửa trực tiếp câu CREATE TABLE — đúng convention của file):
+
+```sql
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('phieu_giam_gia_ca_nhan') AND name = 'don_hang_toi_thieu')
+BEGIN
+    ALTER TABLE phieu_giam_gia_ca_nhan ADD don_hang_toi_thieu DECIMAL(18,0) NULL;
+END
+GO
+```
+
+`BackEnd/src/main/java/com/example/backend/entity/PhieuGiamGiaCaNhan.java` — thêm field cuối class (trước dấu `}` đóng class):
+
+```java
+    // NULL = không yêu cầu đơn tối thiểu. Dùng cho voucher admin tặng trực tiếp lẫn voucher
+    // trúng vòng quay (nếu sau này copy nguyên giá trị từ khuyến mãi gốc).
+    @Column(name = "don_hang_toi_thieu", precision = 18, scale = 0)
+    private BigDecimal donHangToiThieu;
+```
+
+(Thêm `import java.math.BigDecimal;` nếu file chưa có sẵn — kiểm tra trước khi thêm để tránh trùng import.)
+
+Build để xác nhận compile được:
+
+Run: `cd "BackEnd" && ./mvnw compile -q`
+Expected: build thành công.
+
+- [ ] **Step 2: Viết test trước (fail vì chưa có `TangVoucherRequest`/`taoVoucherAdmin`)**
 
 `BackEnd/src/test/java/com/example/backend/service/PhieuGiamGiaCaNhanServiceTest.java`:
 
@@ -607,12 +646,12 @@ class PhieuGiamGiaCaNhanServiceTest {
 }
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận fail**
+- [ ] **Step 3: Chạy test, xác nhận fail**
 
 Run: `cd "BackEnd" && ./mvnw test -Dtest=PhieuGiamGiaCaNhanServiceTest -q`
 Expected: FAIL — lỗi biên dịch (thiếu `TangVoucherRequest`, `taoVoucherAdmin`, `getByKhachHangIdForAdmin`, `findPhieuIdsByKhachHangId`, `getNguon()`).
 
-- [ ] **Step 3: Tạo `TangVoucherRequest`**
+- [ ] **Step 4: Tạo `TangVoucherRequest`**
 
 `BackEnd/src/main/java/com/example/backend/request/TangVoucherRequest.java`:
 
@@ -651,7 +690,7 @@ public class TangVoucherRequest {
 }
 ```
 
-- [ ] **Step 4: Thêm query method vào `LichSuQuayRepository`**
+- [ ] **Step 5: Thêm query method vào `LichSuQuayRepository`**
 
 Thêm vào `BackEnd/src/main/java/com/example/backend/repository/LichSuQuayRepository.java` (trong interface, cạnh `findResponsesByKhachHangId`):
 
@@ -663,17 +702,21 @@ Thêm vào `BackEnd/src/main/java/com/example/backend/repository/LichSuQuayRepos
     List<Integer> findPhieuIdsByKhachHangId(@Param("khachHangId") Integer khachHangId);
 ```
 
-- [ ] **Step 5: Thêm field `nguon` vào `PhieuGiamGiaCaNhanResponse`**
+- [ ] **Step 6: Thêm field `donHangToiThieu` và `nguon` vào `PhieuGiamGiaCaNhanResponse`**
 
-`BackEnd/src/main/java/com/example/backend/response/PhieuGiamGiaCaNhanResponse.java` — thêm field cuối class:
+`BackEnd/src/main/java/com/example/backend/response/PhieuGiamGiaCaNhanResponse.java` hiện có đúng
+8 field (`phieuId, maPhieu, loai, giaTri, giaTriToiDa, daSuDung, ngayDoi, ngayHetHan`). Thêm 2
+field mới cuối class, đúng thứ tự này (khớp với thứ tự tham số ở Step 7/getCuaToi() bên dưới):
 
 ```java
+    private BigDecimal donHangToiThieu;
     private String nguon;
 ```
 
-(File đầy đủ sau khi sửa — chỉ thêm dòng cuối, các field/annotation khác giữ nguyên.)
+(Cần `import java.math.BigDecimal;` nếu file chưa có — kiểm tra trước khi thêm để tránh trùng
+import. Các field/annotation khác giữ nguyên.)
 
-- [ ] **Step 6: Thêm `taoVoucherAdmin()` + `getByKhachHangIdForAdmin()` vào `PhieuGiamGiaCaNhanService`, sửa `getCuaToi()`**
+- [ ] **Step 7: Thêm `taoVoucherAdmin()` + `getByKhachHangIdForAdmin()` vào `PhieuGiamGiaCaNhanService`, sửa `getCuaToi()`**
 
 Thêm import:
 
@@ -732,7 +775,9 @@ Thêm method (cạnh `doiThuong()`):
     }
 ```
 
-Sửa `getCuaToi()` — thêm `null` vào cuối lời gọi constructor (field `nguon` mới thêm ở Task 4 Step 5 không tính ở endpoint tự phục vụ này):
+Sửa `getCuaToi()` — thêm `p.getDonHangToiThieu()` (nay đã hợp lệ nhờ Step 1/Step 6) và `null`
+vào cuối lời gọi constructor (field `nguon` mới thêm ở Step 6 không tính ở endpoint tự phục vụ
+này, luôn để `null`):
 
 ```java
     public List<PhieuGiamGiaCaNhanResponse> getCuaToi() {
@@ -745,12 +790,12 @@ Sửa `getCuaToi()` — thêm `null` vào cuối lời gọi constructor (field 
     }
 ```
 
-- [ ] **Step 7: Chạy lại test, xác nhận pass**
+- [ ] **Step 8: Chạy lại test, xác nhận pass**
 
 Run: `cd "BackEnd" && ./mvnw test -Dtest=PhieuGiamGiaCaNhanServiceTest -q`
 Expected: PASS — 4/4 test xanh.
 
-- [ ] **Step 8: Thêm 2 endpoint vào `PhieuGiamGiaCaNhanController`**
+- [ ] **Step 9: Thêm 2 endpoint vào `PhieuGiamGiaCaNhanController`**
 
 Thêm import (`java.util.List` đã có sẵn trong file này từ trước — KHÔNG thêm lại, sẽ gây lỗi trùng import):
 
@@ -776,15 +821,17 @@ Thêm method (cạnh `getCuaToi()`):
     }
 ```
 
-- [ ] **Step 9: Build toàn bộ**
+- [ ] **Step 10: Build toàn bộ**
 
 Run: `cd "BackEnd" && ./mvnw compile -q`
 Expected: build thành công.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
-git add "BackEnd/src/main/java/com/example/backend/request/TangVoucherRequest.java" \
+git add "Database/QLBanMayTinh.sql" \
+        "BackEnd/src/main/java/com/example/backend/entity/PhieuGiamGiaCaNhan.java" \
+        "BackEnd/src/main/java/com/example/backend/request/TangVoucherRequest.java" \
         "BackEnd/src/main/java/com/example/backend/repository/LichSuQuayRepository.java" \
         "BackEnd/src/main/java/com/example/backend/response/PhieuGiamGiaCaNhanResponse.java" \
         "BackEnd/src/main/java/com/example/backend/service/PhieuGiamGiaCaNhanService.java" \
