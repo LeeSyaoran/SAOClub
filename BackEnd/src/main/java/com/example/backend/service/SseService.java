@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -31,12 +32,19 @@ public class SseService {
         return emitter;
     }
 
+    // @Async — bắt buộc, không phải tối ưu. Các nơi gọi (vd DonHangService.create()) đang ở
+    // giữa request HTTP của khách/nhân viên; nếu broadcast() chạy đồng bộ trên chính thread
+    // đó, 1 kết nối SSE chết/treo (tab đóng không sạch, sau nhiều lần restart backend) sẽ
+    // chặn ghi socket và treo luôn request gốc tới khi OS timeout — request tạo đơn thành
+    // công thật nhưng khách phải chờ rất lâu mới thấy phản hồi.
+    @Async
     public void notifyNewOrder(Integer orderId) {
         broadcast("new-order", orderId);
     }
 
     // Đơn hàng đổi trạng thái/thông tin — admin (tab khác) và trang khách hàng đang mở đơn
     // đó cùng lắng nghe để tự tải lại, khỏi phải F5 mới thấy trạng thái mới.
+    @Async
     public void notifyOrderUpdate(Integer orderId) {
         broadcast("order-updated", orderId);
     }
