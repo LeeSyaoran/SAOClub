@@ -27,6 +27,7 @@ import { showToast } from "../stores/toast.js";
 import ToastHost from "../components/common/ToastHost.vue";
 import ProductsTable from "../components/admin/ProductsTable.vue";
 import CustomersTable from "../components/admin/CustomersTable.vue";
+import CustomerDetailPage from "../components/admin/CustomerDetailPage.vue";
 import OrdersTable from "../components/admin/OrdersTable.vue";
 import PosPanel from "../components/admin/PosPanel.vue";
 import InventoryPanel from "../components/admin/InventoryPanel.vue";
@@ -47,6 +48,11 @@ import * as DmDoiThuongService from "../Service/DmDoiThuongService.js";
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentPage = ref("dashboard");
+const selectedCustomerId = ref(null);
+const openCustomerDetail = (id) => {
+  selectedCustomerId.value = id;
+  currentPage.value = "customer-detail";
+};
 const navigate = (page) => {
   currentPage.value = page;
   if (page === "staff") { ensureChucVuList(); ensureStaff(); }
@@ -62,6 +68,7 @@ const PAGE_META = {
   products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: "💻" },
   orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: "🧾" },
   customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: "👥" },
+  "customer-detail": { titleKey: "admin.pageMeta.customerDetail.title", subKey: "admin.pageMeta.customerDetail.sub", icon: "👤" },
   inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: "📦" },
   "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
   promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub", icon: "🏷️" },
@@ -1313,7 +1320,12 @@ onUnmounted(() => {
 
         <!-- ── Khach hang ── -->
         <section v-show="currentPage === 'customers'">
-          <CustomersTable />
+          <CustomersTable @view-detail="openCustomerDetail" />
+        </section>
+
+        <!-- ── Chi tiet khach hang ── -->
+        <section v-show="currentPage === 'customer-detail'">
+          <CustomerDetailPage v-if="selectedCustomerId" :customer-id="selectedCustomerId" @back="currentPage = 'customers'" />
         </section>
 
         <!-- ── Kho hang ── -->

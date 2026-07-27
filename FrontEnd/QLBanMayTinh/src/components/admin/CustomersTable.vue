@@ -8,6 +8,8 @@ import { askConfirm } from "../../stores/confirm.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../../stores/customers.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
 
+const emit = defineEmits(["view-detail"]);
+
 onMounted(() => { ensureCustomers(); });
 
 // ── Bo loc man hinh Khach hang ────────────────────────────────────────────────
@@ -56,6 +58,7 @@ const customerModalRef = ref(null);
           <td><span class="badge" :class="c.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(c.trangThai) }}</span></td>
           <td>
             <div class="d-flex gap-1">
+              <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem; padding:2px 8px;" @click="emit('view-detail', c.khachHangId)">{{ t('admin.customers.viewDetail') }}</button>
               <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="customerModalRef.openForEdit(c)">{{ t('admin.customers.edit') }}</button>
               <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteCustomer(c.khachHangId)">{{ t('admin.customers.delete') }}</button>
             </div>
