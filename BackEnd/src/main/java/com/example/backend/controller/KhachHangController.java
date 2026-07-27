@@ -3,7 +3,9 @@ package com.example.backend.controller;
 import com.example.backend.entity.KhachHang;
 import com.example.backend.request.KhachHangRegisterRequest;
 import com.example.backend.request.KhachHangRequest;
+import com.example.backend.request.TangDiemRequest;
 import com.example.backend.response.KhachHangResponse;
+import com.example.backend.response.LichSuTangDiemResponse;
 import com.example.backend.service.KhachHangService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +49,19 @@ public class KhachHangController {
                                        @Valid @RequestBody KhachHangRequest request) {
         khachHangService.update(id, request);
         return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/tang-diem")
+    public ResponseEntity<Void> tangDiem(@PathVariable Integer id, @Valid @RequestBody TangDiemRequest request) {
+        khachHangService.tangDiem(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/lich-su-diem")
+    public List<LichSuTangDiemResponse> getLichSuDiem(@PathVariable Integer id) {
+        return khachHangService.layLichSuDiem(id);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")

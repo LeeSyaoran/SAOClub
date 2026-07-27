@@ -2,14 +2,19 @@ package com.example.backend.service;
 
 import com.example.backend.entity.ChucVu;
 import com.example.backend.entity.KhachHang;
+import com.example.backend.entity.LichSuTangDiem;
+import com.example.backend.entity.NhanVien;
 import com.example.backend.entity.TaiKhoan;
 import com.example.backend.repository.ChucVuRepository;
 import com.example.backend.repository.KhachHangRepository;
+import com.example.backend.repository.LichSuTangDiemRepository;
 import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.request.KhachHangRegisterRequest;
 import com.example.backend.request.KhachHangRequest;
+import com.example.backend.request.TangDiemRequest;
 import com.example.backend.response.KhachHangLoginResponse;
 import com.example.backend.response.KhachHangResponse;
+import com.example.backend.response.LichSuTangDiemResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -35,6 +40,9 @@ public class KhachHangService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private LichSuTangDiemRepository lichSuTangDiemRepository;
 
     public List<KhachHangResponse> hienThiKhachHang() {
         return khachHangRepository.hienThiKhachHang();
@@ -75,6 +83,36 @@ public class KhachHangService {
             BeanUtils.copyProperties(request, entity, "khachHangId", "ngayTao", "diemTichLuy", "trangThai");
         }
         return khachHangRepository.save(entity);
+    }
+
+    // Tặng điểm — chỉ admin gọi (@PreAuthorize ở controller). Khóa ghi khách hàng đúng
+    // pattern PhieuGiamGiaCaNhanService.doiThuong() để tránh 2 request tặng điểm đồng thời
+    // đọc trùng số dư rồi cùng cộng (mất 1 lần cộng).
+    @Transactional
+    public void tangDiem(Integer khachHangId, TangDiemRequest request) {
+        KhachHang khachHang = khachHangRepository.findWithLockByKhachHangId(khachHangId)
+                .orElseThrow(() -> new IllegalArgumentException("Khách hàng không tồn tại với id: " + khachHangId));
+        khachHang.setDiemTichLuy(khachHang.getDiemTichLuy() + request.getSoDiem());
+        khachHangRepository.save(khachHang);
+
+        LichSuTangDiem lichSu = new LichSuTangDiem();
+        lichSu.setKhachHang(khachHang);
+        lichSu.setNhanVien(currentNhanVien());
+        lichSu.setSoDiem(request.getSoDiem());
+        lichSu.setLyDo(request.getLyDo());
+        lichSu.setNgayTao(LocalDateTime.now());
+        lichSuTangDiemRepository.save(lichSu);
+    }
+
+    public List<LichSuTangDiemResponse> layLichSuDiem(Integer khachHangId) {
+        return lichSuTangDiemRepository.findResponsesByKhachHangId(khachHangId);
+    }
+
+    private NhanVien currentNhanVien() {
+        TaiKhoan tk = currentAccount();
+        if (tk == null || tk.getNhanVien() == null)
+            throw new AccessDeniedException("Chỉ nhân viên mới thực hiện được thao tác này");
+        return tk.getNhanVien();
     }
 
     // ── Kiểm tra quyền: nhân viên/admin/quản kho xem tất cả, khách chỉ xem/sửa chính mình ──
