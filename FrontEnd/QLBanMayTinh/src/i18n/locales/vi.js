@@ -257,8 +257,6 @@ export default {
     addItemError: "Không thể thêm \"{name}\" vào đơn",
     promoHeading: "Mã khuyến mãi",
     voucherHeading: "Voucher của bạn",
-    bestPromo: "Tốt nhất",
-    noPromo: "Hiện chưa có mã khuyến mãi nào áp dụng được cho đơn này",
     promoPlaceholder: "Nhập mã giảm giá (nếu có)",
     apply: "Áp dụng",
     promoSuccess: "Áp dụng thành công: {name}",
@@ -312,6 +310,7 @@ export default {
     maxStockReached: "Chỉ còn {ton} sản phẩm {name} trong kho.",
     sessionExpired: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
     buyAgainUnavailable: "Không thể thêm vào giỏ: {names} đã ngừng kinh doanh hoặc không còn tồn tại.",
+    loginRequiredForCart: "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.",
   },
 
   adminAccess: {
@@ -447,6 +446,7 @@ export default {
     winPercent: "Giảm {value}% cho đơn hàng tiếp theo",
     winFixed: "Giảm {value} cho đơn hàng tiếp theo",
     winCode: "Mã voucher: {code}",
+    winMinOrder: "Áp dụng cho đơn hàng từ {value}",
     missTitle: "Chúc may mắn lần sau!",
     missDesc: "Bạn chưa trúng khuyến mãi nào lần này, hãy thử lại ở lượt sau nhé.",
     noPrizesAvailable: "Hiện chưa có khuyến mãi nào để quay, vui lòng quay lại sau.",

@@ -194,8 +194,14 @@ public class ChiTietDonHangService {
     // Trước đây xóa thẳng dòng đơn hàng mà không trả serial đã gán (giu_hang/da_ban) về lại
     // "trong_kho" — serial kẹt vĩnh viễn ở trạng thái đã bán dù dòng đơn đã bị xóa, làm tồn
     // kho thực tế sai lệch âm thầm. Mirror đúng logic DonHangService.releaseSerialsToStock()
-    // nhưng chỉ cho 1 dòng thay vì cả đơn. chi_tiet_don_hang_serial tự xóa theo (ON DELETE
-    // CASCADE) khi xóa dòng, chỉ cần đọc trước để biết serial nào cần trả.
+    // nhưng chỉ cho 1 dòng thay vì cả đơn.
+    //
+    // chi_tiet_don_hang_serial CÓ ON DELETE CASCADE ở DB, nhưng Hibernate không biết gì về
+    // cascade ở tầng DB — nó chỉ thấy 1 ChiTietDonHangSerial đã load (persistent, không đổi)
+    // vẫn tham chiếu tới ChiTietDonHang sắp bị remove() trong cùng persistence context, nên
+    // ném TransientPropertyValueException lúc flush/commit (500) trước khi câu DELETE thật
+    // sự chạy tới DB. Phải xóa link tường minh qua Hibernate trước để nó tự biết, không dựa
+    // vào cascade ở DB mà Hibernate không thấy được.
     @Transactional
     public void delete(Integer id) {
         ChiTietDonHang entity = getById(id);
@@ -207,6 +213,7 @@ public class ChiTietDonHangService {
             link.getChiTietSanPham().setTrangThai("trong_kho");
             chiTietSanPhamRepository.save(link.getChiTietSanPham());
         }
+        chiTietDonHangSerialRepository.deleteByChiTietDonHang_Id(id);
         chiTietDonHangRepository.deleteById(id);
     }
 

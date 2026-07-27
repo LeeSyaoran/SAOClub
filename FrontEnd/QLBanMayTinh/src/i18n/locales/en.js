@@ -257,8 +257,6 @@ export default {
     addItemError: "Could not add \"{name}\" to the order",
     promoHeading: "Promo code",
     voucherHeading: "Your vouchers",
-    bestPromo: "Best",
-    noPromo: "No promo code currently applies to this order",
     promoPlaceholder: "Enter discount code (if any)",
     apply: "Apply",
     promoSuccess: "Applied successfully: {name}",
@@ -312,6 +310,7 @@ export default {
     maxStockReached: "Only {ton} of {name} left in stock.",
     sessionExpired: "Your session has expired, please log in again.",
     buyAgainUnavailable: "Could not add to cart: {names} is discontinued or no longer available.",
+    loginRequiredForCart: "Please log in to add products to your cart.",
   },
 
   adminAccess: {
@@ -447,6 +446,7 @@ export default {
     winPercent: "{value}% off your next order",
     winFixed: "{value} off your next order",
     winCode: "Voucher code: {code}",
+    winMinOrder: "Valid for orders from {value}",
     missTitle: "Better luck next time!",
     missDesc: "No prize this time — try again on your next spin.",
     noPrizesAvailable: "No prizes available right now, please check back later.",

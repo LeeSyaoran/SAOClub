@@ -57,6 +57,18 @@ const close = () => emit("update:modelValue", false);
 
 const saveCustomer = async () => {
   customerFormError.value = "";
+  if (!customerForm.value.hoTen.trim()) {
+    customerFormError.value = t('admin.customerModal.nameRequired');
+    return;
+  }
+  if (!customerForm.value.soDienThoai.trim()) {
+    customerFormError.value = t('admin.customerModal.phoneRequired');
+    return;
+  }
+  if (!customerForm.value.diaChi.trim()) {
+    customerFormError.value = t('admin.customerModal.addressRequired');
+    return;
+  }
   if (saving.value) return;
   saving.value = true;
   const body = {

@@ -105,7 +105,13 @@ const openLogin = () => {
 };
 
 // Đăng ký thành công → quay về tab đăng nhập để dùng tài khoản vừa tạo
-const onRegisterSuccess = () => {
+const onRegisterSuccess = (newAccount) => {
+  // maKH có thể trùng với một tài khoản test cũ đã bị xóa (DB reset khi chạy lại
+  // QLBanMayTinh.sql khiến IDENTITY reset về 1) — dọn giỏ hàng cũ còn sót trong
+  // localStorage theo id đó để tài khoản vừa tạo luôn bắt đầu với giỏ hàng rỗng.
+  if (newAccount?.khachHangId != null) {
+    localStorage.removeItem(`saophone_cart_${newAccount.khachHangId}`);
+  }
   authTab.value = "login";
   showToast(t("register.success"), "success");
 };
@@ -335,12 +341,18 @@ const filteredProducts = computed(() => {
     return true;
   });
 
-  // Deduplicate: 1 card / sanPhamId — lấy biến thể giá thấp nhất làm đại diện
+  // Deduplicate: 1 card / sanPhamId — ưu tiên biến thể còn hàng (active), rồi mới đến
+  // giá thấp nhất trong nhóm đó làm đại diện. Nếu chọn đại diện chỉ theo giá thấp nhất,
+  // 1 biến thể hết hàng trùng giá với biến thể còn hàng khác sẽ khiến cả card hiện
+  // "Hết hàng" dù sản phẩm vẫn còn biến thể khác mua được.
   const deduped = [
     ...filtered
       .reduce((map, p) => {
         const ex = map.get(p.sanPhamId);
-        if (!ex || Number(p.giaBan) < Number(ex.giaBan))
+        if (!ex) { map.set(p.sanPhamId, p); return map; }
+        const pActive = p.trangThai === 'active';
+        const exActive = ex.trangThai === 'active';
+        if (pActive !== exActive ? pActive : Number(p.giaBan) < Number(ex.giaBan))
           map.set(p.sanPhamId, p);
         return map;
       }, new Map())
@@ -461,6 +473,13 @@ const fetchProducts = async () => {
 // báo vì 1 số nơi gọi hàm này (vd nút "Mua lại" ở AccountPage) không có icon
 // giỏ hàng trong header để khách tự nhận biết đã thêm thành công hay chưa.
 const addToCart = (product, qty = 1) => {
+  // Bắt buộc đăng nhập mới được thêm giỏ hàng — chặn ngay tại đây vì đây là điểm
+  // gọi chung duy nhất (thẻ sản phẩm, trang chi tiết, "Mua lại" đều đi qua hàm này).
+  if (!auth.user) {
+    showToast(t("toast.loginRequiredForCart"), "error");
+    openLogin();
+    return;
+  }
   // soLuongTon co the undefined neu API cu chua tra field nay — coi nhu khong gioi han
   // thay vi chan nham (an toan hon la false-positive "het hang").
   const ton = product.soLuongTon ?? Infinity;
@@ -515,9 +534,16 @@ const updateQty = (bienTheId, delta) => {
 // ── Checkout (Thanh toán) — toàn bộ logic 2 bước sống trong CheckoutModal.vue ──
 const showCheckout = ref(false); // Hiển thị modal thanh toán
 
-// Mở modal thanh toán (bỏ qua nếu giỏ trống)
+// Mở modal thanh toán (bỏ qua nếu giỏ trống). Chặn thêm ở đây phòng trường hợp
+// giỏ hàng cũ của khách vãng lai còn sót lại trong localStorage từ trước khi
+// yêu cầu đăng nhập được áp dụng.
 const openCheckout = () => {
   if (cart.value.length === 0) return;
+  if (!auth.user) {
+    showToast(t("toast.loginRequiredForCart"), "error");
+    openLogin();
+    return;
+  }
   showCart.value = false;
   showCheckout.value = true;
 };
@@ -735,6 +761,7 @@ onBeforeUnmount(() => {
         @open-account="goAccount"
         @open-login="openLogin"
         @logout="onLogout"
+        @select-category="selectSidebarCat"
       />
 
       <!-- Dải ticker chạy ngang (thông báo khuyến mãi) -->

@@ -274,14 +274,17 @@ const removeItemFromOrder = async (chiTietId) => {
 // ── Gop don hang ─────────────────────────────────────────────────────────────
 const mergeLoading = ref(false);
 
-// Don hang cung khach, cung ngay dat (khong tinh gio), khac don hien tai
+// Don hang cung khach, cung ngay dat (khong tinh gio), khac don hien tai — loai don
+// "pending" vi backend tu choi gop don chua xac nhan (xem mergeOrders() service),
+// hien nut gop voi ung vien chac chan fail se lam nguoi dung bam lai vo ich.
 const mergeCandidates = computed(() => {
   if (!orderDetailData.value) return [];
   const curDate = orderDetailData.value.ngayDat?.slice(0, 10);
   return OrdersStore.items.filter(o =>
     o.khachHangId === orderDetailData.value.khachHangId &&
     o.donHangId   !== orderDetailData.value.donHangId &&
-    o.ngayDat?.slice(0, 10) === curDate
+    o.ngayDat?.slice(0, 10) === curDate &&
+    o.trangThaiDonHang !== 'pending'
   );
 });
 
@@ -295,7 +298,7 @@ const autoMergeOrders = async () => {
       orderDetailData.value.donHangId,
       mergeCandidates.value.map(o => o.donHangId)
     );
-    if (!res.ok) { showToast(t('admin.errors.mergeFailed', { status: res.status })); return; }
+    if (!res.ok) { showToast(t('admin.errors.mergeFailed', { status: res.status, text: await res.text() })); return; }
     await refreshOrderDetail();
   } finally {
     mergeLoading.value = false;

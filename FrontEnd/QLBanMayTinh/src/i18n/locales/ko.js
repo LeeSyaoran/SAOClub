@@ -257,8 +257,6 @@ export default {
     addItemError: "\"{name}\"을(를) 주문에 추가할 수 없습니다",
     promoHeading: "프로모션 코드",
     voucherHeading: "내 바우처",
-    bestPromo: "베스트",
-    noPromo: "현재 이 주문에 적용 가능한 프로모션 코드가 없습니다",
     promoPlaceholder: "할인 코드 입력 (있는 경우)",
     apply: "적용",
     promoSuccess: "적용 완료: {name}",
@@ -312,6 +310,7 @@ export default {
     maxStockReached: "{name} 재고가 {ton}개 남았습니다.",
     sessionExpired: "세션이 만료되었습니다. 다시 로그인해 주세요.",
     buyAgainUnavailable: "장바구니에 담을 수 없습니다: {names}은(는) 판매 종료되었거나 더 이상 존재하지 않습니다.",
+    loginRequiredForCart: "장바구니에 상품을 담으려면 로그인해 주세요.",
   },
 
   adminAccess: {
@@ -447,6 +446,7 @@ export default {
     winPercent: "다음 주문 시 {value}% 할인",
     winFixed: "다음 주문 시 {value} 할인",
     winCode: "쿠폰 코드: {code}",
+    winMinOrder: "{value} 이상 주문 시 사용 가능",
     missTitle: "다음 기회에!",
     missDesc: "이번엔 당첨되지 않았습니다. 다음 스핀에 다시 도전해 보세요.",
     noPrizesAvailable: "현재 이용 가능한 경품이 없습니다. 나중에 다시 확인해 주세요.",

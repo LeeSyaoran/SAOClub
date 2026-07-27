@@ -257,8 +257,6 @@ export default {
     addItemError: "无法将 \"{name}\" 添加到订单",
     promoHeading: "优惠码",
     voucherHeading: "您的优惠券",
-    bestPromo: "最优惠",
-    noPromo: "目前没有可用于此订单的优惠码",
     promoPlaceholder: "输入优惠码（如有）",
     apply: "应用",
     promoSuccess: "应用成功：{name}",
@@ -312,6 +310,7 @@ export default {
     maxStockReached: "{name}库存仅剩{ton}件。",
     sessionExpired: "登录已过期，请重新登录。",
     buyAgainUnavailable: "无法加入购物车：{names}已下架或不再提供。",
+    loginRequiredForCart: "请先登录后再将商品加入购物车。",
   },
 
   adminAccess: {
@@ -426,7 +425,7 @@ export default {
       catalogEmpty: "暂无可兑换的奖励。",
       myVouchersHeading: "已兑换的优惠券",
       expiresOn: "有效期至：{date}",
-      minOrder: "最低订单：{amount}",
+      minOrder: "最低订单金额：{amount}",
       used: "已使用",
       available: "可使用",
       myVouchersEmpty: "您还没有兑换任何优惠券。",
@@ -447,6 +446,7 @@ export default {
     winPercent: "下次订单立减{value}%",
     winFixed: "下次订单立减{value}",
     winCode: "优惠券代码：{code}",
+    winMinOrder: "订单满{value}可用",
     missTitle: "祝下次好运！",
     missDesc: "这次没有中奖，欢迎下次再来试试。",
     noPrizesAvailable: "暂无可用奖品，请稍后再来查看。",

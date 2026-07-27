@@ -64,6 +64,14 @@ const saveSupplier = async () => {
     formError.value = t('admin.supplierModal.nameRequired');
     return;
   }
+  if (!form.value.soDienThoai.trim()) {
+    formError.value = t('admin.supplierModal.phoneRequired');
+    return;
+  }
+  if (!form.value.diaChi.trim()) {
+    formError.value = t('admin.supplierModal.addressRequired');
+    return;
+  }
   if (saving.value) return;
   saving.value = true;
   try {

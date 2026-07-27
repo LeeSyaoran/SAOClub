@@ -94,7 +94,8 @@
                 ? 'background:var(--bg-card); padding-left:1.25rem!important; cursor:pointer;'
                 : 'cursor:pointer;') + (activeCategory === cat.id ? '' : ' color:var(--text-secondary);')"
               @mouseenter="activeCategory = cat.id"
-              @focus="activeCategory = cat.id">
+              @focus="activeCategory = cat.id"
+              @click="onCategoryClick(cat)">
               <span>{{ cat.title }}</span>
               <span style="font-size:14px; opacity:0.5;">›</span>
             </div>
@@ -110,14 +111,15 @@
                        style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid var(--border-color);">
                     {{ t('nav.brandsHeading') }}
                   </div>
-                  <a v-for="brand in cat.brands" :key="brand"
-                     href="#"
-                     class="d-flex align-items-center gap-1 text-decoration-none py-1 small fw-bold"
+                  <button v-for="brand in cat.brands" :key="brand"
+                     type="button"
+                     class="d-flex align-items-center gap-1 text-decoration-none py-1 small fw-bold border-0 bg-transparent text-start"
                      style="font-size:12px; color:var(--text-secondary);"
                      @mouseenter="e => e.target.style.color='var(--text-heading)'"
-                     @mouseleave="e => e.target.style.color=''">
+                     @mouseleave="e => e.target.style.color=''"
+                     @click="onBrandClick(brand)">
                     <span style="color:var(--border-color-strong);">·</span> {{ brand }}
-                  </a>
+                  </button>
                 </div>
                 <!-- Cột phân khúc nổi bật -->
                 <div class="col-6">
@@ -125,14 +127,14 @@
                        style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid var(--border-color);">
                     {{ t('nav.tagsHeading') }}
                   </div>
-                  <a v-for="tag in cat.tags" :key="tag"
-                     href="#"
-                     class="d-block text-decoration-none py-1 small fw-bold"
-                     style="font-size:12px; color:var(--text-secondary);"
-                     @mouseenter="e => e.target.style.color='var(--accent)'"
-                     @mouseleave="e => e.target.style.color=''">
+                  <!-- Text mô tả marketing, không map được vào bộ lọc thật (không có
+                       field dữ liệu tương ứng) — hiện dạng span thuần, không giả vờ
+                       là link để tránh gây hiểu lầm có thể bấm được. -->
+                  <span v-for="tag in cat.tags" :key="tag"
+                     class="d-block py-1 small fw-bold"
+                     style="font-size:12px; color:var(--text-secondary);">
                     {{ tag }}
-                  </a>
+                  </span>
                 </div>
               </div>
             </template>
@@ -215,7 +217,7 @@ import { ref, computed } from 'vue';
 import { t, I18nStore, LOCALES, setLocale } from '../../i18n/index.js';
 import { ThemeStore, toggleTheme } from '../../stores/theme.js';
 
-const emit = defineEmits(["toggle-cart", "search", "open-admin", "open-account", "open-login", "logout"]);
+const emit = defineEmits(["toggle-cart", "search", "open-admin", "open-account", "open-login", "logout", "select-category"]);
 
 const props = defineProps({
   cartCount: { type: Number, default: 0 },
@@ -280,6 +282,27 @@ const categories = computed(() => [
     tags: t('nav.catCreatorTags')
   }
 ]);
+
+// Chuẩn hoá tên hãng/dòng máy thành từ khoá lọc — tách theo "/" vì mega-menu gộp
+// chung các dòng máy anh em vào 1 chuỗi (vd "ASUS ROG / TUF"). Dùng chung logic
+// substring-match đã có sẵn ở App.vue (matchesKw: name/brand/cat/tags.includes(kw)).
+const toKeywords = (label) => label.toLowerCase().split('/').map(s => s.trim());
+
+// Click cả danh mục (cột trái) → lọc theo TẤT CẢ hãng/dòng máy thuộc danh mục đó
+const onCategoryClick = (cat) => {
+  emit('select-category', {
+    id: `mega-${cat.id}`,
+    catId: null,
+    keywords: [...new Set(cat.brands.flatMap(toKeywords))],
+  });
+  isMenuOpen.value = false;
+};
+
+// Click 1 hãng/dòng máy cụ thể (cột phải) → lọc chính xác hãng/dòng đó
+const onBrandClick = (brand) => {
+  emit('select-category', { id: `mega-brand-${brand}`, catId: null, keywords: toKeywords(brand) });
+  isMenuOpen.value = false;
+};
 </script>
 
 <!-- Không còn CSS scoped — toàn bộ giao diện dùng Bootstrap utility classes -->

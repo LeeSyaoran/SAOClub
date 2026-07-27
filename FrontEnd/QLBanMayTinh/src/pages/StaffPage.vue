@@ -129,7 +129,7 @@ onUnmounted(() => {
         <section v-show="currentPage === 'ban-hang'"><PosPanel /></section>
         <section v-show="currentPage === 'orders'"><OrdersTable :can-delete="false" /></section>
         <section v-show="currentPage === 'customers'"><CustomersTable /></section>
-        <section v-show="currentPage === 'tra-hang'"><ReturnsPanel /></section>
+        <section v-show="currentPage === 'tra-hang'"><ReturnsPanel :can-pick-staff="true" /></section>
         <section v-show="currentPage === 'products'">
           <ul class="nav nav-tabs mb-3">
             <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='sanPham'}" @click="productsMainTab='sanPham'">{{ t('admin.productsTabs.sanPham') }}</button></li>

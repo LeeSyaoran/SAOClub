@@ -19,6 +19,7 @@ public class NhanVienResponse {
     private String soDienThoai;
     private String email;
     private Integer chucVuId;
+    private String username;
     private BigDecimal luongCoBan;
     private String trangThai;
     private LocalDateTime ngayTao;

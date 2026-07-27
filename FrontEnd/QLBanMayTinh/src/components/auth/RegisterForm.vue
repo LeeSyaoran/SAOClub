@@ -201,12 +201,13 @@ const handleSubmit = async () => {
       error.value = await res.text() || t('register.errors.registerFailed');
       return;
     }
+    const newAccount = await res.json();
     success.value = t('register.success');
     Object.assign(form, { hoTen: "", soDienThoai: "", email: "", username: "", password: "" });
     confirmPassword.value = "";
     agree.value = false;
     Object.keys(touched).forEach(k => { touched[k] = false; });
-    setTimeout(() => emit('register-success'), 1200);
+    setTimeout(() => emit('register-success', newAccount), 1200);
   } catch {
     error.value = t('register.errors.cannotConnect');
   } finally {

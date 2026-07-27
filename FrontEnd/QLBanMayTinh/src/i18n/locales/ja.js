@@ -257,8 +257,6 @@ export default {
     addItemError: "「{name}」を注文に追加できませんでした",
     promoHeading: "プロモコード",
     voucherHeading: "あなたのバウチャー",
-    bestPromo: "最もお得",
-    noPromo: "現在、このご注文に適用できるプロモコードはありません",
     promoPlaceholder: "割引コードを入力（お持ちの場合）",
     apply: "適用",
     promoSuccess: "適用しました：{name}",
@@ -312,6 +310,7 @@ export default {
     maxStockReached: "{name}の在庫は残り{ton}個です。",
     sessionExpired: "セッションの有効期限が切れました。再度ログインしてください。",
     buyAgainUnavailable: "カートに追加できません：{names}は取り扱い終了または販売終了のため購入できません。",
+    loginRequiredForCart: "商品をカートに追加するにはログインしてください。",
   },
 
   adminAccess: {
@@ -447,6 +446,7 @@ export default {
     winPercent: "次回のご注文が{value}%オフ",
     winFixed: "次回のご注文が{value}オフ",
     winCode: "クーポンコード：{code}",
+    winMinOrder: "{value}以上のご注文で利用可能",
     missTitle: "残念、また次回！",
     missDesc: "今回は当選しませんでした。次のスピンをお試しください。",
     noPrizesAvailable: "現在利用可能な賞品がありません。後でもう一度お試しください。",
