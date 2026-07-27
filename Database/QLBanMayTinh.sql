@@ -2326,6 +2326,21 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'lich_su_tang_diem')
+BEGIN
+    CREATE TABLE lich_su_tang_diem (
+        id             INT           IDENTITY(1,1) PRIMARY KEY,
+        khach_hang_id  INT           NOT NULL,
+        nhan_vien_id   INT           NOT NULL,
+        so_diem        INT           NOT NULL CONSTRAINT CK_lstd_sodiem CHECK (so_diem > 0),
+        ly_do          NVARCHAR(255) NULL,
+        ngay_tao       DATETIME      NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT FK_lstd_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
+        CONSTRAINT FK_lstd_nhan_vien  FOREIGN KEY (nhan_vien_id)  REFERENCES nhan_vien(nhan_vien_id)
+    );
+END
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'cau_hinh_vong_quay')
 BEGIN
     CREATE TABLE cau_hinh_vong_quay (
