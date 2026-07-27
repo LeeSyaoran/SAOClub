@@ -6,8 +6,10 @@ import com.example.backend.entity.PhieuGiamGiaCaNhan;
 import com.example.backend.entity.TaiKhoan;
 import com.example.backend.repository.DmDoiThuongRepository;
 import com.example.backend.repository.KhachHangRepository;
+import com.example.backend.repository.LichSuQuayRepository;
 import com.example.backend.repository.PhieuGiamGiaCaNhanRepository;
 import com.example.backend.repository.TaiKhoanRepository;
+import com.example.backend.request.TangVoucherRequest;
 import com.example.backend.response.PhieuGiamGiaCaNhanResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -29,6 +32,8 @@ public class PhieuGiamGiaCaNhanService {
     private KhachHangRepository khachHangRepository;
     @Autowired
     private TaiKhoanRepository taiKhoanRepository;
+    @Autowired
+    private LichSuQuayRepository lichSuQuayRepository;
 
     private TaiKhoan currentAccount() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -76,12 +81,49 @@ public class PhieuGiamGiaCaNhanService {
         return phieuGiamGiaCaNhanRepository.save(phieu);
     }
 
+    // Admin tặng voucher trực tiếp — không qua đổi điểm, doiThuong=null (giống hệt cách
+    // voucher trúng vòng quay cũng để doiThuong=null, xem VongQuayService.quay()).
+    @Transactional
+    public PhieuGiamGiaCaNhan taoVoucherAdmin(Integer khachHangId, TangVoucherRequest request) {
+        if ("percent".equals(request.getLoai()) && request.getGiaTri().compareTo(BigDecimal.valueOf(100)) > 0)
+            throw new IllegalArgumentException("Voucher giảm theo % không được vượt quá 100%");
+        if (!request.getNgayHetHan().isAfter(LocalDateTime.now()))
+            throw new IllegalArgumentException("Hạn sử dụng phải ở tương lai");
+
+        KhachHang khachHang = khachHangRepository.findById(khachHangId)
+                .orElseThrow(() -> new IllegalArgumentException("Khách hàng không tồn tại với id: " + khachHangId));
+
+        PhieuGiamGiaCaNhan phieu = new PhieuGiamGiaCaNhan();
+        phieu.setKhachHang(khachHang);
+        phieu.setLoai(request.getLoai());
+        phieu.setGiaTri(request.getGiaTri());
+        phieu.setGiaTriToiDa(request.getGiaTriToiDa());
+        phieu.setDaSuDung(false);
+        phieu.setNgayDoi(LocalDateTime.now());
+        phieu.setNgayHetHan(request.getNgayHetHan());
+        phieu.setDonHangToiThieu(request.getDonHangToiThieu());
+        return phieuGiamGiaCaNhanRepository.save(phieu);
+    }
+
+    // Admin xem toàn bộ voucher của 1 khách — khác getCuaToi() (tự phục vụ, suy khách hàng
+    // từ SecurityContextHolder) vì admin cần xem CỦA NGƯỜI KHÁC theo id truyền vào.
+    public List<PhieuGiamGiaCaNhanResponse> getByKhachHangIdForAdmin(Integer khachHangId) {
+        List<Integer> phieuIdTrungThuong = lichSuQuayRepository.findPhieuIdsByKhachHangId(khachHangId);
+        return phieuGiamGiaCaNhanRepository.findByKhachHang_KhachHangId(khachHangId).stream()
+                .map(p -> new PhieuGiamGiaCaNhanResponse(
+                        p.getPhieuId(), p.getMaPhieu(), p.getLoai(), p.getGiaTri(), p.getGiaTriToiDa(),
+                        p.getDaSuDung(), p.getNgayDoi(), p.getNgayHetHan(), p.getDonHangToiThieu(),
+                        p.getDoiThuong() != null || phieuIdTrungThuong.contains(p.getPhieuId())
+                                ? "Khách tự đổi / trúng thưởng" : "Admin tặng"))
+                .toList();
+    }
+
     public List<PhieuGiamGiaCaNhanResponse> getCuaToi() {
         KhachHang khachHang = currentKhachHang();
         return phieuGiamGiaCaNhanRepository.findByKhachHang_KhachHangId(khachHang.getKhachHangId()).stream()
                 .map(p -> new PhieuGiamGiaCaNhanResponse(
                         p.getPhieuId(), p.getMaPhieu(), p.getLoai(), p.getGiaTri(), p.getGiaTriToiDa(),
-                        p.getDaSuDung(), p.getNgayDoi(), p.getNgayHetHan()))
+                        p.getDaSuDung(), p.getNgayDoi(), p.getNgayHetHan(), p.getDonHangToiThieu(), null))
                 .toList();
     }
 }

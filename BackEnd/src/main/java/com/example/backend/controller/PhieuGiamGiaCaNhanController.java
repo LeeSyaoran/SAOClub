@@ -1,8 +1,10 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.PhieuGiamGiaCaNhan;
+import com.example.backend.request.TangVoucherRequest;
 import com.example.backend.response.PhieuGiamGiaCaNhanResponse;
 import com.example.backend.service.PhieuGiamGiaCaNhanService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,5 +31,18 @@ public class PhieuGiamGiaCaNhanController {
     @GetMapping("cua-toi")
     public List<PhieuGiamGiaCaNhanResponse> getCuaToi() {
         return phieuGiamGiaCaNhanService.getCuaToi();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("tang/{khachHangId}")
+    public ResponseEntity<PhieuGiamGiaCaNhan> taoVoucherAdmin(@PathVariable Integer khachHangId,
+                                                                @Valid @RequestBody TangVoucherRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(phieuGiamGiaCaNhanService.taoVoucherAdmin(khachHangId, request));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("khach-hang/{id}")
+    public List<PhieuGiamGiaCaNhanResponse> getByKhachHang(@PathVariable Integer id) {
+        return phieuGiamGiaCaNhanService.getByKhachHangIdForAdmin(id);
     }
 }

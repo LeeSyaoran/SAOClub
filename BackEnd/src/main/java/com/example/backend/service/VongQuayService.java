@@ -142,7 +142,8 @@ public class VongQuayService {
         return new KetQuaQuayResponse("trung", toKhuyenMaiResponse(trung),
                 new PhieuGiamGiaCaNhanResponse(savedPhieu.getPhieuId(), savedPhieu.getMaPhieu(),
                         savedPhieu.getLoai(), savedPhieu.getGiaTri(), savedPhieu.getGiaTriToiDa(),
-                        savedPhieu.getDaSuDung(), savedPhieu.getNgayDoi(), savedPhieu.getNgayHetHan()),
+                        savedPhieu.getDaSuDung(), savedPhieu.getNgayDoi(), savedPhieu.getNgayHetHan(),
+                        savedPhieu.getDonHangToiThieu(), null),
                 khachHang.getDiemTichLuy());
     }
 

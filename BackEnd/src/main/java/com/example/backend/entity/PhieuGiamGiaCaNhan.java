@@ -53,4 +53,9 @@ public class PhieuGiamGiaCaNhan {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "don_hang_id")
     private DonHang donHang;
+
+    // NULL = không yêu cầu đơn tối thiểu. Dùng cho voucher admin tặng trực tiếp lẫn voucher
+    // trúng vòng quay (nếu sau này copy nguyên giá trị từ khuyến mãi gốc).
+    @Column(name = "don_hang_toi_thieu", precision = 18, scale = 0)
+    private BigDecimal donHangToiThieu;
 }

@@ -2326,6 +2326,12 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('phieu_giam_gia_ca_nhan') AND name = 'don_hang_toi_thieu')
+BEGIN
+    ALTER TABLE phieu_giam_gia_ca_nhan ADD don_hang_toi_thieu DECIMAL(18,0) NULL;
+END
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'lich_su_tang_diem')
 BEGIN
     CREATE TABLE lich_su_tang_diem (

@@ -21,4 +21,6 @@ public class PhieuGiamGiaCaNhanResponse {
     private Boolean daSuDung;
     private LocalDateTime ngayDoi;
     private LocalDateTime ngayHetHan;
+    private BigDecimal donHangToiThieu;
+    private String nguon;
 }
