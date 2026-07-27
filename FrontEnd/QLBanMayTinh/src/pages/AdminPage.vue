@@ -999,7 +999,7 @@ onUnmounted(() => {
           {{ t('admin.sidebar.orders') }}
           <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ todayOrdersCount }}</span>
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='customers'}" @click="navigate('customers')">
+        <div class="adm-nav" :class="{active: currentPage==='customers' || currentPage==='customer-detail'}" @click="navigate('customers')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
           {{ t('admin.sidebar.customers') }}
           <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ totalCustomers }}</span>
@@ -1325,7 +1325,7 @@ onUnmounted(() => {
 
         <!-- ── Chi tiet khach hang ── -->
         <section v-show="currentPage === 'customer-detail'">
-          <CustomerDetailPage v-if="selectedCustomerId" :customer-id="selectedCustomerId" @back="currentPage = 'customers'" />
+          <CustomerDetailPage v-if="selectedCustomerId" :key="selectedCustomerId" :customer-id="selectedCustomerId" @back="currentPage = 'customers'" />
         </section>
 
         <!-- ── Kho hang ── -->

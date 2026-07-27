@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
-import { CustomersStore } from "../../stores/customers.js";
+import { CustomersStore, refreshCustomers } from "../../stores/customers.js";
 import { OrdersStore } from "../../stores/orders.js";
 import * as PhieuGiamGiaCaNhanService from "../../Service/PhieuGiamGiaCaNhanService.js";
 import * as KhachHangService from "../../Service/KhachHangService.js";
@@ -23,7 +23,6 @@ const customer = computed(() =>
 const customerOrders = computed(() =>
   OrdersStore.items
     .filter((o) => o.khachHangId === props.customerId)
-    .slice()
     .sort((a, b) => new Date(b.ngayDat) - new Date(a.ngayDat)),
 );
 
@@ -198,7 +197,7 @@ const showGiftVoucherModal = ref(false);
     </div>
 
     <CustomerFormModal ref="customerFormModalRef" v-model="showCustomerModal" />
-    <TangDiemModal v-model="showGiftPointsModal" :customer-id="customerId" @gifted="loadPointHistory" />
+    <TangDiemModal v-model="showGiftPointsModal" :customer-id="customerId" @gifted="() => { loadPointHistory(); refreshCustomers(); }" />
     <TangVoucherModal v-model="showGiftVoucherModal" :customer-id="customerId" @gifted="loadVouchers" />
   </div>
 </template>
