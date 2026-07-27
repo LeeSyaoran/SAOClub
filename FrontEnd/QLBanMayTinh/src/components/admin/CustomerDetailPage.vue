@@ -41,7 +41,8 @@ const loadVouchers = async () => {
   vouchersLoading.value = true;
   try {
     vouchers.value = await PhieuGiamGiaCaNhanService.getByKhachHang(props.customerId);
-  } catch {
+  } catch (e) {
+    console.error('Không tải được danh sách voucher:', e);
     vouchers.value = [];
   } finally {
     vouchersLoading.value = false;
@@ -52,7 +53,8 @@ const loadPointHistory = async () => {
   pointHistoryLoading.value = true;
   try {
     pointHistory.value = await KhachHangService.getLichSuDiem(props.customerId);
-  } catch {
+  } catch (e) {
+    console.error('Không tải được lịch sử tặng điểm:', e);
     pointHistory.value = [];
   } finally {
     pointHistoryLoading.value = false;

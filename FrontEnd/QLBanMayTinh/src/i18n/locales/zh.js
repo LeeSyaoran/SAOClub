@@ -426,6 +426,7 @@ export default {
       catalogEmpty: "暂无可兑换的奖励。",
       myVouchersHeading: "已兑换的优惠券",
       expiresOn: "有效期至：{date}",
+      minOrder: "最低订单：{amount}",
       used: "已使用",
       available: "可使用",
       myVouchersEmpty: "您还没有兑换任何优惠券。",

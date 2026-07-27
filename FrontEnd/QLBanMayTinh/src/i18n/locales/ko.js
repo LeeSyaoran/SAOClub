@@ -426,6 +426,7 @@ export default {
       catalogEmpty: "교환 가능한 보상이 아직 없습니다.",
       myVouchersHeading: "교환한 바우처",
       expiresOn: "유효기간: {date}",
+      minOrder: "최소 주문 금액: {amount}",
       used: "사용됨",
       available: "사용 가능",
       myVouchersEmpty: "아직 교환한 바우처가 없습니다.",

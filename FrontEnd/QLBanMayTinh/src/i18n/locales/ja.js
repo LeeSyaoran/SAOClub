@@ -426,6 +426,7 @@ export default {
       catalogEmpty: "現在交換可能な特典はありません。",
       myVouchersHeading: "交換済みクーポン",
       expiresOn: "有効期限：{date}",
+      minOrder: "最低注文金額：{amount}",
       used: "使用済み",
       available: "利用可能",
       myVouchersEmpty: "まだクーポンを交換していません。",

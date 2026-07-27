@@ -426,6 +426,7 @@ export default {
       catalogEmpty: "No rewards available to redeem yet.",
       myVouchersHeading: "Redeemed vouchers",
       expiresOn: "Expires: {date}",
+      minOrder: "Minimum order: {amount}",
       used: "Used",
       available: "Available",
       myVouchersEmpty: "You haven't redeemed any vouchers yet.",

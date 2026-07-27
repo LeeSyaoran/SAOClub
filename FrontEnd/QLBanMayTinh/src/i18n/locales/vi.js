@@ -426,6 +426,7 @@ export default {
       catalogEmpty: "Chưa có phần thưởng nào để đổi.",
       myVouchersHeading: "Voucher đã đổi",
       expiresOn: "Hạn dùng: {date}",
+      minOrder: "Đơn tối thiểu: {amount}",
       used: "Đã dùng",
       available: "Còn hiệu lực",
       myVouchersEmpty: "Bạn chưa đổi voucher nào.",

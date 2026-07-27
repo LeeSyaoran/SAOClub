@@ -583,6 +583,7 @@ onUnmounted(() => { if (orderSse) orderSse.close(); });
               <div>
                 <div class="fw-bold" style="font-size:12.5px; color:var(--text-primary);">{{ v.maPhieu }}</div>
                 <div style="font-size:11px; color:var(--text-secondary);">{{ t('account.rewards.expiresOn', { date: formatDate(v.ngayHetHan) }) }}</div>
+                <div v-if="v.donHangToiThieu" style="font-size:11px; color:var(--text-secondary);">{{ t('account.rewards.minOrder', { amount: formatPrice(v.donHangToiThieu) }) }}</div>
               </div>
               <span class="badge px-2 py-1 rounded-pill fw-semibold"
                     :style="v.daSuDung ? 'background:rgba(107,114,128,0.15);color:#9ca3af;' : 'background:rgba(34,197,94,0.15);color:#22c55e;'">

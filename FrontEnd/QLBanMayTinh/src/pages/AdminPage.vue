@@ -1325,7 +1325,7 @@ onUnmounted(() => {
 
         <!-- ── Chi tiet khach hang ── -->
         <section v-show="currentPage === 'customer-detail'">
-          <CustomerDetailPage v-if="selectedCustomerId" :key="selectedCustomerId" :customer-id="selectedCustomerId" @back="currentPage = 'customers'" />
+          <CustomerDetailPage v-if="selectedCustomerId" :key="selectedCustomerId" :customer-id="selectedCustomerId" @back="() => { currentPage = 'customers'; selectedCustomerId = null; }" />
         </section>
 
         <!-- ── Kho hang ── -->

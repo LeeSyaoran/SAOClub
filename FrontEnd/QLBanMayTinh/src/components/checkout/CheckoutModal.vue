@@ -450,8 +450,8 @@ const eligiblePromos = computed(() => {
     .sort((a, b) => b.discount - a.discount);
 });
 
-// Voucher cá nhân còn dùng được — chưa dùng, chưa hết hạn. Không lọc theo donHangToiThieu
-// (voucher cá nhân không có trường này, khác khuyen_mai).
+// Voucher cá nhân còn dùng được — chưa dùng, chưa hết hạn, và đạt đơn tối thiểu (nếu có) —
+// lọc qua calcDiscountFor() ở trên (discount=0 khi chưa đạt đơn tối thiểu → bị loại).
 const eligibleVouchers = computed(() => {
   const now = new Date();
   return myVouchers.value
