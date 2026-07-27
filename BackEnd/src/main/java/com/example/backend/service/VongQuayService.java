@@ -125,6 +125,11 @@ public class VongQuayService {
         phieu.setGiaTri(trung.getGiaTri().setScale(0, RoundingMode.HALF_UP));
         phieu.setGiaTriToiDa(trung.getGiaTriToiDa() == null ? null
                 : trung.getGiaTriToiDa().setScale(0, RoundingMode.HALF_UP));
+        // Giữ nguyên đơn tối thiểu của khuyến mãi gốc — CheckoutModal.vue tính giảm giá cho
+        // voucher cá nhân bằng đúng hàm calcDiscountFor() dùng cho mã khuyến mãi công khai,
+        // nên chỉ cần field này có giá trị là điều kiện đơn tối thiểu tự động được áp dụng.
+        phieu.setDonHangToiThieu(trung.getDonHangToiThieu() == null ? null
+                : trung.getDonHangToiThieu().setScale(0, RoundingMode.HALF_UP));
         phieu.setDaSuDung(false);
         phieu.setNgayDoi(LocalDateTime.now());
         phieu.setNgayHetHan(LocalDateTime.now().plusDays(30));

@@ -2319,6 +2319,7 @@ BEGIN
         ngay_doi       DATETIME       NOT NULL DEFAULT GETDATE(),
         ngay_het_han   DATETIME       NOT NULL,
         don_hang_id    INT            NULL,
+        don_hang_toi_thieu DECIMAL(18,0) NULL,
         CONSTRAINT FK_pggcn_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
         CONSTRAINT FK_pggcn_doi_thuong FOREIGN KEY (doi_thuong_id) REFERENCES dm_doi_thuong(doi_thuong_id),
         CONSTRAINT FK_pggcn_don_hang   FOREIGN KEY (don_hang_id)   REFERENCES don_hang(don_hang_id)
@@ -2326,6 +2327,9 @@ BEGIN
 END
 GO
 
+-- Voucher cá nhân trúng từ vòng quay giữ nguyên đơn tối thiểu của khuyến mãi gốc (khách vẫn
+-- phải đạt đơn tối thiểu mới áp được, y hệt mã khuyến mãi công khai) — cột thêm sau, ALTER
+-- idempotent cho DB đã có sẵn bảng từ trước.
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('phieu_giam_gia_ca_nhan') AND name = 'don_hang_toi_thieu')
 BEGIN
     ALTER TABLE phieu_giam_gia_ca_nhan ADD don_hang_toi_thieu DECIMAL(18,0) NULL;

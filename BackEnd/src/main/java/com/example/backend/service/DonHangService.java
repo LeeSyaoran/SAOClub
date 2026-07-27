@@ -9,6 +9,7 @@ import com.example.backend.entity.ThanhToan;
 import com.example.backend.entity.LichSuTonKho;
 import com.example.backend.entity.PhieuTraHang;
 import com.example.backend.entity.PhieuBaoHanh;
+import com.example.backend.entity.KhuyenMai;
 import com.example.backend.entity.PhieuGiamGiaCaNhan;
 import com.example.backend.entity.TaiKhoan;
 import com.example.backend.repository.*;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -98,41 +100,57 @@ public class DonHangService {
     public DonHang create(DonHangRequest request) {
         DonHang entity = new DonHang();
         // BeanUtils copies: maDonHang, diaChiGiaoHangText, nguoiNhan, sdtNguoiNhan,
-        //                   tongTien, giamGia, phiVanChuyen, thanhTien, ngayDat,
+        //                   tongTien, phiVanChuyen, thanhTien, ngayDat,
         //                   ngayGiaoDuKien, ngayGiaoThucTe, trangThaiDonHang,
         //                   trangThaiThanhToan, kenhBan, ghiChu
-        // Bỏ qua: khachHangId, nhanVienId, khuyenMaiId, diaChiGiaoHangId (khác tên với entity)
+        // Bỏ qua: khachHangId, nhanVienId, khuyenMaiId, diaChiGiaoHangId (khác tên với entity),
+        //         giamGia (không tin số client gửi — luôn tự tính lại bên dưới, xem tinhGiamGia*()).
         BeanUtils.copyProperties(request, entity,
-                "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId");
+                "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId", "giamGia");
 
-        entity.setKhachHang(khachHangRepository.getReferenceById(resolveKhachHangIdForCreate(request.getKhachHangId())));
+        Integer khachHangId = resolveKhachHangIdForCreate(request.getKhachHangId());
+        entity.setKhachHang(khachHangRepository.getReferenceById(khachHangId));
         // nhanVienId nullable: nhân viên không bắt buộc (đơn hàng online)
         if (request.getNhanVienId() != null)
             entity.setNhanVien(nhanVienRepository.getReferenceById(request.getNhanVienId()));
-        if (request.getKhuyenMaiId() != null)
-            entity.setKhuyenMai(khuyenMaiRepository.getReferenceById(request.getKhuyenMaiId()));
         if (request.getDiaChiGiaoHangId() != null)
             entity.setDiaChiGiaoHang(diaChiGiaoHangRepository.getReferenceById(request.getDiaChiGiaoHangId()));
 
+        // Chặn dùng đồng thời mã khuyến mãi công khai + voucher cá nhân — giữ đúng quy tắc
+        // "chỉ 1 trong 2" đã chốt ở checkout, không chỉ dựa vào UI (client có thể gửi request
+        // tay kèm cả 2 id).
+        if (request.getKhuyenMaiId() != null && request.getPhieuGiamGiaCaNhanId() != null)
+            throw new IllegalArgumentException("Không thể dùng đồng thời mã khuyến mãi và voucher cá nhân");
+
+        // Không tin điều kiện (còn hạn/còn lượt/đạt đơn tối thiểu) hay số tiền giảm giá do
+        // client gửi lên — client có thể bỏ qua UI, gọi thẳng API với 1 mã đã hết hạn/hết lượt
+        // hoặc 1 số giamGia tự chọn. Validate lại toàn bộ và tự tính giamGia ở đây.
+        PhieuGiamGiaCaNhan phieuDangDung = null;
+        if (request.getKhuyenMaiId() != null) {
+            KhuyenMai khuyenMai = khuyenMaiRepository.findById(request.getKhuyenMaiId())
+                    .orElseThrow(() -> new IllegalArgumentException("Mã khuyến mãi không tồn tại"));
+            entity.setKhuyenMai(khuyenMai);
+            entity.setGiamGia(tinhGiamGiaKhuyenMai(khuyenMai, request.getTongTien()));
+        } else if (request.getPhieuGiamGiaCaNhanId() != null) {
+            phieuDangDung = phieuGiamGiaCaNhanRepository.findWithLockByPhieuId(request.getPhieuGiamGiaCaNhanId())
+                    .orElseThrow(() -> new IllegalArgumentException("Voucher không tồn tại"));
+            if (!phieuDangDung.getKhachHang().getKhachHangId().equals(khachHangId))
+                throw new IllegalArgumentException("Voucher không thuộc về khách hàng này");
+            if (Boolean.TRUE.equals(phieuDangDung.getDaSuDung()))
+                throw new IllegalArgumentException("Voucher đã được sử dụng");
+            if (LocalDateTime.now().isAfter(phieuDangDung.getNgayHetHan()))
+                throw new IllegalArgumentException("Voucher đã hết hạn");
+            entity.setGiamGia(tinhGiamGiaVoucher(phieuDangDung, request.getTongTien()));
+        } else {
+            entity.setGiamGia(BigDecimal.ZERO);
+        }
+
         DonHang saved = donHangRepository.save(entity);
 
-        if (request.getPhieuGiamGiaCaNhanId() != null) {
-            // Chặn dùng đồng thời mã khuyến mãi công khai + voucher cá nhân — giữ đúng quy tắc
-            // "chỉ 1 trong 2" đã chốt ở checkout, không chỉ dựa vào UI (client có thể gửi request
-            // tay kèm cả 2 id).
-            if (request.getKhuyenMaiId() != null)
-                throw new IllegalArgumentException("Không thể dùng đồng thời mã khuyến mãi và voucher cá nhân");
-            PhieuGiamGiaCaNhan phieu = phieuGiamGiaCaNhanRepository.findWithLockByPhieuId(request.getPhieuGiamGiaCaNhanId())
-                    .orElseThrow(() -> new IllegalArgumentException("Voucher không tồn tại"));
-            if (!phieu.getKhachHang().getKhachHangId().equals(saved.getKhachHang().getKhachHangId()))
-                throw new IllegalArgumentException("Voucher không thuộc về khách hàng này");
-            if (Boolean.TRUE.equals(phieu.getDaSuDung()))
-                throw new IllegalArgumentException("Voucher đã được sử dụng");
-            if (LocalDateTime.now().isAfter(phieu.getNgayHetHan()))
-                throw new IllegalArgumentException("Voucher đã hết hạn");
-            phieu.setDaSuDung(true);
-            phieu.setDonHang(saved);
-            phieuGiamGiaCaNhanRepository.save(phieu);
+        if (phieuDangDung != null) {
+            phieuDangDung.setDaSuDung(true);
+            phieuDangDung.setDonHang(saved);
+            phieuGiamGiaCaNhanRepository.save(phieuDangDung);
         }
 
         sseService.notifyNewOrder(saved.getId());
@@ -259,6 +277,44 @@ public class DonHangService {
         if (tk.getKhachHang() == null)
             throw new AccessDeniedException("Tài khoản chưa liên kết khách hàng");
         return tk.getKhachHang().getKhachHangId();
+    }
+
+    // Validate + tính giảm giá cho MÃ KHUYẾN MÃI công khai — dùng ở create() thay vì tin số
+    // giamGia client gửi lên, vì client có thể gọi thẳng API bỏ qua UI với 1 mã đã hết hạn/
+    // hết lượt/chưa đạt đơn tối thiểu.
+    private BigDecimal tinhGiamGiaKhuyenMai(KhuyenMai khuyenMai, BigDecimal tongTien) {
+        if (!"active".equals(khuyenMai.getTrangThai()))
+            throw new IllegalArgumentException("Mã khuyến mãi không còn hiệu lực");
+        LocalDateTime now = LocalDateTime.now();
+        if (khuyenMai.getNgayBatDau() != null && now.isBefore(khuyenMai.getNgayBatDau()))
+            throw new IllegalArgumentException("Mã khuyến mãi chưa đến thời gian áp dụng");
+        if (khuyenMai.getNgayKetThuc() != null && now.isAfter(khuyenMai.getNgayKetThuc()))
+            throw new IllegalArgumentException("Mã khuyến mãi đã hết hạn");
+        if (khuyenMai.getSoLuongToiDa() != null
+                && (khuyenMai.getSoLanDaDung() == null ? 0 : khuyenMai.getSoLanDaDung()) >= khuyenMai.getSoLuongToiDa())
+            throw new IllegalArgumentException("Mã khuyến mãi đã hết lượt sử dụng");
+        if (khuyenMai.getDonHangToiThieu() != null && tongTien.compareTo(khuyenMai.getDonHangToiThieu()) < 0)
+            throw new IllegalArgumentException("Đơn hàng chưa đạt giá trị tối thiểu để áp dụng mã này");
+        return tinhGiamGia(khuyenMai.getLoai(), khuyenMai.getGiaTri(), khuyenMai.getGiaTriToiDa(), tongTien);
+    }
+
+    // Validate + tính giảm giá cho VOUCHER CÁ NHÂN — cùng lý do với tinhGiamGiaKhuyenMai().
+    // Điều kiện sở hữu/đã dùng/hết hạn được kiểm tra riêng ở create() (cần lock + so khách
+    // hàng), ở đây chỉ còn phần chung: đơn tối thiểu + tính số tiền giảm.
+    private BigDecimal tinhGiamGiaVoucher(PhieuGiamGiaCaNhan phieu, BigDecimal tongTien) {
+        if (phieu.getDonHangToiThieu() != null && tongTien.compareTo(phieu.getDonHangToiThieu()) < 0)
+            throw new IllegalArgumentException("Đơn hàng chưa đạt giá trị tối thiểu để dùng voucher này");
+        return tinhGiamGia(phieu.getLoai(), phieu.getGiaTri(), phieu.getGiaTriToiDa(), tongTien);
+    }
+
+    // Công thức giảm giá dùng chung cho cả mã khuyến mãi công khai lẫn voucher cá nhân — y hệt
+    // calcDiscountFor() ở CheckoutModal.vue, chỉ khác chạy phía server để không tin số client gửi.
+    private BigDecimal tinhGiamGia(String loai, BigDecimal giaTri, BigDecimal giaTriToiDa, BigDecimal tongTien) {
+        if ("percent".equals(loai)) {
+            BigDecimal giam = tongTien.multiply(giaTri).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+            return giaTriToiDa != null ? giam.min(giaTriToiDa) : giam;
+        }
+        return giaTri != null ? giaTri : BigDecimal.ZERO;
     }
 
     // Khách hàng đăng nhập không được tự ý truyền khachHangId của người khác trên query param

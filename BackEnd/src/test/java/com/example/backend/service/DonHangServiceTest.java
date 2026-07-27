@@ -288,6 +288,142 @@ class DonHangServiceTest {
         verify(phieuGiamGiaCaNhanRepository).save(phieu);
     }
 
+    // Không tin giamGia client gửi lên khi KHÔNG có mã/voucher nào — nếu không, ai đó gọi
+    // thẳng API (bỏ qua UI) có thể tự đặt giảm giá tuỳ ý mà chẳng cần mã gì cả.
+    @Test
+    void create_khongCoMaHayVoucher_giamGiaLuonBiEpVeKhong() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+        when(khachHangRepository.getReferenceById(1)).thenReturn(new com.example.backend.entity.KhachHang());
+        when(donHangRepository.save(any(DonHang.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
+        req.setKhachHangId(1);
+        req.setTrangThaiDonHang("pending");
+        req.setTrangThaiThanhToan("unpaid");
+        req.setNguoiNhan("A");
+        req.setSdtNguoiNhan("0900000000");
+        req.setTongTien(java.math.BigDecimal.valueOf(1_000_000));
+        req.setGiamGia(java.math.BigDecimal.valueOf(999_999)); // bịa, không gắn mã/voucher nào
+        req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
+        req.setNgayDat(java.time.LocalDateTime.now());
+
+        DonHang saved = service.create(req);
+
+        assertThat(saved.getGiamGia()).isEqualByComparingTo(java.math.BigDecimal.ZERO);
+    }
+
+    // Mã khuyến mãi hết hạn vẫn có thể còn tồn tại trong DB (chỉ ẩn khỏi danh sách gợi ý ở
+    // UI) — request thẳng API với đúng id của nó phải bị chặn ở server, không chỉ ở UI.
+    @Test
+    void create_khuyenMaiHetHan_biTuChoi() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+        when(khachHangRepository.getReferenceById(1)).thenReturn(new com.example.backend.entity.KhachHang());
+
+        com.example.backend.entity.KhuyenMai km = new com.example.backend.entity.KhuyenMai();
+        km.setKhuyenMaiId(3);
+        km.setTrangThai("active");
+        km.setLoai("percent");
+        km.setGiaTri(java.math.BigDecimal.TEN);
+        km.setNgayBatDau(java.time.LocalDateTime.now().minusDays(30));
+        km.setNgayKetThuc(java.time.LocalDateTime.now().minusDays(1)); // đã hết hạn hôm qua
+        when(khuyenMaiRepository.findById(3)).thenReturn(Optional.of(km));
+
+        com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
+        req.setKhachHangId(1);
+        req.setKhuyenMaiId(3);
+        req.setTrangThaiDonHang("pending");
+        req.setTrangThaiThanhToan("unpaid");
+        req.setNguoiNhan("A");
+        req.setSdtNguoiNhan("0900000000");
+        req.setTongTien(java.math.BigDecimal.valueOf(1_000_000));
+        req.setGiamGia(java.math.BigDecimal.ZERO);
+        req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
+        req.setNgayDat(java.time.LocalDateTime.now());
+
+        assertThatThrownBy(() -> service.create(req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("hết hạn");
+
+        verify(donHangRepository, never()).save(any());
+    }
+
+    // Voucher cá nhân trúng từ vòng quay giữ nguyên đơn tối thiểu của khuyến mãi gốc — phải
+    // bị chặn ở server nếu đơn chưa đạt, không chỉ ẩn khỏi danh sách chọn ở checkout.
+    @Test
+    void create_voucherChuaDatDonToiThieu_biTuChoi() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+
+        com.example.backend.entity.KhachHang kh = new com.example.backend.entity.KhachHang();
+        kh.setKhachHangId(1);
+        when(khachHangRepository.getReferenceById(1)).thenReturn(kh);
+
+        com.example.backend.entity.PhieuGiamGiaCaNhan phieu = new com.example.backend.entity.PhieuGiamGiaCaNhan();
+        phieu.setPhieuId(7);
+        phieu.setKhachHang(kh);
+        phieu.setDaSuDung(false);
+        phieu.setNgayHetHan(java.time.LocalDateTime.now().plusDays(10));
+        phieu.setLoai("fixed");
+        phieu.setGiaTri(java.math.BigDecimal.valueOf(2_000_000));
+        phieu.setDonHangToiThieu(java.math.BigDecimal.valueOf(10_000_000));
+        when(phieuGiamGiaCaNhanRepository.findWithLockByPhieuId(7)).thenReturn(Optional.of(phieu));
+
+        com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
+        req.setKhachHangId(1);
+        req.setPhieuGiamGiaCaNhanId(7);
+        req.setTrangThaiDonHang("pending");
+        req.setTrangThaiThanhToan("unpaid");
+        req.setNguoiNhan("A");
+        req.setSdtNguoiNhan("0900000000");
+        req.setTongTien(java.math.BigDecimal.valueOf(100_000)); // dưới xa đơn tối thiểu 10tr
+        req.setGiamGia(java.math.BigDecimal.ZERO);
+        req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
+        req.setNgayDat(java.time.LocalDateTime.now());
+
+        assertThatThrownBy(() -> service.create(req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("tối thiểu");
+
+        verify(donHangRepository, never()).save(any());
+    }
+
+    // Client có thể gửi giamGia sai (cố tình hoặc do bug UI) — server phải tự tính lại từ
+    // chính mã khuyến mãi + tongTien thật, bỏ qua hoàn toàn số client gửi.
+    @Test
+    void create_khuyenMaiHopLe_tuTinhLaiGiamGiaKhongTinSoClientGui() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+        when(khachHangRepository.getReferenceById(1)).thenReturn(new com.example.backend.entity.KhachHang());
+        when(donHangRepository.save(any(DonHang.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        com.example.backend.entity.KhuyenMai km = new com.example.backend.entity.KhuyenMai();
+        km.setKhuyenMaiId(3);
+        km.setTrangThai("active");
+        km.setLoai("percent");
+        km.setGiaTri(java.math.BigDecimal.TEN); // giảm 10%
+        km.setNgayBatDau(java.time.LocalDateTime.now().minusDays(1));
+        km.setNgayKetThuc(java.time.LocalDateTime.now().plusDays(1));
+        when(khuyenMaiRepository.findById(3)).thenReturn(Optional.of(km));
+
+        com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
+        req.setKhachHangId(1);
+        req.setKhuyenMaiId(3);
+        req.setTrangThaiDonHang("pending");
+        req.setTrangThaiThanhToan("unpaid");
+        req.setNguoiNhan("A");
+        req.setSdtNguoiNhan("0900000000");
+        req.setTongTien(java.math.BigDecimal.valueOf(1_000_000)); // 10% = 100.000
+        req.setGiamGia(java.math.BigDecimal.valueOf(999_999));    // client gửi bừa, phải bị bỏ qua
+        req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
+        req.setNgayDat(java.time.LocalDateTime.now());
+
+        DonHang saved = service.create(req);
+
+        assertThat(saved.getGiamGia()).isEqualByComparingTo(java.math.BigDecimal.valueOf(100_000));
+    }
+
     @Test
     void create_coCaKhuyenMaiVaPhieuGiamGiaCaNhan_biChan() {
         loginAs("khach1");
@@ -296,15 +432,6 @@ class DonHangServiceTest {
         com.example.backend.entity.KhachHang kh = new com.example.backend.entity.KhachHang();
         kh.setKhachHangId(1);
         when(khachHangRepository.getReferenceById(1)).thenReturn(kh);
-
-        com.example.backend.entity.KhuyenMai km = new com.example.backend.entity.KhuyenMai();
-        km.setKhuyenMaiId(3);
-        when(khuyenMaiRepository.getReferenceById(3)).thenReturn(km);
-
-        DonHang saved = new DonHang();
-        saved.setId(10);
-        saved.setKhachHang(kh);
-        when(donHangRepository.save(any(DonHang.class))).thenReturn(saved);
 
         com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
         req.setKhachHangId(1);
@@ -319,10 +446,14 @@ class DonHangServiceTest {
         req.setNgayDat(java.time.LocalDateTime.now());
         req.setPhieuGiamGiaCaNhanId(7);
 
+        // Kiểm tra "chỉ 1 trong 2" giờ chạy TRƯỚC khi đụng tới khuyenMaiRepository/
+        // donHangRepository.save() (xem create()) — không cần stub 2 cái đó nữa, request có
+        // cả 2 id là bị chặn ngay, chưa kịp lookup hay insert gì.
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("đồng thời");
 
+        verify(donHangRepository, never()).save(any());
         verify(phieuGiamGiaCaNhanRepository, never()).findWithLockByPhieuId(any());
         verify(phieuGiamGiaCaNhanRepository, never()).save(any());
     }

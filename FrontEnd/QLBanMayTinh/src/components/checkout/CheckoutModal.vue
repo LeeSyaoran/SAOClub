@@ -148,31 +148,13 @@
             <AddressPicker v-model="checkoutForm.diaChiGiaoHangText" :placeholder="t('checkout.addressPlaceholder')" />
           </div>
 
-          <!-- Mã khuyến mãi -->
+          <!-- Mã khuyến mãi — chỉ nhập tay, KHÔNG liệt kê sẵn danh sách mã công khai để khách
+               chọn (mã này do admin/nhân viên chủ động thông báo cho khách biết, không phải
+               thứ tự động lộ ra ở checkout — khác voucher cá nhân bên dưới, vốn thuộc sở hữu
+               riêng của khách nên vẫn liệt kê cho chọn trực tiếp). -->
           <div>
             <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.promoHeading') }}</div>
 
-            <!-- Mã đang áp dụng được cho đơn này, giảm nhiều nhất xếp trước -->
-            <div v-if="eligiblePromos.length" class="d-flex flex-column gap-2 mb-2">
-              <div v-for="(p, idx) in eligiblePromos" :key="p.khuyenMaiId"
-                   class="d-flex align-items-center justify-content-between p-2 rounded-3"
-                   style="cursor:pointer;border:1px solid;"
-                   :style="appliedPromo?.khuyenMaiId===p.khuyenMaiId ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
-                   @click="selectPromo(p)">
-                <div class="min-width-0">
-                  <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold small" style="color:var(--text-heading);">{{ p.maKhuyenMai }}</span>
-                    <span v-if="idx===0" class="badge" style="background:rgba(250,204,21,0.15);color:#facc15;font-size:0.63rem;">🔥 {{ t('checkout.bestPromo') }}</span>
-                  </div>
-                  <div class="text-truncate" style="font-size:11px;color:var(--text-secondary);">{{ p.tenKhuyenMai }}</div>
-                </div>
-                <div class="text-warning fw-bold small flex-shrink-0 ms-2">− {{ formatPrice(p.discount) }}</div>
-              </div>
-            </div>
-
-            <div v-if="eligiblePromos.length === 0" class="small px-1 mb-2" style="color:var(--text-secondary);">{{ t('checkout.noPromo') }}</div>
-
-            <!-- Nhập tay mã không nằm trong danh sách gợi ý ở trên (vd mã riêng không công khai) -->
             <div class="d-flex gap-2">
               <input v-model="checkoutForm.maKhuyenMai" class="form-control form-control-sm"
                      style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
@@ -420,8 +402,7 @@ const isLoggedInCustomer = computed(() => AuthStore.user?.role === 'khach_hang' 
 // Phí vận chuyển: miễn phí nếu đơn từ 300k
 const phiVanChuyen = computed(() => props.cartTotal >= 300000 ? 0 : 30000);
 
-// Số tiền 1 mã khuyến mãi cụ thể giảm được cho đơn hiện tại — dùng chung cho cả mã đang
-// áp dụng (checkoutGiamGia) lẫn để xếp hạng "giảm nhiều nhất" trong eligiblePromos.
+// Số tiền 1 mã khuyến mãi/voucher cụ thể giảm được cho đơn hiện tại.
 const calcDiscountFor = (p) => {
   if (!p) return 0;
   if (p.donHangToiThieu && props.cartTotal < Number(p.donHangToiThieu)) return 0;
@@ -450,8 +431,9 @@ const eligiblePromos = computed(() => {
     .sort((a, b) => b.discount - a.discount);
 });
 
-// Voucher cá nhân còn dùng được — chưa dùng, chưa hết hạn, và đạt đơn tối thiểu (nếu có) —
-// lọc qua calcDiscountFor() ở trên (discount=0 khi chưa đạt đơn tối thiểu → bị loại).
+// Voucher cá nhân còn dùng được — chưa dùng, chưa hết hạn. calcDiscountFor() đã tự áp điều
+// kiện donHangToiThieu nếu voucher có (vd trúng từ vòng quay giữ nguyên đơn tối thiểu của
+// khuyến mãi gốc, hoặc admin tặng kèm điều kiện) — không cần logic lọc riêng ở đây.
 const eligibleVouchers = computed(() => {
   const now = new Date();
   return myVouchers.value
@@ -548,16 +530,22 @@ const lookupCustomer = async () => {
   }
 };
 
-// Kiểm tra và áp dụng mã khuyến mãi
+// Kiểm tra và áp dụng mã khuyến mãi — không còn danh sách gợi ý để bấm chọn (mã công khai
+// giờ chỉ dùng được khi khách tự biết và gõ tay), nên hàm này phải tự kiểm tra đủ điều kiện
+// (active, còn hạn, chưa hết lượt) y hệt bộ lọc trước đây dùng để hiện danh sách, nếu không
+// gõ đúng 1 mã đã hết hạn/hết lượt vẫn sẽ "áp dụng thành công".
 const applyPromo = () => {
   const code = checkoutForm.maKhuyenMai.trim().toUpperCase();
   if (!code) { appliedPromo.value = null; promoMsg.value = ''; return; }
-  const p = allPromos.value.find(
-    (x) => x.maKhuyenMai?.toUpperCase() === code && x.trangThai === 'active'
-  );
+  const now = new Date();
+  const p = allPromos.value.find((x) => x.maKhuyenMai?.toUpperCase() === code
+    && x.trangThai === 'active'
+    && (!x.ngayBatDau || new Date(x.ngayBatDau) <= now)
+    && (!x.ngayKetThuc || new Date(x.ngayKetThuc) > now)
+    && (!x.soLuongToiDa || (x.soLanDaDung ?? 0) < x.soLuongToiDa));
   if (p) {
-    // Cùng quy tắc "chỉ 1 trong 2" như selectPromo() — backend cũng chặn dùng đồng thời
-    // mã khuyến mãi công khai + voucher cá nhân, gõ tay mã mới không phải ngoại lệ.
+    // Chặn dùng đồng thời mã khuyến mãi công khai + voucher cá nhân — backend cũng chặn
+    // (DonHangService.create()), gõ tay mã mới không phải ngoại lệ.
     appliedVoucher.value = null;
     appliedPromo.value = p;
     promoMsg.value     = t('checkout.promoSuccess', { name: p.tenKhuyenMai });
@@ -565,19 +553,6 @@ const applyPromo = () => {
     appliedPromo.value = null;
     promoMsg.value     = t('checkout.promoInvalid');
   }
-};
-
-// Chọn thẳng 1 mã trong danh sách gợi ý — bấm lần nữa vào mã đang áp dụng để bỏ chọn.
-const selectPromo = (p) => {
-  appliedVoucher.value = null;
-  if (appliedPromo.value?.khuyenMaiId === p.khuyenMaiId) {
-    checkoutForm.maKhuyenMai = '';
-    appliedPromo.value = null;
-    promoMsg.value = '';
-    return;
-  }
-  checkoutForm.maKhuyenMai = p.maKhuyenMai;
-  applyPromo();
 };
 
 // Kiểm tra thông tin bước 1 trước khi sang bước thanh toán — chặn sớm thay vì để

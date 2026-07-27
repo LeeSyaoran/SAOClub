@@ -158,6 +158,9 @@ const onSpin = async () => {
                 : t('wheel.winFixed', { value: formatPrice(lastResult.khuyenMai.giaTri) }) }}
           </p>
           <div class="small" style="color:var(--text-secondary);">{{ t('wheel.winCode', { code: lastResult.phieuGiamGia.maPhieu }) }}</div>
+          <div v-if="lastResult.khuyenMai.donHangToiThieu" class="small mt-1" style="color:var(--text-secondary);">
+            {{ t('wheel.winMinOrder', { value: formatPrice(lastResult.khuyenMai.donHangToiThieu) }) }}
+          </div>
         </template>
         <template v-else>
           <div style="font-size:2.4rem;">🍀</div>
