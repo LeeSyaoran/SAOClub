@@ -23,3 +23,9 @@ export const findByPhone = (soDienThoai) =>
 // Tạo khách vãng lai lúc checkout (không mật khẩu) — khác save() (POST /api/khach-hang,
 // chỉ nhân viên/admin gọi được) và register() (bắt buộc username/password).
 export const createGuest = (body) => post('/api/khach-hang/khach-vang-lai', body);
+
+// Admin tặng điểm cho 1 khách hàng — body: { soDiem, lyDo }
+export const tangDiem = (id, body) => post(`/api/khach-hang/${id}/tang-diem`, body);
+
+// Admin xem lịch sử tặng điểm của 1 khách hàng
+export const getLichSuDiem = (id) => get(`/api/khach-hang/${id}/lich-su-diem`);
