@@ -11,6 +11,7 @@ import com.example.backend.repository.LichSuQuayRepository;
 import com.example.backend.repository.PhieuGiamGiaCaNhanRepository;
 import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.request.TangVoucherRequest;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ class PhieuGiamGiaCaNhanServiceTest {
     @Mock private KhachHangRepository khachHangRepository;
     @Mock private TaiKhoanRepository taiKhoanRepository;
     @Mock private LichSuQuayRepository lichSuQuayRepository;
+    @Mock private EntityManager entityManager;
 
     @InjectMocks
     private PhieuGiamGiaCaNhanService service;
@@ -119,7 +121,7 @@ class PhieuGiamGiaCaNhanServiceTest {
 
         TangVoucherRequest request = new TangVoucherRequest(
                 "percent", BigDecimal.valueOf(10), BigDecimal.valueOf(500000),
-                LocalDateTime.now().plusDays(30), null);
+                LocalDateTime.now().plusDays(30), BigDecimal.valueOf(200000));
 
         PhieuGiamGiaCaNhan result = service.taoVoucherAdmin(5, request);
 
@@ -127,6 +129,8 @@ class PhieuGiamGiaCaNhanServiceTest {
         assertThat(result.getDoiThuong()).isNull();
         assertThat(result.getDaSuDung()).isFalse();
         assertThat(result.getLoai()).isEqualTo("percent");
+        assertThat(result.getDonHangToiThieu()).isEqualByComparingTo(BigDecimal.valueOf(200000));
+        verify(entityManager).refresh(result);
     }
 
     @Test
@@ -177,5 +181,27 @@ class PhieuGiamGiaCaNhanServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getNguon()).isEqualTo("Khách tự đổi / trúng thưởng");
         assertThat(result.get(1).getNguon()).isEqualTo("Admin tặng");
+    }
+
+    @Test
+    void getByKhachHangIdForAdmin_trungVongQuay_ganNhanDaDoi() {
+        // Không có doiThuong (không tự đổi điểm) nhưng phieuId khớp lịch sử vòng quay
+        // → vẫn phải gắn nhãn "Khách tự đổi / trúng thưởng", không phải "Admin tặng".
+        PhieuGiamGiaCaNhan trungVongQuay = new PhieuGiamGiaCaNhan();
+        trungVongQuay.setPhieuId(3);
+        trungVongQuay.setLoai("percent");
+        trungVongQuay.setGiaTri(BigDecimal.TEN);
+        trungVongQuay.setDaSuDung(false);
+        trungVongQuay.setNgayDoi(LocalDateTime.now());
+        trungVongQuay.setNgayHetHan(LocalDateTime.now().plusDays(10));
+
+        when(phieuGiamGiaCaNhanRepository.findByKhachHang_KhachHangId(5))
+                .thenReturn(List.of(trungVongQuay));
+        when(lichSuQuayRepository.findPhieuIdsByKhachHangId(5)).thenReturn(List.of(3));
+
+        var result = service.getByKhachHangIdForAdmin(5);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getNguon()).isEqualTo("Khách tự đổi / trúng thưởng");
     }
 }

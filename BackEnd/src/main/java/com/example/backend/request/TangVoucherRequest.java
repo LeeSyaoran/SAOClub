@@ -2,6 +2,7 @@ package com.example.backend.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 @Setter
 public class TangVoucherRequest {
     @NotBlank(message = "Loại voucher không được để trống")
+    @Pattern(regexp = "percent|fixed", message = "Loại voucher phải là 'percent' hoặc 'fixed'")
     private String loai;
 
     @NotNull(message = "Giá trị không được để trống")

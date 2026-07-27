@@ -11,6 +11,7 @@ import com.example.backend.repository.PhieuGiamGiaCaNhanRepository;
 import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.request.TangVoucherRequest;
 import com.example.backend.response.PhieuGiamGiaCaNhanResponse;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,6 +35,8 @@ public class PhieuGiamGiaCaNhanService {
     private TaiKhoanRepository taiKhoanRepository;
     @Autowired
     private LichSuQuayRepository lichSuQuayRepository;
+    @Autowired
+    private EntityManager entityManager;
 
     private TaiKhoan currentAccount() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -102,7 +105,11 @@ public class PhieuGiamGiaCaNhanService {
         phieu.setNgayDoi(LocalDateTime.now());
         phieu.setNgayHetHan(request.getNgayHetHan());
         phieu.setDonHangToiThieu(request.getDonHangToiThieu());
-        return phieuGiamGiaCaNhanRepository.save(phieu);
+        PhieuGiamGiaCaNhan savedPhieu = phieuGiamGiaCaNhanRepository.save(phieu);
+        // maPhieu là DEFAULT sinh bởi DB, insertable=false trên entity — Hibernate không tự
+        // re-select sau INSERT, phải refresh() để đọc lại giá trị thật (giống VongQuayService.quay()).
+        entityManager.refresh(savedPhieu);
+        return savedPhieu;
     }
 
     // Admin xem toàn bộ voucher của 1 khách — khác getCuaToi() (tự phục vụ, suy khách hàng
