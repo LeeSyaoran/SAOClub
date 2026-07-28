@@ -48,6 +48,8 @@ export const configLabel = (v) => ({
 export const colorDot = (mauSac) => {
   if (!mauSac) return '#555';
   const s = mauSac.toLowerCase();
+  // Thứ tự quan trọng: khóa cụ thể ('xanh lá', 'xanh dương') phải đứng trước khóa chung
+  // ('xanh') vì .find() lấy match đầu tiên theo includes().
   const map = [
     ['đen','#18181b'], ['den','#18181b'],
     ['trắng','#e4e4e7'], ['trang','#e4e4e7'],

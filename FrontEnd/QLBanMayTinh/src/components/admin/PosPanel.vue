@@ -155,11 +155,14 @@ const variantPickerBase = ref(null); // san pham dai dien vua bam (tu posProduct
 const variantPickerActiveConfigKey = ref('');
 const variantPickerActiveColor = ref('');
 
-// Toan bo bien the cung sanPhamId, lay tu pool da loc active + tim kiem hien co
-// (posProducts) — POS khong bao gio cho chon 1 cau hinh da het hang, dung y het hanh
-// vi loc "active" dang co truoc khi co thay doi nay.
+// Toan bo bien the active cung sanPhamId — lay tu ProductsStore.items (khong qua bo loc
+// tim kiem cua posProducts) de modal luon hien DAY DU cac lua chon cua san pham, ke ca khi
+// nhan vien dang go tim theo 1 SKU/cau hinh cu the. Chi loai bien the da het hang, giong
+// y het hanh vi da co truoc khi co thay doi nay.
 const variantPickerVariants = computed(() =>
-  posProducts.value.filter((v) => v.sanPhamId === variantPickerBase.value?.sanPhamId),
+  ProductsStore.items.filter(
+    (v) => v.trangThai === 'active' && v.sanPhamId === variantPickerBase.value?.sanPhamId,
+  ),
 );
 
 // Cau hinh duy nhat (deduplicate theo cpu+ram+oCung) — copy logic tu ProductDetail.vue
@@ -419,7 +422,7 @@ const posPlaceOrder = async () => {
 <template>
   <div class="pos-grid-layout">
     <!-- LEFT: tim kiem + san pham — luon hien, nhan vien duyet duoc binh thuong;
-         chi viec THEM VAO GIO moi bi chan neu chua xac dinh khach hang (xem posOpenSerialPicker) -->
+         chi viec THEM VAO GIO moi bi chan neu chua xac dinh khach hang (xem posOpenVariantPicker) -->
     <div class="d-flex flex-column gap-3 overflow-hidden">
       <input v-model="posSearch" class="form-control form-control-sm"
              style="background:var(--bg-hover); border-color:var(--border-color-strong); color:var(--text-primary);"
@@ -545,7 +548,7 @@ const posPlaceOrder = async () => {
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <div>
           <div>{{ t('admin.pos.chooseVariant') }}</div>
-          <div class="text-secondary fw-normal" style="font-size:0.75rem;">{{ variantPickerBase?.tenSanPham }} — {{ variantPickerBase?.maSku }}</div>
+          <div class="text-secondary fw-normal" style="font-size:0.75rem;">{{ variantPickerBase?.tenSanPham }} — {{ variantPickerActiveVariant?.maSku }}</div>
         </div>
         <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showVariantPicker=false"></button>
       </div>
