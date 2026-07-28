@@ -10,7 +10,7 @@ import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { PromotionsStore, ensurePromotions } from "../../stores/promotions.js";
 import { refreshOrders } from "../../stores/orders.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
-import { groupBySanPham, variantCountBySanPham } from "../../utils/productGrouping.js";
+import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot } from "../../utils/productGrouping.js";
 
 onMounted(() => { ensureProducts(); ensureCustomers(); ensurePromotions(); });
 
@@ -155,8 +155,6 @@ const variantPickerBase = ref(null); // san pham dai dien vua bam (tu posProduct
 const variantPickerActiveConfigKey = ref('');
 const variantPickerActiveColor = ref('');
 
-const variantConfigKey = (v) => `${v.cpu ?? ''}|${v.ram ?? ''}|${v.oCung ?? ''}`;
-
 // Toan bo bien the cung sanPhamId, lay tu pool da loc active + tim kiem hien co
 // (posProducts) — POS khong bao gio cho chon 1 cau hinh da het hang, dung y het hanh
 // vi loc "active" dang co truoc khi co thay doi nay.
@@ -168,7 +166,7 @@ const variantPickerVariants = computed(() =>
 const variantPickerConfigs = computed(() => {
   const seen = new Set();
   return variantPickerVariants.value.filter((v) => {
-    const k = variantConfigKey(v);
+    const k = configKey(v);
     if (seen.has(k)) return false;
     seen.add(k); return true;
   });
@@ -178,7 +176,7 @@ const variantPickerConfigs = computed(() => {
 const variantPickerColorsForConfig = computed(() => {
   const seen = new Set();
   return variantPickerVariants.value
-    .filter((v) => variantConfigKey(v) === variantPickerActiveConfigKey.value)
+    .filter((v) => configKey(v) === variantPickerActiveConfigKey.value)
     .filter((v) => {
       const c = v.mauSac ?? '';
       if (seen.has(c)) return false;
@@ -189,49 +187,20 @@ const variantPickerColorsForConfig = computed(() => {
 // Bien the hien tai = giao cua cau hinh + mau da chon
 const variantPickerActiveVariant = computed(() =>
   variantPickerVariants.value.find((v) =>
-    variantConfigKey(v) === variantPickerActiveConfigKey.value &&
+    configKey(v) === variantPickerActiveConfigKey.value &&
     (v.mauSac ?? '') === variantPickerActiveColor.value,
   ) ?? variantPickerBase.value,
 );
 
 const variantPickerSelectConfig = (v) => {
-  variantPickerActiveConfigKey.value = variantConfigKey(v);
+  variantPickerActiveConfigKey.value = configKey(v);
   const available = variantPickerVariants.value.filter(
-    (vv) => variantConfigKey(vv) === variantPickerActiveConfigKey.value,
+    (vv) => configKey(vv) === variantPickerActiveConfigKey.value,
   );
   if (!available.find((vv) => (vv.mauSac ?? '') === variantPickerActiveColor.value))
     variantPickerActiveColor.value = available[0]?.mauSac ?? '';
 };
 const variantPickerSelectColor = (v) => { variantPickerActiveColor.value = v.mauSac ?? ''; };
-
-// Nhan 2 dong cho nut cau hinh — copy tu ProductDetail.vue
-const variantPickerConfigLabel = (v) => ({
-  line1: v.cpu || v.ram || t('productDetail.defaultConfig'),
-  line2: [v.ram, v.oCung].filter(Boolean).join(' · '),
-});
-
-// Mau dot cho color swatch — copy nguyen bang mau tu ProductDetail.vue
-const variantPickerColorDot = (mauSac) => {
-  if (!mauSac) return '#555';
-  const s = mauSac.toLowerCase();
-  const map = [
-    ['đen', '#18181b'], ['den', '#18181b'],
-    ['trắng', '#e4e4e7'], ['trang', '#e4e4e7'],
-    ['bạc', '#94a3b8'], ['bac', '#94a3b8'],
-    ['xám', '#6b7280'], ['xam', '#6b7280'],
-    ['đỏ', '#dc2626'], ['do', '#dc2626'],
-    ['xanh lá', '#16a34a'], ['xanh la', '#16a34a'],
-    ['xanh dương', '#2563eb'], ['xanh duong', '#2563eb'],
-    ['xanh', '#2563eb'],
-    ['vàng', '#ca8a04'], ['vang', '#ca8a04'],
-    ['hồng', '#ec4899'], ['hong', '#ec4899'],
-    ['tím', '#9333ea'], ['tim', '#9333ea'],
-    ['cam', '#ea580c'],
-    ['nâu', '#92400e'], ['nau', '#92400e'],
-  ];
-  const found = map.find(([k]) => s.includes(k));
-  return found ? found[1] : '#555';
-};
 
 // Mo modal chon cau hinh/mau — thay the diem goi cu tu nut "Them vao gio" tren card san
 // pham. Giu nguyen dung guard dang co o dau posOpenSerialPicker (chan neu chua xac dinh
@@ -243,7 +212,7 @@ const posOpenVariantPicker = (p) => {
     return;
   }
   variantPickerBase.value = p;
-  variantPickerActiveConfigKey.value = variantConfigKey(p);
+  variantPickerActiveConfigKey.value = configKey(p);
   variantPickerActiveColor.value = p.mauSac ?? '';
   showVariantPicker.value = true;
 };
@@ -588,15 +557,15 @@ const posPlaceOrder = async () => {
             {{ t('productDetail.versions', { count: variantPickerConfigs.length }) }}
           </div>
           <div class="d-flex flex-wrap gap-2">
-            <button v-for="v in variantPickerConfigs" :key="variantConfigKey(v)"
+            <button v-for="v in variantPickerConfigs" :key="configKey(v)"
                     class="btn btn-sm d-flex flex-column align-items-start text-start px-3 py-2"
                     style="border-radius:10px;"
-                    :style="variantPickerActiveConfigKey === variantConfigKey(v)
+                    :style="variantPickerActiveConfigKey === configKey(v)
                       ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
                       : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
                     @click="variantPickerSelectConfig(v)">
-              <span class="fw-semibold" style="font-size:11px;line-height:1.5;">{{ variantPickerConfigLabel(v).line1 }}</span>
-              <span v-if="variantPickerConfigLabel(v).line2" style="font-size:10px;opacity:0.75;">{{ variantPickerConfigLabel(v).line2 }}</span>
+              <span class="fw-semibold" style="font-size:11px;line-height:1.5;">{{ configLabel(v).line1 }}</span>
+              <span v-if="configLabel(v).line2" style="font-size:10px;opacity:0.75;">{{ configLabel(v).line2 }}</span>
             </button>
           </div>
         </div>
@@ -613,7 +582,7 @@ const posPlaceOrder = async () => {
                       ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
                       : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
                     @click="variantPickerSelectColor(v)">
-              <span class="rounded-circle flex-shrink-0" :style="`width:13px;height:13px;background:${variantPickerColorDot(v.mauSac)};border:1.5px solid #666;display:inline-block;`"></span>
+              <span class="rounded-circle flex-shrink-0" :style="`width:13px;height:13px;background:${colorDot(v.mauSac)};border:1.5px solid #666;display:inline-block;`"></span>
               <div class="d-flex flex-column align-items-start text-start">
                 <span class="fw-semibold" style="font-size:11px;line-height:1.3;">{{ v.mauSac }}</span>
                 <span style="font-size:10px;color:var(--accent-fg);">{{ formatPrice(v.giaBan) }}</span>

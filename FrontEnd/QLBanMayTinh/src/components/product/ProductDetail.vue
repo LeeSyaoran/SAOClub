@@ -264,6 +264,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { t } from '../../i18n/index.js';
 import { formatPrice as formatPriceRaw } from '../../utils/formatPrice.js';
+import { configKey, configLabel, colorDot } from '../../utils/productGrouping.js';
 
 const props = defineProps({
   product:  { type: Object,  required: true },
@@ -275,8 +276,6 @@ defineEmits(['close', 'add-to-cart', 'open-product']);
 // Khóa scroll trang nền khi overlay mở để tránh 2 scrollbar
 onMounted(() => { document.body.style.overflow = 'hidden'; });
 onUnmounted(() => { document.body.style.overflow = ''; });
-
-const configKey = (v) => `${v.cpu ?? ''}|${v.ram ?? ''}|${v.oCung ?? ''}`;
 
 // Tất cả biến thể cùng sanPhamId
 const variants = computed(() =>
@@ -330,35 +329,6 @@ const selectConfig = (v) => {
     activeColor.value = available[0]?.mauSac ?? '';
 };
 const selectColor = (v) => { activeColor.value = v.mauSac ?? ''; };
-
-// Nhãn 2 dòng cho nút cấu hình
-const configLabel = (v) => ({
-  line1: v.cpu || v.ram || t('productDetail.defaultConfig'),
-  line2: [v.ram, v.oCung].filter(Boolean).join(' · '),
-});
-
-// Màu dot cho color swatch
-const colorDot = (mauSac) => {
-  if (!mauSac) return '#555';
-  const s = mauSac.toLowerCase();
-  const map = [
-    ['đen','#18181b'], ['den','#18181b'],
-    ['trắng','#e4e4e7'], ['trang','#e4e4e7'],
-    ['bạc','#94a3b8'], ['bac','#94a3b8'],
-    ['xám','#6b7280'], ['xam','#6b7280'],
-    ['đỏ','#dc2626'], ['do','#dc2626'],
-    ['xanh lá','#16a34a'], ['xanh la','#16a34a'],
-    ['xanh dương','#2563eb'], ['xanh duong','#2563eb'],
-    ['xanh','#2563eb'],
-    ['vàng','#ca8a04'], ['vang','#ca8a04'],
-    ['hồng','#ec4899'], ['hong','#ec4899'],
-    ['tím','#9333ea'], ['tim','#9333ea'],
-    ['cam','#ea580c'],
-    ['nâu','#92400e'], ['nau','#92400e'],
-  ];
-  const found = map.find(([k]) => s.includes(k));
-  return found ? found[1] : '#555';
-};
 
 // Sản phẩm gợi ý: cùng danh mục hoặc thương hiệu, khác sanPhamId, lấy 1 variant/sp
 const related = computed(() => {
