@@ -48,3 +48,18 @@ export const paymentStatusIcon = (s) => {
   if (s === 'refunded') return '↩️';
   return '●';
 };
+
+// Phuong thuc thanh toan — dung o POS (chon luc tao don) va modal "Chi tiet don hang"
+// (hien lai). 1 nguon duy nhat cho danh sach gia tri + icon, tranh 2 noi tu dinh nghia
+// roi lech nhau (dung bai hoc tu vu colorDot o productGrouping.js).
+export const POS_PAYMENT_METHODS = ['tien_mat', 'vnpay', 'chuyen_khoan', 'the_tin_dung'];
+
+export const paymentMethodLabel = (m) => t(`admin.paymentMethod.${m}`);
+
+export const paymentMethodIcon = (m) => {
+  if (m === 'tien_mat')     return '💵';
+  if (m === 'vnpay')        return '📱';
+  if (m === 'chuyen_khoan') return '🏦';
+  if (m === 'the_tin_dung') return '💳';
+  return '💰';
+};
