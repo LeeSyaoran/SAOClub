@@ -14,6 +14,7 @@ import { AuthStore, setSession, clearSession } from "./stores/index.js";
 import { resetAllStores } from "./stores/resetAll.js";
 import { loadSettings, SettingsStore } from "./stores/settings.js";
 import { formatPrice as formatPriceRaw } from "./utils/formatPrice.js";
+import { groupBySanPham, variantCountBySanPham } from "./utils/productGrouping.js";
 import { t, applySystemDefaultLocale } from "./i18n/index.js";
 
 // Import services
@@ -274,13 +275,7 @@ const CHIP_KEYWORDS = {
 };
 
 // Map sanPhamId → số lượng biến thể (để card biết hiển thị "Từ X.XXXđ" hay không)
-const variantCountMap = computed(() => {
-  const map = new Map();
-  products.value.forEach((p) =>
-    map.set(p.sanPhamId, (map.get(p.sanPhamId) || 0) + 1),
-  );
-  return map;
-});
+const variantCountMap = computed(() => variantCountBySanPham(products.value));
 
 // ── Computed: Lọc + deduplicate (1 card/sản phẩm) + sắp xếp ─────────────────
 const filteredProducts = computed(() => {
@@ -341,23 +336,8 @@ const filteredProducts = computed(() => {
     return true;
   });
 
-  // Deduplicate: 1 card / sanPhamId — ưu tiên biến thể còn hàng (active), rồi mới đến
-  // giá thấp nhất trong nhóm đó làm đại diện. Nếu chọn đại diện chỉ theo giá thấp nhất,
-  // 1 biến thể hết hàng trùng giá với biến thể còn hàng khác sẽ khiến cả card hiện
-  // "Hết hàng" dù sản phẩm vẫn còn biến thể khác mua được.
-  const deduped = [
-    ...filtered
-      .reduce((map, p) => {
-        const ex = map.get(p.sanPhamId);
-        if (!ex) { map.set(p.sanPhamId, p); return map; }
-        const pActive = p.trangThai === 'active';
-        const exActive = ex.trangThai === 'active';
-        if (pActive !== exActive ? pActive : Number(p.giaBan) < Number(ex.giaBan))
-          map.set(p.sanPhamId, p);
-        return map;
-      }, new Map())
-      .values(),
-  ];
+  // Deduplicate: 1 card / sanPhamId (quy tắc chọn đại diện — xem utils/productGrouping.js)
+  const deduped = groupBySanPham(filtered);
 
   return deduped.sort((a, b) => {
     if (selectedSort.value === "price-asc")
