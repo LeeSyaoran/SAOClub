@@ -738,6 +738,7 @@ export default {
       total: "Total",
       orderStatus: "Order status",
       paymentStatus: "Payment",
+      paymentMethod: "Paid via",
       addNewItem: "Add new product",
       searchPlaceholder: "Search products...",
       priceFrom: "From",
@@ -800,6 +801,13 @@ export default {
       partial: "Partially paid",
       paid: "Paid",
       refunded: "Refunded",
+    },
+
+    paymentMethod: {
+      tien_mat: "Cash",
+      chuyen_khoan: "Bank transfer",
+      the_tin_dung: "Card",
+      vnpay: "QR",
     },
 
     customers: {
@@ -1514,6 +1522,8 @@ export default {
       needCustomerFirst: "Please identify the customer (in the cart panel) before adding products",
       chooseVariant: "Choose configuration / color",
       continueToSerial: "Continue to serial →",
+      paymentMethodLabel: "Payment method",
+      paymentRequired: "Please select a payment method!",
     },
 
     packModal: {
@@ -1575,6 +1585,7 @@ export default {
       createCustomerError: "Error creating customer: {message}",
       createOrderError: "Error creating order: {message}",
       addProductError: "Error adding product: {message}",
+      createPaymentError: "Error recording payment: {message}",
     },
 
     statusLabel: {

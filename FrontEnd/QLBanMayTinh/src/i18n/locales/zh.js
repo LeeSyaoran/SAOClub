@@ -738,6 +738,7 @@ export default {
       total: "应付总额",
       orderStatus: "订单状态",
       paymentStatus: "支付状态",
+      paymentMethod: "支付方式",
       addNewItem: "添加商品",
       searchPlaceholder: "搜索商品...",
       priceFrom: "起",
@@ -800,6 +801,13 @@ export default {
       partial: "部分支付",
       paid: "已支付",
       refunded: "已退款",
+    },
+
+    paymentMethod: {
+      tien_mat: "现金",
+      chuyen_khoan: "银行转账",
+      the_tin_dung: "刷卡",
+      vnpay: "扫码支付",
     },
 
     customers: {
@@ -1514,6 +1522,8 @@ export default {
       needCustomerFirst: "请先在购物车区域确认客户，再添加商品",
       chooseVariant: "选择配置 / 颜色",
       continueToSerial: "继续选择序列号 →",
+      paymentMethodLabel: "支付方式",
+      paymentRequired: "请选择支付方式！",
     },
 
     packModal: {
@@ -1575,6 +1585,7 @@ export default {
       createCustomerError: "创建客户出错：{message}",
       createOrderError: "创建订单出错：{message}",
       addProductError: "添加商品出错：{message}",
+      createPaymentError: "记录支付出错：{message}",
     },
 
     statusLabel: {

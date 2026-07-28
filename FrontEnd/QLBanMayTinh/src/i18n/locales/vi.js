@@ -738,6 +738,7 @@ export default {
       total: "Thành tiền",
       orderStatus: "Trạng thái đơn",
       paymentStatus: "Thanh toán",
+      paymentMethod: "Đã trả bằng",
       addNewItem: "Thêm sản phẩm mới",
       searchPlaceholder: "Tìm sản phẩm...",
       priceFrom: "Từ",
@@ -800,6 +801,13 @@ export default {
       partial: "Thanh toán một phần",
       paid: "Đã thanh toán",
       refunded: "Hoàn tiền",
+    },
+
+    paymentMethod: {
+      tien_mat: "Tiền mặt",
+      chuyen_khoan: "Chuyển khoản",
+      the_tin_dung: "Thẻ",
+      vnpay: "QR",
     },
 
     customers: {
@@ -1514,6 +1522,8 @@ export default {
       needCustomerFirst: "Vui lòng xác định khách hàng (bên khung giỏ hàng) trước khi thêm sản phẩm",
       chooseVariant: "Chọn cấu hình / màu sắc",
       continueToSerial: "Tiếp tục chọn serial →",
+      paymentMethodLabel: "Phương thức thanh toán",
+      paymentRequired: "Vui lòng chọn phương thức thanh toán!",
     },
 
     packModal: {
@@ -1573,6 +1583,7 @@ export default {
       createCustomerError: "Lỗi tạo khách hàng: {message}",
       createOrderError: "Lỗi tạo đơn hàng: {message}",
       addProductError: "Lỗi thêm sản phẩm: {message}",
+      createPaymentError: "Lỗi ghi nhận thanh toán: {message}",
     },
 
     statusLabel: {

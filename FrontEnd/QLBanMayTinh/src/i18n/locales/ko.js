@@ -738,6 +738,7 @@ export default {
       total: "결제 금액",
       orderStatus: "주문 상태",
       paymentStatus: "결제",
+      paymentMethod: "결제 수단",
       addNewItem: "새 상품 추가",
       searchPlaceholder: "상품 검색...",
       priceFrom: "부터",
@@ -800,6 +801,13 @@ export default {
       partial: "부분 결제",
       paid: "결제 완료",
       refunded: "환불 완료",
+    },
+
+    paymentMethod: {
+      tien_mat: "현금",
+      chuyen_khoan: "계좌이체",
+      the_tin_dung: "카드",
+      vnpay: "QR 코드",
     },
 
     customers: {
@@ -1514,6 +1522,8 @@ export default {
       needCustomerFirst: "상품을 추가하기 전에 장바구니 영역에서 고객을 먼저 확인해 주세요",
       chooseVariant: "구성 / 색상 선택",
       continueToSerial: "시리얼 선택으로 계속 →",
+      paymentMethodLabel: "결제 방법",
+      paymentRequired: "결제 방법을 선택해 주세요!",
     },
 
     packModal: {
@@ -1575,6 +1585,7 @@ export default {
       createCustomerError: "고객 생성 오류: {message}",
       createOrderError: "주문 생성 오류: {message}",
       addProductError: "상품 추가 오류: {message}",
+      createPaymentError: "결제 기록 오류: {message}",
     },
 
     statusLabel: {

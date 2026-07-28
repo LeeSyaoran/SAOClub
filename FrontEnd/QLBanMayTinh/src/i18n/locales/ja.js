@@ -738,6 +738,7 @@ export default {
       total: "合計金額",
       orderStatus: "注文状態",
       paymentStatus: "支払い",
+      paymentMethod: "支払い方法",
       addNewItem: "新しい商品を追加",
       searchPlaceholder: "商品を検索...",
       priceFrom: "〜より",
@@ -800,6 +801,13 @@ export default {
       partial: "一部支払い済み",
       paid: "支払い済み",
       refunded: "返金済み",
+    },
+
+    paymentMethod: {
+      tien_mat: "現金",
+      chuyen_khoan: "銀行振込",
+      the_tin_dung: "カード",
+      vnpay: "QRコード",
     },
 
     customers: {
@@ -1514,6 +1522,8 @@ export default {
       needCustomerFirst: "商品を追加する前に、カート欄で顧客を確認してください",
       chooseVariant: "構成・カラーを選択",
       continueToSerial: "シリアル選択へ進む →",
+      paymentMethodLabel: "支払い方法",
+      paymentRequired: "支払い方法を選択してください！",
     },
 
     packModal: {
@@ -1575,6 +1585,7 @@ export default {
       createCustomerError: "顧客の作成エラー：{message}",
       createOrderError: "注文の作成エラー：{message}",
       addProductError: "商品の追加エラー：{message}",
+      createPaymentError: "支払い記録エラー：{message}",
     },
 
     statusLabel: {
