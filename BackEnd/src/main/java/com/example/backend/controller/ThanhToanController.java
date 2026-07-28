@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Thanh toán — chỉ staff. Hiện chưa có service/component frontend nào gọi tới controller
-// này (tính năng chưa được wire lên UI) — khoá trước theo nguyên tắc least-privilege.
+// Thanh toán — chỉ staff. Dùng ở POS (tạo record khi chốt đơn tại quầy) và modal
+// "Chi tiết đơn hàng" (hiển thị lại phương thức đã dùng).
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/thanh-toan")
@@ -26,6 +26,11 @@ public class ThanhToanController {
     @GetMapping
     public List<ThanhToanResponse> getAll() {
         return thanhToanService.hienThiThanhToan();
+    }
+
+    @GetMapping("/don-hang/{donHangId}")
+    public List<ThanhToanResponse> getByDonHang(@PathVariable Integer donHangId) {
+        return thanhToanService.hienThiThanhToanTheoDonHang(donHangId);
     }
 
     @GetMapping("/{id}")

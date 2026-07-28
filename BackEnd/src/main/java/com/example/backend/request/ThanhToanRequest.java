@@ -27,12 +27,10 @@ public class ThanhToanRequest {
     @Positive(message = "Số tiền phải lớn hơn 0")
     private BigDecimal soTien;
 
-    @NotBlank(message = "Mã giao dịch không được để trống")
     private String maGiaoDich;
 
     @NotBlank(message = "Trạng thái không được để trống")
     private String trangThai;
 
-    @NotBlank(message = "Ghi chú không được để trống")
     private String ghiChu;
 }

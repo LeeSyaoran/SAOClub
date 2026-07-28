@@ -23,6 +23,10 @@ public class ThanhToanService {
         return thanhToanRepository.hienThiThanhToan();
     }
 
+    public List<ThanhToanResponse> hienThiThanhToanTheoDonHang(Integer donHangId) {
+        return thanhToanRepository.hienThiThanhToanTheoDonHang(donHangId);
+    }
+
     public ThanhToan getById(Integer id) {
         return thanhToanRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Thanh toán không tồn tại với id: " + id));
