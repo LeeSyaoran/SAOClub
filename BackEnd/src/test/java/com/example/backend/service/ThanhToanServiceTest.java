@@ -6,6 +6,9 @@ import com.example.backend.repository.DonHangRepository;
 import com.example.backend.repository.ThanhToanRepository;
 import com.example.backend.request.ThanhToanRequest;
 import com.example.backend.response.ThanhToanResponse;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -62,5 +66,22 @@ class ThanhToanServiceTest {
         List<ThanhToanResponse> result = service.hienThiThanhToanTheoDonHang(5);
 
         assertThat(result).isEqualTo(expected);
+    }
+
+    @Test
+    void request_maGiaoDichVaGhiChuNull_khongBiViPham() {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        ThanhToanRequest req = new ThanhToanRequest();
+        req.setDonHangId(1);
+        req.setNgayThanhToan(LocalDateTime.now());
+        req.setPhuongThucThanhToan("tien_mat");
+        req.setSoTien(BigDecimal.valueOf(500000));
+        req.setMaGiaoDich(null);
+        req.setTrangThai("success");
+        req.setGhiChu(null);
+
+        Set<ConstraintViolation<ThanhToanRequest>> violations = validator.validate(req);
+
+        assertThat(violations).isEmpty();
     }
 }
