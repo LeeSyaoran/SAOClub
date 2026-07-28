@@ -43,8 +43,9 @@ const posProducts = computed(() => {
 });
 
 // Gộp posProducts (đã lọc active + tìm kiếm) còn 1 card/sản phẩm — dùng cho lưới hiển
-// thị. posProducts (biến thể phẳng) vẫn giữ nguyên, dùng làm pool cho modal chọn cấu
-// hình/màu bên dưới (Bước "Chọn cấu hình/màu").
+// thị. Modal chọn cấu hình/màu bên dưới KHÔNG dùng posProducts làm pool (sẽ bị bó hẹp
+// theo từ khóa tìm kiếm hiện tại) — nó tự lấy từ ProductsStore.items, xem
+// variantPickerVariants.
 const posProductGroups = computed(() => groupBySanPham(posProducts.value));
 const posVariantCountMap = computed(() => variantCountBySanPham(posProducts.value));
 const posCartTotal = computed(() =>
