@@ -10,6 +10,7 @@ import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { PromotionsStore, ensurePromotions } from "../../stores/promotions.js";
 import { refreshOrders } from "../../stores/orders.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
+import { groupBySanPham, variantCountBySanPham } from "../../utils/productGrouping.js";
 
 onMounted(() => { ensureProducts(); ensureCustomers(); ensurePromotions(); });
 
@@ -40,6 +41,12 @@ const posProducts = computed(() => {
         (p.maSku ?? "").toLowerCase().includes(q)),
   );
 });
+
+// Gộp posProducts (đã lọc active + tìm kiếm) còn 1 card/sản phẩm — dùng cho lưới hiển
+// thị. posProducts (biến thể phẳng) vẫn giữ nguyên, dùng làm pool cho modal chọn cấu
+// hình/màu bên dưới (Bước "Chọn cấu hình/màu").
+const posProductGroups = computed(() => groupBySanPham(posProducts.value));
+const posVariantCountMap = computed(() => variantCountBySanPham(posProducts.value));
 const posCartTotal = computed(() =>
   posCart.value.reduce((s, i) => s + i.giaBan * i.soLuong, 0),
 );
@@ -136,6 +143,116 @@ const posDeleteHeld = async (id) => {
   saveHeldOrders();
   // Huy han don giu -> tra lai tat ca serial trong don do ve trong_kho de ban duoc tiep
   if (held) await Promise.all(held.cart.map((item) => setSerialTrangThai(item, 'trong_kho')));
+};
+
+// ── Chon cau hinh/mau truoc khi vao modal chon serial ─────────────────────────
+// Luon mo modal nay khi bam "Them vao gio", ke ca san pham chi co 1 bien the — dong
+// nhat trai nghiem cho moi truong hop (khac voi trang khach hang, von bo qua buoc nay
+// neu chi co 1 lua chon — xem App.vue handleQuickAdd). Bam "Tiep tuc chon serial" se
+// goi thang posOpenSerialPicker() hien co, khong doi gi ben trong ham do.
+const showVariantPicker = ref(false);
+const variantPickerBase = ref(null); // san pham dai dien vua bam (tu posProductGroups)
+const variantPickerActiveConfigKey = ref('');
+const variantPickerActiveColor = ref('');
+
+const variantConfigKey = (v) => `${v.cpu ?? ''}|${v.ram ?? ''}|${v.oCung ?? ''}`;
+
+// Toan bo bien the cung sanPhamId, lay tu pool da loc active + tim kiem hien co
+// (posProducts) — POS khong bao gio cho chon 1 cau hinh da het hang, dung y het hanh
+// vi loc "active" dang co truoc khi co thay doi nay.
+const variantPickerVariants = computed(() =>
+  posProducts.value.filter((v) => v.sanPhamId === variantPickerBase.value?.sanPhamId),
+);
+
+// Cau hinh duy nhat (deduplicate theo cpu+ram+oCung) — copy logic tu ProductDetail.vue
+const variantPickerConfigs = computed(() => {
+  const seen = new Set();
+  return variantPickerVariants.value.filter((v) => {
+    const k = variantConfigKey(v);
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+});
+
+// Mau sac cua cau hinh dang chon (deduplicate theo mauSac)
+const variantPickerColorsForConfig = computed(() => {
+  const seen = new Set();
+  return variantPickerVariants.value
+    .filter((v) => variantConfigKey(v) === variantPickerActiveConfigKey.value)
+    .filter((v) => {
+      const c = v.mauSac ?? '';
+      if (seen.has(c)) return false;
+      seen.add(c); return true;
+    });
+});
+
+// Bien the hien tai = giao cua cau hinh + mau da chon
+const variantPickerActiveVariant = computed(() =>
+  variantPickerVariants.value.find((v) =>
+    variantConfigKey(v) === variantPickerActiveConfigKey.value &&
+    (v.mauSac ?? '') === variantPickerActiveColor.value,
+  ) ?? variantPickerBase.value,
+);
+
+const variantPickerSelectConfig = (v) => {
+  variantPickerActiveConfigKey.value = variantConfigKey(v);
+  const available = variantPickerVariants.value.filter(
+    (vv) => variantConfigKey(vv) === variantPickerActiveConfigKey.value,
+  );
+  if (!available.find((vv) => (vv.mauSac ?? '') === variantPickerActiveColor.value))
+    variantPickerActiveColor.value = available[0]?.mauSac ?? '';
+};
+const variantPickerSelectColor = (v) => { variantPickerActiveColor.value = v.mauSac ?? ''; };
+
+// Nhan 2 dong cho nut cau hinh — copy tu ProductDetail.vue
+const variantPickerConfigLabel = (v) => ({
+  line1: v.cpu || v.ram || t('productDetail.defaultConfig'),
+  line2: [v.ram, v.oCung].filter(Boolean).join(' · '),
+});
+
+// Mau dot cho color swatch — copy nguyen bang mau tu ProductDetail.vue
+const variantPickerColorDot = (mauSac) => {
+  if (!mauSac) return '#555';
+  const s = mauSac.toLowerCase();
+  const map = [
+    ['đen', '#18181b'], ['den', '#18181b'],
+    ['trắng', '#e4e4e7'], ['trang', '#e4e4e7'],
+    ['bạc', '#94a3b8'], ['bac', '#94a3b8'],
+    ['xám', '#6b7280'], ['xam', '#6b7280'],
+    ['đỏ', '#dc2626'], ['do', '#dc2626'],
+    ['xanh lá', '#16a34a'], ['xanh la', '#16a34a'],
+    ['xanh dương', '#2563eb'], ['xanh duong', '#2563eb'],
+    ['xanh', '#2563eb'],
+    ['vàng', '#ca8a04'], ['vang', '#ca8a04'],
+    ['hồng', '#ec4899'], ['hong', '#ec4899'],
+    ['tím', '#9333ea'], ['tim', '#9333ea'],
+    ['cam', '#ea580c'],
+    ['nâu', '#92400e'], ['nau', '#92400e'],
+  ];
+  const found = map.find(([k]) => s.includes(k));
+  return found ? found[1] : '#555';
+};
+
+// Mo modal chon cau hinh/mau — thay the diem goi cu tu nut "Them vao gio" tren card san
+// pham. Giu nguyen dung guard dang co o dau posOpenSerialPicker (chan neu chua xac dinh
+// khach hang), copy nguyen khong doi.
+const posOpenVariantPicker = (p) => {
+  if (posStage.value !== 'selling') {
+    if (posStage.value === 'start') posStartInvoice();
+    posError.value = t('admin.pos.needCustomerFirst');
+    return;
+  }
+  variantPickerBase.value = p;
+  variantPickerActiveConfigKey.value = variantConfigKey(p);
+  variantPickerActiveColor.value = p.mauSac ?? '';
+  showVariantPicker.value = true;
+};
+
+// Chot bien the da chon -> dong modal nay, mo modal chon serial hien co (khong sua gi
+// ben trong posOpenSerialPicker).
+const posConfirmVariant = () => {
+  showVariantPicker.value = false;
+  posOpenSerialPicker(variantPickerActiveVariant.value);
 };
 
 // Ban tai quay bat buoc chon serial cu the truoc khi cho vao gio — moi dong trong
@@ -340,7 +457,7 @@ const posPlaceOrder = async () => {
              :placeholder="t('admin.pos.searchPlaceholder')" />
       <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.pos.loading') }}</div>
       <div v-else class="row g-2 overflow-y-auto">
-        <div v-for="p in posProducts" :key="p.bienTheId" class="col-6 col-xl-4">
+        <div v-for="p in posProductGroups" :key="p.sanPhamId" class="col-6 col-xl-4">
           <div class="card h-100 border-secondary" style="background:var(--bg-hover);">
             <div class="d-flex align-items-center justify-content-center" style="height:88px;background:var(--bg-card-inset);">
               <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:6px;" />
@@ -350,12 +467,14 @@ const posPlaceOrder = async () => {
               <div class="fw-semibold small text-light">{{ p.tenSanPham }}</div>
               <div class="text-secondary" style="font-size:0.76rem;">{{ p.maSku }}</div>
               <div class="text-secondary" style="font-size:0.75rem;">{{ p.tenThuongHieu }} · {{ p.tenDanhMuc }}</div>
-              <div class="fw-bold text-warning" style="font-size:0.95rem;">{{ formatPrice(p.giaBan) }}</div>
-              <button class="btn btn-sm btn-warning text-dark fw-bold mt-auto" @click="posOpenSerialPicker(p)">{{ t('admin.pos.addToCart') }}</button>
+              <div class="fw-bold text-warning" style="font-size:0.95rem;">
+                <span v-if="(posVariantCountMap.get(p.sanPhamId) || 0) > 1" class="fw-normal" style="font-size:0.7rem;color:var(--text-secondary);">{{ t('home.fromPrice') }} </span>{{ formatPrice(p.giaBan) }}
+              </div>
+              <button class="btn btn-sm btn-warning text-dark fw-bold mt-auto" @click="posOpenVariantPicker(p)">{{ t('admin.pos.addToCart') }}</button>
             </div>
           </div>
         </div>
-        <div v-if="posProducts.length===0" class="col-12 text-center text-secondary small py-4">{{ t('admin.pos.noProductsFound') }}</div>
+        <div v-if="posProductGroups.length===0" class="col-12 text-center text-secondary small py-4">{{ t('admin.pos.noProductsFound') }}</div>
       </div>
     </div>
 
@@ -448,6 +567,63 @@ const posPlaceOrder = async () => {
         </div>
       </div>
       </template>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CHON CAU HINH/MAU (POS) ══ -->
+  <div v-if="showVariantPicker" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="showVariantPicker=false">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:480px;max-width:95vw;max-height:80vh;">
+      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+        <div>
+          <div>{{ t('admin.pos.chooseVariant') }}</div>
+          <div class="text-secondary fw-normal" style="font-size:0.75rem;">{{ variantPickerBase?.tenSanPham }} — {{ variantPickerBase?.maSku }}</div>
+        </div>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showVariantPicker=false"></button>
+      </div>
+      <div class="overflow-y-auto p-3 d-flex flex-column gap-3">
+        <div class="fw-bold text-warning" style="font-size:1.1rem;">{{ formatPrice(variantPickerActiveVariant?.giaBan) }}</div>
+
+        <div v-if="variantPickerConfigs.length > 1">
+          <div class="fw-semibold mb-2" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">
+            {{ t('productDetail.versions', { count: variantPickerConfigs.length }) }}
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button v-for="v in variantPickerConfigs" :key="variantConfigKey(v)"
+                    class="btn btn-sm d-flex flex-column align-items-start text-start px-3 py-2"
+                    style="border-radius:10px;"
+                    :style="variantPickerActiveConfigKey === variantConfigKey(v)
+                      ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
+                      : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
+                    @click="variantPickerSelectConfig(v)">
+              <span class="fw-semibold" style="font-size:11px;line-height:1.5;">{{ variantPickerConfigLabel(v).line1 }}</span>
+              <span v-if="variantPickerConfigLabel(v).line2" style="font-size:10px;opacity:0.75;">{{ variantPickerConfigLabel(v).line2 }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="variantPickerColorsForConfig.some(v => v.mauSac)">
+          <div class="fw-semibold mb-2" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);">
+            {{ t('productDetail.colorHeading') }}
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button v-for="v in variantPickerColorsForConfig" :key="v.bienTheId"
+                    class="btn btn-sm d-flex align-items-center gap-2 px-3 py-2"
+                    style="border-radius:10px;"
+                    :style="variantPickerActiveColor === v.mauSac
+                      ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
+                      : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
+                    @click="variantPickerSelectColor(v)">
+              <span class="rounded-circle flex-shrink-0" :style="`width:13px;height:13px;background:${variantPickerColorDot(v.mauSac)};border:1.5px solid #666;display:inline-block;`"></span>
+              <div class="d-flex flex-column align-items-start text-start">
+                <span class="fw-semibold" style="font-size:11px;line-height:1.3;">{{ v.mauSac }}</span>
+                <span style="font-size:10px;color:var(--accent-fg);">{{ formatPrice(v.giaBan) }}</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn btn-warning text-dark fw-bold mt-2" @click="posConfirmVariant">{{ t('admin.pos.continueToSerial') }}</button>
+      </div>
     </div>
   </div>
 
