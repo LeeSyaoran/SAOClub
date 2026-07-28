@@ -1512,6 +1512,8 @@ export default {
       changeCustomer: "顧客を変更",
       noCustomerYet: "顧客が未選択です",
       needCustomerFirst: "商品を追加する前に、カート欄で顧客を確認してください",
+      chooseVariant: "構成・カラーを選択",
+      continueToSerial: "シリアル選択へ進む →",
     },
 
     packModal: {

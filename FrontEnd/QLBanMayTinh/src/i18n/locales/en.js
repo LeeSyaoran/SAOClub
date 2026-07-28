@@ -1512,6 +1512,8 @@ export default {
       changeCustomer: "Change customer",
       noCustomerYet: "No customer selected yet",
       needCustomerFirst: "Please identify the customer (in the cart panel) before adding products",
+      chooseVariant: "Choose configuration / color",
+      continueToSerial: "Continue to serial →",
     },
 
     packModal: {

@@ -1512,6 +1512,8 @@ export default {
       changeCustomer: "Đổi khách hàng",
       noCustomerYet: "Chưa xác định khách hàng",
       needCustomerFirst: "Vui lòng xác định khách hàng (bên khung giỏ hàng) trước khi thêm sản phẩm",
+      chooseVariant: "Chọn cấu hình / màu sắc",
+      continueToSerial: "Tiếp tục chọn serial →",
     },
 
     packModal: {

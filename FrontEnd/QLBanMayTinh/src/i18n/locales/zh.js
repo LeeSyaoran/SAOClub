@@ -1512,6 +1512,8 @@ export default {
       changeCustomer: "更换客户",
       noCustomerYet: "尚未选择客户",
       needCustomerFirst: "请先在购物车区域确认客户，再添加商品",
+      chooseVariant: "选择配置 / 颜色",
+      continueToSerial: "继续选择序列号 →",
     },
 
     packModal: {

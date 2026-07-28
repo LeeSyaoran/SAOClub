@@ -1512,6 +1512,8 @@ export default {
       changeCustomer: "고객 변경",
       noCustomerYet: "아직 고객이 선택되지 않았습니다",
       needCustomerFirst: "상품을 추가하기 전에 장바구니 영역에서 고객을 먼저 확인해 주세요",
+      chooseVariant: "구성 / 색상 선택",
+      continueToSerial: "시리얼 선택으로 계속 →",
     },
 
     packModal: {
