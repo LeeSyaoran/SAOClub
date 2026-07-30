@@ -2,8 +2,8 @@
 import { ref, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
-import * as DonHangService from "../../Service/DonHangService.js";
-import * as ChiTietSanPhamService from "../../Service/ChiTietSanPhamService.js";
+import * as DonHangService from "../../services/DonHangService.js";
+import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { formatPrice, formatDate } from "../../utils/adminFormat.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
@@ -11,6 +11,8 @@ import { PromotionsStore, ensurePromotions } from "../../stores/promotions.js";
 import { refreshOrders } from "../../stores/orders.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
 import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot } from "../../utils/productGrouping.js";
+import { POS_PAYMENT_METHODS, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
+import * as ThanhToanService from "../../services/ThanhToanService.js";
 
 onMounted(() => { ensureProducts(); ensureCustomers(); ensurePromotions(); });
 
@@ -30,6 +32,7 @@ const posSuccess = ref(false);
 const posPromoCode = ref("");
 const posAppliedPromo = ref(null);
 const posPromoMsg = ref("");
+const posPaymentMethod = ref(null); // 1 trong POS_PAYMENT_METHODS — bat buoc chon truoc khi tao don
 
 const posProducts = computed(() => {
   const q = posSearch.value.toLowerCase();
@@ -106,6 +109,7 @@ const posHoldOrder = () => {
     foundCust: posFoundCust.value,
     promoCode: posPromoCode.value,
     appliedPromo: posAppliedPromo.value,
+    paymentMethod: posPaymentMethod.value,
   });
   saveHeldOrders();
   // Chi don sach form tai cho — KHONG goi posReset() vi no se tra serial ve trong_kho.
@@ -119,6 +123,7 @@ const posHoldOrder = () => {
   posPromoCode.value = "";
   posAppliedPromo.value = null;
   posPromoMsg.value = "";
+  posPaymentMethod.value = null;
   posStage.value = 'start';
   posPhoneNotFound.value = false;
 };
@@ -131,6 +136,7 @@ const posResumeHeld = (id) => {
   posFoundCust.value = held.foundCust;
   posPromoCode.value = held.promoCode;
   posAppliedPromo.value = held.appliedPromo;
+  posPaymentMethod.value = held.paymentMethod ?? null;
   heldOrders.value = heldOrders.value.filter((h) => h.id !== id);
   saveHeldOrders();
   showHeldOrders.value = false;
@@ -303,6 +309,7 @@ const posReset = async () => {
   posPromoCode.value = "";
   posAppliedPromo.value = null;
   posPromoMsg.value = "";
+  posPaymentMethod.value = null;
   posStage.value = 'start';
   posPhoneNotFound.value = false;
 };
@@ -364,6 +371,7 @@ const posPlaceOrder = async () => {
   // Khach hang bat buoc phai duoc xac dinh (co san hoac tao moi) TRUOC khi co san pham
   // trong gio (theo luong posStage) nen o day luon phai co san posFoundCust.
   if (!posFoundCust.value) { posError.value = t('admin.pos.phoneRequired'); return; }
+  if (!posPaymentMethod.value) { posError.value = t('admin.pos.paymentRequired'); return; }
   if (posPlacing.value) return;
   posPlacing.value = true;
   posError.value = "";
@@ -400,6 +408,19 @@ const posPlaceOrder = async () => {
         });
         if (!ctRes.ok) throw new Error(t('admin.errors.addProductError', { message: await ctRes.text() }));
       }
+      // Ghi nhan phuong thuc thanh toan — cung nam trong try nay nen loi cung duoc rollback
+      // (xoa don) giong het loi 1 dong san pham, khong de lai don "da thanh toan" nhung
+      // thieu record thanh toan.
+      const ttRes = await ThanhToanService.create({
+        donHangId,
+        ngayThanhToan: nowLocalIso(),
+        phuongThucThanhToan: posPaymentMethod.value,
+        soTien: posGrandTotal.value,
+        maGiaoDich: null,
+        trangThai: 'success',
+        ghiChu: null,
+      });
+      if (!ttRes.ok) throw new Error(t('admin.errors.createPaymentError', { message: await parsePosApiError(ttRes) }));
     } catch (e) {
       await DonHangService.remove(donHangId).catch(() => {});
       // Xoa xong nhung khong refresh thi danh sach don hang tren UI (da tang truoc do qua
@@ -410,6 +431,7 @@ const posPlaceOrder = async () => {
     posSuccess.value = true;
     posCart.value = []; posPhone.value = ""; posFoundCust.value = null;
     posPromoCode.value = ""; posAppliedPromo.value = null; posPromoMsg.value = "";
+    posPaymentMethod.value = null;
     posStage.value = 'start';
     await refreshOrders();
   } catch (e) {
@@ -523,6 +545,22 @@ const posPlaceOrder = async () => {
         <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.shippingFeeLabel') }}</span><span>{{ posFee===0?t('admin.pos.free'):formatPrice(posFee) }}</span></div>
         <div class="d-flex justify-content-between fw-bold"><span>{{ t('admin.pos.totalLabel') }}</span><span>{{ formatPrice(posGrandTotal) }}</span></div>
       </div>
+      <!-- Phuong thuc thanh toan -->
+      <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
+        <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.paymentMethodLabel') }}</div>
+        <div class="d-flex gap-1">
+          <button v-for="m in POS_PAYMENT_METHODS" :key="m"
+                  class="btn btn-sm flex-fill d-flex flex-column align-items-center py-2"
+                  style="border-radius:8px;font-size:0.65rem;"
+                  :style="posPaymentMethod === m
+                    ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
+                    : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
+                  @click="posPaymentMethod = m">
+            <span style="font-size:1.1rem;">{{ paymentMethodIcon(m) }}</span>
+            <span>{{ paymentMethodLabel(m) }}</span>
+          </button>
+        </div>
+      </div>
       <!-- Khach hang -->
       <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
         <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.customerInfo') }}</div>
@@ -536,7 +574,7 @@ const posPlaceOrder = async () => {
         <div class="d-flex gap-2">
           <button class="btn btn-sm btn-outline-secondary" @click="posReset">{{ t('admin.pos.reset') }}</button>
           <button class="btn btn-sm btn-outline-info" :disabled="!posCart.length" @click="posHoldOrder">{{ t('admin.pos.holdOrder') }}</button>
-          <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" :disabled="posStage !== 'selling' || !posCart.length || posPlacing" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
+          <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" :disabled="posStage !== 'selling' || !posCart.length || !posPaymentMethod || posPlacing" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
         </div>
       </div>
       </template>
