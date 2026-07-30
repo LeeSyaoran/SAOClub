@@ -808,6 +808,10 @@ export default {
       chuyen_khoan: "계좌이체",
       the_tin_dung: "카드",
       vnpay: "QR 코드",
+      momo: "MoMo 지갑",
+      zalopay: "ZaloPay",
+      tra_gop: "할부",
+      khac: "기타",
     },
 
     customers: {

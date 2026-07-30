@@ -808,6 +808,10 @@ export default {
       chuyen_khoan: "银行转账",
       the_tin_dung: "刷卡",
       vnpay: "扫码支付",
+      momo: "MoMo钱包",
+      zalopay: "ZaloPay",
+      tra_gop: "分期付款",
+      khac: "其他",
     },
 
     customers: {

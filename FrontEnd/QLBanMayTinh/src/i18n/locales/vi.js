@@ -808,6 +808,10 @@ export default {
       chuyen_khoan: "Chuyển khoản",
       the_tin_dung: "Thẻ",
       vnpay: "QR",
+      momo: "Ví MoMo",
+      zalopay: "ZaloPay",
+      tra_gop: "Trả góp",
+      khac: "Khác",
     },
 
     customers: {

@@ -411,16 +411,19 @@ const posPlaceOrder = async () => {
       // Ghi nhan phuong thuc thanh toan — cung nam trong try nay nen loi cung duoc rollback
       // (xoa don) giong het loi 1 dong san pham, khong de lai don "da thanh toan" nhung
       // thieu record thanh toan.
-      const ttRes = await ThanhToanService.create({
-        donHangId,
-        ngayThanhToan: nowLocalIso(),
-        phuongThucThanhToan: posPaymentMethod.value,
-        soTien: posGrandTotal.value,
-        maGiaoDich: null,
-        trangThai: 'success',
-        ghiChu: null,
-      });
-      if (!ttRes.ok) throw new Error(t('admin.errors.createPaymentError', { message: await parsePosApiError(ttRes) }));
+      // DB bat buoc so_tien > 0 — don giam gia 100% (tong = 0) khong co gi de ghi nhan thanh toan, nen bo qua.
+      if (posGrandTotal.value > 0) {
+        const ttRes = await ThanhToanService.create({
+          donHangId,
+          ngayThanhToan: nowLocalIso(),
+          phuongThucThanhToan: posPaymentMethod.value,
+          soTien: posGrandTotal.value,
+          maGiaoDich: null,
+          trangThai: 'success',
+          ghiChu: null,
+        });
+        if (!ttRes.ok) throw new Error(t('admin.errors.createPaymentError', { message: await parsePosApiError(ttRes) }));
+      }
     } catch (e) {
       await DonHangService.remove(donHangId).catch(() => {});
       // Xoa xong nhung khong refresh thi danh sach don hang tren UI (da tang truoc do qua

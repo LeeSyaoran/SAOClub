@@ -808,6 +808,10 @@ export default {
       chuyen_khoan: "銀行振込",
       the_tin_dung: "カード",
       vnpay: "QRコード",
+      momo: "MoMoウォレット",
+      zalopay: "ZaloPay",
+      tra_gop: "分割払い",
+      khac: "その他",
     },
 
     customers: {
