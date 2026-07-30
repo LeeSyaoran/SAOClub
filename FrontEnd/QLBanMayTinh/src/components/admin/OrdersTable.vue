@@ -1,16 +1,17 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
-import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon } from "../../utils/orderStatus.js";
+import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatPrice, formatDate, formatDateTime } from "../../utils/adminFormat.js";
-import { authHeaders } from "../../Service/api.js";
+import { authHeaders } from "../../services/api.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
-import * as DonHangService from "../../Service/DonHangService.js";
-import * as ChiTietDonHangService from "../../Service/ChiTietDonHangService.js";
-import * as ChiTietDonHangSerialService from "../../Service/ChiTietDonHangSerialService.js";
-import * as ChiTietSanPhamService from "../../Service/ChiTietSanPhamService.js";
+import * as DonHangService from "../../services/DonHangService.js";
+import * as ChiTietDonHangService from "../../services/ChiTietDonHangService.js";
+import * as ChiTietDonHangSerialService from "../../services/ChiTietDonHangSerialService.js";
+import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
+import * as ThanhToanService from "../../services/ThanhToanService.js";
 import { OrdersStore, ensureOrders, refreshOrders } from "../../stores/orders.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
@@ -22,7 +23,7 @@ onMounted(() => { ensureOrders(); ensureCustomers(); ensureProducts(); });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const customerName = (id) =>
-  CustomersStore.items.find((c) => c.khachHangId === id)?.hoTen ?? `KH#${id}`;
+  (CustomersStore.items ?? []).find((c) => c.khachHangId === id)?.hoTen ?? `KH#${id}`;
 
 // Ngày dạng YYYY-MM-DD cho input[type=date] / so sánh — bản sao cục bộ của cùng hàm
 // ở AdminPage.vue (dùng chung ở Dashboard/Reports, không đáng promote lên module chung
@@ -44,13 +45,14 @@ const historySelectedDate = ref(null); // 'YYYY-MM-DD'
 
 // Danh sách đơn hàng làm nền cho bộ lọc bên dưới, tùy theo chế độ xem đang chọn.
 const ordersBaseList = computed(() => {
+  const all = OrdersStore.items ?? [];
   if (orderViewMode.value === 'history-day' && historySelectedDate.value) {
-    return OrdersStore.items.filter((o) => o.ngayDat?.slice(0, 10) === historySelectedDate.value);
+    return all.filter((o) => o.ngayDat?.slice(0, 10) === historySelectedDate.value);
   }
   if (orderViewMode.value === 'today') {
-    return OrdersStore.items.filter((o) => o.ngayDat?.slice(0, 10) === toDateInputValue(new Date()));
+    return all.filter((o) => o.ngayDat?.slice(0, 10) === toDateInputValue(new Date()));
   }
-  return OrdersStore.items;
+  return all;
 });
 
 const filteredOrders = computed(() => {
@@ -60,7 +62,7 @@ const filteredOrders = computed(() => {
     if (orderPaymentFilter.value && o.trangThaiThanhToan !== orderPaymentFilter.value) return false;
     if (!q) return true;
     const name = customerName(o.khachHangId).toLowerCase();
-    return String(o.donHangId).includes(q) || name.includes(q) || (o.nguoiNhan ?? '').toLowerCase().includes(q) || (o.sdtNguoiNhan ?? '').includes(q);
+    return String(o.donHangId).includes(q) || (o.maDonHang ?? '').toLowerCase().includes(q) || name.includes(q) || (o.nguoiNhan ?? '').toLowerCase().includes(q) || (o.sdtNguoiNhan ?? '').includes(q);
   });
 });
 
@@ -73,7 +75,7 @@ const formatDateHeading = (dateKey) => {
 };
 const orderDatesGrouped = computed(() => {
   const map = {};
-  OrdersStore.items.forEach((o) => {
+  (OrdersStore.items ?? []).forEach((o) => {
     const key = o.ngayDat?.slice(0, 10);
     if (key) map[key] = (map[key] || 0) + 1;
   });
@@ -111,22 +113,25 @@ const deleteOrder = async (id) => {
 const showOrderDetailModal = ref(false);
 const orderDetailData      = ref(null);   // don hang dang xem
 const orderDetailItems     = ref([]);     // ChiTietDonHangResponse[]
+const orderDetailPayments  = ref([]);     // ThanhToanResponse[] — co the rong (don cu/don online)
 const orderDetailLoading   = ref(false);
 
 const openOrderDetail = async (o) => {
   orderDetailData.value  = o;
   orderDetailItems.value = [];
+  orderDetailPayments.value = [];
   showOrderDetailModal.value = true;
   orderDetailLoading.value = true;
   try {
     orderDetailItems.value = await ChiTietDonHangService.getByDonHang(o.donHangId).catch(() => []);
+    orderDetailPayments.value = await ThanhToanService.getByDonHang(o.donHangId).catch(() => []);
   } finally {
     orderDetailLoading.value = false;
   }
 };
 
 // Tim ten san pham tu bienTheId trong danh sach products da load
-const productByBienThe = (bienTheId) => ProductsStore.items.find(p => p.bienTheId === bienTheId);
+const productByBienThe = (bienTheId) => (ProductsStore.items ?? []).find(p => p.bienTheId === bienTheId);
 
 // ── Them san pham vao don ─────────────────────────────────────────────────────
 const addItemMode           = ref(false);
@@ -214,7 +219,7 @@ const confirmAddFromDetail = async () => {
 const addItemProductGroups = computed(() => {
   const q = addItemSearch.value.toLowerCase().trim();
   const map = {};
-  for (const p of ProductsStore.items) {
+  for (const p of (ProductsStore.items ?? [])) {
     if (!map[p.sanPhamId]) {
       map[p.sanPhamId] = { sanPhamId: p.sanPhamId, tenSanPham: p.tenSanPham,
         tenThuongHieu: p.tenThuongHieu, hinhAnhChinh: p.hinhAnhChinh,
@@ -234,9 +239,10 @@ const addItemProductGroups = computed(() => {
 
 const refreshOrderDetail = async () => {
   await refreshOrders();
-  const updated = OrdersStore.items.find(o => o.donHangId === orderDetailData.value?.donHangId);
+  const updated = (OrdersStore.items ?? []).find(o => o.donHangId === orderDetailData.value?.donHangId);
   if (updated) orderDetailData.value = updated;
   orderDetailItems.value = await ChiTietDonHangService.getByDonHang(orderDetailData.value.donHangId).catch(() => []);
+  orderDetailPayments.value = await ThanhToanService.getByDonHang(orderDetailData.value.donHangId).catch(() => []);
 };
 
 const addItemToOrder = async () => {
@@ -280,7 +286,7 @@ const mergeLoading = ref(false);
 const mergeCandidates = computed(() => {
   if (!orderDetailData.value) return [];
   const curDate = orderDetailData.value.ngayDat?.slice(0, 10);
-  return OrdersStore.items.filter(o =>
+  return (OrdersStore.items ?? []).filter(o =>
     o.khachHangId === orderDetailData.value.khachHangId &&
     o.donHangId   !== orderDetailData.value.donHangId &&
     o.ngayDat?.slice(0, 10) === curDate &&
@@ -357,7 +363,7 @@ const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGia
   nguoiNhan: o.nguoiNhan || customerName(o.khachHangId),
   sdtNguoiNhan:
     o.sdtNguoiNhan ||
-    (CustomersStore.items.find((c) => c.khachHangId === o.khachHangId)
+    ((CustomersStore.items ?? []).find((c) => c.khachHangId === o.khachHangId)
       ?.soDienThoai ?? ""),
   tongTien: o.tongTien ?? 0,
   giamGia: o.giamGia ?? 0,
@@ -601,7 +607,7 @@ const confirmXacNhanSerial = async () => {
         <tbody>
           <tr v-for="(o, idx) in filteredOrders" :key="o.donHangId">
             <td class="text-secondary">{{ idx + 1 }}</td>
-            <td class="text-secondary">#{{ o.donHangId }}</td>
+            <td class="text-secondary">{{ o.maDonHang || ('#' + o.donHangId) }}</td>
             <td>{{ customerName(o.khachHangId) }}</td>
             <td>{{ formatPrice(o.thanhTien) }}</td>
             <td>
@@ -867,6 +873,14 @@ const confirmXacNhanSerial = async () => {
           <span class="text-secondary">{{ t('admin.orderDetailModal.paymentStatus') }}</span>
           <span class="badge" :style="{ background: paymentStatusColor(orderDetailData.trangThaiThanhToan).bg, color: paymentStatusColor(orderDetailData.trangThaiThanhToan).text }">
             {{ paymentStatusIcon(orderDetailData.trangThaiThanhToan) }} {{ orderDetailData.trangThaiThanhToan ? paymentStatusLabel(orderDetailData.trangThaiThanhToan) : '—' }}
+          </span>
+        </div>
+        <div v-if="orderDetailPayments.length" class="d-flex justify-content-between small">
+          <span class="text-secondary">{{ t('admin.orderDetailModal.paymentMethod') }}</span>
+          <span style="color:var(--text-primary);">
+            <template v-for="(p, idx) in orderDetailPayments" :key="p.thanhToanId">
+              {{ paymentMethodIcon(p.phuongThucThanhToan) }} {{ paymentMethodLabel(p.phuongThucThanhToan) }}<span v-if="idx < orderDetailPayments.length - 1">, </span>
+            </template>
           </span>
         </div>
         <div v-if="orderDetailData.ngayGiaoDuKien" class="d-flex justify-content-between small">
