@@ -59,7 +59,8 @@ class DmAndSerialAuthorizationTest {
 
     @Test
     void nhanVienController_getAll_moChoNhanVienQuanKho() throws NoSuchMethodException {
-        Method m = NhanVienController.class.getMethod("getAll");
+        // getAll() có phân trang (page, size) — xem NhanVienController.java
+        Method m = NhanVienController.class.getMethod("getAll", int.class, int.class);
         PreAuthorize pa = m.getAnnotation(PreAuthorize.class);
         assertThat(pa).isNotNull();
         assertThat(pa.value()).isEqualTo("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')");

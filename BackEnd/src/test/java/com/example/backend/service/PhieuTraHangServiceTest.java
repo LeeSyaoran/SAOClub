@@ -302,6 +302,37 @@ class PhieuTraHangServiceTest {
         verify(khachHangRepository, never()).save(any());
     }
 
+    @Test
+    void create_ganMaPhieuSauKhiLuuMoi() {
+        // requestDaXuLyQuaVi() tạo phiếu "da_xu_ly" + hoàn "vi" ngay từ lúc tạo mới, nên
+        // create() cũng chạm nhánh cộng ví/trừ điểm (congViNeuVuaHoanTat) — phải gắn KhachHang
+        // đầy đủ vào donHang giống các test khác dùng chung helper này, nếu không NPE ở
+        // KhachHang.getSoDuVi() dù test này chỉ nhắm tới việc gán mã phiếu.
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(1);
+        kh.setSoDuVi(BigDecimal.valueOf(100_000));
+        kh.setDiemTichLuy(20);
+
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+        donHang.setThanhTien(BigDecimal.valueOf(100_000));
+        donHang.setTongTien(BigDecimal.valueOf(100_000));
+
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
+        when(phieuTraHangRepository.save(any(PhieuTraHang.class))).thenAnswer(inv -> {
+            PhieuTraHang p = inv.getArgument(0);
+            if (p.getPhieuTraId() == null) p.setPhieuTraId(101);
+            return p;
+        });
+
+        PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));
+        PhieuTraHang saved = service.create(req);
+
+        assertThat(saved.getMaPhieu()).isEqualTo("TR-101");
+    }
+
     // ── Khách hàng tự gửi yêu cầu trả hàng ──────
 
     @Test

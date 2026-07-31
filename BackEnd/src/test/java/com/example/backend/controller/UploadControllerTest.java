@@ -19,6 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 // file bất kỳ trong upload.dir (trỏ vào mã nguồn frontend).
 class UploadControllerTest {
 
+    // Magic bytes thật — uploadImage() giờ xác thực nội dung file, không chỉ đuôi file
+    // (xem UploadController.uploadImage()), nên nội dung giả phải đúng định dạng khai báo.
+    private static final byte[] JPEG_HEADER = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0};
+    private static final byte[] PNG_HEADER =
+            {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+
     @TempDir
     Path tempDir;
 
@@ -31,7 +37,7 @@ class UploadControllerTest {
     @Test
     void tenFileCoPathTraversal_khongThoatDuocKhoiThuMucDich() throws IOException {
         MockMultipartFile file = new MockMultipartFile(
-                "file", "../../../evil.jpg", "image/jpeg", "noi dung anh".getBytes());
+                "file", "../../../evil.jpg", "image/jpeg", JPEG_HEADER);
 
         ResponseEntity<?> res = newController().uploadImage(file);
 
@@ -64,7 +70,7 @@ class UploadControllerTest {
     @Test
     void tenFileHopLe_luuVoiTenTuSinhKhacTenGoc() {
         MockMultipartFile file = new MockMultipartFile(
-                "file", "product.png", "image/png", "du lieu anh".getBytes());
+                "file", "product.png", "image/png", PNG_HEADER);
 
         ResponseEntity<?> res = newController().uploadImage(file);
 

@@ -12,7 +12,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 // của module — dựng bộ chạy HTTP thật cho riêng test này là hạ tầng mới, không cần thiết.
 // Test này xác nhận trực tiếp bằng reflection rằng @PreAuthorize("hasRole('ADMIN')")
 // (đúng cú pháp đã dùng ở ChucVuController/NhanVienController) có mặt trên
-// get/update/apDungNguongTonKho, và KHÔNG có trên doiMatKhau (mọi role đều được đổi mật khẩu).
+// update/apDungNguongTonKho, và KHÔNG có trên get/doiMatKhau — get() là GET /api/cai-dat,
+// đã permitAll ở SecurityConfig (khách chưa đăng nhập vẫn xem được cấu hình cửa hàng).
 class CaiDatControllerAuthorizationTest {
 
     private static PreAuthorize preAuthorizeOf(String methodName) throws NoSuchMethodException {
@@ -27,10 +28,10 @@ class CaiDatControllerAuthorizationTest {
     }
 
     @Test
-    void get_bienCoAnnotationChiAdmin() throws Exception {
-        PreAuthorize pa = preAuthorizeOf("get");
-        assertThat(pa).isNotNull();
-        assertThat(pa.value()).isEqualTo("hasRole('ADMIN')");
+    void get_khongBiGioiHanRole() throws Exception {
+        // GET /api/cai-dat đã permitAll ở SecurityConfig — không được thêm @PreAuthorize
+        // giới hạn role ở đây, nếu không khách chưa đăng nhập sẽ bị 403 dù URL cho phép qua.
+        assertThat(preAuthorizeOf("get")).isNull();
     }
 
     @Test

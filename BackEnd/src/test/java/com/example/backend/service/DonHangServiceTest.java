@@ -54,6 +54,7 @@ class DonHangServiceTest {
     @Mock private ChiTietDonHangSerialRepository chiTietDonHangSerialRepository;
     @Mock private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
     @Mock private TaiKhoanRepository taiKhoanRepository;
+    @Mock private jakarta.persistence.EntityManager entityManager;
 
     @InjectMocks
     private DonHangService service;

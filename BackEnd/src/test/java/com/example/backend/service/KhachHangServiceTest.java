@@ -10,6 +10,8 @@ import com.example.backend.repository.KhachHangRepository;
 import com.example.backend.repository.LichSuTangDiemRepository;
 import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.request.TangDiemRequest;
+import com.example.backend.response.KhachHangLookupResponse;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -99,5 +101,36 @@ class KhachHangServiceTest {
         assertThatThrownBy(() -> service.tangDiem(99, new TangDiemRequest(10, null)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Khách hàng không tồn tại");
+    }
+
+    // Endpoint /tim-theo-sdt là permitAll (khách vãng lai chưa đăng nhập cũng gọi được) —
+    // không được lộ soDuVi/diemTichLuy/trangThai ra ngoài, chỉ trả đúng thông tin cần để
+    // tự điền form checkout.
+    @Test
+    void findBySoDienThoai_chiTraThongTinCanThiet_khongLoViVaDiem() {
+        KhachHang khachHang = new KhachHang();
+        khachHang.setKhachHangId(7);
+        khachHang.setHoTen("Trần Thị B");
+        khachHang.setSoDienThoai("0912345678");
+        khachHang.setEmail("b@example.com");
+        khachHang.setDiaChi("123 Lê Lợi");
+        khachHang.setDiemTichLuy(9999);
+        khachHang.setSoDuVi(BigDecimal.valueOf(5_000_000));
+        when(khachHangRepository.findBySoDienThoai("0912345678")).thenReturn(Optional.of(khachHang));
+
+        KhachHangLookupResponse result = service.findBySoDienThoai("0912345678");
+
+        assertThat(result.getKhachHangId()).isEqualTo(7);
+        assertThat(result.getHoTen()).isEqualTo("Trần Thị B");
+        assertThat(result.getSoDienThoai()).isEqualTo("0912345678");
+        assertThat(result.getEmail()).isEqualTo("b@example.com");
+        assertThat(result.getDiaChi()).isEqualTo("123 Lê Lợi");
+    }
+
+    @Test
+    void findBySoDienThoai_khongTimThay_traVeNull() {
+        when(khachHangRepository.findBySoDienThoai("0000000000")).thenReturn(Optional.empty());
+
+        assertThat(service.findBySoDienThoai("0000000000")).isNull();
     }
 }
