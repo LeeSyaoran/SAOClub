@@ -3,6 +3,8 @@ package com.example.backend.repository;
 import com.example.backend.entity.KhachHang;
 import com.example.backend.response.KhachHangResponse;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -17,6 +19,10 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
 
 	@Query("SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao) FROM KhachHang k")
 	java.util.List<KhachHangResponse> hienThiKhachHang();
+
+	@Query(value = "SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao) FROM KhachHang k",
+		   countQuery = "SELECT COUNT(k) FROM KhachHang k")
+	Page<KhachHangResponse> hienThiKhachHang(Pageable pageable);
 
 	boolean existsBySoDienThoai(String soDienThoai);
 

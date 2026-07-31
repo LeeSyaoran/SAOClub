@@ -49,6 +49,23 @@ public class PhieuTraHangService {
     @Autowired
     private TaiKhoanRepository taiKhoanRepository;
 
+    private String ensureMaPhieu(PhieuTraHang phieu) {
+        if (phieu.getMaPhieu() != null && !phieu.getMaPhieu().isBlank()) {
+            return phieu.getMaPhieu();
+        }
+        return "TR-" + phieu.getPhieuTraId();
+    }
+
+    private void ensureMaPhieuForSaved(PhieuTraHang phieu) {
+        if (phieu.getPhieuTraId() == null) {
+            return;
+        }
+        if (phieu.getMaPhieu() == null || phieu.getMaPhieu().isBlank()) {
+            phieu.setMaPhieu(ensureMaPhieu(phieu));
+            phieuTraHangRepository.save(phieu);
+        }
+    }
+
     public List<PhieuTraHangResponse> hienThiPhieuTraHang() {
         return phieuTraHangRepository.hienThiPhieuTraHang();
     }
@@ -71,6 +88,7 @@ public class PhieuTraHangService {
         if (request.getNhanVienId() != null)
             entity.setNhanVien(nhanVienRepository.getReferenceById(request.getNhanVienId()));
         PhieuTraHang saved = phieuTraHangRepository.save(entity);
+        ensureMaPhieuForSaved(saved);
         congViNeuVuaHoanTat(null, saved);
         truHoiDiemNeuVuaHoanTat(null, saved);
         return saved;
@@ -89,6 +107,7 @@ public class PhieuTraHangService {
         entity.setNhanVien(request.getNhanVienId() != null
                 ? nhanVienRepository.getReferenceById(request.getNhanVienId()) : null);
         PhieuTraHang saved = phieuTraHangRepository.save(entity);
+        ensureMaPhieuForSaved(saved);
         congViNeuVuaHoanTat(trangThaiCu, saved);
         truHoiDiemNeuVuaHoanTat(trangThaiCu, saved);
         return saved;
@@ -255,6 +274,7 @@ public class PhieuTraHangService {
         phieu.setSoTienHoan(tongTienHoan);
         phieu.setHinhThucHoan("vi");
         PhieuTraHang saved = phieuTraHangRepository.save(phieu);
+        ensureMaPhieuForSaved(saved);
 
         for (ChiTietTraHang dong : dongTraHang) {
             dong.setPhieuTraHang(saved);
@@ -272,7 +292,8 @@ public class PhieuTraHangService {
                 .map(p -> new PhieuTraHangResponse(
                         p.getPhieuTraId(), p.getDonHang().getId(),
                         p.getNhanVien() != null ? p.getNhanVien().getNhanVienId() : null,
-                        p.getLyDo(), p.getNgayTra(), p.getTrangThai(), p.getSoTienHoan(), p.getHinhThucHoan(), p.getGhiChu()))
+                        p.getLyDo(), p.getNgayTra(), p.getTrangThai(), p.getSoTienHoan(), p.getHinhThucHoan(), p.getGhiChu(),
+                        p.getMaPhieu() != null && !p.getMaPhieu().isBlank() ? p.getMaPhieu() : ensureMaPhieu(p)))
                 .toList();
     }
 

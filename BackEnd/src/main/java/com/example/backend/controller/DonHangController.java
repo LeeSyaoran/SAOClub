@@ -9,6 +9,7 @@ import com.example.backend.service.DonHangService;
 import com.example.backend.service.SseService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -72,9 +73,13 @@ public class DonHangController {
     // Gộp nhiều đơn hàng của cùng khách vào 1 đơn đích — chỉ staff (AdminPage).
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PostMapping("merge")
-    public ResponseEntity<Void> merge(@RequestBody MergeOrderRequest request) {
-        donHangService.mergeOrders(request.getTargetId(), request.getSourceIds());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> merge(@RequestBody MergeOrderRequest request) {
+        try {
+            donHangService.mergeOrders(request.getTargetId(), request.getSourceIds());
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     // Tính lại tong_tien sau khi thêm/xóa sản phẩm trong đơn — chỉ staff (AdminPage).

@@ -98,6 +98,7 @@ BEGIN
         diem_tich_luy  INT            NOT NULL DEFAULT 0 CONSTRAINT CK_kh_diem CHECK (diem_tich_luy >= 0),
         trang_thai     NVARCHAR(20)   NOT NULL DEFAULT N'active'
             CONSTRAINT CK_khach_hang_trangthai CHECK (trang_thai IN (N'active', N'inactive', N'blocked')),
+        da_xoa         BIT            NOT NULL DEFAULT 0,
         ngay_tao       DATETIME       NOT NULL DEFAULT GETDATE(),
         ngay_cap_nhat  DATETIME       NOT NULL DEFAULT GETDATE()
     );
@@ -125,6 +126,7 @@ BEGIN
         luong_co_ban   DECIMAL(18,0)  NOT NULL DEFAULT 0 CONSTRAINT CK_nv_luong CHECK (luong_co_ban >= 0),
         trang_thai     NVARCHAR(20)   NOT NULL DEFAULT N'active'
             CONSTRAINT CK_nhan_vien_trangthai CHECK (trang_thai IN (N'active', N'inactive', N'nghi_viec')),
+        da_xoa         BIT            NOT NULL DEFAULT 0,
         ngay_tao       DATETIME       NOT NULL DEFAULT GETDATE(),
         ngay_cap_nhat  DATETIME       NOT NULL DEFAULT GETDATE(),
         CONSTRAINT FK_nhan_vien_chuc_vu FOREIGN KEY (chuc_vu_id) REFERENCES chuc_vu(chuc_vu_id)
@@ -167,7 +169,9 @@ BEGIN
             CONSTRAINT CK_sp_loaisanpham CHECK (loai_san_pham IN ('LAPTOP', 'PHU_KIEN', 'DIEN_THOAI')),
         trang_thai      NVARCHAR(20)    NOT NULL DEFAULT N'active'
             CONSTRAINT CK_san_pham_trangthai CHECK (trang_thai IN (N'active', N'inactive', N'ngung_kinh_doanh')),
+        da_xoa          BIT             NOT NULL DEFAULT 0,
         ngay_tao        DATETIME        NOT NULL DEFAULT GETDATE(),
+        ngay_cap_nhat   DATETIME        NOT NULL DEFAULT GETDATE(),
         CONSTRAINT FK_san_pham_thuong_hieu  FOREIGN KEY (thuong_hieu_id)  REFERENCES thuong_hieu(thuong_hieu_id),
         CONSTRAINT FK_san_pham_danh_muc     FOREIGN KEY (danh_muc_id)     REFERENCES danh_muc(danh_muc_id),
         CONSTRAINT FK_san_pham_nha_cung_cap FOREIGN KEY (nha_cung_cap_id) REFERENCES nha_cung_cap(nha_cung_cap_id)
@@ -215,6 +219,7 @@ BEGIN
         hinh_anh_bien_the   NVARCHAR(500)   NULL,
         trang_thai          NVARCHAR(20)    NOT NULL DEFAULT N'active'
             CONSTRAINT CK_bt_trangthai CHECK (trang_thai IN (N'active', N'inactive')),
+        da_xoa              BIT             NOT NULL DEFAULT 0,
         mau_sac             NVARCHAR(50)    NULL,
 
         -- Thông số kỹ thuật Laptop
@@ -231,6 +236,8 @@ BEGIN
         -- VD: 'gaming,do_hoa' | 'van_phong,sinh_vien'
         phan_loai_tags      NVARCHAR(200)   NULL,
         phan_loai_ten       NVARCHAR(200)   NULL,
+        ngay_tao            DATETIME        NOT NULL DEFAULT GETDATE(),
+        ngay_cap_nhat       DATETIME        NOT NULL DEFAULT GETDATE(),
 
         CONSTRAINT FK_bien_the_san_pham FOREIGN KEY (san_pham_id) REFERENCES san_pham(san_pham_id) ON DELETE CASCADE,
         CONSTRAINT FK_bien_the_cpu      FOREIGN KEY (cpu_id)      REFERENCES dm_cpu(cpu_id),
@@ -253,6 +260,7 @@ BEGIN
         so_luong_giu         INT      NOT NULL DEFAULT 0 CONSTRAINT CK_chtk_giu        CHECK (so_luong_giu >= 0),
         ton_kho_toi_thieu    INT      NOT NULL DEFAULT 5  CONSTRAINT CK_chtk_toithieu  CHECK (ton_kho_toi_thieu >= 0),
         CONSTRAINT CK_chtk_giu_le_ton CHECK (so_luong_giu <= so_luong_ton_thuc_te),
+        ngay_tao             DATETIME NOT NULL DEFAULT GETDATE(),
         ngay_cap_nhat        DATETIME NOT NULL DEFAULT GETDATE(),
         CONSTRAINT FK_ton_kho_bt FOREIGN KEY (bien_the_id) REFERENCES bien_the_san_pham(bien_the_id) ON DELETE CASCADE
     );
@@ -455,6 +463,7 @@ BEGIN
         ngay_dat             DATETIME       NOT NULL DEFAULT GETDATE(),
         ngay_giao_du_kien    DATETIME       NULL,
         ngay_giao_thuc_te    DATETIME       NULL,
+        ngay_tao             DATETIME       NOT NULL DEFAULT GETDATE(),
         ngay_cap_nhat        DATETIME       NOT NULL DEFAULT GETDATE(),
 
         trang_thai_don_hang  NVARCHAR(30)   NOT NULL DEFAULT N'pending'
@@ -580,6 +589,11 @@ BEGIN
             CONSTRAINT CK_pth_trangthai CHECK (trang_thai IN (N'cho_xu_ly', N'da_xu_ly', N'tu_choi')),
         so_tien_hoan  DECIMAL(18,0)  NOT NULL DEFAULT 0 CONSTRAINT CK_pth_tienhoan CHECK (so_tien_hoan >= 0),
         ghi_chu       NVARCHAR(500)  NULL,
+
+        -- ma_phieu: generated, zero-padded 6 digits (e.g. TR-000123)
+        ma_phieu AS ('TR-' + RIGHT('000000' + CONVERT(NVARCHAR(6), phieu_tra_id), 6)) PERSISTED,
+        CONSTRAINT UQ_pth_ma_phieu UNIQUE (ma_phieu),
+
         CONSTRAINT FK_pth_don_hang  FOREIGN KEY (don_hang_id)  REFERENCES don_hang(don_hang_id),
         CONSTRAINT FK_pth_nhan_vien FOREIGN KEY (nhan_vien_id) REFERENCES nhan_vien(nhan_vien_id)
     );
@@ -596,6 +610,7 @@ BEGIN
     ALTER TABLE phieu_tra_hang ADD hinh_thuc_hoan NVARCHAR(20) NOT NULL DEFAULT N'vi'
         CONSTRAINT CK_pth_hinhthuchoan CHECK (hinh_thuc_hoan IN (N'tien_mat', N'vi'));
 END
+-- `ma_phieu` đã được định nghĩa là cột computed trong CREATE TABLE, vì vậy không cần ALTER/UPDATE ở đây.
 
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_tra_hang')
 BEGIN
@@ -629,6 +644,7 @@ BEGIN
         ket_qua_xu_ly     NVARCHAR(500)  NULL,
         trang_thai        NVARCHAR(30)   NOT NULL DEFAULT N'con_bao_hanh'
             CONSTRAINT CK_pbh_trangthai CHECK (trang_thai IN (N'con_bao_hanh', N'dang_xu_ly', N'da_xu_ly', N'het_bao_hanh', N'tu_choi')),
+        da_xoa            BIT            NOT NULL DEFAULT 0,
         chi_phi_phat_sinh DECIMAL(18,0)  NOT NULL DEFAULT 0 CONSTRAINT CK_pbh_chiphi CHECK (chi_phi_phat_sinh >= 0),
         ghi_chu           NVARCHAR(500)  NULL,
         CONSTRAINT FK_pbh_don_hang   FOREIGN KEY (don_hang_id)   REFERENCES don_hang(don_hang_id),

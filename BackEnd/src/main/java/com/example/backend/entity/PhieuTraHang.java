@@ -45,4 +45,7 @@ public class PhieuTraHang {
 
     @Column(name = "ghi_chu", length = 500)
     private String ghiChu;
+
+    @Column(name = "ma_phieu", insertable = false, updatable = false, length = 30)
+    private String maPhieu;
 }

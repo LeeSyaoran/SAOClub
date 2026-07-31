@@ -34,7 +34,6 @@ public class CaiDatController {
     @Autowired
     private AuthService authService;
 
-    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public CaiDatHeThongResponse get() {
         return caiDatHeThongService.get();

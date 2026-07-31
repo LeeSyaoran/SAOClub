@@ -26,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -71,6 +72,8 @@ public class DonHangService {
     private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
     @Autowired
     private TaiKhoanRepository taiKhoanRepository;
+    @Autowired
+    private EntityManager entityManager;
 
     // Trước đây không kiểm tra chủ đơn — khách hàng đăng nhập bất kỳ có thể tự truyền
     // khachHangId của người khác trên URL để xem đơn hàng người khác. Ép về đúng chủ tài
@@ -146,6 +149,11 @@ public class DonHangService {
         }
 
         DonHang saved = donHangRepository.save(entity);
+        // maDonHang sinh bởi trigger DB (insertable=false) — không có sẵn trên entity vừa
+        // save() trong cùng transaction, phải refresh() lại mới đọc được (cùng pattern đã
+        // dùng cho maPhieu ở PhieuGiamGiaCaNhanService/VongQuayService). Thiếu bước này,
+        // response trả về cho khách sau khi đặt hàng thành công sẽ có maDonHang = null.
+        entityManager.refresh(saved);
 
         if (phieuDangDung != null) {
             phieuDangDung.setDaSuDung(true);
@@ -413,6 +421,7 @@ public class DonHangService {
     }
 
     // Tính lại tong_tien từ tổng các dòng chi tiết (don_gia * so_luong - giam_gia_dong)
+    @Transactional
     public void recalculateTongTien(Integer orderId) {
         DonHang order = getById(orderId);
         List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(orderId);

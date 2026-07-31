@@ -6,6 +6,8 @@ import com.example.backend.response.NhanVienResponse;
 import com.example.backend.service.NhanVienService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,11 +26,13 @@ public class NhanVienController {
     @Autowired
     private NhanVienService nhanVienService;
 
-    // GET /api/nhan-vien — DTO query với LEFT JOIN chuc_vu (tránh implicit INNER JOIN)
+    // GET /api/nhan-vien — DTO query với LEFT JOIN chuc_vu (tránh implicit INNER JOIN), có phân trang.
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @GetMapping
-    public List<NhanVienResponse> getAll() {
-        return nhanVienService.hienThiNhanVien();
+    public Page<NhanVienResponse> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return nhanVienService.hienThiNhanVien(PageRequest.of(page, size));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")

@@ -3,9 +3,12 @@ package com.example.backend.service;
 import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.repository.*;
 import com.example.backend.request.BienTheSanPhamRequest;
+import com.example.backend.response.BienTheSanPhamPublicResponse;
 import com.example.backend.response.BienTheSanPhamResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,11 +48,30 @@ public class BienTheSanPhamService {
         return bienTheSanPhamRepository.hienThiBienTheSanPham();
     }
 
+    public Page<BienTheSanPhamResponse> hienThiBienTheSanPham(Pageable pageable) {
+        return bienTheSanPhamRepository.hienThiBienTheSanPham(pageable);
+    }
+
+    public List<BienTheSanPhamPublicResponse> hienThiBienTheSanPhamPublic() {
+        return bienTheSanPhamRepository.hienThiBienTheSanPhamPublic();
+    }
+
+    public BienTheSanPhamPublicResponse getPublicById(Integer id) {
+        return bienTheSanPhamRepository.findPublicById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Biến thể sản phẩm không tồn tại với id: " + id));
+    }
+
+    public BienTheSanPhamResponse getResponseById(Integer id) {
+        return bienTheSanPhamRepository.findResponseById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Biến thể sản phẩm không tồn tại với id: " + id));
+    }
+
     public BienTheSanPham getById(Integer id) {
         return bienTheSanPhamRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Biến thể sản phẩm không tồn tại với id: " + id));
     }
 
+    @Transactional
     public BienTheSanPham create(BienTheSanPhamRequest request) {
         BienTheSanPham entity = new BienTheSanPham();
         // Bỏ qua: sanPhamId, cpuId, ramId, oCungId, gpuId (khác tên với entity)
@@ -64,6 +86,7 @@ public class BienTheSanPhamService {
         return bienTheSanPhamRepository.save(entity);
     }
 
+    @Transactional
     public BienTheSanPham update(Integer id, BienTheSanPhamRequest request) {
         BienTheSanPham entity = getById(id);
         BeanUtils.copyProperties(request, entity, "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId");
@@ -87,10 +110,6 @@ public class BienTheSanPhamService {
                 || chiTietSanPhamRepository.existsByBienThe_BienTheIdAndTrangThaiNot(id, "trong_kho");
     }
 
-    // Chỉ xóa được biến thể CHƯA từng qua giao dịch — có giao dịch rồi mà xóa sẽ làm sai
-    // lịch sử đơn hàng/bảo hành đã ghi nhận. Nếu an toàn, dọn hết dữ liệu phụ thuộc (tồn
-    // kho/serial/lịch sử/phiếu nhập của riêng biến thể này — không phải bằng chứng đã bán)
-    // trước khi xóa biến thể.
     @Transactional
     public void delete(Integer id) {
         BienTheSanPham entity = getById(id);
@@ -99,10 +118,6 @@ public class BienTheSanPhamService {
                     "Không thể xóa biến thể \"" + entity.getMaSku() + "\": đã có lịch sử bán hàng/bảo hành. " +
                     "Hãy chuyển trạng thái sang ngừng kinh doanh thay vì xóa.");
         }
-        chiTietSanPhamRepository.deleteByBienThe_BienTheId(id);
-        tonKhoRepository.deleteByBienThe_BienTheId(id);
-        chiTietPhieuNhapRepository.deleteByBienThe_BienTheId(id);
-        lichSuTonKhoRepository.deleteByBienThe_BienTheId(id);
         bienTheSanPhamRepository.deleteById(id);
     }
 }

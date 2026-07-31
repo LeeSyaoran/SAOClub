@@ -9,6 +9,8 @@ import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.request.NhanVienRequest;
 import com.example.backend.response.NhanVienResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,10 @@ public class NhanVienService {
 
     public List<NhanVienResponse> hienThiNhanVien() {
         return nhanVienRepository.hienThiNhanVien();
+    }
+
+    public Page<NhanVienResponse> hienThiNhanVien(Pageable pageable) {
+        return nhanVienRepository.hienThiNhanVien(pageable);
     }
 
     public NhanVien getById(Integer id) {
@@ -85,12 +91,10 @@ public class NhanVienService {
         return saved;
     }
 
-    // Xoá nhân viên — xoá luôn tài khoản đăng nhập liên kết trước (FK), nếu không sẽ vỡ khoá ngoại.
     @Transactional
     public void delete(Integer id) {
         if (!nhanVienRepository.existsById(id))
             throw new IllegalArgumentException("Nhân viên không tồn tại với id: " + id);
-        taiKhoanRepository.findByNhanVien_NhanVienId(id).ifPresent(taiKhoanRepository::delete);
         nhanVienRepository.deleteById(id);
     }
 }

@@ -22,4 +22,5 @@ public class PhieuTraHangResponse {
     private BigDecimal soTienHoan;
     private String hinhThucHoan;
     private String ghiChu;
+    private String maPhieu;
 }

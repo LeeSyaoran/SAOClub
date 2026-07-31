@@ -6,6 +6,8 @@ import com.example.backend.request.PhieuBaoHanhRequest;
 import com.example.backend.response.PhieuBaoHanhResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,6 +28,10 @@ public class PhieuBaoHanhService {
 
     public List<PhieuBaoHanhResponse> hienThiPhieuBaoHanh() {
         return phieuBaoHanhRepository.hienThiPhieuBaoHanh();
+    }
+
+    public Page<PhieuBaoHanhResponse> hienThiPhieuBaoHanh(Pageable pageable) {
+        return phieuBaoHanhRepository.hienThiPhieuBaoHanh(pageable);
     }
 
     public PhieuBaoHanh getById(Integer id) {

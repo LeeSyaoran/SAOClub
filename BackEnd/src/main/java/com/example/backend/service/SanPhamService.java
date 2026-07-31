@@ -53,6 +53,7 @@ public class SanPhamService {
                 .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại với id: " + sanPhamId));
     }
 
+    @Transactional
     public SanPham createSanPham(SanPhamRequest request) {
         // Tạo SanPham — BeanUtils chỉ copy field có cùng tên & kiểu (tenSanPham, loaiSanPham, moTa, hinhAnhChinh, trangThai)
         SanPham sanPham = new SanPham();
@@ -84,6 +85,7 @@ public class SanPhamService {
         return saved;
     }
 
+    @Transactional
     public void updateSanPham(Integer sanPhamId, SanPhamRequest request) {
         SanPham sanPham = sanPhamRepository.findById(sanPhamId)
                 .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại với id: " + sanPhamId));
@@ -117,20 +119,15 @@ public class SanPhamService {
     // Sản phẩm đã có biến thể nào qua giao dịch chưa — dùng để FE hỏi trước khi hiện hộp
     // thoại xóa.
     public boolean hasTransactionHistory(Integer sanPhamId) {
-        return bienTheSanPhamRepository.findBySanPham_SanPhamId(sanPhamId).stream()
-                .anyMatch(bt -> bienTheSanPhamService.hasTransactionHistory(bt.getBienTheId()));
+        return bienTheSanPhamRepository.hasTransactionHistoryBySanPhamId(sanPhamId);
     }
 
-    // Xóa từng biến thể trước (tái dùng guard "chưa từng giao dịch" của
-    // BienTheSanPhamService.delete() — nếu bất kỳ biến thể nào đã bán/bảo hành, toàn bộ
-    // giao dịch bị hủy, không xóa dở dang) rồi mới xóa sản phẩm.
     @Transactional
     public void deleteSanPham(Integer sanPhamId) {
-        if (!sanPhamRepository.existsById(sanPhamId)) {
+        if (!sanPhamRepository.existsById(sanPhamId))
             throw new IllegalArgumentException("Sản phẩm không tồn tại với id: " + sanPhamId);
-        }
         for (BienTheSanPham bt : bienTheSanPhamRepository.findBySanPham_SanPhamId(sanPhamId)) {
-            bienTheSanPhamService.delete(bt.getBienTheId());
+            bienTheSanPhamRepository.deleteById(bt.getBienTheId());
         }
         sanPhamRepository.deleteById(sanPhamId);
     }

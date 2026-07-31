@@ -3,6 +3,8 @@ package com.example.backend.repository;
 import com.example.backend.entity.NhanVien;
 import com.example.backend.entity.TaiKhoan;
 import com.example.backend.response.NhanVienResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -34,4 +36,17 @@ public interface NhanVienRepository extends JpaRepository<NhanVien, Integer> {
     LEFT JOIN TaiKhoan tk ON tk.nhanVien = n
     """)
     List<NhanVienResponse> hienThiNhanVien();
+
+    @Query(value = """
+        SELECT new com.example.backend.response.NhanVienResponse(
+            n.nhanVienId, n.hoTen, n.soDienThoai, n.email,
+            cv.id, tk.username,
+            n.luongCoBan, n.trangThai, n.ngayTao
+        )
+        FROM NhanVien n
+        LEFT JOIN n.chucVu cv
+        LEFT JOIN TaiKhoan tk ON tk.nhanVien = n
+        """,
+        countQuery = "SELECT COUNT(n) FROM NhanVien n")
+    Page<NhanVienResponse> hienThiNhanVien(Pageable pageable);
 }

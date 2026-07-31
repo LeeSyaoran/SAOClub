@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -13,7 +12,7 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @Table(name = "khach_hang")
-public class KhachHang {
+public class KhachHang extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,8 +48,5 @@ public class KhachHang {
 
     @Column(name = "trang_thai", length = 20)
     private String trangThai;
-
-    @Column(name = "ngay_tao", nullable = false)
-    private LocalDateTime ngayTao;
 
 }

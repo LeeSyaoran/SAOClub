@@ -3,8 +3,6 @@ package com.example.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,7 +10,7 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @Table(name = "ton_kho")
-public class TonKho {
+public class TonKho extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,6 +30,5 @@ public class TonKho {
     @Column(name = "ton_kho_toi_thieu")
     private Integer tonKhoToiThieu;
 
-    @Column(name = "ngay_cap_nhat")
-    private LocalDateTime ngayCapNhat;
+
 }
