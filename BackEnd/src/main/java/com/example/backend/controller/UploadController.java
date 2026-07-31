@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,6 +38,27 @@ public class UploadController {
         String duoi = layDuoiFile(tenGoc);
         if (!DUOI_ANH_HOP_LE.contains(duoi)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Chỉ chấp nhận file ảnh (jpg, jpeg, png, gif, webp)"));
+        }
+
+        // Xác thực nội dung file bằng magic bytes — chặn file giả đuôi (.exe đổi thành .png)
+        try (InputStream is = file.getInputStream()) {
+            byte[] header = new byte[8];
+            int read = is.read(header);
+            if (read < 4) {
+                return ResponseEntity.badRequest().body(Map.of("error", "File không hợp lệ"));
+            }
+            boolean validMagic = switch (duoi) {
+                case "jpg", "jpeg" -> header[0] == (byte) 0xFF && header[1] == (byte) 0xD8;
+                case "png" -> header[0] == (byte) 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47;
+                case "gif" -> header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46;
+                case "webp" -> header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46;
+                default -> false;
+            };
+            if (!validMagic) {
+                return ResponseEntity.badRequest().body(Map.of("error", "File không phải là ảnh hợp lệ"));
+            }
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Lỗi đọc file"));
         }
 
         try {

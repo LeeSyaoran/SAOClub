@@ -24,7 +24,7 @@ public class KhachHangRegisterRequest {
     private String username;
 
     @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 4, message = "Mật khẩu tối thiểu 4 ký tự")
+    @Size(min = 8, message = "Mật khẩu tối thiểu 8 ký tự")
     private String password;
 
     private String diaChi;

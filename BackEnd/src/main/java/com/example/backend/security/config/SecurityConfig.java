@@ -20,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -45,7 +46,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173",
+                "http://localhost:4173"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
 
@@ -82,6 +86,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(s -> s
                 // Public: đăng nhập, đăng ký
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/khach-hang/register").permitAll()
                 .requestMatchers("/api/khach-hang/tim-theo-sdt").permitAll()
                 .requestMatchers("/api/khach-hang/khach-vang-lai").permitAll()
@@ -89,6 +94,7 @@ public class SecurityConfig {
                 // Public: CHỈ xem sản phẩm, danh mục (khách chưa đăng nhập vẫn xem được) — trước
                 // đây permitAll không giới hạn method, nên POST/PUT/DELETE cũng đi qua mà không
                 // cần JWT. Ghi/sửa/xoá vẫn phải qua @PreAuthorize staff-only ở từng controller.
+                .requestMatchers(HttpMethod.GET, "/api/cai-dat").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/san-pham/**", "/api/danh-muc/**", "/api/thuong-hieu/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/dm-cpu/**", "/api/dm-ram/**", "/api/dm-gpu/**", "/api/dm-o-cung/**").permitAll()
 

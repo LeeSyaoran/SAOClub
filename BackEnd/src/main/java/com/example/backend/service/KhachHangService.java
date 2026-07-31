@@ -13,10 +13,13 @@ import com.example.backend.request.KhachHangRegisterRequest;
 import com.example.backend.request.KhachHangRequest;
 import com.example.backend.request.TangDiemRequest;
 import com.example.backend.response.KhachHangLoginResponse;
+import com.example.backend.response.KhachHangLookupResponse;
 import com.example.backend.response.KhachHangResponse;
 import com.example.backend.response.LichSuTangDiemResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,12 +51,22 @@ public class KhachHangService {
         return khachHangRepository.hienThiKhachHang();
     }
 
+    public Page<KhachHangResponse> hienThiKhachHang(Pageable pageable) {
+        return khachHangRepository.hienThiKhachHang(pageable);
+    }
+
     // Tra cứu theo SĐT cho luồng checkout (khách vãng lai lẫn đã đăng nhập) — không kiểm
     // tra staff-or-self như getById() vì lúc này người gọi CHƯA CHẮC đã có tài khoản/đăng
     // nhập (khách vãng lai). Chỉ trả về đúng 1 khách khớp SĐT, không lộ toàn bộ danh sách
     // như getAll() (vốn chỉ dành cho nhân viên/admin).
-    public KhachHang findBySoDienThoai(String soDienThoai) {
-        return khachHangRepository.findBySoDienThoai(soDienThoai).orElse(null);
+    //
+    // Trả DTO rút gọn (KHÔNG phải entity KhachHang) — endpoint này permitAll, ai cũng gọi
+    // được kể cả dò số điện thoại ngẫu nhiên, nên tuyệt đối không lộ soDuVi/diemTichLuy.
+    public KhachHangLookupResponse findBySoDienThoai(String soDienThoai) {
+        return khachHangRepository.findBySoDienThoai(soDienThoai)
+                .map(k -> new KhachHangLookupResponse(
+                        k.getKhachHangId(), k.getHoTen(), k.getSoDienThoai(), k.getEmail(), k.getDiaChi()))
+                .orElse(null);
     }
 
     public KhachHang getById(Integer id) {
@@ -64,6 +77,7 @@ public class KhachHangService {
         return entity;
     }
 
+    @Transactional
     public KhachHang create(KhachHangRequest request) {
         KhachHang entity = new KhachHang();
         BeanUtils.copyProperties(request, entity);
@@ -72,6 +86,7 @@ public class KhachHangService {
         return khachHangRepository.save(entity);
     }
 
+    @Transactional
     public KhachHang update(Integer id, KhachHangRequest request) {
         KhachHang entity = getById(id); // đã kiểm tra staff-or-self ở trên
 
@@ -133,12 +148,10 @@ public class KhachHangService {
         return tk.getKhachHang() != null && khachHangId.equals(tk.getKhachHang().getKhachHangId());
     }
 
-    // Xoá khách hàng — xoá luôn tài khoản đăng nhập liên kết trước (FK), nếu không sẽ vỡ khoá ngoại.
     @Transactional
     public void delete(Integer id) {
         if (!khachHangRepository.existsById(id))
             throw new IllegalArgumentException("Khách hàng không tồn tại với id: " + id);
-        taiKhoanRepository.findByKhachHang_KhachHangId(id).ifPresent(taiKhoanRepository::delete);
         khachHangRepository.deleteById(id);
     }
 

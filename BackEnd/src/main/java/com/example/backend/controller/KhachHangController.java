@@ -4,11 +4,14 @@ import com.example.backend.entity.KhachHang;
 import com.example.backend.request.KhachHangRegisterRequest;
 import com.example.backend.request.KhachHangRequest;
 import com.example.backend.request.TangDiemRequest;
+import com.example.backend.response.KhachHangLookupResponse;
 import com.example.backend.response.KhachHangResponse;
 import com.example.backend.response.LichSuTangDiemResponse;
 import com.example.backend.service.KhachHangService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,11 +26,13 @@ public class KhachHangController {
     @Autowired
     private KhachHangService khachHangService;
 
-    // Danh sách toàn bộ khách hàng — chỉ nhân viên/admin/quản kho được xem
+    // Danh sách toàn bộ khách hàng — chỉ nhân viên/admin/quản kho được xem, có phân trang.
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @GetMapping
-    public List<KhachHangResponse> getAll() {
-        return khachHangService.hienThiKhachHang();
+    public Page<KhachHangResponse> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return khachHangService.hienThiKhachHang(PageRequest.of(page, size));
     }
 
     // Xem 1 khách hàng — nhân viên xem ai cũng được, khách chỉ xem chính mình (check trong service)
@@ -82,8 +87,10 @@ public class KhachHangController {
 
     // Tra cứu theo SĐT cho checkout (khách vãng lai lẫn đã đăng nhập) — permitAll vì khách
     // vãng lai chưa có JWT lúc này. Trả về null (không phải lỗi) nếu chưa có tài khoản.
+    // Rate-limit riêng ở RateLimitingFilter — endpoint công khai, không giới hạn thì ai
+    // cũng dò được số điện thoại ngẫu nhiên để biết ai đã là khách hàng.
     @GetMapping("/tim-theo-sdt")
-    public KhachHang findBySoDienThoai(@RequestParam String soDienThoai) {
+    public KhachHangLookupResponse findBySoDienThoai(@RequestParam String soDienThoai) {
         return khachHangService.findBySoDienThoai(soDienThoai);
     }
 
