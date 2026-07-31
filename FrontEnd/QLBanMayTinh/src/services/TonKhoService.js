@@ -1,6 +1,6 @@
 import { get, put } from './api.js';
 
-export const getAll = () => get('/api/ton-kho');
+export const getAll = () => get(`/api/ton-kho`);
 
 export const getByBienThe = (bienTheId) => get(`/api/ton-kho/bien-the/${bienTheId}`);
 

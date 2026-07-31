@@ -14,7 +14,7 @@ export const getPage = ({ page = 0, size = 20, keyword, danhMucId, thuongHieuId,
 
 // Tương thích các chỗ đang cần "toàn bộ" sản phẩm trong bộ nhớ (dashboard, POS, dropdown
 // biến thể...) — lấy 1 trang lớn rồi trả thẳng mảng .content, không đổi chữ ký hàm cũ.
-export const getAll = () => getPage({ size: 5000 }).then((p) => p.content);
+export const getAll = () => getPage({ size: 200 }).then((p) => p.content);
 
 export const save = (id, body) =>
   id ? put(`/api/san-pham/update/${id}`, body) : post('/api/san-pham', body);

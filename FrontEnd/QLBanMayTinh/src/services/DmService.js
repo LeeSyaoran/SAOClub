@@ -8,7 +8,8 @@ export const getOCung      = () => get('/api/dm-o-cung');
 export const getGpu        = () => get('/api/dm-gpu');
 
 const crud = (path) => ({
-  getAll: () => get(`/api/${path}`),
+  getAll: () => get(`/api/${path}?page=0&size=200`),
+  getPage: ({ page = 0, size = 50 } = {}) => get(`/api/${path}?page=${page}&size=${size}`),
   save: (id, body) => id ? put(`/api/${path}/update/${id}`, body) : post(`/api/${path}`, body),
   remove: (id) => del(`/api/${path}/delete/${id}`),
 });

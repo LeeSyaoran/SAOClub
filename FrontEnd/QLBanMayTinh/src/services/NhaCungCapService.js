@@ -1,6 +1,6 @@
 import { get, post, put, del } from './api.js';
 
-export const getAll = () => get('/api/nha-cung-cap');
+export const getAll = () => get(`/api/nha-cung-cap`);
 
 export const getById = (id) => get(`/api/nha-cung-cap/${id}`);
 

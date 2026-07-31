@@ -5,4 +5,4 @@ export const getByDonHang = (donHangId) => get(`/api/chi-tiet-don-hang/don-hang/
 
 // Lấy toàn bộ chi tiết đơn hàng trong 1 lần gọi (dùng cho thống kê tổng hợp,
 // tránh gọi getByDonHang() lặp lại cho từng đơn — rất chậm khi có nhiều đơn hàng)
-export const getAll = () => get('/api/chi-tiet-don-hang');
+export const getAll = () => get(`/api/chi-tiet-don-hang`);

@@ -1,7 +1,8 @@
 import { get, post, put, del } from './api.js';
 
 const chiTietLinhKien = (path) => ({
-  getAll: () => get(`/api/${path}`),
+  getAll: () => get(`/api/${path}?page=0&size=200`),
+  getPage: ({ page = 0, size = 50 } = {}) => get(`/api/${path}?page=${page}&size=${size}`),
   create: (body) => post(`/api/${path}`, body),
   update: (id, body) => put(`/api/${path}/update/${id}`, body),
   remove: (id) => del(`/api/${path}/delete/${id}`),
