@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
+import * as KhuyenMaiService from "../services/KhuyenMaiService.js";
 
 export const PromotionsStore = reactive({ items: [], loading: false, loaded: false });
 

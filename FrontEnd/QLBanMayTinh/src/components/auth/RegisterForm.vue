@@ -8,90 +8,97 @@
       <div class="small" style="color:var(--text-secondary);">{{ t('register.subtitle') }}</div>
     </div>
 
-    <form @submit.prevent="handleSubmit" class="d-flex flex-column gap-3" novalidate>
+    <form @submit.prevent="onSubmit" class="d-flex flex-column gap-3" novalidate>
 
-      <div>
-        <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.fullNameLabel') }}</label>
-        <input v-model="form.hoTen" type="text"
-               class="form-control form-control-sm"
-               :style="fieldStyle(hoTenValid, touched.hoTen)"
-               :placeholder="t('register.fullNamePlaceholder')" required
-               @blur="touched.hoTen = true" />
-        <div v-if="touched.hoTen && !hoTenValid" class="small text-danger mt-1">{{ t('register.errors.required') }}</div>
-      </div>
+      <FormField :label="t('register.fullNameLabel')" :errors="errors.hoTen">
+        <template #default="{ errors: fieldErr }">
+          <input v-model="hoTen" type="text"
+                 class="form-control form-control-sm"
+                 :class="{ 'is-invalid': fieldErr }"
+                 :placeholder="t('register.fullNamePlaceholder')" />
+        </template>
+      </FormField>
 
       <div class="row g-2">
         <div class="col-6">
-          <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.phoneLabel') }}</label>
-          <input v-model="form.soDienThoai" type="text"
-                 class="form-control form-control-sm"
-                 :style="fieldStyle(phoneValid, touched.soDienThoai)"
-                 :placeholder="t('register.phonePlaceholder')" required
-                 @blur="touched.soDienThoai = true" />
-          <div v-if="touched.soDienThoai && !phoneValid" class="small text-danger mt-1">{{ t('register.errors.invalidPhone') }}</div>
+          <FormField :label="t('register.phoneLabel')" :errors="errors.soDienThoai">
+            <template #default="{ errors: fieldErr }">
+              <input v-model="soDienThoai" type="text"
+                     class="form-control form-control-sm"
+                     :class="{ 'is-invalid': fieldErr }"
+                     :placeholder="t('register.phonePlaceholder')" />
+            </template>
+          </FormField>
         </div>
         <div class="col-6">
-          <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.emailLabel') }}</label>
-          <input v-model="form.email" type="email"
-                 class="form-control form-control-sm"
-                 :style="fieldStyle(emailValid, touched.email)"
-                 :placeholder="t('register.emailPlaceholder')" required
-                 @blur="touched.email = true" />
-          <div v-if="touched.email && !emailValid" class="small text-danger mt-1">{{ t('register.errors.invalidEmail') }}</div>
+          <FormField :label="t('register.emailLabel')" :errors="errors.email">
+            <template #default="{ errors: fieldErr }">
+              <input v-model="email" type="email"
+                     class="form-control form-control-sm"
+                     :class="{ 'is-invalid': fieldErr }"
+                     :placeholder="t('register.emailPlaceholder')" />
+            </template>
+          </FormField>
         </div>
       </div>
 
-      <div>
-        <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.usernameLabel') }}</label>
-        <input v-model="form.username" type="text"
-               class="form-control form-control-sm"
-               :style="fieldStyle(usernameValid, touched.username)"
-               :placeholder="t('register.usernamePlaceholder')" required
-               @blur="touched.username = true" />
-        <div v-if="touched.username && !usernameValid" class="small text-danger mt-1">{{ t('register.errors.usernameTooShort') }}</div>
-      </div>
+      <FormField :label="t('register.usernameLabel')" :errors="errors.username">
+        <template #default="{ errors: fieldErr }">
+          <input v-model="username" type="text"
+                 class="form-control form-control-sm"
+                 :class="{ 'is-invalid': fieldErr }"
+                 :placeholder="t('register.usernamePlaceholder')" />
+        </template>
+      </FormField>
 
       <div class="row g-2">
         <div class="col-6">
-          <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.passwordLabel') }}</label>
-          <div class="input-group input-group-sm">
-            <input v-model="form.password" :type="showPassword ? 'text' : 'password'"
-                   class="form-control form-control-sm"
-                   :style="fieldStyle(passwordValid, touched.password)"
-                   :placeholder="t('register.passwordPlaceholder')" required
-                   @blur="touched.password = true" />
-            <button type="button" class="btn btn-sm"
-                    style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
-                    :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
-                    @click="showPassword = !showPassword">
-              {{ showPassword ? '🙈' : '👁' }}
-            </button>
-          </div>
-          <div v-if="touched.password && !passwordValid" class="small text-danger mt-1">{{ t('register.errors.passwordTooShort') }}</div>
+          <FormField :label="t('register.passwordLabel')" :errors="errors.password">
+            <template #default="{ errors: fieldErr }">
+              <div class="input-group input-group-sm">
+                <input v-model="password" :type="showPassword ? 'text' : 'password'"
+                       class="form-control form-control-sm"
+                       :class="{ 'is-invalid': fieldErr }"
+                       :placeholder="t('register.passwordPlaceholder')" />
+                <button type="button" class="btn btn-sm"
+                        style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
+                        :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
+                        @click="showPassword = !showPassword">
+                  {{ showPassword ? '🙈' : '👁' }}
+                </button>
+              </div>
+            </template>
+          </FormField>
         </div>
         <div class="col-6">
-          <label class="form-label small fw-semibold" style="color:var(--text-secondary);">{{ t('register.confirmPasswordLabel') }}</label>
-          <div class="input-group input-group-sm">
-            <input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'"
-                   class="form-control form-control-sm"
-                   :style="fieldStyle(confirmValid, touched.confirmPassword)"
-                   :placeholder="t('register.passwordPlaceholder')" required
-                   @blur="touched.confirmPassword = true" />
-            <button type="button" class="btn btn-sm"
-                    style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
-                    :title="showConfirm ? t('register.hidePassword') : t('register.showPassword')"
-                    @click="showConfirm = !showConfirm">
-              {{ showConfirm ? '🙈' : '👁' }}
-            </button>
-          </div>
-          <div v-if="touched.confirmPassword && !confirmValid" class="small text-danger mt-1">{{ t('register.errors.passwordMismatch') }}</div>
+          <FormField :label="t('register.confirmPasswordLabel')" :errors="errors.confirmPassword">
+            <template #default="{ errors: fieldErr }">
+              <div class="input-group input-group-sm">
+                <input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'"
+                       class="form-control form-control-sm"
+                       :class="{ 'is-invalid': fieldErr }"
+                       :placeholder="t('register.passwordPlaceholder')" />
+                <button type="button" class="btn btn-sm"
+                        style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
+                        :title="showConfirm ? t('register.hidePassword') : t('register.showPassword')"
+                        @click="showConfirm = !showConfirm">
+                  {{ showConfirm ? '🙈' : '👁' }}
+                </button>
+              </div>
+            </template>
+          </FormField>
         </div>
       </div>
 
-      <label class="d-flex align-items-start gap-2 small" style="color:var(--text-secondary); cursor:pointer;">
-        <input type="checkbox" v-model="agree" class="form-check-input mt-1" style="flex-shrink:0;" />
-        <span>{{ t('register.agreeText') }}</span>
-      </label>
+      <FormField :errors="errors.agree">
+        <template #default="{ errors: fieldErr }">
+          <label class="d-flex align-items-start gap-2 small" style="color:var(--text-secondary); cursor:pointer;">
+            <input type="checkbox" v-model="agree" class="form-check-input mt-1" style="flex-shrink:0;" />
+            <span>{{ t('register.agreeText') }}</span>
+          </label>
+          <div v-if="fieldErr" class="small text-danger mt-1">{{ fieldErr }}</div>
+        </template>
+      </FormField>
 
       <div v-if="error" class="alert alert-danger small py-2 mb-0">{{ error }}</div>
       <div v-if="success" class="alert alert-success small py-2 mb-0">{{ success }}</div>
@@ -111,107 +118,60 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from "vue";
+import { ref } from "vue";
+import { useForm, useField } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import { registerSchema } from "../../utils/validators.js";
 import { t } from "../../i18n/index.js";
-import * as KhachHangService from "../../Service/KhachHangService.js";
+import * as KhachHangService from "../../services/KhachHangService.js";
+import FormField from "../common/FormField.vue";
 
 const emit = defineEmits(["register-success", "open-login"]);
 
-const form = reactive({
-  hoTen: "",
-  soDienThoai: "",
-  email: "",
-  username: "",
-  password: "",
-});
-const confirmPassword = ref("");
-const agree   = ref(false);
 const loading = ref(false);
 const error   = ref("");
 const success = ref("");
 
-// Hiện/ẩn mật khẩu để người dùng tự kiểm tra lại đã gõ đúng chưa
 const showPassword = ref(false);
 const showConfirm  = ref(false);
 
-// Đánh dấu field đã bị rời khỏi (blur) lần nào chưa — chỉ hiện lỗi sau khi người dùng đã tương tác
-const touched = reactive({
-  hoTen: false, soDienThoai: false, email: false,
-  username: false, password: false, confirmPassword: false,
+const { handleSubmit, errors, resetForm } = useForm({
+  validationSchema: toTypedSchema(registerSchema),
 });
 
-const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-const PHONE_RE = /^[0-9]{10}$/;
+const { value: hoTen } = useField('hoTen');
+const { value: soDienThoai } = useField('soDienThoai');
+const { value: email } = useField('email');
+const { value: username } = useField('username');
+const { value: password } = useField('password');
+const { value: confirmPassword } = useField('confirmPassword');
+const { value: agree } = useField('agree');
 
-// ── Kiểm tra hợp lệ theo từng ô, cập nhật ngay khi gõ ──────────────────────────
-const hoTenValid    = computed(() => form.hoTen.trim().length > 0);
-const phoneValid    = computed(() => PHONE_RE.test(form.soDienThoai));
-const emailValid    = computed(() => EMAIL_RE.test(form.email));
-const usernameValid = computed(() => form.username.trim().length >= 3);
-const passwordValid = computed(() => form.password.length >= 6);
-const confirmValid  = computed(() => confirmPassword.value.length > 0 && confirmPassword.value === form.password);
-
-// Viền ô input đổi màu theo trạng thái hợp lệ, chỉ sau khi đã touched
-const fieldStyle = (isValid, isTouched) => {
-  const base = 'background:var(--bg-input); color:var(--text-primary);';
-  if (!isTouched) return `${base} border-color:var(--border-color-strong);`;
-  return isValid ? `${base} border-color:#22c55e;` : `${base} border-color:#f87171;`;
-};
-
-const handleSubmit = async () => {
-  error.value = "";
-  success.value = "";
-
-  // Đánh dấu tất cả field đã touched để hiện đủ lỗi khi bấm submit sớm
-  Object.keys(touched).forEach(k => { touched[k] = true; });
-
-  if (!form.hoTen || !form.soDienThoai || !form.email || !form.username || !form.password) {
-    error.value = t('register.errors.fillAllFields');
-    return;
-  }
-  if (!emailValid.value) {
-    error.value = t('register.errors.invalidEmail');
-    return;
-  }
-  if (!phoneValid.value) {
-    error.value = t('register.errors.invalidPhone');
-    return;
-  }
-  if (!usernameValid.value) {
-    error.value = t('register.errors.usernameTooShort');
-    return;
-  }
-  if (!passwordValid.value) {
-    error.value = t('register.errors.passwordTooShort');
-    return;
-  }
-  if (!confirmValid.value) {
-    error.value = t('register.errors.passwordMismatch');
-    return;
-  }
-  if (!agree.value) {
+const onSubmit = handleSubmit(async (values) => {
+  if (!values.agree) {
     error.value = t('register.errors.mustAgree');
     return;
   }
+  error.value = "";
+  success.value = "";
 
   loading.value = true;
   try {
-    const res = await KhachHangService.register({ ...form });
+    const { confirmPassword: _, agree: __, ...body } = values;
+    const res = await KhachHangService.register(body);
     if (!res.ok) {
       error.value = await res.text() || t('register.errors.registerFailed');
       return;
     }
     const newAccount = await res.json();
     success.value = t('register.success');
-    Object.assign(form, { hoTen: "", soDienThoai: "", email: "", username: "", password: "" });
-    confirmPassword.value = "";
+    resetForm();
     agree.value = false;
-    Object.keys(touched).forEach(k => { touched[k] = false; });
     setTimeout(() => emit('register-success', newAccount), 1200);
   } catch {
     error.value = t('register.errors.cannotConnect');
   } finally {
     loading.value = false;
   }
-};
+});
 </script>

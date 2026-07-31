@@ -3,17 +3,17 @@ import { ref, computed, onMounted, onUnmounted, reactive, watch } from "vue";
 import { AuthStore } from "../stores/index.js";
 import { t, I18nStore, LOCALES, setLocale } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
-import * as NhanVienService  from "../Service/NhanVienService.js";
-import * as DonHangService   from "../Service/DonHangService.js";
-import * as KhuyenMaiService from "../Service/KhuyenMaiService.js";
-import * as VongQuayService from "../Service/VongQuayService.js";
+import * as NhanVienService  from "../services/NhanVienService.js";
+import * as DonHangService   from "../services/DonHangService.js";
+import * as KhuyenMaiService from "../services/KhuyenMaiService.js";
+import * as VongQuayService from "../services/VongQuayService.js";
 // DmService vẫn cần cho getChucVu() (tab Nhân viên) — CPU/RAM/GPU/Ổ cứng đã chuyển sang
 // WarehouseManagementPage.vue nên bỏ import ChiTietCpuService/RamService/GpuService/OCungService.
-import * as DmService              from "../Service/DmService.js";
-import * as DashboardService       from "../Service/DashboardService.js";
+import * as DmService              from "../services/DmService.js";
+import * as DashboardService       from "../services/DashboardService.js";
 import DonutChart from "../components/common/DonutChart.vue";
 import RevenueBarChart from "../components/common/RevenueBarChart.vue";
-import * as CaiDatService from "../Service/CaiDatService.js";
+import * as CaiDatService from "../services/CaiDatService.js";
 import { SettingsStore } from "../stores/settings.js";
 import BarChart   from "../components/common/BarChart.vue";
 import GaugeChart from "../components/common/GaugeChart.vue";
@@ -21,7 +21,7 @@ import TrendChart from "../components/common/TrendChart.vue";
 import ConfirmDialog from "../components/common/ConfirmDialog.vue";
 import { askConfirm } from "../stores/confirm.js";
 import { ThemeStore, toggleTheme } from "../stores/theme.js";
-import { authHeaders } from "../Service/api.js";
+import { authHeaders } from "../services/api.js";
 import { formatPrice, formatDate, formatDateTime, statusLabel, toLocalDT } from "../utils/adminFormat.js";
 import { showToast } from "../stores/toast.js";
 import ToastHost from "../components/common/ToastHost.vue";
@@ -36,6 +36,9 @@ import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
 import BienTheTable from "../components/admin/BienTheTable.vue";
 import SerialManager from "../components/admin/SerialManager.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
+import AdminDashboard from "../components/admin/AdminDashboard.vue";
+import AdminReports from "../components/admin/AdminReports.vue";
+import AdminSettings from "../components/admin/AdminSettings.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
@@ -44,7 +47,9 @@ import { StaffStore, ensureStaff, refreshStaff } from "../stores/staff.js";
 import { PromotionsStore, ensurePromotions, refreshPromotions } from "../stores/promotions.js";
 import { DoiThuongStore, ensureDoiThuong, refreshDoiThuong } from "../stores/doiThuong.js";
 import { refreshReturns } from "../stores/returns.js";
-import * as DmDoiThuongService from "../Service/DmDoiThuongService.js";
+import * as DmDoiThuongService from "../services/DmDoiThuongService.js";
+
+defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentPage = ref("dashboard");
@@ -89,11 +94,11 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📊");
 // dùng chung nhiều trang — computed alias bên dưới giữ nguyên tên biến cũ để phần còn lại
 // của file (200+ chỗ đọc products.value/orders.value/...) không cần sửa. computed = read-only,
 // mọi chỗ CRUD phải gọi refreshXxx()/ensureXxx() của store thay vì gán tay vào các biến này.
-const products = computed(() => ProductsStore.items);
-const orders = computed(() => OrdersStore.items);
-const customers = computed(() => CustomersStore.items);
-const staff = computed(() => StaffStore.items);
-const promotions = computed(() => PromotionsStore.items);
+const products = computed(() => ProductsStore?.items ?? []);
+const orders = computed(() => OrdersStore?.items ?? []);
+const customers = computed(() => CustomersStore?.items ?? []);
+const staff = computed(() => StaffStore?.items ?? []);
+const promotions = computed(() => PromotionsStore?.items ?? []);
 // Cấu hình vòng quay may mắn — không dùng store riêng vì chỉ 1 dòng dữ liệu phẳng, chỉ
 // dùng ở đúng section này (khác các store khác dùng chung nhiều nơi).
 const wheelConfig = ref({ diemMoiLuot: 0, tyLeTruot: 0 });
@@ -123,8 +128,8 @@ const saveWheelConfig = async () => {
     wheelConfigSaving.value = false;
   }
 };
-const rewards = computed(() => DoiThuongStore.items);
-const inventory = computed(() => InventoryStore.items);
+const rewards = computed(() => DoiThuongStore?.items ?? []);
+const inventory = computed(() => InventoryStore?.items ?? []);
 const chucVuList = ref([]);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -534,6 +539,7 @@ const autoMergeAllDuplicates = async () => {
   try {
     const groups = {};
     for (const o of orders.value) {
+      if (o.trangThaiDonHang === 'pending') continue;
       const key = `${o.khachHangId}_${o.ngayDat?.slice(0, 10)}`;
       if (!groups[key]) groups[key] = [];
       groups[key].push(o);
@@ -1071,232 +1077,35 @@ onUnmounted(() => {
       <div class="flex-grow-1 overflow-y-auto p-4">
 
         <!-- ── Dashboard ── -->
-        <section v-show="currentPage === 'dashboard'">
-          <div v-if="ProductsStore.loading || OrdersStore.loading || CustomersStore.loading || InventoryStore.loading" class="text-secondary small">{{ t('admin.dashboard.loading') }}</div>
-          <template v-else>
-            <!-- Stat cards -->
-            <div class="row g-3 mb-4">
-              <div class="col-6 col-xl-2">
-                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                  <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:44px;height:44px;background:rgba(96,165,250,0.15);font-size:1.3rem;">💻</div>
-                    <div>
-                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalProducts') }}</div>
-                      <div class="fw-bold" style="font-size:1.55rem;">{{ totalProducts }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-6 col-xl-2">
-                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                  <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:44px;height:44px;background:rgba(167,139,250,0.15);font-size:1.3rem;">🧾</div>
-                    <div>
-                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalOrders') }}</div>
-                      <div class="fw-bold" style="font-size:1.55rem;">{{ totalOrders }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-6 col-xl-2">
-                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                  <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:44px;height:44px;background:rgba(52,211,153,0.15);font-size:1.3rem;">👥</div>
-                    <div>
-                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalCustomers') }}</div>
-                      <div class="fw-bold" style="font-size:1.55rem;">{{ totalCustomers }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-6 col-xl-3">
-                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                  <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">💰</div>
-                    <div>
-                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.revenueThisMonth') }}</div>
-                      <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(revenueThisMonth) }}</span>
-                        <span v-if="revenueThisMonthDelta !== null"
-                              class="fw-bold" style="font-size:0.7rem;white-space:nowrap;"
-                              :style="{ color: revenueThisMonthDelta >= 0 ? '#22c55e' : '#f87171' }">
-                          {{ revenueThisMonthDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(revenueThisMonthDelta) }}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-6 col-xl-3">
-                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                  <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:44px;height:44px;background:rgba(250,204,21,0.15);font-size:1.3rem;">📅</div>
-                    <div>
-                      <div class="text-secondary small mb-1">{{ t('admin.dashboard.revenueThisYear') }}</div>
-                      <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(revenueThisYear) }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Canh bao het hang -->
-            <div v-if="lowStockItems.length" class="alert alert-danger small py-2 mb-3 d-flex align-items-center gap-2">
-              <span class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                    style="width:22px;height:22px;background:rgba(248,113,113,0.25);font-size:0.85rem;">⚠️</span>
-              {{ t('admin.dashboard.lowStockAlert', { count: lowStockItems.length }) }}
-            </div>
-
-            <!-- Bieu do thong ke -->
-            <div class="row g-3 mb-4">
-              <div class="col-12 col-xl-5">
-                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                  <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                      <div class="fw-semibold small text-secondary">🍩 {{ t('admin.dashboard.ordersByStatusChart') }}</div>
-                      <div class="d-flex align-items-center gap-2">
-                        <input type="date" v-model="statusChartDate" :max="toDateInputValue(new Date())"
-                               class="form-control form-control-sm"
-                               style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;" />
-                        <button v-if="!isStatusChartToday" type="button" class="btn btn-sm py-0 px-2"
-                                style="font-size:0.72rem; color:var(--accent-fg); border:1px solid var(--border-color-strong);"
-                                @click="statusChartDate = toDateInputValue(new Date())">
-                          {{ t('admin.dashboard.backToToday') }}
-                        </button>
-                      </div>
-                    </div>
-                    <div class="mb-3">
-                      <span class="badge rounded-pill" style="background:var(--bg-card-inset); color:var(--text-secondary); font-weight:600;">
-                        {{ isStatusChartToday
-                          ? t('admin.dashboard.todayOrders', { count: ordersOnStatusChartDate.length })
-                          : t('admin.dashboard.ordersOnDate', { count: ordersOnStatusChartDate.length }) }}
-                      </span>
-                    </div>
-                    <DonutChart
-                      :data="orderStatusChartData"
-                      :center-value="String(ordersOnStatusChartDate.length)"
-                      :center-label="t('admin.dashboard.totalOrders')"
-                      :empty-text="t('admin.dashboard.chartEmptyOrders')" />
-                  </div>
-                </div>
-              </div>
-              <div class="col-12 col-xl-7">
-                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                  <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                      <div class="fw-semibold small text-secondary">📅 {{ t('admin.dashboard.ordersByWeekChart') }}</div>
-                      <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <input type="date" v-model="weekChartAnchor" :max="toDateInputValue(new Date())"
-                               class="form-control form-control-sm"
-                               style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;" />
-                        <button v-if="!isWeekChartCurrentWeek" type="button" class="btn btn-sm py-0 px-2"
-                                style="font-size:0.72rem; color:var(--accent-fg); border:1px solid var(--border-color-strong);"
-                                @click="resetToCurrentWeek">
-                          {{ t('admin.dashboard.backToThisWeek') }}
-                        </button>
-                      </div>
-                    </div>
-                    <div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
-                      <span class="badge rounded-pill" style="background:var(--bg-card-inset); color:var(--text-secondary); font-weight:600;">
-                        {{ weekChartRangeLabel }}
-                      </span>
-                      <span class="badge rounded-pill" style="background:var(--bg-card-inset); color:var(--text-secondary); font-weight:600;">
-                        {{ t('admin.dashboard.ordersInRange', { count: ordersInWeekRange.length }) }}
-                      </span>
-                    </div>
-                    <DonutChart
-                      :data="weekOrderStatusChartData"
-                      :center-value="String(ordersInWeekRange.length)"
-                      :center-label="t('admin.dashboard.totalOrders')"
-                      :empty-text="t('admin.dashboard.chartEmptyOrders')" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- San pham ban chay / ban cham -->
-            <div class="row g-3 mb-4">
-              <div class="col-12 col-xl-6">
-                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                  <div class="card-body">
-                    <div class="fw-semibold small text-secondary mb-3">🔥 {{ t('admin.dashboard.topSellingChart') }}</div>
-                    <BarChart :data="topSellingChart" :empty-text="t('admin.dashboard.chartEmptyOrders')" />
-                  </div>
-                </div>
-              </div>
-              <div class="col-12 col-xl-6">
-                <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                  <div class="card-body">
-                    <div class="fw-semibold small text-secondary mb-3">🐌 {{ t('admin.dashboard.slowSellingChart') }}</div>
-                    <BarChart :data="slowSellingChart" :empty-text="t('admin.dashboard.chartEmptyProducts')" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Gauge KPI: suc khoe van hanh -->
-            <div class="card border-secondary mb-4" style="background:var(--bg-hover);">
-              <div class="card-body">
-                <div class="fw-semibold small text-secondary mb-3">🩺 {{ t('admin.dashboard.kpiHealth') }}</div>
-                <div class="row g-3 text-center">
-                  <div class="col-12 col-md-4 d-flex justify-content-center">
-                    <GaugeChart :value="orderCompletionRate" :color="gaugeColor(orderCompletionRate)"
-                                :label="'✅ ' + t('admin.dashboard.gaugeCompletion')" />
-                  </div>
-                  <div class="col-12 col-md-4 d-flex justify-content-center">
-                    <GaugeChart :value="paymentRate" :color="gaugeColor(paymentRate)"
-                                :label="'💳 ' + t('admin.dashboard.gaugePayment')" />
-                  </div>
-                  <div class="col-12 col-md-4 d-flex justify-content-center">
-                    <GaugeChart :value="stockHealthRate" :color="gaugeColor(stockHealthRate)"
-                                :label="'📦 ' + t('admin.dashboard.gaugeStock')" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Xu huong doanh thu theo thang -->
-            <div class="card border-secondary mb-4" style="background:var(--bg-hover);">
-              <div class="card-body">
-                <div class="fw-semibold small text-secondary mb-3">📈 {{ t('admin.dashboard.revenueTrendChart') }}</div>
-                <TrendChart :data="revenueTrendChart" :height="140" color="#f06b81" :empty-text="t('admin.dashboard.chartEmptyOrders')" />
-              </div>
-            </div>
-
-            <!-- Bang san pham gan day -->
-            <div class="small fw-semibold text-secondary mb-2">🗃️ {{ t('admin.dashboard.recentProducts') }}</div>
-            <div class="table-responsive">
-              <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-                <thead><tr>
-                  <th></th><th>🖥️ {{ t('admin.dashboard.colName') }}</th><th>🏷️ {{ t('admin.dashboard.colBrand') }}</th><th>🗂️ {{ t('admin.dashboard.colCategory') }}</th><th>💵 {{ t('admin.dashboard.colPrice') }}</th><th>🔖 {{ t('admin.dashboard.colStatus') }}</th>
-                </tr></thead>
-                <tbody>
-                  <tr v-for="p in products.slice(0,5)" :key="p.sanPhamId">
-                    <td style="width:48px;">
-                      <div class="rounded-2 d-flex align-items-center justify-content-center overflow-hidden"
-                           style="width:38px;height:32px;background:var(--bg-card-inset);">
-                        <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham"
-                             style="width:100%;height:100%;object-fit:contain;padding:2px;" />
-                        <span v-else style="font-size:1rem;">💻</span>
-                      </div>
-                    </td>
-                    <td>{{ p.tenSanPham }}</td>
-                    <td>{{ p.tenThuongHieu }}</td>
-                    <td>{{ p.tenDanhMuc }}</td>
-                    <td>{{ formatPrice(p.giaBan) }}</td>
-                    <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(p.trangThai) }}</span></td>
-                  </tr>
-                  <tr v-if="products.length===0"><td colspan="6" class="text-center text-secondary">{{ t('admin.dashboard.emptyProducts') }}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </template>
-        </section>
+        <AdminDashboard
+          v-show="currentPage === 'dashboard'"
+          :total-products="totalProducts"
+          :total-orders="totalOrders"
+          :total-customers="totalCustomers"
+          :revenue-this-month="revenueThisMonth"
+          :revenue-this-month-delta="revenueThisMonthDelta"
+          :revenue-this-year="revenueThisYear"
+          :low-stock-items="lowStockItems"
+          :status-chart-date="statusChartDate"
+          :is-status-chart-today="isStatusChartToday"
+          :orders-on-status-chart-date="ordersOnStatusChartDate"
+          :order-status-chart-data="orderStatusChartData"
+          :week-chart-anchor="weekChartAnchor"
+          :is-week-chart-current-week="isWeekChartCurrentWeek"
+          :week-chart-range-label="weekChartRangeLabel"
+          :orders-in-week-range="ordersInWeekRange"
+          :week-order-status-chart-data="weekOrderStatusChartData"
+          :top-selling-chart="topSellingChart"
+          :slow-selling-chart="slowSellingChart"
+          :order-completion-rate="orderCompletionRate"
+          :payment-rate="paymentRate"
+          :stock-health-rate="stockHealthRate"
+          :revenue-trend-chart="revenueTrendChart"
+          :products="products"
+          @update:status-chart-date="statusChartDate = $event"
+          @update:week-chart-anchor="weekChartAnchor = $event"
+          @reset-to-current-week="resetToCurrentWeek"
+          @back-to-today="statusChartDate = toDateInputValue(new Date())" />
 
         <!-- ── San pham ── -->
         <section v-show="currentPage === 'products'">
@@ -1472,243 +1281,51 @@ onUnmounted(() => {
         </section>
 
         <!-- ── Bao cao ── -->
-        <section v-show="currentPage === 'reports'">
-          <div class="row g-3 mb-4">
-            <div class="col-6 col-xl-3">
-              <div class="card border-secondary" style="background:var(--bg-hover);"><div class="card-body">
-                <div class="text-secondary small mb-1">{{ t('admin.reports.totalRevenue') }}</div>
-                <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(totalRevenue) }}</div>
-              </div></div>
-            </div>
-            <div class="col-6 col-xl-3">
-              <div class="card border-secondary" style="background:var(--bg-hover);"><div class="card-body">
-                <div class="text-secondary small mb-1">{{ t('admin.reports.activeProducts') }}</div>
-                <div class="fw-bold" style="font-size:1.55rem;">{{ activeProducts }}</div>
-              </div></div>
-            </div>
-            <div class="col-6 col-xl-3">
-              <div class="card border-secondary" style="background:var(--bg-hover);"><div class="card-body">
-                <div class="text-secondary small mb-1">{{ t('admin.reports.activePromotions') }}</div>
-                <div class="fw-bold" style="font-size:1.55rem;">{{ activePromos }}</div>
-              </div></div>
-            </div>
-            <div class="col-6 col-xl-3">
-              <div class="card border-secondary" style="background:var(--bg-hover);"><div class="card-body">
-                <div class="text-secondary small mb-1">{{ t('admin.reports.lowStockVariants') }}</div>
-                <div class="fw-bold" :class="lowStockItems.length?'text-danger':''" style="font-size:1.55rem;">{{ lowStockItems.length }}</div>
-              </div></div>
-            </div>
-          </div>
-          <div class="d-flex flex-wrap align-items-center gap-3 mb-3 px-3 py-2 rounded-3" style="background:var(--bg-card-alt);">
-            <div class="d-flex align-items-center gap-2">
-              <span class="text-secondary small">{{ t('admin.reports.groupByLabel') }}</span>
-              <div class="d-flex align-items-center gap-1 rounded-pill p-1" style="background:var(--bg-input);">
-                <button v-for="opt in ['day','month','year']" :key="opt" type="button"
-                        class="btn btn-sm border-0 rounded-pill px-3 py-1"
-                        :style="reportsGroupBy===opt
-                          ? 'background:var(--accent);color:var(--accent-text);font-weight:600;'
-                          : 'background:transparent;color:var(--text-secondary);'"
-                        @click="reportsGroupBy=opt">
-                  {{ t(`admin.reports.groupBy${opt.charAt(0).toUpperCase()}${opt.slice(1)}`) }}
-                </button>
-              </div>
-            </div>
-            <div v-if="reportsGroupBy==='day'" class="d-flex flex-wrap align-items-center gap-2"
-                 style="border-left:1px solid var(--border-color-soft); padding-left:0.9rem;">
-              <div class="d-flex align-items-center gap-1 rounded-pill p-1" style="background:var(--bg-input);">
-                <button v-for="opt in ['today','week','month','custom']" :key="opt" type="button"
-                        class="btn btn-sm border-0 rounded-pill px-3 py-1"
-                        :style="reportsDateRange===opt
-                          ? 'background:var(--accent);color:var(--accent-text);font-weight:600;'
-                          : 'background:transparent;color:var(--text-secondary);'"
-                        @click="reportsDateRange=opt">
-                  {{ t(`admin.reports.dateRange${opt.charAt(0).toUpperCase()}${opt.slice(1)}`) }}
-                </button>
-              </div>
-              <template v-if="reportsDateRange==='custom'">
-                <input type="date" v-model="reportsCustomFrom" class="form-control form-control-sm"
-                       :aria-label="t('admin.reports.dateFrom')"
-                       style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                <span class="text-secondary small">→</span>
-                <input type="date" v-model="reportsCustomTo" class="form-control form-control-sm"
-                       :aria-label="t('admin.reports.dateTo')"
-                       style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-              </template>
-            </div>
-          </div>
-          <div class="small fw-semibold text-secondary mb-2">📈 {{ t('admin.reports.revenueChartTitle') }}</div>
-          <div class="card border-secondary mb-4" style="background:var(--bg-hover);"><div class="card-body">
-            <RevenueBarChart :data="reportsRevenueChartData" :granularity="reportsGroupBy" :empty-text="t('admin.reports.revenueChartEmpty')" />
-          </div></div>
-          <div class="small fw-semibold text-secondary mb-2">🍩 {{ t('admin.reports.ordersByStatus') }}</div>
-          <div class="table-responsive mb-4">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th>{{ t('admin.reports.colStatus') }}</th><th>{{ t('admin.reports.colQuantity') }}</th></tr></thead>
-              <tbody>
-                <tr v-for="row in reportsOrdersByStatus" :key="row.status">
-                  <td><span class="badge" :style="{ background: row.color.bg, color: row.color.text }">{{ row.label }}</span></td>
-                  <td><strong>{{ row.count }}</strong></td>
-                </tr>
-                <tr v-if="reportsOrdersByStatus.length===0"><td colspan="2" class="text-center text-secondary">{{ t('admin.reports.emptyOrders') }}</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="small fw-semibold text-secondary mb-2">🔥 {{ t('admin.reports.topProducts') }}</div>
-          <div class="table-responsive">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th>{{ t('admin.reports.colIndex') }}</th><th>{{ t('admin.reports.colName') }}</th><th>{{ t('admin.reports.colQuantitySold') }}</th></tr></thead>
-              <tbody>
-                <tr v-for="(p,i) in reportsTopSelling" :key="p.tenSanPham">
-                  <td class="text-secondary">{{ i+1 }}</td><td>{{ p.tenSanPham }}</td><td>{{ p.soLuongDaBan }}</td>
-                </tr>
-                <tr v-if="reportsTopSelling.length===0"><td colspan="3" class="text-center text-secondary">{{ t('admin.reports.emptyOrders') }}</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="small fw-semibold text-secondary mb-2 mt-4">🏆 {{ t('admin.reports.customersTitle') }}</div>
-          <div class="text-secondary small mb-2">{{ reportsRepeatRateText }}</div>
-          <div class="table-responsive">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th>{{ t('admin.reports.colIndex') }}</th><th>{{ t('admin.reports.colCustomerName') }}</th><th>{{ t('admin.reports.colOrderCount') }}</th><th>{{ t('admin.reports.colTotalSpent') }}</th></tr></thead>
-              <tbody>
-                <tr v-for="(c,i) in reportsCustomerReport.topKhach" :key="c.khachHangId">
-                  <td class="text-secondary">{{ i+1 }}</td><td>{{ c.hoTen }}</td><td>{{ c.soDonHang }}</td><td>{{ formatPrice(c.tongChiTieu) }}</td>
-                </tr>
-                <tr v-if="reportsCustomerReport.topKhach.length===0"><td colspan="4" class="text-center text-secondary">{{ t('admin.reports.customersEmpty') }}</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <AdminReports
+          v-show="currentPage === 'reports'"
+          :total-revenue="totalRevenue"
+          :active-products="activeProducts"
+          :active-promos="activePromos"
+          :low-stock-items="lowStockItems"
+          :reports-group-by="reportsGroupBy"
+          :reports-date-range="reportsDateRange"
+          :reports-custom-from="reportsCustomFrom"
+          :reports-custom-to="reportsCustomTo"
+          :reports-revenue-chart-data="reportsRevenueChartData"
+          :reports-orders-by-status="reportsOrdersByStatus"
+          :reports-top-selling="reportsTopSelling"
+          :reports-customer-report="reportsCustomerReport"
+          :reports-repeat-rate-text="reportsRepeatRateText"
+          @update:reports-group-by="reportsGroupBy = $event"
+          @update:reports-date-range="reportsDateRange = $event"
+          @update:reports-custom-from="reportsCustomFrom = $event"
+          @update:reports-custom-to="reportsCustomTo = $event" />
 
         <!-- ── Cai dat ── -->
-        <section v-show="currentPage === 'settings'">
-          <div class="row g-3">
-            <!-- Đổi mật khẩu -->
-            <div class="col-12 col-xl-6">
-              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                <div class="card-body">
-                  <div class="fw-bold mb-3">🔑 {{ t('admin.settings.changePasswordTitle') }}</div>
-                  <div class="mb-2">
-                    <label class="form-label small text-secondary mb-1">{{ t('admin.settings.currentPassword') }}</label>
-                    <input type="password" v-model="cdMatKhauCu" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label small text-secondary mb-1">{{ t('admin.settings.newPassword') }}</label>
-                    <input type="password" v-model="cdMatKhauMoi" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label small text-secondary mb-1">{{ t('admin.settings.confirmNewPassword') }}</label>
-                    <input type="password" v-model="cdMatKhauXacNhan" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                  </div>
-                  <div v-if="cdMatKhauError" class="text-danger small mb-2">{{ cdMatKhauError }}</div>
-                  <div v-if="cdMatKhauSuccess" class="text-success small mb-2">{{ cdMatKhauSuccess }}</div>
-                  <button class="btn btn-warning btn-sm" :disabled="cdMatKhauLoading || !cdMatKhauCu || !cdMatKhauMoi" @click="doiMatKhauSubmit">
-                    {{ t('admin.settings.changePasswordButton') }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Thông tin cửa hàng -->
-            <div class="col-12 col-xl-6">
-              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                <div class="card-body">
-                  <div class="fw-bold mb-3">🏪 {{ t('admin.settings.storeInfoTitle') }}</div>
-                  <div class="d-flex align-items-center gap-3 mb-3">
-                    <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:88px;height:70px;cursor:pointer;flex-shrink:0;overflow:hidden;background:var(--bg-card-inset);">
-                      <img v-if="cdLogoPreview" :src="cdLogoPreview" style="width:88px;height:70px;object-fit:contain;" />
-                      <span v-else style="font-size:1.3rem;">🖼️</span>
-                      <input type="file" accept="image/*" class="d-none" @change="handleLogoFile" />
-                    </label>
-                    <span class="text-secondary small">{{ t('admin.settings.storeLogo') }}</span>
-                  </div>
-                  <div class="row g-2 mb-3">
-                    <div class="col-12">
-                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storeName') }}</label>
-                      <input v-model="cdForm.tenCuaHang" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                    </div>
-                    <div class="col-12">
-                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storeAddress') }}</label>
-                      <input v-model="cdForm.diaChi" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                    </div>
-                    <div class="col-6">
-                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storePhone') }}</label>
-                      <input v-model="cdForm.soDienThoai" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                    </div>
-                    <div class="col-6">
-                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storeEmail') }}</label>
-                      <input v-model="cdForm.email" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                    </div>
-                    <div class="col-12">
-                      <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storeTaxCode') }}</label>
-                      <input v-model="cdForm.maSoThue" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                    </div>
-                  </div>
-                  <div v-if="cdStoreError" class="text-danger small mb-2">{{ cdStoreError }}</div>
-                  <div v-if="cdStoreSaved" class="text-success small mb-2">{{ t('admin.settings.saved') }}</div>
-                  <button class="btn btn-warning btn-sm" :disabled="cdStoreSaving" @click="saveStoreInfo">
-                    {{ t('admin.settings.saveButton') }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Ngưỡng cảnh báo tồn kho -->
-            <div class="col-12 col-xl-6">
-              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                <div class="card-body">
-                  <div class="fw-bold mb-3">📦 {{ t('admin.settings.lowStockThresholdTitle') }}</div>
-                  <div class="mb-3">
-                    <label class="form-label small text-secondary mb-1">{{ t('admin.settings.lowStockThresholdLabel') }}</label>
-                    <input type="number" min="0" v-model.number="cdNguongTonKho" class="form-control form-control-sm" style="width:120px;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-                  </div>
-                  <button class="btn btn-outline-warning btn-sm" :disabled="cdApplyingThreshold" @click="apDungNguongTonKhoSubmit">
-                    {{ t('admin.settings.applyToAllButton') }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Giao diện & ngôn ngữ -->
-            <div class="col-12 col-xl-6">
-              <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-                <div class="card-body">
-                  <div class="fw-bold mb-3">🎨 {{ t('admin.settings.appearanceTitle') }}</div>
-                  <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
-                    <span class="text-secondary">{{ t('admin.settings.themeLabel') }}</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="toggleTheme">
-                      {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
-                    </button>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
-                    <span class="text-secondary">{{ t('admin.settings.languageLabel') }}</span>
-                    <select class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
-                            :value="I18nStore.locale" @change="setLocale($event.target.value)">
-                      <option v-for="loc in LOCALES" :key="loc.code" :value="loc.code">{{ loc.flag }} {{ loc.label }}</option>
-                    </select>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
-                    <span class="text-secondary">{{ t('admin.settings.defaultLanguageLabel') }}</span>
-                    <select class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
-                            v-model="SettingsStore.ngonNguMacDinh"
-                            @change="saveAppearancePrefs">
-                      <option v-for="loc in LOCALES" :key="loc.code" :value="loc.code">{{ loc.flag }} {{ loc.label }}</option>
-                    </select>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center py-2 small">
-                    <span class="text-secondary">{{ t('admin.settings.numberFormatLabel') }}</span>
-                    <select class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
-                            v-model="SettingsStore.dinhDangSo"
-                            @change="saveAppearancePrefs">
-                      <option value="vi">{{ t('admin.settings.numberFormatVi') }}</option>
-                      <option value="en">{{ t('admin.settings.numberFormatEn') }}</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <AdminSettings
+          v-show="currentPage === 'settings'"
+          :cd-mat-khau-cu="cdMatKhauCu"
+          :cd-mat-khau-moi="cdMatKhauMoi"
+          :cd-mat-khau-xac-nhan="cdMatKhauXacNhan"
+          :cd-mat-khau-error="cdMatKhauError"
+          :cd-mat-khau-success="cdMatKhauSuccess"
+          :cd-mat-khau-loading="cdMatKhauLoading"
+          :cd-form="cdForm"
+          :cd-logo-preview="cdLogoPreview"
+          :cd-store-error="cdStoreError"
+          :cd-store-saved="cdStoreSaved"
+          :cd-store-saving="cdStoreSaving"
+          :cd-nguong-ton-kho="cdNguongTonKho"
+          :cd-applying-threshold="cdApplyingThreshold"
+          @update:cd-mat-khau-cu="cdMatKhauCu = $event"
+          @update:cd-mat-khau-moi="cdMatKhauMoi = $event"
+          @update:cd-mat-khau-xac-nhan="cdMatKhauXacNhan = $event"
+          @update:cd-nguong-ton-kho="cdNguongTonKho = $event"
+          @change-password="doiMatKhauSubmit"
+          @handle-logo-file="handleLogoFile"
+          @save-store="saveStoreInfo"
+          @apply-threshold="apDungNguongTonKhoSubmit"
+          @save-appearance="saveAppearancePrefs" />
 
         <!-- ── Ban hang (POS) ── -->
         <section v-show="currentPage === 'ban-hang'">

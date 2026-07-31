@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { t } from "../../i18n/index.js";
-import * as KhachHangService from "../../Service/KhachHangService.js";
+import * as KhachHangService from "../../services/KhachHangService.js";
 import { CustomersStore, refreshCustomers } from "../../stores/customers.js";
 
 // ── Modal "Thêm/Sửa khách hàng" — dùng chung bởi CustomersTable.vue (sở hữu, mở
@@ -86,8 +86,9 @@ const saveCustomer = async () => {
     // Khách hàng là entity phẳng (không join tên qua ID) nên vá cục bộ an toàn,
     // khỏi phải tải lại cả bảng khách hàng.
     if (editingCustomerId.value) {
-      const idx = CustomersStore.items.findIndex((c) => c.khachHangId === editingCustomerId.value);
-      saved = { ...(idx !== -1 ? CustomersStore.items[idx] : {}), ...body };
+      const items = CustomersStore.items ?? [];
+      const idx = items.findIndex((c) => c.khachHangId === editingCustomerId.value);
+      saved = { ...(idx !== -1 ? items[idx] : {}), ...body };
       if (idx !== -1) CustomersStore.items[idx] = saved;
     } else {
       // PUT /update trả 200 rỗng (không body) nên chỉ POST mới parse được response —

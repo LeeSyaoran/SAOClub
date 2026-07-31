@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import * as SanPhamService from "../Service/SanPhamService.js";
+import * as SanPhamService from "../services/SanPhamService.js";
 
 // ── Products Store — dữ liệu sản phẩm dùng chung nhiều trang (ProductsTable, PosPanel,
 // OrdersTable). fetch-once-cache: gọi ensureProducts() nhiều lần chỉ tải 1 lần, refresh()

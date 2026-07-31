@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import * as PhieuTraHangService from "../Service/PhieuTraHangService.js";
+import * as PhieuTraHangService from "../services/PhieuTraHangService.js";
 
 export const ReturnsStore = reactive({ items: [], loading: false, loaded: false });
 

@@ -7,10 +7,10 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import * as XLSX from "xlsx";
 import SearchSelect from "../common/SearchSelect.vue";
-import * as TonKhoService from "../../Service/TonKhoService.js";
-import * as ChiTietSanPhamService from "../../Service/ChiTietSanPhamService.js";
-import * as PhieuNhapKhoService from "../../Service/PhieuNhapKhoService.js";
-import * as ChiTietPhieuNhapService from "../../Service/ChiTietPhieuNhapService.js";
+import * as TonKhoService from "../../services/TonKhoService.js";
+import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
+import * as PhieuNhapKhoService from "../../services/PhieuNhapKhoService.js";
+import * as ChiTietPhieuNhapService from "../../services/ChiTietPhieuNhapService.js";
 import { InventoryStore, ensureInventory } from "../../stores/inventory.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
@@ -24,10 +24,10 @@ onMounted(() => {
   ensureProducts();
 });
 
-const inventory = computed(() => InventoryStore.items);
-const products = computed(() => ProductsStore.items);
-const suppliers = computed(() => SuppliersStore.items);
-const staff = computed(() => StaffStore.items);
+const inventory = computed(() => InventoryStore.items ?? []);
+const products = computed(() => ProductsStore.items ?? []);
+const suppliers = computed(() => SuppliersStore.items ?? []);
+const staff = computed(() => StaffStore.items ?? []);
 
 // ── Tab noi bo: Ton kho | Phieu nhap kho ──────────────────────────────────────
 const khoTab = ref('ton-kho'); // 'ton-kho' | 'phieu-nhap'

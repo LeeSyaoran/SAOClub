@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import * as DmDoiThuongService from "../Service/DmDoiThuongService.js";
+import * as DmDoiThuongService from "../services/DmDoiThuongService.js";
 
 export const DoiThuongStore = reactive({ items: [], loading: false, loaded: false });
 

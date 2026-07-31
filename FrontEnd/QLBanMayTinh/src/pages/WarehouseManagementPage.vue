@@ -1,4 +1,5 @@
 <script setup>
+defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
 import { computed, ref } from "vue";
 import { t } from "../i18n/index.js";
 import { ThemeStore, toggleTheme } from "../stores/theme.js";
@@ -12,8 +13,8 @@ import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
 import SerialManager from "../components/admin/SerialManager.vue";
 import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
-import * as DmService from "../Service/DmService.js";
-import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../Service/ChiTietLinhKienService.js";
+import * as DmService from "../services/DmService.js";
+import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../services/ChiTietLinhKienService.js";
 import { refreshReturns } from "../stores/returns.js";
 
 // ── Navigation — mac dinh vao thang Kho hang (viec chinh hang ngay cua quan ly kho) ──

@@ -2,7 +2,7 @@
 import { ref, watch } from "vue";
 import { t } from "../../i18n/index.js";
 import { ProductsStore } from "../../stores/products.js";
-import * as ChiTietSanPhamService from "../../Service/ChiTietSanPhamService.js";
+import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
 
 // ── Modal "Chi tiết sản phẩm" (xem toàn bộ biến thể của 1 sản phẩm) — dùng chung
@@ -32,7 +32,7 @@ watch(
   () => [props.modelValue, props.sanPhamId],
   async ([open, sanPhamId]) => {
     if (!open || sanPhamId == null) return;
-    const list = ProductsStore.items.filter((p) => p.sanPhamId === sanPhamId);
+    const list = (ProductsStore.items ?? []).filter((p) => p.sanPhamId === sanPhamId);
     detailModalList.value = list;
     detailSerialMap.value = {};
     detailSerialMap.value = await fetchSerialMap(list.map((v) => v.bienTheId));

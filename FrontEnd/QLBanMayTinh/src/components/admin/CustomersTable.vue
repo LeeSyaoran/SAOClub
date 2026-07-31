@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
-import * as KhachHangService from "../../Service/KhachHangService.js";
+import * as KhachHangService from "../../services/KhachHangService.js";
 import { statusLabel } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
@@ -16,8 +16,9 @@ onMounted(() => { ensureCustomers(); });
 const customerSearch = ref("");
 const filteredCustomers = computed(() => {
   const q = customerSearch.value.trim().toLowerCase();
-  if (!q) return CustomersStore.items;
-  return CustomersStore.items.filter((c) =>
+  const all = CustomersStore.items ?? [];
+  if (!q) return all;
+  return all.filter((c) =>
     (c.hoTen ?? '').toLowerCase().includes(q) ||
     (c.soDienThoai ?? '').includes(q) ||
     (c.email ?? '').toLowerCase().includes(q)
@@ -37,7 +38,7 @@ const customerModalRef = ref(null);
 
 <template>
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredCustomers.length }}/{{ CustomersStore.items.length }} {{ t('admin.customers.countSuffix') }}</span>
+    <span class="text-secondary small">{{ filteredCustomers.length }}/{{ (CustomersStore.items ?? []).length }} {{ t('admin.customers.countSuffix') }}</span>
     <div class="d-flex gap-2 flex-wrap">
       <input v-model="customerSearch" class="form-control form-control-sm" style="width:240px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.customers.searchPlaceholder')" />
       <button class="btn btn-sm btn-warning text-dark fw-bold" @click="customerModalRef.openForCreate()">{{ t('admin.customers.add') }}</button>

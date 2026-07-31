@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
-import * as LichSuTonKhoService from "../../Service/LichSuTonKhoService.js";
+import * as LichSuTonKhoService from "../../services/LichSuTonKhoService.js";
 import { formatDateTime } from "../../utils/adminFormat.js";
 
 const items = ref([]);

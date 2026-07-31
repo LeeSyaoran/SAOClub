@@ -2,12 +2,12 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
-import * as SanPhamService from "../../Service/SanPhamService.js";
-import * as BienTheSanPhamService from "../../Service/BienTheSanPhamService.js";
-import * as ChiTietSanPhamService from "../../Service/ChiTietSanPhamService.js";
-import * as DanhMucService from "../../Service/DanhMucService.js";
-import * as DmService from "../../Service/DmService.js";
-import { authHeaders } from "../../Service/api.js";
+import * as SanPhamService from "../../services/SanPhamService.js";
+import * as BienTheSanPhamService from "../../services/BienTheSanPhamService.js";
+import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
+import * as DanhMucService from "../../services/DanhMucService.js";
+import * as DmService from "../../services/DmService.js";
+import { authHeaders } from "../../services/api.js";
 import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
@@ -53,15 +53,16 @@ const ensureProductRefData = () => {
   });
   return productRefDataPromise;
 };
-const suppliers = computed(() => SuppliersStore.items);
+const suppliers = computed(() => SuppliersStore.items ?? []);
 
 // ── Bo loc danh sach bien the phang (moi dong = 1 bien the, ProductsStore.items da dung
 // dinh dang nay san) ────────────────────────────────────────────────────────────────
 const variantSearch = ref("");
 const filteredVariants = computed(() => {
   const q = variantSearch.value.trim().toLowerCase();
-  if (!q) return ProductsStore.items;
-  return ProductsStore.items.filter((p) =>
+  const all = ProductsStore.items ?? [];
+  if (!q) return all;
+  return all.filter((p) =>
     (p.tenSanPham ?? '').toLowerCase().includes(q) ||
     (p.maSku ?? '').toLowerCase().includes(q)
   );
@@ -142,7 +143,7 @@ const variantProductSearch = ref('');
 // San pham doc nhat (dedupe theo sanPhamId) de tim/chon khi them bien the moi
 const distinctProducts = computed(() => {
   const map = new Map();
-  ProductsStore.items.forEach(p => { if (!map.has(p.sanPhamId)) map.set(p.sanPhamId, p); });
+  (ProductsStore.items ?? []).forEach(p => { if (!map.has(p.sanPhamId)) map.set(p.sanPhamId, p); });
   return [...map.values()];
 });
 const searchedProducts = computed(() => {
@@ -326,7 +327,7 @@ const saveVariant = async () => {
 };
 
 const deleteVariant = async (bienTheId) => {
-  const sku = ProductsStore.items.find(p => p.bienTheId === bienTheId)?.maSku ?? '';
+  const sku = (ProductsStore.items ?? []).find(p => p.bienTheId === bienTheId)?.maSku ?? '';
   const daGiaoDich = await BienTheSanPhamService.hasTransactionHistory(bienTheId).catch(() => false);
   if (daGiaoDich) {
     showToast(t('admin.errors.cannotDeleteVariant', { sku }));
@@ -341,7 +342,7 @@ const deleteVariant = async (bienTheId) => {
 
 <template>
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredVariants.length }}/{{ ProductsStore.items.length }} {{ t('admin.variants.countSuffix') }}</span>
+    <span class="text-secondary small">{{ filteredVariants.length }}/{{ (ProductsStore.items ?? []).length }} {{ t('admin.variants.countSuffix') }}</span>
     <div class="d-flex gap-2 flex-wrap">
       <input v-model="variantSearch" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.variants.searchPlaceholder')" />
       <button v-if="!readonly" class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddVariantFlow">{{ t('admin.variants.add') }}</button>

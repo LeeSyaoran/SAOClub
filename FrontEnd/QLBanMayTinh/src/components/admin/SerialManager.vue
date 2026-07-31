@@ -1,9 +1,9 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
-import * as ChiTietSanPhamService from "../../Service/ChiTietSanPhamService.js";
-import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../../Service/ChiTietLinhKienService.js";
-import * as DmService from "../../Service/DmService.js";
+import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
+import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../../services/ChiTietLinhKienService.js";
+import * as DmService from "../../services/DmService.js";
 import { formatDate } from "../../utils/adminFormat.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { showToast } from "../../stores/toast.js";
@@ -34,11 +34,11 @@ const load = async () => {
       ChiTietOCungService.getAll().catch(() => []),
     ]);
     items.value = [
-      ...sp.map((i) => ({ ...i, loai: 'sanPham', rowId: i.chiTietId })),
-      ...cpu.map((i) => ({ ...i, loai: 'cpu', rowId: i.chiTietCpuId })),
-      ...ram.map((i) => ({ ...i, loai: 'ram', rowId: i.chiTietRamId })),
-      ...gpu.map((i) => ({ ...i, loai: 'gpu', rowId: i.chiTietGpuId })),
-      ...oCung.map((i) => ({ ...i, loai: 'oCung', rowId: i.chiTietOCungId })),
+      ...(sp ?? []).map((i) => ({ ...i, loai: 'sanPham', rowId: i.chiTietId })),
+      ...(cpu ?? []).map((i) => ({ ...i, loai: 'cpu', rowId: i.chiTietCpuId })),
+      ...(ram ?? []).map((i) => ({ ...i, loai: 'ram', rowId: i.chiTietRamId })),
+      ...(gpu ?? []).map((i) => ({ ...i, loai: 'gpu', rowId: i.chiTietGpuId })),
+      ...(oCung ?? []).map((i) => ({ ...i, loai: 'oCung', rowId: i.chiTietOCungId })),
     ];
   } finally {
     loading.value = false;
@@ -54,7 +54,7 @@ onMounted(() => {
 });
 
 const variantOptions = computed(() =>
-  ProductsStore.items.map((p) => ({ value: p.bienTheId, label: `${p.tenSanPham} — ${p.maSku}` }))
+  (ProductsStore.items ?? []).map((p) => ({ value: p.bienTheId, label: `${p.tenSanPham} — ${p.maSku}` }))
 );
 const variantLabel = (bienTheId) => variantOptions.value.find((o) => o.value === bienTheId)?.label ?? '';
 

@@ -3,8 +3,8 @@ import { ref, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
 import { CustomersStore, refreshCustomers } from "../../stores/customers.js";
 import { OrdersStore } from "../../stores/orders.js";
-import * as PhieuGiamGiaCaNhanService from "../../Service/PhieuGiamGiaCaNhanService.js";
-import * as KhachHangService from "../../Service/KhachHangService.js";
+import * as PhieuGiamGiaCaNhanService from "../../services/PhieuGiamGiaCaNhanService.js";
+import * as KhachHangService from "../../services/KhachHangService.js";
 import { formatPrice, formatDate, formatDateTime, statusLabel } from "../../utils/adminFormat.js";
 import { orderStatusLabel, orderStatusColor } from "../../utils/orderStatus.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
@@ -17,11 +17,11 @@ const props = defineProps({
 const emit = defineEmits(["back"]);
 
 const customer = computed(() =>
-  CustomersStore.items.find((c) => c.khachHangId === props.customerId) ?? null,
+  (CustomersStore.items ?? []).find((c) => c.khachHangId === props.customerId) ?? null,
 );
 
 const customerOrders = computed(() =>
-  OrdersStore.items
+  (OrdersStore.items ?? [])
     .filter((o) => o.khachHangId === props.customerId)
     .sort((a, b) => new Date(b.ngayDat) - new Date(a.ngayDat)),
 );

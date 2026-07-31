@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import * as KhachHangService from "../Service/KhachHangService.js";
+import * as KhachHangService from "../services/KhachHangService.js";
 
 export const CustomersStore = reactive({ items: [], loading: false, loaded: false });
 

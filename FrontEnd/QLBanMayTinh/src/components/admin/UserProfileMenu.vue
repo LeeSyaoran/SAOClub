@@ -3,7 +3,7 @@ import { ref, computed } from "vue";
 import { AuthStore, clearSession, setSession } from "../../stores/index.js";
 import { resetAllStores } from "../../stores/resetAll.js";
 import { t } from "../../i18n/index.js";
-import * as CaiDatService from "../../Service/CaiDatService.js";
+import * as CaiDatService from "../../services/CaiDatService.js";
 
 const emit = defineEmits(["navigate-settings"]);
 const props = defineProps({ showSettingsLink: { type: Boolean, default: true } });
@@ -22,7 +22,7 @@ const userDisplayRole = computed(() => {
 const logout = () => {
   clearSession();
   resetAllStores();
-  window.location.hash = '';
+  window.location.hash = '#/';
 };
 
 // ── Menu hồ sơ (dropdown ở chân sidebar) ─────────────────────────────────────

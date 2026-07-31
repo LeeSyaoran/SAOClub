@@ -1,4 +1,5 @@
 <script setup>
+defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { AuthStore } from "../stores/index.js";
 import { t } from "../i18n/index.js";

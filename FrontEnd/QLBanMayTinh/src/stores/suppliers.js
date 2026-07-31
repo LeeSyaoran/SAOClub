@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import * as NhaCungCapService from "../Service/NhaCungCapService.js";
+import * as NhaCungCapService from "../services/NhaCungCapService.js";
 
 export const SuppliersStore = reactive({ items: [], loading: false, loaded: false });
 

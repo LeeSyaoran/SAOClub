@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import * as DonHangService from "../Service/DonHangService.js";
+import * as DonHangService from "../services/DonHangService.js";
 
 // ── Orders Store — dữ liệu đơn hàng dùng chung (OrdersTable, PosPanel). Có SSE realtime:
 // connectOrderEvents() mở 1 kết nối EventSource, tự patch OrdersStore.items khi có đơn mới/
@@ -42,7 +42,8 @@ let subscriberCount = 0;
 export const connectOrderEvents = (token, { onNewOrder, onOrderUpdated } = {}) => {
   subscriberCount += 1;
   if (eventSource) return;
-  eventSource = new EventSource(`/api/don-hang/events?token=${encodeURIComponent(token ?? '')}`);
+  document.cookie = `sse_token=${encodeURIComponent(token ?? '')}; path=/api/don-hang; SameSite=Strict`;
+  eventSource = new EventSource('/api/don-hang/events');
   eventSource.onerror = (e) => console.error('Kết nối SSE (đơn hàng real-time) lỗi:', e);
   eventSource.addEventListener('new-order', () => { refreshOrders(); onNewOrder?.(); });
   eventSource.addEventListener('order-updated', () => { refreshOrders(); onOrderUpdated?.(); });
@@ -53,5 +54,6 @@ export const disconnectOrderEvents = () => {
   if (subscriberCount === 0 && eventSource) {
     eventSource.close();
     eventSource = null;
+    document.cookie = 'sse_token=; path=/api/don-hang; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
   }
 };

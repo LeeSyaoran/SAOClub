@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { t } from "../../i18n/index.js";
-import * as PhieuGiamGiaCaNhanService from "../../Service/PhieuGiamGiaCaNhanService.js";
+import * as PhieuGiamGiaCaNhanService from "../../services/PhieuGiamGiaCaNhanService.js";
 import { showToast } from "../../stores/toast.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 

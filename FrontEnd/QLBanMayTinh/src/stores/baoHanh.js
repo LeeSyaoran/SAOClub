@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import * as PhieuBaoHanhService from "../Service/PhieuBaoHanhService.js";
+import * as PhieuBaoHanhService from "../services/PhieuBaoHanhService.js";
 
 export const BaoHanhStore = reactive({ items: [], loading: false, loaded: false });
 

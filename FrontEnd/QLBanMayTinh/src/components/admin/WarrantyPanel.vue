@@ -1,8 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
-import * as ChiTietSanPhamService from "../../Service/ChiTietSanPhamService.js";
-import * as PhieuBaoHanhService from "../../Service/PhieuBaoHanhService.js";
+import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
+import * as PhieuBaoHanhService from "../../services/PhieuBaoHanhService.js";
 import { formatPrice, formatDate } from "../../utils/adminFormat.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { showToast } from "../../stores/toast.js";
@@ -40,7 +40,7 @@ const filteredWarranty = computed(() => {
 const daysUntilExpiry = (isoDate) => Math.ceil((new Date(isoDate) - new Date()) / 86400000);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const customerName = (id) => CustomersStore.items.find(c => c.khachHangId === id)?.hoTen ?? `KH#${id}`;
+const customerName = (id) => (CustomersStore.items ?? []).find(c => c.khachHangId === id)?.hoTen ?? `KH#${id}`;
 const statusLabel = (s) => t(`admin.warrantyClaimStatus.${s}`);
 const STATUS_COLOR = {
   con_bao_hanh: { bg: '#bfdbfe', text: '#1e3a8a' },
@@ -55,8 +55,8 @@ const statusColor = (s) => STATUS_COLOR[s] ?? { bg: '#e5e7eb', text: '#374151' }
 const claimSearch = ref("");
 const filteredClaims = computed(() => {
   const q = claimSearch.value.trim().toLowerCase();
-  if (!q) return BaoHanhStore.items;
-  return BaoHanhStore.items.filter((p) => {
+  if (!q) return BaoHanhStore.items ?? [];
+  return (BaoHanhStore.items ?? []).filter((p) => {
     const name = customerName(p.khachHangId).toLowerCase();
     return String(p.baoHanhId).includes(q) || name.includes(q) || (p.soSerial ?? '').toLowerCase().includes(q);
   });
@@ -227,7 +227,7 @@ const deleteClaim = async (id) => {
 
   <!-- ══ BANG PHIEU BAO HANH ══ -->
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredClaims.length }}/{{ BaoHanhStore.items.length }} {{ t('admin.warrantyClaims.countSuffix') }}</span>
+    <span class="text-secondary small">{{ filteredClaims.length }}/{{ (BaoHanhStore.items ?? []).length }} {{ t('admin.warrantyClaims.countSuffix') }}</span>
     <input v-model="claimSearch" class="form-control form-control-sm" style="width:240px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.warrantyClaims.searchPlaceholder')" />
   </div>
   <div v-if="BaoHanhStore.loading" class="text-secondary small">{{ t('admin.warrantyClaims.loading') }}</div>

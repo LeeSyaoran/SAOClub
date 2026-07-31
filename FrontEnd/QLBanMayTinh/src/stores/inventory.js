@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import * as TonKhoService from "../Service/TonKhoService.js";
+import * as TonKhoService from "../services/TonKhoService.js";
 
 export const InventoryStore = reactive({ items: [], loading: false, loaded: false });
 

@@ -10,14 +10,14 @@ import { AuthStore, setSession } from "../stores/index.js";
 import { I18nStore, t } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
 import { formatPrice as formatPriceRaw } from "../utils/formatPrice.js";
-import * as DonHangService         from "../Service/DonHangService.js";
-import * as ChiTietDonHangService  from "../Service/ChiTietDonHangService.js";
-import * as SanPhamService         from "../Service/SanPhamService.js";
-import * as KhachHangService       from "../Service/KhachHangService.js";
-import * as LichSuDonHangService   from "../Service/LichSuDonHangService.js";
-import * as PhieuTraHangService    from "../Service/PhieuTraHangService.js";
-import * as DmDoiThuongService         from "../Service/DmDoiThuongService.js";
-import * as PhieuGiamGiaCaNhanService  from "../Service/PhieuGiamGiaCaNhanService.js";
+import * as DonHangService         from "../services/DonHangService.js";
+import * as ChiTietDonHangService  from "../services/ChiTietDonHangService.js";
+import * as SanPhamService         from "../services/SanPhamService.js";
+import * as KhachHangService       from "../services/KhachHangService.js";
+import * as LichSuDonHangService   from "../services/LichSuDonHangService.js";
+import * as PhieuTraHangService    from "../services/PhieuTraHangService.js";
+import * as DmDoiThuongService         from "../services/DmDoiThuongService.js";
+import * as PhieuGiamGiaCaNhanService  from "../services/PhieuGiamGiaCaNhanService.js";
 import OrderStatusTimeline from "../components/order/OrderStatusTimeline.vue";
 import OrderTrackingLog from "../components/order/OrderTrackingLog.vue";
 import ReturnRequestModal from "../components/order/ReturnRequestModal.vue";
@@ -278,10 +278,14 @@ let orderSse = null;
 onMounted(() => {
   fetchData();
   fetchProfile();
-  orderSse = new EventSource(`/api/don-hang/events?token=${encodeURIComponent(auth.user?.token ?? '')}`);
+  document.cookie = `sse_token=${encodeURIComponent(auth.user?.token ?? '')}; path=/api/don-hang; SameSite=Strict`;
+  orderSse = new EventSource('/api/don-hang/events');
   orderSse.addEventListener('order-updated', () => { fetchData(); });
 });
-onUnmounted(() => { if (orderSse) orderSse.close(); });
+onUnmounted(() => {
+  if (orderSse) orderSse.close();
+  document.cookie = 'sse_token=; path=/api/don-hang; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+});
 </script>
 
 <template>

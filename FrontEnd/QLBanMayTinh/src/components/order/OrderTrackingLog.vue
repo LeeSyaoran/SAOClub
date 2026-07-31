@@ -28,10 +28,12 @@ const props = defineProps({
 
 const copied = ref(false);
 const copyCode = async () => {
-  if (!props.maVanDon) return;
-  await navigator.clipboard.writeText(props.maVanDon);
-  copied.value = true;
-  setTimeout(() => { copied.value = false; }, 1500);
+  if (!props.maVanDon || !navigator.clipboard) return;
+  try {
+    await navigator.clipboard.writeText(props.maVanDon);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 1500);
+  } catch {}
 };
 
 const formatDate = (d) => {

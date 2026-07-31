@@ -16,7 +16,7 @@
           <div>
             <h2 class="fw-black mb-1" style="font-size:1.4rem; color:var(--text-heading);">{{ t('checkout.successTitle') }}</h2>
             <p class="mb-0" style="font-size:0.9rem; color:var(--text-secondary);">
-              {{ t('checkout.orderCode') }} <strong class="text-warning">#{{ checkoutOrderId }}</strong>
+              {{ t('checkout.orderCode') }} <strong class="text-warning">{{ checkoutOrderCode }}</strong>
             </p>
           </div>
           <!-- Hướng dẫn thanh toán theo phương thức đã chọn -->
@@ -345,11 +345,12 @@ import { t } from '../../i18n/index.js';
 import { AuthStore } from '../../stores/index.js';
 import { nowLocalIso } from '../../utils/datetime.js';
 import { formatPrice as formatPriceRaw } from '../../utils/formatPrice.js';
+import { checkoutInfoSchema } from '../../utils/validators.js';
 import AddressPicker from './AddressPicker.vue';
-import * as KhachHangService from '../../Service/KhachHangService.js';
-import * as KhuyenMaiService  from '../../Service/KhuyenMaiService.js';
-import * as DonHangService    from '../../Service/DonHangService.js';
-import * as PhieuGiamGiaCaNhanService from '../../Service/PhieuGiamGiaCaNhanService.js';
+import * as KhachHangService from '../../services/KhachHangService.js';
+import * as KhuyenMaiService  from '../../services/KhuyenMaiService.js';
+import * as DonHangService    from '../../services/DonHangService.js';
+import * as PhieuGiamGiaCaNhanService from '../../services/PhieuGiamGiaCaNhanService.js';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -365,7 +366,8 @@ const checkoutSuccess = ref(false); // Đặt hàng thành công chưa
 const checkoutLoading = ref(false); // Đang xử lý API
 const checkoutProgress = ref('');   // Bước hiện tại trong placeOrder() — hiện cho người dùng biết đơn đang xử lý tới đâu
 const checkoutError   = ref('');    // Thông báo lỗi khi checkout
-const checkoutOrderId    = ref(null);  // ID đơn hàng sau khi đặt xong
+const checkoutOrderId    = ref(null);  // ID đơn hàng sau khi đặt xong (dùng nội bộ để gọi API)
+const checkoutOrderCode  = ref('');    // Mã đơn hàng (maDonHang) hiện cho khách — cùng mã staff/admin thấy
 const checkoutFinalTotal = ref(0);     // Tổng tiền lúc đặt hàng (lưu trước khi cha xóa giỏ)
 const allPromos       = ref([]);    // Cache danh sách khuyến mãi
 const foundCustomer   = ref(null);  // Khách hàng tìm thấy qua SĐT
@@ -555,15 +557,28 @@ const applyPromo = () => {
   }
 };
 
-// Kiểm tra thông tin bước 1 trước khi sang bước thanh toán — chặn sớm thay vì để
-// backend từ chối rồi hiện lỗi JSON thô cho khách.
+// Kiểm tra thông tin bước 1 trước khi sang bước thanh toán — dùng Zod schema
+// thay cho chuỗi if/else thủ công, dễ đọc và bảo trì hơn.
 const goToPayment = () => {
   checkoutError.value = '';
-  if (!checkoutForm.soDienThoai.trim()) { checkoutError.value = t('checkout.errPhoneRequired'); return; }
-  if (!foundCustomer.value && !checkoutForm.hoTen.trim()) { checkoutError.value = t('checkout.errNameRequired'); return; }
-  if (!checkoutForm.nguoiNhan.trim()) { checkoutError.value = t('checkout.errReceiverRequired'); return; }
-  if (!checkoutForm.sdtNguoiNhan.trim()) { checkoutError.value = t('checkout.errReceiverPhoneRequired'); return; }
-  if (!checkoutForm.diaChiGiaoHangText.trim()) { checkoutError.value = t('checkout.errAddressRequired'); return; }
+  const data = {
+    soDienThoai: checkoutForm.soDienThoai,
+    hoTen: isLoggedInCustomer.value ? 'logged-in' : checkoutForm.hoTen,
+    nguoiNhan: checkoutForm.nguoiNhan,
+    sdtNguoiNhan: checkoutForm.sdtNguoiNhan,
+    diaChiGiaoHangText: checkoutForm.diaChiGiaoHangText,
+  };
+  if (isLoggedInCustomer.value) {
+    data.soDienThoai = 'logged-in';
+    data.hoTen = 'logged-in';
+  }
+  const result = checkoutInfoSchema.safeParse(data);
+  if (!result.success) {
+    const fieldErrors = result.error.flatten().fieldErrors;
+    const firstError = Object.values(fieldErrors).flat().find(Boolean);
+    checkoutError.value = firstError || t('checkout.errValidation');
+    return;
+  }
   checkoutStep.value = 2;
 };
 
@@ -653,6 +668,9 @@ const placeOrder = async () => {
     // Lưu tổng tiền trước khi cha xóa giỏ (props.cartTotal sẽ về 0 sau khi cart rỗng)
     checkoutFinalTotal.value = checkoutTotal.value;
     checkoutOrderId.value    = donHangId;
+    // maDonHang là mã hiển thị thống nhất với AccountPage/OrdersTable bên admin — client
+    // không tin được nó luôn có sẵn (vd API cũ chưa refresh kịp), fallback về id số thô.
+    checkoutOrderCode.value  = createdOrder.maDonHang || `#${donHangId}`;
     checkoutSuccess.value    = true;
     emit('order-placed');
   } catch (e) {

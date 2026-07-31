@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
-import * as NhaCungCapService from "../../Service/NhaCungCapService.js";
+import * as NhaCungCapService from "../../services/NhaCungCapService.js";
 import { statusLabel } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
@@ -13,8 +13,9 @@ onMounted(() => { ensureSuppliers(); });
 const supplierSearch = ref("");
 const filteredSuppliers = computed(() => {
   const q = supplierSearch.value.trim().toLowerCase();
-  if (!q) return SuppliersStore.items;
-  return SuppliersStore.items.filter((s) =>
+  const all = SuppliersStore.items ?? [];
+  if (!q) return all;
+  return all.filter((s) =>
     (s.tenNhaCungCap ?? '').toLowerCase().includes(q) ||
     (s.soDienThoai ?? '').includes(q) ||
     (s.email ?? '').toLowerCase().includes(q)
@@ -99,7 +100,7 @@ const deleteSupplier = async (id) => {
 
 <template>
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredSuppliers.length }}/{{ SuppliersStore.items.length }} {{ t('admin.suppliers.countSuffix') }}</span>
+    <span class="text-secondary small">{{ filteredSuppliers.length }}/{{ (SuppliersStore.items ?? []).length }} {{ t('admin.suppliers.countSuffix') }}</span>
     <div class="d-flex gap-2 flex-wrap">
       <input v-model="supplierSearch" class="form-control form-control-sm" style="width:240px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.suppliers.searchPlaceholder')" />
       <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAdd">{{ t('admin.suppliers.add') }}</button>

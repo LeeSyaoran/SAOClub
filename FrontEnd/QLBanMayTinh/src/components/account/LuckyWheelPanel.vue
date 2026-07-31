@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { t } from '../../i18n/index.js';
 import { formatPrice } from '../../utils/formatPrice.js';
-import * as VongQuayService from '../../Service/VongQuayService.js';
+import * as VongQuayService from '../../services/VongQuayService.js';
 import Modal from '../common/Modal.vue';
 
 // points: điểm tích lũy hiện tại của khách — nhận từ AccountPage.vue (đã load sẵn cho

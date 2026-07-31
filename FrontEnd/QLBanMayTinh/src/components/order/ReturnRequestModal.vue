@@ -36,7 +36,7 @@
 <script setup>
 import { ref } from 'vue';
 import { t } from '../../i18n/index.js';
-import * as PhieuTraHangService from '../../Service/PhieuTraHangService.js';
+import * as PhieuTraHangService from '../../services/PhieuTraHangService.js';
 
 const props = defineProps({
   order: { type: Object, required: true },

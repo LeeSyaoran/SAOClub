@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { t } from "../../i18n/index.js";
-import * as KhachHangService from "../../Service/KhachHangService.js";
+import * as KhachHangService from "../../services/KhachHangService.js";
 import { showToast } from "../../stores/toast.js";
 
 const props = defineProps({
