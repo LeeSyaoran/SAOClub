@@ -1,0 +1,22 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Backend
+        working-directory: ./BackEnd
+        run: mvn clean package -DskipTests
+
+      - name: Build Frontend
+        working-directory: ./FrontEnd/QLBanMayTinh
+        run: |
+          npm ci
+          npm run build
