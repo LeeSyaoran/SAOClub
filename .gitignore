@@ -1,2 +1,6 @@
 .worktrees/
 .superpowers/
+.playwright-mcp/
+
+### Secrets — không commit ###
+.env
