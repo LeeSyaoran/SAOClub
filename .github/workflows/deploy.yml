@@ -13,7 +13,9 @@ jobs:
 
       - name: Build Backend
         working-directory: ./BackEnd
-        run: mvn clean package -DskipTests
+        # BackEndApplicationTests can DB thuc, khong co trong CI nen loai rieng no ra
+        # (xem ci.yml) — cac test con lai PHAI qua thi moi duoc dong goi de deploy.
+        run: mvn clean package -Dtest='!BackEndApplicationTests'
 
       - name: Build Frontend
         working-directory: ./FrontEnd/QLBanMayTinh

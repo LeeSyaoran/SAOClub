@@ -62,9 +62,18 @@ export default defineConfig({
     },
   },
   server: {
+    // Bind-mount qua Docker Desktop trên Windows không phát event fs native đáng tin cậy —
+    // Vite/chokidar không tự nhận file đổi (sửa code không thấy cập nhật dù đã lưu). Polling
+    // là fallback chuẩn cho trường hợp này, không tốn gì đáng kể khi chạy native.
+    watch: {
+      usePolling: true,
+    },
     proxy: {
       "/api": {
-        target: "http://localhost:8080",
+        // Docker: backend chạy ở container riêng ("localhost" bên trong container frontend
+        // là chính nó, không phải container backend) — set VITE_API_PROXY_TARGET=http://backend:8080
+        // qua docker-compose. Dev native không set biến này thì giữ nguyên localhost:8080.
+        target: process.env.VITE_API_PROXY_TARGET || "http://localhost:8080",
         changeOrigin: true,
         secure: false,
       },

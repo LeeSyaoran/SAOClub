@@ -41,7 +41,7 @@ jobs:
       - run: npm run build
 
   build-backend:
-    name: Build Backend
+    name: Build & Test Backend
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,4 +53,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
-      - run: mvn clean compile -DskipTests
+      # BackEndApplicationTests la @SpringBootTest that (can ket noi DB thuc) — khong co
+      # SQL Server trong CI nen loai rieng test nay. 130 test con lai la unit test Mockito
+      # thuan tuy (khong dung DB) — chinh nhung test nay bao ve logic don hang/kho/tra hang.
+      - run: mvn clean test -Dtest='!BackEndApplicationTests'

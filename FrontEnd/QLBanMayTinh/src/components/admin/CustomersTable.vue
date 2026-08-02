@@ -7,6 +7,8 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../../stores/customers.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 const emit = defineEmits(["view-detail"]);
 
@@ -24,6 +26,7 @@ const filteredCustomers = computed(() => {
     (c.email ?? '').toLowerCase().includes(q)
   );
 });
+const { currentPage, totalPages, pagedItems: pagedCustomers, pageSize } = usePagination(filteredCustomers);
 
 const deleteCustomer = async (id) => {
   if (!(await askConfirm(t('admin.confirm.deleteCustomer')))) return;
@@ -49,8 +52,8 @@ const customerModalRef = ref(null);
     <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
       <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.customers.colFullName') }}</th><th>{{ t('admin.customers.colPhone') }}</th><th>{{ t('admin.customers.colEmail') }}</th><th>{{ t('admin.customers.colCustomerType') }}</th><th>{{ t('admin.customers.colPoints') }}</th><th>{{ t('admin.customers.colStatus') }}</th><th>{{ t('admin.customers.colAction') }}</th></tr></thead>
       <tbody>
-        <tr v-for="(c, idx) in filteredCustomers" :key="c.khachHangId">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(c, idx) in pagedCustomers" :key="c.khachHangId">
+          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
           <td>{{ c.hoTen }}</td>
           <td class="text-secondary">{{ c.soDienThoai }}</td>
           <td class="text-secondary">{{ c.email }}</td>
@@ -68,6 +71,7 @@ const customerModalRef = ref(null);
         <tr v-if="filteredCustomers.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.customers.empty') }}</td></tr>
       </tbody>
     </table>
+    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
   <CustomerFormModal ref="customerModalRef" v-model="showCustomerModal" />

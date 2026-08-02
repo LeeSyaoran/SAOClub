@@ -17,6 +17,8 @@ import {
 } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 const props = defineProps({ readonly: { type: Boolean, default: false } });
 
@@ -88,6 +90,7 @@ const filteredGroupedProducts = computed(() => {
       (p.tenThuongHieu ?? "").toLowerCase().includes(q),
   );
 });
+const { currentPage, totalPages, pagedItems: pagedProducts, pageSize } = usePagination(filteredGroupedProducts);
 
 // ── Modal "Chi tiet san pham" (xem) ───────────────────────────────────────────
 const showDetailModal = ref(false);
@@ -414,8 +417,8 @@ const deleteProduct = async (id) => {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(p, idx) in filteredGroupedProducts" :key="p.sanPhamId">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(p, idx) in pagedProducts" :key="p.sanPhamId">
+          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
           <td>{{ p.tenSanPham }}</td>
           <td>{{ p.tenThuongHieu }}</td>
           <td>{{ p.tenDanhMuc }}</td>
@@ -465,6 +468,7 @@ const deleteProduct = async (id) => {
         </tr>
       </tbody>
     </table>
+    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
   <ProductDetailModal

@@ -10,6 +10,9 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import SearchSelect from "../common/SearchSelect.vue";
+import ProductDetailModal from "./ProductDetailModal.vue";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 const specLists = reactive({ cpu: [], ram: [], gpu: [], oCung: [] });
 const LINH_KIEN_META = {
@@ -57,6 +60,23 @@ const variantOptions = computed(() =>
   (ProductsStore.items ?? []).map((p) => ({ value: p.bienTheId, label: `${p.tenSanPham} — ${p.maSku}` }))
 );
 const variantLabel = (bienTheId) => variantOptions.value.find((o) => o.value === bienTheId)?.label ?? '';
+const findVariant = (bienTheId) => (ProductsStore.items ?? []).find((p) => p.bienTheId === bienTheId);
+
+// Modal "Chi tiet san pham" xem-thuan cho dong loai "sanPham" — chi hien DUNG bien the cua
+// serial dang xem (onlyBienTheIds), khong phai ca ho bien the cua san pham do. Dong loai
+// linh kien (cpu/ram/gpu/oCung) khong co nut nay — khong co "san pham"/bien the de xem.
+const showDetailModal = ref(false);
+const detailSanPhamId = ref(null);
+const detailSanPhamName = ref('');
+const detailOnlyBienTheIds = ref(null);
+const openDetail = (item) => {
+  const variant = findVariant(item.bienTheId);
+  if (!variant) return;
+  detailSanPhamId.value = variant.sanPhamId;
+  detailSanPhamName.value = variant.tenSanPham;
+  detailOnlyBienTheIds.value = [item.bienTheId];
+  showDetailModal.value = true;
+};
 
 // Nhãn hiển thị cột "Sản phẩm/SKU" cho MỌI loại dòng (sản phẩm lẫn linh kiện) —
 // linh kiện đã có sẵn tên spec (tenCpu/dungLuong/...) ngay trong response, không cần
@@ -74,6 +94,7 @@ const filteredItems = computed(() => {
     [i.soSerial, rowSpecLabel(i)].some((v) => (v || '').toLowerCase().includes(q))
   );
 });
+const { currentPage, totalPages, pagedItems, pageSize } = usePagination(filteredItems);
 
 const STATUS_COLOR = {
   trong_kho: '#22c55e',
@@ -220,8 +241,8 @@ const deleteSerial = async (item) => {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, idx) in filteredItems" :key="`${item.loai}-${item.rowId}`">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(item, idx) in pagedItems" :key="`${item.loai}-${item.rowId}`">
+          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
           <td>{{ t(`admin.productsTabs.${item.loai}`) }}</td>
           <td>{{ rowSpecLabel(item) }}</td>
           <td>{{ item.soSerial }}</td>
@@ -233,6 +254,7 @@ const deleteSerial = async (item) => {
           <td class="text-secondary">{{ item.ghiChu }}</td>
           <td>
             <div class="d-flex gap-1">
+              <button v-if="item.loai === 'sanPham'" class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;padding:2px 8px;" @click="openDetail(item)">{{ t('admin.products.detail') }}</button>
               <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openEdit(item)">{{ t('admin.serialManager.edit') }}</button>
               <button v-if="item.trangThai === 'trong_kho'" class="btn btn-sm btn-outline-danger" style="font-size:0.78rem;padding:2px 8px;" @click="deleteSerial(item)">{{ t('admin.serialManager.delete') }}</button>
             </div>
@@ -241,6 +263,7 @@ const deleteSerial = async (item) => {
         <tr v-if="filteredItems.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.serialManager.empty') }}</td></tr>
       </tbody>
     </table>
+    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
   <div v-if="showModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showModal=false">
@@ -290,4 +313,11 @@ const deleteSerial = async (item) => {
       </div>
     </div>
   </div>
+
+  <ProductDetailModal
+    v-model="showDetailModal"
+    :san-pham-id="detailSanPhamId"
+    :san-pham-name="detailSanPhamName"
+    :only-bien-the-ids="detailOnlyBienTheIds"
+  />
 </template>

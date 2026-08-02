@@ -1,12 +1,14 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.ChiTietDonHang;
+import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.ChiTietTraHang;
 import com.example.backend.entity.DonHang;
 import com.example.backend.entity.KhachHang;
 import com.example.backend.entity.PhieuTraHang;
 import com.example.backend.entity.TaiKhoan;
 import com.example.backend.repository.ChiTietDonHangRepository;
+import com.example.backend.repository.ChiTietSanPhamRepository;
 import com.example.backend.repository.ChiTietTraHangRepository;
 import com.example.backend.repository.DonHangRepository;
 import com.example.backend.repository.KhachHangRepository;
@@ -48,6 +50,8 @@ public class PhieuTraHangService {
     private ChiTietTraHangRepository chiTietTraHangRepository;
     @Autowired
     private TaiKhoanRepository taiKhoanRepository;
+    @Autowired
+    private ChiTietSanPhamRepository chiTietSanPhamRepository;
 
     private String ensureMaPhieu(PhieuTraHang phieu) {
         if (phieu.getMaPhieu() != null && !phieu.getMaPhieu().isBlank()) {
@@ -91,6 +95,8 @@ public class PhieuTraHangService {
         ensureMaPhieuForSaved(saved);
         congViNeuVuaHoanTat(null, saved);
         truHoiDiemNeuVuaHoanTat(null, saved);
+        capNhatKhoNeuVuaHoanTat(null, saved);
+        capNhatDonHangNeuVuaHoanTat(null, saved);
         return saved;
     }
 
@@ -110,6 +116,8 @@ public class PhieuTraHangService {
         ensureMaPhieuForSaved(saved);
         congViNeuVuaHoanTat(trangThaiCu, saved);
         truHoiDiemNeuVuaHoanTat(trangThaiCu, saved);
+        capNhatKhoNeuVuaHoanTat(trangThaiCu, saved);
+        capNhatDonHangNeuVuaHoanTat(trangThaiCu, saved);
         return saved;
     }
 
@@ -189,6 +197,63 @@ public class PhieuTraHangService {
         int diemHienTai = khachHang.getDiemTichLuy() != null ? khachHang.getDiemTichLuy() : 0;
         khachHang.setDiemTichLuy(Math.max(0, diemHienTai - diemTru));
         khachHangRepository.save(khachHang);
+    }
+
+    // Cap nhat don hang khi phieu tra hang VUA chuyen sang "da_xu_ly":
+    // 1) trang_thai_thanh_toan -> "refunded" (so tien hoan > 0) — truoc day khong bao gio doi,
+    //    don da hoan tien van hien "paid" nhu binh thuong. Schema chi co 4 muc unpaid/partial/
+    //    paid/refunded (khong co "hoan mot phan" rieng) nen coi moi lan hoan tien (toan phan
+    //    hay 1 phan don) la "refunded" — thong nhat voi kiemTraGioiHanSoTienHoan() da gioi han
+    //    tong tien hoan theo don.
+    // 2) trang_thai_don_hang -> "returned" — truoc day don cu dung yen "delivered" mai mai du
+    //    thuc te da tra/hoan xong. Chi doi khi don DANG la "delivered" (dung y state machine
+    //    delivered->returned cua DonHangService), vi luong tao phieu truc tiep cua nhan vien
+    //    (khac voi taoYeuCauTuKhachHang) khong bat buoc don phai delivered — bo qua neu don
+    //    dang o trang thai khac de khong "nhay coc" state machine.
+    private void capNhatDonHangNeuVuaHoanTat(String trangThaiCu, PhieuTraHang phieu) {
+        boolean vuaChuyenSangDaXuLy = "da_xu_ly".equals(phieu.getTrangThai()) && !"da_xu_ly".equals(trangThaiCu);
+        if (!vuaChuyenSangDaXuLy) return;
+
+        DonHang donHang = phieu.getDonHang();
+        boolean coDoi = false;
+        if (phieu.getSoTienHoan() != null && phieu.getSoTienHoan().signum() > 0) {
+            donHang.setTrangThaiThanhToan("refunded");
+            coDoi = true;
+        }
+        if ("delivered".equals(donHang.getTrangThaiDonHang())) {
+            donHang.setTrangThaiDonHang("returned");
+            coDoi = true;
+        }
+        if (coDoi) donHangRepository.save(donHang);
+    }
+
+    // Cong lai kho khi phieu VUA chuyen sang "da_xu_ly" — ap dung cho MOI dong tra hang hien
+    // co cua phieu nay tai thoi diem duyet, bat ke dong do duoc tao truoc hay sau, boi nhan
+    // vien (ReturnsPanel) hay boi khach tu gui yeu cau (taoYeuCauTuKhachHang). Truoc day logic
+    // nay nam o ChiTietTraHangService.create() nen chi chay khi TAO MOI 1 dong — cong kho qua
+    // som (truoc khi phieu duoc duyet, ke ca phieu sau do bi tu choi) va hoan toan khong chay
+    // voi luong khach tu gui (dong duoc luu thang qua repository, khong qua create()). Chuyen
+    // sang gan dung vao thoi diem duyet, doc truc tiep tu DB nen dung voi ca 2 luong.
+    // Hang loi/hong (tinhTrang co "loi"/"hong") khong duoc cong lai kho — giu nguyen trang thai
+    // serial hien tai (vd cho bao hanh/huy). Dong khong gan serial cu the (chiTietSanPham=null)
+    // thi khong dung toi kho — kho o he thong nay quan ly theo tung serial.
+    private void capNhatKhoNeuVuaHoanTat(String trangThaiCu, PhieuTraHang phieu) {
+        boolean vuaChuyenSangDaXuLy = "da_xu_ly".equals(phieu.getTrangThai()) && !"da_xu_ly".equals(trangThaiCu);
+        if (!vuaChuyenSangDaXuLy) return;
+
+        List<ChiTietTraHang> dongTraHang = chiTietTraHangRepository.findByPhieuTraHang_PhieuTraId(phieu.getPhieuTraId());
+        for (ChiTietTraHang dong : dongTraHang) {
+            ChiTietSanPham serial = dong.getChiTietSanPham();
+            if (serial == null || laHangLoi(dong.getTinhTrang())) continue;
+            serial.setTrangThai("trong_kho");
+            chiTietSanPhamRepository.save(serial);
+        }
+    }
+
+    private boolean laHangLoi(String tinhTrang) {
+        if (tinhTrang == null) return false;
+        String s = tinhTrang.toLowerCase(java.util.Locale.ROOT);
+        return s.contains("lỗi") || s.contains("loi") || s.contains("hỏng") || s.contains("hong") || s.contains("hư");
     }
 
     // ── Khách hàng tự gửi yêu cầu trả hàng (tách biệt hoàn toàn CRUD staff ở trên) ──────

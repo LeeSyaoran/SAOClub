@@ -99,6 +99,15 @@ public class DonHangController {
         return ResponseEntity.ok().build();
     }
 
+    // Khách hàng tự bấm "Đã nhận được hàng" (đơn đang "awaiting_confirmation") — route mở cho
+    // mọi role đã đăng nhập (không @PreAuthorize staff-only như update()), service tự kiểm tra
+    // đúng chủ đơn qua isStaffOrOwner() để chặn khách A xác nhận hộ đơn khách B.
+    @PatchMapping("{id}/xac-nhan-nhan-hang")
+    public ResponseEntity<Void> xacNhanDaNhanHang(@PathVariable Integer id) {
+        donHangService.xacNhanDaNhanHang(id);
+        return ResponseEntity.ok().build();
+    }
+
     // SSE — giữ mở: cả AccountPage (khách theo dõi đơn của mình) lẫn AdminPage (staff) đều subscribe.
     @GetMapping(value = "events", produces = "text/event-stream")
     public SseEmitter subscribe() {

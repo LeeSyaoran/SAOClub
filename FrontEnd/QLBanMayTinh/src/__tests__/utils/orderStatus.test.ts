@@ -28,6 +28,11 @@ describe('orderStatusColor', () => {
     expect(orderStatusColor('delivered')).toEqual({ bg: 'rgba(34,197,94,0.15)', text: '#22c55e' });
   });
 
+  it('should return correct color for awaiting_confirmation', async () => {
+    const { orderStatusColor } = await import('../../utils/orderStatus.js');
+    expect(orderStatusColor('awaiting_confirmation')).toEqual({ bg: 'rgba(45,212,191,0.15)', text: '#2dd4bf' });
+  });
+
   it('should return default color for unknown status', async () => {
     const { orderStatusColor } = await import('../../utils/orderStatus.js');
     expect(orderStatusColor('unknown')).toEqual({ bg: 'rgba(107,114,128,0.15)', text: '#9ca3af' });
@@ -42,6 +47,7 @@ describe('orderStatusIcon', () => {
     expect(orderStatusIcon('processing')).toBe('📦');
     expect(orderStatusIcon('shipping')).toBe('🚚');
     expect(orderStatusIcon('out_for_delivery')).toBe('🛵');
+    expect(orderStatusIcon('awaiting_confirmation')).toBe('📬');
     expect(orderStatusIcon('delivered')).toBe('🎉');
     expect(orderStatusIcon('cancelled')).toBe('❌');
     expect(orderStatusIcon('returned')).toBe('↩️');

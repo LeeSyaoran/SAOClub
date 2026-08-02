@@ -47,6 +47,63 @@
       </div>
     </div>
 
+    <!-- ── Lọc theo cấu hình: CPU / RAM / GPU / Ổ cứng ── -->
+    <div v-if="cpus.length">
+      <div class="fw-bold small text-uppercase mb-2"
+           style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);">{{ t('productFilter.cpu') }}</div>
+      <div class="d-flex flex-wrap gap-2">
+        <button v-for="c in cpus" :key="c"
+                class="btn btn-sm"
+                :class="selectedCpu.includes(c) ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                style="font-size:0.78rem; border-radius:20px;"
+                @click="toggleSpec(selectedCpu, c)">
+          {{ c }}
+        </button>
+      </div>
+    </div>
+
+    <div v-if="rams.length">
+      <div class="fw-bold small text-uppercase mb-2"
+           style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);">{{ t('productFilter.ram') }}</div>
+      <div class="d-flex flex-wrap gap-2">
+        <button v-for="r in rams" :key="r"
+                class="btn btn-sm"
+                :class="selectedRam.includes(r) ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                style="font-size:0.78rem; border-radius:20px;"
+                @click="toggleSpec(selectedRam, r)">
+          {{ r }}
+        </button>
+      </div>
+    </div>
+
+    <div v-if="gpus.length">
+      <div class="fw-bold small text-uppercase mb-2"
+           style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);">{{ t('productFilter.gpu') }}</div>
+      <div class="d-flex flex-wrap gap-2">
+        <button v-for="g in gpus" :key="g"
+                class="btn btn-sm"
+                :class="selectedGpu.includes(g) ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                style="font-size:0.78rem; border-radius:20px;"
+                @click="toggleSpec(selectedGpu, g)">
+          {{ g }}
+        </button>
+      </div>
+    </div>
+
+    <div v-if="storages.length">
+      <div class="fw-bold small text-uppercase mb-2"
+           style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);">{{ t('productFilter.storage') }}</div>
+      <div class="d-flex flex-wrap gap-2">
+        <button v-for="s in storages" :key="s"
+                class="btn btn-sm"
+                :class="selectedStorage.includes(s) ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                style="font-size:0.78rem; border-radius:20px;"
+                @click="toggleSpec(selectedStorage, s)">
+          {{ s }}
+        </button>
+      </div>
+    </div>
+
     <!-- ── Nút xóa bộ lọc ── -->
     <div v-if="hasFilter">
       <button class="btn btn-sm btn-outline-danger"
@@ -68,6 +125,13 @@ const props = defineProps({
   brands:     { type: Array, default: () => [] },
   // Danh sách danh mục từ API [{ id, tenDanhMuc }]
   categories: { type: Array, default: () => [] },
+  // Danh sách giá trị cấu hình xuất hiện trong tập sản phẩm hiện tại (string[]) — CustomerPage.vue
+  // tự tính từ products.value, chỉ hiện chip cho giá trị THỰC SỰ có hàng, tránh chip chọn xong
+  // ra danh sách rỗng.
+  cpus:     { type: Array, default: () => [] },
+  rams:     { type: Array, default: () => [] },
+  gpus:     { type: Array, default: () => [] },
+  storages: { type: Array, default: () => [] },
 });
 
 // Emit 'change' mỗi khi bộ lọc thay đổi — App.vue lắng nghe để filter danh sách sản phẩm
@@ -79,6 +143,19 @@ const selectedPrice    = ref('');
 const selectedCategory = ref(null);
 const priceMin         = ref(null);
 const priceMax         = ref(null);
+const selectedCpu      = ref([]);
+const selectedRam      = ref([]);
+const selectedGpu      = ref([]);
+const selectedStorage  = ref([]);
+
+// Bật/tắt 1 giá trị trong mảng multi-select (dùng chung cho CPU/RAM/GPU/Ổ cứng — cùng kiểu
+// chip nhiều lựa chọn như Thương hiệu, khác Giá/Danh mục là chọn đơn).
+const toggleSpec = (arr, value) => {
+  const idx = arr.indexOf(value);
+  if (idx === -1) arr.push(value);
+  else arr.splice(idx, 1);
+  emitChange();
+};
 
 // Các khoảng giá cố định (nhãn dịch theo ngôn ngữ hiện tại)
 const priceRanges = computed(() => {
@@ -94,6 +171,8 @@ const priceRanges = computed(() => {
 // Có bộ lọc nào đang active không
 const hasFilter = computed(
   () => selectedBrands.value.length > 0 || selectedPrice.value || selectedCategory.value
+    || selectedCpu.value.length > 0 || selectedRam.value.length > 0
+    || selectedGpu.value.length > 0 || selectedStorage.value.length > 0
 );
 
 // Bật/tắt một thương hiệu
@@ -131,6 +210,10 @@ const clearAll = () => {
   selectedCategory.value = null;
   priceMin.value         = null;
   priceMax.value         = null;
+  selectedCpu.value      = [];
+  selectedRam.value      = [];
+  selectedGpu.value      = [];
+  selectedStorage.value  = [];
   emitChange();
 };
 
@@ -141,6 +224,10 @@ const emitChange = () => {
     priceMin: priceMin.value,
     priceMax: priceMax.value,
     category: selectedCategory.value,
+    cpu:      selectedCpu.value,
+    ram:      selectedRam.value,
+    gpu:      selectedGpu.value,
+    storage:  selectedStorage.value,
   });
 };
 </script>

@@ -37,6 +37,10 @@ export const registerSchema = z.object({
   username: z.string().min(3, 'Tên đăng nhập phải có ít nhất 3 ký tự'),
   password: passwordSchema,
   confirmPassword: z.string(),
+  // Không khai báo field này thì Zod tự strip khỏi kết quả parse (default: "strip"
+  // unknown keys) — RegisterForm.vue đọc values.agree sau handleSubmit nên sẽ luôn
+  // undefined dù checkbox đã tick, báo "chưa đồng ý điều khoản" mãi mãi.
+  agree: z.boolean().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Mật khẩu xác nhận không khớp',
   path: ['confirmPassword'],

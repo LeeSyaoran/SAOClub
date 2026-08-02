@@ -167,24 +167,35 @@ public class DonHangService {
 
     // Trạng thái đơn hàng đi 1 chiều theo đúng luồng xử lý thực tế (xem NEXT_ORDER_STATUS ở
     // OrdersTable.vue): pending -> confirmed -> processing -> shipping -> out_for_delivery ->
-    // delivered, có thể "cancelled" ở bất kỳ bước nào trước khi giao, và chỉ đơn "delivered"
-    // mới đánh dấu được "returned". Trước đây update() nhận thẳng trangThaiDonHang bất kỳ từ
-    // request — modal "Cập nhật trạng thái" (OrdersTable.vue) cho chọn tự do mọi trạng thái,
-    // nhân viên (hoặc tài khoản bị chiếm) có thể chuyển lùi tuỳ ý (vd shipping -> pending),
-    // làm sai lệch tồn kho/lịch sử/trigger tích điểm vốn chỉ tính đúng 1 lần theo 1 chiều.
+    // awaiting_confirmation -> delivered, có thể "cancelled" ở bất kỳ bước nào trước khi giao,
+    // và chỉ đơn "delivered" mới đánh dấu được "returned". "awaiting_confirmation" là bước admin
+    // đã đánh dấu giao (shipper đã đưa hàng) nhưng chưa ai xác nhận — chỉ tự chuyển "delivered"
+    // qua route riêng xacNhanDaNhanHang() (khách tự bấm "Đã nhận hàng", hoặc staff xác nhận hộ),
+    // KHÔNG qua update() thường, để tách rõ "admin nói đã giao" và "đơn thật sự hoàn tất".
+    // Trước đây update() nhận thẳng trangThaiDonHang bất kỳ từ request — modal "Cập nhật trạng
+    // thái" (OrdersTable.vue) cho chọn tự do mọi trạng thái, nhân viên (hoặc tài khoản bị chiếm)
+    // có thể chuyển lùi tuỳ ý (vd shipping -> pending), làm sai lệch tồn kho/lịch sử/trigger
+    // tích điểm vốn chỉ tính đúng 1 lần theo 1 chiều.
     private static final Map<String, Set<String>> CHUYEN_TRANG_THAI_DON_HANG = Map.of(
-            "pending",          Set.of("confirmed", "cancelled"),
-            "confirmed",        Set.of("processing", "cancelled"),
-            "processing",       Set.of("shipping", "cancelled"),
-            "shipping",         Set.of("out_for_delivery", "cancelled"),
-            "out_for_delivery", Set.of("delivered", "cancelled"),
-            "delivered",        Set.of("returned"),
-            "cancelled",        Set.of(),
-            "returned",         Set.of()
+            "pending",              Set.of("confirmed", "cancelled"),
+            "confirmed",            Set.of("processing", "cancelled"),
+            "processing",           Set.of("shipping", "cancelled"),
+            "shipping",             Set.of("out_for_delivery", "cancelled"),
+            "out_for_delivery",     Set.of("awaiting_confirmation", "cancelled"),
+            "awaiting_confirmation", Set.of("delivered"),
+            "delivered",            Set.of("returned"),
+            "cancelled",            Set.of(),
+            "returned",             Set.of()
     );
 
-    private void kiemTraChuyenTrangThai(String trangThaiCu, String trangThaiMoi) {
+    // Đơn tại quầy (kenhBan="in_store"): khách nhận hàng ngay lúc thanh toán, không có khái
+    // niệm giao hàng online (processing/shipping/out_for_delivery — bước "shipping" còn bắt
+    // buộc nhập mã vận đơn, vô nghĩa với đơn tại quầy) — POS chuyển thẳng "confirmed" sang
+    // "delivered" ngay sau khi tạo đơn. CHỈ áp dụng cho in_store, đơn online vẫn phải đi tuần
+    // tự đúng luồng như cũ.
+    private void kiemTraChuyenTrangThai(String trangThaiCu, String trangThaiMoi, String kenhBan) {
         if (trangThaiCu == null || trangThaiMoi == null || trangThaiCu.equals(trangThaiMoi)) return;
+        if ("in_store".equals(kenhBan) && "confirmed".equals(trangThaiCu) && "delivered".equals(trangThaiMoi)) return;
         if (!CHUYEN_TRANG_THAI_DON_HANG.getOrDefault(trangThaiCu, Set.of()).contains(trangThaiMoi))
             throw new IllegalArgumentException(
                     "Không thể chuyển trạng thái đơn hàng từ \"" + trangThaiCu + "\" sang \"" + trangThaiMoi + "\"");
@@ -194,7 +205,10 @@ public class DonHangService {
     public DonHang update(Integer id, DonHangRequest request) {
         DonHang entity = getById(id);
         String oldStatus = entity.getTrangThaiDonHang();
-        kiemTraChuyenTrangThai(oldStatus, request.getTrangThaiDonHang());
+        // Dùng kenhBan hiện có trên entity (trước khi copyProperties phía dưới), không lấy từ
+        // request — kenhBan chốt 1 lần lúc tạo đơn, không cho client tự xưng "in_store" trong
+        // cùng request update để lách luật chuyển trạng thái của đơn online.
+        kiemTraChuyenTrangThai(oldStatus, request.getTrangThaiDonHang(), entity.getKenhBan());
         BeanUtils.copyProperties(request, entity,
                 "id", "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId");
 
@@ -213,12 +227,28 @@ public class DonHangService {
         // "giu_hang"/"da_ban" dù đơn đã hủy, làm lệch tồn kho thật.
         if ("cancelled".equals(request.getTrangThaiDonHang()) && !"cancelled".equals(oldStatus)) {
             releaseSerialsToStock(id);
+            giaiPhongKhuyenMaiVoucher(saved);
         }
 
         // Báo real-time cho admin (tab khác) + trang khách hàng đang mở đơn này, khỏi cần F5.
         sseService.notifyOrderUpdate(id);
 
         return saved;
+    }
+
+    // Khách hàng tự bấm "Đã nhận được hàng" khi đơn ở "awaiting_confirmation" (admin đã đánh
+    // dấu giao nhưng chưa ai xác nhận) — route mở cho khách (không staff-only như update()),
+    // tự kiểm tra đúng chủ đơn qua isStaffOrOwner() để khách A không xác nhận hộ đơn khách B.
+    // Sau bước này đơn mới thật sự "delivered" -> rơi vào tab "Hoàn tất" phía khách.
+    @Transactional
+    public void xacNhanDaNhanHang(Integer id) {
+        DonHang donHang = getById(id);
+        if (!isStaffOrOwner(donHang.getKhachHang().getKhachHangId()))
+            throw new AccessDeniedException("Không có quyền xác nhận đơn hàng này");
+        kiemTraChuyenTrangThai(donHang.getTrangThaiDonHang(), "delivered", donHang.getKenhBan());
+        donHang.setTrangThaiDonHang("delivered");
+        donHangRepository.save(donHang);
+        sseService.notifyOrderUpdate(id);
     }
 
     // Trả toàn bộ serial đã gắn với đơn hàng về lại "trong_kho" — dùng chung khi xóa đơn
@@ -241,6 +271,26 @@ public class DonHangService {
         }
     }
 
+    // Tra lai suat dung khuyen mai chung/voucher ca nhan khi don bi huy (update -> cancelled
+    // hoac delete) — dung chung cho ca 2 noi goi, giong releaseSerialsToStock(). Truoc day:
+    // - khuyen_mai.so_lan_da_dung tang tu dong qua trigger DB luc INSERT don hang, nhung
+    //   khong bao gio duoc tru lai — huy don van tinh nhu da dung 1 suat, khuyen mai chung
+    //   co the het suat som du chua ai mua thanh cong that su.
+    // - phieu_giam_gia_ca_nhan.daSuDung set true luc tao don, cung khong bao gio reset lai
+    //   false — khach mat oan 1 voucher ca nhan (doi bang diem) neu don bi nhan vien huy.
+    private void giaiPhongKhuyenMaiVoucher(DonHang donHang) {
+        if (donHang.getKhuyenMai() != null) {
+            KhuyenMai khuyenMai = donHang.getKhuyenMai();
+            int daDung = khuyenMai.getSoLanDaDung() != null ? khuyenMai.getSoLanDaDung() : 0;
+            khuyenMai.setSoLanDaDung(Math.max(0, daDung - 1));
+            khuyenMaiRepository.save(khuyenMai);
+        }
+        phieuGiamGiaCaNhanRepository.findByDonHang_Id(donHang.getId()).ifPresent(phieu -> {
+            phieu.setDaSuDung(false);
+            phieuGiamGiaCaNhanRepository.save(phieu);
+        });
+    }
+
     // Xoá đơn hàng — trước tiên xoá các dòng chi tiết + lịch sử tồn kho (FK) và trả
     // seri đã bán về "trong_kho" (trigger DB tự cộng lại tồn kho), nếu không sẽ vỡ FK
     // khi đơn đã có sản phẩm, và tồn kho sẽ bị lệch vì seri vẫn coi như đã bán.
@@ -255,8 +305,21 @@ public class DonHangService {
             throw new AccessDeniedException("Không có quyền xóa đơn hàng này");
 
         releaseSerialsToStock(id);
-        chiTietDonHangRepository.deleteAll(chiTietDonHangRepository.findEntityByDonHangId(id));
+        giaiPhongKhuyenMaiVoucher(donHang);
+        List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(id);
+        // Dòng so_luong > 1 giữ các serial "phụ" trong bảng join chi_tiet_don_hang_serial
+        // (FK -> chi_tiet_don_hang) — phải xóa trước, nếu không Hibernate ném
+        // TransientPropertyValueException lúc flush (dòng ChiTietDonHangSerial persistent vẫn
+        // còn trỏ tới ChiTietDonHang vừa xóa), lộ ra ngoài thành lỗi 500.
+        for (ChiTietDonHang item : items) {
+            chiTietDonHangSerialRepository.deleteByChiTietDonHang_Id(item.getId());
+        }
+        chiTietDonHangRepository.deleteAll(items);
         lichSuTonKhoRepository.deleteAll(lichSuTonKhoRepository.findByDonHang_Id(id));
+        // Đơn đã ghi nhận thanh toán (thanh_toan.don_hang_id) phải xóa trước, nếu không vỡ FK
+        // FK_tt_don_hang khi xóa don_hang — chỉ lộ ra với đơn đã thanh toán (POS/checkout),
+        // đơn "Chờ xác nhận" chưa có dòng thanh_toan nên trước giờ không thấy lỗi.
+        thanhToanRepository.deleteAll(thanhToanRepository.findByDonHang_Id(id));
         donHangRepository.deleteById(id);
     }
 

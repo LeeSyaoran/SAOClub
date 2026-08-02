@@ -30,6 +30,18 @@ export const variantCountBySanPham = (items) => {
   return map;
 };
 
+// Danh sách biến thể hiện trong modal "Chi tiết sản phẩm" (ProductDetailModal.vue) — mặc
+// định cả họ biến thể của sanPhamId (ProductsTable.vue: xem/so sánh toàn bộ biến thể).
+// Truyền onlyBienTheIds (1 id hoặc mảng nhiều id) khi mở từ đơn hàng (OrdersTable.vue) để
+// chỉ hiện đúng (các) biến thể khách đã mua trong đơn đó — vd đơn có cùng 1 sản phẩm nhưng
+// 2 biến thể khác nhau thì hiện cả 2, không phải cả họ biến thể ngoài catalogue.
+export const variantsForDetail = (items, sanPhamId, onlyBienTheIds) => {
+  const family = items.filter((p) => p.sanPhamId === sanPhamId);
+  if (onlyBienTheIds == null) return family;
+  const allow = new Set(Array.isArray(onlyBienTheIds) ? onlyBienTheIds : [onlyBienTheIds]);
+  return family.filter((p) => allow.has(p.bienTheId));
+};
+
 // 3 hàm thuần dưới đây (không phụ thuộc reactive state) dùng chung cho ProductDetail.vue
 // và PosPanel.vue — trước đây bị copy trùng ở 2 nơi, bao gồm cả bảng mau-hex ~24 dòng,
 // nên sửa/thêm màu ở 1 nơi rất dễ quên nơi kia (đúng loại bug groupBySanPham ở trên đã

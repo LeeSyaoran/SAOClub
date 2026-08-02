@@ -152,6 +152,7 @@ export default {
     processing: "Đang đóng gói",
     shipping: "Đang vận chuyển",
     out_for_delivery: "Đang giao hàng",
+    awaiting_confirmation: "Đã giao - chờ xác nhận",
     delivered: "Đã giao",
     cancelled: "Đã hủy",
     returned: "Đã trả hàng",
@@ -166,8 +167,8 @@ export default {
       shippingDesc: "Shipper đã lấy hàng",
       outForDeliveryTitle: "Đang giao hàng",
       outForDeliveryDesc: "Shipper đang trên đường tới",
-      deliveredTitle: "Giao thành công",
-      deliveredDesc: "Đơn hàng hoàn tất",
+      deliveredTitle: "Đã giao hàng",
+      deliveredDesc: "Vui lòng xác nhận đã nhận hàng",
     },
   },
 
@@ -212,6 +213,8 @@ export default {
     noMatch: "Không có sản phẩm nào phù hợp.",
     inStock: "Còn hàng",
     outOfStock: "Hết hàng",
+    inStockCount: "Còn {count} máy",
+    lowStockCount: "Chỉ còn {count} máy",
     fromPrice: "Từ",
     fastDelivery: "🚚 Giao nhanh 2H",
     addToCart: "🛒 Thêm vào giỏ",  },
@@ -311,6 +314,9 @@ export default {
     sessionExpired: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
     buyAgainUnavailable: "Không thể thêm vào giỏ: {names} đã ngừng kinh doanh hoặc không còn tồn tại.",
     loginRequiredForCart: "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.",
+    loginRequiredForWishlist: "Vui lòng đăng nhập để thêm vào danh sách yêu thích.",
+    addedToWishlist: "Đã thêm {name} vào danh sách yêu thích.",
+    removedFromWishlist: "Đã bỏ {name} khỏi danh sách yêu thích.",
   },
 
   adminAccess: {
@@ -322,6 +328,10 @@ export default {
     brand: "Thương hiệu",
     priceRange: "Khoảng giá",
     category: "Danh mục",
+    cpu: "CPU",
+    ram: "RAM",
+    gpu: "Card đồ họa",
+    storage: "Ổ cứng",
     clearFilter: "✕ Xóa bộ lọc",
     priceRanges: ["Dưới 10 triệu", "10 - 20 triệu", "20 - 30 triệu", "Trên 30 triệu"],
   },
@@ -329,6 +339,8 @@ export default {
   productDetail: {
     inStock: "Còn hàng",
     outOfStock: "Hết hàng",
+    inStockCount: "Còn {count} máy",
+    lowStockCount: "Chỉ còn {count} máy",
     freeShipping: "🚚 Giao nhanh 2H · Miễn phí từ 300K",
     versions: "Phiên bản ({count} cấu hình)",
     colorHeading: "Màu sắc",
@@ -363,8 +375,41 @@ export default {
     },
   },
 
+  productCompare: {
+    add: "So sánh",
+    added: "✓ Đang so sánh",
+    barLabel: "Đã chọn {count}/{max} sản phẩm để so sánh",
+    barClear: "Bỏ chọn hết",
+    barOpen: "So sánh ngay",
+    maxReached: "Chỉ so sánh được tối đa {max} sản phẩm cùng lúc",
+    title: "So sánh sản phẩm",
+    rowPrice: "Giá",
+    addToCart: "Thêm vào giỏ",
+  },
+
+  wishlist: {
+    add: "Thêm vào yêu thích",
+    remove: "Bỏ yêu thích",
+    empty: "Chưa có sản phẩm yêu thích nào.",
+    browse: "Khám phá sản phẩm",
+  },
+
+  review: {
+    heading: "Đánh giá sản phẩm",
+    placeholder: "Chia sẻ cảm nhận của bạn về sản phẩm này...",
+    submit: "Gửi đánh giá",
+    loginToReview: "Đăng nhập để đánh giá sản phẩm này.",
+    yourReview: "Đánh giá của bạn",
+    delete: "Xóa",
+    loading: "Đang tải đánh giá...",
+    empty: "Chưa có đánh giá nào cho sản phẩm này.",
+    submitFailed: "Không thể gửi đánh giá. Vui lòng thử lại.",
+    deleteFailed: "Không thể xóa đánh giá. Vui lòng thử lại.",
+  },
+
   account: {
     myAccount: "Tài khoản của tôi",
+    tabWishlist: "Yêu thích",
     points: "{points} điểm tích lũy",
     walletBalance: "Số dư ví: {amount}",
     tabOrders: "Đơn hàng hiện tại",
@@ -381,6 +426,10 @@ export default {
     expectedDelivery: "Dự kiến giao",
     actualDelivery: "Đã nhận hàng",
     buyAgain: "Mua lại",
+    confirmReceived: "Xác nhận đã nhận hàng",
+    confirmReceivedDisabledHint: "Chỉ xác nhận được sau khi nhân viên đánh dấu đã giao hàng",
+    confirmReceivedSuccess: "Cảm ơn bạn đã xác nhận nhận hàng!",
+    confirmReceivedFailed: "Không thể xác nhận, vui lòng thử lại",
     trackingCode: "Mã vận đơn",
     trackingCodeCopy: "Sao chép",
     trackingCodeCopied: "Đã sao chép",
@@ -465,6 +514,7 @@ export default {
 
     sidebar: {
       groupOverview: "Tổng quan",
+      toggleMenu: "Mở/đóng menu",
       groupManagement: "Quản lý",
       groupAnalytics: "Phân tích",
       groupMyPage: "Trang của tôi",
@@ -490,6 +540,7 @@ export default {
       warrantyClaims: "Phiếu bảo hành",
       serial: "Serial",
       groupComponents: "Linh kiện",
+      reviews: "Đánh giá",
     },
 
     pageMeta: {
@@ -513,6 +564,7 @@ export default {
       suppliers:        { title: "Nhà cung cấp",   sub: "Quản lý nhà cung cấp" },
       inventoryHistory:  { title: "Lịch sử tồn kho", sub: "Lịch sử biến động tồn kho" },
       traHang:           { title: "Trả hàng", sub: "Quản lý phiếu trả hàng" },
+      reviews:           { title: "Đánh giá", sub: "Kiểm duyệt đánh giá sản phẩm" },
       warrantyClaims:    { title: "Phiếu bảo hành", sub: "Tiếp nhận và xử lý bảo hành" },
       serial:            { title: "Quản lý Serial", sub: "Xem, thêm, sửa, xóa serial máy" },
       cpu:               { title: "CPU", sub: "Quản lý danh mục CPU" },
@@ -710,7 +762,7 @@ export default {
       nextPack: "Đóng gói",
       nextShip: "Giao hàng",
       nextOutForDelivery: "Đang giao",
-      nextComplete: "Hoàn tất",
+      nextDelivered: "Đã giao",
       allStatuses: "Tất cả trạng thái",
       allPayments: "Tất cả thanh toán",
       paid: "Đã thanh toán",
@@ -790,6 +842,7 @@ export default {
         processing: "Đang đóng gói",
         shipping: "Đã gửi hàng",
         out_for_delivery: "Đang giao hàng",
+        awaiting_confirmation: "Đã giao - chờ xác nhận",
         delivered: "Đã giao",
         cancelled: "Hủy",
         returned: "Hoàn trả",
@@ -1120,6 +1173,8 @@ export default {
       save: "Lưu",
       nameRequired: "Vui lòng nhập {label}",
       serialRequired: "Vui lòng nhập ít nhất 1 số serial cho {label} mới",
+      viewSerials: "Còn {count}",
+      serialsModalTitle: "Serial — {name}",
     },
 
     serialManager: {
@@ -1169,6 +1224,18 @@ export default {
       colQty: "Số lượng",
       colNote: "Ghi chú",
       empty: "Chưa có lịch sử biến động",
+    },
+
+    reviews: {
+      countSuffix: "đánh giá",
+      loading: "Đang tải...",
+      searchPlaceholder: "Tìm sản phẩm, khách hàng, nội dung...",
+      colDate: "Thời gian",
+      colProduct: "Sản phẩm",
+      colCustomer: "Khách hàng",
+      colStars: "Số sao",
+      colContent: "Nội dung",
+      empty: "Chưa có đánh giá nào",
     },
 
     phieuNhap: {
@@ -1506,7 +1573,7 @@ export default {
       newCustomerHint: "Khách hàng mới sẽ được tạo tự động",
       orderCreated: "✓ Tạo đơn hàng thành công!",
       reset: "Làm mới",
-      createOrder: "Tạo đơn hàng",
+      createOrder: "Thanh toán",
       cartEmpty: "Giỏ hàng đang trống!",
       phoneRequired: "Vui lòng nhập SĐT khách hàng!",
       heldOrders: "Đơn đang giữ",
@@ -1526,6 +1593,10 @@ export default {
       needCustomerFirst: "Vui lòng xác định khách hàng (bên khung giỏ hàng) trước khi thêm sản phẩm",
       chooseVariant: "Chọn cấu hình / màu sắc",
       continueToSerial: "Tiếp tục chọn serial →",
+      swapSerial: "Đổi serial",
+      confirmRemove: "Xóa {name} (S/N: {serial}) khỏi giỏ hàng?",
+      confirmRemoveGroup: "Xóa toàn bộ {count} máy \"{name}\" khỏi giỏ hàng?",
+      removeAll: "Xóa tất cả",
       paymentMethodLabel: "Phương thức thanh toán",
       paymentRequired: "Vui lòng chọn phương thức thanh toán!",
     },
@@ -1568,6 +1639,7 @@ export default {
       deleteReturn: "Xóa phiếu trả hàng này?",
       deleteWarrantyClaim: "Xóa phiếu bảo hành này?",
       deleteDmItem: "Xóa {label} này?",
+      deleteReview: "Xóa đánh giá này? Hành động không thể hoàn tác.",
     },
 
     errors: {

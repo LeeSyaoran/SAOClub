@@ -7,10 +7,9 @@ import * as NhanVienService  from "../services/NhanVienService.js";
 import * as DonHangService   from "../services/DonHangService.js";
 import * as KhuyenMaiService from "../services/KhuyenMaiService.js";
 import * as VongQuayService from "../services/VongQuayService.js";
-// DmService vẫn cần cho getChucVu() (tab Nhân viên) — CPU/RAM/GPU/Ổ cứng đã chuyển sang
-// WarehouseManagementPage.vue nên bỏ import ChiTietCpuService/RamService/GpuService/OCungService.
 import * as DmService              from "../services/DmService.js";
 import * as DashboardService       from "../services/DashboardService.js";
+import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../services/ChiTietLinhKienService.js";
 import DonutChart from "../components/common/DonutChart.vue";
 import RevenueBarChart from "../components/common/RevenueBarChart.vue";
 import * as CaiDatService from "../services/CaiDatService.js";
@@ -31,10 +30,14 @@ import CustomerDetailPage from "../components/admin/CustomerDetailPage.vue";
 import OrdersTable from "../components/admin/OrdersTable.vue";
 import PosPanel from "../components/admin/PosPanel.vue";
 import InventoryPanel from "../components/admin/InventoryPanel.vue";
+import SupplierManager from "../components/admin/SupplierManager.vue";
+import InventoryHistoryPanel from "../components/admin/InventoryHistoryPanel.vue";
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
+import DanhGiaPanel from "../components/admin/DanhGiaPanel.vue";
 import BienTheTable from "../components/admin/BienTheTable.vue";
 import SerialManager from "../components/admin/SerialManager.vue";
+import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import AdminDashboard from "../components/admin/AdminDashboard.vue";
 import AdminReports from "../components/admin/AdminReports.vue";
@@ -53,6 +56,11 @@ defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const currentPage = ref("dashboard");
+// Sidebar bật/tắt được ở MỌI kích thước màn hình bằng nút hamburger ở topbar — mặc định
+// mở trên desktop (>=768px), đóng trên mobile. Trên mobile sidebar hiện dạng overlay đè lên
+// nội dung; trên desktop nó ẩn/hiện ngay trong layout (xem CSS .adm-sidebar cuối file).
+// ponytail: không đồng bộ lại khi resize cửa sổ giữa chừng qua mốc 768px, F5 lại nếu cần.
+const sidebarOpen = ref(window.matchMedia("(min-width: 768px)").matches);
 const selectedCustomerId = ref(null);
 const openCustomerDetail = (id) => {
   selectedCustomerId.value = id;
@@ -60,6 +68,7 @@ const openCustomerDetail = (id) => {
 };
 const navigate = (page) => {
   currentPage.value = page;
+  if (window.matchMedia("(max-width: 767.98px)").matches) sidebarOpen.value = false; // chọn xong tự đóng lại trên mobile
   if (page === "staff") { ensureChucVuList(); ensureStaff(); }
   // ReturnsPanel.vue chỉ tải dữ liệu 1 lần lúc mount (v-show giữ nguyên component, không
   // tự huỷ/tạo lại theo tab) — khách gửi yêu cầu trả hàng mới sau khi admin đã mở trang sẽ
@@ -76,6 +85,7 @@ const PAGE_META = {
   "customer-detail": { titleKey: "admin.pageMeta.customerDetail.title", subKey: "admin.pageMeta.customerDetail.sub", icon: "👤" },
   inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: "📦" },
   "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
+  reviews: { titleKey: "admin.pageMeta.reviews.title", subKey: "admin.pageMeta.reviews.sub", icon: "⭐" },
   promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub", icon: "🏷️" },
   "doi-thuong": { titleKey: "admin.pageMeta.doiThuong.title", subKey: "admin.pageMeta.doiThuong.sub", icon: "🎁" },
   staff: { titleKey: "admin.pageMeta.staff.title", subKey: "admin.pageMeta.staff.sub", icon: "🧑‍💼" },
@@ -972,16 +982,22 @@ onUnmounted(() => {
   <!-- Layout chính: sidebar bên trái + main content bên phải -->
   <div class="d-flex overflow-hidden" style="height:100vh; background:var(--bg-page-alt); color:var(--text-primary); font-family:'Nunito Sans',sans-serif;">
 
+    <!-- Lớp phủ mờ phía sau sidebar khi mở trên mobile — bấm ra ngoài để đóng -->
+    <div v-if="sidebarOpen" class="d-md-none position-fixed top-0 start-0 w-100 h-100"
+         style="background:rgba(0,0,0,0.5); z-index:1039;"
+         @click="sidebarOpen = false"></div>
+
     <!-- ══════════ SIDEBAR ══════════ -->
-    <aside class="d-flex flex-column border-end flex-shrink-0"
-           style="width:240px; background:var(--bg-card-inset); border-color:var(--border-color)!important; overflow-y:auto;">
+    <aside class="d-flex flex-column border-end flex-shrink-0 adm-sidebar"
+           :class="{ 'adm-sidebar-open': sidebarOpen }"
+           style="background:var(--bg-card-inset); border-color:var(--border-color)!important; overflow-y:auto;">
 
       <!-- Logo -->
-      <div class="d-flex align-items-center gap-2 p-3 border-bottom"
+      <div class="d-flex align-items-center gap-2 p-3 border-bottom adm-brand-row"
            style="border-color:var(--border-color-soft)!important;">
         <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
              style="width:38px;height:38px;background:var(--accent);color:var(--accent-text);font-size:0.8rem;">SAO</div>
-        <div>
+        <div class="adm-brand-text">
           <div class="fw-bold" style="font-size:0.95rem;">{{ t('admin.brand.name') }}</div>
           <div style="font-size:0.7rem;color:var(--text-muted);">{{ t('admin.brand.tagline') }}</div>
         </div>
@@ -1018,6 +1034,10 @@ onUnmounted(() => {
         <div class="adm-nav" :class="{active: currentPage==='tra-hang'}" @click="navigate('tra-hang')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 3.293a1 1 0 010 1.414L7.414 7H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
           {{ t('admin.sidebar.traHang') }}
+        </div>
+        <div class="adm-nav" :class="{active: currentPage==='reviews'}" @click="navigate('reviews')">
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.957c.3.922-.755 1.688-1.54 1.118l-3.367-2.446a1 1 0 00-1.175 0l-3.367 2.446c-.784.57-1.838-.196-1.539-1.118l1.286-3.957a1 1 0 00-.363-1.118l-3.368-2.447c-.783-.57-.38-1.81.588-1.81h4.163a1 1 0 00.95-.69l1.285-3.958z"/></svg>
+          {{ t('admin.sidebar.reviews') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='promotions'}" @click="navigate('promotions')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clip-rule="evenodd"/><path d="M9 11H3v5a2 2 0 002 2h4v-7zm2 7h4a2 2 0 002-2v-5h-6v7z"/></svg>
@@ -1056,9 +1076,15 @@ onUnmounted(() => {
       <!-- Topbar: tieu de trang hien tai -->
       <div class="d-flex align-items-center justify-content-between p-3 border-bottom"
            style="background:var(--bg-card-inset); border-color:var(--border-color)!important;">
-        <div>
-          <div class="fw-bold" style="font-size:1.05rem;">{{ topbarIcon }} {{ topbarTitle }}</div>
-          <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
+                  style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1.1rem;"
+                  :aria-label="t('admin.sidebar.toggleMenu')" :title="t('admin.sidebar.toggleMenu')"
+                  @click="sidebarOpen = !sidebarOpen">{{ sidebarOpen ? '✕' : '☰' }}</button>
+          <div>
+            <div class="fw-bold" style="font-size:1.05rem;">{{ topbarIcon }} {{ topbarTitle }}</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
+          </div>
         </div>
         <div class="d-flex align-items-center gap-2">
           <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
@@ -1149,6 +1175,24 @@ onUnmounted(() => {
             <li class="nav-item">
               <button class="nav-link" :class="{active: inventoryMainTab==='serial'}" @click="inventoryMainTab='serial'">🔢 {{ t('admin.inventory.tabSerial') }}</button>
             </li>
+            <li class="nav-item">
+              <button class="nav-link" :class="{active: inventoryMainTab==='suppliers'}" @click="inventoryMainTab='suppliers'">🚚 {{ t('admin.sidebar.suppliers') }}</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" :class="{active: inventoryMainTab==='lich-su'}" @click="inventoryMainTab='lich-su'">📜 {{ t('admin.sidebar.inventoryHistory') }}</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" :class="{active: inventoryMainTab==='cpu'}" @click="inventoryMainTab='cpu'">🧠 {{ t('admin.productsTabs.cpu') }}</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" :class="{active: inventoryMainTab==='ram'}" @click="inventoryMainTab='ram'">💾 {{ t('admin.productsTabs.ram') }}</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" :class="{active: inventoryMainTab==='gpu'}" @click="inventoryMainTab='gpu'">🎮 {{ t('admin.productsTabs.gpu') }}</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" :class="{active: inventoryMainTab==='o-cung'}" @click="inventoryMainTab='o-cung'">💽 {{ t('admin.productsTabs.oCung') }}</button>
+            </li>
           </ul>
 
           <div v-show="inventoryMainTab==='kho'">
@@ -1164,9 +1208,33 @@ onUnmounted(() => {
           <div v-show="inventoryMainTab==='serial'">
             <SerialManager />
           </div>
+
+          <!-- ══ TAB: NHA CUNG CAP / LICH SU TON KHO / LINH KIEN — trước đây chỉ có ở
+               WarehouseManagementPage.vue (role quan_kho), giờ nối lại cho admin ══ -->
+          <div v-show="inventoryMainTab==='suppliers'">
+            <SupplierManager />
+          </div>
+          <div v-show="inventoryMainTab==='lich-su'">
+            <InventoryHistoryPanel />
+          </div>
+          <div v-show="inventoryMainTab==='cpu'">
+            <DmCategoryTable :service="DmService.DmCpuService" id-field="cpuId" name-field="tenCpu" :label="t('admin.productsTabs.cpu')" :name-label="t('admin.productsTabs.cpu')" :serial-service="ChiTietCpuService" serial-field-name="cpuId" />
+          </div>
+          <div v-show="inventoryMainTab==='ram'">
+            <DmCategoryTable :service="DmService.DmRamService" id-field="ramId" name-field="dungLuong" :label="t('admin.productsTabs.ram')" :name-label="t('admin.productsTabs.ram')" :serial-service="ChiTietRamService" serial-field-name="ramId" />
+          </div>
+          <div v-show="inventoryMainTab==='gpu'">
+            <DmCategoryTable :service="DmService.DmGpuService" id-field="gpuId" name-field="tenGpu" :label="t('admin.productsTabs.gpu')" :name-label="t('admin.productsTabs.gpu')" :serial-service="ChiTietGpuService" serial-field-name="gpuId" />
+          </div>
+          <div v-show="inventoryMainTab==='o-cung'">
+            <DmCategoryTable :service="DmService.DmOCungService" id-field="oCungId" name-field="loaiOcung" :label="t('admin.productsTabs.oCung')" :name-label="t('admin.productsTabs.oCung')" :serial-service="ChiTietOCungService" serial-field-name="oCungId" />
+          </div>
         </section>
 
         <section v-show="currentPage === 'tra-hang'"><ReturnsPanel :can-pick-staff="true" /></section>
+
+        <!-- ── Danh gia san pham (kiem duyet) ── -->
+        <section v-show="currentPage === 'reviews'"><DanhGiaPanel /></section>
 
         <!-- ── Khuyen mai ── -->
         <section v-show="currentPage === 'promotions'">
@@ -1463,6 +1531,53 @@ onUnmounted(() => {
   color: #555;
   text-transform: uppercase;
   padding: 10px 8px 3px;
+}
+
+/* Sidebar an/hien theo sidebarOpen o moi kich thuoc man hinh (bam hamburger de bat/tat).
+   Desktop: thu gon con dai icon 60px (van dieu huong duoc, khong mat han). Mobile (<768px):
+   luon giu width day du, truot vao/ra bang transform (overlay de len noi dung). */
+.adm-sidebar {
+  width: 240px;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+.adm-sidebar:not(.adm-sidebar-open) { width: 60px; }
+
+/* Trang thai rail (desktop, dong): chi con icon, an het chu/badge/nhom/chan sidebar.
+   Dung font-size:0 de an text-node tran (khong bang <span>) — icon SVG kich thuoc px co dinh
+   nen khong bi anh huong. Tren mobile trang thai nay nam ngoai man hinh nen khong ai thay. */
+.adm-sidebar:not(.adm-sidebar-open) .adm-nav {
+  font-size: 0;
+  justify-content: center;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.adm-sidebar:not(.adm-sidebar-open) .adm-nav .badge,
+.adm-sidebar:not(.adm-sidebar-open) .adm-nav-label {
+  display: none;
+}
+.adm-sidebar:not(.adm-sidebar-open) .adm-brand-row {
+  justify-content: center;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.adm-sidebar:not(.adm-sidebar-open) .adm-brand-text,
+.adm-sidebar:not(.adm-sidebar-open) :deep(.adm-sidebar-footer) {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .adm-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1040;
+    width: 240px !important;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+  .adm-sidebar.adm-sidebar-open { transform: translateX(0); }
 }
 
 </style>

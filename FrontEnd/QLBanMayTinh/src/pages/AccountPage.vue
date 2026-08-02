@@ -18,6 +18,7 @@ import * as LichSuDonHangService   from "../services/LichSuDonHangService.js";
 import * as PhieuTraHangService    from "../services/PhieuTraHangService.js";
 import * as DmDoiThuongService         from "../services/DmDoiThuongService.js";
 import * as PhieuGiamGiaCaNhanService  from "../services/PhieuGiamGiaCaNhanService.js";
+import * as YeuThichService            from "../services/YeuThichService.js";
 import OrderStatusTimeline from "../components/order/OrderStatusTimeline.vue";
 import OrderTrackingLog from "../components/order/OrderTrackingLog.vue";
 import ReturnRequestModal from "../components/order/ReturnRequestModal.vue";
@@ -25,7 +26,7 @@ import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
 import LuckyWheelPanel from "../components/account/LuckyWheelPanel.vue";
 
-const emit = defineEmits(["go-home", "add-to-cart", "buy-again-unavailable"]);
+const emit = defineEmits(["go-home", "add-to-cart", "buy-again-unavailable", "toast"]);
 
 const auth = AuthStore;
 // Tách theo trạng thái kiểu Shopee thay vì gộp chung "hiện tại/lịch sử"
@@ -37,7 +38,7 @@ const activeTab = ref("pending"); // 'pending' | 'shipping' | 'completed' | 'can
 // advanceOrderStatus() cho luồng cập nhật phía admin.
 const TAB_STATUS_GROUPS = {
   pending:   ["pending", "confirmed", "processing"],
-  shipping:  ["shipping", "out_for_delivery"],
+  shipping:  ["shipping", "out_for_delivery", "awaiting_confirmation"],
   completed: ["delivered"],
   cancelled: ["cancelled", "returned"],
 };
@@ -74,6 +75,7 @@ const TABS = computed(() => [
   { id: "shipping",  icon: "🚚", label: t("account.tabShipping") },
   { id: "completed", icon: "✅", label: t("account.tabCompleted") },
   { id: "cancelled", icon: "❌", label: t("account.tabCancelled") },
+  { id: "wishlist",  icon: "❤️", label: t("account.tabWishlist") },
   { id: "wheel",     icon: "🎡", label: t("account.tabWheel") },
   { id: "settings",  icon: "⚙️", label: t("account.tabSettings") },
 ]);
@@ -146,6 +148,73 @@ const buyAgainOrder = (o) => {
   if (khongMuaLaiDuoc.length > 0) emit("buy-again-unavailable", khongMuaLaiDuoc);
 };
 
+// ── Yêu thích — trang này tự gọi API riêng (không inject appState như CustomerPage.vue),
+// giữ đúng phong cách hiện có của file (mọi tab đều tự fetch dữ liệu riêng qua *Service.js).
+const wishlistItems = ref([]);
+const wishlistLoading = ref(false);
+
+const loadWishlistItems = async () => {
+  wishlistLoading.value = true;
+  try {
+    wishlistItems.value = await YeuThichService.getAll();
+  } catch {
+    wishlistItems.value = [];
+  } finally {
+    wishlistLoading.value = false;
+  }
+};
+
+const removeWishlistItem = async (item) => {
+  await YeuThichService.remove(item.bienTheId);
+  wishlistItems.value = wishlistItems.value.filter((i) => i.bienTheId !== item.bienTheId);
+};
+
+const addWishlistItemToCart = (item) => {
+  if (item.trangThai !== 'active' || (item.soLuongTon ?? 0) <= 0) return;
+  emit("add-to-cart", item, 1);
+};
+
+// Set bienTheId đang yêu thích — dùng để tô tim trên ProductDetail mở từ trang này (vd bấm
+// vào 1 sản phẩm trong lịch sử mua hàng, không chỉ từ chính tab Yêu thích).
+const wishlistIdSet = computed(() => new Set(wishlistItems.value.map((i) => i.bienTheId)));
+
+// Bật/tắt yêu thích từ trong ProductDetail (khác removeWishlistItem — hàm đó chỉ xoá, dùng
+// ngay trong danh sách nơi chắc chắn item đã có sẵn).
+const toggleWishlistInDetail = async (variant) => {
+  const daThich = wishlistIdSet.value.has(variant.bienTheId);
+  try {
+    if (daThich) {
+      await YeuThichService.remove(variant.bienTheId);
+      wishlistItems.value = wishlistItems.value.filter((i) => i.bienTheId !== variant.bienTheId);
+    } else {
+      await YeuThichService.add(variant.bienTheId);
+      await loadWishlistItems();
+    }
+  } catch (e) {
+    emit("toast", e.message, "error");
+  }
+};
+
+// Khách bấm "Xác nhận đã nhận hàng" khi đơn ở "awaiting_confirmation" (admin đã đánh dấu
+// giao nhưng chưa ai xác nhận) — chuyển hẳn sang "delivered", đơn mới rơi vào tab "Hoàn
+// tất". Route riêng (không qua update() staff-only), backend tự kiểm tra đúng chủ đơn.
+const confirmingOrderId = ref(null);
+const confirmReceived = async (o) => {
+  if (confirmingOrderId.value) return;
+  confirmingOrderId.value = o.donHangId;
+  try {
+    const res = await DonHangService.xacNhanDaNhanHang(o.donHangId);
+    if (!res.ok) {
+      emit("toast", await res.text().catch(() => t("account.confirmReceivedFailed")), "error");
+      return;
+    }
+    emit("toast", t("account.confirmReceivedSuccess"), "success");
+    await fetchData();
+  } finally {
+    confirmingOrderId.value = null;
+  }
+};
+
 const fetchData = async () => {
   loading.value = true;
   try {
@@ -166,7 +235,7 @@ const fetchData = async () => {
       Promise.all(
         orders.value.map(async (o) => [
           o.donHangId,
-          ["shipping", "out_for_delivery", "delivered"].includes(o.trangThaiDonHang)
+          ["shipping", "out_for_delivery", "awaiting_confirmation", "delivered"].includes(o.trangThaiDonHang)
             ? await LichSuDonHangService.getByDonHang(o.donHangId).catch(() => [])
             : [],
         ])
@@ -278,6 +347,7 @@ let orderSse = null;
 onMounted(() => {
   fetchData();
   fetchProfile();
+  loadWishlistItems();
   document.cookie = `sse_token=${encodeURIComponent(auth.user?.token ?? '')}; path=/api/don-hang; SameSite=Strict`;
   orderSse = new EventSource('/api/don-hang/events');
   orderSse.addEventListener('order-updated', () => { fetchData(); });
@@ -407,8 +477,22 @@ onUnmounted(() => {
               <span v-if="o.ngayGiaoThucTe">✅ {{ t('account.actualDelivery') }}: {{ formatDate(o.ngayGiaoThucTe) }}</span>
             </div>
 
+            <!-- Xác nhận đã nhận hàng — luôn hiện từ lúc đơn sang "Đang giao" để khách biết
+                 trước sẽ có bước này, nhưng chỉ bấm được khi admin đã đánh dấu giao
+                 (awaiting_confirmation). Bấm xong đơn mới thật sự chuyển "delivered" và rơi
+                 vào tab "Hoàn tất". Xem confirmReceived() ở trên. -->
+            <div v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)"
+                 class="d-flex justify-content-end mb-3">
+              <button class="btn btn-warning btn-sm fw-bold rounded-pill px-4"
+                      :disabled="o.trangThaiDonHang !== 'awaiting_confirmation' || confirmingOrderId === o.donHangId"
+                      :title="o.trangThaiDonHang !== 'awaiting_confirmation' ? t('account.confirmReceivedDisabledHint') : ''"
+                      @click="confirmReceived(o)">
+                ✅ {{ t('account.confirmReceived') }}
+              </button>
+            </div>
+
             <!-- Mã vận đơn + lịch sử trạng thái -->
-            <OrderTrackingLog v-if="['shipping', 'out_for_delivery'].includes(o.trangThaiDonHang)"
+            <OrderTrackingLog v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)"
                                :ma-van-don="o.maVanDon || ''"
                                :history="historyByOrder[o.donHangId] || []"
                                class="mb-3" />
@@ -542,6 +626,57 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- ══ Tab: Yêu thích ══ -->
+      <div v-else-if="activeTab === 'wishlist'">
+        <div v-if="wishlistLoading" class="d-flex flex-column gap-2">
+          <Skeleton v-for="i in 3" :key="i" width="100%" height="56px" radius="12px" />
+        </div>
+
+        <div v-else-if="wishlistItems.length === 0"
+             class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
+             style="background:var(--bg-card); border:1px dashed var(--border-color);">
+          <div style="font-size:2.6rem; opacity:0.35;">🤍</div>
+          <div class="mt-1" style="color:var(--text-secondary); font-size:12px;">{{ t('wishlist.empty') }}</div>
+          <button class="btn btn-warning btn-sm fw-bold rounded-pill px-4 mt-3" @click="emit('go-home')">
+            🛍️ {{ t('wishlist.browse') }}
+          </button>
+        </div>
+
+        <div v-else class="d-flex flex-column gap-2">
+          <div v-for="item in wishlistItems" :key="item.bienTheId"
+               class="d-flex align-items-center gap-3 p-2 rounded-3"
+               style="background:var(--bg-card); border:1px solid var(--border-color-soft); transition:background 0.15s; cursor:pointer;"
+               @click="viewProductDetail(item)"
+               @mouseenter="e => e.currentTarget.style.background = 'var(--bg-hover)'"
+               @mouseleave="e => e.currentTarget.style.background = 'var(--bg-card)'">
+            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width:52px; height:44px; background:var(--bg-card-inset); overflow:hidden;">
+              <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" style="width:100%; height:100%; object-fit:contain; padding:4px;" />
+              <span v-else style="font-size:1.2rem;">💻</span>
+            </div>
+            <div class="flex-grow-1" style="min-width:0;">
+              <div class="text-truncate" style="color:var(--text-primary); font-size:12.5px;">{{ item.tenSanPham }}</div>
+              <div style="color:var(--text-secondary); font-size:11px;">{{ item.tenThuongHieu }}</div>
+            </div>
+            <span class="fw-bold flex-shrink-0" style="color:var(--accent-fg); font-size:13px;">{{ formatPrice(item.giaBan) }}</span>
+            <span v-if="item.trangThai !== 'active' || (item.soLuongTon ?? 0) <= 0"
+                  class="badge flex-shrink-0" style="background:var(--bg-card-inset); color:var(--text-secondary); font-size:10px;">
+              {{ t('home.outOfStock') }}
+            </span>
+            <button v-else class="btn btn-warning btn-sm fw-bold rounded-pill flex-shrink-0" style="font-size:11px;"
+                    @click.stop="addWishlistItemToCart(item)">
+              🛒
+            </button>
+            <button class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                    style="width:30px; height:30px; padding:0; border:none; background:transparent; font-size:14px;"
+                    :aria-label="t('wishlist.remove')" :title="t('wishlist.remove')"
+                    @click.stop="removeWishlistItem(item)">
+              ❤️
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- ══ Tab: Vòng quay may mắn ══ -->
       <div v-else-if="activeTab === 'wheel'" class="d-flex flex-column mx-auto" style="max-width:640px;">
         <LuckyWheelPanel :points="profile?.diemTichLuy ?? 0" @spun="fetchProfile" />
@@ -665,9 +800,12 @@ onUnmounted(() => {
     :key="selectedProductDetail.bienTheId"
     :product="selectedProductDetail"
     :products="products"
+    :wishlist-ids="wishlistIdSet"
+    :auth-user="auth.user"
     @close="selectedProductDetail = null"
     @add-to-cart="p => { emit('add-to-cart', p); selectedProductDetail = null; }"
     @open-product="p => selectedProductDetail = p"
+    @toggle-wishlist="toggleWishlistInDetail"
   />
 
   <!-- Yêu cầu trả hàng — chọn sản phẩm + số lượng muốn trả -->

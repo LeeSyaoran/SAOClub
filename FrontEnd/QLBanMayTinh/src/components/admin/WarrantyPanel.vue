@@ -9,6 +9,8 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { BaoHanhStore, ensureBaoHanh, refreshBaoHanh } from "../../stores/baoHanh.js";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 onMounted(() => {
   ensureWarrantyData();
@@ -37,6 +39,7 @@ const filteredWarranty = computed(() => {
     [w.soSerial, w.maSku, w.tenSanPham, w.maDonHang, w.tenKhachHang, w.soDienThoaiKhachHang]
       .some((v) => (v || '').toLowerCase().includes(q)));
 });
+const { currentPage: wCurrentPage, totalPages: wTotalPages, pagedItems: pagedWarranty, pageSize: wPageSize } = usePagination(filteredWarranty);
 const daysUntilExpiry = (isoDate) => Math.ceil((new Date(isoDate) - new Date()) / 86400000);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -61,6 +64,7 @@ const filteredClaims = computed(() => {
     return String(p.baoHanhId).includes(q) || name.includes(q) || (p.soSerial ?? '').toLowerCase().includes(q);
   });
 });
+const { currentPage: cCurrentPage, totalPages: cTotalPages, pagedItems: pagedClaims, pageSize: cPageSize } = usePagination(filteredClaims);
 
 const showModal = ref(false);
 const editingId = ref(null);
@@ -198,8 +202,8 @@ const deleteClaim = async (id) => {
         <th>{{ t('admin.warranty.colAction') }}</th>
       </tr></thead>
       <tbody>
-        <tr v-for="(w, idx) in filteredWarranty" :key="w.chiTietId">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(w, idx) in pagedWarranty" :key="w.chiTietId">
+          <td class="text-secondary">{{ wCurrentPage * wPageSize + idx + 1 }}</td>
           <td class="text-secondary" style="font-family:monospace;">{{ w.soSerial }}</td>
           <td>{{ w.tenSanPham }} <span class="text-secondary" style="font-size:0.75rem;">({{ w.maSku }})</span></td>
           <td>{{ w.tenKhachHang }}</td>
@@ -223,6 +227,7 @@ const deleteClaim = async (id) => {
         <tr v-if="filteredWarranty.length===0"><td colspan="10" class="text-center text-secondary">{{ t('admin.warranty.empty') }}</td></tr>
       </tbody>
     </table>
+    <Pagination :current-page="wCurrentPage" :total-pages="wTotalPages" @page-change="wCurrentPage = $event" />
   </div>
 
   <!-- ══ BANG PHIEU BAO HANH ══ -->
@@ -240,8 +245,8 @@ const deleteClaim = async (id) => {
         <th>{{ t('admin.warrantyClaims.colCost') }}</th><th>{{ t('admin.warrantyClaims.colStatus') }}</th><th>{{ t('admin.warrantyClaims.colAction') }}</th>
       </tr></thead>
       <tbody>
-        <tr v-for="(p, idx) in filteredClaims" :key="p.baoHanhId">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(p, idx) in pagedClaims" :key="p.baoHanhId">
+          <td class="text-secondary">{{ cCurrentPage * cPageSize + idx + 1 }}</td>
           <td class="text-secondary" style="font-family:monospace;">#{{ p.baoHanhId }}</td>
           <td class="text-secondary" style="font-family:monospace;">{{ p.maSku }}</td>
           <td class="text-secondary" style="font-family:monospace;">{{ p.soSerial || '—' }}</td>
@@ -259,6 +264,7 @@ const deleteClaim = async (id) => {
         <tr v-if="filteredClaims.length===0"><td colspan="9" class="text-center text-secondary">{{ t('admin.warrantyClaims.empty') }}</td></tr>
       </tbody>
     </table>
+    <Pagination :current-page="cCurrentPage" :total-pages="cTotalPages" @page-change="cCurrentPage = $event" />
   </div>
 
   <!-- ══ MODAL PHIEU BAO HANH ══ -->

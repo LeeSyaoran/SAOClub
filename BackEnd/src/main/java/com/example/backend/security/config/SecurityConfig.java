@@ -48,7 +48,11 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173",
-                "http://localhost:4173"
+                "http://localhost:4173",
+                // IP LAN của máy chạy Docker — cho máy khác cùng mạng WiFi/LAN truy cập
+                // http://192.168.0.101:5173 được (test đa thiết bị). IP này do DHCP cấp,
+                // có thể đổi nếu router cấp lại IP khác — sửa lại đây nếu không còn khớp.
+                "http://192.168.0.101:5173"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
@@ -97,6 +101,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/cai-dat").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/san-pham/**", "/api/danh-muc/**", "/api/thuong-hieu/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/dm-cpu/**", "/api/dm-ram/**", "/api/dm-gpu/**", "/api/dm-o-cung/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/danh-gia/**").permitAll()
 
                 // Còn lại: bắt buộc đăng nhập (JWT hợp lệ) — phân quyền chi tiết theo role
                 // dùng @PreAuthorize ở từng controller quản trị (nhân viên, chức vụ...)

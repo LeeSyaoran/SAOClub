@@ -8,16 +8,16 @@
       </button>
     </div>
     <div v-if="history.length" class="d-flex flex-column gap-2">
-      <div v-for="entry in history" :key="entry.lichSuId" class="d-flex gap-2">
-        <span style="font-size:0.78rem; color:var(--text-secondary); min-width:130px;">{{ formatDate(entry.thoiGian) }}</span>
-        <span style="font-size:0.82rem; color:var(--text-primary);">{{ orderStatusIcon(entry.trangThaiMoi) }} {{ orderStatusLabel(entry.trangThaiMoi) }}</span>
+      <div v-for="(entry, idx) in sortedHistory" :key="entry.lichSuId" class="d-flex gap-2">
+        <span class="small" :style="idx === 0 ? 'color:var(--text-primary);' : 'color:var(--text-secondary); opacity:0.6;'" style="min-width:130px;">{{ formatDate(entry.thoiGian) }}</span>
+        <span :class="idx === 0 ? 'fw-bold' : ''" :style="idx === 0 ? 'font-size:0.82rem; color:var(--accent-fg);' : 'font-size:0.82rem; color:var(--text-secondary); opacity:0.6;'">{{ orderStatusIcon(entry.trangThaiMoi) }} {{ orderStatusLabel(entry.trangThaiMoi) }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { t, I18nStore } from '../../i18n/index.js';
 import { orderStatusLabel, orderStatusIcon } from '../../utils/orderStatus.js';
 
@@ -25,6 +25,11 @@ const props = defineProps({
   maVanDon: { type: String, default: '' },
   history: { type: Array, default: () => [] },
 });
+
+// Mới nhất lên đầu (kiểu Shopee) — API trả về theo thứ tự cũ->mới (thời gian tăng dần).
+const sortedHistory = computed(() =>
+  [...props.history].sort((a, b) => new Date(b.thoiGian) - new Date(a.thoiGian))
+);
 
 const copied = ref(false);
 const copyCode = async () => {

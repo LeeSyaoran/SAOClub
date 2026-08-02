@@ -653,6 +653,43 @@ BEGIN
         CONSTRAINT FK_pbh_ctsp       FOREIGN KEY (chi_tiet_id)   REFERENCES chi_tiet_san_pham(chi_tiet_id)
     );
 END
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham_yeu_thich')
+BEGIN
+    CREATE TABLE san_pham_yeu_thich (
+        yeu_thich_id  INT       IDENTITY(1,1) PRIMARY KEY,
+        khach_hang_id INT       NOT NULL,
+        bien_the_id   INT       NOT NULL,
+        ngay_them     DATETIME  NOT NULL DEFAULT GETDATE(),
+
+        -- 1 khach chi luu 1 bien the vao yeu thich 1 lan — trung thi bo (unlike), khong tao dong moi.
+        CONSTRAINT UQ_spyt_kh_bt UNIQUE (khach_hang_id, bien_the_id),
+        CONSTRAINT FK_spyt_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
+        CONSTRAINT FK_spyt_bien_the   FOREIGN KEY (bien_the_id)   REFERENCES bien_the_san_pham(bien_the_id)
+    );
+END
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'danh_gia')
+BEGIN
+    CREATE TABLE danh_gia (
+        danh_gia_id   INT            IDENTITY(1,1) PRIMARY KEY,
+        khach_hang_id INT            NOT NULL,
+        san_pham_id   INT            NOT NULL,
+        don_hang_id   INT            NOT NULL,
+        so_sao        INT            NOT NULL CONSTRAINT CK_dg_sosao CHECK (so_sao BETWEEN 1 AND 5),
+        noi_dung      NVARCHAR(1000) NULL,
+        ngay_danh_gia DATETIME       NOT NULL DEFAULT GETDATE(),
+
+        -- 1 khach chi danh gia 1 san pham 1 lan (theo san_pham_id, khong phai tung bien_the/
+        -- don_hang) — mua nhieu lan hoac nhieu cau hinh khac nhau cua cung 1 san pham khong
+        -- tao them danh gia moi, tranh spam. don_hang_id luu lai don nao dung de xac minh
+        -- "da mua" luc tao (xem DanhGiaService.themDanhGia).
+        CONSTRAINT UQ_dg_kh_sp UNIQUE (khach_hang_id, san_pham_id),
+        CONSTRAINT FK_dg_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
+        CONSTRAINT FK_dg_san_pham   FOREIGN KEY (san_pham_id)   REFERENCES san_pham(san_pham_id),
+        CONSTRAINT FK_dg_don_hang   FOREIGN KEY (don_hang_id)   REFERENCES don_hang(don_hang_id)
+    );
+END
 GO
 
 -- ============================================================
@@ -2189,6 +2226,35 @@ LEFT JOIN (
     GROUP BY bien_the_id
 ) tinh_lai ON tk.bien_the_id = tinh_lai.bien_the_id;
 GO
+
+-- Serial mẫu cho linh kiện rời (CPU/RAM/GPU/Ổ cứng) — 10 serial/loại, rải đều qua các
+-- mục danh mục đã seed ở trên (dm_cpu 1-7, dm_ram 1-5, dm_gpu 1-5, dm_o_cung 1-4).
+-- Trước đây các bảng chi_tiet_cpu/ram/gpu/o_cung không có dữ liệu mẫu nên tab "Serial"
+-- (Kho hàng) chỉ thấy serial sản phẩm, không thấy serial linh kiện.
+;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
+INSERT INTO chi_tiet_cpu (cpu_id, so_serial, trang_thai)
+SELECT ((n - 1) % 7) + 1, N'CPU-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
+FROM Seq;
+GO
+
+;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
+INSERT INTO chi_tiet_ram (ram_id, so_serial, trang_thai)
+SELECT ((n - 1) % 5) + 1, N'RAM-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
+FROM Seq;
+GO
+
+;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
+INSERT INTO chi_tiet_gpu (gpu_id, so_serial, trang_thai)
+SELECT ((n - 1) % 5) + 1, N'GPU-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
+FROM Seq;
+GO
+
+;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
+INSERT INTO chi_tiet_o_cung (o_cung_id, so_serial, trang_thai)
+SELECT ((n - 1) % 4) + 1, N'OCUNG-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
+FROM Seq;
+GO
+
 -- ============================================================
 --  CÀI ĐẶT HỆ THỐNG (singleton — luôn đúng 1 dòng, cai_dat_id = 1)
 -- ============================================================
@@ -2268,6 +2334,15 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('don_hang')
 BEGIN
     ALTER TABLE don_hang ADD da_cong_diem BIT NOT NULL DEFAULT 0;
 END
+GO
+
+-- Cộng điểm khi đơn chuyển "delivered" — tức lúc khách bấm "Xác nhận đã nhận hàng" (đơn
+-- online, xem xacNhanDaNhanHang() ở DonHangService) hoặc lúc bán tại quầy (đơn in_store vào
+-- thẳng "delivered"). Không cộng sớm hơn (lúc đặt/thanh toán) để tránh khách "cày" điểm bằng
+-- cách đặt rồi hủy liên tục — đơn đã "delivered" không còn hủy được nữa (xem
+-- CHUYEN_TRANG_THAI_DON_HANG), nên không cần trigger trừ điểm riêng cho trường hợp hủy.
+IF EXISTS (SELECT 1 FROM sys.triggers WHERE name = 'trg_don_hang_tru_diem_huy')
+    DROP TRIGGER trg_don_hang_tru_diem_huy;
 GO
 
 CREATE OR ALTER TRIGGER trg_don_hang_cong_diem
@@ -2400,13 +2475,16 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_pggcn_khach_hang')
 GO
 
 -- ============================================================
---  Trạng thái đơn hàng "out_for_delivery" — xen giữa shipping và delivered, cho phép
---  timeline khách hàng tách rõ "đã gửi hàng" và "đang giao hàng". Drop-rồi-add (không
---  gói trong CREATE TABLE) nên chạy lại file bao nhiêu lần trên DB đã có sẵn cũng an toàn.
+--  Mở rộng danh sách trạng thái đơn hàng theo thời gian (out_for_delivery, rồi
+--  awaiting_confirmation) — Drop-rồi-add (không gói trong CREATE TABLE) nên chạy lại file
+--  bao nhiêu lần trên DB đã có sẵn cũng an toàn. "awaiting_confirmation": admin đã bấm "Đã
+--  giao" nhưng khách chưa bấm "Xác nhận đã nhận hàng" — chỉ khách (hoặc staff) xác nhận mới
+--  chuyển tiếp "delivered", đơn mới thật sự rơi vào tab "Hoàn tất" phía khách hàng. Xem
+--  DonHangService.xacNhanDaNhanHang() (BackEnd) và CHUYEN_TRANG_THAI_DON_HANG.
 -- ============================================================
 IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_dh_trangthai')
     ALTER TABLE don_hang DROP CONSTRAINT CK_dh_trangthai;
 ALTER TABLE don_hang ADD CONSTRAINT CK_dh_trangthai
-    CHECK (trang_thai_don_hang IN (N'pending', N'confirmed', N'processing', N'shipping', N'out_for_delivery', N'delivered', N'cancelled', N'returned'));
+    CHECK (trang_thai_don_hang IN (N'pending', N'confirmed', N'processing', N'shipping', N'out_for_delivery', N'awaiting_confirmation', N'delivered', N'cancelled', N'returned'));
 GO
 GO

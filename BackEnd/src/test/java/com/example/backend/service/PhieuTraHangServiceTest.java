@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.ChiTietDonHang;
+import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.ChiTietTraHang;
 import com.example.backend.entity.ChucVu;
 import com.example.backend.entity.DonHang;
@@ -8,6 +9,7 @@ import com.example.backend.entity.KhachHang;
 import com.example.backend.entity.PhieuTraHang;
 import com.example.backend.entity.TaiKhoan;
 import com.example.backend.repository.ChiTietDonHangRepository;
+import com.example.backend.repository.ChiTietSanPhamRepository;
 import com.example.backend.repository.ChiTietTraHangRepository;
 import com.example.backend.repository.DonHangRepository;
 import com.example.backend.repository.KhachHangRepository;
@@ -48,6 +50,7 @@ class PhieuTraHangServiceTest {
     @Mock private ChiTietDonHangRepository chiTietDonHangRepository;
     @Mock private ChiTietTraHangRepository chiTietTraHangRepository;
     @Mock private TaiKhoanRepository taiKhoanRepository;
+    @Mock private ChiTietSanPhamRepository chiTietSanPhamRepository;
 
     @InjectMocks
     private PhieuTraHangService service;
@@ -154,6 +157,140 @@ class PhieuTraHangServiceTest {
         // hàng — điểm gắn với đơn đã trả, không phụ thuộc hình thức hoàn tiền lần này.
         assertThat(kh.getDiemTichLuy()).isEqualTo(15);
         verify(khachHangRepository, times(1)).save(kh);
+    }
+
+    // ── Cộng lại kho khi phiếu chuyển "da_xu_ly" ──────
+
+    @Test
+    void update_chuyenDaXuLy_dongConSerialKhongLoi_congLaiKho() {
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(1);
+        kh.setSoDuVi(BigDecimal.valueOf(100_000));
+        kh.setDiemTichLuy(20);
+
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+
+        PhieuTraHang phieu = new PhieuTraHang();
+        phieu.setPhieuTraId(5);
+        phieu.setDonHang(donHang);
+        phieu.setTrangThai("cho_xu_ly");
+
+        ChiTietSanPham serial = new ChiTietSanPham();
+        serial.setChiTietId(200);
+        serial.setTrangThai("da_ban");
+        ChiTietTraHang dongTra = new ChiTietTraHang();
+        dongTra.setChiTietSanPham(serial);
+        dongTra.setTinhTrang("Đổi ý, máy còn nguyên"); // không chứa "lỗi"/"hỏng"
+
+        when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
+        when(phieuTraHangRepository.save(phieu)).thenReturn(phieu);
+        when(chiTietTraHangRepository.findByPhieuTraHang_PhieuTraId(5)).thenReturn(List.of(dongTra));
+
+        service.update(5, requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000)));
+
+        assertThat(serial.getTrangThai()).isEqualTo("trong_kho");
+        verify(chiTietSanPhamRepository).save(serial);
+    }
+
+    @Test
+    void update_chuyenDaXuLy_dongHangLoi_khongCongLaiKho() {
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(1);
+        kh.setSoDuVi(BigDecimal.valueOf(100_000));
+        kh.setDiemTichLuy(20);
+
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+
+        PhieuTraHang phieu = new PhieuTraHang();
+        phieu.setPhieuTraId(5);
+        phieu.setDonHang(donHang);
+        phieu.setTrangThai("cho_xu_ly");
+
+        ChiTietSanPham serial = new ChiTietSanPham();
+        serial.setChiTietId(200);
+        serial.setTrangThai("da_ban");
+        ChiTietTraHang dongTra = new ChiTietTraHang();
+        dongTra.setChiTietSanPham(serial);
+        dongTra.setTinhTrang("Máy bị lỗi màn hình");
+
+        when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
+        when(phieuTraHangRepository.save(phieu)).thenReturn(phieu);
+        when(chiTietTraHangRepository.findByPhieuTraHang_PhieuTraId(5)).thenReturn(List.of(dongTra));
+
+        service.update(5, requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000)));
+
+        assertThat(serial.getTrangThai()).isEqualTo("da_ban"); // giữ nguyên, không cộng lại kho
+        verify(chiTietSanPhamRepository, never()).save(any());
+    }
+
+    // ── Cập nhật đơn hàng (thanh toán refunded + trạng thái returned) khi phiếu chuyển "da_xu_ly" ──────
+
+    @Test
+    void update_chuyenDaXuLy_donDangDelivered_chuyenReturnedVaRefunded() {
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(1);
+        kh.setSoDuVi(BigDecimal.valueOf(100_000));
+        kh.setDiemTichLuy(20);
+
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+        donHang.setTrangThaiDonHang("delivered");
+        donHang.setTrangThaiThanhToan("paid");
+
+        PhieuTraHang phieu = new PhieuTraHang();
+        phieu.setPhieuTraId(5);
+        phieu.setDonHang(donHang);
+        phieu.setTrangThai("cho_xu_ly");
+
+        when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
+        when(phieuTraHangRepository.save(phieu)).thenReturn(phieu);
+
+        service.update(5, requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000)));
+
+        assertThat(donHang.getTrangThaiThanhToan()).isEqualTo("refunded");
+        assertThat(donHang.getTrangThaiDonHang()).isEqualTo("returned");
+        verify(donHangRepository).save(donHang);
+    }
+
+    @Test
+    void update_chuyenDaXuLy_donChuaDelivered_khongEpTrangThaiDon() {
+        KhachHang kh = new KhachHang();
+        kh.setKhachHangId(1);
+        kh.setSoDuVi(BigDecimal.valueOf(100_000));
+        kh.setDiemTichLuy(20);
+
+        DonHang donHang = new DonHang();
+        donHang.setId(9);
+        donHang.setKhachHang(kh);
+        donHang.setTrangThaiDonHang("shipping"); // nhan vien tao phieu tra som, don chua giao xong
+        donHang.setTrangThaiThanhToan("paid");
+
+        PhieuTraHang phieu = new PhieuTraHang();
+        phieu.setPhieuTraId(5);
+        phieu.setDonHang(donHang);
+        phieu.setTrangThai("cho_xu_ly");
+
+        when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
+        when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
+        when(phieuTraHangRepository.findByDonHang_Id(9)).thenReturn(List.of());
+        when(phieuTraHangRepository.save(phieu)).thenReturn(phieu);
+
+        service.update(5, requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000)));
+
+        // Van danh dau da hoan tien, nhung KHONG ep trang thai don nhay coc tu "shipping".
+        assertThat(donHang.getTrangThaiThanhToan()).isEqualTo("refunded");
+        assertThat(donHang.getTrangThaiDonHang()).isEqualTo("shipping");
     }
 
     @Test

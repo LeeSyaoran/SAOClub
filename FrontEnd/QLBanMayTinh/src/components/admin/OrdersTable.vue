@@ -16,6 +16,8 @@ import { OrdersStore, ensureOrders, refreshOrders } from "../../stores/orders.js
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 const props = defineProps({ canDelete: { type: Boolean, default: true } });
 
@@ -65,6 +67,7 @@ const filteredOrders = computed(() => {
     return String(o.donHangId).includes(q) || (o.maDonHang ?? '').toLowerCase().includes(q) || name.includes(q) || (o.nguoiNhan ?? '').toLowerCase().includes(q) || (o.sdtNguoiNhan ?? '').includes(q);
   });
 });
+const { currentPage, totalPages, pagedItems: pagedOrders, pageSize } = usePagination(filteredOrders);
 
 // Danh sách ngày có đơn hàng (mới nhất trước), dùng cho màn "Lịch sử đơn hàng"
 const VN_WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
@@ -311,19 +314,25 @@ const autoMergeOrders = async () => {
   }
 };
 
-// ── Modal "Chi tiet san pham" (xem 1 bien the trong don) — dung lai ProductDetailModal.vue
-// (Task 3), vốn chỉ nhận sanPhamId/sanPhamName qua props rồi tự hiện toàn bộ họ biến thể
-// (không còn cách hiện đúng 1 biến thể như hành vi cũ trước Task 3 — đây là hệ quả tất yếu
-// của việc dùng lại component chung, không phải lỗi).
+// ── Modal "Chi tiet san pham" (xem cac bien the da mua trong don nay) — dung lai ProductDetailModal.vue
 const showDetailModal = ref(false);
 const detailModalSanPhamId = ref(null);
 const detailModalSanPhamName = ref('');
+const detailModalBienTheIds = ref([]);
 
 const openVariantDetail = (bienTheId) => {
   const v = productByBienThe(bienTheId);
   if (!v) return;
   detailModalSanPhamId.value = v.sanPhamId;
   detailModalSanPhamName.value = v.tenSanPham;
+  // Khach co the mua cung 1 san pham nhung nhieu bien the khac nhau trong CUNG don nay
+  // (vd may A bien the 1 va 2) — bam "Chi tiet" o dong nao cung phai hien du cac bien the
+  // da mua trong don, khong chi dung dong vua bam.
+  detailModalBienTheIds.value = [...new Set(
+    orderDetailItems.value
+      .map((item) => item.bienTheId)
+      .filter((id) => productByBienThe(id)?.sanPhamId === v.sanPhamId)
+  )];
   showDetailModal.value = true;
 };
 
@@ -412,19 +421,21 @@ const saveOrderStatus = async () => {
 };
 
 // Quy trình xử lý đơn thực tế: chờ xác nhận -> đã xác nhận -> đang đóng gói -> đã gửi
-// hàng -> đang giao -> đã giao. Nút "bước tiếp theo" trên bảng đơn hàng đi đúng theo thứ
-// tự này, khỏi phải mở modal chọn tay mỗi lần chỉ để nhích 1 bước — mở modal vẫn dùng
-// được cho các trường hợp khác (hủy đơn, sửa ngày giao...).
+// hàng -> đang giao -> đã giao (chờ khách xác nhận) -> hoàn tất. Nút "bước tiếp theo" trên
+// bảng đơn hàng đi đúng theo thứ tự này, khỏi phải mở modal chọn tay mỗi lần chỉ để nhích 1
+// bước — mở modal vẫn dùng được cho các trường hợp khác (hủy đơn, sửa ngày giao...). Bước
+// cuối "awaiting_confirmation -> delivered" KHÔNG có nút ở đây — chỉ khách hàng (hoặc staff
+// qua modal "Cập nhật trạng thái") mới xác nhận được, xem AccountPage.vue confirmReceived().
 const NEXT_ORDER_STATUS = {
   pending: 'confirmed', confirmed: 'processing', processing: 'shipping',
-  shipping: 'out_for_delivery', out_for_delivery: 'delivered',
+  shipping: 'out_for_delivery', out_for_delivery: 'awaiting_confirmation',
 };
 const NEXT_ORDER_STATUS_LABEL = {
   pending:          { icon: '✅', key: 'admin.orders.nextConfirm' },
   confirmed:        { icon: '📦', key: 'admin.orders.nextPack' },
   processing:       { icon: '🚚', key: 'admin.orders.nextShip' },
   shipping:         { icon: '🛵', key: 'admin.orders.nextOutForDelivery' },
-  out_for_delivery: { icon: '🎉', key: 'admin.orders.nextComplete' },
+  out_for_delivery: { icon: '📬', key: 'admin.orders.nextDelivered' },
 };
 const advanceOrderStatus = async (o) => {
   const next = NEXT_ORDER_STATUS[o.trangThaiDonHang];
@@ -445,15 +456,20 @@ const advanceOrderStatus = async (o) => {
   }
   const body = buildOrderUpdateBody(o, {
     trangThaiDonHang: next,
-    // Giao hàng hoàn tất mà thanh toán vẫn "chưa thanh toán" -> tự chuyển "đã thanh toán"
-    // (đơn ở đây mặc định thu tiền khi giao — COD). "partial"/"paid"/"refunded" giữ nguyên,
-    // chỉ tự động hoá đúng 1 chiều unpaid -> paid, không đụng các trạng thái staff đã set tay.
-    trangThaiThanhToan: next === 'delivered' && o.trangThaiThanhToan === 'unpaid'
+    // Admin đánh dấu "đã giao" (awaiting_confirmation) mà thanh toán vẫn "chưa thanh toán" ->
+    // tự chuyển "đã thanh toán" (đơn ở đây mặc định thu tiền khi giao — COD, tiền đã thu
+    // xong tại thời điểm giao chứ không đợi khách bấm xác nhận). "partial"/"paid"/"refunded"
+    // giữ nguyên, chỉ tự động hoá đúng 1 chiều unpaid -> paid, không đụng trạng thái staff
+    // đã set tay.
+    trangThaiThanhToan: next === 'awaiting_confirmation' && o.trangThaiThanhToan === 'unpaid'
       ? 'paid'
       : o.trangThaiThanhToan,
     ngayGiaoDuKien: o.ngayGiaoDuKien,
-    // Chuyển sang "delivered" mà chưa có ngày khách nhận hàng -> tự đóng dấu thời điểm này.
-    ngayGiaoThucTe: next === 'delivered' && !o.ngayGiaoThucTe
+    // Chuyển sang "awaiting_confirmation" (shipper đã giao) mà chưa có ngày khách nhận hàng
+    // -> tự đóng dấu thời điểm này ngay lúc đó, không đợi khách bấm "Xác nhận đã nhận hàng"
+    // (có thể vài ngày sau) — hạn trả hàng 7 ngày phải tính từ lúc giao thật, không phải lúc
+    // khách rảnh bấm xác nhận.
+    ngayGiaoThucTe: next === 'awaiting_confirmation' && !o.ngayGiaoThucTe
       ? nowLocalIso()
       : o.ngayGiaoThucTe,
     maVanDon: o.maVanDon,
@@ -588,6 +604,7 @@ const confirmXacNhanSerial = async () => {
           <option value="processing">{{ orderStatusLabel('processing') }}</option>
           <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
           <option value="out_for_delivery">{{ orderStatusLabel('out_for_delivery') }}</option>
+          <option value="awaiting_confirmation">{{ orderStatusLabel('awaiting_confirmation') }}</option>
           <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
           <option value="cancelled">{{ orderStatusLabel('cancelled') }}</option>
           <option value="returned">{{ orderStatusLabel('returned') }}</option>
@@ -605,8 +622,8 @@ const confirmXacNhanSerial = async () => {
       <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
         <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
         <tbody>
-          <tr v-for="(o, idx) in filteredOrders" :key="o.donHangId">
-            <td class="text-secondary">{{ idx + 1 }}</td>
+          <tr v-for="(o, idx) in pagedOrders" :key="o.donHangId">
+            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
             <td class="text-secondary">{{ o.maDonHang || ('#' + o.donHangId) }}</td>
             <td>{{ customerName(o.khachHangId) }}</td>
             <td>{{ formatPrice(o.thanhTien) }}</td>
@@ -641,6 +658,7 @@ const confirmXacNhanSerial = async () => {
           <tr v-if="filteredOrders.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.orders.empty') }}</td></tr>
         </tbody>
       </table>
+      <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
     </div>
   </template>
 
@@ -779,12 +797,13 @@ const confirmXacNhanSerial = async () => {
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
         <div>
-          <div class="fw-bold" style="font-size:0.95rem;color:var(--text-heading);">
-            {{ t('admin.orderDetailModal.titlePrefix') }}{{ orderDetailData?.donHangId }}
-            <span v-if="orderDetailData?.maDonHang" class="text-secondary ms-2" style="font-size:0.8rem;font-family:monospace;">{{ orderDetailData.maDonHang }}</span>
+          <div class="fw-bold" style="font-size:1.05rem;color:var(--text-heading);">
+            👤 {{ customerName(orderDetailData?.khachHangId) }}
           </div>
           <div class="text-secondary" style="font-size:0.78rem;">
-            {{ customerName(orderDetailData?.khachHangId) }} · {{ formatDate(orderDetailData?.ngayDat) }}
+            {{ t('admin.orderDetailModal.titlePrefix') }}{{ orderDetailData?.donHangId }}
+            <span v-if="orderDetailData?.maDonHang" class="ms-1" style="font-family:monospace;">{{ orderDetailData.maDonHang }}</span>
+            · {{ formatDate(orderDetailData?.ngayDat) }}
           </div>
         </div>
         <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showOrderDetailModal=false"></button>
@@ -971,7 +990,7 @@ const confirmXacNhanSerial = async () => {
           {{ t('admin.orderStatusModal.orderPrefix') }}{{ editingOrder.donHangId }} — {{ t('admin.orderStatusModal.customerLabel') }} <strong>{{ customerName(editingOrder.khachHangId) }}</strong>
         </div>
         <div class="d-flex flex-column gap-3">
-          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.statusLabel') }}</label><select v-model="orderStatusForm.trangThaiDonHang" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="pending">{{ t('admin.orderStatusModal.status.pending') }}</option><option value="confirmed">{{ t('admin.orderStatusModal.status.confirmed') }}</option><option value="processing">{{ t('admin.orderStatusModal.status.processing') }}</option><option value="shipping">{{ t('admin.orderStatusModal.status.shipping') }}</option><option value="out_for_delivery">{{ t('admin.orderStatusModal.status.out_for_delivery') }}</option><option value="delivered">{{ t('admin.orderStatusModal.status.delivered') }}</option><option value="cancelled">{{ t('admin.orderStatusModal.status.cancelled') }}</option><option value="returned">{{ t('admin.orderStatusModal.status.returned') }}</option></select></div>
+          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.statusLabel') }}</label><select v-model="orderStatusForm.trangThaiDonHang" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="pending">{{ t('admin.orderStatusModal.status.pending') }}</option><option value="confirmed">{{ t('admin.orderStatusModal.status.confirmed') }}</option><option value="processing">{{ t('admin.orderStatusModal.status.processing') }}</option><option value="shipping">{{ t('admin.orderStatusModal.status.shipping') }}</option><option value="out_for_delivery">{{ t('admin.orderStatusModal.status.out_for_delivery') }}</option><option value="awaiting_confirmation">{{ t('admin.orderStatusModal.status.awaiting_confirmation') }}</option><option value="delivered">{{ t('admin.orderStatusModal.status.delivered') }}</option><option value="cancelled">{{ t('admin.orderStatusModal.status.cancelled') }}</option><option value="returned">{{ t('admin.orderStatusModal.status.returned') }}</option></select></div>
           <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.trackingCodeLabel') }}</label><input v-model="orderStatusForm.maVanDon" type="text" class="form-control form-control-sm" :placeholder="t('admin.orderStatusModal.trackingCodePlaceholder')" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
           <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.paymentLabel') }}</label><select v-model="orderStatusForm.trangThaiThanhToan" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="unpaid">{{ t('admin.paymentStatus.unpaid') }}</option><option value="partial">{{ t('admin.paymentStatus.partial') }}</option><option value="paid">{{ t('admin.paymentStatus.paid') }}</option><option value="refunded">{{ t('admin.paymentStatus.refunded') }}</option></select></div>
           <div class="row g-2">
@@ -1036,6 +1055,7 @@ const confirmXacNhanSerial = async () => {
     v-model="showDetailModal"
     :san-pham-id="detailModalSanPhamId"
     :san-pham-name="detailModalSanPhamName"
+    :only-bien-the-ids="detailModalBienTheIds"
   />
 </template>
 

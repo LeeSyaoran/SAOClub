@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
 import * as LichSuTonKhoService from "../../services/LichSuTonKhoService.js";
 import { formatDateTime } from "../../utils/adminFormat.js";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 const items = ref([]);
 const loading = ref(false);
@@ -40,6 +42,7 @@ const filteredItems = computed(() => {
     .filter((h) => !q || (h.maSku ?? '').toLowerCase().includes(q) || (h.ghiChu ?? '').toLowerCase().includes(q))
     .sort((a, b) => new Date(b.ngayTao) - new Date(a.ngayTao));
 });
+const { currentPage, totalPages, pagedItems: pagedHistory, pageSize } = usePagination(filteredItems);
 </script>
 
 <template>
@@ -68,8 +71,8 @@ const filteredItems = computed(() => {
         <th>{{ t('admin.inventoryHistory.colNote') }}</th>
       </tr></thead>
       <tbody>
-        <tr v-for="(h, idx) in filteredItems" :key="h.lichSuId">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(h, idx) in pagedHistory" :key="h.lichSuId">
+          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
           <td class="text-secondary">{{ formatDateTime(h.ngayTao) }}</td>
           <td style="font-family:monospace;">{{ h.maSku }}</td>
           <td><span class="badge" :style="{ background: typeColor(h.loaiBienDong) }">{{ typeLabel(h.loaiBienDong) }}</span></td>
@@ -79,5 +82,6 @@ const filteredItems = computed(() => {
         <tr v-if="filteredItems.length===0"><td colspan="6" class="text-center text-secondary">{{ t('admin.inventoryHistory.empty') }}</td></tr>
       </tbody>
     </table>
+    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 </template>

@@ -104,4 +104,86 @@ class PhieuBaoHanhServiceTest {
                 .hasMessageContaining("trước ngày tiếp nhận");
         verify(phieuBaoHanhRepository, never()).save(any());
     }
+
+    // ── Gán trạng thái serial (loi_bao_hanh <-> da_ban) theo vòng đời phiếu ──────
+
+    @Test
+    void update_chuyenDangXuLy_ganSerialLoiBaoHanh() {
+        PhieuBaoHanh entity = new PhieuBaoHanh();
+        entity.setBaoHanhId(1);
+        entity.setTrangThai("con_bao_hanh");
+        ChiTietSanPham serial = new ChiTietSanPham();
+        serial.setChiTietId(100);
+        serial.setTrangThai("da_ban");
+        entity.setChiTietSanPham(serial);
+        when(phieuBaoHanhRepository.findById(1)).thenReturn(java.util.Optional.of(entity));
+        when(phieuBaoHanhRepository.save(entity)).thenReturn(entity);
+        // update() gan lai chiTietSanPham tu chiTietId cua request — phai stub de tra ve
+        // DUNG object serial nay, khong thi entity bi gan chiTietSanPham=null (mac dinh cua
+        // Mockito) va capNhatSerialTheoTrangThai() se return som, khong lam gi ca.
+        when(chiTietSanPhamRepository.getReferenceById(100)).thenReturn(serial);
+
+        PhieuBaoHanhRequest req = requestCoBan();
+        req.setChiTietId(100);
+        req.setTrangThai("dang_xu_ly");
+
+        service.update(1, req);
+
+        assertThat(serial.getTrangThai()).isEqualTo("loi_bao_hanh");
+        verify(chiTietSanPhamRepository).save(serial);
+    }
+
+    @Test
+    void update_chuyenDaXuLy_traSerialVeDaBan() {
+        PhieuBaoHanh entity = new PhieuBaoHanh();
+        entity.setBaoHanhId(1);
+        entity.setTrangThai("dang_xu_ly");
+        ChiTietSanPham serial = new ChiTietSanPham();
+        serial.setChiTietId(100);
+        serial.setTrangThai("loi_bao_hanh");
+        entity.setChiTietSanPham(serial);
+        when(phieuBaoHanhRepository.findById(1)).thenReturn(java.util.Optional.of(entity));
+        when(phieuBaoHanhRepository.save(entity)).thenReturn(entity);
+        // update() gan lai chiTietSanPham tu chiTietId cua request — phai stub de tra ve
+        // DUNG object serial nay, khong thi entity bi gan chiTietSanPham=null (mac dinh cua
+        // Mockito) va capNhatSerialTheoTrangThai() se return som, khong lam gi ca.
+        when(chiTietSanPhamRepository.getReferenceById(100)).thenReturn(serial);
+
+        PhieuBaoHanhRequest req = requestCoBan();
+        req.setChiTietId(100);
+        req.setTrangThai("da_xu_ly");
+        req.setKetQuaXuLy("Đã sửa xong, thay bàn phím");
+
+        service.update(1, req);
+
+        assertThat(serial.getTrangThai()).isEqualTo("da_ban");
+        verify(chiTietSanPhamRepository).save(serial);
+    }
+
+    @Test
+    void update_vanConBaoHanh_khongDungToiSerial() {
+        PhieuBaoHanh entity = new PhieuBaoHanh();
+        entity.setBaoHanhId(1);
+        entity.setTrangThai("con_bao_hanh");
+        ChiTietSanPham serial = new ChiTietSanPham();
+        serial.setChiTietId(100);
+        serial.setTrangThai("da_ban");
+        entity.setChiTietSanPham(serial);
+        when(phieuBaoHanhRepository.findById(1)).thenReturn(java.util.Optional.of(entity));
+        when(phieuBaoHanhRepository.save(entity)).thenReturn(entity);
+        // update() gan lai chiTietSanPham tu chiTietId cua request — phai stub de tra ve
+        // DUNG object serial nay, khong thi entity bi gan chiTietSanPham=null (mac dinh cua
+        // Mockito) va capNhatSerialTheoTrangThai() se return som, khong lam gi ca.
+        when(chiTietSanPhamRepository.getReferenceById(100)).thenReturn(serial);
+
+        PhieuBaoHanhRequest req = requestCoBan();
+        req.setChiTietId(100);
+        req.setGhiChu("Cập nhật ghi chú thôi");
+        req.setTrangThai("con_bao_hanh");
+
+        service.update(1, req);
+
+        assertThat(serial.getTrangThai()).isEqualTo("da_ban");
+        verify(chiTietSanPhamRepository, never()).save(any());
+    }
 }

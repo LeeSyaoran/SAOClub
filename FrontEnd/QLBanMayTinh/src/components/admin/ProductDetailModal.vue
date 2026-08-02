@@ -4,14 +4,17 @@ import { t } from "../../i18n/index.js";
 import { ProductsStore } from "../../stores/products.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
+import { variantsForDetail } from "../../utils/productGrouping.js";
 
-// ── Modal "Chi tiết sản phẩm" (xem toàn bộ biến thể của 1 sản phẩm) — dùng chung
-// bởi ProductsTable.vue (sở hữu) và OrdersTable.vue (xem 1 biến thể trong đơn hàng).
-// Thuần XEM — sửa/thêm/xóa biến thể giờ ở tab "Biến thể" riêng (BienTheTable.vue).
+// ── Modal "Chi tiết sản phẩm" — dùng chung bởi ProductsTable.vue (xem/so sánh toàn bộ
+// biến thể của 1 sản phẩm) và OrdersTable.vue (chỉ xem (các) biến thể khách đã mua trong
+// 1 đơn cụ thể, qua prop onlyBienTheIds — nhận 1 id hoặc mảng nhiều id). Thuần XEM —
+// sửa/thêm/xóa biến thể giờ ở tab "Biến thể" riêng (BienTheTable.vue).
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   sanPhamId: { type: [Number, String], default: null },
   sanPhamName: { type: String, default: "" },
+  onlyBienTheIds: { type: [Number, String, Array], default: null },
 });
 const emit = defineEmits(["update:modelValue"]);
 
@@ -29,10 +32,10 @@ const fetchSerialMap = async (bienTheIds) => {
 };
 
 watch(
-  () => [props.modelValue, props.sanPhamId],
-  async ([open, sanPhamId]) => {
+  () => [props.modelValue, props.sanPhamId, props.onlyBienTheIds],
+  async ([open, sanPhamId, onlyBienTheIds]) => {
     if (!open || sanPhamId == null) return;
-    const list = (ProductsStore.items ?? []).filter((p) => p.sanPhamId === sanPhamId);
+    const list = variantsForDetail(ProductsStore.items ?? [], sanPhamId, onlyBienTheIds);
     detailModalList.value = list;
     detailSerialMap.value = {};
     detailSerialMap.value = await fetchSerialMap(list.map((v) => v.bienTheId));

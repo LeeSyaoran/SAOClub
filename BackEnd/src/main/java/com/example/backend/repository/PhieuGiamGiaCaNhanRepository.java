@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface PhieuGiamGiaCaNhanRepository extends JpaRepository<PhieuGiamGiaCaNhan, Integer> {
     List<PhieuGiamGiaCaNhan> findByKhachHang_KhachHangId(Integer khachHangId);
     Optional<PhieuGiamGiaCaNhan> findByMaPhieu(String maPhieu);
+    Optional<PhieuGiamGiaCaNhan> findByDonHang_Id(Integer donHangId);
 
     // Khóa ghi (PESSIMISTIC_WRITE) — chặn 2 request tiêu cùng 1 voucher đồng thời (chỉ có
     // tác dụng trong 1 transaction đang mở, xem DonHangService.create()).

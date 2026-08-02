@@ -118,7 +118,7 @@ const goToSettingsFromMenu = () => {
 
 <template>
   <!-- Footer sidebar: thong tin user (bam mo dropdown ho so) + logout -->
-  <div class="p-3 border-top position-relative" style="border-color:var(--border-color-soft)!important;"
+  <div class="p-3 border-top position-relative adm-sidebar-footer" style="border-color:var(--border-color-soft)!important;"
        @keydown.esc="closeUserMenu" @focusout="onUserMenuFocusOut">
     <!-- Dropdown menu ho so — mo LEN tren (bottom:100%) vi dang o cuoi sidebar -->
     <div v-if="showUserMenu" class="position-absolute rounded-3 shadow-lg overflow-hidden"

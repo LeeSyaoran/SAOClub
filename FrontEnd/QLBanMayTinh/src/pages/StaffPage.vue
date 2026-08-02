@@ -19,9 +19,13 @@ import { refreshReturns } from "../stores/returns.js";
 
 // ── Navigation — mac dinh vao thang Ban hang (viec chinh hang ngay cua nhan vien) ──
 const currentPage = ref("ban-hang");
+// Sidebar bat/tat duoc o moi kich thuoc man hinh, mac dinh mo tren desktop, dong tren
+// mobile (dong bo AdminPage.vue). ponytail: khong dong bo lai khi resize giua chung.
+const sidebarOpen = ref(window.matchMedia("(min-width: 768px)").matches);
 const productsMainTab = ref("sanPham");
 const navigate = (page) => {
   currentPage.value = page;
+  if (window.matchMedia("(max-width: 767.98px)").matches) sidebarOpen.value = false; // chon xong tu dong dong lai tren mobile
   // ReturnsPanel.vue chỉ tải dữ liệu 1 lần lúc mount — làm mới lại mỗi lần vào tab để
   // thấy yêu cầu trả hàng khách vừa gửi (xem AdminPage.vue navigate() cùng lý do).
   if (page === "tra-hang") refreshReturns();
@@ -62,16 +66,22 @@ onUnmounted(() => {
   <!-- Layout chinh: sidebar ben trai + main content ben phai — dong bo AdminPage.vue -->
   <div class="d-flex overflow-hidden" style="height:100vh; background:var(--bg-page-alt); color:var(--text-primary); font-family:'Nunito Sans',sans-serif;">
 
+    <!-- Lớp phủ mờ phía sau sidebar khi mở trên mobile — bấm ra ngoài để đóng -->
+    <div v-if="sidebarOpen" class="d-md-none position-fixed top-0 start-0 w-100 h-100"
+         style="background:rgba(0,0,0,0.5); z-index:1039;"
+         @click="sidebarOpen = false"></div>
+
     <!-- ══════════ SIDEBAR ══════════ -->
-    <aside class="d-flex flex-column border-end flex-shrink-0"
-           style="width:240px; background:var(--bg-card-inset); border-color:var(--border-color)!important; overflow-y:auto;">
+    <aside class="d-flex flex-column border-end flex-shrink-0 adm-sidebar"
+           :class="{ 'adm-sidebar-open': sidebarOpen }"
+           style="background:var(--bg-card-inset); border-color:var(--border-color)!important; overflow-y:auto;">
 
       <!-- Logo -->
-      <div class="d-flex align-items-center gap-2 p-3 border-bottom"
+      <div class="d-flex align-items-center gap-2 p-3 border-bottom adm-brand-row"
            style="border-color:var(--border-color-soft)!important;">
         <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
              style="width:38px;height:38px;background:var(--accent);color:var(--accent-text);font-size:0.8rem;">SAO</div>
-        <div>
+        <div class="adm-brand-text">
           <div class="fw-bold" style="font-size:0.95rem;">{{ t('admin.brand.name') }}</div>
           <div style="font-size:0.7rem;color:var(--text-muted);">{{ t('admin.brand.tagline') }}</div>
         </div>
@@ -112,9 +122,15 @@ onUnmounted(() => {
       <!-- Topbar -->
       <div class="d-flex align-items-center justify-content-between p-3 border-bottom"
            style="background:var(--bg-card-inset); border-color:var(--border-color)!important;">
-        <div>
-          <div class="fw-bold" style="font-size:1.05rem;">{{ topbarIcon }} {{ topbarTitle }}</div>
-          <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
+                  style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1.1rem;"
+                  :aria-label="t('admin.sidebar.toggleMenu')" :title="t('admin.sidebar.toggleMenu')"
+                  @click="sidebarOpen = !sidebarOpen">{{ sidebarOpen ? '✕' : '☰' }}</button>
+          <div>
+            <div class="fw-bold" style="font-size:1.05rem;">{{ topbarIcon }} {{ topbarTitle }}</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
+          </div>
         </div>
         <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
                 style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1rem;"
@@ -166,4 +182,51 @@ onUnmounted(() => {
 .adm-nav.active { background: rgba(244,63,94,0.12); color: var(--accent-fg); }
 .adm-nav.active .adm-icon { opacity: 1; }
 .adm-icon { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.75; }
+
+/* Sidebar an/hien theo sidebarOpen o moi kich thuoc man hinh (dong bo AdminPage.vue).
+   Desktop: thu gon con dai icon 60px (van dieu huong duoc, khong mat han). Mobile (<768px):
+   luon giu width day du, truot vao/ra bang transform (overlay de len noi dung). */
+.adm-sidebar {
+  width: 240px;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+.adm-sidebar:not(.adm-sidebar-open) { width: 60px; }
+
+/* Trang thai rail (desktop, dong): chi con icon, an het chu/badge/nhom/chan sidebar.
+   Dung font-size:0 de an text-node tran (khong bang <span>) — icon SVG kich thuoc px co dinh
+   nen khong bi anh huong. Tren mobile trang thai nay nam ngoai man hinh nen khong ai thay. */
+.adm-sidebar:not(.adm-sidebar-open) .adm-nav {
+  font-size: 0;
+  justify-content: center;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.adm-sidebar:not(.adm-sidebar-open) .adm-nav .badge,
+.adm-sidebar:not(.adm-sidebar-open) .adm-nav-label {
+  display: none;
+}
+.adm-sidebar:not(.adm-sidebar-open) .adm-brand-row {
+  justify-content: center;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.adm-sidebar:not(.adm-sidebar-open) .adm-brand-text,
+.adm-sidebar:not(.adm-sidebar-open) :deep(.adm-sidebar-footer) {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .adm-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1040;
+    width: 240px !important;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+  .adm-sidebar.adm-sidebar-open { transform: translateX(0); }
+}
 </style>

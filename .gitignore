@@ -4,3 +4,8 @@
 
 ### Secrets — không commit ###
 .env
+
+### Backup database — file .bak nặng + log chạy, không commit, chỉ lưu local ###
+Database/backups/*.bak
+Database/backups/*.log
+!Database/backups/.gitkeep

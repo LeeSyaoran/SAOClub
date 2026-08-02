@@ -14,11 +14,20 @@
         @click="$emit('close')"
       >‹</button>
       <span class="fw-semibold small text-truncate" style="color:var(--text-primary);">{{ activeVariant.tenSanPham }}</span>
+      <button
+        type="button"
+        class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ms-auto"
+        style="width:34px; height:34px; padding:0; border:none; background:transparent; font-size:15px;"
+        :aria-label="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
+        :title="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
+        @click="$emit('toggle-wishlist', activeVariant)">
+        {{ isWishlisted ? '❤️' : '🤍' }}
+      </button>
       <span
-        class="badge ms-auto flex-shrink-0"
-        :class="activeVariant.trangThai === 'active' ? 'bg-success' : 'bg-secondary'"
+        class="badge flex-shrink-0"
+        :class="stockBadgeClass"
         style="font-size:10px;"
-      >{{ activeVariant.trangThai === 'active' ? t('productDetail.inStock') : t('productDetail.outOfStock') }}</span>
+      >{{ stockBadgeText }}</span>
     </div>
 
     <div class="container-xl py-4">
@@ -200,7 +209,7 @@
             <button
               class="btn fw-black flex-grow-1 py-2"
               style="background:var(--accent); color:var(--accent-text); border-radius:12px; font-size:0.95rem;"
-              :disabled="activeVariant.trangThai !== 'active'"
+              :disabled="stockBadgeClass === 'bg-secondary'"
               @click="$emit('add-to-cart', activeVariant)"
             >
               {{ t('productDetail.addToCart') }}
@@ -256,6 +265,66 @@
         <div class="small" style="line-height:1.8; white-space:pre-wrap; color:var(--text-secondary);">{{ activeVariant.moTa }}</div>
       </div>
 
+      <!-- ── Đánh giá sản phẩm ── -->
+      <div class="mt-5">
+        <h2 class="fw-bold mb-3" style="font-size:1rem; border-bottom:1px solid var(--border-color); padding-bottom:8px; color:var(--text-heading);">
+          {{ t('review.heading') }}
+          <span v-if="avgRating != null" class="fw-normal" style="font-size:0.85rem; color:var(--text-secondary);">
+            · ⭐ {{ avgRating.toFixed(1) }} ({{ reviews.length }})
+          </span>
+        </h2>
+
+        <!-- Form viết đánh giá — chỉ hiện khi đã đăng nhập và chưa đánh giá -->
+        <div v-if="authUser && !myReview" class="mb-4 p-3 rounded-3" style="background:var(--bg-card); border:1px solid var(--border-color);">
+          <div class="d-flex align-items-center gap-1 mb-2">
+            <button
+              v-for="n in 5" :key="n" type="button"
+              class="btn btn-sm p-0" style="font-size:20px; background:transparent; border:none; line-height:1;"
+              @click="newSoSao = n"
+            >{{ n <= newSoSao ? '⭐' : '☆' }}</button>
+          </div>
+          <textarea
+            v-model="newNoiDung" class="form-control form-control-sm mb-2" rows="2" maxlength="1000"
+            :placeholder="t('review.placeholder')"
+          ></textarea>
+          <div v-if="reviewError" class="small text-danger mb-2">{{ reviewError }}</div>
+          <button class="btn btn-sm btn-warning fw-bold" :disabled="submittingReview" @click="submitReview">
+            {{ t('review.submit') }}
+          </button>
+        </div>
+        <div v-else-if="!authUser" class="mb-4 small" style="color:var(--text-secondary);">
+          {{ t('review.loginToReview') }}
+        </div>
+
+        <!-- Đánh giá của tôi -->
+        <div v-if="myReview" class="mb-4 p-3 rounded-3 d-flex justify-content-between align-items-start gap-2"
+             style="background:rgba(244,63,94,0.08); border:1px solid rgba(244,63,94,0.3);">
+          <div>
+            <div class="small fw-semibold mb-1" style="color:var(--text-primary);">
+              {{ t('review.yourReview') }} · {{ '⭐'.repeat(myReview.soSao) }}
+            </div>
+            <div v-if="myReview.noiDung" class="small" style="color:var(--text-secondary);">{{ myReview.noiDung }}</div>
+          </div>
+          <button class="btn btn-sm btn-outline-danger flex-shrink-0" @click="deleteMyReview">{{ t('review.delete') }}</button>
+        </div>
+
+        <!-- Danh sách đánh giá của khách khác -->
+        <div v-if="reviewsLoading" class="small" style="color:var(--text-secondary);">{{ t('review.loading') }}</div>
+        <div v-else-if="otherReviews.length === 0 && !myReview" class="small" style="color:var(--text-secondary);">
+          {{ t('review.empty') }}
+        </div>
+        <div v-else class="d-flex flex-column gap-3">
+          <div v-for="r in pagedReviews" :key="r.danhGiaId" class="pb-3" style="border-bottom:1px solid var(--border-color-soft);">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-semibold small" style="color:var(--text-primary);">{{ r.tenKhachHang }}</span>
+              <span style="font-size:12px;">{{ '⭐'.repeat(r.soSao) }}</span>
+            </div>
+            <div v-if="r.noiDung" class="small" style="color:var(--text-secondary);">{{ r.noiDung }}</div>
+          </div>
+          <Pagination :current-page="reviewsPage" :total-pages="reviewsTotalPages" @page-change="reviewsPage = $event" />
+        </div>
+      </div>
+
     </div><!-- /container -->
   </div>
 </template>
@@ -265,13 +334,23 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { t } from '../../i18n/index.js';
 import { formatPrice as formatPriceRaw } from '../../utils/formatPrice.js';
 import { configKey, configLabel, colorDot } from '../../utils/productGrouping.js';
+import * as DanhGiaService from '../../services/DanhGiaService.js';
+import Pagination from '../common/Pagination.vue';
+import { usePagination } from '../../composables/usePagination.js';
 
 const props = defineProps({
-  product:  { type: Object,  required: true },
-  products: { type: Array,   default: () => [] },
+  product:     { type: Object,  required: true },
+  products:    { type: Array,   default: () => [] },
+  // Set các bienTheId đang yêu thích (App.vue giữ state dùng chung) — truyền cả Set thay vì
+  // 1 boolean tính sẵn, vì trang này cho đổi cấu hình/màu (activeVariant đổi bienTheId), phải
+  // tự tính lại theo đúng biến thể đang xem chứ không cố định theo product lúc mở trang.
+  wishlistIds: { type: Set, default: () => new Set() },
+  // Khách đang đăng nhập (null nếu chưa) — dùng để ẩn/hiện form đánh giá và nhận diện đánh giá
+  // của chính mình (so khachHangId), giống cách wishlist nhờ App.vue quyết định đăng nhập chưa.
+  authUser: { type: Object, default: null },
 });
 
-defineEmits(['close', 'add-to-cart', 'open-product']);
+defineEmits(['close', 'add-to-cart', 'open-product', 'toggle-wishlist']);
 
 // Khóa scroll trang nền khi overlay mở để tránh 2 scrollbar
 onMounted(() => { document.body.style.overflow = 'hidden'; });
@@ -321,6 +400,24 @@ const activeVariant = computed(() =>
     (v.mauSac ?? '') === activeColor.value
   ) ?? props.product
 );
+
+const isWishlisted = computed(() => props.wishlistIds.has(activeVariant.value.bienTheId));
+
+// Ngưỡng "sắp hết hàng" — dùng chung với ProductCard.vue.
+const LOW_STOCK_THRESHOLD = 5;
+
+const stockBadgeClass = computed(() => {
+  if (activeVariant.value.trangThai !== 'active' || (activeVariant.value.soLuongTon ?? 0) <= 0) return 'bg-secondary';
+  if (activeVariant.value.soLuongTon <= LOW_STOCK_THRESHOLD) return 'bg-warning text-dark';
+  return 'bg-success';
+});
+
+const stockBadgeText = computed(() => {
+  const soLuong = activeVariant.value.soLuongTon ?? 0;
+  if (activeVariant.value.trangThai !== 'active' || soLuong <= 0) return t('productDetail.outOfStock');
+  if (soLuong <= LOW_STOCK_THRESHOLD) return t('productDetail.lowStockCount', { count: soLuong });
+  return t('productDetail.inStockCount', { count: soLuong });
+});
 
 const selectConfig = (v) => {
   activeConfigKey.value = configKey(v);
@@ -378,4 +475,66 @@ const specGroups = computed(() => {
     ]),
   };
 });
+
+// ── Đánh giá sản phẩm — theo sanPhamId (chung cho mọi biến thể/màu), không đổi khi chọn lại
+// cấu hình/màu trong cùng lần mở nên chỉ cần load 1 lần lúc mount. ─────────────────────────
+const reviews = ref([]);
+const reviewsLoading = ref(true);
+
+const loadReviews = async () => {
+  reviewsLoading.value = true;
+  try {
+    reviews.value = await DanhGiaService.getBySanPham(props.product.sanPhamId);
+  } catch {
+    reviews.value = [];
+  } finally {
+    reviewsLoading.value = false;
+  }
+};
+onMounted(loadReviews);
+
+// auth.user.id = khachHangId cho tài khoản khách hàng (xem AuthService.buildLoginResponse —
+// LoginResponse dùng field chung "id", không phải "khachHangId").
+const myReview = computed(() =>
+  props.authUser ? reviews.value.find(r => r.khachHangId === props.authUser.id) ?? null : null
+);
+const otherReviews = computed(() =>
+  reviews.value.filter(r => r.danhGiaId !== myReview.value?.danhGiaId)
+);
+const { currentPage: reviewsPage, totalPages: reviewsTotalPages, pagedItems: pagedReviews } = usePagination(otherReviews, 5);
+const avgRating = computed(() =>
+  reviews.value.length ? reviews.value.reduce((sum, r) => sum + r.soSao, 0) / reviews.value.length : null
+);
+
+const newSoSao = ref(5);
+const newNoiDung = ref('');
+const submittingReview = ref(false);
+const reviewError = ref('');
+
+const submitReview = async () => {
+  reviewError.value = '';
+  submittingReview.value = true;
+  try {
+    const res = await DanhGiaService.add(props.product.sanPhamId, newSoSao.value, newNoiDung.value.trim() || null);
+    if (!res.ok) { reviewError.value = await res.text().catch(() => res.statusText); return; }
+    newSoSao.value = 5;
+    newNoiDung.value = '';
+    await loadReviews();
+  } catch (e) {
+    reviewError.value = e.message || t('review.submitFailed');
+  } finally {
+    submittingReview.value = false;
+  }
+};
+
+const deleteMyReview = async () => {
+  if (!myReview.value) return;
+  try {
+    const res = await DanhGiaService.remove(myReview.value.danhGiaId);
+    if (!res.ok) { reviewError.value = await res.text().catch(() => res.statusText); return; }
+    await loadReviews();
+  } catch (e) {
+    reviewError.value = e.message || t('review.deleteFailed');
+  }
+};
 </script>

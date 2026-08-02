@@ -4,7 +4,10 @@ import { t } from "../../i18n/index.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { nowLocalIso } from "../../utils/datetime.js";
+import { formatDate } from "../../utils/adminFormat.js";
 import * as XLSX from "xlsx";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 const props = defineProps({
   service: { type: Object, required: true },
@@ -19,22 +22,40 @@ const props = defineProps({
 const items = ref([]);
 const loading = ref(false);
 const search = ref("");
+// Toan bo serial cua loai linh kien nay (khong loc theo item) — tai 1 lan cung items,
+// dung de dem "con bao nhieu" (trang_thai='trong_kho') tren tung dong + hien danh sach
+// khi bam nut xem.
+const serials = ref([]);
 
 const load = async () => {
   loading.value = true;
   try {
-    items.value = await props.service.getAll().catch(() => []);
+    [items.value, serials.value] = await Promise.all([
+      props.service.getAll().catch(() => []),
+      props.serialService.getAll().catch(() => []),
+    ]);
   } finally {
     loading.value = false;
   }
 };
 onMounted(load);
 
+const serialsOf = (item) => serials.value.filter((s) => s[props.serialFieldName] === item[props.idField]);
+const stockCountOf = (item) => serialsOf(item).filter((s) => s.trangThai === 'trong_kho').length;
+
+const showSerialsModal = ref(false);
+const serialsModalItem = ref(null);
+const openSerials = (item) => {
+  serialsModalItem.value = item;
+  showSerialsModal.value = true;
+};
+
 const filteredItems = computed(() => {
   const q = search.value.trim().toLowerCase();
   if (!q) return items.value;
   return items.value.filter((i) => (i[props.nameField] || '').toLowerCase().includes(q));
 });
+const { currentPage, totalPages, pagedItems: pagedRows, pageSize } = usePagination(filteredItems);
 
 const showModal = ref(false);
 const editingId = ref(null);
@@ -160,11 +181,12 @@ const deleteItem = async (id) => {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, idx) in filteredItems" :key="item[idField]">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(item, idx) in pagedRows" :key="item[idField]">
+          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
           <td>{{ item[nameField] }}</td>
           <td>
             <div class="d-flex gap-1">
+              <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 8px;" @click="openSerials(item)">🔢 {{ t('admin.dmCategory.viewSerials', { count: stockCountOf(item) }) }}</button>
               <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openEdit(item)">{{ t('admin.dmCategory.edit') }}</button>
               <button class="btn btn-sm btn-outline-danger" style="font-size:0.78rem;padding:2px 8px;" @click="deleteItem(item[idField])">{{ t('admin.dmCategory.delete') }}</button>
             </div>
@@ -173,6 +195,7 @@ const deleteItem = async (id) => {
         <tr v-if="filteredItems.length===0"><td colspan="3" class="text-center text-secondary">{{ t('admin.dmCategory.empty', { label }) }}</td></tr>
       </tbody>
     </table>
+    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
   <div v-if="showModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showModal=false">
@@ -206,6 +229,26 @@ const deleteItem = async (id) => {
       <div class="d-flex justify-content-end gap-2">
         <button class="btn btn-sm btn-outline-secondary" @click="showModal=false">{{ t('admin.dmCategory.cancel') }}</button>
         <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="saving" @click="saveItem">{{ t('admin.dmCategory.save') }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal xem danh sach serial cua 1 muc danh muc (CPU/RAM/GPU/O cung) — thuan xem,
+       sua/xoa tung serial van lam o tab Serial chung (SerialManager.vue) -->
+  <div v-if="showSerialsModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showSerialsModal=false">
+    <div class="rounded-3 p-3 d-flex flex-column" style="background:var(--bg-card);width:420px;max-width:94vw;max-height:80vh;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="fw-bold" style="color:var(--text-heading);">{{ t('admin.dmCategory.serialsModalTitle', { name: serialsModalItem?.[nameField] }) }}</div>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showSerialsModal=false"></button>
+      </div>
+      <div class="overflow-y-auto d-flex flex-column gap-1">
+        <div v-if="serialsOf(serialsModalItem).length===0" class="text-secondary small text-center py-3">{{ t('admin.serialManager.empty') }}</div>
+        <div v-for="s in serialsOf(serialsModalItem)" :key="s.soSerial"
+             class="d-flex justify-content-between align-items-center p-2 rounded-2" style="background:var(--bg-hover);font-size:0.82rem;">
+          <span class="font-monospace">{{ s.soSerial }}</span>
+          <span class="text-secondary">{{ t(`admin.statusLabel.${s.trangThai}`) }}</span>
+          <span class="text-secondary" style="font-size:0.72rem;">{{ formatDate(s.ngayNhapKho) }}</span>
+        </div>
       </div>
     </div>
   </div>

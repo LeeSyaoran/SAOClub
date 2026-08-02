@@ -36,3 +36,7 @@ export const addChiTiet = (body) => post('/api/chi-tiet-don-hang', body);
 // Chọn serial cho từng dòng + chốt bán + chuyển đơn sang "confirmed" (xác nhận) — chỉ
 // dùng cho đơn online. body: { lines: [{ chiTietDonHangId, serialIds: [...] }] }
 export const xacNhan = (donHangId, body) => patch(`/api/don-hang/${donHangId}/xac-nhan`, body);
+
+// Khách tự bấm "Đã nhận được hàng" khi đơn ở "awaiting_confirmation" — chuyển hẳn sang
+// "delivered". Route mở cho khách (không staff-only), backend tự kiểm tra đúng chủ đơn.
+export const xacNhanDaNhanHang = (donHangId) => patch(`/api/don-hang/${donHangId}/xac-nhan-nhan-hang`, {});

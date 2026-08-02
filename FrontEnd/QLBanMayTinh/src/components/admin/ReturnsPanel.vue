@@ -13,6 +13,8 @@ import { OrdersStore, ensureOrders } from "../../stores/orders.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import { StaffStore, ensureStaff } from "../../stores/staff.js";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 import {
   ReturnsStore,
   ensureReturns,
@@ -72,6 +74,7 @@ const filteredReturns = computed(() => {
     );
   });
 });
+const { currentPage, totalPages, pagedItems: pagedReturns, pageSize } = usePagination(filteredReturns);
 
 // ── Modal tao/sua/xem ─────────────────────────────────────────────────────────
 const showModal = ref(false);
@@ -345,8 +348,8 @@ const deleteReturn = async (id) => {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(p, idx) in filteredReturns" :key="p.phieuTraId">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(p, idx) in pagedReturns" :key="p.phieuTraId">
+          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
           <td class="text-secondary" style="font-family: monospace">
             {{ p.maPhieu || "#" + p.phieuTraId }}
           </td>
@@ -399,6 +402,7 @@ const deleteReturn = async (id) => {
         </tr>
       </tbody>
     </table>
+    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
   <!-- ══ MODAL PHIEU TRA HANG ══ -->

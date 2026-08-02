@@ -6,6 +6,8 @@ import { statusLabel } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { SuppliersStore, ensureSuppliers, refreshSuppliers } from "../../stores/suppliers.js";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 onMounted(() => { ensureSuppliers(); });
 
@@ -21,6 +23,7 @@ const filteredSuppliers = computed(() => {
     (s.email ?? '').toLowerCase().includes(q)
   );
 });
+const { currentPage, totalPages, pagedItems: pagedSuppliers, pageSize } = usePagination(filteredSuppliers);
 
 // ── Modal them/sua ────────────────────────────────────────────────────────────
 const showModal = ref(false);
@@ -115,8 +118,8 @@ const deleteSupplier = async (id) => {
         <th>{{ t('admin.suppliers.colContact') }}</th><th>{{ t('admin.suppliers.colStatus') }}</th><th>{{ t('admin.suppliers.colAction') }}</th>
       </tr></thead>
       <tbody>
-        <tr v-for="(s, idx) in filteredSuppliers" :key="s.nhaCungCapId">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(s, idx) in pagedSuppliers" :key="s.nhaCungCapId">
+          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
           <td>{{ s.tenNhaCungCap }}</td>
           <td class="text-secondary">{{ s.soDienThoai }}</td>
           <td class="text-secondary">{{ s.email }}</td>
@@ -132,6 +135,7 @@ const deleteSupplier = async (id) => {
         <tr v-if="filteredSuppliers.length===0"><td colspan="7" class="text-center text-secondary">{{ t('admin.suppliers.empty') }}</td></tr>
       </tbody>
     </table>
+    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
   <!-- ══ MODAL NHA CUNG CAP ══ -->

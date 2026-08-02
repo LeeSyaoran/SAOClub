@@ -10,9 +10,11 @@ import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { PromotionsStore, ensurePromotions } from "../../stores/promotions.js";
 import { refreshOrders } from "../../stores/orders.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
+import ProductDetailModal from "./ProductDetailModal.vue";
 import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot } from "../../utils/productGrouping.js";
 import { POS_PAYMENT_METHODS, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
 import * as ThanhToanService from "../../services/ThanhToanService.js";
+import { askConfirm } from "../../stores/confirm.js";
 
 onMounted(() => { ensureProducts(); ensureCustomers(); ensurePromotions(); });
 
@@ -51,9 +53,39 @@ const posProducts = computed(() => {
 // variantPickerVariants.
 const posProductGroups = computed(() => groupBySanPham(posProducts.value));
 const posVariantCountMap = computed(() => variantCountBySanPham(posProducts.value));
+
+// Modal "Chi tiet san pham" xem-thuan (khong qua cong khach hang, khong dinh vao luong
+// them-vao-gio) — mo tu nut "Chi tiet" tren dong gio hang, dung lai ProductDetailModal.vue.
+// onlyBienTheIds gioi han modal chi hien DUNG cac bien the dang co trong nhom gio hang nay
+// (khong phai toan bo ho bien the trong catalogue) — them 1 bien the moi cung sanPhamId
+// vao gio thi lan mo sau se tu dong hien them, vi tinh lai luc mo (khong luu snapshot).
+const showPosDetailModal = ref(false);
+const posDetailSanPhamId = ref(null);
+const posDetailSanPhamName = ref('');
+const posDetailOnlyBienTheIds = ref(null);
+const openPosDetail = (g) => {
+  posDetailSanPhamId.value = g.sanPhamId;
+  posDetailSanPhamName.value = g.tenSanPham;
+  posDetailOnlyBienTheIds.value = [...new Set(g.items.map((i) => i.bienTheId))];
+  showPosDetailModal.value = true;
+};
+
 const posCartTotal = computed(() =>
   posCart.value.reduce((s, i) => s + i.giaBan * i.soLuong, 0),
 );
+// Gom posCart (van la mang phang 1 phan tu/serial — nguon su that cho posCartTotal/
+// posPlaceOrder, khong doi) theo sanPhamId de hien thi — mua nhieu bien the KHAC NHAU
+// (khac mau/cau hinh) cung 1 san pham van gom chung 1 dong "x N", giong dung cach lai
+// san pham da gom o luoi ben trai.
+const posCartGroups = computed(() => {
+  const map = new Map();
+  posCart.value.forEach((item) => {
+    if (!map.has(item.sanPhamId)) map.set(item.sanPhamId, { ...item, items: [] });
+    map.get(item.sanPhamId).items.push(item);
+  });
+  return [...map.values()];
+});
+const posGroupTotal = (g) => g.items.reduce((s, i) => s + i.giaBan, 0);
 const posFee = computed(() => (posCartTotal.value >= 300000 ? 0 : 30000));
 const posGiamGia = computed(() => {
   const p = posAppliedPromo.value;
@@ -241,8 +273,11 @@ const showSerialPicker = ref(false);
 const serialPickerProduct = ref(null);
 const serialPickerList = ref([]);
 const serialPickerLoading = ref(false);
+// Khac null khi mo picker de DOI serial cua 1 dong da co san trong gio (nut 🔄) — thay vi
+// them dong moi. Serial cu se duoc tra ve "trong_kho" sau khi chon xong (xem posSelectSerial).
+const serialPickerSwapChiTietId = ref(null);
 
-const posOpenSerialPicker = async (p) => {
+const posOpenSerialPicker = async (p, swapChiTietId = null) => {
   // Chan them vao gio neu chua xac dinh khach hang — nhan vien duyet san pham
   // thoai mai, nhung phai qua cong "Tao hoa don" (o khu vuc gio hang) truoc.
   if (posStage.value !== 'selling') {
@@ -251,6 +286,7 @@ const posOpenSerialPicker = async (p) => {
     return;
   }
   serialPickerProduct.value = p;
+  serialPickerSwapChiTietId.value = swapChiTietId;
   serialPickerList.value = [];
   showSerialPicker.value = true;
   serialPickerLoading.value = true;
@@ -277,6 +313,7 @@ const setSerialTrangThai = async (item, trangThai) => {
 const posSelectSerial = async (serial) => {
   const p = serialPickerProduct.value;
   const item = {
+    sanPhamId: p.sanPhamId,
     bienTheId: p.bienTheId,
     tenSanPham: p.tenSanPham,
     maSku: p.maSku,
@@ -287,17 +324,34 @@ const posSelectSerial = async (serial) => {
     ngayNhapKho: serial.ngayNhapKho,
     soLuong: 1,
   };
-  posCart.value.push(item);
+  const swapId = serialPickerSwapChiTietId.value;
+  const oldItem = swapId != null ? posCart.value.find((i) => i.chiTietId === swapId) : null;
+  posCart.value = swapId != null
+    ? posCart.value.map((i) => (i.chiTietId === swapId ? item : i))
+    : [...posCart.value, item];
   showSerialPicker.value = false;
+  serialPickerSwapChiTietId.value = null;
   // Danh dau giu ngay khi chon — de phien POS khac (hoac don khac) khong the chon trung
   // serial nay, ke ca khi don nay chua duoc "giu don" chinh thuc.
   await setSerialTrangThai(item, 'giu_hang');
+  if (oldItem) await setSerialTrangThai(oldItem, 'trong_kho');
 };
 
 const posRemove = async (chiTietId) => {
   const item = posCart.value.find((i) => i.chiTietId === chiTietId);
+  if (!item) return;
+  if (!(await askConfirm(t('admin.pos.confirmRemove', { name: item.tenSanPham, serial: item.soSerial })))) return;
   posCart.value = posCart.value.filter((i) => i.chiTietId !== chiTietId);
-  if (item) await setSerialTrangThai(item, 'trong_kho');
+  await setSerialTrangThai(item, 'trong_kho');
+};
+
+// Xoa toan bo 1 group (cung bienTheId) trong 1 lan xac nhan — dung khi mua nhieu may cung
+// bien the va muon huy ca lo, thay vi bam xoa tung serial rieng.
+const posRemoveGroup = async (g) => {
+  if (!(await askConfirm(t('admin.pos.confirmRemoveGroup', { name: g.tenSanPham, count: g.items.length })))) return;
+  const ids = new Set(g.items.map((i) => i.chiTietId));
+  posCart.value = posCart.value.filter((i) => !ids.has(i.chiTietId));
+  await Promise.all(g.items.map((i) => setSerialTrangThai(i, 'trong_kho')));
 };
 const posReset = async () => {
   await Promise.all(posCart.value.map((item) => setSerialTrangThai(item, 'trong_kho')));
@@ -379,13 +433,14 @@ const posPlaceOrder = async () => {
   try {
     const khachHangId = posFoundCust.value.khachHangId;
     const nguoiNhan = posFoundCust.value.hoTen;
+    const ngayDat = nowLocalIso();
     const orderRes = await DonHangService.create({
       khachHangId, nguoiNhan, sdtNguoiNhan: posFoundCust.value.soDienThoai,
       diaChiGiaoHangText: posFoundCust.value.diaChi ?? "Tai cua hang",
       khuyenMaiId: posAppliedPromo.value?.khuyenMaiId ?? null,
       tongTien: posCartTotal.value, giamGia: posGiamGia.value,
       phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
-      ngayDat: nowLocalIso(),
+      ngayDat,
       trangThaiDonHang: "confirmed", trangThaiThanhToan: "paid", kenhBan: "in_store",
     });
     if (!orderRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(orderRes) }));
@@ -424,6 +479,22 @@ const posPlaceOrder = async () => {
         });
         if (!ttRes.ok) throw new Error(t('admin.errors.createPaymentError', { message: await parsePosApiError(ttRes) }));
       }
+      // Don tai quay: khach nhan hang ngay luc thanh toan, khong qua cac buoc giao hang online
+      // (processing/shipping/out_for_delivery) — chuyen thang sang "delivered" ngay sau khi
+      // tao don + ghi nhan thanh toan xong. Backend chi cho phep nhay thang confirmed->delivered
+      // voi kenhBan="in_store" (xem DonHangService.kiemTraChuyenTrangThai), don online van phai
+      // di tuan tu nhu cu.
+      const finalizeRes = await DonHangService.update(donHangId, {
+        khachHangId, nguoiNhan, sdtNguoiNhan: posFoundCust.value.soDienThoai,
+        diaChiGiaoHangText: posFoundCust.value.diaChi ?? "Tai cua hang",
+        khuyenMaiId: posAppliedPromo.value?.khuyenMaiId ?? null,
+        tongTien: posCartTotal.value, giamGia: posGiamGia.value,
+        phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
+        ngayDat,
+        ngayGiaoThucTe: nowLocalIso(),
+        trangThaiDonHang: "delivered", trangThaiThanhToan: "paid", kenhBan: "in_store",
+      });
+      if (!finalizeRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(finalizeRes) }));
     } catch (e) {
       await DonHangService.remove(donHangId).catch(() => {});
       // Xoa xong nhung khong refresh thi danh sach don hang tren UI (da tang truoc do qua
@@ -515,22 +586,43 @@ const posPlaceOrder = async () => {
       <template v-if="posStage === 'selling'">
       <div class="flex-grow-1 overflow-y-auto p-2 d-flex flex-column gap-1">
         <div v-if="posCart.length===0" class="text-secondary small text-center py-4">{{ t('admin.pos.cartEmptyList') }}</div>
-        <div v-for="item in posCart" :key="item.chiTietId"
-             class="d-flex align-items-center gap-2 p-2 rounded-2" style="background:var(--bg-hover);">
-          <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);">
-            <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:2px;" />
-            <span v-else style="font-size:1rem;">💻</span>
+        <div v-for="g in posCartGroups" :key="g.sanPhamId"
+             class="d-flex flex-column gap-1 p-2 rounded-2" style="background:var(--bg-hover);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);">
+              <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh" :alt="g.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:2px;" />
+              <span v-else style="font-size:1rem;">💻</span>
+            </div>
+            <div class="flex-grow-1" style="min-width:0;">
+              <div class="fw-semibold small text-light text-truncate">{{ g.tenSanPham }}<span v-if="g.items.length>1" class="text-secondary fw-normal"> × {{ g.items.length }}</span></div>
+              <template v-if="g.items.length===1">
+                <div class="text-secondary" style="font-size:0.73rem;">{{ g.items[0].maSku }}</div>
+                <div class="text-info" style="font-size:0.7rem;">S/N: {{ g.items[0].soSerial }}</div>
+              </template>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary flex-shrink-0" style="width:20px;height:20px;padding:0;font-size:0.62rem;"
+                    :aria-label="t('admin.products.detail')" @click="openPosDetail(g)">ℹ️</button>
+            <div v-if="g.items.length===1" class="d-flex align-items-center gap-1 flex-shrink-0">
+              <button class="btn btn-sm btn-outline-secondary" style="width:20px;height:20px;padding:0;font-size:0.68rem;"
+                      :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(g.items[0], g.items[0].chiTietId)">🔄</button>
+              <button class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
+                      :aria-label="t('common.remove')" @click="posRemove(g.items[0].chiTietId)">✕</button>
+            </div>
+            <button v-else class="btn btn-sm btn-outline-danger flex-shrink-0" style="font-size:0.66rem;padding:2px 6px;" @click="posRemoveGroup(g)">{{ t('admin.pos.removeAll') }} ({{ g.items.length }})</button>
+            <div class="text-warning fw-bold flex-shrink-0 text-end" style="font-size:0.8rem;min-width:72px;">{{ formatPrice(posGroupTotal(g)) }}</div>
           </div>
-          <div class="flex-grow-1" style="min-width:0;">
-            <div class="fw-semibold small text-light text-truncate">{{ item.tenSanPham }}</div>
-            <div class="text-secondary" style="font-size:0.73rem;">{{ item.maSku }}</div>
-            <div class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
+          <div v-if="g.items.length>1" class="d-flex flex-column gap-1 ps-4">
+            <div v-for="item in g.items" :key="item.chiTietId" class="d-flex align-items-center gap-2">
+              <div class="flex-grow-1" style="min-width:0;">
+                <div class="text-secondary text-truncate" style="font-size:0.68rem;">{{ item.maSku }}</div>
+                <div class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
+              </div>
+              <button class="btn btn-sm btn-outline-secondary" style="width:20px;height:20px;padding:0;font-size:0.68rem;"
+                      :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(item, item.chiTietId)">🔄</button>
+              <button class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
+                      :aria-label="t('common.remove')" @click="posRemove(item.chiTietId)">✕</button>
+            </div>
           </div>
-          <div class="d-flex align-items-center gap-1 flex-shrink-0">
-            <button class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
-                    :aria-label="t('common.remove')" @click="posRemove(item.chiTietId)">✕</button>
-          </div>
-          <div class="text-warning fw-bold flex-shrink-0 text-end" style="font-size:0.8rem;min-width:72px;">{{ formatPrice(item.giaBan*item.soLuong) }}</div>
         </div>
       </div>
       <!-- Ma khuyen mai -->
@@ -691,6 +783,15 @@ const posPlaceOrder = async () => {
   <!-- ══ MODAL THEM KHACH HANG NHANH (POS) — instance rieng, khong dung chung voi
        CustomersTable.vue vi 2 noi mo modal doc lap nhau ══ -->
   <CustomerFormModal ref="quickCustomerModalRef" v-model="showQuickCustomerModal" @saved="onQuickCustomerSaved" />
+
+  <!-- ══ MODAL CHI TIET SAN PHAM (POS) — xem-thuan, mo tu nut "Chi tiet" tren dong gio hang,
+       chi hien dung cac bien the dang co trong nhom do (onlyBienTheIds) ══ -->
+  <ProductDetailModal
+    v-model="showPosDetailModal"
+    :san-pham-id="posDetailSanPhamId"
+    :san-pham-name="posDetailSanPhamName"
+    :only-bien-the-ids="posDetailOnlyBienTheIds"
+  />
 </template>
 
 <style scoped>

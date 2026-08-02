@@ -12,6 +12,7 @@ services:
     volumes:
       - sqlserver-data:/var/opt/mssql
       - ./Database:/scripts
+      - ./Database/backups:/backups
 
   backend:
     build: ./BackEnd
@@ -27,6 +28,8 @@ services:
   frontend:
     image: node:20-alpine
     working_dir: /app
+    environment:
+      VITE_API_PROXY_TARGET: "http://backend:8080"
     volumes:
       - ./FrontEnd/QLBanMayTinh:/app
     ports:

@@ -204,6 +204,100 @@ class DonHangServiceTest {
     }
 
     @Test
+    void update_chuyenCancelled_traLaiSuatDungKhuyenMaiChung() {
+        com.example.backend.entity.KhuyenMai km = new com.example.backend.entity.KhuyenMai();
+        km.setKhuyenMaiId(3);
+        km.setSoLanDaDung(5);
+
+        DonHang d = new DonHang();
+        d.setId(1);
+        d.setTrangThaiDonHang("processing");
+        d.setKhuyenMai(km);
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+        when(khachHangRepository.getReferenceById(1)).thenReturn(new KhachHang());
+        when(donHangRepository.save(d)).thenReturn(d);
+        when(chiTietDonHangRepository.findEntityByDonHangId(1)).thenReturn(List.of());
+        when(khuyenMaiRepository.getReferenceById(3)).thenReturn(km);
+
+        com.example.backend.request.DonHangRequest request = new com.example.backend.request.DonHangRequest();
+        request.setKhachHangId(1);
+        request.setKhuyenMaiId(3);
+        request.setTrangThaiDonHang("cancelled");
+
+        service.update(1, request);
+
+        assertThat(km.getSoLanDaDung()).isEqualTo(4);
+        verify(khuyenMaiRepository).save(km);
+    }
+
+    @Test
+    void update_chuyenCancelled_traLaiVoucherCaNhan() {
+        com.example.backend.entity.PhieuGiamGiaCaNhan voucher = new com.example.backend.entity.PhieuGiamGiaCaNhan();
+        voucher.setPhieuId(7);
+        voucher.setDaSuDung(true);
+
+        DonHang d = new DonHang();
+        d.setId(1);
+        d.setTrangThaiDonHang("processing");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+        when(khachHangRepository.getReferenceById(1)).thenReturn(new KhachHang());
+        when(donHangRepository.save(d)).thenReturn(d);
+        when(chiTietDonHangRepository.findEntityByDonHangId(1)).thenReturn(List.of());
+        when(phieuGiamGiaCaNhanRepository.findByDonHang_Id(1)).thenReturn(Optional.of(voucher));
+
+        com.example.backend.request.DonHangRequest request = new com.example.backend.request.DonHangRequest();
+        request.setKhachHangId(1);
+        request.setTrangThaiDonHang("cancelled");
+
+        service.update(1, request);
+
+        assertThat(voucher.getDaSuDung()).isFalse();
+        verify(phieuGiamGiaCaNhanRepository).save(voucher);
+    }
+
+    // Đơn tại quầy: khách nhận hàng ngay lúc thanh toán, không qua các bước giao hàng
+    // online (processing/shipping/out_for_delivery) — POS gọi update() sang "delivered"
+    // ngay sau khi tạo đơn "confirmed", phải được phép dù bình thường confirmed chỉ được
+    // sang processing/cancelled (xem CHUYEN_TRANG_THAI_DON_HANG).
+    @Test
+    void update_donTaiQuay_confirmedSangDelivered_choPhep() {
+        DonHang d = new DonHang();
+        d.setId(1);
+        d.setTrangThaiDonHang("confirmed");
+        d.setKenhBan("in_store");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+        when(khachHangRepository.getReferenceById(1)).thenReturn(new KhachHang());
+        when(donHangRepository.save(d)).thenReturn(d);
+
+        com.example.backend.request.DonHangRequest request = new com.example.backend.request.DonHangRequest();
+        request.setKhachHangId(1);
+        request.setTrangThaiDonHang("delivered");
+
+        service.update(1, request);
+
+        assertThat(d.getTrangThaiDonHang()).isEqualTo("delivered");
+    }
+
+    // Đơn online KHÔNG được hưởng ngoại lệ trên — vẫn phải đi tuần tự qua processing/
+    // shipping/out_for_delivery, không được nhảy thẳng confirmed -> delivered.
+    @Test
+    void update_donOnline_confirmedSangDelivered_vanBiChan() {
+        DonHang d = new DonHang();
+        d.setId(1);
+        d.setTrangThaiDonHang("confirmed");
+        d.setKenhBan("online");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+
+        com.example.backend.request.DonHangRequest request = new com.example.backend.request.DonHangRequest();
+        request.setKhachHangId(1);
+        request.setTrangThaiDonHang("delivered");
+
+        assertThatThrownBy(() -> service.update(1, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Không thể chuyển trạng thái");
+    }
+
+    @Test
     void mergeOrders_donNguonChuaXacNhan_biChan() {
         DonHang target = new DonHang();
         target.setId(1);
@@ -511,6 +605,55 @@ class DonHangServiceTest {
         verify(donHangRepository).deleteById(1);
     }
 
+    // Dòng đơn hàng số_lượng > 1 giữ các serial "phụ" trong bảng join chi_tiet_don_hang_serial
+    // (FK -> chi_tiet_don_hang) — xóa chi_tiet_don_hang trước mà không dọn bảng join này trước
+    // sẽ làm Hibernate ném TransientPropertyValueException lúc flush (do 1 dòng
+    // ChiTietDonHangSerial persistent vẫn còn trỏ tới ChiTietDonHang vừa bị xóa), lộ ra ngoài
+    // thành lỗi 500 khi nhấn nút xóa đơn.
+    @Test
+    void delete_donCoSerialTrongBangJoin_xoaCaChiTietDonHangSerial() {
+        loginAs("nv1");
+        when(taiKhoanRepository.findByUsername("nv1")).thenReturn(Optional.of(taiKhoanStaff("nv1")));
+
+        DonHang d = donHangCuaKhach(1, 55);
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+
+        ChiTietDonHang item = new ChiTietDonHang();
+        item.setId(5);
+        when(chiTietDonHangRepository.findEntityByDonHangId(1)).thenReturn(List.of(item));
+        when(chiTietDonHangSerialRepository.findByChiTietDonHang_Id(5)).thenReturn(List.of());
+        when(lichSuTonKhoRepository.findByDonHang_Id(1)).thenReturn(List.of());
+
+        service.delete(1);
+
+        verify(chiTietDonHangSerialRepository).deleteByChiTietDonHang_Id(5);
+        verify(donHangRepository).deleteById(1);
+    }
+
+    // Đơn đã ghi nhận thanh toán (POS/checkout) có dòng thanh_toan trỏ FK về don_hang —
+    // xóa don_hang trước khi dọn thanh_toan sẽ vỡ constraint FK_tt_don_hang, lộ ra ngoài
+    // thành lỗi 400 khi bấm "Xóa" ở OrdersTable.vue.
+    @Test
+    void delete_donDaThanhToan_xoaCaThanhToan() {
+        loginAs("nv1");
+        when(taiKhoanRepository.findByUsername("nv1")).thenReturn(Optional.of(taiKhoanStaff("nv1")));
+
+        DonHang d = donHangCuaKhach(1, 55);
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+        when(chiTietDonHangRepository.findEntityByDonHangId(1)).thenReturn(List.of());
+        when(lichSuTonKhoRepository.findByDonHang_Id(1)).thenReturn(List.of());
+
+        com.example.backend.entity.ThanhToan tt = new com.example.backend.entity.ThanhToan();
+        tt.setThanhToanId(9);
+        tt.setDonHang(d);
+        when(thanhToanRepository.findByDonHang_Id(1)).thenReturn(List.of(tt));
+
+        service.delete(1);
+
+        verify(thanhToanRepository).deleteAll(List.of(tt));
+        verify(donHangRepository).deleteById(1);
+    }
+
     @Test
     void create_khachSpoofKhachHangIdNguoiKhac_biGhiDeVeChinhMinh() {
         loginAs("khach1");
@@ -562,5 +705,52 @@ class DonHangServiceTest {
         service.create(req);
 
         verify(khachHangRepository).getReferenceById(77);
+    }
+
+    // ── xacNhanDaNhanHang: khách tự bấm "Đã nhận được hàng" ──────────────────────────────
+    @Test
+    void xacNhanDaNhanHang_laChuDon_dangChoXacNhan_chuyenDelivered() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+
+        DonHang d = donHangCuaKhach(1, 1);
+        d.setTrangThaiDonHang("awaiting_confirmation");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+
+        service.xacNhanDaNhanHang(1);
+
+        assertThat(d.getTrangThaiDonHang()).isEqualTo("delivered");
+        verify(donHangRepository).save(d);
+    }
+
+    @Test
+    void xacNhanDaNhanHang_khongPhaiChuDon_biTuChoi() {
+        loginAs("khach2");
+        when(taiKhoanRepository.findByUsername("khach2")).thenReturn(Optional.of(taiKhoanKhachHang("khach2", 99)));
+
+        DonHang d = donHangCuaKhach(1, 1);
+        d.setTrangThaiDonHang("awaiting_confirmation");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+
+        assertThatThrownBy(() -> service.xacNhanDaNhanHang(1))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(donHangRepository, never()).save(any());
+    }
+
+    // Đơn chưa tới bước "awaiting_confirmation" (vd còn "shipping") — khách chưa xác nhận
+    // được, tránh nhảy cóc trạng thái qua route riêng này.
+    @Test
+    void xacNhanDaNhanHang_chuaDenBuocChoXacNhan_biChan() {
+        loginAs("khach1");
+        when(taiKhoanRepository.findByUsername("khach1")).thenReturn(Optional.of(taiKhoanKhachHang("khach1", 1)));
+
+        DonHang d = donHangCuaKhach(1, 1);
+        d.setTrangThaiDonHang("shipping");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+
+        assertThatThrownBy(() -> service.xacNhanDaNhanHang(1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Không thể chuyển trạng thái");
+        verify(donHangRepository, never()).save(any());
     }
 }

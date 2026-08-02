@@ -13,6 +13,8 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 // Không dựa vào ProductsTable.vue (tab anh em) đã tải sẵn ProductsStore — self-contained,
 // đúng pattern ensureX() dùng chung toàn app (no-op nếu đã tải/đang tải).
@@ -67,6 +69,7 @@ const filteredVariants = computed(() => {
     (p.maSku ?? '').toLowerCase().includes(q)
   );
 });
+const { currentPage, totalPages, pagedItems: pagedVariants, pageSize } = usePagination(filteredVariants);
 // Bỏ tiền tố hãng CPU (Intel Core/AMD Ryzen) — dư thừa, không cần trong bảng liệt kê gọn,
 // tên đầy đủ vẫn hiện nguyên trong ProductDetailModal.vue lúc xem chi tiết.
 const shortCpu = (cpu) => cpu?.replace(/^(Intel Core|AMD Ryzen)\s+/i, '') ?? '';
@@ -358,8 +361,8 @@ const deleteVariant = async (bienTheId) => {
         <th style="width:120px;">{{ t('admin.variants.colPriceSell') }}</th><th style="width:100px;">{{ t('admin.variants.colStatus') }}</th><th style="width:110px;">{{ t('admin.variants.colAction') }}</th>
       </tr></thead>
       <tbody>
-        <tr v-for="(p, idx) in filteredVariants" :key="p.bienTheId">
-          <td class="text-secondary">{{ idx + 1 }}</td>
+        <tr v-for="(p, idx) in pagedVariants" :key="p.bienTheId">
+          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
           <td class="text-secondary text-truncate" style="font-family:monospace; font-size:0.76rem; max-width:150px;" :title="p.maSku">{{ p.maSku }}</td>
           <td class="text-truncate" style="max-width:220px;" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
           <td class="text-secondary text-truncate" style="max-width:260px;" :title="configLabel(p)">{{ configLabel(p) }}</td>
@@ -376,6 +379,7 @@ const deleteVariant = async (bienTheId) => {
         <tr v-if="filteredVariants.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.variants.empty') }}</td></tr>
       </tbody>
     </table>
+    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
   <!-- ══ MODAL BIEN THE (them/sua) ══ -->

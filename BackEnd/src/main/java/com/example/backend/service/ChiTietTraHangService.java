@@ -1,6 +1,5 @@
 package com.example.backend.service;
 
-import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.ChiTietTraHang;
 import com.example.backend.entity.DonHang;
 import com.example.backend.entity.PhieuTraHang;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Locale;
 
 @Service
 public class ChiTietTraHangService {
@@ -53,27 +51,13 @@ public class ChiTietTraHangService {
         BeanUtils.copyProperties(request, entity, "phieuTraId", "bienTheId", "chiTietId");
         entity.setPhieuTraHang(phieu);
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
-        // chiTietId (serial cụ thể) — optional
+        // chiTietId (serial cụ thể) — optional. Việc cộng lại tồn kho (chuyển serial về
+        // "trong_kho") KHÔNG làm ở đây nữa — đã chuyển sang PhieuTraHangService.capNhatKhoNeuVuaHoanTat(),
+        // gắn đúng vào thời điểm phiếu chuyển "da_xu_ly" thay vì lúc tạo dòng (xem comment ở đó).
         if (request.getChiTietId() != null) {
             entity.setChiTietSanPham(chiTietSanPhamRepository.getReferenceById(request.getChiTietId()));
-
-            // Hàng trả về còn tốt → đưa lại "trong_kho" để bán tiếp (trigger DB tự cộng tồn kho).
-            // Hàng lỗi/hỏng thì không cộng lại — giữ nguyên trạng thái hiện tại (vd: chờ bảo hành/huỷ).
-            if (!laHangLoi(request.getTinhTrang())) {
-                ChiTietSanPham serial = chiTietSanPhamRepository.findById(request.getChiTietId())
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Serial không tồn tại với id: " + request.getChiTietId()));
-                serial.setTrangThai("trong_kho");
-                chiTietSanPhamRepository.save(serial);
-            }
         }
         return chiTietTraHangRepository.save(entity);
-    }
-
-    private boolean laHangLoi(String tinhTrang) {
-        if (tinhTrang == null) return false;
-        String s = tinhTrang.toLowerCase(Locale.ROOT);
-        return s.contains("lỗi") || s.contains("loi") || s.contains("hỏng") || s.contains("hong") || s.contains("hư");
     }
 
     // Đối chiếu số lượng trả với số lượng ĐÃ MUA thật của đơn — trước đây chỉ luồng khách tự

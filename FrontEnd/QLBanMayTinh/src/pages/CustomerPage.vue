@@ -17,18 +17,20 @@ import NavBar from "../components/layout/NavBar.vue";
 import AppFooter from "../components/layout/Footer.vue";
 import ProductFilter from "../components/product/ProductFilter.vue";
 import ProductCard from "../components/product/ProductCard.vue";
+import ProductCompareBar from "../components/product/ProductCompareBar.vue";
+import ProductCompareModal from "../components/product/ProductCompareModal.vue";
 import CartItem from "../components/cart/CartItem.vue";
 import CartSummary from "../components/cart/CartSummary.vue";
 
 const router = useRouter();
 
 const {
-  products, cart, showCart, cartCount, cartTotal, auth,
+  products, cart, showCart, cartCount, cartTotal, auth, ratingSummaries,
 } = inject("appState");
 const {
   addToCart, removeFromCart, updateQty, toggleCart,
   openCheckout, openProduct, showToast, openLogin, onLogout,
-  fetchProducts, formatPrice,
+  fetchProducts, formatPrice, isWishlisted, toggleWishlist,
 } = inject("appActions");
 
 const searchQuery = ref("");
@@ -39,6 +41,10 @@ const advFilter = reactive({
   priceMin: null,
   priceMax: null,
   category: null,
+  cpu: [],
+  ram: [],
+  gpu: [],
+  storage: [],
 });
 
 const apiCats = ref([]);
@@ -49,6 +55,14 @@ const fetchApiCats = async () => {
 const allBrands = computed(() => [
   ...new Set(products.value.map((p) => p.tenThuongHieu).filter(Boolean)),
 ]);
+
+// Chỉ liệt kê giá trị cấu hình THỰC SỰ có trong tập sản phẩm hiện tại — tránh chip lọc ra
+// danh sách rỗng. sort() cho RAM/Ổ cứng chỉ là sắp chữ (không phải theo dung lượng tăng dần)
+// nhưng với số lượng giá trị nhỏ (xem ProductFilter.vue) không đáng để viết parser riêng.
+const allCpus = computed(() => [...new Set(products.value.map((p) => p.cpu).filter(Boolean))].sort());
+const allRams = computed(() => [...new Set(products.value.map((p) => p.ram).filter(Boolean))].sort());
+const allGpus = computed(() => [...new Set(products.value.map((p) => p.gpu).filter(Boolean))].sort());
+const allStorages = computed(() => [...new Set(products.value.map((p) => p.oCung).filter(Boolean))].sort());
 
 const allCategories = computed(() => {
   const seen = new Set();
@@ -68,6 +82,10 @@ const onAdvFilterChange = (f) => {
   advFilter.priceMin = f.priceMin;
   advFilter.priceMax = f.priceMax;
   advFilter.category = f.category;
+  advFilter.cpu = f.cpu;
+  advFilter.ram = f.ram;
+  advFilter.gpu = f.gpu;
+  advFilter.storage = f.storage;
 };
 
 const activeTab = ref("deal");
@@ -145,6 +163,10 @@ const selectSidebarCat = (cat) => {
   advFilter.priceMin = null;
   advFilter.priceMax = null;
   advFilter.category = null;
+  advFilter.cpu = [];
+  advFilter.ram = [];
+  advFilter.gpu = [];
+  advFilter.storage = [];
   const el = document.getElementById("deal-section");
   if (el) el.scrollIntoView({ behavior: "smooth" });
 };
@@ -219,6 +241,15 @@ const filteredProducts = computed(() => {
     if (advFilter.category !== null && product.danhMucId !== advFilter.category)
       return false;
 
+    if (advFilter.cpu.length > 0 && !advFilter.cpu.includes(product.cpu))
+      return false;
+    if (advFilter.ram.length > 0 && !advFilter.ram.includes(product.ram))
+      return false;
+    if (advFilter.gpu.length > 0 && !advFilter.gpu.includes(product.gpu))
+      return false;
+    if (advFilter.storage.length > 0 && !advFilter.storage.includes(product.oCung))
+      return false;
+
     return true;
   });
 
@@ -246,6 +277,38 @@ const handleQuickAdd = (product) => {
   } else {
     addToCart(product);
   }
+};
+
+// ── So sánh sản phẩm — thuần frontend, mọi thông số cần đều đã có sẵn trong products.value
+// (SanPhamResponse.java), không cần gọi thêm API nào. ─────────────────────────────────────
+const MAX_COMPARE = 4;
+const compareList = ref([]);
+const showCompareModal = ref(false);
+
+const isComparing = (product) => compareList.value.some((p) => p.bienTheId === product.bienTheId);
+
+const toggleCompare = (product) => {
+  const idx = compareList.value.findIndex((p) => p.bienTheId === product.bienTheId);
+  if (idx !== -1) {
+    compareList.value.splice(idx, 1);
+    return;
+  }
+  if (compareList.value.length >= MAX_COMPARE) {
+    showToast(t("productCompare.maxReached", { max: MAX_COMPARE }));
+    return;
+  }
+  compareList.value.push(product);
+};
+
+const removeFromCompare = (product) => {
+  compareList.value = compareList.value.filter((p) => p.bienTheId !== product.bienTheId);
+};
+
+const clearCompare = () => { compareList.value = []; };
+
+const addToCartFromCompare = (product) => {
+  addToCart(product);
+  showCompareModal.value = false;
 };
 
 onMounted(() => {
@@ -614,7 +677,11 @@ onMounted(() => {
                 v-if="
                   advFilter.brands.length ||
                   advFilter.priceMin ||
-                  advFilter.category
+                  advFilter.category ||
+                  advFilter.cpu.length ||
+                  advFilter.ram.length ||
+                  advFilter.gpu.length ||
+                  advFilter.storage.length
                 "
                 class="badge bg-danger ms-1"
                 style="font-size: 9px"
@@ -622,7 +689,11 @@ onMounted(() => {
                 {{
                   advFilter.brands.length +
                   (advFilter.priceMin ? 1 : 0) +
-                  (advFilter.category ? 1 : 0)
+                  (advFilter.category ? 1 : 0) +
+                  advFilter.cpu.length +
+                  advFilter.ram.length +
+                  advFilter.gpu.length +
+                  advFilter.storage.length
                 }}
               </span>
             </button>
@@ -658,6 +729,10 @@ onMounted(() => {
           <ProductFilter
             :brands="allBrands"
             :categories="allCategories"
+            :cpus="allCpus"
+            :rams="allRams"
+            :gpus="allGpus"
+            :storages="allStorages"
             @change="onAdvFilterChange"
           />
         </div>
@@ -689,8 +764,14 @@ onMounted(() => {
             <ProductCard
               :product="product"
               :variant-count="variantCountMap.get(product.sanPhamId) || 0"
+              :is-comparing="isComparing(product)"
+              :compare-disabled="!isComparing(product) && compareList.length >= MAX_COMPARE"
+              :is-wishlisted="isWishlisted(product.bienTheId)"
+              :rating="ratingSummaries.get(product.sanPhamId)"
               @click="openProduct(product)"
               @add-to-cart="handleQuickAdd(product)"
+              @toggle-compare="toggleCompare(product)"
+              @toggle-wishlist="toggleWishlist(product)"
             />
           </div>
         </div>
@@ -785,4 +866,18 @@ onMounted(() => {
 
     <AppFooter />
   </div>
+
+  <ProductCompareBar
+    :items="compareList"
+    :max="MAX_COMPARE"
+    @open="showCompareModal = true"
+    @clear="clearCompare"
+    @remove="removeFromCompare"
+  />
+  <ProductCompareModal
+    v-model="showCompareModal"
+    :items="compareList"
+    @remove="removeFromCompare"
+    @add-to-cart="addToCartFromCompare"
+  />
 </template>

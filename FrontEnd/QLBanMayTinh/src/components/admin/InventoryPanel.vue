@@ -15,6 +15,8 @@ import { InventoryStore, ensureInventory } from "../../stores/inventory.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import { StaffStore, ensureStaff } from "../../stores/staff.js";
+import Pagination from "../common/Pagination.vue";
+import { usePagination } from "../../composables/usePagination.js";
 
 // products/inventory: chi doc (khong CRUD o day) — ProductsStore da duoc tai eager tu
 // fetchAll() (AdminPage.vue), goi lai ensureProducts() o day chi de an toan neu component
@@ -82,6 +84,7 @@ const inventoryGrouped = computed(() => {
       return true;
     });
 });
+const { currentPage: invCurrentPage, totalPages: invTotalPages, pagedItems: pagedInventoryGrouped } = usePagination(inventoryGrouped);
 
 const getVariantInfo = (item) => products.value.find(p => p.bienTheId === item.bienThe?.bienTheId);
 const stockClass = (item) => {
@@ -284,6 +287,7 @@ const filteredPhieuNhap = computed(() =>
     .filter(p => !phieuNhapStatusFilter.value || p.trangThai === phieuNhapStatusFilter.value)
     .sort((a, b) => new Date(b.ngayNhap) - new Date(a.ngayNhap)),
 );
+const { currentPage: pnCurrentPage, totalPages: pnTotalPages, pagedItems: pagedPhieuNhap, pageSize: pnPageSize } = usePagination(filteredPhieuNhap);
 
 // San pham + bien the de chon khi tao dong phieu nhap — lay tu ton kho (da co san, khoi tai them)
 // Options dang {value,label} de dung truc tiep voi SearchSelect.
@@ -683,7 +687,7 @@ const exportPhieuNhapExcel = () => {
     <div v-if="InventoryStore.loading" class="text-secondary small py-4 text-center">{{ t('admin.inventory.loading') }}</div>
     <div v-else class="d-flex flex-column gap-2">
 
-      <div v-for="group in inventoryGrouped" :key="group.name"
+      <div v-for="group in pagedInventoryGrouped" :key="group.name"
            class="rounded-3 overflow-hidden"
            style="background:var(--bg-card);border:1px solid var(--border-color);">
 
@@ -757,6 +761,7 @@ const exportPhieuNhapExcel = () => {
       </div>
 
       <div v-if="inventoryGrouped.length === 0" class="text-secondary small text-center py-5">{{ t('admin.inventory.empty') }}</div>
+      <Pagination :current-page="invCurrentPage" :total-pages="invTotalPages" @page-change="invCurrentPage = $event" />
     </div>
     </template>
 
@@ -842,8 +847,8 @@ const exportPhieuNhapExcel = () => {
           <th>{{ t('admin.phieuNhap.colAction') }}</th>
         </tr></thead>
         <tbody>
-          <tr v-for="(p, idx) in filteredPhieuNhap" :key="p.phieuNhapId">
-            <td class="text-secondary">{{ idx + 1 }}</td>
+          <tr v-for="(p, idx) in pagedPhieuNhap" :key="p.phieuNhapId">
+            <td class="text-secondary">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
             <td class="text-secondary" style="font-family:monospace;">{{ p.maPhieuNhap }}</td>
             <td>{{ formatDate(p.ngayNhap) }}</td>
             <td>{{ supplierName(p.nhaCungCapId) }}</td>
@@ -869,6 +874,7 @@ const exportPhieuNhapExcel = () => {
           <tr v-if="filteredPhieuNhap.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.phieuNhap.empty') }}</td></tr>
         </tbody>
       </table>
+      <Pagination :current-page="pnCurrentPage" :total-pages="pnTotalPages" @page-change="pnCurrentPage = $event" />
     </div>
     </template>
   </div>

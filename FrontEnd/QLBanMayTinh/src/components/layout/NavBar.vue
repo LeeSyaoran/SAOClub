@@ -72,7 +72,7 @@
           aria-haspopup="true"
           :aria-expanded="isMenuOpen"
           @click="isMenuOpen = !isMenuOpen">
-          ☰ {{ t('nav.categories') }}
+          ☰ <span class="d-none d-sm-inline">{{ t('nav.categories') }}</span>
         </button>
 
         <!-- Mega menu dropdown panel -->
@@ -158,7 +158,7 @@
           v-model="searchValue"
           type="text"
           class="form-control form-control-sm"
-          style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:12px 0 0 12px; font-size:12px; font-weight:600;"
+          style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:12px 0 0 12px; font-size:12px; font-weight:600; min-width:0;"
           :placeholder="t('nav.searchPlaceholder')"
           @keyup.enter="emit('search', searchValue)"
         />
@@ -178,7 +178,7 @@
         <button class="btn btn-sm d-flex align-items-center gap-1 fw-bold"
                 style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary); font-size:12px; white-space:nowrap;"
                 @click="emit('toggle-cart')">
-          🛒 {{ t('nav.cart') }}
+          🛒 <span class="d-none d-sm-inline">{{ t('nav.cart') }}</span>
           <!-- Badge hiển thị số lượng sản phẩm trong giỏ -->
           <span class="badge fw-black"
                 style="background:var(--accent); color:var(--accent-text); border-radius:999px; font-size:11px;">

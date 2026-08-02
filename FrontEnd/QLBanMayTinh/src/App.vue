@@ -27,6 +27,8 @@ import { t, applySystemDefaultLocale } from "./i18n/index.js";
 
 import * as SanPhamService from "./services/SanPhamService.js";
 import * as AuthService from "./services/AuthService.js";
+import * as YeuThichService from "./services/YeuThichService.js";
+import * as DanhGiaService from "./services/DanhGiaService.js";
 
 import LoginForm from "./components/auth/LoginForm.vue";
 import RegisterForm from "./components/auth/RegisterForm.vue";
@@ -95,6 +97,7 @@ const onLogout = () => {
   clearSession();
   resetAllStores();
   loadCart();
+  loadWishlist();
   showCart.value = false;
   showToast(t("toast.loggedOut"), "info");
   router.push("/");
@@ -184,6 +187,58 @@ const onBuyAgainUnavailable = (names) => {
   showToast(t("toast.buyAgainUnavailable", { names: names.join(", ") }), "error");
 };
 
+// ── Wishlist (yêu thích) — lưu ở backend theo khách hàng (không phải localStorage như giỏ
+// hàng), nên cần load lại mỗi khi đăng nhập/đăng xuất. Set để tra cứu isWishlisted() O(1)
+// trên lưới sản phẩm thay vì .find() O(n) trên mảng mỗi lần render 1 thẻ. ────────────────
+const wishlistIds = ref(new Set());
+
+const loadWishlist = async () => {
+  if (!auth.user) { wishlistIds.value = new Set(); return; }
+  try {
+    const list = await YeuThichService.getAll();
+    wishlistIds.value = new Set(list.map((i) => i.bienTheId));
+  } catch {
+    wishlistIds.value = new Set();
+  }
+};
+
+const isWishlisted = (bienTheId) => wishlistIds.value.has(bienTheId);
+
+const toggleWishlist = async (product) => {
+  if (!auth.user) {
+    showToast(t("toast.loginRequiredForWishlist"), "error");
+    openLogin();
+    return;
+  }
+  const daThich = wishlistIds.value.has(product.bienTheId);
+  try {
+    if (daThich) {
+      await YeuThichService.remove(product.bienTheId);
+      wishlistIds.value.delete(product.bienTheId);
+      showToast(t("toast.removedFromWishlist", { name: product.tenSanPham }), "info");
+    } else {
+      await YeuThichService.add(product.bienTheId);
+      wishlistIds.value.add(product.bienTheId);
+      showToast(t("toast.addedToWishlist", { name: product.tenSanPham }), "success");
+    }
+  } catch (e) {
+    showToast(e.message, "error");
+  }
+};
+
+// ── Đánh giá (rating summary) — công khai, không phụ thuộc đăng nhập nên chỉ load 1 lần lúc
+// mount (khác wishlist phải reload theo phiên). Map để ProductCard tra cứu O(1) theo sanPhamId. ──
+const ratingSummaries = ref(new Map());
+
+const loadRatingSummaries = async () => {
+  try {
+    const list = await DanhGiaService.getTongHop();
+    ratingSummaries.value = new Map(list.map((s) => [s.sanPhamId, s]));
+  } catch {
+    // giữ nguyên map cũ nếu lỗi mạng
+  }
+};
+
 // ── Checkout ──────────────────────────────────────────────────────────────────
 const showCheckout = ref(false);
 
@@ -241,6 +296,7 @@ const onPopState = (event) => {
 function onLoginSuccess(user) {
   setSession(user);
   loadCart();
+  loadWishlist();
   const ROLE_PATH = { admin: "/admin", nhan_vien: "/staff", quan_kho: "/kho" };
   router.push(ROLE_PATH[user.role] ?? "/");
 }
@@ -255,6 +311,8 @@ provide("appState", {
   showCheckout,
   selectedProduct,
   auth,
+  wishlistIds,
+  ratingSummaries,
 });
 
 provide("appActions", {
@@ -272,12 +330,17 @@ provide("appActions", {
   onBuyAgainUnavailable,
   fetchProducts,
   formatPrice,
+  isWishlisted,
+  toggleWishlist,
+  loadWishlist,
 });
 
 // ── Lifecycle hooks ───────────────────────────────────────────────────────────
 onMounted(async () => {
   window.addEventListener("popstate", onPopState);
   loadCart();
+  loadWishlist();
+  loadRatingSummaries();
   await loadSettings();
   applySystemDefaultLocale(SettingsStore.ngonNguMacDinh);
 });
@@ -294,6 +357,7 @@ onBeforeUnmount(() => {
         :is="Component"
         @add-to-cart="addToCart"
         @buy-again-unavailable="onBuyAgainUnavailable"
+        @toast="(msg, type) => showToast(msg, type)"
         @go-home="() => router.push('/')"
       />
     </router-view>
@@ -371,6 +435,8 @@ onBeforeUnmount(() => {
         :key="selectedProduct.bienTheId"
         :product="selectedProduct"
         :products="products"
+        :wishlist-ids="wishlistIds"
+        :auth-user="auth.user"
         @close="closeProduct"
         @add-to-cart="
           (p) => {
@@ -379,6 +445,7 @@ onBeforeUnmount(() => {
           }
         "
         @open-product="openProduct"
+        @toggle-wishlist="toggleWishlist"
       />
     </Transition>
   </div>
