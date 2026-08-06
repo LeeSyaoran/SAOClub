@@ -1,12 +1,12 @@
-# Thay emoji-làm-icon bằng lucide-vue-next Implementation Plan
+# Thay emoji-làm-icon bằng @lucide/vue Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Thay toàn bộ emoji đang đóng vai trò icon chức năng (chip số liệu, nút, badge trạng thái, header bảng, nav, timeline) trong admin + storefront bằng icon component từ `lucide-vue-next`, giữ nguyên emoji trang trí trong copy đã dịch.
+**Goal:** Thay toàn bộ emoji đang đóng vai trò icon chức năng (chip số liệu, nút, badge trạng thái, header bảng, nav, timeline) trong admin + storefront bằng icon component từ `@lucide/vue`, giữ nguyên emoji trang trí trong copy đã dịch.
 
-**Architecture:** Import trực tiếp named icon component từ `lucide-vue-next` tại từng file `.vue` cần dùng — không có wrapper component. Icon dùng `currentColor` (mặc định lucide) để ăn theo màu/token hiện có. `utils/orderStatus.js` đổi 3 hàm `orderStatusIcon`/`paymentStatusIcon`/`paymentMethodIcon` từ trả về chuỗi emoji sang trả về icon component, mọi nơi gọi đổi từ `{{ fn(s) }}` sang `<component :is="fn(s)" />`.
+**Architecture:** Import trực tiếp named icon component từ `@lucide/vue` tại từng file `.vue` cần dùng — không có wrapper component. Icon dùng `currentColor` (mặc định lucide) để ăn theo màu/token hiện có. `utils/orderStatus.js` đổi 3 hàm `orderStatusIcon`/`paymentStatusIcon`/`paymentMethodIcon` từ trả về chuỗi emoji sang trả về icon component, mọi nơi gọi đổi từ `{{ fn(s) }}` sang `<component :is="fn(s)" />`.
 
-**Tech Stack:** Vue 3 (`<script setup>`), `lucide-vue-next`, Vite, Vitest.
+**Tech Stack:** Vue 3 (`<script setup>`), `@lucide/vue`, Vite, Vitest.
 
 ## Global Constraints
 
@@ -22,7 +22,7 @@
 
 ## Master Icon Glossary
 
-Bảng ánh xạ emoji → icon `lucide-vue-next` dùng xuyên suốt plan này. Cùng một khái niệm luôn dùng cùng một icon ở mọi file (nhất quán thị giác — mục tiêu chính của việc đổi này).
+Bảng ánh xạ emoji → icon `@lucide/vue` dùng xuyên suốt plan này. Cùng một khái niệm luôn dùng cùng một icon ở mọi file (nhất quán thị giác — mục tiêu chính của việc đổi này).
 
 | Emoji | Icon | Khái niệm | Emoji | Icon | Khái niệm |
 |---|---|---|---|---|---|
@@ -76,7 +76,7 @@ Bảng ánh xạ emoji → icon `lucide-vue-next` dùng xuyên suốt plan này.
 
 Mọi task dưới đây dùng chung trình tự này (không lặp lại chi tiết ở từng task để giữ DRY):
 
-1. Với mỗi icon mới dùng lần đầu trong file, thêm vào dòng `import { ... } from 'lucide-vue-next';` trong `<script setup>` (gộp vào import statement hiện có nếu file đã có, tạo mới nếu chưa).
+1. Với mỗi icon mới dùng lần đầu trong file, thêm vào dòng `import { ... } from '@lucide/vue';` trong `<script setup>` (gộp vào import statement hiện có nếu file đã có, tạo mới nếu chưa).
 2. Áp dụng từng Edit (old_string → new_string) liệt kê trong task bằng Edit tool.
 3. Verify: chạy `npm run dev` (nếu chưa chạy), mở trang/panel liên quan, so icon mới với emoji cũ ở **cả dark và light theme** (toggle theme trên topbar) — đúng khái niệm, size hợp lý, màu ăn theo `currentColor`.
 4. `npm run lint` trong `FrontEnd/QLBanMayTinh` — sửa nếu có import thừa/thiếu.
@@ -84,20 +84,20 @@ Mọi task dưới đây dùng chung trình tự này (không lặp lại chi ti
 
 ---
 
-## Task 0: Cài lucide-vue-next
+## Task 0: Cài @lucide/vue
 
 **Files:**
 - Modify: `FrontEnd/QLBanMayTinh/package.json`
 
 - [ ] **Bước 1:** Chạy trong `FrontEnd/QLBanMayTinh`:
 ```bash
-npm install lucide-vue-next
+npm install @lucide/vue
 ```
-- [ ] **Bước 2:** Xác nhận `"lucide-vue-next"` xuất hiện trong `dependencies` của `package.json` và `package-lock.json` được cập nhật.
+- [ ] **Bước 2:** Xác nhận `"@lucide/vue"` xuất hiện trong `dependencies` của `package.json` và `package-lock.json` được cập nhật.
 - [ ] **Bước 3:** Commit:
 ```bash
 git add package.json package-lock.json
-git commit -m "chore: thêm lucide-vue-next cho icon system"
+git commit -m "chore: thêm @lucide/vue cho icon system"
 ```
 
 ---
@@ -113,7 +113,7 @@ git commit -m "chore: thêm lucide-vue-next cho icon system"
 - Modify: `FrontEnd/QLBanMayTinh/src/components/order/OrderTrackingLog.vue` (1 chỗ)
 
 **Interfaces:**
-- Produces: `orderStatusIcon(s)`, `paymentStatusIcon(s)`, `paymentMethodIcon(m)` — trước trả về `string` (emoji), sau đổi trả về **icon component** (import trực tiếp từ `lucide-vue-next`, không phải string). Mọi task khác gọi các hàm này qua `<component :is="fn(...)" />`, không còn `{{ fn(...) }}`.
+- Produces: `orderStatusIcon(s)`, `paymentStatusIcon(s)`, `paymentMethodIcon(m)` — trước trả về `string` (emoji), sau đổi trả về **icon component** (import trực tiếp từ `@lucide/vue`, không phải string). Mọi task khác gọi các hàm này qua `<component :is="fn(...)" />`, không còn `{{ fn(...) }}`.
 
 - [ ] **Bước 1: Đổi `orderStatus.js` — 3 hàm icon trả về component thay vì string**
 
@@ -123,7 +123,7 @@ import { t } from "../i18n/index.js";
 import {
   Clock, CheckCircle2, Package, Truck, Bike, Inbox, PartyPopper, XCircle, Undo2,
   Wallet, Banknote, Smartphone, Landmark, CreditCard, Circle,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 ```
 
 Thay khối `orderStatusIcon` (dòng 19-31 hiện tại):
@@ -453,7 +453,7 @@ import {
   BarChart3, Laptop, Receipt, Users, User, Package, Undo2, Star, Tag, Gift,
   Briefcase, ShoppingCart, TrendingUp, Settings, X, Menu, Moon, Sun, Bell,
   Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive,
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 ```
 
 - [ ] **Edit — `PAGE_META` (dòng 81-94):** đổi giá trị `icon:` từ chuỗi emoji sang tham chiếu component. Vì đây là object dùng trong `computed`/render (không phải trực tiếp trong template), giữ nguyên cấu trúc, chỉ đổi giá trị:
@@ -629,7 +629,7 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? BarChart
 import {
   Laptop, Receipt, Users, Wallet, Calendar, AlertTriangle, PieChart, Flame,
   Turtle, Activity, TrendingUp, Archive, Monitor, Tag, FolderOpen, Banknote, Bookmark,
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 ```
 
 - [ ] **Edit — stat chips (dòng 66, 78, 90, 102, 121):**
@@ -770,7 +770,7 @@ import {
   CheckCircle2, XCircle, Clock, Package, ClipboardList, BarChart3, AlertTriangle,
   Ban, Laptop, Search, Pencil, Printer, Download, Plus, Check, X, Trash2,
   Building2, User, Calendar, FileText, FolderOpen,
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 ```
 
 - [ ] **Edit — `phieuNhapStatusIcon` helper (dòng 273):** hàm này trả về emoji dùng ở nhiều chỗ trong badge; đổi theo cùng pattern Task 1 (trả component, gọi qua `<component :is>`):
@@ -1096,7 +1096,7 @@ Tìm mọi nơi gọi `phieuNhapStatusIcon(...)` trong template file này (inter
 
 - [ ] **Import (gộp với import đã thêm ở Task 1 nếu file này có import khác từ Task 1 — kiểm tra trước khi thêm dòng riêng):**
 ```js
-import { CheckCircle2, Package, Truck, Bike, Inbox, Laptop, User, Eye, Printer } from 'lucide-vue-next';
+import { CheckCircle2, Package, Truck, Bike, Inbox, Laptop, User, Eye, Printer } from '@lucide/vue';
 ```
 
 - [ ] **Edit — `NEXT_ORDER_STATUS_LABEL` map (dòng 423-427):**
@@ -1190,7 +1190,7 @@ Tìm chỗ render `{{ NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].icon }}` trong
 
 - [ ] **Import:**
 ```js
-import { Laptop, ShoppingCart, Receipt, Info, RefreshCw, X, Check } from 'lucide-vue-next';
+import { Laptop, ShoppingCart, Receipt, Info, RefreshCw, X, Check } from '@lucide/vue';
 ```
 
 - [ ] **Edit (dòng 580, 599, 609, 648, 658, 661, 663, 675, 677, 726):**
@@ -1285,7 +1285,7 @@ import { Laptop, ShoppingCart, Receipt, Info, RefreshCw, X, Check } from 'lucide
 
 - [ ] **Import:**
 ```js
-import { Calendar, Shield } from 'lucide-vue-next';
+import { Calendar, Shield } from '@lucide/vue';
 ```
 
 - [ ] **Edit (dòng 184, 223):**
@@ -1316,7 +1316,7 @@ import { Calendar, Shield } from 'lucide-vue-next';
 
 - [ ] **Import:**
 ```js
-import { TrendingUp, PieChart, Flame, Trophy } from 'lucide-vue-next';
+import { TrendingUp, PieChart, Flame, Trophy } from '@lucide/vue';
 ```
 
 - [ ] **Edit (dòng 97, 101, 114, 126):**
@@ -1363,7 +1363,7 @@ import { TrendingUp, PieChart, Flame, Trophy } from 'lucide-vue-next';
 
 - [ ] **Import:**
 ```js
-import { KeyRound, Store, Image, Package, Palette, Moon, Sun } from 'lucide-vue-next';
+import { KeyRound, Store, Image, Package, Palette, Moon, Sun } from '@lucide/vue';
 ```
 
 - [ ] **Edit (dòng 42, 67, 71, 110, 125, 129):**
@@ -1426,7 +1426,7 @@ import { KeyRound, Store, Image, Package, Palette, Moon, Sun } from 'lucide-vue-
 
 - [ ] **Import:**
 ```js
-import { Hash, FolderOpen, X } from 'lucide-vue-next';
+import { Hash, FolderOpen, X } from '@lucide/vue';
 ```
 
 - [ ] **Edit (dòng 189, 216, 223):**
@@ -1467,7 +1467,7 @@ import { Hash, FolderOpen, X } from 'lucide-vue-next';
 
 - [ ] **`ProductDetailModal.vue` — Import + Edit (dòng 62):**
 ```js
-import { Laptop } from 'lucide-vue-next';
+import { Laptop } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -1480,7 +1480,7 @@ import { Laptop } from 'lucide-vue-next';
 
 - [ ] **`BienTheTable.vue` — Import + Edit (dòng 553, HTML entity):**
 ```js
-import { Camera } from 'lucide-vue-next';
+import { Camera } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -1505,7 +1505,7 @@ Hai file dùng chung một khuôn shell (page-meta icon map, sidebar toggle, the
 
 - [ ] **`StaffPage.vue` — Import:**
 ```js
-import { ShoppingCart, Receipt, Users, Undo2, Laptop, X, Menu, Moon, Sun } from 'lucide-vue-next';
+import { ShoppingCart, Receipt, Users, Undo2, Laptop, X, Menu, Moon, Sun } from '@lucide/vue';
 ```
 
 - [ ] **`StaffPage.vue` — Edit `PAGE_META` (dòng 35-39):**
@@ -1571,7 +1571,7 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? Shopping
 import {
   Package, Truck, ScrollText, Undo2, Shield, Hash, Cpu, MemoryStick,
   Gamepad2, HardDrive, X, Menu, Moon, Sun,
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 ```
 
 - [ ] **`WarehouseManagementPage.vue` — Edit `PAGE_META` (dòng 34-43):**
@@ -1658,7 +1658,7 @@ import {
   Clock, Truck, CheckCircle2, XCircle, Heart, Sparkles, Settings, ArrowLeft,
   User, Gift, Wallet, Package, ShoppingBag, Receipt, Laptop, History, RefreshCw,
   Undo2, AlertTriangle, Loader2, Smartphone, Mail, MapPin, Save,
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 ```
 
 - [ ] **Edit — tab config (dòng 74-80):**
@@ -1956,7 +1956,7 @@ Tìm chỗ render tab (`{{ tab.icon }}` trong `v-for` render các nút tab) và 
 
 - [ ] **Import:**
 ```js
-import { Laptop, Gamepad2, Zap, Apple, Star, Wrench, Flame, ShoppingCart, X, ShoppingBag } from 'lucide-vue-next';
+import { Laptop, Gamepad2, Zap, Apple, Star, Wrench, Flame, ShoppingCart, X, ShoppingBag } from '@lucide/vue';
 ```
 
 - [ ] **Edit — category icons (dòng 113, 119, 125, 131, 137, 143):**
@@ -2060,7 +2060,7 @@ Cả ba đều thuộc "product family", dùng chung khái niệm (fallback ản
 
 - [ ] **`ProductDetail.vue` — Import:**
 ```js
-import { Heart, Laptop, Palette, Shield, Star } from 'lucide-vue-next';
+import { Heart, Laptop, Palette, Shield, Star } from '@lucide/vue';
 ```
 
 - [ ] **`ProductDetail.vue` — Edit (dòng 23, 46, 125, 126, 227, 254, 264, 283, 298):**
@@ -2139,7 +2139,7 @@ import { Heart, Laptop, Palette, Shield, Star } from 'lucide-vue-next';
 
 - [ ] **`ProductCard.vue` — Import + Edit (dòng 19, 35, 51):**
 ```js
-import { Laptop, Heart, Star } from 'lucide-vue-next';
+import { Laptop, Heart, Star } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2168,7 +2168,7 @@ import { Laptop, Heart, Star } from 'lucide-vue-next';
 
 - [ ] **`ProductCompareModal.vue` — Import + Edit (dòng 16):**
 ```js
-import { Laptop } from 'lucide-vue-next';
+import { Laptop } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2189,7 +2189,7 @@ import { Laptop } from 'lucide-vue-next';
 
 - [ ] **Import:**
 ```js
-import { CheckCircle2, Laptop, Banknote, Smartphone, Landmark, ImageOff } from 'lucide-vue-next';
+import { CheckCircle2, Laptop, Banknote, Smartphone, Landmark, ImageOff } from '@lucide/vue';
 ```
 
 - [ ] **Edit (dòng 14, 82, 214, 232, 250, 273):**
@@ -2254,7 +2254,7 @@ import { CheckCircle2, Laptop, Banknote, Smartphone, Landmark, ImageOff } from '
 
 - [ ] **`CartItem.vue` — Import + Edit (dòng 9):**
 ```js
-import { Laptop } from 'lucide-vue-next';
+import { Laptop } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2267,7 +2267,7 @@ import { Laptop } from 'lucide-vue-next';
 
 - [ ] **`NavBar.vue` — Import:**
 ```js
-import { BadgeCheck, Truck, RefreshCw, Moon, Sun, Menu, MapPin, Search, ShoppingCart } from 'lucide-vue-next';
+import { BadgeCheck, Truck, RefreshCw, Moon, Sun, Menu, MapPin, Search, ShoppingCart } from '@lucide/vue';
 ```
 
 - [ ] **`NavBar.vue` — Edit (dòng 10, 11, 12, 20, 60, 125, 147, 158):**
@@ -2348,7 +2348,7 @@ import { BadgeCheck, Truck, RefreshCw, Moon, Sun, Menu, MapPin, Search, Shopping
 
 - [ ] **`RegisterForm.vue` — Import + Edit (dòng 65, 83):**
 ```js
-import { Eye, EyeOff } from 'lucide-vue-next';
+import { Eye, EyeOff } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2369,7 +2369,7 @@ import { Eye, EyeOff } from 'lucide-vue-next';
 
 - [ ] **`LoginForm.vue` — Import + Edit (dòng 34):**
 ```js
-import { Eye, EyeOff } from 'lucide-vue-next';
+import { Eye, EyeOff } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2390,7 +2390,7 @@ import { Eye, EyeOff } from 'lucide-vue-next';
 
 - [ ] **Import:**
 ```js
-import { Check, Send, Bike, PartyPopper, FileText, CheckCircle2, Package } from 'lucide-vue-next';
+import { Check, Send, Bike, PartyPopper, FileText, CheckCircle2, Package } from '@lucide/vue';
 ```
 
 - [ ] **Edit (dòng 20, 46 — checkmark badge, giống nhau ở desktop/mobile):**
@@ -2449,9 +2449,9 @@ import { Check, Send, Bike, PartyPopper, FileText, CheckCircle2, Package } from 
 
 - [ ] **Import:**
 ```js
-import { Triangle, PartyPopper, Clover } from 'lucide-vue-next';
+import { Triangle, PartyPopper, Clover } from '@lucide/vue';
 ```
-Nếu `Clover` không tồn tại trong phiên bản `lucide-vue-next` đã cài (kiểm tra bằng cách chạy `npm run dev` và xem lỗi import), thay bằng `Frown` — cùng vai trò "kết quả trượt", cập nhật cả import lẫn dòng dùng bên dưới.
+Nếu `Clover` không tồn tại trong phiên bản `@lucide/vue` đã cài (kiểm tra bằng cách chạy `npm run dev` và xem lỗi import), thay bằng `Frown` — cùng vai trò "kết quả trượt", cập nhật cả import lẫn dòng dùng bên dưới.
 
 - [ ] **Edit (dòng 120, 153, 166):**
 ```html
@@ -2491,7 +2491,7 @@ Nếu `Clover` không tồn tại trong phiên bản `lucide-vue-next` đã cài
 
 - [ ] **`ToastHost.vue` — Import + Edit (dòng 10):**
 ```js
-import { CheckCircle2, XCircle } from 'lucide-vue-next';
+import { CheckCircle2, XCircle } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2504,7 +2504,7 @@ import { CheckCircle2, XCircle } from 'lucide-vue-next';
 
 - [ ] **`App.vue` — Import + Edit (dòng 385-389):**
 ```js
-import { CheckCircle2, XCircle, Info } from 'lucide-vue-next';
+import { CheckCircle2, XCircle, Info } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2539,7 +2539,7 @@ Ba file nhỏ, cùng vai trò "icon cảnh báo/trạng thái trống" — bundl
 
 - [ ] **`EmptyState.vue` — Import + Edit (dòng 4):**
 ```js
-import { Inbox } from 'lucide-vue-next';
+import { Inbox } from '@lucide/vue';
 ```
 ```js
 // old_string
@@ -2553,7 +2553,7 @@ Dòng 15 (`{{ icon }}`) đổi sang `<component :is="icon" :size="40" />`. **Lư
 
 - [ ] **`ErrorBoundary.vue` — Import + Edit (dòng 14):**
 ```js
-import { AlertTriangle } from 'lucide-vue-next';
+import { AlertTriangle } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2566,7 +2566,7 @@ import { AlertTriangle } from 'lucide-vue-next';
 
 - [ ] **`ConfirmDialog.vue` — Import + Edit (dòng 5):**
 ```js
-import { AlertTriangle } from 'lucide-vue-next';
+import { AlertTriangle } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2589,7 +2589,7 @@ import { AlertTriangle } from 'lucide-vue-next';
 
 - [ ] **`BarChart.vue` — Import + Edit (dòng 7):**
 ```js
-import { Laptop } from 'lucide-vue-next';
+import { Laptop } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
@@ -2602,7 +2602,7 @@ import { Laptop } from 'lucide-vue-next';
 
 - [ ] **`NotFoundPage.vue` — Import + Edit (dòng 11, 14):**
 ```js
-import { Search, ArrowLeft } from 'lucide-vue-next';
+import { Search, ArrowLeft } from '@lucide/vue';
 ```
 ```html
 <!-- old_string -->
