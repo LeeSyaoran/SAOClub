@@ -1,6 +1,11 @@
 <script setup>
 import { ref, computed, reactive, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
+import {
+  CheckCircle2, XCircle, Clock, Package, ClipboardList, BarChart3, AlertTriangle,
+  Ban, Laptop, Search, Pencil, Printer, Download, Plus, Check, X, Trash2,
+  Building2, User, Calendar, FileText, FolderOpen,
+} from '@lucide/vue';
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatPrice, formatDate, statusLabel, toLocalDT } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
@@ -270,7 +275,7 @@ const phieuNhapStatusColor = (s) => {
   if (s === 'huy')        return { bg: 'rgba(239,68,68,0.15)',  text: '#f87171' };
   return                         { bg: 'rgba(250,204,21,0.15)', text: '#facc15' }; // cho_duyet
 };
-const phieuNhapStatusIcon = (s) => (s === 'hoan_thanh' ? '✅' : s === 'huy' ? '❌' : '⏳');
+const phieuNhapStatusIcon = (s) => (s === 'hoan_thanh' ? CheckCircle2 : s === 'huy' ? XCircle : Clock);
 
 const phieuNhapCounts = computed(() => ({
   total: phieuNhapList.value.length,
@@ -605,9 +610,9 @@ const exportPhieuNhapExcel = () => {
     <!-- Tabs -->
     <div class="d-flex gap-2 mb-3">
       <button class="btn btn-sm fw-bold" :class="khoTab==='ton-kho' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-              @click="khoTab='ton-kho'">📦 {{ t('admin.inventory.tabStock') }}</button>
+              @click="khoTab='ton-kho'"><Package :size="15" style="vertical-align:-2px;" /> {{ t('admin.inventory.tabStock') }}</button>
       <button class="btn btn-sm fw-bold" :class="khoTab==='phieu-nhap' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-              @click="khoTab='phieu-nhap'; ensurePhieuNhapData()">📋 {{ t('admin.inventory.tabReceipts') }}</button>
+              @click="khoTab='phieu-nhap'; ensurePhieuNhapData()"><ClipboardList :size="15" style="vertical-align:-2px;" /> {{ t('admin.inventory.tabReceipts') }}</button>
     </div>
 
     <!-- ══ TAB: TON KHO ══ -->
@@ -617,7 +622,7 @@ const exportPhieuNhapExcel = () => {
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body d-flex align-items-center gap-3">
             <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(96,165,250,0.15);font-size:1.3rem;">📦</div>
+                 style="width:44px;height:44px;background:rgba(96,165,250,0.15);"><Package :size="20" color="#60a5fa" /></div>
             <div>
               <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalSku') }}</div>
               <div class="fw-bold" style="font-size:1.55rem;">{{ inventory.length }}</div>
@@ -629,7 +634,7 @@ const exportPhieuNhapExcel = () => {
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body d-flex align-items-center gap-3">
             <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(52,211,153,0.15);font-size:1.3rem;">📊</div>
+                 style="width:44px;height:44px;background:rgba(52,211,153,0.15);"><BarChart3 :size="20" color="#34d399" /></div>
             <div>
               <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalStock') }}</div>
               <div class="fw-bold" style="font-size:1.55rem;">{{ totalStockQty }}</div>
@@ -641,7 +646,7 @@ const exportPhieuNhapExcel = () => {
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body d-flex align-items-center gap-3">
             <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(250,204,21,0.15);font-size:1.3rem;">⚠️</div>
+                 style="width:44px;height:44px;background:rgba(250,204,21,0.15);"><AlertTriangle :size="20" color="#facc15" /></div>
             <div>
               <div class="text-secondary small mb-1">{{ t('admin.inventory.statLowStock') }}</div>
               <div class="fw-bold" :style="lowStockOnlyItems.length?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ lowStockOnlyItems.length }}</div>
@@ -653,7 +658,7 @@ const exportPhieuNhapExcel = () => {
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body d-flex align-items-center gap-3">
             <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">🚫</div>
+                 style="width:44px;height:44px;background:rgba(244,63,94,0.15);"><Ban :size="20" color="var(--accent-fg)" /></div>
             <div>
               <div class="text-secondary small mb-1">{{ t('admin.inventory.statOutOfStock') }}</div>
               <div class="fw-bold" :style="outOfStockItems.length?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ outOfStockItems.length }}</div>
@@ -666,8 +671,8 @@ const exportPhieuNhapExcel = () => {
     <!-- Summary + Search -->
     <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
       <span class="text-secondary small">{{ t('admin.inventory.summary', { groups: inventoryGrouped.length, skus: inventory.length }) }}</span>
-      <span v-if="outOfStockItems.length" class="badge" style="background:rgba(244,63,94,0.15);color:#f87171;">🚫 {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
-      <span v-if="lowStockItems.length" class="badge" style="background:rgba(250,204,21,0.15);color:#facc15;">⚠️ {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
+      <span v-if="outOfStockItems.length" class="badge d-inline-flex align-items-center gap-1" style="background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="12" /> {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
+      <span v-if="lowStockItems.length" class="badge d-inline-flex align-items-center gap-1" style="background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="12" /> {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
       <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 10px;" @click="toggleAllGroups">
         {{ allGroupsExpanded ? '▲ ' + t('admin.inventory.collapseAll') : '▼ ' + t('admin.inventory.expandAll') }}
       </button>
@@ -699,7 +704,7 @@ const exportPhieuNhapExcel = () => {
              @click="toggleGroup(group.name)">
           <img v-if="group.hinhAnh" :src="group.hinhAnh"
                style="width:44px;height:36px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;" />
-          <div v-else style="width:44px;height:36px;background:var(--bg-input);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;">💻</div>
+          <div v-else style="width:44px;height:36px;background:var(--bg-input);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><Laptop :size="16" color="var(--text-muted)" /></div>
           <div class="flex-grow-1 min-width-0">
             <div class="fw-semibold" style="font-size:0.88rem;color:var(--text-heading);">{{ group.name }}</div>
             <div class="text-secondary" style="font-size:0.72rem;">
@@ -707,9 +712,9 @@ const exportPhieuNhapExcel = () => {
             </div>
           </div>
           <div class="d-flex align-items-center gap-2">
-            <span v-if="group.outCount" class="badge" style="font-size:0.7rem;background:rgba(244,63,94,0.15);color:#f87171;">🚫 {{ group.outCount }} {{ t('admin.inventory.outOfStock') }}</span>
-            <span v-else-if="group.lowCount" class="badge" style="font-size:0.7rem;background:rgba(250,204,21,0.15);color:#facc15;">⚠️ {{ group.lowCount }} {{ t('admin.inventory.lowStock') }}</span>
-            <span v-else class="badge" style="font-size:0.7rem;background:rgba(34,197,94,0.15);color:#22c55e;">✅ {{ t('admin.inventory.ok') }}</span>
+            <span v-if="group.outCount" class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="11" /> {{ group.outCount }} {{ t('admin.inventory.outOfStock') }}</span>
+            <span v-else-if="group.lowCount" class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="11" /> {{ group.lowCount }} {{ t('admin.inventory.lowStock') }}</span>
+            <span v-else class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(34,197,94,0.15);color:#22c55e;"><CheckCircle2 :size="11" /> {{ t('admin.inventory.ok') }}</span>
             <span class="text-secondary" style="font-size:0.75rem;width:12px;text-align:center;">{{ expandedGroups[group.name] ? '▲' : '▼' }}</span>
           </div>
         </div>
@@ -748,10 +753,10 @@ const exportPhieuNhapExcel = () => {
                   <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-outline-info"
                             style="font-size:0.72rem;padding:2px 8px;"
-                            @click.stop="openStockDetail(item)">🔍 {{ t('admin.inventory.detail') }}</button>
+                            @click.stop="openStockDetail(item)"><Search :size="13" style="vertical-align:-2px;" /> {{ t('admin.inventory.detail') }}</button>
                     <button class="btn btn-sm btn-outline-warning"
                             style="font-size:0.72rem;padding:2px 8px;"
-                            @click.stop="openEditStock(item)">✏️ {{ t('admin.inventory.update') }}</button>
+                            @click.stop="openEditStock(item)"><Pencil :size="13" style="vertical-align:-2px;" /> {{ t('admin.inventory.update') }}</button>
                   </div>
                 </td>
               </tr>
@@ -772,7 +777,7 @@ const exportPhieuNhapExcel = () => {
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body d-flex align-items-center gap-3">
             <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(167,139,250,0.15);font-size:1.3rem;">📋</div>
+                 style="width:44px;height:44px;background:rgba(167,139,250,0.15);"><ClipboardList :size="20" color="#a78bfa" /></div>
             <div>
               <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statTotal') }}</div>
               <div class="fw-bold" style="font-size:1.55rem;">{{ phieuNhapCounts.total }}</div>
@@ -784,7 +789,7 @@ const exportPhieuNhapExcel = () => {
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body d-flex align-items-center gap-3">
             <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(250,204,21,0.15);font-size:1.3rem;">⏳</div>
+                 style="width:44px;height:44px;background:rgba(250,204,21,0.15);"><Clock :size="20" color="#facc15" /></div>
             <div>
               <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statPending') }}</div>
               <div class="fw-bold" :style="phieuNhapCounts.choDuyet?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.choDuyet }}</div>
@@ -796,7 +801,7 @@ const exportPhieuNhapExcel = () => {
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body d-flex align-items-center gap-3">
             <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(34,197,94,0.15);font-size:1.3rem;">✅</div>
+                 style="width:44px;height:44px;background:rgba(34,197,94,0.15);"><CheckCircle2 :size="20" color="#22c55e" /></div>
             <div>
               <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statDone') }}</div>
               <div class="fw-bold" style="font-size:1.55rem;color:#22c55e;">{{ phieuNhapCounts.hoanThanh }}</div>
@@ -808,7 +813,7 @@ const exportPhieuNhapExcel = () => {
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body d-flex align-items-center gap-3">
             <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">❌</div>
+                 style="width:44px;height:44px;background:rgba(244,63,94,0.15);"><XCircle :size="20" color="var(--accent-fg)" /></div>
             <div>
               <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statCancelled') }}</div>
               <div class="fw-bold" :style="phieuNhapCounts.huy?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.huy }}</div>
@@ -828,9 +833,9 @@ const exportPhieuNhapExcel = () => {
         <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
       </select>
       <div class="ms-auto d-flex gap-2">
-        <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapList">🖨️ {{ t('admin.phieuNhap.printPdf') }}</button>
-        <button class="btn btn-sm btn-outline-success" @click="exportPhieuNhapExcel">📥 {{ t('admin.phieuNhap.exportExcel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPhieuNhap">➕ {{ t('admin.phieuNhap.add') }}</button>
+        <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapList"><Printer :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.printPdf') }}</button>
+        <button class="btn btn-sm btn-outline-success" @click="exportPhieuNhapExcel"><Download :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.exportExcel') }}</button>
+        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPhieuNhap"><Plus :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.add') }}</button>
       </div>
     </div>
 
@@ -856,17 +861,17 @@ const exportPhieuNhapExcel = () => {
             <td>{{ formatPrice(p.tongTien) }}</td>
             <td>
               <span class="badge" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
-                {{ phieuNhapStatusIcon(p.trangThai) }} {{ statusLabel(p.trangThai) }}
+                <component :is="phieuNhapStatusIcon(p.trangThai)" :size="13" /> {{ statusLabel(p.trangThai) }}
               </span>
             </td>
             <td>
               <div class="d-flex gap-1">
-                <button class="btn btn-sm btn-outline-info" style="font-size:0.72rem;padding:2px 8px;" @click="openPhieuNhapDetail(p)">🔍 {{ t('admin.phieuNhap.viewDetail') }}</button>
+                <button class="btn btn-sm btn-outline-info" style="font-size:0.72rem;padding:2px 8px;" @click="openPhieuNhapDetail(p)"><Search :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.viewDetail') }}</button>
                 <template v-if="p.trangThai==='cho_duyet'">
-                  <button class="btn btn-sm btn-outline-success" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'hoan_thanh')">✔️ {{ t('admin.phieuNhap.approve') }}</button>
-                  <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'huy')">✖️ {{ t('admin.phieuNhap.cancel') }}</button>
-                  <button class="btn btn-sm btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" @click="openEditPhieuNhap(p)">✏️ {{ t('admin.phieuNhap.editAction') }}</button>
-                  <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="deletePhieuNhap(p.phieuNhapId)">🗑️ {{ t('admin.phieuNhap.deleteAction') }}</button>
+                  <button class="btn btn-sm btn-outline-success" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'hoan_thanh')"><Check :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.approve') }}</button>
+                  <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'huy')"><X :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.cancel') }}</button>
+                  <button class="btn btn-sm btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" @click="openEditPhieuNhap(p)"><Pencil :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.editAction') }}</button>
+                  <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="deletePhieuNhap(p.phieuNhapId)"><Trash2 :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.deleteAction') }}</button>
                 </template>
               </div>
             </td>
@@ -907,7 +912,7 @@ const exportPhieuNhapExcel = () => {
           </div>
         </div>
 
-        <div class="fw-semibold small text-secondary mb-2">📦 {{ t('admin.phieuNhapModal.itemsLabel') }}</div>
+        <div class="fw-semibold small text-secondary mb-2 d-flex align-items-center gap-1"><Package :size="14" /> {{ t('admin.phieuNhapModal.itemsLabel') }}</div>
         <div class="d-flex gap-2 mb-1">
           <label class="form-label small text-secondary mb-0" style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colProduct') }}</label>
           <label class="form-label small text-secondary mb-0" style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colVariant') }}</label>
@@ -929,7 +934,7 @@ const exportPhieuNhapExcel = () => {
             </div>
             <input v-model="row.soLuong" type="number" min="1" class="form-control form-control-sm" style="flex:0 0 80px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.qtyPlaceholder')" @change="clampPhieuNhapSoLuong(row)" />
             <input v-model="row.donGia" type="number" min="0" class="form-control form-control-sm" style="flex:0 0 110px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.unitPricePlaceholder')" />
-            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;flex:0 0 34px;" :aria-label="t('common.remove')" @click="removePhieuNhapItemRow(idx)">✕</button>
+            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;flex:0 0 34px;" :aria-label="t('common.remove')" @click="removePhieuNhapItemRow(idx)"><X :size="14" /></button>
           </div>
         </div>
         <button class="btn btn-sm btn-outline-warning mb-3" @click="addPhieuNhapItemRow">{{ t('admin.phieuNhapModal.addRow') }}</button>
@@ -953,7 +958,7 @@ const exportPhieuNhapExcel = () => {
       <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);" v-if="phieuNhapDetailData">
         <div class="d-flex align-items-center gap-3">
           <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-               style="width:40px;height:40px;background:rgba(167,139,250,0.15);font-size:1.2rem;">📋</div>
+               style="width:40px;height:40px;background:rgba(167,139,250,0.15);"><ClipboardList :size="18" color="#a78bfa" /></div>
           <div>
             <div class="fw-bold" style="font-size:0.95rem;color:var(--text-heading);">
               {{ t('admin.phieuNhapDetailModal.title') }}
@@ -969,18 +974,18 @@ const exportPhieuNhapExcel = () => {
         <!-- Info chips -->
         <div class="d-flex flex-wrap gap-2 p-3" style="border-bottom:1px solid var(--border-color-soft);">
           <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
-            🏢 <span class="text-secondary">{{ t('admin.phieuNhap.colSupplier') }}:</span> <span class="text-light fw-semibold">{{ supplierName(phieuNhapDetailData.nhaCungCapId) }}</span>
+            <Building2 :size="13" style="vertical-align:-2px;" /> <span class="text-secondary">{{ t('admin.phieuNhap.colSupplier') }}:</span> <span class="text-light fw-semibold">{{ supplierName(phieuNhapDetailData.nhaCungCapId) }}</span>
           </span>
           <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
-            👤 <span class="text-secondary">{{ t('admin.phieuNhap.colStaff') }}:</span> <span class="text-light fw-semibold">{{ staffName(phieuNhapDetailData.nhanVienId) }}</span>
+            <User :size="13" style="vertical-align:-2px;" /> <span class="text-secondary">{{ t('admin.phieuNhap.colStaff') }}:</span> <span class="text-light fw-semibold">{{ staffName(phieuNhapDetailData.nhanVienId) }}</span>
           </span>
           <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
-            📅 <span class="text-secondary">{{ t('admin.phieuNhap.colDate') }}:</span> <span class="text-light fw-semibold">{{ formatDate(phieuNhapDetailData.ngayNhap) }}</span>
+            <Calendar :size="13" style="vertical-align:-2px;" /> <span class="text-secondary">{{ t('admin.phieuNhap.colDate') }}:</span> <span class="text-light fw-semibold">{{ formatDate(phieuNhapDetailData.ngayNhap) }}</span>
           </span>
           <span class="badge d-flex align-items-center" :style="{ background: phieuNhapStatusColor(phieuNhapDetailData.trangThai).bg, color: phieuNhapStatusColor(phieuNhapDetailData.trangThai).text }">
-            {{ phieuNhapStatusIcon(phieuNhapDetailData.trangThai) }} {{ statusLabel(phieuNhapDetailData.trangThai) }}
+            <component :is="phieuNhapStatusIcon(phieuNhapDetailData.trangThai)" :size="13" /> {{ statusLabel(phieuNhapDetailData.trangThai) }}
           </span>
-          <div v-if="phieuNhapDetailData.ghiChu" class="w-100 text-secondary small fst-italic" style="padding-left:2px;">📝 {{ phieuNhapDetailData.ghiChu }}</div>
+          <div v-if="phieuNhapDetailData.ghiChu" class="w-100 text-secondary small fst-italic d-flex align-items-center gap-1" style="padding-left:2px;"><FileText :size="12" /> {{ phieuNhapDetailData.ghiChu }}</div>
         </div>
 
         <!-- Danh sach hang -->
@@ -1022,7 +1027,7 @@ const exportPhieuNhapExcel = () => {
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 pt-0" v-if="phieuNhapDetailData">
-        <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapDetail(phieuNhapDetailData)">🖨️ {{ t('admin.phieuNhap.printPdf') }}</button>
+        <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapDetail(phieuNhapDetailData)"><Printer :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.printPdf') }}</button>
         <button class="btn btn-sm btn-outline-secondary" @click="showPhieuNhapDetailModal=false">{{ t('admin.promoModal.cancel') }}</button>
       </div>
     </div>
@@ -1051,14 +1056,14 @@ const exportPhieuNhapExcel = () => {
             <div class="d-flex justify-content-between align-items-center mb-1">
               <label class="form-label small text-secondary mb-0">{{ t('admin.stockModal.newSerialsLabel') }}</label>
               <label class="btn btn-sm btn-outline-info" style="padding:2px 10px;font-size:0.72rem;cursor:pointer;">
-                📂 {{ t('admin.stockModal.importFromFile') }}
+                <FolderOpen :size="14" style="vertical-align:-2px;" /> {{ t('admin.stockModal.importFromFile') }}
                 <input type="file" accept=".csv,.txt,.xlsx,.xls" class="d-none" @change="importSerialsFromFile" />
               </label>
             </div>
             <div class="d-flex flex-column gap-2">
               <div v-for="(s, idx) in stockForm.newSerials" :key="idx" class="d-flex gap-2 align-items-center">
                 <input v-model="stockForm.newSerials[idx]" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.stockModal.serialPlaceholder')" />
-                <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" :aria-label="t('common.remove')" @click="removeStockSerialRow(idx)">✕</button>
+                <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" :aria-label="t('common.remove')" @click="removeStockSerialRow(idx)"><X :size="14" /></button>
               </div>
             </div>
             <button class="btn btn-sm btn-outline-warning mt-2" @click="addStockSerialRow">{{ t('admin.stockModal.addSerialRow') }}</button>
@@ -1148,7 +1153,7 @@ const exportPhieuNhapExcel = () => {
                 ></span>
               </td>
               <td class="px-4 py-2">
-                <button v-if="s.trangThai==='trong_kho'" class="btn btn-sm btn-outline-danger" style="padding:1px 7px;font-size:0.72rem;" :title="t('admin.stockDetailModal.deleteSerial')" :aria-label="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)">✕</button>
+                <button v-if="s.trangThai==='trong_kho'" class="btn btn-sm btn-outline-danger" style="padding:1px 7px;font-size:0.72rem;" :title="t('admin.stockDetailModal.deleteSerial')" :aria-label="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)"><X :size="11" /></button>
               </td>
             </tr>
           </tbody>
