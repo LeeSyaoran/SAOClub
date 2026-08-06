@@ -3,6 +3,7 @@ import { t } from "../../i18n/index.js";
 import { I18nStore, LOCALES, setLocale } from "../../i18n/index.js";
 import { ThemeStore, toggleTheme } from "../../stores/theme.js";
 import { SettingsStore } from "../../stores/settings.js";
+import { KeyRound, Store, Image, Package, Palette, Moon, Sun } from '@lucide/vue';
 
 const props = defineProps({
   cdMatKhauCu: String,
@@ -39,7 +40,7 @@ const emit = defineEmits([
       <div class="col-12 col-xl-6">
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body">
-            <div class="fw-bold mb-3">🔑 {{ t('admin.settings.changePasswordTitle') }}</div>
+            <div class="fw-bold mb-3 d-flex align-items-center gap-1"><KeyRound :size="16" /> {{ t('admin.settings.changePasswordTitle') }}</div>
             <div class="mb-2">
               <label class="form-label small text-secondary mb-1">{{ t('admin.settings.currentPassword') }}</label>
               <input type="password" :value="cdMatKhauCu" @input="$emit('update:cdMatKhauCu', $event.target.value)" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
@@ -64,11 +65,11 @@ const emit = defineEmits([
       <div class="col-12 col-xl-6">
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body">
-            <div class="fw-bold mb-3">🏪 {{ t('admin.settings.storeInfoTitle') }}</div>
+            <div class="fw-bold mb-3 d-flex align-items-center gap-1"><Store :size="16" /> {{ t('admin.settings.storeInfoTitle') }}</div>
             <div class="d-flex align-items-center gap-3 mb-3">
               <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:88px;height:70px;cursor:pointer;flex-shrink:0;overflow:hidden;background:var(--bg-card-inset);">
                 <img v-if="cdLogoPreview" :src="cdLogoPreview" style="width:88px;height:70px;object-fit:contain;" />
-                <span v-else style="font-size:1.3rem;">🖼️</span>
+                <span v-else><Image :size="20" color="var(--text-muted)" /></span>
                 <input type="file" accept="image/*" class="d-none" @change="$emit('handleLogoFile', $event)" />
               </label>
               <span class="text-secondary small">{{ t('admin.settings.storeLogo') }}</span>
@@ -107,7 +108,7 @@ const emit = defineEmits([
       <div class="col-12 col-xl-6">
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body">
-            <div class="fw-bold mb-3">📦 {{ t('admin.settings.lowStockThresholdTitle') }}</div>
+            <div class="fw-bold mb-3 d-flex align-items-center gap-1"><Package :size="16" /> {{ t('admin.settings.lowStockThresholdTitle') }}</div>
             <div class="mb-3">
               <label class="form-label small text-secondary mb-1">{{ t('admin.settings.lowStockThresholdLabel') }}</label>
               <input type="number" min="0" :value="cdNguongTonKho" @input="$emit('update:cdNguongTonKho', Number($event.target.value))" class="form-control form-control-sm" style="width:120px;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
@@ -122,11 +123,11 @@ const emit = defineEmits([
       <div class="col-12 col-xl-6">
         <div class="card border-secondary h-100" style="background:var(--bg-hover);">
           <div class="card-body">
-            <div class="fw-bold mb-3">🎨 {{ t('admin.settings.appearanceTitle') }}</div>
+            <div class="fw-bold mb-3 d-flex align-items-center gap-1"><Palette :size="16" /> {{ t('admin.settings.appearanceTitle') }}</div>
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
               <span class="text-secondary">{{ t('admin.settings.themeLabel') }}</span>
               <button type="button" class="btn btn-sm btn-outline-secondary" @click="toggleTheme">
-                {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
+                <component :is="ThemeStore.mode === 'dark' ? Moon : Sun" :size="16" />
               </button>
             </div>
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
