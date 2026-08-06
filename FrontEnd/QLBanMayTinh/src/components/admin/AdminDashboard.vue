@@ -1,6 +1,10 @@
 <script setup>
 import { computed } from "vue";
 import { t } from "../../i18n/index.js";
+import {
+  Laptop, Receipt, Users, Wallet, Calendar, AlertTriangle, PieChart, Flame,
+  Turtle, Activity, TrendingUp, Archive, Monitor, Tag, FolderOpen, Banknote, Bookmark,
+} from '@lucide/vue';
 import { ProductsStore } from "../../stores/products.js";
 import { OrdersStore } from "../../stores/orders.js";
 import { CustomersStore } from "../../stores/customers.js";
@@ -63,7 +67,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body d-flex align-items-center gap-3">
               <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                   style="width:44px;height:44px;background:rgba(96,165,250,0.15);font-size:1.3rem;">💻</div>
+                   style="width:44px;height:44px;background:rgba(96,165,250,0.15);"><Laptop :size="20" color="#60a5fa" /></div>
               <div>
                 <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalProducts') }}</div>
                 <div class="fw-bold" style="font-size:1.55rem;">{{ totalProducts }}</div>
@@ -75,7 +79,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body d-flex align-items-center gap-3">
               <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                   style="width:44px;height:44px;background:rgba(167,139,250,0.15);font-size:1.3rem;">🧾</div>
+                   style="width:44px;height:44px;background:rgba(167,139,250,0.15);"><Receipt :size="20" color="#a78bfa" /></div>
               <div>
                 <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalOrders') }}</div>
                 <div class="fw-bold" style="font-size:1.55rem;">{{ totalOrders }}</div>
@@ -87,7 +91,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body d-flex align-items-center gap-3">
               <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                   style="width:44px;height:44px;background:rgba(52,211,153,0.15);font-size:1.3rem;">👥</div>
+                   style="width:44px;height:44px;background:rgba(52,211,153,0.15);"><Users :size="20" color="#34d399" /></div>
               <div>
                 <div class="text-secondary small mb-1">{{ t('admin.dashboard.totalCustomers') }}</div>
                 <div class="fw-bold" style="font-size:1.55rem;">{{ totalCustomers }}</div>
@@ -99,7 +103,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body d-flex align-items-center gap-3">
               <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                   style="width:44px;height:44px;background:rgba(244,63,94,0.15);font-size:1.3rem;">💰</div>
+                   style="width:44px;height:44px;background:rgba(244,63,94,0.15);"><Wallet :size="20" color="var(--accent-fg)" /></div>
               <div>
                 <div class="text-secondary small mb-1">{{ t('admin.dashboard.revenueThisMonth') }}</div>
                 <div class="d-flex align-items-center gap-2">
@@ -118,7 +122,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body d-flex align-items-center gap-3">
               <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                   style="width:44px;height:44px;background:rgba(250,204,21,0.15);font-size:1.3rem;">📅</div>
+                   style="width:44px;height:44px;background:rgba(250,204,21,0.15);"><Calendar :size="20" color="#facc15" /></div>
               <div>
                 <div class="text-secondary small mb-1">{{ t('admin.dashboard.revenueThisYear') }}</div>
                 <div class="fw-bold" style="font-size:1.1rem;">{{ formatPrice(revenueThisYear) }}</div>
@@ -130,7 +134,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
 
       <div v-if="lowStockItems.length" class="alert alert-danger small py-2 mb-3 d-flex align-items-center gap-2">
         <span class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-              style="width:22px;height:22px;background:rgba(248,113,113,0.25);font-size:0.85rem;">⚠️</span>
+              style="width:22px;height:22px;background:rgba(248,113,113,0.25);"><AlertTriangle :size="13" color="#f87171" /></span>
         {{ t('admin.dashboard.lowStockAlert', { count: lowStockItems.length }) }}
       </div>
 
@@ -139,7 +143,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                <div class="fw-semibold small text-secondary">🍩 {{ t('admin.dashboard.ordersByStatusChart') }}</div>
+                <div class="fw-semibold small text-secondary d-flex align-items-center gap-1"><PieChart :size="14" /> {{ t('admin.dashboard.ordersByStatusChart') }}</div>
                 <div class="d-flex align-items-center gap-2">
                   <input type="date" :value="statusChartDate" :max="toDateInputValue(new Date())"
                          @input="$emit('update:statusChartDate', $event.target.value)"
@@ -171,7 +175,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                <div class="fw-semibold small text-secondary">📅 {{ t('admin.dashboard.ordersByWeekChart') }}</div>
+                <div class="fw-semibold small text-secondary d-flex align-items-center gap-1"><Calendar :size="14" /> {{ t('admin.dashboard.ordersByWeekChart') }}</div>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                   <input type="date" :value="weekChartAnchor" :max="toDateInputValue(new Date())"
                          @input="$emit('update:weekChartAnchor', $event.target.value)"
@@ -206,7 +210,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
         <div class="col-12 col-xl-6">
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body">
-              <div class="fw-semibold small text-secondary mb-3">🔥 {{ t('admin.dashboard.topSellingChart') }}</div>
+              <div class="fw-semibold small text-secondary mb-3 d-flex align-items-center gap-1"><Flame :size="14" /> {{ t('admin.dashboard.topSellingChart') }}</div>
               <BarChart :data="topSellingChart" :empty-text="t('admin.dashboard.chartEmptyOrders')" />
             </div>
           </div>
@@ -214,7 +218,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
         <div class="col-12 col-xl-6">
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body">
-              <div class="fw-semibold small text-secondary mb-3">🐌 {{ t('admin.dashboard.slowSellingChart') }}</div>
+              <div class="fw-semibold small text-secondary mb-3 d-flex align-items-center gap-1"><Turtle :size="14" /> {{ t('admin.dashboard.slowSellingChart') }}</div>
               <BarChart :data="slowSellingChart" :empty-text="t('admin.dashboard.chartEmptyProducts')" />
             </div>
           </div>
@@ -223,7 +227,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
 
       <div class="card border-secondary mb-4" style="background:var(--bg-hover);">
         <div class="card-body">
-          <div class="fw-semibold small text-secondary mb-3">🩺 {{ t('admin.dashboard.kpiHealth') }}</div>
+          <div class="fw-semibold small text-secondary mb-3 d-flex align-items-center gap-1"><Activity :size="14" /> {{ t('admin.dashboard.kpiHealth') }}</div>
           <div class="row g-3 text-center">
             <div class="col-12 col-md-4 d-flex justify-content-center">
               <GaugeChart :value="orderCompletionRate" :color="gaugeColor(orderCompletionRate)"
@@ -243,16 +247,16 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
 
       <div class="card border-secondary mb-4" style="background:var(--bg-hover);">
         <div class="card-body">
-          <div class="fw-semibold small text-secondary mb-3">📈 {{ t('admin.dashboard.revenueTrendChart') }}</div>
+          <div class="fw-semibold small text-secondary mb-3 d-flex align-items-center gap-1"><TrendingUp :size="14" /> {{ t('admin.dashboard.revenueTrendChart') }}</div>
           <TrendChart :data="revenueTrendChart" :height="140" color="#f06b81" :empty-text="t('admin.dashboard.chartEmptyOrders')" />
         </div>
       </div>
 
-      <div class="small fw-semibold text-secondary mb-2">🗃️ {{ t('admin.dashboard.recentProducts') }}</div>
+      <div class="small fw-semibold text-secondary mb-2 d-flex align-items-center gap-1"><Archive :size="14" /> {{ t('admin.dashboard.recentProducts') }}</div>
       <div class="table-responsive">
         <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
           <thead><tr>
-            <th></th><th>🖥️ {{ t('admin.dashboard.colName') }}</th><th>🏷️ {{ t('admin.dashboard.colBrand') }}</th><th>🗂️ {{ t('admin.dashboard.colCategory') }}</th><th>💵 {{ t('admin.dashboard.colPrice') }}</th><th>🔖 {{ t('admin.dashboard.colStatus') }}</th>
+            <th></th><th><Monitor :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colName') }}</th><th><Tag :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colBrand') }}</th><th><FolderOpen :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colCategory') }}</th><th><Banknote :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colPrice') }}</th><th><Bookmark :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colStatus') }}</th>
           </tr></thead>
           <tbody>
             <tr v-for="p in products.slice(0,5)" :key="p.sanPhamId">
