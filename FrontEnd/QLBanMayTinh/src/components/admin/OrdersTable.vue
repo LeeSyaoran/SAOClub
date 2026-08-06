@@ -18,6 +18,7 @@ import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
+import { CheckCircle2, Package, Truck, Bike, Inbox, Laptop, User } from '@lucide/vue';
 
 const props = defineProps({ canDelete: { type: Boolean, default: true } });
 
@@ -431,11 +432,11 @@ const NEXT_ORDER_STATUS = {
   shipping: 'out_for_delivery', out_for_delivery: 'awaiting_confirmation',
 };
 const NEXT_ORDER_STATUS_LABEL = {
-  pending:          { icon: '✅', key: 'admin.orders.nextConfirm' },
-  confirmed:        { icon: '📦', key: 'admin.orders.nextPack' },
-  processing:       { icon: '🚚', key: 'admin.orders.nextShip' },
-  shipping:         { icon: '🛵', key: 'admin.orders.nextOutForDelivery' },
-  out_for_delivery: { icon: '📬', key: 'admin.orders.nextDelivered' },
+  pending:          { icon: CheckCircle2, key: 'admin.orders.nextConfirm' },
+  confirmed:        { icon: Package, key: 'admin.orders.nextPack' },
+  processing:       { icon: Truck, key: 'admin.orders.nextShip' },
+  shipping:         { icon: Bike, key: 'admin.orders.nextOutForDelivery' },
+  out_for_delivery: { icon: Inbox, key: 'admin.orders.nextDelivered' },
 };
 const advanceOrderStatus = async (o) => {
   const next = NEXT_ORDER_STATUS[o.trangThaiDonHang];
@@ -641,14 +642,14 @@ const confirmXacNhanSerial = async () => {
             <td>
               {{ formatDate(o.ngayDat) }}
               <div v-if="o.ngayGiaoThucTe" class="text-success" style="font-size:0.72rem;">
-                ✅ {{ t('admin.orderStatusModal.actualDeliveryLabel') }}: {{ formatDateTime(o.ngayGiaoThucTe) }}
+                <CheckCircle2 :size="13" style="vertical-align:-2px;" /> {{ t('admin.orderStatusModal.actualDeliveryLabel') }}: {{ formatDateTime(o.ngayGiaoThucTe) }}
               </div>
             </td>
             <td>
               <div class="d-flex gap-1">
                 <button class="btn btn-sm btn-outline-info"    style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
                 <button v-if="NEXT_ORDER_STATUS[o.trangThaiDonHang]" class="btn btn-sm btn-outline-success" style="font-size:0.78rem;padding:2px 8px;" @click="advanceOrderStatus(o)">
-                  {{ NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].icon }} {{ t(NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].key) }}
+                  <component :is="NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].icon" :size="14" /> {{ t(NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].key) }}
                 </button>
                 <button v-if="!['delivered','cancelled','returned'].includes(o.trangThaiDonHang)" class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
                 <button v-if="canDelete" class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">{{ t('admin.orders.delete') }}</button>
@@ -684,7 +685,7 @@ const confirmXacNhanSerial = async () => {
               <img v-if="(addItemCurrentVariant || addItemDetailGroup.variants[0])?.hinhAnhChinh"
                    :src="(addItemCurrentVariant || addItemDetailGroup.variants[0]).hinhAnhChinh"
                    style="max-width:100%;max-height:100%;object-fit:contain;" />
-              <span v-else style="font-size:4rem;">💻</span>
+              <span v-else><Laptop :size="64" color="var(--text-muted)" /></span>
             </div>
             <div class="mt-3 d-flex gap-1 flex-wrap justify-content-center">
               <span v-for="tag in (addItemDetailGroup.variants[0]?.phanLoaiTen||'').split(',').filter(Boolean)"
@@ -798,7 +799,7 @@ const confirmXacNhanSerial = async () => {
       <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
         <div>
           <div class="fw-bold" style="font-size:1.05rem;color:var(--text-heading);">
-            👤 {{ customerName(orderDetailData?.khachHangId) }}
+            <User :size="14" style="vertical-align:-2px;" /> {{ customerName(orderDetailData?.khachHangId) }}
           </div>
           <div class="text-secondary" style="font-size:0.78rem;">
             {{ t('admin.orderDetailModal.titlePrefix') }}{{ orderDetailData?.donHangId }}
@@ -833,7 +834,7 @@ const confirmXacNhanSerial = async () => {
                   <img v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
                        :src="productByBienThe(item.bienTheId).hinhAnhChinh"
                        style="width:36px;height:28px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;" />
-                  <span v-else style="font-size:1.2rem;flex-shrink:0;">💻</span>
+                  <span v-else style="flex-shrink:0;"><Laptop :size="19" color="var(--text-muted)" /></span>
                   <span class="text-light">{{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}</span>
                 </div>
               </td>
@@ -936,7 +937,7 @@ const confirmXacNhanSerial = async () => {
                 <div style="background:var(--bg-card-inset);height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
                   <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh"
                        style="max-height:76px;max-width:100%;object-fit:contain;" />
-                  <span v-else style="font-size:1.8rem;">💻</span>
+                  <span v-else><Laptop :size="29" color="var(--text-muted)" /></span>
                 </div>
                 <div class="px-2 py-1">
                   <div class="fw-semibold text-light" style="font-size:0.72rem;line-height:1.3;
