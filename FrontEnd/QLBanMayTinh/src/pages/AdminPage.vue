@@ -51,6 +51,11 @@ import { PromotionsStore, ensurePromotions, refreshPromotions } from "../stores/
 import { DoiThuongStore, ensureDoiThuong, refreshDoiThuong } from "../stores/doiThuong.js";
 import { refreshReturns } from "../stores/returns.js";
 import * as DmDoiThuongService from "../services/DmDoiThuongService.js";
+import {
+  BarChart3, Laptop, Receipt, Users, User, Package, Undo2, Star, Tag, Gift,
+  Briefcase, ShoppingCart, TrendingUp, Settings, X, Menu, Moon, Sun, Bell,
+  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive,
+} from '@lucide/vue';
 
 defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
 
@@ -78,26 +83,26 @@ const navigate = (page) => {
 // icon khớp đúng ý nghĩa icon SVG tương ứng ở sidebar (adm-icon) — hiện lại 1 lần nữa
 // cạnh tiêu đề trang cho dễ nhận biết đang ở đâu, không cần đổi cả 2 nơi khi thêm trang mới.
 const PAGE_META = {
-  dashboard: { titleKey: "admin.pageMeta.dashboard.title", subKey: "admin.pageMeta.dashboard.sub", icon: "📊" },
-  products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: "💻" },
-  orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: "🧾" },
-  customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: "👥" },
-  "customer-detail": { titleKey: "admin.pageMeta.customerDetail.title", subKey: "admin.pageMeta.customerDetail.sub", icon: "👤" },
-  inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: "📦" },
-  "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
-  reviews: { titleKey: "admin.pageMeta.reviews.title", subKey: "admin.pageMeta.reviews.sub", icon: "⭐" },
-  promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub", icon: "🏷️" },
-  "doi-thuong": { titleKey: "admin.pageMeta.doiThuong.title", subKey: "admin.pageMeta.doiThuong.sub", icon: "🎁" },
-  staff: { titleKey: "admin.pageMeta.staff.title", subKey: "admin.pageMeta.staff.sub", icon: "🧑‍💼" },
-  "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: "🛒" },
-  reports: { titleKey: "admin.pageMeta.reports.title", subKey: "admin.pageMeta.reports.sub", icon: "📈" },
-  settings: { titleKey: "admin.pageMeta.settings.title", subKey: "admin.pageMeta.settings.sub", icon: "⚙️" },
+  dashboard: { titleKey: "admin.pageMeta.dashboard.title", subKey: "admin.pageMeta.dashboard.sub", icon: BarChart3 },
+  products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: Laptop },
+  orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: Receipt },
+  customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: Users },
+  "customer-detail": { titleKey: "admin.pageMeta.customerDetail.title", subKey: "admin.pageMeta.customerDetail.sub", icon: User },
+  inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: Package },
+  "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: Undo2 },
+  reviews: { titleKey: "admin.pageMeta.reviews.title", subKey: "admin.pageMeta.reviews.sub", icon: Star },
+  promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub", icon: Tag },
+  "doi-thuong": { titleKey: "admin.pageMeta.doiThuong.title", subKey: "admin.pageMeta.doiThuong.sub", icon: Gift },
+  staff: { titleKey: "admin.pageMeta.staff.title", subKey: "admin.pageMeta.staff.sub", icon: Briefcase },
+  "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: ShoppingCart },
+  reports: { titleKey: "admin.pageMeta.reports.title", subKey: "admin.pageMeta.reports.sub", icon: TrendingUp },
+  settings: { titleKey: "admin.pageMeta.settings.title", subKey: "admin.pageMeta.settings.sub", icon: Settings },
 };
 const topbarTitle = computed(
   () => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.dashboard.title"),
 );
 const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
-const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📊");
+const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? BarChart3);
 
 // ── Data refs ─────────────────────────────────────────────────────────────────
 // products/orders/customers/staff/promotions/inventory/suppliers giờ sống trong stores/*.js
@@ -1080,9 +1085,9 @@ onUnmounted(() => {
           <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
                   style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1.1rem;"
                   :aria-label="t('admin.sidebar.toggleMenu')" :title="t('admin.sidebar.toggleMenu')"
-                  @click="sidebarOpen = !sidebarOpen">{{ sidebarOpen ? '✕' : '☰' }}</button>
+                  @click="sidebarOpen = !sidebarOpen"><component :is="sidebarOpen ? X : Menu" :size="20" /></button>
           <div>
-            <div class="fw-bold" style="font-size:1.05rem;">{{ topbarIcon }} {{ topbarTitle }}</div>
+            <div class="fw-bold" style="font-size:1.05rem;"><component :is="topbarIcon" :size="20" /> {{ topbarTitle }}</div>
             <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
           </div>
         </div>
@@ -1092,10 +1097,10 @@ onUnmounted(() => {
                   :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
                   :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
                   @click="toggleTheme">
-            {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
+            <component :is="ThemeStore.mode === 'dark' ? Moon : Sun" :size="18" />
           </button>
           <div class="d-flex align-items-center justify-content-center rounded-2"
-               style="width:34px;height:34px;background:var(--bg-hover);cursor:pointer;">&#128276;</div>
+               style="width:34px;height:34px;background:var(--bg-hover);cursor:pointer;display:flex;align-items:center;justify-content:center;"><Bell :size="18" /></div>
         </div>
       </div>
 
@@ -1167,31 +1172,31 @@ onUnmounted(() => {
         <section v-show="currentPage === 'inventory'">
           <ul class="nav nav-tabs mb-3">
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='kho'}" @click="inventoryMainTab='kho'">📦 {{ t('admin.inventory.tabStock') }} / {{ t('admin.inventory.tabReceipts') }}</button>
+              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='kho'}" @click="inventoryMainTab='kho'"><Package :size="15" /> {{ t('admin.inventory.tabStock') }} / {{ t('admin.inventory.tabReceipts') }}</button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='bao-hanh'}" @click="inventoryMainTab='bao-hanh'">🛡️ {{ t('admin.inventory.tabWarranty') }}</button>
+              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='bao-hanh'}" @click="inventoryMainTab='bao-hanh'"><Shield :size="15" /> {{ t('admin.inventory.tabWarranty') }}</button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='serial'}" @click="inventoryMainTab='serial'">🔢 {{ t('admin.inventory.tabSerial') }}</button>
+              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='serial'}" @click="inventoryMainTab='serial'"><Hash :size="15" /> {{ t('admin.inventory.tabSerial') }}</button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='suppliers'}" @click="inventoryMainTab='suppliers'">🚚 {{ t('admin.sidebar.suppliers') }}</button>
+              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='suppliers'}" @click="inventoryMainTab='suppliers'"><Truck :size="15" /> {{ t('admin.sidebar.suppliers') }}</button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='lich-su'}" @click="inventoryMainTab='lich-su'">📜 {{ t('admin.sidebar.inventoryHistory') }}</button>
+              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='lich-su'}" @click="inventoryMainTab='lich-su'"><ScrollText :size="15" /> {{ t('admin.sidebar.inventoryHistory') }}</button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='cpu'}" @click="inventoryMainTab='cpu'">🧠 {{ t('admin.productsTabs.cpu') }}</button>
+              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='cpu'}" @click="inventoryMainTab='cpu'"><Cpu :size="15" /> {{ t('admin.productsTabs.cpu') }}</button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='ram'}" @click="inventoryMainTab='ram'">💾 {{ t('admin.productsTabs.ram') }}</button>
+              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='ram'}" @click="inventoryMainTab='ram'"><MemoryStick :size="15" /> {{ t('admin.productsTabs.ram') }}</button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='gpu'}" @click="inventoryMainTab='gpu'">🎮 {{ t('admin.productsTabs.gpu') }}</button>
+              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='gpu'}" @click="inventoryMainTab='gpu'"><Gamepad2 :size="15" /> {{ t('admin.productsTabs.gpu') }}</button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" :class="{active: inventoryMainTab==='o-cung'}" @click="inventoryMainTab='o-cung'">💽 {{ t('admin.productsTabs.oCung') }}</button>
+              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='o-cung'}" @click="inventoryMainTab='o-cung'"><HardDrive :size="15" /> {{ t('admin.productsTabs.oCung') }}</button>
             </li>
           </ul>
 
