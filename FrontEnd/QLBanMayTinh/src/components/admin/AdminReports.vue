@@ -2,6 +2,7 @@
 import { t } from "../../i18n/index.js";
 import { formatPrice } from "../../utils/adminFormat.js";
 import RevenueBarChart from "../common/RevenueBarChart.vue";
+import { TrendingUp, PieChart, Flame, Trophy } from '@lucide/vue';
 
 defineProps({
   totalRevenue: Number,
@@ -94,11 +95,11 @@ const emit = defineEmits([
         </template>
       </div>
     </div>
-    <div class="small fw-semibold text-secondary mb-2">📈 {{ t('admin.reports.revenueChartTitle') }}</div>
+    <div class="small fw-semibold text-secondary mb-2 d-flex align-items-center gap-1"><TrendingUp :size="14" /> {{ t('admin.reports.revenueChartTitle') }}</div>
     <div class="card border-secondary mb-4" style="background:var(--bg-hover);"><div class="card-body">
       <RevenueBarChart :data="reportsRevenueChartData" :granularity="reportsGroupBy" :empty-text="t('admin.reports.revenueChartEmpty')" />
     </div></div>
-    <div class="small fw-semibold text-secondary mb-2">🍩 {{ t('admin.reports.ordersByStatus') }}</div>
+    <div class="small fw-semibold text-secondary mb-2 d-flex align-items-center gap-1"><PieChart :size="14" /> {{ t('admin.reports.ordersByStatus') }}</div>
     <div class="table-responsive mb-4">
       <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
         <thead><tr><th>{{ t('admin.reports.colStatus') }}</th><th>{{ t('admin.reports.colQuantity') }}</th></tr></thead>
@@ -111,7 +112,7 @@ const emit = defineEmits([
         </tbody>
       </table>
     </div>
-    <div class="small fw-semibold text-secondary mb-2">🔥 {{ t('admin.reports.topProducts') }}</div>
+    <div class="small fw-semibold text-secondary mb-2 d-flex align-items-center gap-1"><Flame :size="14" /> {{ t('admin.reports.topProducts') }}</div>
     <div class="table-responsive">
       <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
         <thead><tr><th>{{ t('admin.reports.colIndex') }}</th><th>{{ t('admin.reports.colName') }}</th><th>{{ t('admin.reports.colQuantitySold') }}</th></tr></thead>
@@ -123,7 +124,7 @@ const emit = defineEmits([
         </tbody>
       </table>
     </div>
-    <div class="small fw-semibold text-secondary mb-2 mt-4">🏆 {{ t('admin.reports.customersTitle') }}</div>
+    <div class="small fw-semibold text-secondary mb-2 mt-4 d-flex align-items-center gap-1"><Trophy :size="14" /> {{ t('admin.reports.customersTitle') }}</div>
     <div class="text-secondary small mb-2">{{ reportsRepeatRateText }}</div>
     <div class="table-responsive">
       <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
