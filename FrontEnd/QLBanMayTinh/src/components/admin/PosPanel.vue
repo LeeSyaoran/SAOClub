@@ -15,6 +15,7 @@ import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot
 import { POS_PAYMENT_METHODS, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
 import * as ThanhToanService from "../../services/ThanhToanService.js";
 import { askConfirm } from "../../stores/confirm.js";
+import { Laptop, ShoppingCart, Receipt, Info, RefreshCw, X, Check } from '@lucide/vue';
 
 onMounted(() => { ensureProducts(); ensureCustomers(); ensurePromotions(); });
 
@@ -530,7 +531,7 @@ const posPlaceOrder = async () => {
           <div class="card h-100 border-secondary" style="background:var(--bg-hover);">
             <div class="d-flex align-items-center justify-content-center" style="height:88px;background:var(--bg-card-inset);">
               <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:6px;" />
-              <span v-else style="font-size:1.8rem;">💻</span>
+              <span v-else><Laptop :size="29" color="var(--text-muted)" /></span>
             </div>
             <div class="card-body p-2 d-flex flex-column gap-1">
               <div class="fw-semibold small text-light">{{ p.tenSanPham }}</div>
@@ -550,7 +551,7 @@ const posPlaceOrder = async () => {
     <!-- RIGHT: gio hang POS — cong xac dinh khach hang nam o day -->
     <div class="card border-secondary d-flex flex-column overflow-hidden" style="background:var(--bg-hover);">
       <div class="card-header border-secondary d-flex justify-content-between align-items-center fw-bold">
-        <span>🛒 {{ t('admin.pos.cart') }} <span class="text-secondary fw-normal small">{{ posCart.length }} {{ t('admin.pos.cartCountSuffix') }}</span></span>
+        <span class="d-inline-flex align-items-center gap-1"><ShoppingCart :size="16" /> {{ t('admin.pos.cart') }} <span class="text-secondary fw-normal small">{{ posCart.length }} {{ t('admin.pos.cartCountSuffix') }}</span></span>
         <button class="btn btn-sm btn-outline-info position-relative" style="font-size:0.72rem;padding:2px 8px;" @click="showHeldOrders = true">
           {{ t('admin.pos.heldOrders') }}
           <span v-if="heldOrders.length" class="badge rounded-pill bg-warning text-dark" style="font-size:0.62rem;">{{ heldOrders.length }}</span>
@@ -561,7 +562,7 @@ const posPlaceOrder = async () => {
       <div v-if="posStage !== 'selling'" class="d-flex flex-column align-items-center justify-content-center gap-3 flex-grow-1 text-center p-3">
         <div v-if="posError" class="small p-2 rounded-2 w-100" style="background:rgba(220,53,69,0.1);color:#e05252;">{{ posError }}</div>
         <template v-if="posStage === 'start'">
-          <div style="font-size:2.4rem;">🧾</div>
+          <div><Receipt :size="38" color="var(--text-muted)" /></div>
           <div class="text-secondary small">{{ t('admin.pos.startHint') }}</div>
           <button class="btn btn-warning text-dark fw-bold px-4" @click="posStartInvoice">{{ t('admin.pos.startInvoice') }}</button>
         </template>
@@ -591,7 +592,7 @@ const posPlaceOrder = async () => {
           <div class="d-flex align-items-center gap-2">
             <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);">
               <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh" :alt="g.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:2px;" />
-              <span v-else style="font-size:1rem;">💻</span>
+              <span v-else><Laptop :size="16" color="var(--text-muted)" /></span>
             </div>
             <div class="flex-grow-1" style="min-width:0;">
               <div class="fw-semibold small text-light text-truncate">{{ g.tenSanPham }}<span v-if="g.items.length>1" class="text-secondary fw-normal"> × {{ g.items.length }}</span></div>
@@ -601,12 +602,12 @@ const posPlaceOrder = async () => {
               </template>
             </div>
             <button class="btn btn-sm btn-outline-secondary flex-shrink-0" style="width:20px;height:20px;padding:0;font-size:0.62rem;"
-                    :aria-label="t('admin.products.detail')" @click="openPosDetail(g)">ℹ️</button>
+                    :aria-label="t('admin.products.detail')" @click="openPosDetail(g)"><Info :size="14" /></button>
             <div v-if="g.items.length===1" class="d-flex align-items-center gap-1 flex-shrink-0">
               <button class="btn btn-sm btn-outline-secondary" style="width:20px;height:20px;padding:0;font-size:0.68rem;"
-                      :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(g.items[0], g.items[0].chiTietId)">🔄</button>
+                      :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(g.items[0], g.items[0].chiTietId)"><RefreshCw :size="14" /></button>
               <button class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
-                      :aria-label="t('common.remove')" @click="posRemove(g.items[0].chiTietId)">✕</button>
+                      :aria-label="t('common.remove')" @click="posRemove(g.items[0].chiTietId)"><X :size="14" /></button>
             </div>
             <button v-else class="btn btn-sm btn-outline-danger flex-shrink-0" style="font-size:0.66rem;padding:2px 6px;" @click="posRemoveGroup(g)">{{ t('admin.pos.removeAll') }} ({{ g.items.length }})</button>
             <div class="text-warning fw-bold flex-shrink-0 text-end" style="font-size:0.8rem;min-width:72px;">{{ formatPrice(posGroupTotal(g)) }}</div>
@@ -618,9 +619,9 @@ const posPlaceOrder = async () => {
                 <div class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
               </div>
               <button class="btn btn-sm btn-outline-secondary" style="width:20px;height:20px;padding:0;font-size:0.68rem;"
-                      :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(item, item.chiTietId)">🔄</button>
+                      :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(item, item.chiTietId)"><RefreshCw :size="14" /></button>
               <button class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
-                      :aria-label="t('common.remove')" @click="posRemove(item.chiTietId)">✕</button>
+                      :aria-label="t('common.remove')" @click="posRemove(item.chiTietId)"><X :size="14" /></button>
             </div>
           </div>
         </div>
@@ -660,7 +661,7 @@ const posPlaceOrder = async () => {
       <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
         <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.customerInfo') }}</div>
         <div v-if="posFoundCust" class="d-flex justify-content-between align-items-center gap-2 small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
-          <span>✓ {{ posFoundCust.hoTen }} · {{ posFoundCust.soDienThoai }}</span>
+          <span class="d-inline-flex align-items-center gap-1"><Check :size="13" /> {{ posFoundCust.hoTen }} · {{ posFoundCust.soDienThoai }}</span>
           <button class="btn btn-sm btn-link text-secondary p-0" style="font-size:0.7rem;text-decoration:underline;" @click="posReset">{{ t('admin.pos.changeCustomer') }}</button>
         </div>
         <div v-else class="small text-secondary">{{ t('admin.pos.noCustomerYet') }}</div>
