@@ -11,6 +11,7 @@ import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { BaoHanhStore, ensureBaoHanh, refreshBaoHanh } from "../../stores/baoHanh.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
+import { Calendar, Shield } from '@lucide/vue';
 
 onMounted(() => {
   ensureWarrantyData();
@@ -182,7 +183,7 @@ const deleteClaim = async (id) => {
   <!-- ══ BANG CON HAN BAO HANH ══ -->
   <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
     <span class="text-secondary small">{{ filteredWarranty.length }} {{ t('admin.warranty.countSuffix') }}</span>
-    <span class="badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;font-size:0.72rem;">📅 {{ t('admin.warranty.today') }}: {{ formatDate(new Date()) }}</span>
+    <span class="badge d-inline-flex align-items-center gap-1" style="background:rgba(148,163,184,0.15);color:#94a3b8;font-size:0.72rem;"><Calendar :size="11" /> {{ t('admin.warranty.today') }}: {{ formatDate(new Date()) }}</span>
     <input v-model="warrantySearch" class="form-control form-control-sm ms-auto" style="max-width:260px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
            :placeholder="t('admin.warranty.searchPlaceholder')" />
   </div>
@@ -221,7 +222,7 @@ const deleteClaim = async (id) => {
             </span>
           </td>
           <td>
-            <button class="btn btn-sm btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" @click="openCreateFromWarranty(w)">🛡️ {{ t('admin.warranty.createClaim') }}</button>
+            <button class="btn btn-sm btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" @click="openCreateFromWarranty(w)"><Shield :size="12" style="vertical-align:-2px;" /> {{ t('admin.warranty.createClaim') }}</button>
           </td>
         </tr>
         <tr v-if="filteredWarranty.length===0"><td colspan="10" class="text-center text-secondary">{{ t('admin.warranty.empty') }}</td></tr>
