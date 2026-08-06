@@ -628,13 +628,13 @@ const confirmXacNhanSerial = async () => {
             <td>{{ customerName(o.khachHangId) }}</td>
             <td>{{ formatPrice(o.thanhTien) }}</td>
             <td>
-              <span class="badge" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
-                {{ orderStatusIcon(o.trangThaiDonHang) }} {{ orderStatusLabel(o.trangThaiDonHang) }}
+              <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="13" /> {{ orderStatusLabel(o.trangThaiDonHang) }}
               </span>
             </td>
             <td>
-              <span v-if="o.trangThaiThanhToan" class="badge" :style="{ background: paymentStatusColor(o.trangThaiThanhToan).bg, color: paymentStatusColor(o.trangThaiThanhToan).text }">
-                {{ paymentStatusIcon(o.trangThaiThanhToan) }} {{ paymentStatusLabel(o.trangThaiThanhToan) }}
+              <span v-if="o.trangThaiThanhToan" class="badge d-inline-flex align-items-center gap-1" :style="{ background: paymentStatusColor(o.trangThaiThanhToan).bg, color: paymentStatusColor(o.trangThaiThanhToan).text }">
+                <component :is="paymentStatusIcon(o.trangThaiThanhToan)" :size="13" /> {{ paymentStatusLabel(o.trangThaiThanhToan) }}
               </span>
               <span v-else class="text-secondary">—</span>
             </td>
@@ -884,21 +884,21 @@ const confirmXacNhanSerial = async () => {
         </div>
         <div class="d-flex justify-content-between small mt-2 pt-2" style="border-top:1px solid var(--bg-input);">
           <span class="text-secondary">{{ t('admin.orderDetailModal.orderStatus') }}</span>
-          <span class="badge" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
-            {{ orderStatusIcon(orderDetailData.trangThaiDonHang) }} {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
+          <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
+            <component :is="orderStatusIcon(orderDetailData.trangThaiDonHang)" :size="13" /> {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
           </span>
         </div>
         <div class="d-flex justify-content-between small">
           <span class="text-secondary">{{ t('admin.orderDetailModal.paymentStatus') }}</span>
-          <span class="badge" :style="{ background: paymentStatusColor(orderDetailData.trangThaiThanhToan).bg, color: paymentStatusColor(orderDetailData.trangThaiThanhToan).text }">
-            {{ paymentStatusIcon(orderDetailData.trangThaiThanhToan) }} {{ orderDetailData.trangThaiThanhToan ? paymentStatusLabel(orderDetailData.trangThaiThanhToan) : '—' }}
+          <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: paymentStatusColor(orderDetailData.trangThaiThanhToan).bg, color: paymentStatusColor(orderDetailData.trangThaiThanhToan).text }">
+            <component :is="paymentStatusIcon(orderDetailData.trangThaiThanhToan)" :size="13" /> {{ orderDetailData.trangThaiThanhToan ? paymentStatusLabel(orderDetailData.trangThaiThanhToan) : '—' }}
           </span>
         </div>
         <div v-if="orderDetailPayments.length" class="d-flex justify-content-between small">
           <span class="text-secondary">{{ t('admin.orderDetailModal.paymentMethod') }}</span>
           <span style="color:var(--text-primary);">
             <template v-for="(p, idx) in orderDetailPayments" :key="p.thanhToanId">
-              {{ paymentMethodIcon(p.phuongThucThanhToan) }} {{ paymentMethodLabel(p.phuongThucThanhToan) }}<span v-if="idx < orderDetailPayments.length - 1">, </span>
+              <component :is="paymentMethodIcon(p.phuongThucThanhToan)" :size="14" style="vertical-align:-2px;" /> {{ paymentMethodLabel(p.phuongThucThanhToan) }}<span v-if="idx < orderDetailPayments.length - 1">, </span>
             </template>
           </span>
         </div>

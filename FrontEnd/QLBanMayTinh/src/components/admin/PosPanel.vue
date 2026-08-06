@@ -651,7 +651,7 @@ const posPlaceOrder = async () => {
                     ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
                     : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
                   @click="posPaymentMethod = m">
-            <span style="font-size:1.1rem;">{{ paymentMethodIcon(m) }}</span>
+            <component :is="paymentMethodIcon(m)" :size="18" />
             <span>{{ paymentMethodLabel(m) }}</span>
           </button>
         </div>

@@ -460,7 +460,7 @@ onUnmounted(() => {
               </div>
               <span class="badge d-flex align-items-center gap-1 px-3 py-2 rounded-pill fw-semibold"
                     :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
-                <span style="font-size:11px;">{{ orderStatusIcon(o.trangThaiDonHang) }}</span>
+                <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="12" />
                 {{ orderStatusLabel(o.trangThaiDonHang) }}
               </span>
             </div>
@@ -565,7 +565,7 @@ onUnmounted(() => {
               <div class="d-flex align-items-center gap-3">
                 <span class="badge d-flex align-items-center gap-1 px-3 py-2 rounded-pill fw-semibold"
                       :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
-                  <span style="font-size:11px;">{{ orderStatusIcon(o.trangThaiDonHang) }}</span>
+                  <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="12" />
                   {{ orderStatusLabel(o.trangThaiDonHang) }}
                 </span>
                 <span class="fw-black" style="color:var(--accent-fg); font-size:0.95rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>

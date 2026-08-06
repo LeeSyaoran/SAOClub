@@ -40,22 +40,17 @@ describe('orderStatusColor', () => {
 });
 
 describe('orderStatusIcon', () => {
-  it('should return correct icon for each status', async () => {
+  it('should return a distinct icon component for each status', async () => {
     const { orderStatusIcon } = await import('../../utils/orderStatus.js');
-    expect(orderStatusIcon('pending')).toBe('⏳');
-    expect(orderStatusIcon('confirmed')).toBe('✅');
-    expect(orderStatusIcon('processing')).toBe('📦');
-    expect(orderStatusIcon('shipping')).toBe('🚚');
-    expect(orderStatusIcon('out_for_delivery')).toBe('🛵');
-    expect(orderStatusIcon('awaiting_confirmation')).toBe('📬');
-    expect(orderStatusIcon('delivered')).toBe('🎉');
-    expect(orderStatusIcon('cancelled')).toBe('❌');
-    expect(orderStatusIcon('returned')).toBe('↩️');
+    const statuses = ['pending', 'confirmed', 'processing', 'shipping', 'out_for_delivery', 'awaiting_confirmation', 'delivered', 'cancelled', 'returned'];
+    const icons = statuses.map(orderStatusIcon);
+    icons.forEach((icon) => expect(icon).toBeTruthy());
+    expect(new Set(icons).size).toBe(statuses.length);
   });
 
-  it('should return default icon for unknown status', async () => {
+  it('should return default icon component for unknown status', async () => {
     const { orderStatusIcon } = await import('../../utils/orderStatus.js');
-    expect(orderStatusIcon('unknown')).toBe('●');
+    expect(orderStatusIcon('unknown')).toBeTruthy();
   });
 });
 
@@ -80,12 +75,12 @@ describe('paymentStatusColor', () => {
 });
 
 describe('paymentStatusIcon', () => {
-  it('should return correct icon for each status', async () => {
+  it('should return a distinct icon component for each status', async () => {
     const { paymentStatusIcon } = await import('../../utils/orderStatus.js');
-    expect(paymentStatusIcon('unpaid')).toBe('⏳');
-    expect(paymentStatusIcon('partial')).toBe('💰');
-    expect(paymentStatusIcon('paid')).toBe('✅');
-    expect(paymentStatusIcon('refunded')).toBe('↩️');
+    const statuses = ['unpaid', 'partial', 'paid', 'refunded'];
+    const icons = statuses.map(paymentStatusIcon);
+    icons.forEach((icon) => expect(icon).toBeTruthy());
+    expect(new Set(icons).size).toBe(statuses.length);
   });
 });
 
@@ -105,16 +100,16 @@ describe('paymentMethodLabel', () => {
 });
 
 describe('paymentMethodIcon', () => {
-  it('should return correct icon for each method', async () => {
+  it('should return a distinct icon component for each method', async () => {
     const { paymentMethodIcon } = await import('../../utils/orderStatus.js');
-    expect(paymentMethodIcon('tien_mat')).toBe('💵');
-    expect(paymentMethodIcon('vnpay')).toBe('📱');
-    expect(paymentMethodIcon('chuyen_khoan')).toBe('🏦');
-    expect(paymentMethodIcon('the_tin_dung')).toBe('💳');
+    const methods = ['tien_mat', 'vnpay', 'chuyen_khoan', 'the_tin_dung'];
+    const icons = methods.map(paymentMethodIcon);
+    icons.forEach((icon) => expect(icon).toBeTruthy());
+    expect(new Set(icons).size).toBe(methods.length);
   });
 
-  it('should return default icon for unknown method', async () => {
+  it('should return default icon component for unknown method', async () => {
     const { paymentMethodIcon } = await import('../../utils/orderStatus.js');
-    expect(paymentMethodIcon('unknown')).toBe('💰');
+    expect(paymentMethodIcon('unknown')).toBeTruthy();
   });
 });

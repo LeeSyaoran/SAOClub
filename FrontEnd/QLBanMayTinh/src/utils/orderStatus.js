@@ -1,4 +1,8 @@
 import { t } from "../i18n/index.js";
+import {
+  Clock, CheckCircle2, Package, Truck, Bike, Inbox, PartyPopper, XCircle, Undo2,
+  Wallet, Banknote, Smartphone, Landmark, CreditCard, Circle,
+} from "@lucide/vue";
 
 // Bảng màu chốt — không tự ý đổi giá trị nếu không được yêu cầu.
 export const orderStatusLabel = (s) => t(`orderStatus.${s}`);
@@ -18,16 +22,16 @@ export const orderStatusColor = (s) => {
 
 // Icon theo trạng thái đơn hàng — dùng thay cho chấm tròn chung chung ở badge trạng thái
 export const orderStatusIcon = (s) => {
-  if (s === 'pending')    return '⏳';
-  if (s === 'confirmed')  return '✅';
-  if (s === 'processing') return '📦';
-  if (s === 'shipping')   return '🚚';
-  if (s === 'out_for_delivery') return '🛵';
-  if (s === 'awaiting_confirmation') return '📬';
-  if (s === 'delivered')  return '🎉';
-  if (s === 'cancelled')  return '❌';
-  if (s === 'returned')   return '↩️';
-  return '●';
+  if (s === 'pending')    return Clock;
+  if (s === 'confirmed')  return CheckCircle2;
+  if (s === 'processing') return Package;
+  if (s === 'shipping')   return Truck;
+  if (s === 'out_for_delivery') return Bike;
+  if (s === 'awaiting_confirmation') return Inbox;
+  if (s === 'delivered')  return PartyPopper;
+  if (s === 'cancelled')  return XCircle;
+  if (s === 'returned')   return Undo2;
+  return Circle;
 };
 
 // Trạng thái THANH TOÁN (khác trạng thái đơn hàng ở trên) — dùng chung cho bảng đơn hàng
@@ -44,11 +48,11 @@ export const paymentStatusColor = (s) => {
 };
 
 export const paymentStatusIcon = (s) => {
-  if (s === 'unpaid')   return '⏳';
-  if (s === 'partial')  return '💰';
-  if (s === 'paid')     return '✅';
-  if (s === 'refunded') return '↩️';
-  return '●';
+  if (s === 'unpaid')   return Clock;
+  if (s === 'partial')  return Wallet;
+  if (s === 'paid')     return CheckCircle2;
+  if (s === 'refunded') return Undo2;
+  return Circle;
 };
 
 // Phuong thuc thanh toan — dung o POS (chon luc tao don) va modal "Chi tiet don hang"
@@ -59,9 +63,9 @@ export const POS_PAYMENT_METHODS = ['tien_mat', 'vnpay', 'chuyen_khoan', 'the_ti
 export const paymentMethodLabel = (m) => t(`admin.paymentMethod.${m}`);
 
 export const paymentMethodIcon = (m) => {
-  if (m === 'tien_mat')     return '💵';
-  if (m === 'vnpay')        return '📱';
-  if (m === 'chuyen_khoan') return '🏦';
-  if (m === 'the_tin_dung') return '💳';
-  return '💰';
+  if (m === 'tien_mat')     return Banknote;
+  if (m === 'vnpay')        return Smartphone;
+  if (m === 'chuyen_khoan') return Landmark;
+  if (m === 'the_tin_dung') return CreditCard;
+  return Wallet;
 };

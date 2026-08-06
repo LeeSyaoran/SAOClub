@@ -10,7 +10,7 @@
     <div v-if="history.length" class="d-flex flex-column gap-2">
       <div v-for="(entry, idx) in sortedHistory" :key="entry.lichSuId" class="d-flex gap-2">
         <span class="small" :style="idx === 0 ? 'color:var(--text-primary);' : 'color:var(--text-secondary); opacity:0.6;'" style="min-width:130px;">{{ formatDate(entry.thoiGian) }}</span>
-        <span :class="idx === 0 ? 'fw-bold' : ''" :style="idx === 0 ? 'font-size:0.82rem; color:var(--accent-fg);' : 'font-size:0.82rem; color:var(--text-secondary); opacity:0.6;'">{{ orderStatusIcon(entry.trangThaiMoi) }} {{ orderStatusLabel(entry.trangThaiMoi) }}</span>
+        <span :class="idx === 0 ? 'fw-bold' : ''" :style="idx === 0 ? 'font-size:0.82rem; color:var(--accent-fg); display:inline-flex; align-items:center; gap:4px;' : 'font-size:0.82rem; color:var(--text-secondary); opacity:0.6; display:inline-flex; align-items:center; gap:4px;'"><component :is="orderStatusIcon(entry.trangThaiMoi)" :size="13" /> {{ orderStatusLabel(entry.trangThaiMoi) }}</span>
       </div>
     </div>
   </div>
