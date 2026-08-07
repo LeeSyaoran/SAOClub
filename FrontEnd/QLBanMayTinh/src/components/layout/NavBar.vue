@@ -15,9 +15,9 @@
       </span>
       <!-- Các thông tin tiện ích bên phải -->
       <div class="d-flex align-items-center gap-3 small fw-semibold" style="color:var(--text-secondary);">
-        <span class="d-none d-lg-inline d-inline-flex align-items-center gap-1"><BadgeCheck :size="13" /> {{ t('nav.genuine') }}</span>
-        <span class="d-none d-xl-inline d-inline-flex align-items-center gap-1"><Truck :size="13" /> {{ t('nav.freeShip') }}</span>
-        <span class="d-none d-xl-inline d-inline-flex align-items-center gap-1"><RefreshCw :size="13" /> {{ t('nav.tradeIn') }}</span>
+        <span class="d-none d-lg-flex align-items-center gap-1"><BadgeCheck :size="13" /> {{ t('nav.genuine') }}</span>
+        <span class="d-none d-xl-flex align-items-center gap-1"><Truck :size="13" /> {{ t('nav.freeShip') }}</span>
+        <span class="d-none d-xl-flex align-items-center gap-1"><RefreshCw :size="13" /> {{ t('nav.tradeIn') }}</span>
         <!-- Số hotline nổi bật màu vàng -->
         <span class="text-warning fw-black">{{ t('nav.hotline') }}</span>
 

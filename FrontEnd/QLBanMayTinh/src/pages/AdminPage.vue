@@ -1087,7 +1087,7 @@ onUnmounted(() => {
                   :aria-label="t('admin.sidebar.toggleMenu')" :title="t('admin.sidebar.toggleMenu')"
                   @click="sidebarOpen = !sidebarOpen"><component :is="sidebarOpen ? X : Menu" :size="20" /></button>
           <div>
-            <div class="fw-bold" style="font-size:1.05rem;"><component :is="topbarIcon" :size="20" /> {{ topbarTitle }}</div>
+            <div class="fw-bold d-flex align-items-center gap-1" style="font-size:1.05rem;"><component :is="topbarIcon" :size="18" /> {{ topbarTitle }}</div>
             <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
           </div>
         </div>
