@@ -22,10 +22,10 @@
                  :style="index <= currentStep
                    ? 'background:var(--bg-hover); border:2px solid var(--accent);'
                    : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'">
-              <span :style="index <= currentStep ? 'font-size:1rem; opacity:1;' : 'font-size:1rem; opacity:0.35;'">{{ step.icon }}</span>
+              <component :is="step.icon" :size="18" :style="{ opacity: index <= currentStep ? 1 : 0.35 }" />
               <span v-if="isStepDone(index)"
                     class="rounded-circle d-flex align-items-center justify-content-center position-absolute"
-                    style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); font-size:9px; opacity:0.55; border:1px solid var(--bg-hover);">✓</span>
+                    style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); opacity:0.55; border:1px solid var(--bg-hover); display:flex; align-items:center; justify-content:center;"><Check :size="9" /></span>
             </div>
             <div class="flex-grow-1" style="height:1.5px;"
                  :style="index === steps.length - 1 ? 'background:transparent;'
@@ -49,10 +49,10 @@
                :style="index <= currentStep
                  ? 'background:var(--bg-hover); border:2px solid var(--accent);'
                  : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'">
-            <span :style="index <= currentStep ? 'font-size:1rem; opacity:1;' : 'font-size:1rem; opacity:0.35;'">{{ step.icon }}</span>
+            <component :is="step.icon" :size="18" :style="{ opacity: index <= currentStep ? 1 : 0.35 }" />
             <span v-if="isStepDone(index)"
                   class="rounded-circle d-flex align-items-center justify-content-center position-absolute"
-                  style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); font-size:9px; opacity:0.55; border:1px solid var(--bg-hover);">✓</span>
+                  style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); opacity:0.55; border:1px solid var(--bg-hover); display:flex; align-items:center; justify-content:center;"><Check :size="9" /></span>
           </div>
           <div>
             <div class="fw-bold" style="font-size:0.82rem;"
@@ -71,6 +71,7 @@
 <script setup>
 import { computed } from 'vue';
 import { t } from '../../i18n/index.js';
+import { Check, Send, Bike, PartyPopper, FileText, CheckCircle2, Package } from '@lucide/vue';
 
 // Nhận thẳng trạng thái đơn (status) thay vì số bước — timeline tự chọn hiển thị bộ 3
 // bước "Đặt/Xác nhận/Đóng gói" (đơn còn ở tab "Chờ xác nhận") hay bộ 3 bước "Gửi hàng/
@@ -88,13 +89,13 @@ const isPostShip = computed(() => POST_SHIP.includes(props.status));
 const isAwaitingConfirmation = computed(() => props.status === 'awaiting_confirmation');
 
 const steps = computed(() => isPostShip.value ? [
-  { title: t('orderStatus.timeline.shippingTitle'),        desc: t('orderStatus.timeline.shippingDesc'),        icon: '📤' },
-  { title: t('orderStatus.timeline.outForDeliveryTitle'),  desc: t('orderStatus.timeline.outForDeliveryDesc'),  icon: '🛵' },
-  { title: t('orderStatus.timeline.deliveredTitle'),       desc: t('orderStatus.timeline.deliveredDesc'),       icon: '🎉' },
+  { title: t('orderStatus.timeline.shippingTitle'),        desc: t('orderStatus.timeline.shippingDesc'),        icon: Send },
+  { title: t('orderStatus.timeline.outForDeliveryTitle'),  desc: t('orderStatus.timeline.outForDeliveryDesc'),  icon: Bike },
+  { title: t('orderStatus.timeline.deliveredTitle'),       desc: t('orderStatus.timeline.deliveredDesc'),       icon: PartyPopper },
 ] : [
-  { title: t('orderStatus.timeline.placedTitle'),    desc: t('orderStatus.timeline.placedDesc'),    icon: '📝' },
-  { title: t('orderStatus.timeline.confirmedTitle'), desc: t('orderStatus.timeline.confirmedDesc'), icon: '✅' },
-  { title: t('orderStatus.timeline.packingTitle'),   desc: t('orderStatus.timeline.packingDesc'),   icon: '📦' },
+  { title: t('orderStatus.timeline.placedTitle'),    desc: t('orderStatus.timeline.placedDesc'),    icon: FileText },
+  { title: t('orderStatus.timeline.confirmedTitle'), desc: t('orderStatus.timeline.confirmedDesc'), icon: CheckCircle2 },
+  { title: t('orderStatus.timeline.packingTitle'),   desc: t('orderStatus.timeline.packingDesc'),   icon: Package },
 ]);
 
 const currentStep = computed(() => {
