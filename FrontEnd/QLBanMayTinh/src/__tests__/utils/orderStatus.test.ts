@@ -95,6 +95,11 @@ describe('paymentStatusIcon', () => {
     const { paymentStatusIcon } = await import('../../utils/orderStatus.js');
     expect(paymentStatusIcon(status)).toBe(expectedIcon);
   });
+
+  it('should return default icon component for unknown status', async () => {
+    const { paymentStatusIcon } = await import('../../utils/orderStatus.js');
+    expect(paymentStatusIcon('unknown')).toBe(Circle);
+  });
 });
 
 describe('POS_PAYMENT_METHODS', () => {
