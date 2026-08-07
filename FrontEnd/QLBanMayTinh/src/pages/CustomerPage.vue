@@ -8,6 +8,7 @@ import {
   inject,
 } from "vue";
 import { useRouter } from "vue-router";
+import { Laptop, Gamepad2, Zap, Apple, Star, Wrench, Flame, ShoppingCart, X, ShoppingBag } from '@lucide/vue';
 import * as SanPhamService from "../services/SanPhamService.js";
 import * as DanhMucService from "../services/DanhMucService.js";
 import { t } from "../i18n/index.js";
@@ -110,37 +111,37 @@ const dealFilters = computed(() => [
 const sidebarCatsBase = computed(() => [
   {
     id: "office",
-    icon: "💻",
+    icon: Laptop,
     name: t("home.sidebar.office"),
     keywords: ["van_phong", "sinh_vien", "văn phòng", "sinh viên"],
   },
   {
     id: "gaming",
-    icon: "🎮",
+    icon: Gamepad2,
     name: t("home.sidebar.gaming"),
     keywords: ["gaming"],
   },
   {
     id: "graphics",
-    icon: "⚡",
+    icon: Zap,
     name: t("home.sidebar.graphics"),
     keywords: ["do_hoa", "ky_thuat", "đồ họa", "kỹ thuật"],
   },
   {
     id: "macbook",
-    icon: "🍎",
+    icon: Apple,
     name: t("home.sidebar.macbook"),
     keywords: ["macbook", "apple"],
   },
   {
     id: "used",
-    icon: "⭐",
+    icon: Star,
     name: t("home.sidebar.used"),
     keywords: ["cu", "gia_re", "cũ", "rẻ"],
   },
   {
     id: "parts",
-    icon: "🔧",
+    icon: Wrench,
     name: t("home.sidebar.parts"),
     keywords: ["linh_kien", "ram", "ssd", "linh kiện"],
   },
@@ -358,7 +359,7 @@ onMounted(() => {
           class="text-warning text-uppercase"
           style="letter-spacing: 0.05em"
         >
-          🔥 {{ t("home.tickerBadge") }}
+          <Flame :size="13" style="vertical-align:-2px;" /> {{ t("home.tickerBadge") }}
         </span>
         <span>{{ t("home.ticker1") }}</span>
         <span>{{ t("home.ticker2") }}</span>
@@ -408,7 +409,7 @@ onMounted(() => {
               @click.prevent="selectSidebarCat(cat)"
             >
               <span class="d-flex align-items-center gap-2">
-                <span style="font-size: 13px">{{ cat.icon }}</span>
+                <component :is="cat.icon" :size="16" />
                 {{ cat.name }}
               </span>
               <span style="color: var(--text-muted)">›</span>
@@ -794,7 +795,7 @@ onMounted(() => {
             style="border-bottom: 1px solid var(--border-color-soft)"
           >
             <div class="d-flex align-items-center gap-2">
-              <span style="font-size: 1.1rem">🛒</span>
+              <span><ShoppingCart :size="18" /></span>
               <span
                 class="fw-bold"
                 style="font-size: 0.95rem; color: var(--text-heading)"
@@ -821,7 +822,7 @@ onMounted(() => {
               :aria-label="t('common.close')"
               @click="toggleCart"
             >
-              ✕
+              <X :size="16" />
             </button>
           </div>
 
@@ -829,7 +830,7 @@ onMounted(() => {
             v-if="cartCount === 0"
             class="flex-grow-1 d-flex flex-column align-items-center justify-content-center gap-3 text-center px-4"
           >
-            <div style="font-size: 3rem; opacity: 0.2">🛍️</div>
+            <div style="opacity: 0.2"><ShoppingBag :size="48" /></div>
             <p class="small mb-0" style="color: var(--text-secondary)">
               {{ t("cart.empty") }}
             </p>
