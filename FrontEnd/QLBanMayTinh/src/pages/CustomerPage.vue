@@ -8,7 +8,7 @@ import {
   inject,
 } from "vue";
 import { useRouter } from "vue-router";
-import { Laptop, Gamepad2, Zap, Apple, Star, Wrench, Flame, ShoppingCart, X, ShoppingBag } from '@lucide/vue';
+import { Laptop, Gamepad2, Zap, Apple, Star, Wrench, Flame, ShoppingCart, X, ShoppingBag, GraduationCap, RefreshCw, SlidersHorizontal } from '@lucide/vue';
 import * as SanPhamService from "../services/SanPhamService.js";
 import * as DanhMucService from "../services/DanhMucService.js";
 import { t } from "../i18n/index.js";
@@ -95,7 +95,7 @@ const activeCatId = ref(null);
 const activeSidebarCat = ref(null);
 
 const dealTabs = computed(() => [
-  { id: "deal", label: t("home.dealTabDeal") },
+  { id: "deal", label: t("home.dealTabDeal"), icon: Flame },
   { id: "hot", label: t("home.dealTabHot") },
   { id: "new", label: t("home.dealTabNew") },
 ]);
@@ -564,12 +564,12 @@ onMounted(() => {
             <div class="d-flex flex-column gap-1">
               <a
                 v-for="link in [
-                  t('home.promoLink1'),
-                  t('home.promoLink2'),
-                  t('home.promoLink3'),
-                  t('home.promoLink4'),
+                  { icon: GraduationCap, text: t('home.promoLink1') },
+                  { icon: Flame, text: t('home.promoLink2') },
+                  { icon: Laptop, text: t('home.promoLink3') },
+                  { icon: RefreshCw, text: t('home.promoLink4') },
                 ]"
-                :key="link"
+                :key="link.text"
                 href="#"
                 class="d-block text-decoration-none fw-semibold p-2 rounded-2 small"
                 style="
@@ -590,7 +590,7 @@ onMounted(() => {
                   }
                 "
               >
-                {{ link }}
+                <component :is="link.icon" :size="13" style="vertical-align:-2px;" /> {{ link.text }}
               </a>
             </div>
             <div
@@ -633,7 +633,7 @@ onMounted(() => {
             "
             @click="activeTab = tab.id"
           >
-            {{ tab.label }}
+            <component v-if="tab.icon" :is="tab.icon" :size="12" style="vertical-align:-2px;" /> {{ tab.label }}
           </button>
         </div>
 
@@ -673,7 +673,7 @@ onMounted(() => {
               :style="!showAdvFilter ? 'color:var(--text-secondary);' : ''"
               @click="showAdvFilter = !showAdvFilter"
             >
-              {{ t("home.advFilter") }}
+              <SlidersHorizontal :size="12" style="vertical-align:-2px;" /> {{ t("home.advFilter") }}
               <span
                 v-if="
                   advFilter.brands.length ||
