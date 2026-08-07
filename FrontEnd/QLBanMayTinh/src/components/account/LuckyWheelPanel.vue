@@ -4,6 +4,7 @@ import { t } from '../../i18n/index.js';
 import { formatPrice } from '../../utils/formatPrice.js';
 import * as VongQuayService from '../../services/VongQuayService.js';
 import Modal from '../common/Modal.vue';
+import { Triangle, PartyPopper, Clover } from '@lucide/vue';
 
 // points: điểm tích lũy hiện tại của khách — nhận từ AccountPage.vue (đã load sẵn cho
 // badge điểm ở header), không tự fetch profile riêng trong component này.
@@ -117,7 +118,7 @@ const onSpin = async () => {
     <div v-if="loadError" class="alert alert-danger small">{{ loadError }}</div>
     <template v-else>
       <div class="position-relative" style="width:280px; height:280px;">
-        <div class="position-absolute top-0 start-50 translate-middle-x" style="z-index:2; font-size:28px; margin-top:-14px;">🔻</div>
+        <div class="position-absolute top-0 start-50 translate-middle-x" style="z-index:2; margin-top:-14px;"><Triangle :size="22" style="transform:rotate(180deg);" fill="currentColor" /></div>
         <div class="rounded-circle position-relative"
              style="width:100%; height:100%; transition:transform 4s cubic-bezier(0.17,0.67,0.12,0.99);"
              :style="{ background: wheelBackground, transform: `rotate(${rotation}deg)` }">
@@ -150,7 +151,7 @@ const onSpin = async () => {
     <Modal v-model="showResultModal" width="380px">
       <div v-if="lastResult" class="text-center">
         <template v-if="lastResult.ketQua === 'trung'">
-          <div style="font-size:2.4rem;">🎉</div>
+          <div><PartyPopper :size="38" /></div>
           <h5 class="fw-black mt-2" style="color:var(--text-heading);">{{ t('wheel.winTitle') }}</h5>
           <p class="mb-1" style="color:var(--text-primary);">
             {{ lastResult.khuyenMai.loai === 'percent'
@@ -163,7 +164,7 @@ const onSpin = async () => {
           </div>
         </template>
         <template v-else>
-          <div style="font-size:2.4rem;">🍀</div>
+          <div><Clover :size="38" /></div>
           <h5 class="fw-black mt-2" style="color:var(--text-heading);">{{ t('wheel.missTitle') }}</h5>
           <p class="small" style="color:var(--text-secondary);">{{ t('wheel.missDesc') }}</p>
         </template>
