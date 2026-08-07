@@ -15,9 +15,9 @@
       </span>
       <!-- Các thông tin tiện ích bên phải -->
       <div class="d-flex align-items-center gap-3 small fw-semibold" style="color:var(--text-secondary);">
-        <span class="d-none d-lg-inline">✓ {{ t('nav.genuine') }}</span>
-        <span class="d-none d-xl-inline">🚚 {{ t('nav.freeShip') }}</span>
-        <span class="d-none d-xl-inline">🔄 {{ t('nav.tradeIn') }}</span>
+        <span class="d-none d-lg-inline d-inline-flex align-items-center gap-1"><BadgeCheck :size="13" /> {{ t('nav.genuine') }}</span>
+        <span class="d-none d-xl-inline d-inline-flex align-items-center gap-1"><Truck :size="13" /> {{ t('nav.freeShip') }}</span>
+        <span class="d-none d-xl-inline d-inline-flex align-items-center gap-1"><RefreshCw :size="13" /> {{ t('nav.tradeIn') }}</span>
         <!-- Số hotline nổi bật màu vàng -->
         <span class="text-warning fw-black">{{ t('nav.hotline') }}</span>
 
@@ -27,7 +27,7 @@
                 :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
                 :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
                 @click="toggleTheme">
-          {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
+          <component :is="ThemeStore.mode === 'dark' ? Moon : Sun" :size="18" />
         </button>
 
         <!-- Đổi ngôn ngữ — dùng được kể cả khi chưa đăng nhập -->
@@ -72,7 +72,7 @@
           aria-haspopup="true"
           :aria-expanded="isMenuOpen"
           @click="isMenuOpen = !isMenuOpen">
-          ☰ <span class="d-none d-sm-inline">{{ t('nav.categories') }}</span>
+          <Menu :size="16" style="vertical-align:-3px;" /> <span class="d-none d-sm-inline">{{ t('nav.categories') }}</span>
         </button>
 
         <!-- Mega menu dropdown panel -->
@@ -145,7 +145,7 @@
       <!-- Nút chọn thành phố (chỉ hiện trên màn to) -->
       <button class="btn btn-sm fw-bold d-none d-xl-flex align-items-center gap-2 flex-shrink-0"
               style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary);">
-        📍
+        <MapPin :size="15" />
         <div class="text-start lh-1">
           <div style="font-size:10px; color:var(--text-muted);">{{ t('nav.changeCityLabel') }}</div>
           <div style="font-size:12px; font-weight:800;">{{ t('nav.city') }}</div>
@@ -167,7 +167,7 @@
           class="btn btn-sm"
           style="background:var(--bg-input); border-color:var(--border-color-strong); border-left:none; color:var(--text-secondary); border-radius:0 12px 12px 0;"
           @click="emit('search', searchValue)">
-          🔎
+          <Search :size="15" />
         </button>
       </div>
 
@@ -178,7 +178,7 @@
         <button class="btn btn-sm d-flex align-items-center gap-1 fw-bold"
                 style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary); font-size:12px; white-space:nowrap;"
                 @click="emit('toggle-cart')">
-          🛒 <span class="d-none d-sm-inline">{{ t('nav.cart') }}</span>
+          <ShoppingCart :size="16" style="vertical-align:-3px;" /> <span class="d-none d-sm-inline">{{ t('nav.cart') }}</span>
           <!-- Badge hiển thị số lượng sản phẩm trong giỏ -->
           <span class="badge fw-black"
                 style="background:var(--accent); color:var(--accent-text); border-radius:999px; font-size:11px;">
@@ -214,6 +214,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { BadgeCheck, Truck, RefreshCw, Moon, Sun, Menu, MapPin, Search, ShoppingCart } from '@lucide/vue';
 import { t, I18nStore, LOCALES, setLocale } from '../../i18n/index.js';
 import { ThemeStore, toggleTheme } from '../../stores/theme.js';
 

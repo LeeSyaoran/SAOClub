@@ -8,7 +8,7 @@
       <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham"
            style="width:64px;height:64px;object-fit:contain;border-radius:10px;background:var(--bg-card-inset);" />
       <div v-else class="d-flex align-items-center justify-content-center rounded-3"
-           style="width:64px;height:64px;background:var(--bg-card-alt);font-size:1.6rem;">💻</div>
+           style="width:64px;height:64px;background:var(--bg-card-alt);"><Laptop :size="26" color="var(--text-muted)" /></div>
     </div>
 
     <!-- Thông tin -->
@@ -41,6 +41,7 @@
 <script setup>
 // Props: item = { tenSanPham, hinhAnhChinh, giaBan, quantity, mauSac?, cpu? }
 // Emits: increase(item), decrease(item) — cha (App.vue) đã có sẵn updateQty(bienTheId, delta)
+import { Laptop } from '@lucide/vue';
 import { t } from '../../i18n/index.js';
 import { formatPrice } from '../../utils/formatPrice.js';
 
