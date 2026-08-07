@@ -1,4 +1,5 @@
 <template>
+  <!-- Đồng hồ đo nửa hình tròn có kim chỉ — kiểu CSAT/CES/NPS -->
   <div class="d-flex flex-column align-items-center">
     <div class="small fw-semibold text-center mb-1 d-inline-flex align-items-center gap-1" style="color:var(--text-secondary); max-width:100%;"><component v-if="icon" :is="icon" :size="12" /> {{ label }}</div>
     <svg :width="size + pad * 2" :height="size / 2 + 22" :viewBox="`0 0 ${size + pad * 2} ${size / 2 + 22}`">
