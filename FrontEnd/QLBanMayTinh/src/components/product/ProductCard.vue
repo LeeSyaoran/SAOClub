@@ -17,9 +17,8 @@
       />
       <!-- Placeholder nếu không có ảnh -->
       <div v-else
-           class="w-100 h-100 d-flex align-items-center justify-content-center"
-           style="font-size:2.5rem;">
-        💻
+           class="w-100 h-100 d-flex align-items-center justify-content-center">
+        <Laptop :size="40" color="var(--text-muted)" />
       </div>
       <!-- Badge trạng thái: hết hàng / sắp hết (tạo cảm giác khan hiếm) / còn hàng kèm số lượng
            thực tế — trước đây chỉ có "Còn hàng"/"Hết hàng" chung chung, dù soLuongTon đã có sẵn
@@ -39,7 +38,7 @@
         :aria-label="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
         :title="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
         @click.stop="$emit('toggle-wishlist', product)">
-        {{ isWishlisted ? '❤️' : '🤍' }}
+        <Heart :size="16" :fill="isWishlisted ? 'currentColor' : 'none'" />
       </button>
     </div>
 
@@ -56,7 +55,7 @@
         <span v-if="variantCount > 1" class="fw-normal" style="font-size:9px; color:var(--text-secondary);">{{ t('home.fromPrice') }} </span>{{ formatPrice(product.giaBan) }}
       </p>
       <p v-if="rating" class="mb-0" style="font-size:10px; color:var(--text-secondary);">
-        ⭐ {{ rating.diemTrungBinh.toFixed(1) }} ({{ rating.tongSoDanhGia }})
+        <Star :size="12" fill="currentColor" style="vertical-align:-2px;" /> {{ rating.diemTrungBinh.toFixed(1) }} ({{ rating.tongSoDanhGia }})
       </p>
       <p class="mb-0" style="font-size:10px; color:var(--text-secondary);">{{ t('home.fastDelivery') }}</p>
       <!-- Tags phân loại — hiển thị tên tiếng Việt từ phanLoaiTen -->
@@ -104,6 +103,7 @@
 import { computed } from 'vue';
 import { t } from '../../i18n/index.js';
 import { formatPrice } from '../../utils/formatPrice.js';
+import { Laptop, Heart, Star } from '@lucide/vue';
 
 const props = defineProps({
   // Sản phẩm từ API /api/san-pham/hien-thi

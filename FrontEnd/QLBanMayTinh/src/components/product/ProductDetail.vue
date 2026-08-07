@@ -21,7 +21,7 @@
         :aria-label="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
         :title="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
         @click="$emit('toggle-wishlist', activeVariant)">
-        {{ isWishlisted ? '❤️' : '🤍' }}
+        <Heart :size="18" :fill="isWishlisted ? 'currentColor' : 'none'" />
       </button>
       <span
         class="badge flex-shrink-0"
@@ -45,7 +45,7 @@
               :alt="activeVariant.tenSanPham"
               style="max-width:100%; max-height:360px; object-fit:contain;"
             />
-            <span v-else style="font-size:6rem;">💻</span>
+            <span v-else><Laptop :size="96" color="var(--text-muted)" /></span>
           </div>
 
           <!-- Tags phân loại -->
@@ -130,8 +130,8 @@
 
           <!-- Meta: màu sắc, SKU, bảo hành -->
           <div class="d-flex flex-wrap gap-3 small" style="color:var(--text-secondary);">
-            <span v-if="activeVariant.mauSac">🎨 {{ t('productDetail.color') }} <strong style="color:var(--text-primary);">{{ activeVariant.mauSac }}</strong></span>
-            <span v-if="activeVariant.baoHanhThang">🛡️ {{ t('productDetail.warranty') }} <strong style="color:var(--text-primary);">{{ activeVariant.baoHanhThang }} {{ t('productDetail.months') }}</strong></span>
+            <span v-if="activeVariant.mauSac" class="d-inline-flex align-items-center gap-1"><Palette :size="14" /> {{ t('productDetail.color') }} <strong style="color:var(--text-primary);">{{ activeVariant.mauSac }}</strong></span>
+            <span v-if="activeVariant.baoHanhThang" class="d-inline-flex align-items-center gap-1"><Shield :size="14" /> {{ t('productDetail.warranty') }} <strong style="color:var(--text-primary);">{{ activeVariant.baoHanhThang }} {{ t('productDetail.months') }}</strong></span>
           </div>
 
           <!-- ── Thông số kỹ thuật (nhóm) ── -->
@@ -240,7 +240,7 @@
               <img v-if="p.hinhAnhChinh"
                    :src="p.hinhAnhChinh" :alt="p.tenSanPham"
                    style="max-width:100%; max-height:90px; object-fit:contain;" />
-              <span v-else style="font-size:2.5rem;">💻</span>
+              <span v-else><Laptop :size="40" color="var(--text-muted)" /></span>
             </div>
             <!-- Info -->
             <div class="p-2 d-flex flex-column gap-1 flex-grow-1">
@@ -270,7 +270,7 @@
         <h2 class="fw-bold mb-3" style="font-size:1rem; border-bottom:1px solid var(--border-color); padding-bottom:8px; color:var(--text-heading);">
           {{ t('review.heading') }}
           <span v-if="avgRating != null" class="fw-normal" style="font-size:0.85rem; color:var(--text-secondary);">
-            · ⭐ {{ avgRating.toFixed(1) }} ({{ reviews.length }})
+            · <Star :size="13" fill="currentColor" style="vertical-align:-2px;" /> {{ avgRating.toFixed(1) }} ({{ reviews.length }})
           </span>
         </h2>
 
@@ -281,7 +281,7 @@
               v-for="n in 5" :key="n" type="button"
               class="btn btn-sm p-0" style="font-size:20px; background:transparent; border:none; line-height:1;"
               @click="newSoSao = n"
-            >{{ n <= newSoSao ? '⭐' : '☆' }}</button>
+            ><Star :size="20" :fill="n <= newSoSao ? 'currentColor' : 'none'" /></button>
           </div>
           <textarea
             v-model="newNoiDung" class="form-control form-control-sm mb-2" rows="2" maxlength="1000"
@@ -301,7 +301,7 @@
              style="background:rgba(244,63,94,0.08); border:1px solid rgba(244,63,94,0.3);">
           <div>
             <div class="small fw-semibold mb-1" style="color:var(--text-primary);">
-              {{ t('review.yourReview') }} · {{ '⭐'.repeat(myReview.soSao) }}
+              {{ t('review.yourReview') }} · <span class="d-inline-flex" style="gap:1px;"><Star v-for="n in myReview.soSao" :key="n" :size="13" fill="currentColor" /></span>
             </div>
             <div v-if="myReview.noiDung" class="small" style="color:var(--text-secondary);">{{ myReview.noiDung }}</div>
           </div>
@@ -317,7 +317,7 @@
           <div v-for="r in pagedReviews" :key="r.danhGiaId" class="pb-3" style="border-bottom:1px solid var(--border-color-soft);">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="fw-semibold small" style="color:var(--text-primary);">{{ r.tenKhachHang }}</span>
-              <span style="font-size:12px;">{{ '⭐'.repeat(r.soSao) }}</span>
+              <span class="d-inline-flex" style="gap:1px;"><Star v-for="n in r.soSao" :key="n" :size="12" fill="currentColor" /></span>
             </div>
             <div v-if="r.noiDung" class="small" style="color:var(--text-secondary);">{{ r.noiDung }}</div>
           </div>
@@ -337,6 +337,7 @@ import { configKey, configLabel, colorDot } from '../../utils/productGrouping.js
 import * as DanhGiaService from '../../services/DanhGiaService.js';
 import Pagination from '../common/Pagination.vue';
 import { usePagination } from '../../composables/usePagination.js';
+import { Heart, Laptop, Palette, Shield, Star } from '@lucide/vue';
 
 const props = defineProps({
   product:     { type: Object,  required: true },

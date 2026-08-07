@@ -13,7 +13,7 @@
               <div class="d-flex flex-column align-items-center gap-1">
                 <div style="width:80px; height:80px; background:var(--bg-card-inset); border-radius:8px;" class="d-flex align-items-center justify-content-center overflow-hidden">
                   <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham" style="width:100%; height:100%; object-fit:contain; padding:6px;" />
-                  <span v-else style="font-size:1.5rem;">💻</span>
+                  <span v-else><Laptop :size="24" color="var(--text-muted)" /></span>
                 </div>
                 <span class="fw-bold small" style="color:var(--text-primary); font-size:0.78rem;">{{ item.tenSanPham }}</span>
                 <button class="btn-close" style="font-size:9px;" :aria-label="t('common.remove')" @click="$emit('remove', item)"></button>
@@ -48,6 +48,7 @@ import { computed } from 'vue';
 import Modal from '../common/Modal.vue';
 import { t } from '../../i18n/index.js';
 import { formatPrice } from '../../utils/formatPrice.js';
+import { Laptop } from '@lucide/vue';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
