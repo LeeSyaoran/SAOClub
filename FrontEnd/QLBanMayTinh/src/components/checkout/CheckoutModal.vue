@@ -12,7 +12,7 @@
       <template v-if="checkoutSuccess">
         <div class="d-flex flex-column align-items-center justify-content-center gap-4 p-5 text-center">
           <div class="d-flex align-items-center justify-content-center rounded-circle"
-               style="width:72px;height:72px;background:rgba(72,199,142,0.15);color:#48c78e;font-size:2rem;">✓</div>
+               style="width:72px;height:72px;background:rgba(72,199,142,0.15);color:#48c78e;"><CheckCircle2 :size="32" /></div>
           <div>
             <h2 class="fw-black mb-1" style="font-size:1.4rem; color:var(--text-heading);">{{ t('checkout.successTitle') }}</h2>
             <p class="mb-0" style="font-size:0.9rem; color:var(--text-secondary);">
@@ -85,7 +85,7 @@
                    class="d-flex align-items-center gap-3 px-2 py-1">
                 <div style="width:36px;height:36px;flex-shrink:0;">
                   <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham" style="width:36px;height:36px;object-fit:contain;border-radius:6px;" />
-                  <div v-else class="d-flex align-items-center justify-content-center rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);font-size:1rem;">💻</div>
+                  <div v-else class="d-flex align-items-center justify-content-center rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);"><Laptop :size="16" color="var(--text-muted)" /></div>
                 </div>
                 <span class="flex-grow-1 small text-truncate" style="color:var(--text-primary);">{{ item.tenSanPham }}</span>
                 <span class="small flex-shrink-0" style="color:var(--text-secondary);">×{{ item.quantity }}</span>
@@ -219,7 +219,7 @@
                      :style="selectedPayment==='tien_mat' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
                      @click="selectedPayment='tien_mat'">
                 <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                     style="width:42px;height:42px;background:#2a2000;font-size:1.3rem;">💵</div>
+                     style="width:42px;height:42px;background:#2a2000;"><Banknote :size="20" color="#facc15" /></div>
                 <div class="flex-grow-1">
                   <div class="fw-bold" style="font-size:0.9rem; color:var(--text-heading);">{{ t('checkout.cashTitle') }}</div>
                   <div style="font-size:11px; color:var(--text-secondary);">{{ t('checkout.cashDesc') }}</div>
@@ -237,7 +237,7 @@
                      :style="selectedPayment==='qr' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
                      @click="selectedPayment='qr'">
                 <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                     style="width:42px;height:42px;background:#0a1a2a;font-size:1.3rem;">📱</div>
+                     style="width:42px;height:42px;background:#0a1a2a;"><Smartphone :size="20" color="#60a5fa" /></div>
                 <div class="flex-grow-1">
                   <div class="fw-bold" style="font-size:0.9rem; color:var(--text-heading);">{{ t('checkout.qrTitle') }}</div>
                   <div style="font-size:11px; color:var(--text-secondary);">{{ t('checkout.qrDesc') }}</div>
@@ -255,7 +255,7 @@
                      :style="selectedPayment==='chuyen_khoan' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
                      @click="selectedPayment='chuyen_khoan'">
                 <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                     style="width:42px;height:42px;background:#0a1a0a;font-size:1.3rem;">🏦</div>
+                     style="width:42px;height:42px;background:#0a1a0a;"><Landmark :size="20" color="#34d399" /></div>
                 <div class="flex-grow-1">
                   <div class="fw-bold" style="font-size:0.9rem; color:var(--text-heading);">{{ t('checkout.bankTitle') }}</div>
                   <div style="font-size:11px; color:var(--text-secondary);">{{ t('checkout.bankDesc') }}</div>
@@ -278,7 +278,7 @@
                  style="width:220px;height:220px;border-radius:12px;background:#fff;padding:6px;" />
             <div v-else class="d-flex flex-column align-items-center justify-content-center text-center small"
                  style="width:220px;height:220px;border-radius:12px;background:var(--bg-card-alt);color:var(--text-secondary);gap:6px;">
-              <span style="font-size:1.8rem;">📵</span>{{ t('checkout.qrImageFailed') }}
+              <ImageOff :size="29" />{{ t('checkout.qrImageFailed') }}
             </div>
             <div class="text-center small" style="line-height:1.8; color:var(--text-secondary);">
               {{ t('checkout.bank') }} <strong style="color:var(--text-heading);">Vietcombank (VCB)</strong><br />
@@ -341,6 +341,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue';
+import { CheckCircle2, Laptop, Banknote, Smartphone, Landmark, ImageOff } from '@lucide/vue';
 import { t } from '../../i18n/index.js';
 import { AuthStore } from '../../stores/index.js';
 import { nowLocalIso } from '../../utils/datetime.js';
