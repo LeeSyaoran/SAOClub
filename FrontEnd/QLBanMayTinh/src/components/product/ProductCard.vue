@@ -57,7 +57,7 @@
       <p v-if="rating" class="mb-0" style="font-size:10px; color:var(--text-secondary);">
         <Star :size="12" fill="currentColor" style="vertical-align:-2px;" /> {{ rating.diemTrungBinh.toFixed(1) }} ({{ rating.tongSoDanhGia }})
       </p>
-      <p class="mb-0" style="font-size:10px; color:var(--text-secondary);">{{ t('home.fastDelivery') }}</p>
+      <p class="mb-0" style="font-size:10px; color:var(--text-secondary);"><Truck :size="11" style="vertical-align:-2px;" /> {{ t('home.fastDelivery') }}</p>
       <!-- Tags phân loại — hiển thị tên tiếng Việt từ phanLoaiTen -->
       <div v-if="product.phanLoaiTen" class="d-flex flex-wrap gap-1 mt-1">
         <span
@@ -77,7 +77,7 @@
         :class="stockBadgeClass === 'bg-secondary' ? 'btn-secondary' : 'btn-warning text-dark'"
         :disabled="stockBadgeClass === 'bg-secondary'"
         @click.stop="$emit('add-to-cart', product)">
-        {{ t('home.addToCart') }}
+        <ShoppingCart :size="12" style="vertical-align:-2px;" /> {{ t('home.addToCart') }}
       </button>
 
       <!-- Checkbox "So sánh" — disabled khi đã chọn đủ số lượng tối đa (trừ chính nó, vẫn
@@ -93,7 +93,7 @@
           :checked="isComparing"
           :disabled="compareDisabled"
           @change="$emit('toggle-compare', product)" />
-        {{ isComparing ? t('productCompare.added') : t('productCompare.add') }}
+        <CheckCircle2 v-if="isComparing" :size="11" style="vertical-align:-2px;" /> {{ isComparing ? t('productCompare.added') : t('productCompare.add') }}
       </label>
     </div>
   </article>
@@ -103,7 +103,7 @@
 import { computed } from 'vue';
 import { t } from '../../i18n/index.js';
 import { formatPrice } from '../../utils/formatPrice.js';
-import { Laptop, Heart, Star } from '@lucide/vue';
+import { Laptop, Heart, Star, Truck, ShoppingCart, CheckCircle2 } from '@lucide/vue';
 
 const props = defineProps({
   // Sản phẩm từ API /api/san-pham/hien-thi
