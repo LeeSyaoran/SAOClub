@@ -8,13 +8,14 @@
            ? 'background:var(--state-success,#16a34a); color:#fff;'
            : 'background:var(--state-danger,#dc2626); color:#fff;'"
          role="status" aria-live="polite">
-      <span style="font-size:1.1rem; flex-shrink:0;">{{ ToastState.type === 'success' ? '✓' : '✕' }}</span>
+      <span style="flex-shrink:0;"><component :is="ToastState.type === 'success' ? CheckCircle2 : XCircle" :size="18" /></span>
       <span>{{ ToastState.msg }}</span>
     </div>
   </Transition>
 </template>
 
 <script setup>
+import { CheckCircle2, XCircle } from '@lucide/vue';
 import { ToastState } from '../../stores/toast.js';
 </script>
 

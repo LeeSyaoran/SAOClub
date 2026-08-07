@@ -10,6 +10,7 @@ import {
 } from "vue";
 import { useRouter } from "vue-router";
 import { useHead } from "@unhead/vue";
+import { CheckCircle2, XCircle, Info } from '@lucide/vue';
 
 useHead({
   title: "SAOPhone",
@@ -385,10 +386,11 @@ onBeforeUnmount(() => {
               : 'background:#2563eb; color:#fff;'
         "
       >
-        <span style="font-size: 1.1rem; flex-shrink: 0">
-          {{
-            toast.type === "success" ? "✓" : toast.type === "error" ? "✕" : "ℹ"
-          }}
+        <span style="flex-shrink: 0">
+          <component
+            :is="toast.type === 'success' ? CheckCircle2 : toast.type === 'error' ? XCircle : Info"
+            :size="18"
+          />
         </span>
         {{ toast.msg }}
       </div>
