@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { Hash, FolderOpen, X } from '@lucide/vue';
 import { t } from "../../i18n/index.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
@@ -186,7 +187,7 @@ const deleteItem = async (id) => {
           <td>{{ item[nameField] }}</td>
           <td>
             <div class="d-flex gap-1">
-              <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 8px;" @click="openSerials(item)">🔢 {{ t('admin.dmCategory.viewSerials', { count: stockCountOf(item) }) }}</button>
+              <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 8px;" @click="openSerials(item)"><Hash :size="12" style="vertical-align:-2px;" /> {{ t('admin.dmCategory.viewSerials', { count: stockCountOf(item) }) }}</button>
               <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openEdit(item)">{{ t('admin.dmCategory.edit') }}</button>
               <button class="btn btn-sm btn-outline-danger" style="font-size:0.78rem;padding:2px 8px;" @click="deleteItem(item[idField])">{{ t('admin.dmCategory.delete') }}</button>
             </div>
@@ -213,14 +214,14 @@ const deleteItem = async (id) => {
         <div class="d-flex justify-content-between align-items-center mb-1">
           <label class="form-label small text-secondary mb-0">{{ t('admin.stockModal.newSerialsLabel') }}</label>
           <label class="btn btn-sm btn-outline-info" style="padding:2px 10px;font-size:0.72rem;cursor:pointer;">
-            📂 {{ t('admin.stockModal.importFromFile') }}
+            <FolderOpen :size="14" style="vertical-align:-2px;" /> {{ t('admin.stockModal.importFromFile') }}
             <input type="file" accept=".csv,.txt,.xlsx,.xls" class="d-none" @change="importSerialsFromFile" />
           </label>
         </div>
         <div class="d-flex flex-column gap-2">
           <div v-for="(s, idx) in newSerials" :key="idx" class="d-flex gap-2 align-items-center">
             <input v-model="newSerials[idx]" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.stockModal.serialPlaceholder')" />
-            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" :aria-label="t('common.remove')" @click="removeSerialRow(idx)">✕</button>
+            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" :aria-label="t('common.remove')" @click="removeSerialRow(idx)"><X :size="14" /></button>
           </div>
         </div>
         <button class="btn btn-sm btn-outline-warning mt-2" @click="addSerialRow">{{ t('admin.stockModal.addSerialRow') }}</button>
