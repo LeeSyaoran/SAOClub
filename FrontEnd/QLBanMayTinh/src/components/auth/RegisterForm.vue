@@ -64,7 +64,7 @@
                         style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
                         :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
                         @click="showPassword = !showPassword">
-                  {{ showPassword ? '🙈' : '👁' }}
+                  <component :is="showPassword ? EyeOff : Eye" :size="16" />
                 </button>
               </div>
             </template>
@@ -82,7 +82,7 @@
                         style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
                         :title="showConfirm ? t('register.hidePassword') : t('register.showPassword')"
                         @click="showConfirm = !showConfirm">
-                  {{ showConfirm ? '🙈' : '👁' }}
+                  <component :is="showConfirm ? EyeOff : Eye" :size="16" />
                 </button>
               </div>
             </template>
@@ -125,6 +125,7 @@ import { registerSchema } from "../../utils/validators.js";
 import { t } from "../../i18n/index.js";
 import * as KhachHangService from "../../services/KhachHangService.js";
 import FormField from "../common/FormField.vue";
+import { Eye, EyeOff } from '@lucide/vue';
 
 const emit = defineEmits(["register-success", "open-login"]);
 

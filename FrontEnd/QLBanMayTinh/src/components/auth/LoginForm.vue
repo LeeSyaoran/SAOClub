@@ -35,7 +35,7 @@
                     style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
                     :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
                     @click="showPassword = !showPassword">
-              {{ showPassword ? '🙈' : '👁' }}
+              <component :is="showPassword ? EyeOff : Eye" :size="16" />
             </button>
           </div>
         </template>
@@ -75,6 +75,7 @@ import { toTypedSchema } from '@vee-validate/zod';
 import { loginSchema } from '../../utils/validators.js';
 import { t } from '../../i18n/index.js';
 import FormField from '../common/FormField.vue';
+import { Eye, EyeOff } from '@lucide/vue';
 
 // Emit: submit (trả về { username, password }), register-click (chuyển tab đăng ký)
 const emit = defineEmits([
