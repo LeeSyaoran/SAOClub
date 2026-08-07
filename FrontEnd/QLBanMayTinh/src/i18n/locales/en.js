@@ -224,7 +224,7 @@ export default {
     empty: "Your cart is empty",
     continueShopping: "Continue shopping",
     subtotal: "Subtotal ({count} items)",
-    freeShipNote: "🚚 Free shipping for orders from 300,000₫",
+    freeShipNote: "Free shipping for orders from 300,000₫",
     checkout: "Checkout",
     decrease: "Decrease quantity",
     increase: "Increase quantity",

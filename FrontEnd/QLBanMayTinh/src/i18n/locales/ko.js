@@ -224,7 +224,7 @@ export default {
     empty: "장바구니가 비어 있습니다",
     continueShopping: "쇼핑 계속하기",
     subtotal: "소계 ({count}개 상품)",
-    freeShipNote: "🚚 30만동 이상 무료배송",
+    freeShipNote: "30만동 이상 무료배송",
     checkout: "결제하기",
     decrease: "수량 감소",
     increase: "수량 증가",

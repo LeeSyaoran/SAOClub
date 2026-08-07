@@ -224,7 +224,7 @@ export default {
     empty: "カートは空です",
     continueShopping: "買い物を続ける",
     subtotal: "小計（{count} 点）",
-    freeShipNote: "🚚 30万ドン以上で送料無料",
+    freeShipNote: "30万ドン以上で送料無料",
     checkout: "レジに進む",
     decrease: "数量を減らす",
     increase: "数量を増やす",

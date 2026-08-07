@@ -224,7 +224,7 @@ export default {
     empty: "您的购物车是空的",
     continueShopping: "继续购物",
     subtotal: "小计（{count} 件商品）",
-    freeShipNote: "🚚 满30万免运费",
+    freeShipNote: "满30万免运费",
     checkout: "结算",
     decrease: "减少数量",
     increase: "增加数量",

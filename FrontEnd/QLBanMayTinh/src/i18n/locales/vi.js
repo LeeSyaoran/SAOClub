@@ -224,7 +224,7 @@ export default {
     empty: "Giỏ hàng của bạn đang trống",
     continueShopping: "Tiếp tục mua sắm",
     subtotal: "Tạm tính ({count} sản phẩm)",
-    freeShipNote: "🚚 Miễn phí vận chuyển cho đơn từ 300.000đ",
+    freeShipNote: "Miễn phí vận chuyển cho đơn từ 300.000đ",
     checkout: "Thanh toán",
     decrease: "Giảm số lượng",
     increase: "Tăng số lượng",
