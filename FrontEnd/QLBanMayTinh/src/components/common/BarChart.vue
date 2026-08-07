@@ -5,7 +5,7 @@
       <div v-if="row.image !== undefined" class="rounded-2 d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
            style="width:30px; height:26px; background:var(--bg-card-inset);">
         <img v-if="row.image" :src="row.image" :alt="row.label" style="width:100%; height:100%; object-fit:contain; padding:2px;" />
-        <span v-else style="font-size:0.85rem;">💻</span>
+        <span v-else><Laptop :size="14" color="var(--text-muted)" /></span>
       </div>
       <div class="text-truncate flex-shrink-0" style="width:110px; font-size:11.5px; color:var(--text-secondary);" :title="row.label">
         {{ row.label }}
@@ -23,6 +23,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { Laptop } from '@lucide/vue';
 
 const props = defineProps({
   data:      { type: Array, required: true }, // [{ label, value, color?, displayValue? }]
