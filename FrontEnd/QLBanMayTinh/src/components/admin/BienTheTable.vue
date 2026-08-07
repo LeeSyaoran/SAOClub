@@ -13,6 +13,7 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
+import { Camera } from '@lucide/vue';
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
 
@@ -555,7 +556,7 @@ const deleteVariant = async (bienTheId) => {
                 <label class="d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary text-secondary" style="width:110px;height:88px;cursor:pointer;flex-shrink:0;overflow:hidden;background:var(--bg-card-inset);">
                   <img v-if="imagePreview" :src="imagePreview" style="width:110px;height:88px;object-fit:contain;" />
                   <template v-else>
-                    <span style="font-size:1.4rem;">&#128247;</span>
+                    <span><Camera :size="22" color="var(--text-muted)" /></span>
                     <span style="font-size:0.68rem;margin-top:4px;">{{ t('admin.productModal.imageClickToChoose') }}</span>
                   </template>
                   <input type="file" accept="image/*" class="d-none" @change="handleImageFile" />

@@ -5,6 +5,7 @@ import { ProductsStore } from "../../stores/products.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
 import { variantsForDetail } from "../../utils/productGrouping.js";
+import { Laptop } from '@lucide/vue';
 
 // ── Modal "Chi tiết sản phẩm" — dùng chung bởi ProductsTable.vue (xem/so sánh toàn bộ
 // biến thể của 1 sản phẩm) và OrdersTable.vue (chỉ xem (các) biến thể khách đã mua trong
@@ -60,7 +61,7 @@ const close = () => emit("update:modelValue", false);
           <div class="d-flex align-items-center justify-content-between gap-3 p-3" style="background:var(--bg-input);">
             <div class="d-flex align-items-center gap-3">
               <img v-if="v.hinhAnhChinh" :src="v.hinhAnhChinh" style="width:72px;height:54px;object-fit:contain;background:var(--bg-card-inset);border-radius:6px;padding:4px;" />
-              <span v-else style="font-size:2rem;width:72px;text-align:center;">💻</span>
+              <span v-else style="width:72px;text-align:center;"><Laptop :size="32" color="var(--text-muted)" /></span>
               <div>
                 <div class="fw-bold text-light" style="font-size:0.95rem;">{{ v.tenSanPham }}</div>
                 <div class="text-secondary" style="font-size:0.75rem;font-family:monospace;">{{ v.maSku }}</div>
