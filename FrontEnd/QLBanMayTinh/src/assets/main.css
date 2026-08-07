@@ -21,3 +21,9 @@ a {
   outline-offset: 2px;
   border-radius: inherit;
 }
+
+.spin-icon { animation: spin-icon-rotate 0.8s linear infinite; }
+@keyframes spin-icon-rotate { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spin-icon { animation: none; }
+}

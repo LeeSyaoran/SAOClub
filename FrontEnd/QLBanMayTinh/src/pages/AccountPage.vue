@@ -25,6 +25,11 @@ import ReturnRequestModal from "../components/order/ReturnRequestModal.vue";
 import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
 import LuckyWheelPanel from "../components/account/LuckyWheelPanel.vue";
+import {
+  Clock, Truck, CheckCircle2, XCircle, Heart, Sparkles, Settings, ArrowLeft,
+  User, Gift, Wallet, Package, ShoppingBag, Receipt, Laptop, History, RefreshCw,
+  Undo2, AlertTriangle, Loader2, Smartphone, Mail, MapPin, Save, ShoppingCart,
+} from '@lucide/vue';
 
 const emit = defineEmits(["go-home", "add-to-cart", "buy-again-unavailable", "toast"]);
 
@@ -71,13 +76,13 @@ const RETURN_STATUS_COLOR = {
 };
 
 const TABS = computed(() => [
-  { id: "pending",   icon: "🕐", label: t("account.tabPending") },
-  { id: "shipping",  icon: "🚚", label: t("account.tabShipping") },
-  { id: "completed", icon: "✅", label: t("account.tabCompleted") },
-  { id: "cancelled", icon: "❌", label: t("account.tabCancelled") },
-  { id: "wishlist",  icon: "❤️", label: t("account.tabWishlist") },
-  { id: "wheel",     icon: "🎡", label: t("account.tabWheel") },
-  { id: "settings",  icon: "⚙️", label: t("account.tabSettings") },
+  { id: "pending",   icon: Clock, label: t("account.tabPending") },
+  { id: "shipping",  icon: Truck, label: t("account.tabShipping") },
+  { id: "completed", icon: CheckCircle2, label: t("account.tabCompleted") },
+  { id: "cancelled", icon: XCircle, label: t("account.tabCancelled") },
+  { id: "wishlist",  icon: Heart, label: t("account.tabWishlist") },
+  { id: "wheel",     icon: Sparkles, label: t("account.tabWheel") },
+  { id: "settings",  icon: Settings, label: t("account.tabSettings") },
 ]);
 
 // ── Dữ liệu ─────────────────────────────────────────────────────────────────
@@ -367,7 +372,7 @@ onUnmounted(() => {
         <button class="btn btn-sm fw-bold d-flex align-items-center gap-1"
                 style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary);"
                 @click="emit('go-home')">
-          ← {{ t('common.backHome') }}
+          <ArrowLeft :size="14" style="vertical-align:-2px;" /> {{ t('common.backHome') }}
         </button>
 
         <div class="vr d-none d-sm-block" style="opacity:0.15; height:28px;"></div>
@@ -380,7 +385,7 @@ onUnmounted(() => {
           <div>
             <div class="fw-black" style="color:var(--text-heading); font-size:1.05rem; line-height:1.25;">{{ auth.user?.hoTen || auth.user?.username }}</div>
             <div style="color:var(--text-secondary); font-size:11px;">
-              <span>👤 {{ t('account.myAccount') }}</span>
+              <span class="d-inline-flex align-items-center gap-1"><User :size="14" /> {{ t('account.myAccount') }}</span>
             </div>
           </div>
         </div>
@@ -388,13 +393,13 @@ onUnmounted(() => {
         <!-- Điểm tích lũy -->
         <div v-if="profile" class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-bold"
              style="background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.25); color:var(--accent-fg); font-size:12px; white-space:nowrap;">
-          🎁 {{ t('account.points', { points: profile.diemTichLuy ?? 0 }) }}
+          <Gift :size="13" style="vertical-align:-2px;" /> {{ t('account.points', { points: profile.diemTichLuy ?? 0 }) }}
         </div>
 
         <!-- So du vi -->
         <div v-if="profile" class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-bold"
              style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.25); color:#22c55e; font-size:12px; white-space:nowrap;">
-          💰 {{ t('account.walletBalance', { amount: formatPrice(profile.soDuVi ?? 0) }) }}
+          <Wallet :size="13" style="vertical-align:-2px;" /> {{ t('account.walletBalance', { amount: formatPrice(profile.soDuVi ?? 0) }) }}
         </div>
       </div>
     </header>
@@ -412,7 +417,7 @@ onUnmounted(() => {
                 @mouseenter="e => { if (activeTab !== tab.id) e.currentTarget.style.background = 'var(--bg-hover)'; }"
                 @mouseleave="e => { if (activeTab !== tab.id) e.currentTarget.style.background = ''; }"
                 @click="activeTab = tab.id">
-          <span>{{ tab.icon }}</span>
+          <component :is="tab.icon" :size="16" />
           {{ tab.label }}
           <span v-if="tabOrderCounts[tab.id]"
                 class="badge rounded-pill" style="background:var(--accent); color:var(--accent-text); font-size:10px;">
@@ -433,11 +438,11 @@ onUnmounted(() => {
         <div v-else-if="currentOrders.length === 0"
              class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
              style="background:var(--bg-card); border:1px dashed var(--border-color);">
-          <div style="font-size:2.6rem; opacity:0.35;">📦</div>
+          <div style="opacity:0.35;"><Package :size="42" /></div>
           <div class="fw-bold mt-2" style="color:var(--text-primary); font-size:0.95rem;">{{ t('account.ordersEmptyTitle') }}</div>
           <div class="mt-1" style="color:var(--text-secondary); font-size:12px;">{{ t('account.ordersEmptyDesc') }}</div>
           <button class="btn btn-warning btn-sm fw-bold rounded-pill px-4 mt-3" @click="emit('go-home')">
-            🛍️ {{ t('common.continueShopping') }}
+            <ShoppingBag :size="14" style="vertical-align:-2px;" /> {{ t('common.continueShopping') }}
           </button>
         </div>
 
@@ -452,7 +457,7 @@ onUnmounted(() => {
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3"
                  style="border-bottom:1px solid var(--border-color-soft);">
               <div class="d-flex align-items-center gap-2">
-                <span style="font-size:1.1rem;">🧾</span>
+                <span><Receipt :size="18" /></span>
                 <div>
                   <div class="fw-bold" style="color:var(--text-heading); font-size:0.9rem;">{{ t('account.orderCode', { code: o.maDonHang || o.donHangId }) }}</div>
                   <div style="color:var(--text-secondary); font-size:11px;">{{ formatDate(o.ngayDat) }}</div>
@@ -473,8 +478,8 @@ onUnmounted(() => {
             <!-- Ngày giao dự kiến / ngày nhận hàng thực tế -->
             <div v-if="o.ngayGiaoDuKien || o.ngayGiaoThucTe"
                  class="d-flex flex-wrap gap-3 mb-3 small" style="color:var(--text-secondary);">
-              <span v-if="o.ngayGiaoDuKien">📦 {{ t('account.expectedDelivery') }}: {{ formatDate(o.ngayGiaoDuKien) }}</span>
-              <span v-if="o.ngayGiaoThucTe">✅ {{ t('account.actualDelivery') }}: {{ formatDate(o.ngayGiaoThucTe) }}</span>
+              <span v-if="o.ngayGiaoDuKien" class="d-inline-flex align-items-center gap-1"><Package :size="13" /> {{ t('account.expectedDelivery') }}: {{ formatDate(o.ngayGiaoDuKien) }}</span>
+              <span v-if="o.ngayGiaoThucTe" class="d-inline-flex align-items-center gap-1"><CheckCircle2 :size="13" /> {{ t('account.actualDelivery') }}: {{ formatDate(o.ngayGiaoThucTe) }}</span>
             </div>
 
             <!-- Xác nhận đã nhận hàng — luôn hiện từ lúc đơn sang "Đang giao" để khách biết
@@ -487,7 +492,7 @@ onUnmounted(() => {
                       :disabled="o.trangThaiDonHang !== 'awaiting_confirmation' || confirmingOrderId === o.donHangId"
                       :title="o.trangThaiDonHang !== 'awaiting_confirmation' ? t('account.confirmReceivedDisabledHint') : ''"
                       @click="confirmReceived(o)">
-                ✅ {{ t('account.confirmReceived') }}
+                <CheckCircle2 :size="14" style="vertical-align:-2px;" /> {{ t('account.confirmReceived') }}
               </button>
             </div>
 
@@ -510,7 +515,7 @@ onUnmounted(() => {
                   <img v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
                        :src="productByBienThe(item.bienTheId).hinhAnhChinh"
                        style="width:100%; height:100%; object-fit:contain; padding:4px;" />
-                  <span v-else style="font-size:1.2rem;">💻</span>
+                  <span v-else><Laptop :size="19" color="var(--text-muted)" /></span>
                 </div>
                 <span class="flex-grow-1" style="color:var(--text-primary); font-size:12.5px;">{{ productByBienThe(item.bienTheId)?.tenSanPham || item.maSku }}</span>
                 <span class="fw-semibold" style="color:var(--text-secondary); font-size:12px;">x{{ item.soLuong }}</span>
@@ -536,7 +541,7 @@ onUnmounted(() => {
         <div v-else-if="historyOrders.length === 0"
              class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
              style="background:var(--bg-card); border:1px dashed var(--border-color);">
-          <div style="font-size:2.6rem; opacity:0.35;">🕘</div>
+          <div style="opacity:0.35;"><History :size="42" /></div>
           <div class="fw-bold mt-2" style="color:var(--text-primary); font-size:0.95rem;">{{ t('account.historyEmptyTitle') }}</div>
           <div class="mt-1" style="color:var(--text-secondary); font-size:12px;">{{ t('account.historyEmptyDesc') }}</div>
         </div>
@@ -551,14 +556,14 @@ onUnmounted(() => {
                @mouseleave="e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
               <div class="d-flex align-items-center gap-3">
-                <span style="font-size:1.3rem; opacity:0.6;">🧾</span>
+                <span style="opacity:0.6;"><Receipt :size="21" /></span>
                 <div>
                   <div class="fw-bold" style="color:var(--text-heading); font-size:0.88rem;">{{ t('account.orderCode', { code: o.maDonHang || o.donHangId }) }}</div>
                   <div style="color:var(--text-secondary); font-size:11px;">
                     {{ formatDate(o.ngayDat) }} · {{ (itemsByOrder[o.donHangId] || []).length }} {{ t('account.products') }}
                   </div>
                   <div v-if="o.ngayGiaoThucTe" style="color:var(--text-secondary); font-size:11px;">
-                    ✅ {{ t('account.actualDelivery') }}: {{ formatDate(o.ngayGiaoThucTe) }}
+                    <CheckCircle2 :size="13" style="vertical-align:-2px;" /> {{ t('account.actualDelivery') }}: {{ formatDate(o.ngayGiaoThucTe) }}
                   </div>
                 </div>
               </div>
@@ -573,13 +578,13 @@ onUnmounted(() => {
                         class="btn btn-sm fw-bold rounded-pill px-3"
                         style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
                         @click.stop="buyAgainOrder(o)">
-                  🔁 {{ t('account.buyAgain') }}
+                  <RefreshCw :size="14" style="vertical-align:-2px;" /> {{ t('account.buyAgain') }}
                 </button>
                 <button v-if="canRequestReturn(o)"
                         class="btn btn-sm fw-bold rounded-pill px-3"
                         style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
                         @click.stop="returnModalOrder = o">
-                  ↩️ {{ t('account.requestReturn') }}
+                  <Undo2 :size="14" style="vertical-align:-2px;" /> {{ t('account.requestReturn') }}
                 </button>
                 <span style="color:var(--text-secondary); font-size:0.8rem;">{{ expandedHistoryOrders.has(o.donHangId) ? '▲' : '▼' }}</span>
               </div>
@@ -599,7 +604,7 @@ onUnmounted(() => {
                   <img v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
                        :src="productByBienThe(item.bienTheId).hinhAnhChinh"
                        style="width:100%; height:100%; object-fit:contain; padding:3px;" />
-                  <span v-else style="font-size:1rem;">💻</span>
+                  <span v-else><Laptop :size="16" color="var(--text-muted)" /></span>
                 </div>
                 <span class="flex-grow-1" style="color:var(--text-primary); font-size:12.5px;">{{ productByBienThe(item.bienTheId)?.tenSanPham || item.maSku }}</span>
                 <span class="text-secondary" style="font-size:12px;">x{{ item.soLuong }}</span>
@@ -635,10 +640,10 @@ onUnmounted(() => {
         <div v-else-if="wishlistItems.length === 0"
              class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
              style="background:var(--bg-card); border:1px dashed var(--border-color);">
-          <div style="font-size:2.6rem; opacity:0.35;">🤍</div>
+          <div style="opacity:0.35;"><Heart :size="42" /></div>
           <div class="mt-1" style="color:var(--text-secondary); font-size:12px;">{{ t('wishlist.empty') }}</div>
           <button class="btn btn-warning btn-sm fw-bold rounded-pill px-4 mt-3" @click="emit('go-home')">
-            🛍️ {{ t('wishlist.browse') }}
+            <ShoppingBag :size="14" style="vertical-align:-2px;" /> {{ t('wishlist.browse') }}
           </button>
         </div>
 
@@ -652,7 +657,7 @@ onUnmounted(() => {
             <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                  style="width:52px; height:44px; background:var(--bg-card-inset); overflow:hidden;">
               <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" style="width:100%; height:100%; object-fit:contain; padding:4px;" />
-              <span v-else style="font-size:1.2rem;">💻</span>
+              <span v-else><Laptop :size="19" color="var(--text-muted)" /></span>
             </div>
             <div class="flex-grow-1" style="min-width:0;">
               <div class="text-truncate" style="color:var(--text-primary); font-size:12.5px;">{{ item.tenSanPham }}</div>
@@ -665,13 +670,13 @@ onUnmounted(() => {
             </span>
             <button v-else class="btn btn-warning btn-sm fw-bold rounded-pill flex-shrink-0" style="font-size:11px;"
                     @click.stop="addWishlistItemToCart(item)">
-              🛒
+              <ShoppingCart :size="15" />
             </button>
             <button class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                     style="width:30px; height:30px; padding:0; border:none; background:transparent; font-size:14px;"
                     :aria-label="t('wishlist.remove')" :title="t('wishlist.remove')"
                     @click.stop="removeWishlistItem(item)">
-              ❤️
+              <Heart :size="15" fill="currentColor" />
             </button>
           </div>
         </div>
@@ -688,7 +693,7 @@ onUnmounted(() => {
         <!-- Điểm & Voucher -->
         <div class="rounded-4 p-4" style="background:var(--bg-card); border:1px solid var(--border-color); box-shadow:0 4px 18px var(--shadow-color);">
           <div class="d-flex align-items-center gap-2 mb-4">
-            <span style="font-size:1.3rem;">🎁</span>
+            <span><Gift :size="21" /></span>
             <div>
               <h5 class="fw-black mb-0" style="color:var(--text-heading);">{{ t('account.rewards.heading') }}</h5>
               <div style="color:var(--text-secondary); font-size:11.5px;">{{ t('account.rewards.subtitle', { points: profile?.diemTichLuy ?? 0 }) }}</div>
@@ -736,7 +741,7 @@ onUnmounted(() => {
         <!-- Thông tin cá nhân -->
         <div class="rounded-4 p-4" style="background:var(--bg-card); border:1px solid var(--border-color); box-shadow:0 4px 18px var(--shadow-color);">
           <div class="d-flex align-items-center gap-2 mb-4">
-            <span style="font-size:1.3rem;">👤</span>
+            <span><User :size="21" /></span>
             <div>
               <h5 class="fw-black mb-0" style="color:var(--text-heading);">{{ t('account.settings.heading') }}</h5>
               <div style="color:var(--text-secondary); font-size:11.5px;">{{ t('account.settings.subtitle') }}</div>
@@ -749,7 +754,7 @@ onUnmounted(() => {
 
           <form v-else @submit.prevent="saveProfile" class="d-flex flex-column gap-3">
             <div>
-              <label class="form-label small fw-semibold" style="color:var(--text-secondary);">🧑 {{ t('account.settings.fullName') }}</label>
+              <label class="form-label small fw-semibold d-flex align-items-center gap-1" style="color:var(--text-secondary);"><User :size="13" /> {{ t('account.settings.fullName') }}</label>
               <input v-model="profileForm.hoTen" type="text" required
                      class="form-control"
                      style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;" />
@@ -757,13 +762,13 @@ onUnmounted(() => {
 
             <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label small fw-semibold" style="color:var(--text-secondary);">📱 {{ t('account.settings.phone') }}</label>
+                <label class="form-label small fw-semibold d-flex align-items-center gap-1" style="color:var(--text-secondary);"><Smartphone :size="13" /> {{ t('account.settings.phone') }}</label>
                 <input v-model="profileForm.soDienThoai" type="text" required
                        class="form-control"
                        style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;" />
               </div>
               <div class="col-md-6">
-                <label class="form-label small fw-semibold" style="color:var(--text-secondary);">✉️ {{ t('account.settings.email') }}</label>
+                <label class="form-label small fw-semibold d-flex align-items-center gap-1" style="color:var(--text-secondary);"><Mail :size="13" /> {{ t('account.settings.email') }}</label>
                 <input v-model="profileForm.email" type="email" required
                        class="form-control"
                        style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;" />
@@ -771,19 +776,19 @@ onUnmounted(() => {
             </div>
 
             <div>
-              <label class="form-label small fw-semibold" style="color:var(--text-secondary);">📍 {{ t('account.settings.address') }}</label>
+              <label class="form-label small fw-semibold d-flex align-items-center gap-1" style="color:var(--text-secondary);"><MapPin :size="13" /> {{ t('account.settings.address') }}</label>
               <input v-model="profileForm.diaChi" type="text" required
                      class="form-control"
                      style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;" />
             </div>
 
-            <div v-if="profileError" class="alert alert-danger small py-2 mb-0 rounded-3">⚠️ {{ profileError }}</div>
-            <div v-if="profileSuccess" class="alert alert-success small py-2 mb-0 rounded-3">✅ {{ profileSuccess }}</div>
+            <div v-if="profileError" class="alert alert-danger small py-2 mb-0 rounded-3 d-flex align-items-center gap-1"><AlertTriangle :size="14" /> {{ profileError }}</div>
+            <div v-if="profileSuccess" class="alert alert-success small py-2 mb-0 rounded-3 d-flex align-items-center gap-1"><CheckCircle2 :size="14" /> {{ profileSuccess }}</div>
 
             <div class="d-flex justify-content-end pt-2" style="border-top:1px solid var(--border-color-soft);">
               <button type="submit" class="btn btn-warning fw-bold rounded-pill px-4 py-2 mt-3" :disabled="profileSaving"
                       style="font-size:0.85rem;">
-                {{ profileSaving ? '⏳ ' + t('common.saving') : '💾 ' + t('common.save') }}
+                <span class="d-inline-flex align-items-center gap-1"><component :is="profileSaving ? Loader2 : Save" :size="14" :class="{ 'spin-icon': profileSaving }" /> {{ profileSaving ? t('common.saving') : t('common.save') }}</span>
               </button>
             </div>
           </form>
