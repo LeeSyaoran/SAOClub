@@ -216,8 +216,8 @@ export default {
     inStockCount: "{count}대 재고",
     lowStockCount: "{count}대 남음",
     fromPrice: "부터",
-    fastDelivery: "🚚 2시간 초고속 배송",
-    addToCart: "🛒 장바구니에 담기",  },
+    fastDelivery: "2시간 초고속 배송",
+    addToCart: "장바구니에 담기",  },
 
   cart: {
     title: "장바구니",
@@ -377,7 +377,7 @@ export default {
 
   productCompare: {
     add: "비교하기",
-    added: "✓ 비교 중",
+    added: "비교 중",
     barLabel: "{count}/{max}개 선택됨",
     barClear: "선택 해제",
     barOpen: "지금 비교하기",

@@ -216,8 +216,8 @@ export default {
     inStockCount: "Còn {count} máy",
     lowStockCount: "Chỉ còn {count} máy",
     fromPrice: "Từ",
-    fastDelivery: "🚚 Giao nhanh 2H",
-    addToCart: "🛒 Thêm vào giỏ",  },
+    fastDelivery: "Giao nhanh 2H",
+    addToCart: "Thêm vào giỏ",  },
 
   cart: {
     title: "Giỏ hàng",
@@ -377,7 +377,7 @@ export default {
 
   productCompare: {
     add: "So sánh",
-    added: "✓ Đang so sánh",
+    added: "Đang so sánh",
     barLabel: "Đã chọn {count}/{max} sản phẩm để so sánh",
     barClear: "Bỏ chọn hết",
     barOpen: "So sánh ngay",

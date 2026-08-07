@@ -216,8 +216,8 @@ export default {
     inStockCount: "{count} in stock",
     lowStockCount: "Only {count} left",
     fromPrice: "From",
-    fastDelivery: "🚚 2H fast delivery",
-    addToCart: "🛒 Add to cart",  },
+    fastDelivery: "2H fast delivery",
+    addToCart: "Add to cart",  },
 
   cart: {
     title: "Cart",
@@ -377,7 +377,7 @@ export default {
 
   productCompare: {
     add: "Compare",
-    added: "✓ Comparing",
+    added: "Comparing",
     barLabel: "{count}/{max} products selected to compare",
     barClear: "Clear selection",
     barOpen: "Compare now",

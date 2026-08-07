@@ -216,8 +216,8 @@ export default {
     inStockCount: "现货 {count} 台",
     lowStockCount: "仅剩 {count} 台",
     fromPrice: "起",
-    fastDelivery: "🚚 2小时极速配送",
-    addToCart: "🛒 加入购物车",  },
+    fastDelivery: "2小时极速配送",
+    addToCart: "加入购物车",  },
 
   cart: {
     title: "购物车",
@@ -377,7 +377,7 @@ export default {
 
   productCompare: {
     add: "对比",
-    added: "✓ 对比中",
+    added: "对比中",
     barLabel: "已选择 {count}/{max} 件商品",
     barClear: "清除选择",
     barOpen: "立即对比",

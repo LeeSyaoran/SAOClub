@@ -216,8 +216,8 @@ export default {
     inStockCount: "在庫 {count} 台",
     lowStockCount: "残り {count} 台",
     fromPrice: "〜より",
-    fastDelivery: "🚚 2時間スピード配送",
-    addToCart: "🛒 カートに追加",  },
+    fastDelivery: "2時間スピード配送",
+    addToCart: "カートに追加",  },
 
   cart: {
     title: "カート",
@@ -377,7 +377,7 @@ export default {
 
   productCompare: {
     add: "比較する",
-    added: "✓ 比較中",
+    added: "比較中",
     barLabel: "{count}/{max} 件選択中",
     barClear: "選択をクリア",
     barOpen: "今すぐ比較",
