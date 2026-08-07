@@ -1,6 +1,10 @@
 <script setup>
 defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
 import { computed, ref } from "vue";
+import {
+  Package, Truck, ScrollText, Undo2, Shield, Hash, Cpu, MemoryStick,
+  Gamepad2, HardDrive, X, Menu, Moon, Sun,
+} from '@lucide/vue';
 import { t } from "../i18n/index.js";
 import { ThemeStore, toggleTheme } from "../stores/theme.js";
 import ConfirmDialog from "../components/common/ConfirmDialog.vue";
@@ -31,20 +35,20 @@ const navigate = (page) => {
 };
 
 const PAGE_META = {
-  inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: "📦" },
-  suppliers: { titleKey: "admin.pageMeta.suppliers.title", subKey: "admin.pageMeta.suppliers.sub", icon: "🚚" },
-  inventoryHistory: { titleKey: "admin.pageMeta.inventoryHistory.title", subKey: "admin.pageMeta.inventoryHistory.sub", icon: "📜" },
-  traHang: { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
-  warrantyClaims: { titleKey: "admin.pageMeta.warrantyClaims.title", subKey: "admin.pageMeta.warrantyClaims.sub", icon: "🛡️" },
-  serial: { titleKey: "admin.pageMeta.serial.title", subKey: "admin.pageMeta.serial.sub", icon: "🔢" },
-  cpu: { titleKey: "admin.pageMeta.cpu.title", subKey: "admin.pageMeta.cpu.sub", icon: "🧠" },
-  ram: { titleKey: "admin.pageMeta.ram.title", subKey: "admin.pageMeta.ram.sub", icon: "💾" },
-  gpu: { titleKey: "admin.pageMeta.gpu.title", subKey: "admin.pageMeta.gpu.sub", icon: "🎮" },
-  oCung: { titleKey: "admin.pageMeta.oCung.title", subKey: "admin.pageMeta.oCung.sub", icon: "💽" },
+  inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: Package },
+  suppliers: { titleKey: "admin.pageMeta.suppliers.title", subKey: "admin.pageMeta.suppliers.sub", icon: Truck },
+  inventoryHistory: { titleKey: "admin.pageMeta.inventoryHistory.title", subKey: "admin.pageMeta.inventoryHistory.sub", icon: ScrollText },
+  traHang: { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: Undo2 },
+  warrantyClaims: { titleKey: "admin.pageMeta.warrantyClaims.title", subKey: "admin.pageMeta.warrantyClaims.sub", icon: Shield },
+  serial: { titleKey: "admin.pageMeta.serial.title", subKey: "admin.pageMeta.serial.sub", icon: Hash },
+  cpu: { titleKey: "admin.pageMeta.cpu.title", subKey: "admin.pageMeta.cpu.sub", icon: Cpu },
+  ram: { titleKey: "admin.pageMeta.ram.title", subKey: "admin.pageMeta.ram.sub", icon: MemoryStick },
+  gpu: { titleKey: "admin.pageMeta.gpu.title", subKey: "admin.pageMeta.gpu.sub", icon: Gamepad2 },
+  oCung: { titleKey: "admin.pageMeta.oCung.title", subKey: "admin.pageMeta.oCung.sub", icon: HardDrive },
 };
 const topbarTitle = computed(() => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.inventory.title"));
 const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
-const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
+const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? Package);
 </script>
 
 <template>
@@ -130,9 +134,9 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
           <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
                   style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1.1rem;"
                   :aria-label="t('admin.sidebar.toggleMenu')" :title="t('admin.sidebar.toggleMenu')"
-                  @click="sidebarOpen = !sidebarOpen">{{ sidebarOpen ? '✕' : '☰' }}</button>
+                  @click="sidebarOpen = !sidebarOpen"><component :is="sidebarOpen ? X : Menu" :size="20" /></button>
           <div>
-            <div class="fw-bold" style="font-size:1.05rem;">{{ topbarIcon }} {{ topbarTitle }}</div>
+            <div class="fw-bold d-flex align-items-center gap-1" style="font-size:1.05rem;"><component :is="topbarIcon" :size="18" /> {{ topbarTitle }}</div>
             <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
           </div>
         </div>
@@ -141,7 +145,7 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "📦");
                 :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
                 :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
                 @click="toggleTheme">
-          {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
+          <component :is="ThemeStore.mode === 'dark' ? Moon : Sun" :size="18" />
         </button>
       </div>
 

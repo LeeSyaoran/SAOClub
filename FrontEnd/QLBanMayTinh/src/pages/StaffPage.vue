@@ -1,6 +1,7 @@
 <script setup>
 defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import { ShoppingCart, Receipt, Users, Undo2, Laptop, X, Menu, Moon, Sun } from '@lucide/vue';
 import { AuthStore } from "../stores/index.js";
 import { t } from "../i18n/index.js";
 import { ThemeStore, toggleTheme } from "../stores/theme.js";
@@ -32,15 +33,15 @@ const navigate = (page) => {
 };
 
 const PAGE_META = {
-  "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: "🛒" },
-  orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: "🧾" },
-  customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: "👥" },
-  "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: "↩️" },
-  products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: "💻" },
+  "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: ShoppingCart },
+  orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: Receipt },
+  customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: Users },
+  "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: Undo2 },
+  products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: Laptop },
 };
 const topbarTitle = computed(() => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.banHang.title"));
 const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
-const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? "🛒");
+const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? ShoppingCart);
 
 // ── Badge sidebar: don hang hom nay, tong khach hang — doc thang tu store, khong
 // can qua AdminPage.vue vi trang nay doc lap hoan toan ──
@@ -126,9 +127,9 @@ onUnmounted(() => {
           <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
                   style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1.1rem;"
                   :aria-label="t('admin.sidebar.toggleMenu')" :title="t('admin.sidebar.toggleMenu')"
-                  @click="sidebarOpen = !sidebarOpen">{{ sidebarOpen ? '✕' : '☰' }}</button>
+                  @click="sidebarOpen = !sidebarOpen"><component :is="sidebarOpen ? X : Menu" :size="20" /></button>
           <div>
-            <div class="fw-bold" style="font-size:1.05rem;">{{ topbarIcon }} {{ topbarTitle }}</div>
+            <div class="fw-bold d-flex align-items-center gap-1" style="font-size:1.05rem;"><component :is="topbarIcon" :size="18" /> {{ topbarTitle }}</div>
             <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
           </div>
         </div>
@@ -137,7 +138,7 @@ onUnmounted(() => {
                 :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
                 :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
                 @click="toggleTheme">
-          {{ ThemeStore.mode === 'dark' ? '🌙' : '☀️' }}
+          <component :is="ThemeStore.mode === 'dark' ? Moon : Sun" :size="18" />
         </button>
       </div>
 
