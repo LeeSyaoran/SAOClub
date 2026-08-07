@@ -4,6 +4,7 @@ import { t } from "../../i18n/index.js";
 import {
   Laptop, Receipt, Users, Wallet, Calendar, AlertTriangle, PieChart, Flame,
   Turtle, Activity, TrendingUp, Archive, Monitor, Tag, FolderOpen, Banknote, Bookmark,
+  CheckCircle2, CreditCard, Package,
 } from '@lucide/vue';
 import { ProductsStore } from "../../stores/products.js";
 import { OrdersStore } from "../../stores/orders.js";
@@ -231,15 +232,15 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
           <div class="row g-3 text-center">
             <div class="col-12 col-md-4 d-flex justify-content-center">
               <GaugeChart :value="orderCompletionRate" :color="gaugeColor(orderCompletionRate)"
-                          :label="'✅ ' + t('admin.dashboard.gaugeCompletion')" />
+                          :label="t('admin.dashboard.gaugeCompletion')" :icon="CheckCircle2" />
             </div>
             <div class="col-12 col-md-4 d-flex justify-content-center">
               <GaugeChart :value="paymentRate" :color="gaugeColor(paymentRate)"
-                          :label="'💳 ' + t('admin.dashboard.gaugePayment')" />
+                          :label="t('admin.dashboard.gaugePayment')" :icon="CreditCard" />
             </div>
             <div class="col-12 col-md-4 d-flex justify-content-center">
               <GaugeChart :value="stockHealthRate" :color="gaugeColor(stockHealthRate)"
-                          :label="'📦 ' + t('admin.dashboard.gaugeStock')" />
+                          :label="t('admin.dashboard.gaugeStock')" :icon="Package" />
             </div>
           </div>
         </div>
@@ -265,7 +266,7 @@ const anyStoreLoading = computed(() => ProductsStore.loading || OrdersStore.load
                      style="width:38px;height:32px;background:var(--bg-card-inset);">
                   <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham"
                        style="width:100%;height:100%;object-fit:contain;padding:2px;" />
-                  <span v-else style="font-size:1rem;">💻</span>
+                  <span v-else><Laptop :size="16" color="var(--text-muted)" /></span>
                 </div>
               </td>
               <td>{{ p.tenSanPham }}</td>

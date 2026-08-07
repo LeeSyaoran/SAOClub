@@ -1,7 +1,7 @@
 <template>
   <div v-if="maVanDon || history.length" class="rounded-3 p-3" style="background:var(--bg-card-alt);">
     <div v-if="maVanDon" class="d-flex align-items-center gap-2 mb-2 pb-2" style="border-bottom:1px solid var(--border-color-soft);">
-      <span style="font-size:0.85rem; color:var(--text-secondary);">📦 {{ t('account.trackingCode') }}:</span>
+      <span style="font-size:0.85rem; color:var(--text-secondary);" class="d-inline-flex align-items-center gap-1"><Package :size="13" /> {{ t('account.trackingCode') }}:</span>
       <span class="fw-bold" style="color:var(--text-primary); font-size:0.85rem;">{{ maVanDon }}</span>
       <button class="btn btn-sm px-2 py-0" style="font-size:11px; border:1px solid var(--border-color-strong); background:var(--bg-input); color:var(--text-secondary);" @click="copyCode">
         {{ copied ? t('account.trackingCodeCopied') : t('account.trackingCodeCopy') }}
@@ -20,6 +20,7 @@
 import { ref, computed } from 'vue';
 import { t, I18nStore } from '../../i18n/index.js';
 import { orderStatusLabel, orderStatusIcon } from '../../utils/orderStatus.js';
+import { Package } from '@lucide/vue';
 
 const props = defineProps({
   maVanDon: { type: String, default: '' },

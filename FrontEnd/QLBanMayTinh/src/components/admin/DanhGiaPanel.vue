@@ -7,6 +7,7 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
+import { Star } from '@lucide/vue';
 
 const items = ref([]);
 const loading = ref(false);
@@ -61,7 +62,7 @@ const deleteReview = async (d) => {
           <td class="text-secondary">{{ formatDateTime(d.ngayDanhGia) }}</td>
           <td>{{ d.tenSanPham }}</td>
           <td>{{ d.tenKhachHang }}</td>
-          <td>{{ '⭐'.repeat(d.soSao) }}</td>
+          <td><span class="d-inline-flex" style="gap:1px;"><Star v-for="n in d.soSao" :key="n" :size="12" fill="currentColor" /></span></td>
           <td class="text-secondary">{{ d.noiDung || '—' }}</td>
           <td>
             <button class="btn btn-sm btn-outline-danger" @click="deleteReview(d)">{{ t('admin.common.delete') }}</button>

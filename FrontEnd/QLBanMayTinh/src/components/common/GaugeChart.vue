@@ -1,7 +1,6 @@
 <template>
-  <!-- Đồng hồ đo nửa hình tròn có kim chỉ — kiểu CSAT/CES/NPS -->
   <div class="d-flex flex-column align-items-center">
-    <div class="small fw-semibold text-center mb-1" style="color:var(--text-secondary); max-width:100%;">{{ label }}</div>
+    <div class="small fw-semibold text-center mb-1 d-inline-flex align-items-center gap-1" style="color:var(--text-secondary); max-width:100%;"><component v-if="icon" :is="icon" :size="12" /> {{ label }}</div>
     <svg :width="size + pad * 2" :height="size / 2 + 22" :viewBox="`0 0 ${size + pad * 2} ${size / 2 + 22}`">
       <path :d="bgPath" fill="none" stroke="var(--bg-hover)" :stroke-width="thickness" stroke-linecap="round" />
       <path :d="valuePath" fill="none" :stroke="color" :stroke-width="thickness" stroke-linecap="round"
@@ -26,6 +25,7 @@ const props = defineProps({
   size:         { type: Number, default: 140 },
   thickness:    { type: Number, default: 14 },
   color:        { type: String, default: '#f43f5e' },
+  icon:         { type: Object, default: null },
 });
 
 const pad = 16;
