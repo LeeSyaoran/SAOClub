@@ -1,18 +1,12 @@
 import { reactive } from "vue";
 import vi from "./locales/vi.js";
 import en from "./locales/en.js";
-import zh from "./locales/zh.js";
-import ja from "./locales/ja.js";
-import ko from "./locales/ko.js";
 
-const MESSAGES = { vi, en, zh, ja, ko };
+const MESSAGES = { vi, en };
 
 export const LOCALES = [
   { code: "vi", label: "Tiếng Việt", flag: "🇻🇳" },
   { code: "en", label: "English",    flag: "🇬🇧" },
-  { code: "zh", label: "中文",        flag: "🇨🇳" },
-  { code: "ja", label: "日本語",      flag: "🇯🇵" },
-  { code: "ko", label: "한국어",      flag: "🇰🇷" },
 ];
 
 const STORAGE_KEY = "saophone_locale";
