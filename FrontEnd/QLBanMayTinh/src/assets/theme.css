@@ -53,6 +53,7 @@
   --accent-fg:   #f06b81;
 
   --shadow-color: rgba(12,12,21,0.5);
+  --gradient-brand: linear-gradient(135deg, var(--accent-2), var(--accent));
 }
 
 [data-theme="light"] {
@@ -91,6 +92,7 @@
   --accent-fg:   #e11d48;
 
   --shadow-color: rgba(225,29,72,0.1);
+  --gradient-brand: linear-gradient(135deg, var(--accent-2), var(--accent));
 }
 
 body {
