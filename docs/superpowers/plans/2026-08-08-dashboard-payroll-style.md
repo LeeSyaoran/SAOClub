@@ -26,8 +26,13 @@ task).
 - Không thêm dependency chart mới (Chart.js/ApexCharts/D3...) — 100% SVG tay theo
   convention hiện có.
 - Không đổi API/backend — 0 file trong `BackEnd/` bị đụng tới.
-- Token gradient mới (`--gradient-brand`) chỉ dùng ở: sidebar nav active, logo badge, 4
-  chart mới. Không đổi cách dùng `--accent`/`--accent-2` ở nơi khác trong app.
+- Token gradient mới (`--gradient-brand`) là 1 giá trị CSS `linear-gradient(...)` —
+  CHỈ áp được cho `background` (nền phẳng): sidebar nav active (Task 9), logo badge
+  (Task 9). SVG không nhận `linear-gradient()` của CSS làm giá trị `stroke`/`fill`
+  trực tiếp — 4 chart mới (Task 4-7) tái tạo hiệu ứng gradient tương đương bằng
+  `<linearGradient>` SVG native trỏ thẳng tới `var(--accent-2)`/`var(--accent)` (2 màu
+  giống hệt 2 đầu của `--gradient-brand`, không phải dùng lại token này). Không đổi
+  cách dùng `--accent`/`--accent-2` ở nơi khác trong app.
 - KPI radar chỉ 1 series (không so sánh kỳ trước/kỳ này).
 - `DotMatrix` dùng lưới cố định 50 dot (5 hàng × 10 cột), không vẽ nhiều hàng
   riêng/category như ảnh gốc.
