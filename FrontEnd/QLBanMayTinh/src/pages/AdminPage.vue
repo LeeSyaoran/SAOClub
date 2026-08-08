@@ -460,14 +460,17 @@ const stockHealthRate = computed(() => {
   ]);
   return Math.max(0, ((inventory.value.length - unhealthyIds.size) / inventory.value.length) * 100);
 });
-const gaugeColor = (pct) => (pct >= 70 ? '#22c55e' : pct >= 40 ? '#facc15' : '#f87171');
-
 // ── Dữ liệu mới cho bố cục Dashboard kiểu "Joint Payroll" ─────────────────────
 // Tỉ lệ sản phẩm đang bán/tổng sản phẩm — dùng cho ring "Sản phẩm đang bán" và 1 trục
 // radar KPI. groupedProducts (không phải products) vì products là 1 dòng/biến thể.
-const activeProductRatio = computed(() =>
-  groupedProducts.value.length ? (activeProducts.value / groupedProducts.value.length) * 100 : 0
-);
+const activeProductRatio = computed(() => {
+  const total = groupedProducts.value.length;
+  if (!total) return 0;
+  const active = new Set(
+    products.value.filter(p => p.trangThai === 'active').map(p => p.sanPhamId)
+  ).size;
+  return (active / total) * 100;
+});
 
 // Doanh thu theo từng ngày trong tuần hiện tại — dùng lại đúng ordersInWeekRange đã có
 // (tính theo weekChartAnchor, mặc định tuần hiện tại) cho biểu đồ cột "Weekly Payroll
@@ -1585,7 +1588,7 @@ onUnmounted(() => {
 }
 .adm-nav:hover { background: var(--bg-hover); color: var(--text-heading); }
 .adm-nav.active {
-  background: var(--gradient-brand);
+  background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent) 80%, black));
   color: var(--accent-text);
   box-shadow: 0 2px 10px -2px rgba(244,63,94,0.5);
 }

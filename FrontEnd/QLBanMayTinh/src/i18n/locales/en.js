@@ -603,7 +603,7 @@ export default {
       kpiRadarChart: "Operational overview",
       weeklyRevenueChart: "Revenue by weekday",
       orderHeatmap: "Orders by day",
-      kpiHealth: "Operational metrics",
+      emptyStaff: "No staff yet",
       gaugeCompletion: "Order completion rate",
       gaugePayment: "Payment rate",
       gaugeStock: "Stock ratio",

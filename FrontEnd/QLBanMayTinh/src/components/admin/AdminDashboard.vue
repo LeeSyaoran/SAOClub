@@ -69,7 +69,7 @@ const anyStoreLoading = computed(() =>
 // ensureStaff() không set StaffStore.loading (chỉ refreshStaff() có) — dùng .loaded làm
 // cờ chờ thay vì .loading cho đúng với cách store này báo trạng thái.
 const weeklyRevenueBarData = computed(() =>
-  props.weeklyRevenueChart.map((d) => ({ ...d, color: 'var(--accent-2)', displayValue: formatPrice(d.value) }))
+  props.weeklyRevenueChart.map((d) => ({ ...d, color: 'var(--accent-2)' }))
 );
 
 // Tính 1 lần lúc mount — component giữ nguyên qua v-show nên không tự cập nhật qua nửa
@@ -144,7 +144,7 @@ const heatmapYear = now.getFullYear();
           <div class="card border-secondary h-100" style="background:var(--bg-hover);">
             <div class="card-body">
               <div class="fw-semibold small text-secondary mb-3 d-flex align-items-center gap-1"><Users :size="14" /> {{ t('admin.dashboard.positions') }}</div>
-              <DotMatrix :data="staffByRole" :empty-text="t('admin.dashboard.emptyProducts')" />
+              <DotMatrix :data="staffByRole" :empty-text="t('admin.dashboard.emptyStaff')" />
             </div>
           </div>
         </div>

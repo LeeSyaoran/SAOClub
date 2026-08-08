@@ -603,7 +603,7 @@ export default {
       kpiRadarChart: "Chỉ số vận hành tổng quan",
       weeklyRevenueChart: "Doanh thu theo ngày trong tuần",
       orderHeatmap: "Đơn hàng theo ngày",
-      kpiHealth: "Chỉ số vận hành",
+      emptyStaff: "Chưa có nhân viên",
       gaugeCompletion: "Tỷ lệ đơn hoàn tất",
       gaugePayment: "Tỷ lệ đã thanh toán",
       gaugeStock: "Tỷ lệ tồn kho",
