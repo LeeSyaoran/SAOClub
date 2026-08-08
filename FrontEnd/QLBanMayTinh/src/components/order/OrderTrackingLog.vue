@@ -39,7 +39,9 @@ const copyCode = async () => {
     await navigator.clipboard.writeText(props.maVanDon);
     copied.value = true;
     setTimeout(() => { copied.value = false; }, 1500);
-  } catch {}
+  } catch {
+    // Bỏ qua nếu clipboard API lỗi/không có quyền — không có gì để báo cho người dùng
+  }
 };
 
 const formatDate = (d) => {

@@ -43,15 +43,15 @@ const emit = defineEmits([
             <div class="fw-bold mb-3 d-flex align-items-center gap-1"><KeyRound :size="16" /> {{ t('admin.settings.changePasswordTitle') }}</div>
             <div class="mb-2">
               <label class="form-label small text-secondary mb-1">{{ t('admin.settings.currentPassword') }}</label>
-              <input type="password" :value="cdMatKhauCu" @input="$emit('update:cdMatKhauCu', $event.target.value)" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+              <input type="password" :value="cdMatKhauCu" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" @input="$emit('update:cdMatKhauCu', $event.target.value)" />
             </div>
             <div class="mb-2">
               <label class="form-label small text-secondary mb-1">{{ t('admin.settings.newPassword') }}</label>
-              <input type="password" :value="cdMatKhauMoi" @input="$emit('update:cdMatKhauMoi', $event.target.value)" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+              <input type="password" :value="cdMatKhauMoi" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" @input="$emit('update:cdMatKhauMoi', $event.target.value)" />
             </div>
             <div class="mb-3">
               <label class="form-label small text-secondary mb-1">{{ t('admin.settings.confirmNewPassword') }}</label>
-              <input type="password" :value="cdMatKhauXacNhan" @input="$emit('update:cdMatKhauXacNhan', $event.target.value)" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+              <input type="password" :value="cdMatKhauXacNhan" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" @input="$emit('update:cdMatKhauXacNhan', $event.target.value)" />
             </div>
             <div v-if="cdMatKhauError" class="text-danger small mb-2">{{ cdMatKhauError }}</div>
             <div v-if="cdMatKhauSuccess" class="text-success small mb-2">{{ cdMatKhauSuccess }}</div>
@@ -74,6 +74,11 @@ const emit = defineEmits([
               </label>
               <span class="text-secondary small">{{ t('admin.settings.storeLogo') }}</span>
             </div>
+            <!-- eslint-disable vue/no-mutating-props -- cdForm cố ý dùng làm form object 2
+                 chiều (v-model thẳng vào field con), cha AdminPage.vue không đọc lại giá trị
+                 tức thời mà chỉ đọc lúc bấm Lưu — mutate trực tiếp không gây sai lệch dữ liệu
+                 ở đây, nhưng vẫn phá quy ước Vue 3 nên tắt rule có chủ đích thay vì rewrite
+                 sang emit từng field (rủi ro hơn giá trị mang lại cho 1 form nội bộ đơn giản). -->
             <div class="row g-2 mb-3">
               <div class="col-12">
                 <label class="form-label small text-secondary mb-1">{{ t('admin.settings.storeName') }}</label>
@@ -96,6 +101,7 @@ const emit = defineEmits([
                 <input v-model="cdForm.maSoThue" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
               </div>
             </div>
+            <!-- eslint-enable vue/no-mutating-props -->
             <div v-if="cdStoreError" class="text-danger small mb-2">{{ cdStoreError }}</div>
             <div v-if="cdStoreSaved" class="text-success small mb-2">{{ t('admin.settings.saved') }}</div>
             <button class="btn btn-warning btn-sm" :disabled="cdStoreSaving" @click="$emit('saveStore')">
@@ -111,7 +117,7 @@ const emit = defineEmits([
             <div class="fw-bold mb-3 d-flex align-items-center gap-1"><Package :size="16" /> {{ t('admin.settings.lowStockThresholdTitle') }}</div>
             <div class="mb-3">
               <label class="form-label small text-secondary mb-1">{{ t('admin.settings.lowStockThresholdLabel') }}</label>
-              <input type="number" min="0" :value="cdNguongTonKho" @input="$emit('update:cdNguongTonKho', Number($event.target.value))" class="form-control form-control-sm" style="width:120px;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+              <input type="number" min="0" :value="cdNguongTonKho" class="form-control form-control-sm" style="width:120px;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" @input="$emit('update:cdNguongTonKho', Number($event.target.value))" />
             </div>
             <button class="btn btn-outline-warning btn-sm" :disabled="cdApplyingThreshold" @click="$emit('applyThreshold')">
               {{ t('admin.settings.applyToAllButton') }}
@@ -132,24 +138,30 @@ const emit = defineEmits([
             </div>
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
               <span class="text-secondary">{{ t('admin.settings.languageLabel') }}</span>
-              <select class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
-                      :value="I18nStore.locale" @change="setLocale($event.target.value)">
+              <select
+                class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
+                :value="I18nStore.locale" @change="setLocale($event.target.value)"
+              >
                 <option v-for="loc in LOCALES" :key="loc.code" :value="loc.code">{{ loc.flag }} {{ loc.label }}</option>
               </select>
             </div>
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary small">
               <span class="text-secondary">{{ t('admin.settings.defaultLanguageLabel') }}</span>
-              <select class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
-                      v-model="SettingsStore.ngonNguMacDinh"
-                      @change="$emit('saveAppearance')">
+              <select
+                v-model="SettingsStore.ngonNguMacDinh" class="form-select form-select-sm"
+                style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
+                @change="$emit('saveAppearance')"
+              >
                 <option v-for="loc in LOCALES" :key="loc.code" :value="loc.code">{{ loc.flag }} {{ loc.label }}</option>
               </select>
             </div>
             <div class="d-flex justify-content-between align-items-center py-2 small">
               <span class="text-secondary">{{ t('admin.settings.numberFormatLabel') }}</span>
-              <select class="form-select form-select-sm" style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
-                      v-model="SettingsStore.dinhDangSo"
-                      @change="$emit('saveAppearance')">
+              <select
+                v-model="SettingsStore.dinhDangSo" class="form-select form-select-sm"
+                style="width:auto;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
+                @change="$emit('saveAppearance')"
+              >
                 <option value="vi">{{ t('admin.settings.numberFormatVi') }}</option>
                 <option value="en">{{ t('admin.settings.numberFormatEn') }}</option>
               </select>

@@ -633,7 +633,7 @@ onMounted(() => {
             "
             @click="activeTab = tab.id"
           >
-            <component v-if="tab.icon" :is="tab.icon" :size="12" style="vertical-align:-2px;" /> {{ tab.label }}
+            <component :is="tab.icon" v-if="tab.icon" :size="12" style="vertical-align:-2px;" /> {{ tab.label }}
           </button>
         </div>
 
@@ -677,24 +677,24 @@ onMounted(() => {
               <span
                 v-if="
                   advFilter.brands.length ||
-                  advFilter.priceMin ||
-                  advFilter.category ||
-                  advFilter.cpu.length ||
-                  advFilter.ram.length ||
-                  advFilter.gpu.length ||
-                  advFilter.storage.length
+                    advFilter.priceMin ||
+                    advFilter.category ||
+                    advFilter.cpu.length ||
+                    advFilter.ram.length ||
+                    advFilter.gpu.length ||
+                    advFilter.storage.length
                 "
                 class="badge bg-danger ms-1"
                 style="font-size: 9px"
               >
                 {{
                   advFilter.brands.length +
-                  (advFilter.priceMin ? 1 : 0) +
-                  (advFilter.category ? 1 : 0) +
-                  advFilter.cpu.length +
-                  advFilter.ram.length +
-                  advFilter.gpu.length +
-                  advFilter.storage.length
+                    (advFilter.priceMin ? 1 : 0) +
+                    (advFilter.category ? 1 : 0) +
+                    advFilter.cpu.length +
+                    advFilter.ram.length +
+                    advFilter.gpu.length +
+                    advFilter.storage.length
                 }}
               </span>
             </button>
@@ -739,17 +739,7 @@ onMounted(() => {
         </div>
 
         <div
-          v-if="false"
-          class="text-center py-4 small"
-          style="color: var(--text-secondary)"
-        >
-          {{ t("home.loadingProducts") }}
-        </div>
-        <div v-else-if="false" class="alert alert-danger small py-2">
-          {{ "error" }}
-        </div>
-        <div
-          v-else-if="filteredProducts.length === 0"
+          v-if="filteredProducts.length === 0"
           class="text-center py-4 small"
           style="color: var(--text-secondary)"
         >
@@ -799,14 +789,12 @@ onMounted(() => {
               <span
                 class="fw-bold"
                 style="font-size: 0.95rem; color: var(--text-heading)"
-                >{{ t("cart.title") }}</span
-              >
+              >{{ t("cart.title") }}</span>
               <span
                 v-if="cartCount > 0"
                 class="badge bg-warning text-dark fw-bold rounded-pill"
                 style="font-size: 10px"
-                >{{ cartCount }}</span
-              >
+              >{{ cartCount }}</span>
             </div>
             <button
               class="btn btn-sm d-flex align-items-center justify-content-center rounded-circle"
