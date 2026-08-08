@@ -15,7 +15,6 @@ import RevenueBarChart from "../components/common/RevenueBarChart.vue";
 import * as CaiDatService from "../services/CaiDatService.js";
 import { SettingsStore } from "../stores/settings.js";
 import BarChart   from "../components/common/BarChart.vue";
-import GaugeChart from "../components/common/GaugeChart.vue";
 import TrendChart from "../components/common/TrendChart.vue";
 import ConfirmDialog from "../components/common/ConfirmDialog.vue";
 import { askConfirm } from "../stores/confirm.js";
@@ -1190,6 +1189,11 @@ onUnmounted(() => {
           :payment-rate="paymentRate"
           :stock-health-rate="stockHealthRate"
           :revenue-trend-chart="revenueTrendChart"
+          :active-product-ratio="activeProductRatio"
+          :weekly-revenue-chart="weeklyRevenueChart"
+          :monthly-order-heat="monthlyOrderHeat"
+          :kpi-radar-data="kpiRadarData"
+          :staff-by-role="staffByRole"
           :products="products"
           @update:status-chart-date="statusChartDate = $event"
           @update:week-chart-anchor="weekChartAnchor = $event"
