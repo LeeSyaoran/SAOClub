@@ -463,6 +463,65 @@ const stockHealthRate = computed(() => {
 });
 const gaugeColor = (pct) => (pct >= 70 ? '#22c55e' : pct >= 40 ? '#facc15' : '#f87171');
 
+// ── Dữ liệu mới cho bố cục Dashboard kiểu "Joint Payroll" ─────────────────────
+// Tỉ lệ sản phẩm đang bán/tổng sản phẩm — dùng cho ring "Sản phẩm đang bán" và 1 trục
+// radar KPI. groupedProducts (không phải products) vì products là 1 dòng/biến thể.
+const activeProductRatio = computed(() =>
+  groupedProducts.value.length ? (activeProducts.value / groupedProducts.value.length) * 100 : 0
+);
+
+// Doanh thu theo từng ngày trong tuần hiện tại — dùng lại đúng ordersInWeekRange đã có
+// (tính theo weekChartAnchor, mặc định tuần hiện tại) cho biểu đồ cột "Weekly Payroll
+// Budget". getDay() trả 0=Chủ nhật — quy về mảng bắt đầu Thứ 2 (index 0) cho khớp UI.
+const weeklyRevenueChart = computed(() => {
+  const dayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  const sums = new Array(7).fill(0);
+  ordersInWeekRange.value.forEach((o) => {
+    if (!o.ngayDat) return;
+    const idx = (new Date(o.ngayDat).getDay() + 6) % 7;
+    sums[idx] += Number(o.thanhTien) || 0;
+  });
+  return dayLabels.map((label, i) => ({ label, value: sums[i] }));
+});
+
+// Số đơn hàng theo từng ngày trong THÁNG HIỆN TẠI — cho "Heat Map" lịch. Chỉ tính 1
+// lần lúc load trang (không tự cập nhật qua nửa đêm — chấp nhận được cho 1 dashboard
+// admin, F5 lại nếu cần xem đúng tháng mới).
+const monthlyOrderHeat = computed(() => {
+  const now = new Date();
+  const map = {};
+  orders.value.forEach((o) => {
+    if (!o.ngayDat) return;
+    const d = new Date(o.ngayDat);
+    if (d.getFullYear() !== now.getFullYear() || d.getMonth() !== now.getMonth()) return;
+    map[d.getDate()] = (map[d.getDate()] || 0) + 1;
+  });
+  return Object.entries(map).map(([day, count]) => ({ day: Number(day), count }));
+});
+
+// Gộp 4 tỉ lệ vận hành đã có (đơn hoàn tất/thanh toán/tồn kho/sản phẩm đang bán) thành
+// 1 mảng cho RadarChart — tái dùng đúng key i18n các gauge cũ, không tạo nhãn mới.
+const kpiRadarData = computed(() => [
+  { axis: t('admin.dashboard.gaugeCompletion'), value: orderCompletionRate.value },
+  { axis: t('admin.dashboard.gaugePayment'), value: paymentRate.value },
+  { axis: t('admin.dashboard.gaugeStock'), value: stockHealthRate.value },
+  { axis: t('admin.dashboard.activeProducts'), value: activeProductRatio.value },
+]);
+
+// Nhân viên theo chức vụ — cho DotMatrix "Positions". Màu cố định nhỏ (không sinh màu
+// động) vì số chức vụ thực tế của shop chỉ vài nhóm, lặp lại bảng nếu nhiều hơn.
+const ROLE_COLORS = ['#7c3aed', '#f43f5e', '#22c55e', '#facc15', '#0e7490'];
+const staffByRole = computed(() => {
+  const map = {};
+  staff.value.forEach((s) => {
+    const name = chucVuName(s.chucVuId);
+    map[name] = (map[name] || 0) + 1;
+  });
+  return Object.entries(map).map(([label, value], i) => ({
+    label, value, color: ROLE_COLORS[i % ROLE_COLORS.length],
+  }));
+});
+
 // ── Doanh thu theo tháng (trend) ───────────────────────────────────────────────
 const revenueTrendChart = computed(() => {
   const map = {};
@@ -512,15 +571,12 @@ const productsMainTab = ref('sanPham');
 // components/admin/InventoryPanel.vue (Task 7).
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
-// Chỉ tải 6 bảng chính lúc vào trang (dashboard + các bảng danh sách cần ngay).
 // Danh mục/hãng/CPU/RAM/ổ cứng/GPU (ensureProductRefData) đã chuyển vào
-// ProductsTable.vue (Task 3) — chỉ tab Sản phẩm cần. Chức vụ (ensureChucVuList) vẫn
-// KHÔNG tải ở đây — chỉ tải khi vào trang Nhân viên, xem ensureChucVuList() bên dưới.
-// Với dữ liệu lớn, bớt 7-8 lệnh gọi song song này giúp trang vào nhanh hơn hẳn.
-// Nhân viên KHÔNG tải ở đây nữa — không có KPI/dashboard/POS nào cần đến staff.value,
-// chỉ tab Nhân viên và tab Phiếu nhập (staffName/staffOptions) cần, cả 2 đều lazy-load
-// qua ensureStaff() (stores/staff.js). products/orders/customers/promotions/inventory VẪN
-// tải eager vì dashboard KPI + POS (tìm SP, áp mã khuyến mãi, tra cứu KH) cần ngay.
+// ProductsTable.vue (Task 3) — chỉ tab Sản phẩm cần, vẫn lazy-load riêng.
+// Nhân viên + chức vụ NAY tải eager (ensureStaff/ensureChucVuList, có cache promise nên
+// gọi lại ở navigate('staff') không tốn thêm lần fetch) — khối "Positions" ở Dashboard
+// cần staffByRole ngay khi vào trang, đổi lại quyết định lazy-load cũ (staff từng không
+// cần cho dashboard/KPI/POS, nay dashboard cần).
 const fetchAll = async () => {
   await Promise.all([
     refreshProducts(),
@@ -529,6 +585,8 @@ const fetchAll = async () => {
     refreshPromotions(),
     refreshInventory(),
     refreshDoiThuong(),
+    ensureStaff(),
+    ensureChucVuList(),
   ]);
   await autoMergeAllDuplicates();
 };
