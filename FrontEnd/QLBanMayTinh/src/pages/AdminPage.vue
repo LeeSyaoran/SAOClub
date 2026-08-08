@@ -1059,7 +1059,7 @@ onUnmounted(() => {
       <div class="d-flex align-items-center gap-2 p-3 border-bottom adm-brand-row"
            style="border-color:var(--border-color-soft)!important;">
         <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
-             style="width:38px;height:38px;background:var(--accent);color:var(--accent-text);font-size:0.8rem;">SAO</div>
+             style="width:38px;height:38px;background:var(--gradient-brand);color:var(--accent-text);font-size:0.8rem;">SAO</div>
         <div class="adm-brand-text">
           <div class="fw-bold" style="font-size:0.95rem;">{{ t('admin.brand.name') }}</div>
           <div style="font-size:0.7rem;color:var(--text-muted);">{{ t('admin.brand.tagline') }}</div>
@@ -1580,7 +1580,11 @@ onUnmounted(() => {
   user-select: none;
 }
 .adm-nav:hover { background: var(--bg-hover); color: var(--text-heading); }
-.adm-nav.active { background: rgba(244,63,94,0.12); color: var(--accent-fg); }
+.adm-nav.active {
+  background: var(--gradient-brand);
+  color: var(--accent-text);
+  box-shadow: 0 2px 10px -2px rgba(244,63,94,0.5);
+}
 .adm-nav.active .adm-icon { opacity: 1; }
 
 /* Icon trong nav */
