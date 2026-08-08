@@ -239,9 +239,9 @@ export default {
     customerHeading: "Customer",
     phonePlaceholder: "Phone number *",
     find: "Find",
-    foundCustomer: "✓ Found:",
+    foundCustomer: "Found:",
     newCustomer: "New number — a customer account will be created.",
-    loggedInAs: "✓ Ordering with account:",
+    loggedInAs: "Ordering with account:",
     fullNamePlaceholder: "Full name *",
     emailPlaceholder: "Email",
     shippingHeading: "Shipping",
@@ -288,8 +288,8 @@ export default {
     accountNameFull: "Account holder:",
     contentShort: "Transfer message:",
     cancel: "Cancel",
-    back: "← Back",
-    continue: "Continue →",
+    back: "Back",
+    continue: "Continue",
     processing: "Processing...",
     confirmOrder: "Confirm order",
     progressCustomer: "Verifying customer...",
@@ -297,9 +297,9 @@ export default {
     progressItems: "Adding items... {current}/{total}",
     successTitle: "Order placed successfully!",
     orderCode: "Order code:",
-    cashInstruction: "💵 Please prepare {amount} in cash when the delivery staff arrives.",
-    qrInstruction: "✅ Thank you! We will confirm your payment once the transfer is received.",
-    bankInstruction: "🏦 Please transfer {amount} using the information provided.",
+    cashInstruction: "Please prepare {amount} in cash when the delivery staff arrives.",
+    qrInstruction: "Thank you! We will confirm your payment once the transfer is received.",
+    bankInstruction: "Please transfer {amount} using the information provided.",
     close: "Close",
   },
 
@@ -503,7 +503,7 @@ export default {
 
   admin: {
     brand: {
-      name: "SAOPhone",
+      name: "SAOClub",
       tagline: "Management System",
     },
 
@@ -803,6 +803,8 @@ export default {
       mergeBannerText: "This customer has {count} orders placed on the same day",
       mergeAll: "Merge all",
       merging: "...",
+      printInvoice: "Print invoice",
+      viewInvoice: "View invoice",
     },
 
     addItemDetailModal: {
@@ -1604,6 +1606,7 @@ export default {
       removeAll: "Remove all",
       paymentMethodLabel: "Payment method",
       paymentRequired: "Please select a payment method!",
+      confirmCheckout: "Confirm checkout for {total}?",
     },
 
     packModal: {

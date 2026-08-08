@@ -239,9 +239,9 @@ export default {
     customerHeading: "Khách hàng",
     phonePlaceholder: "Số điện thoại *",
     find: "Tìm",
-    foundCustomer: "✓ Đã tìm thấy:",
+    foundCustomer: "Đã tìm thấy:",
     newCustomer: "Số mới — sẽ tạo tài khoản khách hàng.",
-    loggedInAs: "✓ Đặt hàng với tài khoản:",
+    loggedInAs: "Đặt hàng với tài khoản:",
     fullNamePlaceholder: "Họ tên *",
     emailPlaceholder: "Email",
     shippingHeading: "Giao hàng",
@@ -288,8 +288,8 @@ export default {
     accountNameFull: "Chủ tài khoản:",
     contentShort: "Nội dung CK:",
     cancel: "Hủy",
-    back: "← Quay lại",
-    continue: "Tiếp tục →",
+    back: "Quay lại",
+    continue: "Tiếp tục",
     processing: "Đang xử lý...",
     confirmOrder: "Xác nhận đặt hàng",
     progressCustomer: "Đang xác thực khách hàng...",
@@ -297,9 +297,9 @@ export default {
     progressItems: "Đang thêm sản phẩm... {current}/{total}",
     successTitle: "Đặt hàng thành công!",
     orderCode: "Mã đơn hàng:",
-    cashInstruction: "💵 Vui lòng chuẩn bị tiền mặt {amount} khi nhân viên giao hàng đến.",
-    qrInstruction: "✅ Cảm ơn! Chúng tôi sẽ xác nhận thanh toán sau khi nhận được chuyển khoản.",
-    bankInstruction: "🏦 Vui lòng chuyển khoản {amount} theo thông tin đã cung cấp.",
+    cashInstruction: "Vui lòng chuẩn bị tiền mặt {amount} khi nhân viên giao hàng đến.",
+    qrInstruction: "Cảm ơn! Chúng tôi sẽ xác nhận thanh toán sau khi nhận được chuyển khoản.",
+    bankInstruction: "Vui lòng chuyển khoản {amount} theo thông tin đã cung cấp.",
     close: "Đóng",
   },
 
@@ -503,7 +503,7 @@ export default {
 
   admin: {
     brand: {
-      name: "SAOPhone",
+      name: "SAOClub",
       tagline: "Hệ thống quản lý",
     },
 
@@ -803,6 +803,8 @@ export default {
       mergeBannerText: "Có {count} đơn hàng cùng ngày của khách này",
       mergeAll: "Gộp tất cả",
       merging: "...",
+      printInvoice: "In hóa đơn",
+      viewInvoice: "Xem hóa đơn",
     },
 
     addItemDetailModal: {
@@ -1604,6 +1606,7 @@ export default {
       removeAll: "Xóa tất cả",
       paymentMethodLabel: "Phương thức thanh toán",
       paymentRequired: "Vui lòng chọn phương thức thanh toán!",
+      confirmCheckout: "Xác nhận thanh toán {total}?",
     },
 
     packModal: {

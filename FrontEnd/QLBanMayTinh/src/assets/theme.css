@@ -1,29 +1,11 @@
-/* ══════════════════════════════════════════════════════════════════
-   Hệ thống biến màu theo theme — mặc định tối (dark), có thể chuyển
-   sang sáng (light) bằng cách đặt [data-theme="light"] trên <html>.
-   Xem src/stores/theme.js để biết cách toggle.
-
-   Bảng màu "Vibrant & Block-based" (tím-neon + hồng, ui-ux-pro-max) —
-   thay cho hệ vàng-đen cũ. accent = hồng (CTA/giá/badge), accent-2 =
-   tím (hover/gradient/nhấn phụ). Giữ nguyên tên biến để toàn bộ
-   component (đang dùng var(--accent)...) tự động ăn theo, không cần
-   sửa từng file.
-════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Màu trạng thái ngữ nghĩa (toast thành công/lỗi...) — cố định, KHÔNG đổi theo
-     theme sáng/tối, giống cách utils/orderStatus.js đã cố định màu trạng thái đơn
-     hàng độc lập với --accent/--accent-2 (xanh/đỏ semantic không nên đổi theo
-     thương hiệu). ToastHost.vue trước đây dùng var(--state-danger, #dc2626) —
-     biến chưa từng được khai báo ở đâu nên luôn rơi về giá trị fallback cứng. */
   --state-success: #16a34a;
   --state-danger:  #dc2626;
 }
 
 :root,
 [data-theme="dark"] {
-  /* Nền/viền trung tính đã giảm bớt chroma tím (~45%) so với bản đầu —
-     giữ cùng độ sáng và hue nhưng bớt "đục" hơn, gần với near-black hơn. */
   --bg-page:           #12121d;
   --bg-page-alt:       #0c0c15;
   --bg-header:         #12121d;
@@ -46,10 +28,6 @@
   --accent:      #f43f5e;
   --accent-2:    #7c3aed;
   --accent-text: #ffffff;
-  /* accent-fg: bản sáng hơn của accent, CHỈ dùng khi accent làm màu CHỮ
-     (label/giá/link nhỏ) trên nền tối — #f43f5e đặc chỉ đạt ~5.1:1 vì
-     "tối" hơn vàng cũ; bản sáng này lên ~6.4:1. Nút/badge nền đặc vẫn
-     dùng var(--accent) nguyên bản (không đổi). */
   --accent-fg:   #f06b81;
 
   --shadow-color: rgba(12,12,21,0.5);
@@ -57,11 +35,6 @@
 }
 
 [data-theme="light"] {
-  /* Tông riêng cho light theme — không dùng lại rose/violet neon của dark.
-     #f43f5e chỉ đạt ~3.67:1 trên nền trắng (dưới AA cho chữ thường) và nhìn
-     "nhạt" trên sáng dù rực trên tối. Đổi sang rose đậm hơn (jewel-tone,
-     kiểu Tailwind rose-600) — cùng họ hue với dark để vẫn là một thương
-     hiệu, nhưng đủ đậm/bão hòa để đọc tốt trên nền sáng. */
   --bg-page:           #fdf5fa;
   --bg-page-alt:       #ffffff;
   --bg-header:         #ffffff;
@@ -81,14 +54,9 @@
   --text-secondary: #6b6890;
   --text-muted:     #9c97b8;
 
-  /* accent-2: KHÔNG dùng tím trên light theme (tối/lệch tông với nền sáng) —
-     đổi sang teal đậm, cặp tương phản ấm-lạnh kinh điển với rose, tương
-     phản ~5.35:1 trên trắng, tương đương mức tím đạt trên dark theme. */
   --accent:      #e11d48;
   --accent-2:    #0e7490;
   --accent-text: #ffffff;
-  /* Light theme: accent đặc (#e11d48, ~4.7:1 trên trắng) đã đủ tương phản
-     để làm chữ luôn, không cần bản riêng như dark theme. */
   --accent-fg:   #e11d48;
 
   --shadow-color: rgba(225,29,72,0.1);
@@ -101,10 +69,6 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* ── Bootstrap "warning" utility → route qua accent mới ──────────────
-   Nhiều component đang dùng sẵn class Bootstrap (btn-warning, text-warning...)
-   cho nút/CTA chính thay vì var(--accent) trực tiếp. Override 1 chỗ ở đây để
-   toàn bộ các chỗ đó tự đổi màu theo theme mới, không phải sửa từng file. */
 .btn-warning {
   background-color: var(--accent) !important;
   border-color: var(--accent) !important;
@@ -127,10 +91,6 @@ body {
 .border-warning { border-color: var(--accent) !important; }
 .bg-warning { background-color: var(--accent) !important; color: var(--accent-text) !important; }
 
-/* ── prefers-reduced-motion (PRODUCT.md yêu cầu) — 1 chỗ duy nhất áp dụng cho
-   MỌI animation/transition trong app (Bootstrap lẫn CSS tự viết), khỏi phải
-   sửa từng component. Không tắt hẳn (display:none dễ vỡ layout phụ thuộc
-   animation để lộ ra) — rút gần về 0 để coi như tức thời. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
