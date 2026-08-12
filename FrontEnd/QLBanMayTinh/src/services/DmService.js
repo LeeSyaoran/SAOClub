@@ -1,4 +1,4 @@
-import { get, post, put, del } from './api.js';
+import { get, post, put } from './api.js';
 export const getThuongHieu = () => get('/api/thuong-hieu');
 export const getNhaCungCap = () => get('/api/nha-cung-cap');
 export const getChucVu     = () => get('/api/chuc-vu');
@@ -11,7 +11,6 @@ const crud = (path) => ({
   getAll: () => get(`/api/${path}?page=0&size=200`),
   getPage: ({ page = 0, size = 50 } = {}) => get(`/api/${path}?page=${page}&size=${size}`),
   save: (id, body) => id ? put(`/api/${path}/update/${id}`, body) : post(`/api/${path}`, body),
-  remove: (id) => del(`/api/${path}/delete/${id}`),
 });
 
 export const DmCpuService = crud('dm-cpu');

@@ -171,12 +171,6 @@ const saveClaim = async () => {
   }
 };
 
-const deleteClaim = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deleteWarrantyClaim')))) return;
-  const res = await PhieuBaoHanhService.remove(id);
-  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
-  await refreshBaoHanh();
-};
 </script>
 
 <template>
@@ -258,7 +252,6 @@ const deleteClaim = async (id) => {
           <td>
             <div class="d-flex gap-1">
               <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openEdit(p)">{{ t('admin.warrantyClaims.edit') }}</button>
-              <button class="btn btn-sm btn-outline-danger" style="font-size:0.78rem;padding:2px 8px;" @click="deleteClaim(p.baoHanhId)">{{ t('admin.warrantyClaims.delete') }}</button>
             </div>
           </td>
         </tr>

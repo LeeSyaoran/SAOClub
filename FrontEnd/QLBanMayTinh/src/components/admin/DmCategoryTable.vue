@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from "vue";
 import { Hash, FolderOpen, X } from '@lucide/vue';
 import { t } from "../../i18n/index.js";
 import { showToast } from "../../stores/toast.js";
-import { askConfirm } from "../../stores/confirm.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatDate } from "../../utils/adminFormat.js";
 import * as XLSX from "xlsx";
@@ -151,15 +150,6 @@ const saveItem = async () => {
   }
 };
 
-const deleteItem = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deleteDmItem', { label: props.label })))) return;
-  const res = await props.service.remove(id);
-  if (!res.ok) {
-    showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status })));
-    return;
-  }
-  await load();
-};
 </script>
 
 <template>
@@ -189,7 +179,6 @@ const deleteItem = async (id) => {
             <div class="d-flex gap-1">
               <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 8px;" @click="openSerials(item)"><Hash :size="12" style="vertical-align:-2px;" /> {{ t('admin.dmCategory.viewSerials', { count: stockCountOf(item) }) }}</button>
               <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openEdit(item)">{{ t('admin.dmCategory.edit') }}</button>
-              <button class="btn btn-sm btn-outline-danger" style="font-size:0.78rem;padding:2px 8px;" @click="deleteItem(item[idField])">{{ t('admin.dmCategory.delete') }}</button>
             </div>
           </td>
         </tr>

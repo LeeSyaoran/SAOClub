@@ -276,19 +276,6 @@ const saveReturn = async () => {
   }
 };
 
-const deleteReturn = async (id) => {
-  if (!(await askConfirm(t("admin.confirm.deleteReturn")))) return;
-  const res = await PhieuTraHangService.remove(id);
-  if (!res.ok) {
-    showToast(
-      await res
-        .text()
-        .catch(() => t("admin.errors.deleteFailed", { status: res.status })),
-    );
-    return;
-  }
-  await refreshReturns();
-};
 </script>
 
 <template>
@@ -383,14 +370,6 @@ const deleteReturn = async (id) => {
                 {{
                   readonly ? t("admin.returns.view") : t("admin.returns.edit")
                 }}
-              </button>
-              <button
-                v-if="!readonly"
-                class="btn btn-sm btn-outline-danger"
-                style="font-size: 0.78rem; padding: 2px 8px"
-                @click="deleteReturn(p.phieuTraId)"
-              >
-                {{ t("admin.returns.delete") }}
               </button>
             </div>
           </td>

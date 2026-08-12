@@ -93,12 +93,6 @@ const saveSupplier = async () => {
   }
 };
 
-const deleteSupplier = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deleteSupplier')))) return;
-  const res = await NhaCungCapService.remove(id);
-  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
-  await refreshSuppliers();
-};
 </script>
 
 <template>
@@ -128,7 +122,6 @@ const deleteSupplier = async (id) => {
           <td>
             <div class="d-flex gap-1">
               <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEdit(s)">{{ t('admin.suppliers.edit') }}</button>
-              <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteSupplier(s.nhaCungCapId)">{{ t('admin.suppliers.delete') }}</button>
             </div>
           </td>
         </tr>

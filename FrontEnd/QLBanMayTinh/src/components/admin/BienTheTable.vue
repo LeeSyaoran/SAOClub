@@ -330,18 +330,6 @@ const saveVariant = async () => {
   }
 };
 
-const deleteVariant = async (bienTheId) => {
-  const sku = (ProductsStore.items ?? []).find(p => p.bienTheId === bienTheId)?.maSku ?? '';
-  const daGiaoDich = await BienTheSanPhamService.hasTransactionHistory(bienTheId).catch(() => false);
-  if (daGiaoDich) {
-    showToast(t('admin.errors.cannotDeleteVariant', { sku }));
-    return;
-  }
-  if (!(await askConfirm(t('admin.confirm.deleteVariantSimple', { sku })))) return;
-  const res = await BienTheSanPhamService.remove(bienTheId);
-  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
-  await refreshProducts();
-};
 </script>
 
 <template>
@@ -373,7 +361,6 @@ const deleteVariant = async (bienTheId) => {
           <td>
             <div class="d-flex gap-1">
               <button v-if="!readonly" class="btn btn-sm btn-outline-warning" style="font-size:0.72rem; padding:2px 7px;" @click="openEdit(p)">{{ t('admin.variants.edit') }}</button>
-              <button v-if="!readonly" class="btn btn-sm btn-outline-danger"  style="font-size:0.72rem; padding:2px 7px;" @click="deleteVariant(p.bienTheId)">{{ t('admin.variants.delete') }}</button>
             </div>
           </td>
         </tr>
