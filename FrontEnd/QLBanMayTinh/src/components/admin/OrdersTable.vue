@@ -20,8 +20,6 @@ import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
 import { CheckCircle2, Package, Truck, Bike, Inbox, Laptop, User } from '@lucide/vue';
 
-const props = defineProps({ canDelete: { type: Boolean, default: true } });
-
 onMounted(() => { ensureOrders(); ensureCustomers(); ensureProducts(); });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -103,14 +101,6 @@ const fetchSerialMap = async (bienTheIds) => {
   const map = {};
   bienTheIds.forEach((id, i) => { map[id] = results[i]; });
   return map;
-};
-
-// ── Orders CRUD ───────────────────────────────────────────────────────────────
-const deleteOrder = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deleteOrder')))) return;
-  const res = await DonHangService.remove(id);
-  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  await refreshOrders();
 };
 
 // ── Order detail modal (xem san pham trong don) ───────────────────────────────
@@ -652,7 +642,6 @@ const confirmXacNhanSerial = async () => {
                   <component :is="NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].icon" :size="14" /> {{ t(NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].key) }}
                 </button>
                 <button v-if="!['delivered','cancelled','returned'].includes(o.trangThaiDonHang)" class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
-                <button v-if="canDelete" class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem;padding:2px 8px;" @click="deleteOrder(o.donHangId)">{{ t('admin.orders.delete') }}</button>
               </div>
             </td>
           </tr>

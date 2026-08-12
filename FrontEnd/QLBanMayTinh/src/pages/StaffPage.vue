@@ -145,7 +145,7 @@ onUnmounted(() => {
       <!-- Noi dung -->
       <div class="flex-grow-1 overflow-y-auto p-3">
         <section v-show="currentPage === 'ban-hang'"><PosPanel /></section>
-        <section v-show="currentPage === 'orders'"><OrdersTable :can-delete="false" /></section>
+        <section v-show="currentPage === 'orders'"><OrdersTable /></section>
         <section v-show="currentPage === 'customers'"><CustomersTable /></section>
         <section v-show="currentPage === 'tra-hang'"><ReturnsPanel :can-pick-staff="true" /></section>
         <section v-show="currentPage === 'products'">
