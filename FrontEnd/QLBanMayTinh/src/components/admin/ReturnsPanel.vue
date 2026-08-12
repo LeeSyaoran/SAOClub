@@ -282,10 +282,8 @@ const saveReturn = async () => {
   <div
     class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2"
   >
-    <span class="text-secondary small"
-      >{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
-      {{ t("admin.returns.countSuffix") }}</span
-    >
+    <span class="text-secondary small">{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
+      {{ t("admin.returns.countSuffix") }}</span>
     <div class="d-flex gap-2 flex-wrap">
       <input
         v-model="search"
@@ -357,8 +355,7 @@ const saveReturn = async () => {
                 background: statusColor(p.trangThai).bg,
                 color: statusColor(p.trangThai).text,
               }"
-              >{{ statusLabel(p.trangThai) }}</span
-            >
+            >{{ statusLabel(p.trangThai) }}</span>
           </td>
           <td>
             <div class="d-flex gap-1">
@@ -384,7 +381,6 @@ const saveReturn = async () => {
     <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
-  <!-- ══ MODAL PHIEU TRA HANG ══ -->
   <div
     v-if="showModal"
     class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
@@ -419,7 +415,6 @@ const saveReturn = async () => {
         {{ formError }}
       </div>
 
-      <!-- Chon don hang -->
       <div class="mb-2">
         <label class="form-label small text-secondary mb-1">{{
           t("admin.returnModal.orderLabel")
@@ -429,10 +424,8 @@ const saveReturn = async () => {
           class="d-flex align-items-center justify-content-between p-2 rounded-2"
           style="background: var(--bg-input)"
         >
-          <span
-            >{{ selectedOrder.maDonHang || "#" + selectedOrder.donHangId }} —
-            {{ customerName(selectedOrder.khachHangId) }}</span
-          >
+          <span>{{ selectedOrder.maDonHang || "#" + selectedOrder.donHangId }} —
+            {{ customerName(selectedOrder.khachHangId) }}</span>
           <button
             v-if="!editingId"
             class="btn btn-sm btn-outline-secondary"
@@ -519,8 +512,8 @@ const saveReturn = async () => {
             >
               <td class="px-2 py-1">
                 <input
-                  type="checkbox"
                   v-model="l.checked"
+                  type="checkbox"
                   :disabled="readonly"
                   @change="recalcSoTienHoan"
                 />
@@ -534,16 +527,15 @@ const saveReturn = async () => {
               >
                 {{ l.maSku
                 }}<span v-if="l.soSerial" class="text-info">
-                  · SN {{ l.soSerial }}</span
-                >
+                  · SN {{ l.soSerial }}</span>
               </td>
               <td class="px-2 py-1 text-center">{{ l.soLuongDaMua }}</td>
               <td class="px-2 py-1 text-center">
                 <input
+                  v-model.number="l.soLuongTra"
                   type="number"
                   min="1"
                   :max="l.soLuongDaMua"
-                  v-model.number="l.soLuongTra"
                   :disabled="readonly || !l.checked"
                   class="form-control form-control-sm"
                   style="
@@ -578,7 +570,7 @@ const saveReturn = async () => {
       </div>
 
       <div class="row g-2 mb-2">
-        <div class="col-6" v-if="canPickStaff">
+        <div v-if="canPickStaff" class="col-6">
           <label class="form-label small text-secondary mb-1">{{
             t("admin.returnModal.staffLabel")
           }}</label>
@@ -602,7 +594,7 @@ const saveReturn = async () => {
             </option>
           </select>
         </div>
-        <div class="col-6" v-else>
+        <div v-else class="col-6">
           <label class="form-label small text-secondary mb-1">{{
             t("admin.returnModal.staffLabel")
           }}</label>
@@ -622,8 +614,8 @@ const saveReturn = async () => {
             t("admin.returnModal.dateLabel")
           }}</label>
           <input
-            type="datetime-local"
             v-model="form.ngayTra"
+            type="datetime-local"
             :disabled="readonly"
             class="form-control form-control-sm"
             style="
@@ -657,9 +649,9 @@ const saveReturn = async () => {
             t("admin.returnModal.amountLabel")
           }}</label>
           <input
+            v-model.number="form.soTienHoan"
             type="number"
             min="0"
-            v-model.number="form.soTienHoan"
             :disabled="readonly"
             class="form-control form-control-sm"
             style="
@@ -672,10 +664,10 @@ const saveReturn = async () => {
         <div class="col-4">
           <div class="form-check mb-1">
             <input
-              type="checkbox"
-              class="form-check-input"
               id="khachCoMat"
               v-model="khachCoMat"
+              type="checkbox"
+              class="form-check-input"
               :disabled="readonly"
               @change="
                 () => {
@@ -687,8 +679,7 @@ const saveReturn = async () => {
             <label
               class="form-check-label small text-secondary"
               for="khachCoMat"
-              >{{ t("admin.returnModal.customerPresentLabel") }}</label
-            >
+            >{{ t("admin.returnModal.customerPresentLabel") }}</label>
           </div>
         </div>
         <div class="col-4">

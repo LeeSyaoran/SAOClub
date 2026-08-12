@@ -100,7 +100,36 @@ const posGiamGia = computed(() => {
 });
 const posGrandTotal = computed(() => Math.max(0, posCartTotal.value + posFee.value - posGiamGia.value));
 
+// Ap tu dong khi go xong (debounce), khong can bam nut "Ap dung" — giong luong online.
+let posPromoDebounce = null;
+const onPosPromoInput = () => {
+  showPosPromoSuggestions.value = true;
+  clearTimeout(posPromoDebounce);
+  if (!posPromoCode.value.trim()) { posAppliedPromo.value = null; posPromoMsg.value = ''; return; }
+  posPromoDebounce = setTimeout(posApplyPromo, 500);
+};
+
+// Goi y ma khuyen mai con hieu luc (du dieu kien don toi thieu) de bam chon thay vi phai
+// nho/go dung ma — giong list voucher ca nhan tu dong hien o checkout online.
+const showPosPromoSuggestions = ref(false);
+const posPromoSuggestions = computed(() => {
+  const q = posPromoCode.value.trim().toUpperCase();
+  return (PromotionsStore.items ?? [])
+    .filter((p) => p.trangThai === 'active'
+      && (!p.donHangToiThieu || posCartTotal.value >= Number(p.donHangToiThieu))
+      && (!q || p.maKhuyenMai?.toUpperCase().includes(q)))
+    .slice(0, 8);
+});
+const onPosPromoFocus = () => { if (posPromoSuggestions.value.length) showPosPromoSuggestions.value = true; };
+const selectPosPromoSuggestion = (p) => {
+  posPromoCode.value = p.maKhuyenMai;
+  posAppliedPromo.value = p;
+  posPromoMsg.value = t('checkout.promoSuccess', { name: p.tenKhuyenMai });
+  showPosPromoSuggestions.value = false;
+};
+
 const posApplyPromo = () => {
+  clearTimeout(posPromoDebounce);
   const code = posPromoCode.value.trim().toUpperCase();
   if (!code) { posAppliedPromo.value = null; posPromoMsg.value = ''; return; }
   const p = PromotionsStore.items.find(
@@ -389,6 +418,25 @@ const posLookup = () => {
   }
 };
 
+// ── Goi y khach hang theo SDT (tu 2 so dau) khi nhap tren POS ──────────────────
+const showPosSuggestions = ref(false);
+const posPhoneSuggestions = computed(() => {
+  const q = posPhone.value.trim();
+  if (q.length < 2) return [];
+  return (CustomersStore.items ?? [])
+    .filter((c) => c.soDienThoai?.startsWith(q))
+    .slice(0, 8);
+});
+const onPosPhoneFocus = () => { if (posPhoneSuggestions.value.length) showPosSuggestions.value = true; };
+const selectPosSuggestion = (c) => {
+  posPhone.value = c.soDienThoai;
+  posFoundCust.value = c;
+  posPhoneNotFound.value = false;
+  posError.value = '';
+  showPosSuggestions.value = false;
+  posStage.value = 'selling';
+};
+
 const posCancelCreateCustomer = () => {
   posPhoneNotFound.value = false;
   posPhone.value = '';
@@ -428,6 +476,7 @@ const posPlaceOrder = async () => {
   if (!posFoundCust.value) { posError.value = t('admin.pos.phoneRequired'); return; }
   if (!posPaymentMethod.value) { posError.value = t('admin.pos.paymentRequired'); return; }
   if (posPlacing.value) return;
+  if (!(await askConfirm(t('admin.pos.confirmCheckout', { total: formatPrice(posGrandTotal.value) })))) return;
   posPlacing.value = true;
   posError.value = "";
   posSuccess.value = false;
@@ -519,12 +568,12 @@ const posPlaceOrder = async () => {
 
 <template>
   <div class="pos-grid-layout">
-    <!-- LEFT: tim kiem + san pham — luon hien, nhan vien duyet duoc binh thuong;
-         chi viec THEM VAO GIO moi bi chan neu chua xac dinh khach hang (xem posOpenVariantPicker) -->
     <div class="d-flex flex-column gap-3 overflow-hidden">
-      <input v-model="posSearch" class="form-control form-control-sm"
-             style="background:var(--bg-hover); border-color:var(--border-color-strong); color:var(--text-primary);"
-             :placeholder="t('admin.pos.searchPlaceholder')" />
+      <input
+        v-model="posSearch" class="form-control form-control-sm"
+        style="background:var(--bg-hover); border-color:var(--border-color-strong); color:var(--text-primary);"
+        :placeholder="t('admin.pos.searchPlaceholder')"
+      />
       <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.pos.loading') }}</div>
       <div v-else class="row g-2 overflow-y-auto">
         <div v-for="p in posProductGroups" :key="p.sanPhamId" class="col-6 col-xl-4">
@@ -548,7 +597,6 @@ const posPlaceOrder = async () => {
       </div>
     </div>
 
-    <!-- RIGHT: gio hang POS — cong xac dinh khach hang nam o day -->
     <div class="card border-secondary d-flex flex-column overflow-hidden" style="background:var(--bg-hover);">
       <div class="card-header border-secondary d-flex justify-content-between align-items-center fw-bold">
         <span class="d-inline-flex align-items-center gap-1"><ShoppingCart :size="16" /> {{ t('admin.pos.cart') }} <span class="text-secondary fw-normal small">{{ posCart.length }} {{ t('admin.pos.cartCountSuffix') }}</span></span>
@@ -558,7 +606,6 @@ const posPlaceOrder = async () => {
         </button>
       </div>
 
-      <!-- Cong xac dinh khach hang: thay the phan gio hang cho toi khi co khach -->
       <div v-if="posStage !== 'selling'" class="d-flex flex-column align-items-center justify-content-center gap-3 flex-grow-1 text-center p-3">
         <div v-if="posError" class="small p-2 rounded-2 w-100" style="background:rgba(220,53,69,0.1);color:#e05252;">{{ posError }}</div>
         <template v-if="posStage === 'start'">
@@ -568,9 +615,20 @@ const posPlaceOrder = async () => {
         </template>
         <template v-else-if="posStage === 'phone'">
           <div class="fw-bold text-light">{{ t('admin.pos.enterPhoneTitle') }}</div>
-          <div class="d-flex gap-2 w-100">
-            <input v-model="posPhone" class="form-control form-control-sm" style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.pos.phonePlaceholder')" @keyup.enter="posLookup" />
+          <div class="d-flex gap-2 w-100 position-relative">
+            <input v-model="posPhone" class="form-control form-control-sm" style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.pos.phonePlaceholder')" @input="showPosSuggestions = true" @focus="onPosPhoneFocus" @blur="showPosSuggestions = false" @keyup.enter="posLookup" />
             <button class="btn btn-sm btn-warning text-dark fw-bold flex-shrink-0" @click="posLookup">{{ t('admin.pos.find') }}</button>
+            <div v-if="showPosSuggestions && posPhoneSuggestions.length" class="position-absolute w-100 rounded-3 shadow-lg" style="top:100%; left:0; z-index:20; background:var(--bg-card); border:1px solid var(--border-color-strong); max-height:220px; overflow-y:auto;">
+              <div
+                v-for="c in posPhoneSuggestions" :key="c.khachHangId" class="px-3 py-2 small d-flex justify-content-between gap-2"
+                style="cursor:pointer;" @mousedown.prevent="selectPosSuggestion(c)"
+                @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
+                @mouseleave="$event.currentTarget.style.background=''"
+              >
+                <span class="text-light">{{ c.hoTen }}</span>
+                <span class="text-secondary">{{ c.soDienThoai }}</span>
+              </div>
+            </div>
           </div>
           <div v-if="posPhoneNotFound" class="d-flex flex-column align-items-center gap-2 w-100">
             <div class="small" style="color:#e05252;">{{ t('admin.pos.customerNotFound') }}</div>
@@ -585,94 +643,129 @@ const posPlaceOrder = async () => {
 
       <!-- Danh sach san pham trong gio: chi hien khi da xac dinh khach hang -->
       <template v-if="posStage === 'selling'">
-      <div class="flex-grow-1 overflow-y-auto p-2 d-flex flex-column gap-1">
-        <div v-if="posCart.length===0" class="text-secondary small text-center py-4">{{ t('admin.pos.cartEmptyList') }}</div>
-        <div v-for="g in posCartGroups" :key="g.sanPhamId"
-             class="d-flex flex-column gap-1 p-2 rounded-2" style="background:var(--bg-hover);">
-          <div class="d-flex align-items-center gap-2">
-            <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);">
-              <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh" :alt="g.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:2px;" />
-              <span v-else><Laptop :size="16" color="var(--text-muted)" /></span>
-            </div>
-            <div class="flex-grow-1" style="min-width:0;">
-              <div class="fw-semibold small text-light text-truncate">{{ g.tenSanPham }}<span v-if="g.items.length>1" class="text-secondary fw-normal"> × {{ g.items.length }}</span></div>
-              <template v-if="g.items.length===1">
-                <div class="text-secondary" style="font-size:0.73rem;">{{ g.items[0].maSku }}</div>
-                <div class="text-info" style="font-size:0.7rem;">S/N: {{ g.items[0].soSerial }}</div>
-              </template>
-            </div>
-            <button class="btn btn-sm btn-outline-secondary flex-shrink-0" style="width:20px;height:20px;padding:0;font-size:0.62rem;"
-                    :aria-label="t('admin.products.detail')" @click="openPosDetail(g)"><Info :size="14" /></button>
-            <div v-if="g.items.length===1" class="d-flex align-items-center gap-1 flex-shrink-0">
-              <button class="btn btn-sm btn-outline-secondary" style="width:20px;height:20px;padding:0;font-size:0.68rem;"
-                      :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(g.items[0], g.items[0].chiTietId)"><RefreshCw :size="14" /></button>
-              <button class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
-                      :aria-label="t('common.remove')" @click="posRemove(g.items[0].chiTietId)"><X :size="14" /></button>
-            </div>
-            <button v-else class="btn btn-sm btn-outline-danger flex-shrink-0" style="font-size:0.66rem;padding:2px 6px;" @click="posRemoveGroup(g)">{{ t('admin.pos.removeAll') }} ({{ g.items.length }})</button>
-            <div class="text-warning fw-bold flex-shrink-0 text-end" style="font-size:0.8rem;min-width:72px;">{{ formatPrice(posGroupTotal(g)) }}</div>
-          </div>
-          <div v-if="g.items.length>1" class="d-flex flex-column gap-1 ps-4">
-            <div v-for="item in g.items" :key="item.chiTietId" class="d-flex align-items-center gap-2">
-              <div class="flex-grow-1" style="min-width:0;">
-                <div class="text-secondary text-truncate" style="font-size:0.68rem;">{{ item.maSku }}</div>
-                <div class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
+        <div class="flex-grow-1 overflow-y-auto p-2 d-flex flex-column gap-1">
+          <div v-if="posCart.length===0" class="text-secondary small text-center py-4">{{ t('admin.pos.cartEmptyList') }}</div>
+          <div
+            v-for="g in posCartGroups" :key="g.sanPhamId"
+            class="d-flex flex-column gap-1 p-2 rounded-2" style="background:var(--bg-hover);"
+          >
+            <div class="d-flex align-items-center gap-2">
+              <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);">
+                <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh" :alt="g.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:2px;" />
+                <span v-else><Laptop :size="16" color="var(--text-muted)" /></span>
               </div>
-              <button class="btn btn-sm btn-outline-secondary" style="width:20px;height:20px;padding:0;font-size:0.68rem;"
-                      :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(item, item.chiTietId)"><RefreshCw :size="14" /></button>
-              <button class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
-                      :aria-label="t('common.remove')" @click="posRemove(item.chiTietId)"><X :size="14" /></button>
+              <div class="flex-grow-1" style="min-width:0;">
+                <div class="fw-semibold small text-light text-truncate">{{ g.tenSanPham }}<span v-if="g.items.length>1" class="text-secondary fw-normal"> × {{ g.items.length }}</span></div>
+                <template v-if="g.items.length===1">
+                  <div class="text-secondary" style="font-size:0.73rem;">{{ g.items[0].maSku }}</div>
+                  <div class="text-info" style="font-size:0.7rem;">S/N: {{ g.items[0].soSerial }}</div>
+                </template>
+              </div>
+              <button
+                class="btn btn-sm btn-outline-secondary flex-shrink-0" style="width:20px;height:20px;padding:0;font-size:0.62rem;"
+                :aria-label="t('admin.products.detail')" @click="openPosDetail(g)"
+              >
+                <Info :size="14" />
+              </button>
+              <div v-if="g.items.length===1" class="d-flex align-items-center gap-1 flex-shrink-0">
+                <button
+                  class="btn btn-sm btn-outline-secondary" style="width:20px;height:20px;padding:0;font-size:0.68rem;"
+                  :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(g.items[0], g.items[0].chiTietId)"
+                >
+                  <RefreshCw :size="14" />
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
+                  :aria-label="t('common.remove')" @click="posRemove(g.items[0].chiTietId)"
+                >
+                  <X :size="14" />
+                </button>
+              </div>
+              <button v-else class="btn btn-sm btn-outline-danger flex-shrink-0" style="font-size:0.66rem;padding:2px 6px;" @click="posRemoveGroup(g)">{{ t('admin.pos.removeAll') }} ({{ g.items.length }})</button>
+              <div class="text-warning fw-bold flex-shrink-0 text-end" style="font-size:0.8rem;min-width:72px;">{{ formatPrice(posGroupTotal(g)) }}</div>
+            </div>
+            <div v-if="g.items.length>1" class="d-flex flex-column gap-1 ps-4">
+              <div v-for="item in g.items" :key="item.chiTietId" class="d-flex align-items-center gap-2">
+                <div class="flex-grow-1" style="min-width:0;">
+                  <div class="text-secondary text-truncate" style="font-size:0.68rem;">{{ item.maSku }}</div>
+                  <div class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
+                </div>
+                <button
+                  class="btn btn-sm btn-outline-secondary" style="width:20px;height:20px;padding:0;font-size:0.68rem;"
+                  :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(item, item.chiTietId)"
+                >
+                  <RefreshCw :size="14" />
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-danger" style="width:20px;height:20px;padding:0;font-size:0.72rem;"
+                  :aria-label="t('common.remove')" @click="posRemove(item.chiTietId)"
+                >
+                  <X :size="14" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <!-- Ma khuyen mai -->
-      <div class="p-2 border-top border-secondary d-flex flex-column gap-1">
-        <div class="d-flex gap-2">
-          <input v-model="posPromoCode" class="form-control form-control-sm" style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('checkout.promoPlaceholder')" @keyup.enter="posApplyPromo" />
-          <button class="btn btn-sm btn-outline-warning flex-shrink-0" @click="posApplyPromo">{{ t('checkout.apply') }}</button>
+        <!-- Ma khuyen mai -->
+        <div class="p-2 border-top border-secondary d-flex flex-column gap-1">
+          <div class="d-flex gap-2 position-relative">
+            <input v-model="posPromoCode" class="form-control form-control-sm" style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('checkout.promoPlaceholder')" @input="onPosPromoInput" @focus="onPosPromoFocus" @blur="showPosPromoSuggestions = false" @keyup.enter="posApplyPromo" />
+            <button class="btn btn-sm btn-outline-warning flex-shrink-0" @click="posApplyPromo">{{ t('checkout.apply') }}</button>
+            <div v-if="showPosPromoSuggestions && posPromoSuggestions.length" class="position-absolute w-100 rounded-3 shadow-lg" style="top:100%; left:0; z-index:20; background:var(--bg-card); border:1px solid var(--border-color-strong); max-height:220px; overflow-y:auto;">
+              <div
+                v-for="p in posPromoSuggestions" :key="p.khuyenMaiId" class="px-3 py-2 small d-flex justify-content-between gap-2"
+                style="cursor:pointer;" @mousedown.prevent="selectPosPromoSuggestion(p)"
+                @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
+                @mouseleave="$event.currentTarget.style.background=''"
+              >
+                <span class="text-light">{{ p.maKhuyenMai }} <span class="text-secondary">· {{ p.tenKhuyenMai }}</span></span>
+                <span class="text-warning fw-bold flex-shrink-0">{{ p.loai === 'percent' ? `${p.giaTri}%` : formatPrice(p.giaTri) }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="posPromoMsg" class="small" :class="posAppliedPromo ? 'text-success' : 'text-danger'">{{ posPromoMsg }}</div>
         </div>
-        <div v-if="posPromoMsg" class="small" :class="posAppliedPromo ? 'text-success' : 'text-danger'">{{ posPromoMsg }}</div>
-      </div>
-      <!-- Tong tien -->
-      <div class="p-2 border-top border-secondary d-flex flex-column gap-1">
-        <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.subtotalLabel') }}</span><span>{{ formatPrice(posCartTotal) }}</span></div>
-        <div v-if="posGiamGia > 0" class="d-flex justify-content-between text-success small"><span>{{ t('checkout.discount') }}</span><span>-{{ formatPrice(posGiamGia) }}</span></div>
-        <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.shippingFeeLabel') }}</span><span>{{ posFee===0?t('admin.pos.free'):formatPrice(posFee) }}</span></div>
-        <div class="d-flex justify-content-between fw-bold"><span>{{ t('admin.pos.totalLabel') }}</span><span>{{ formatPrice(posGrandTotal) }}</span></div>
-      </div>
-      <!-- Phuong thuc thanh toan -->
-      <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
-        <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.paymentMethodLabel') }}</div>
-        <div class="d-flex gap-1">
-          <button v-for="m in POS_PAYMENT_METHODS" :key="m"
-                  class="btn btn-sm flex-fill d-flex flex-column align-items-center py-2"
-                  style="border-radius:8px;font-size:0.65rem;"
-                  :style="posPaymentMethod === m
-                    ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
-                    : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
-                  @click="posPaymentMethod = m">
-            <component :is="paymentMethodIcon(m)" :size="18" />
-            <span>{{ paymentMethodLabel(m) }}</span>
-          </button>
+        <!-- Tong tien -->
+        <div class="p-2 border-top border-secondary d-flex flex-column gap-1">
+          <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.subtotalLabel') }}</span><span>{{ formatPrice(posCartTotal) }}</span></div>
+          <div v-if="posGiamGia > 0" class="d-flex justify-content-between text-success small"><span>{{ t('checkout.discount') }}</span><span>-{{ formatPrice(posGiamGia) }}</span></div>
+          <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.shippingFeeLabel') }}</span><span>{{ posFee===0?t('admin.pos.free'):formatPrice(posFee) }}</span></div>
+          <div class="d-flex justify-content-between fw-bold"><span>{{ t('admin.pos.totalLabel') }}</span><span>{{ formatPrice(posGrandTotal) }}</span></div>
         </div>
-      </div>
-      <!-- Khach hang -->
-      <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
-        <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.customerInfo') }}</div>
-        <div v-if="posFoundCust" class="d-flex justify-content-between align-items-center gap-2 small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
-          <span class="d-inline-flex align-items-center gap-1"><Check :size="13" /> {{ posFoundCust.hoTen }} · {{ posFoundCust.soDienThoai }}</span>
-          <button class="btn btn-sm btn-link text-secondary p-0" style="font-size:0.7rem;text-decoration:underline;" @click="posReset">{{ t('admin.pos.changeCustomer') }}</button>
+        <!-- Phuong thuc thanh toan -->
+        <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
+          <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.paymentMethodLabel') }}</div>
+          <div class="d-flex gap-1">
+            <button
+              v-for="m in POS_PAYMENT_METHODS" :key="m"
+              class="btn btn-sm flex-fill d-flex flex-column align-items-center py-2"
+              style="border-radius:8px;font-size:0.65rem;"
+              :style="posPaymentMethod === m
+                ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
+                : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
+              @click="posPaymentMethod = m"
+            >
+              <component :is="paymentMethodIcon(m)" :size="18" />
+              <span>{{ paymentMethodLabel(m) }}</span>
+            </button>
+          </div>
         </div>
-        <div v-else class="small text-secondary">{{ t('admin.pos.noCustomerYet') }}</div>
-        <div v-if="posError" class="small p-2 rounded-2" style="background:rgba(220,53,69,0.1);color:#e05252;">{{ posError }}</div>
-        <div v-if="posSuccess" class="small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">{{ t('admin.pos.orderCreated') }}</div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-sm btn-outline-secondary" @click="posReset">{{ t('admin.pos.reset') }}</button>
-          <button class="btn btn-sm btn-outline-info" :disabled="!posCart.length" @click="posHoldOrder">{{ t('admin.pos.holdOrder') }}</button>
-          <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" :disabled="posStage !== 'selling' || !posCart.length || !posPaymentMethod || posPlacing" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
+        <!-- Khach hang -->
+        <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
+          <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.customerInfo') }}</div>
+          <div v-if="posFoundCust" class="d-flex justify-content-between align-items-center gap-2 small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
+            <span class="d-inline-flex align-items-center gap-1"><Check :size="13" /> {{ posFoundCust.hoTen }} · {{ posFoundCust.soDienThoai }}</span>
+            <button class="btn btn-sm btn-link text-secondary p-0" style="font-size:0.7rem;text-decoration:underline;" @click="posReset">{{ t('admin.pos.changeCustomer') }}</button>
+          </div>
+          <div v-else class="small text-secondary">{{ t('admin.pos.noCustomerYet') }}</div>
+          <div v-if="posError" class="small p-2 rounded-2" style="background:rgba(220,53,69,0.1);color:#e05252;">{{ posError }}</div>
+          <div v-if="posSuccess" class="small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">{{ t('admin.pos.orderCreated') }}</div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-secondary" @click="posReset">{{ t('admin.pos.reset') }}</button>
+            <button class="btn btn-sm btn-outline-info" :disabled="!posCart.length" @click="posHoldOrder">{{ t('admin.pos.holdOrder') }}</button>
+            <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" :disabled="posStage !== 'selling' || !posCart.length || !posPaymentMethod || posPlacing" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
+          </div>
         </div>
-      </div>
       </template>
     </div>
   </div>
@@ -695,13 +788,15 @@ const posPlaceOrder = async () => {
             {{ t('productDetail.versions', { count: variantPickerConfigs.length }) }}
           </div>
           <div class="d-flex flex-wrap gap-2">
-            <button v-for="v in variantPickerConfigs" :key="configKey(v)"
-                    class="btn btn-sm d-flex flex-column align-items-start text-start px-3 py-2"
-                    style="border-radius:10px;"
-                    :style="variantPickerActiveConfigKey === configKey(v)
-                      ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
-                      : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
-                    @click="variantPickerSelectConfig(v)">
+            <button
+              v-for="v in variantPickerConfigs" :key="configKey(v)"
+              class="btn btn-sm d-flex flex-column align-items-start text-start px-3 py-2"
+              style="border-radius:10px;"
+              :style="variantPickerActiveConfigKey === configKey(v)
+                ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
+                : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
+              @click="variantPickerSelectConfig(v)"
+            >
               <span class="fw-semibold" style="font-size:11px;line-height:1.5;">{{ configLabel(v).line1 }}</span>
               <span v-if="configLabel(v).line2" style="font-size:10px;opacity:0.75;">{{ configLabel(v).line2 }}</span>
             </button>
@@ -713,13 +808,15 @@ const posPlaceOrder = async () => {
             {{ t('productDetail.colorHeading') }}
           </div>
           <div class="d-flex flex-wrap gap-2">
-            <button v-for="v in variantPickerColorsForConfig" :key="v.bienTheId"
-                    class="btn btn-sm d-flex align-items-center gap-2 px-3 py-2"
-                    style="border-radius:10px;"
-                    :style="variantPickerActiveColor === v.mauSac
-                      ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
-                      : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
-                    @click="variantPickerSelectColor(v)">
+            <button
+              v-for="v in variantPickerColorsForConfig" :key="v.bienTheId"
+              class="btn btn-sm d-flex align-items-center gap-2 px-3 py-2"
+              style="border-radius:10px;"
+              :style="variantPickerActiveColor === v.mauSac
+                ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
+                : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
+              @click="variantPickerSelectColor(v)"
+            >
               <span class="rounded-circle flex-shrink-0" :style="`width:13px;height:13px;background:${colorDot(v.mauSac)};border:1.5px solid #666;display:inline-block;`"></span>
               <div class="d-flex flex-column align-items-start text-start">
                 <span class="fw-semibold" style="font-size:11px;line-height:1.3;">{{ v.mauSac }}</span>
@@ -747,10 +844,12 @@ const posPlaceOrder = async () => {
       <div class="overflow-y-auto p-3 d-flex flex-column gap-2">
         <div v-if="serialPickerLoading" class="text-secondary small text-center py-4">{{ t('admin.pos.loading') }}</div>
         <div v-else-if="serialPickerList.length===0" class="text-secondary small text-center py-4">{{ t('admin.pos.noSerialAvailable') }}</div>
-        <button v-else v-for="s in serialPickerList" :key="s.chiTietId"
-                class="btn btn-outline-warning d-flex justify-content-between align-items-center"
-                style="font-family:monospace;font-size:0.85rem;"
-                @click="posSelectSerial(s)">
+        <button
+          v-for="s in serialPickerList" v-else :key="s.chiTietId"
+          class="btn btn-outline-warning d-flex justify-content-between align-items-center"
+          style="font-family:monospace;font-size:0.85rem;"
+          @click="posSelectSerial(s)"
+        >
           <span>{{ s.soSerial }}</span>
           <span class="text-secondary" style="font-size:0.7rem;">{{ formatDate(s.ngayNhapKho) }}</span>
         </button>
@@ -796,7 +895,6 @@ const posPlaceOrder = async () => {
 </template>
 
 <style scoped>
-/* Layout POS: 2 cot, chiem toan bo chieu cao */
 .pos-grid-layout {
   display: grid;
   grid-template-columns: 1fr 360px;
@@ -804,10 +902,6 @@ const posPlaceOrder = async () => {
   height: calc(100vh - 120px);
 }
 
-/* Bootstrap .text-light hardcode mau trang co dinh — ghi de theo theme hien tai (dung
-   tren nen the/card, khong phai nen mau thuong hieu co dinh, nen an toan khi ghi de
-   theo bien theme). Scoped rieng cho component nay vi CSS scoped khong ke thua qua bien
-   gioi component. */
 .text-light {
   color: var(--text-primary) !important;
 }

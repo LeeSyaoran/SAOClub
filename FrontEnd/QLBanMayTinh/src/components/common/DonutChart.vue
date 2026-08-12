@@ -1,11 +1,11 @@
 <template>
-  <!-- Biểu đồ tròn (donut) — vẽ bằng SVG thuần, không cần thư viện ngoài -->
   <div class="d-flex align-items-center gap-4 flex-wrap">
     <svg :width="size" :height="size" :viewBox="`0 0 ${size} ${size}`" style="flex-shrink:0;">
-      <!-- Nền vòng tròn khi không có dữ liệu -->
-      <circle v-if="total === 0"
-              :cx="size/2" :cy="size/2" :r="radius"
-              fill="none" stroke="var(--bg-hover)" :stroke-width="thickness" />
+      <circle
+        v-if="total === 0"
+        :cx="size/2" :cy="size/2" :r="radius"
+        fill="none" stroke="var(--bg-hover)" :stroke-width="thickness"
+      />
       <circle
         v-for="(seg, i) in segments" :key="i"
         :cx="size/2" :cy="size/2" :r="radius"
@@ -15,13 +15,16 @@
         stroke-linecap="butt"
         style="transform:rotate(-90deg); transform-origin:center; transition:stroke-dasharray .5s ease;"
       />
-      <text v-if="centerValue" :x="size/2" :y="size/2 - 3" text-anchor="middle"
-            fill="var(--text-heading)" style="font-size:19px; font-weight:800;">{{ centerValue }}</text>
-      <text v-if="centerLabel" :x="size/2" :y="size/2 + 16" text-anchor="middle"
-            fill="var(--text-secondary)" style="font-size:10px;">{{ centerLabel }}</text>
+      <text
+        v-if="centerValue" :x="size/2" :y="size/2 - 3" text-anchor="middle"
+        fill="var(--text-heading)" style="font-size:19px; font-weight:800;"
+      >{{ centerValue }}</text>
+      <text
+        v-if="centerLabel" :x="size/2" :y="size/2 + 16" text-anchor="middle"
+        fill="var(--text-secondary)" style="font-size:10px;"
+      >{{ centerLabel }}</text>
     </svg>
 
-    <!-- Chú giải -->
     <div class="d-flex flex-column gap-2" style="min-width:140px;">
       <div v-for="(seg, i) in segments" :key="i" class="d-flex align-items-center gap-2">
         <span class="rounded-circle flex-shrink-0" :style="{ background: seg.color, width: '9px', height: '9px' }"></span>

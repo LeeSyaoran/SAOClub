@@ -26,9 +26,6 @@ public class DanhMucService {
                 .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại với id: " + id));
     }
 
-    // Trước đây controller nhận thẳng entity JPA làm request body — không @Valid, không
-    // validate tenDanhMuc bắt buộc, client tự gửi ngayTao (hoặc bỏ trống -> NULL đè lên cột
-    // NOT NULL DEFAULT GETDATE(), lỗi DB). Dùng DTO riêng, ngayTao luôn do server tự đặt.
     public DanhMuc create(DanhMucRequest request) {
         DanhMuc entity = new DanhMuc();
         BeanUtils.copyProperties(request, entity);
@@ -38,7 +35,6 @@ public class DanhMucService {
         return danhMucRepository.save(entity);
     }
 
-    // DanhMuc dùng field "id" (không phải danhMucId) — xem entity DanhMuc
     public DanhMuc update(Integer id, DanhMucRequest request) {
         DanhMuc entity = getById(id);
         LocalDateTime ngayTaoGoc = entity.getNgayTao();

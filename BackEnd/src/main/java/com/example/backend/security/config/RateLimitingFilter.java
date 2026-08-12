@@ -43,9 +43,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    // Giới hạn cho các endpoint permitAll mà nếu spam được sẽ dò ra thông tin/vét cạn tài
-    // khoản: đăng nhập (brute-force mật khẩu) và tra cứu SĐT (vét cạn số điện thoại để biết
-    // ai đã là khách hàng, xem KhachHangController.findBySoDienThoai).
     private boolean canBiGioiHan(HttpServletRequest request) {
         String uri = request.getRequestURI();
         String method = request.getMethod();

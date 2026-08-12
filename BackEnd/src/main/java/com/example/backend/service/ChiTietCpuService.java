@@ -42,8 +42,6 @@ public class ChiTietCpuService {
         return chiTietCpuRepository.save(entity);
     }
 
-    // Chỉ cho xóa serial đang "trong_kho" (thêm nhầm) — đã dùng/lỗi bảo hành mà xóa sẽ
-    // làm sai lịch sử nhập kho đã ghi nhận.
     public void delete(Integer id) {
         ChiTietCpu entity = getById(id);
         if (!"trong_kho".equals(entity.getTrangThai())) {

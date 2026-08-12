@@ -31,8 +31,10 @@
           <tr style="border-top:1px solid var(--border-color-soft);">
             <td></td>
             <td v-for="item in items" :key="item.bienTheId" class="text-center py-2">
-              <button class="btn btn-sm btn-warning text-dark fw-bold" style="font-size:0.75rem;"
-                      @click="$emit('add-to-cart', item)">
+              <button
+                class="btn btn-sm btn-warning text-dark fw-bold" style="font-size:0.75rem;"
+                @click="$emit('add-to-cart', item)"
+              >
                 {{ t('productCompare.addToCart') }}
               </button>
             </td>

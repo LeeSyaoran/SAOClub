@@ -607,280 +607,335 @@ const exportPhieuNhapExcel = () => {
 
 <template>
   <div>
-    <!-- Tabs -->
     <div class="d-flex gap-2 mb-3">
-      <button class="btn btn-sm fw-bold" :class="khoTab==='ton-kho' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-              @click="khoTab='ton-kho'"><Package :size="15" style="vertical-align:-2px;" /> {{ t('admin.inventory.tabStock') }}</button>
-      <button class="btn btn-sm fw-bold" :class="khoTab==='phieu-nhap' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-              @click="khoTab='phieu-nhap'; ensurePhieuNhapData()"><ClipboardList :size="15" style="vertical-align:-2px;" /> {{ t('admin.inventory.tabReceipts') }}</button>
-    </div>
-
-    <!-- ══ TAB: TON KHO ══ -->
-    <template v-if="khoTab==='ton-kho'">
-    <div class="row g-3 mb-3">
-      <div class="col-6 col-xl-3">
-        <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-          <div class="card-body d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(96,165,250,0.15);"><Package :size="20" color="#60a5fa" /></div>
-            <div>
-              <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalSku') }}</div>
-              <div class="fw-bold" style="font-size:1.55rem;">{{ inventory.length }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-          <div class="card-body d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(52,211,153,0.15);"><BarChart3 :size="20" color="#34d399" /></div>
-            <div>
-              <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalStock') }}</div>
-              <div class="fw-bold" style="font-size:1.55rem;">{{ totalStockQty }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-          <div class="card-body d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(250,204,21,0.15);"><AlertTriangle :size="20" color="#facc15" /></div>
-            <div>
-              <div class="text-secondary small mb-1">{{ t('admin.inventory.statLowStock') }}</div>
-              <div class="fw-bold" :style="lowStockOnlyItems.length?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ lowStockOnlyItems.length }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-          <div class="card-body d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(244,63,94,0.15);"><Ban :size="20" color="var(--accent-fg)" /></div>
-            <div>
-              <div class="text-secondary small mb-1">{{ t('admin.inventory.statOutOfStock') }}</div>
-              <div class="fw-bold" :style="outOfStockItems.length?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ outOfStockItems.length }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Summary + Search -->
-    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-      <span class="text-secondary small">{{ t('admin.inventory.summary', { groups: inventoryGrouped.length, skus: inventory.length }) }}</span>
-      <span v-if="outOfStockItems.length" class="badge d-inline-flex align-items-center gap-1" style="background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="12" /> {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
-      <span v-if="lowStockItems.length" class="badge d-inline-flex align-items-center gap-1" style="background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="12" /> {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
-      <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 10px;" @click="toggleAllGroups">
-        {{ allGroupsExpanded ? '▲ ' + t('admin.inventory.collapseAll') : '▼ ' + t('admin.inventory.expandAll') }}
+      <button
+        class="btn btn-sm fw-bold" :class="khoTab==='ton-kho' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+        @click="khoTab='ton-kho'"
+      >
+        <Package :size="15" style="vertical-align:-2px;" /> {{ t('admin.inventory.tabStock') }}
       </button>
-      <select v-model="inventoryStatusFilter" class="form-select form-select-sm" style="width:auto;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.8rem;">
-        <option value="all">{{ t('admin.inventory.filterAll') }}</option>
-        <option value="out">{{ t('admin.inventory.filterOut') }}</option>
-        <option value="low">{{ t('admin.inventory.filterLow') }}</option>
-        <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
-      </select>
-      <div class="ms-auto" style="min-width:200px;">
-        <input v-model="inventorySearch" class="form-control form-control-sm"
-               :placeholder="t('admin.inventory.searchPlaceholder')"
-               style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;" />
-      </div>
+      <button
+        class="btn btn-sm fw-bold" :class="khoTab==='phieu-nhap' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+        @click="khoTab='phieu-nhap'; ensurePhieuNhapData()"
+      >
+        <ClipboardList :size="15" style="vertical-align:-2px;" /> {{ t('admin.inventory.tabReceipts') }}
+      </button>
     </div>
 
-    <div v-if="InventoryStore.loading" class="text-secondary small py-4 text-center">{{ t('admin.inventory.loading') }}</div>
-    <div v-else class="d-flex flex-column gap-2">
-
-      <div v-for="group in pagedInventoryGrouped" :key="group.name"
-           class="rounded-3 overflow-hidden"
-           style="background:var(--bg-card);border:1px solid var(--border-color);">
-
-        <!-- Product header -->
-        <div class="d-flex align-items-center px-3 py-2 gap-3"
-             style="cursor:pointer;transition:background 0.15s;"
-             @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
-             @mouseleave="$event.currentTarget.style.background=''"
-             @click="toggleGroup(group.name)">
-          <img v-if="group.hinhAnh" :src="group.hinhAnh"
-               style="width:44px;height:36px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;" />
-          <div v-else style="width:44px;height:36px;background:var(--bg-input);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><Laptop :size="16" color="var(--text-muted)" /></div>
-          <div class="flex-grow-1 min-width-0">
-            <div class="fw-semibold" style="font-size:0.88rem;color:var(--text-heading);">{{ group.name }}</div>
-            <div class="text-secondary" style="font-size:0.72rem;">
-              {{ group.thuongHieu ? group.thuongHieu + ' · ' : '' }}{{ group.items.length }} {{ t('admin.inventory.totalStockLabel') }} <strong :class="group.totalTon===0?'text-danger':group.totalTon<5?'text-warning':'text-success'">{{ group.totalTon }}</strong>
+    <template v-if="khoTab==='ton-kho'">
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-xl-3">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div
+                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:44px;height:44px;background:rgba(96,165,250,0.15);"
+              >
+                <Package :size="20" color="#60a5fa" />
+              </div>
+              <div>
+                <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalSku') }}</div>
+                <div class="fw-bold" style="font-size:1.55rem;">{{ inventory.length }}</div>
+              </div>
             </div>
           </div>
-          <div class="d-flex align-items-center gap-2">
-            <span v-if="group.outCount" class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="11" /> {{ group.outCount }} {{ t('admin.inventory.outOfStock') }}</span>
-            <span v-else-if="group.lowCount" class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="11" /> {{ group.lowCount }} {{ t('admin.inventory.lowStock') }}</span>
-            <span v-else class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(34,197,94,0.15);color:#22c55e;"><CheckCircle2 :size="11" /> {{ t('admin.inventory.ok') }}</span>
-            <span class="text-secondary" style="font-size:0.75rem;width:12px;text-align:center;">{{ expandedGroups[group.name] ? '▲' : '▼' }}</span>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div
+                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:44px;height:44px;background:rgba(52,211,153,0.15);"
+              >
+                <BarChart3 :size="20" color="#34d399" />
+              </div>
+              <div>
+                <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalStock') }}</div>
+                <div class="fw-bold" style="font-size:1.55rem;">{{ totalStockQty }}</div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <!-- Variant detail table -->
-        <div v-if="expandedGroups[group.name]" style="border-top:1px solid var(--border-color-soft);">
-          <table class="w-100" style="border-collapse:collapse;font-size:0.8rem;">
-            <thead>
-              <tr style="background:var(--bg-input);">
-                <th class="px-3 py-2 text-secondary" style="font-weight:500;width:22%;">{{ t('admin.inventory.colSku') }}</th>
-                <th class="px-3 py-2 text-secondary" style="font-weight:500;">{{ t('admin.inventory.colConfig') }}</th>
-                <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">{{ t('admin.inventory.colStock') }}</th>
-                <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:70px;">{{ t('admin.inventory.colHeld') }}</th>
-                <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">{{ t('admin.inventory.colMinStock') }}</th>
-                <th class="px-3 py-2 text-secondary" style="font-weight:500;width:90px;"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in group.items" :key="item.tonKhoId"
-                  style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.73rem;">{{ item.bienThe?.maSku || '—' }}</td>
-                <td class="px-3 py-2">
-                  <div class="d-flex gap-1 flex-wrap">
-                    <span v-if="getVariantInfo(item)?.cpu" class="badge" style="background:#2a2a3a;color:#aab;font-size:0.68rem;">{{ getVariantInfo(item).cpu }}</span>
-                    <span v-if="getVariantInfo(item)?.ram" class="badge" style="background:#2a3a2a;color:#aba;font-size:0.68rem;">{{ getVariantInfo(item).ram }}</span>
-                    <span v-if="getVariantInfo(item)?.oCung" class="badge" style="background:#3a2a2a;color:#baa;font-size:0.68rem;">{{ getVariantInfo(item).oCung }}</span>
-                    <span v-if="getVariantInfo(item)?.mauSac" class="badge" style="background:#2a2a2a;color:#999;font-size:0.68rem;">{{ getVariantInfo(item).mauSac }}</span>
-                  </div>
-                </td>
-                <td class="px-3 py-2 text-center">
-                  <span :class="stockClass(item)" class="fw-bold" style="font-size:0.88rem;">{{ item.soLuongTon ?? '—' }}</span>
-                </td>
-                <td class="px-3 py-2 text-center text-secondary">{{ item.soLuongGiu ?? 0 }}</td>
-                <td class="px-3 py-2 text-center text-secondary">{{ item.tonKhoToiThieu ?? '—' }}</td>
-                <td class="px-3 py-2">
-                  <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-info"
-                            style="font-size:0.72rem;padding:2px 8px;"
-                            @click.stop="openStockDetail(item)"><Search :size="13" style="vertical-align:-2px;" /> {{ t('admin.inventory.detail') }}</button>
-                    <button class="btn btn-sm btn-outline-warning"
-                            style="font-size:0.72rem;padding:2px 8px;"
-                            @click.stop="openEditStock(item)"><Pencil :size="13" style="vertical-align:-2px;" /> {{ t('admin.inventory.update') }}</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="col-6 col-xl-3">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div
+                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:44px;height:44px;background:rgba(250,204,21,0.15);"
+              >
+                <AlertTriangle :size="20" color="#facc15" />
+              </div>
+              <div>
+                <div class="text-secondary small mb-1">{{ t('admin.inventory.statLowStock') }}</div>
+                <div class="fw-bold" :style="lowStockOnlyItems.length?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ lowStockOnlyItems.length }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div
+                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:44px;height:44px;background:rgba(244,63,94,0.15);"
+              >
+                <Ban :size="20" color="var(--accent-fg)" />
+              </div>
+              <div>
+                <div class="text-secondary small mb-1">{{ t('admin.inventory.statOutOfStock') }}</div>
+                <div class="fw-bold" :style="outOfStockItems.length?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ outOfStockItems.length }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div v-if="inventoryGrouped.length === 0" class="text-secondary small text-center py-5">{{ t('admin.inventory.empty') }}</div>
-      <Pagination :current-page="invCurrentPage" :total-pages="invTotalPages" @page-change="invCurrentPage = $event" />
-    </div>
+      <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <span class="text-secondary small">{{ t('admin.inventory.summary', { groups: inventoryGrouped.length, skus: inventory.length }) }}</span>
+        <span v-if="outOfStockItems.length" class="badge d-inline-flex align-items-center gap-1" style="background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="12" /> {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
+        <span v-if="lowStockItems.length" class="badge d-inline-flex align-items-center gap-1" style="background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="12" /> {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
+        <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 10px;" @click="toggleAllGroups">
+          {{ allGroupsExpanded ? '▲ ' + t('admin.inventory.collapseAll') : '▼ ' + t('admin.inventory.expandAll') }}
+        </button>
+        <select v-model="inventoryStatusFilter" class="form-select form-select-sm" style="width:auto;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.8rem;">
+          <option value="all">{{ t('admin.inventory.filterAll') }}</option>
+          <option value="out">{{ t('admin.inventory.filterOut') }}</option>
+          <option value="low">{{ t('admin.inventory.filterLow') }}</option>
+          <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
+        </select>
+        <div class="ms-auto" style="min-width:200px;">
+          <input
+            v-model="inventorySearch" class="form-control form-control-sm"
+            :placeholder="t('admin.inventory.searchPlaceholder')"
+            style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
+          />
+        </div>
+      </div>
+
+      <div v-if="InventoryStore.loading" class="text-secondary small py-4 text-center">{{ t('admin.inventory.loading') }}</div>
+      <div v-else class="d-flex flex-column gap-2">
+        <div
+          v-for="group in pagedInventoryGrouped" :key="group.name"
+          class="rounded-3 overflow-hidden"
+          style="background:var(--bg-card);border:1px solid var(--border-color);"
+        >
+          <div
+            class="d-flex align-items-center px-3 py-2 gap-3"
+            style="cursor:pointer;transition:background 0.15s;"
+            @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
+            @mouseleave="$event.currentTarget.style.background=''"
+            @click="toggleGroup(group.name)"
+          >
+            <img
+              v-if="group.hinhAnh" :src="group.hinhAnh"
+              style="width:44px;height:36px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;"
+            />
+            <div v-else style="width:44px;height:36px;background:var(--bg-input);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><Laptop :size="16" color="var(--text-muted)" /></div>
+            <div class="flex-grow-1 min-width-0">
+              <div class="fw-semibold" style="font-size:0.88rem;color:var(--text-heading);">{{ group.name }}</div>
+              <div class="text-secondary" style="font-size:0.72rem;">
+                {{ group.thuongHieu ? group.thuongHieu + ' · ' : '' }}{{ group.items.length }} {{ t('admin.inventory.totalStockLabel') }} <strong :class="group.totalTon===0?'text-danger':group.totalTon<5?'text-warning':'text-success'">{{ group.totalTon }}</strong>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span v-if="group.outCount" class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="11" /> {{ group.outCount }} {{ t('admin.inventory.outOfStock') }}</span>
+              <span v-else-if="group.lowCount" class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="11" /> {{ group.lowCount }} {{ t('admin.inventory.lowStock') }}</span>
+              <span v-else class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(34,197,94,0.15);color:#22c55e;"><CheckCircle2 :size="11" /> {{ t('admin.inventory.ok') }}</span>
+              <span class="text-secondary" style="font-size:0.75rem;width:12px;text-align:center;">{{ expandedGroups[group.name] ? '▲' : '▼' }}</span>
+            </div>
+          </div>
+
+          <div v-if="expandedGroups[group.name]" style="border-top:1px solid var(--border-color-soft);">
+            <table class="w-100" style="border-collapse:collapse;font-size:0.8rem;">
+              <thead>
+                <tr style="background:var(--bg-input);">
+                  <th class="px-3 py-2 text-secondary" style="font-weight:500;width:22%;">{{ t('admin.inventory.colSku') }}</th>
+                  <th class="px-3 py-2 text-secondary" style="font-weight:500;">{{ t('admin.inventory.colConfig') }}</th>
+                  <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">{{ t('admin.inventory.colStock') }}</th>
+                  <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:70px;">{{ t('admin.inventory.colHeld') }}</th>
+                  <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">{{ t('admin.inventory.colMinStock') }}</th>
+                  <th class="px-3 py-2 text-secondary" style="font-weight:500;width:90px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="item in group.items" :key="item.tonKhoId"
+                  style="border-top:1px solid var(--border-color-soft);"
+                >
+                  <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.73rem;">{{ item.bienThe?.maSku || '—' }}</td>
+                  <td class="px-3 py-2">
+                    <div class="d-flex gap-1 flex-wrap">
+                      <span v-if="getVariantInfo(item)?.cpu" class="badge" style="background:#2a2a3a;color:#aab;font-size:0.68rem;">{{ getVariantInfo(item).cpu }}</span>
+                      <span v-if="getVariantInfo(item)?.ram" class="badge" style="background:#2a3a2a;color:#aba;font-size:0.68rem;">{{ getVariantInfo(item).ram }}</span>
+                      <span v-if="getVariantInfo(item)?.oCung" class="badge" style="background:#3a2a2a;color:#baa;font-size:0.68rem;">{{ getVariantInfo(item).oCung }}</span>
+                      <span v-if="getVariantInfo(item)?.mauSac" class="badge" style="background:#2a2a2a;color:#999;font-size:0.68rem;">{{ getVariantInfo(item).mauSac }}</span>
+                    </div>
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <span :class="stockClass(item)" class="fw-bold" style="font-size:0.88rem;">{{ item.soLuongTon ?? '—' }}</span>
+                  </td>
+                  <td class="px-3 py-2 text-center text-secondary">{{ item.soLuongGiu ?? 0 }}</td>
+                  <td class="px-3 py-2 text-center text-secondary">{{ item.tonKhoToiThieu ?? '—' }}</td>
+                  <td class="px-3 py-2">
+                    <div class="d-flex gap-1">
+                      <button
+                        class="btn btn-sm btn-outline-info"
+                        style="font-size:0.72rem;padding:2px 8px;"
+                        @click.stop="openStockDetail(item)"
+                      >
+                        <Search :size="13" style="vertical-align:-2px;" /> {{ t('admin.inventory.detail') }}
+                      </button>
+                      <button
+                        class="btn btn-sm btn-outline-warning"
+                        style="font-size:0.72rem;padding:2px 8px;"
+                        @click.stop="openEditStock(item)"
+                      >
+                        <Pencil :size="13" style="vertical-align:-2px;" /> {{ t('admin.inventory.update') }}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div v-if="inventoryGrouped.length === 0" class="text-secondary small text-center py-5">{{ t('admin.inventory.empty') }}</div>
+        <Pagination :current-page="invCurrentPage" :total-pages="invTotalPages" @page-change="invCurrentPage = $event" />
+      </div>
     </template>
 
     <!-- ══ TAB: PHIEU NHAP ══ -->
     <template v-else-if="khoTab==='phieu-nhap'">
-    <div class="row g-3 mb-3">
-      <div class="col-6 col-xl-3">
-        <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-          <div class="card-body d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(167,139,250,0.15);"><ClipboardList :size="20" color="#a78bfa" /></div>
-            <div>
-              <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statTotal') }}</div>
-              <div class="fw-bold" style="font-size:1.55rem;">{{ phieuNhapCounts.total }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-          <div class="card-body d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(250,204,21,0.15);"><Clock :size="20" color="#facc15" /></div>
-            <div>
-              <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statPending') }}</div>
-              <div class="fw-bold" :style="phieuNhapCounts.choDuyet?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.choDuyet }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-          <div class="card-body d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(34,197,94,0.15);"><CheckCircle2 :size="20" color="#22c55e" /></div>
-            <div>
-              <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statDone') }}</div>
-              <div class="fw-bold" style="font-size:1.55rem;color:#22c55e;">{{ phieuNhapCounts.hoanThanh }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="card border-secondary h-100" style="background:var(--bg-hover);">
-          <div class="card-body d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:44px;height:44px;background:rgba(244,63,94,0.15);"><XCircle :size="20" color="var(--accent-fg)" /></div>
-            <div>
-              <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statCancelled') }}</div>
-              <div class="fw-bold" :style="phieuNhapCounts.huy?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.huy }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-      <input v-model="phieuNhapSearch" class="form-control form-control-sm" style="max-width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
-             :placeholder="t('admin.phieuNhap.searchPlaceholder')" />
-      <select v-model="phieuNhapStatusFilter" class="form-select form-select-sm" style="width:auto;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.8rem;">
-        <option value="">{{ t('admin.inventory.filterAll') }}</option>
-        <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
-        <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
-        <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
-      </select>
-      <div class="ms-auto d-flex gap-2">
-        <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapList"><Printer :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.printPdf') }}</button>
-        <button class="btn btn-sm btn-outline-success" @click="exportPhieuNhapExcel"><Download :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.exportExcel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPhieuNhap"><Plus :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.add') }}</button>
-      </div>
-    </div>
-
-    <div class="table-responsive">
-      <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-        <thead><tr>
-          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-          <th>{{ t('admin.phieuNhap.colCode') }}</th>
-          <th>{{ t('admin.phieuNhap.colDate') }}</th>
-          <th>{{ t('admin.phieuNhap.colSupplier') }}</th>
-          <th>{{ t('admin.phieuNhap.colStaff') }}</th>
-          <th>{{ t('admin.phieuNhap.colTotal') }}</th>
-          <th>{{ t('admin.phieuNhap.colStatus') }}</th>
-          <th>{{ t('admin.phieuNhap.colAction') }}</th>
-        </tr></thead>
-        <tbody>
-          <tr v-for="(p, idx) in pagedPhieuNhap" :key="p.phieuNhapId">
-            <td class="text-secondary">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
-            <td class="text-secondary" style="font-family:monospace;">{{ p.maPhieuNhap }}</td>
-            <td>{{ formatDate(p.ngayNhap) }}</td>
-            <td>{{ supplierName(p.nhaCungCapId) }}</td>
-            <td>{{ staffName(p.nhanVienId) }}</td>
-            <td>{{ formatPrice(p.tongTien) }}</td>
-            <td>
-              <span class="badge" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
-                <component :is="phieuNhapStatusIcon(p.trangThai)" :size="13" /> {{ statusLabel(p.trangThai) }}
-              </span>
-            </td>
-            <td>
-              <div class="d-flex gap-1">
-                <button class="btn btn-sm btn-outline-info" style="font-size:0.72rem;padding:2px 8px;" @click="openPhieuNhapDetail(p)"><Search :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.viewDetail') }}</button>
-                <template v-if="p.trangThai==='cho_duyet'">
-                  <button class="btn btn-sm btn-outline-success" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'hoan_thanh')"><Check :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.approve') }}</button>
-                  <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'huy')"><X :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.cancel') }}</button>
-                  <button class="btn btn-sm btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" @click="openEditPhieuNhap(p)"><Pencil :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.editAction') }}</button>
-                  <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="deletePhieuNhap(p.phieuNhapId)"><Trash2 :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.deleteAction') }}</button>
-                </template>
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-xl-3">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div
+                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:44px;height:44px;background:rgba(167,139,250,0.15);"
+              >
+                <ClipboardList :size="20" color="#a78bfa" />
               </div>
-            </td>
-          </tr>
-          <tr v-if="filteredPhieuNhap.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.phieuNhap.empty') }}</td></tr>
-        </tbody>
-      </table>
-      <Pagination :current-page="pnCurrentPage" :total-pages="pnTotalPages" @page-change="pnCurrentPage = $event" />
-    </div>
+              <div>
+                <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statTotal') }}</div>
+                <div class="fw-bold" style="font-size:1.55rem;">{{ phieuNhapCounts.total }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div
+                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:44px;height:44px;background:rgba(250,204,21,0.15);"
+              >
+                <Clock :size="20" color="#facc15" />
+              </div>
+              <div>
+                <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statPending') }}</div>
+                <div class="fw-bold" :style="phieuNhapCounts.choDuyet?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.choDuyet }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div
+                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:44px;height:44px;background:rgba(34,197,94,0.15);"
+              >
+                <CheckCircle2 :size="20" color="#22c55e" />
+              </div>
+              <div>
+                <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statDone') }}</div>
+                <div class="fw-bold" style="font-size:1.55rem;color:#22c55e;">{{ phieuNhapCounts.hoanThanh }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div
+                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:44px;height:44px;background:rgba(244,63,94,0.15);"
+              >
+                <XCircle :size="20" color="var(--accent-fg)" />
+              </div>
+              <div>
+                <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statCancelled') }}</div>
+                <div class="fw-bold" :style="phieuNhapCounts.huy?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.huy }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <input
+          v-model="phieuNhapSearch" class="form-control form-control-sm" style="max-width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
+          :placeholder="t('admin.phieuNhap.searchPlaceholder')"
+        />
+        <select v-model="phieuNhapStatusFilter" class="form-select form-select-sm" style="width:auto;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.8rem;">
+          <option value="">{{ t('admin.inventory.filterAll') }}</option>
+          <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
+          <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
+          <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
+        </select>
+        <div class="ms-auto d-flex gap-2">
+          <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapList"><Printer :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.printPdf') }}</button>
+          <button class="btn btn-sm btn-outline-success" @click="exportPhieuNhapExcel"><Download :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.exportExcel') }}</button>
+          <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPhieuNhap"><Plus :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.add') }}</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
+          <thead>
+            <tr>
+              <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+              <th>{{ t('admin.phieuNhap.colCode') }}</th>
+              <th>{{ t('admin.phieuNhap.colDate') }}</th>
+              <th>{{ t('admin.phieuNhap.colSupplier') }}</th>
+              <th>{{ t('admin.phieuNhap.colStaff') }}</th>
+              <th>{{ t('admin.phieuNhap.colTotal') }}</th>
+              <th>{{ t('admin.phieuNhap.colStatus') }}</th>
+              <th>{{ t('admin.phieuNhap.colAction') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(p, idx) in pagedPhieuNhap" :key="p.phieuNhapId">
+              <td class="text-secondary">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
+              <td class="text-secondary" style="font-family:monospace;">{{ p.maPhieuNhap }}</td>
+              <td>{{ formatDate(p.ngayNhap) }}</td>
+              <td>{{ supplierName(p.nhaCungCapId) }}</td>
+              <td>{{ staffName(p.nhanVienId) }}</td>
+              <td>{{ formatPrice(p.tongTien) }}</td>
+              <td>
+                <span class="badge" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
+                  <component :is="phieuNhapStatusIcon(p.trangThai)" :size="13" /> {{ statusLabel(p.trangThai) }}
+                </span>
+              </td>
+              <td>
+                <div class="d-flex gap-1">
+                  <button class="btn btn-sm btn-outline-info" style="font-size:0.72rem;padding:2px 8px;" @click="openPhieuNhapDetail(p)"><Search :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.viewDetail') }}</button>
+                  <template v-if="p.trangThai==='cho_duyet'">
+                    <button class="btn btn-sm btn-outline-success" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'hoan_thanh')"><Check :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.approve') }}</button>
+                    <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'huy')"><X :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.cancel') }}</button>
+                    <button class="btn btn-sm btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" @click="openEditPhieuNhap(p)"><Pencil :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.editAction') }}</button>
+                    <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="deletePhieuNhap(p.phieuNhapId)"><Trash2 :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.deleteAction') }}</button>
+                  </template>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="filteredPhieuNhap.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.phieuNhap.empty') }}</td></tr>
+          </tbody>
+        </table>
+        <Pagination :current-page="pnCurrentPage" :total-pages="pnTotalPages" @page-change="pnCurrentPage = $event" />
+      </div>
     </template>
   </div>
 
@@ -923,14 +978,18 @@ const exportPhieuNhapExcel = () => {
         <div class="d-flex flex-column gap-2 mb-2">
           <div v-for="(row, idx) in phieuNhapForm.items" :key="idx" class="d-flex gap-2 align-items-center">
             <div style="flex:2 1 0;min-width:0;">
-              <SearchSelect v-model="row.sanPhamId" @update:model-value="row.bienTheId=''"
-                            :options="productOptionsForPhieuNhap"
-                            :placeholder="t('admin.phieuNhapModal.selectProductPlaceholder')" />
+              <SearchSelect
+                v-model="row.sanPhamId" :options="productOptionsForPhieuNhap"
+                :placeholder="t('admin.phieuNhapModal.selectProductPlaceholder')"
+                @update:model-value="row.bienTheId=''"
+              />
             </div>
             <div style="flex:2 1 0;min-width:0;">
-              <SearchSelect v-model="row.bienTheId" :disabled="!row.sanPhamId"
-                            :options="variantsForProduct(row.sanPhamId)"
-                            :placeholder="t('admin.phieuNhapModal.selectVariantPlaceholder')" />
+              <SearchSelect
+                v-model="row.bienTheId" :disabled="!row.sanPhamId"
+                :options="variantsForProduct(row.sanPhamId)"
+                :placeholder="t('admin.phieuNhapModal.selectVariantPlaceholder')"
+              />
             </div>
             <input v-model="row.soLuong" type="number" min="1" class="form-control form-control-sm" style="flex:0 0 80px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.qtyPlaceholder')" @change="clampPhieuNhapSoLuong(row)" />
             <input v-model="row.donGia" type="number" min="0" class="form-control form-control-sm" style="flex:0 0 110px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.unitPricePlaceholder')" />
@@ -953,12 +1012,15 @@ const exportPhieuNhapExcel = () => {
   <!-- ══ MODAL CHI TIET PHIEU NHAP ══ -->
   <div v-if="showPhieuNhapDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showPhieuNhapDetailModal=false">
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:680px;max-width:96vw;max-height:90vh;">
-
       <!-- Header -->
-      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);" v-if="phieuNhapDetailData">
+      <div v-if="phieuNhapDetailData" class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
         <div class="d-flex align-items-center gap-3">
-          <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-               style="width:40px;height:40px;background:rgba(167,139,250,0.15);"><ClipboardList :size="18" color="#a78bfa" /></div>
+          <div
+            class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+            style="width:40px;height:40px;background:rgba(167,139,250,0.15);"
+          >
+            <ClipboardList :size="18" color="#a78bfa" />
+          </div>
           <div>
             <div class="fw-bold" style="font-size:0.95rem;color:var(--text-heading);">
               {{ t('admin.phieuNhapDetailModal.title') }}
@@ -970,7 +1032,7 @@ const exportPhieuNhapExcel = () => {
         <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showPhieuNhapDetailModal=false"></button>
       </div>
 
-      <div class="overflow-y-auto flex-grow-1" v-if="phieuNhapDetailData">
+      <div v-if="phieuNhapDetailData" class="overflow-y-auto flex-grow-1">
         <!-- Info chips -->
         <div class="d-flex flex-wrap gap-2 p-3" style="border-bottom:1px solid var(--border-color-soft);">
           <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
@@ -1026,7 +1088,7 @@ const exportPhieuNhapExcel = () => {
           <span class="fw-bold" style="font-size:1.15rem;color:var(--accent-fg);">{{ formatPrice(phieuNhapDetailData.tongTien) }}</span>
         </div>
       </div>
-      <div class="d-flex justify-content-end gap-2 p-3 pt-0" v-if="phieuNhapDetailData">
+      <div v-if="phieuNhapDetailData" class="d-flex justify-content-end gap-2 p-3 pt-0">
         <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapDetail(phieuNhapDetailData)"><Printer :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.printPdf') }}</button>
         <button class="btn btn-sm btn-outline-secondary" @click="showPhieuNhapDetailModal=false">{{ t('admin.promoModal.cancel') }}</button>
       </div>
@@ -1079,13 +1141,16 @@ const exportPhieuNhapExcel = () => {
   </div>
 
   <!-- ══ MODAL CHI TIET SERIAL ══ -->
-  <div v-if="showStockDetailModal"
-       class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-       style="background:var(--bg-overlay);z-index:1060;"
-       @click.self="showStockDetailModal=false">
-    <div class="rounded-4 d-flex flex-column"
-         style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:760px;max-width:96vw;max-height:88vh;">
-
+  <div
+    v-if="showStockDetailModal"
+    class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+    style="background:var(--bg-overlay);z-index:1060;"
+    @click.self="showStockDetailModal=false"
+  >
+    <div
+      class="rounded-4 d-flex flex-column"
+      style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:760px;max-width:96vw;max-height:88vh;"
+    >
       <!-- Header -->
       <div class="d-flex align-items-start justify-content-between px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
         <div>
@@ -1140,8 +1205,10 @@ const exportPhieuNhapExcel = () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(s, idx) in stockDetailSerials" :key="s.chiTietId"
-                style="border-top:1px solid var(--bg-input);">
+            <tr
+              v-for="(s, idx) in stockDetailSerials" :key="s.chiTietId"
+              style="border-top:1px solid var(--bg-input);"
+            >
               <td class="px-4 py-2 text-secondary">{{ idx + 1 }}</td>
               <td class="px-4 py-2 fw-semibold" style="font-family:monospace;color:var(--text-heading);">{{ s.soSerial }}</td>
               <td class="px-4 py-2 text-secondary">{{ formatDate(s.ngayNhapKho) }}</td>
@@ -1159,16 +1226,11 @@ const exportPhieuNhapExcel = () => {
           </tbody>
         </table>
       </div>
-
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Bootstrap .text-light hardcode mau trang co dinh — ghi de theo theme hien tai (dung
-   trong modal Chi tiet phieu nhap, tren nen the/card, khong phai nen mau thuong hieu co
-   dinh, nen an toan khi ghi de theo bien theme). Chuyen tu AdminPage.vue (Task 7) — class
-   scoped theo component, khong ke thua tu style block cua component cha. */
 .text-light {
   color: var(--text-primary) !important;
 }

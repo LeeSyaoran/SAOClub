@@ -31,7 +31,6 @@ public class DiaChiGiaoHangService {
 
     public DiaChiGiaoHang create(DiaChiGiaoHangRequest request) {
         DiaChiGiaoHang entity = new DiaChiGiaoHang();
-        // BeanUtils copies: hoTenNguoiNhan, soDienThoai, diaChi, thanhPho, tinh, laMacDinh
         BeanUtils.copyProperties(request, entity, "khachHangId", "ngayTao");
         entity.setKhachHang(khachHangRepository.getReferenceById(request.getKhachHangId()));
         entity.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());

@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-// Chỉ admin/nhân viên/quản kho dùng (ProductsTable.vue) — chỉ khách hàng chưa từng gọi tới.
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/upload")
@@ -33,14 +32,12 @@ public class UploadController {
             return ResponseEntity.badRequest().body(Map.of("error", "File rong"));
         }
 
-        // Chỉ nhận đúng đuôi file ảnh — không tin content-type client tự khai.
         String tenGoc = file.getOriginalFilename();
         String duoi = layDuoiFile(tenGoc);
         if (!DUOI_ANH_HOP_LE.contains(duoi)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Chỉ chấp nhận file ảnh (jpg, jpeg, png, gif, webp)"));
         }
 
-        // Xác thực nội dung file bằng magic bytes — chặn file giả đuôi (.exe đổi thành .png)
         try (InputStream is = file.getInputStream()) {
             byte[] header = new byte[8];
             int read = is.read(header);
@@ -65,11 +62,6 @@ public class UploadController {
             Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
             Files.createDirectories(uploadPath);
 
-            // Luôn tự sinh tên file bằng UUID — KHÔNG bao giờ dùng tên file gốc từ client cho
-            // đường dẫn ghi, kể cả sau khi "làm sạch". Trước đây dùng thẳng
-            // file.getOriginalFilename() làm tên đích — client gửi tên dạng "../../..." sẽ ghi
-            // đè được file bất kỳ trong cây thư mục (upload.dir trỏ thẳng vào
-            // FrontEnd/QLBanMayTinh/public/images, tức là mã nguồn frontend).
             String filename = UUID.randomUUID() + "." + duoi;
             Path dest = uploadPath.resolve(filename);
             Files.write(dest, file.getBytes());

@@ -13,7 +13,7 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
-import { Camera } from '@lucide/vue';
+import { Camera, Image, Cpu, MemoryStick, HardDrive } from '@lucide/vue';
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
 
@@ -343,18 +343,42 @@ const saveVariant = async () => {
   <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.variants.loading') }}</div>
   <div v-else class="table-responsive">
     <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft); font-size:0.82rem;">
-      <thead><tr>
-        <th style="width:36px;">{{ t('admin.common.stt') }}</th>
-        <th style="width:150px;">{{ t('admin.variants.colSku') }}</th><th style="width:220px;">{{ t('admin.variants.colProduct') }}</th>
-        <th>{{ t('admin.variants.colConfig') }}</th><th style="width:100px;">{{ t('admin.variants.colColor') }}</th>
-        <th style="width:120px;">{{ t('admin.variants.colPriceSell') }}</th><th style="width:100px;">{{ t('admin.variants.colStatus') }}</th><th style="width:110px;">{{ t('admin.variants.colAction') }}</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th style="width:36px;">{{ t('admin.common.stt') }}</th>
+          <th style="width:48px;">{{ t('admin.variants.colImage') }}</th>
+          <th style="width:150px;">{{ t('admin.variants.colSku') }}</th><th style="width:220px;">{{ t('admin.variants.colProduct') }}</th>
+          <th>{{ t('admin.variants.colConfig') }}</th><th style="width:100px;">{{ t('admin.variants.colColor') }}</th>
+          <th style="width:120px;">{{ t('admin.variants.colPriceSell') }}</th><th style="width:100px;">{{ t('admin.variants.colStatus') }}</th><th style="width:110px;">{{ t('admin.variants.colAction') }}</th>
+        </tr>
+      </thead>
       <tbody>
         <tr v-for="(p, idx) in pagedVariants" :key="p.bienTheId">
           <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+          <td>
+            <div
+              class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
+              style="width:36px;height:36px;background:var(--bg-card-inset);overflow:hidden;"
+            >
+              <img
+                v-if="p.hinhAnhChinh"
+                :src="p.hinhAnhChinh"
+                :alt="p.tenSanPham"
+                style="width:100%;height:100%;object-fit:cover;"
+              />
+              <Image v-else :size="14" color="var(--text-muted)" />
+            </div>
+          </td>
           <td class="text-secondary text-truncate" style="font-family:monospace; font-size:0.76rem; max-width:150px;" :title="p.maSku">{{ p.maSku }}</td>
           <td class="text-truncate" style="max-width:220px;" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
-          <td class="text-secondary text-truncate" style="max-width:260px;" :title="configLabel(p)">{{ configLabel(p) }}</td>
+          <td class="text-secondary" style="max-width:260px;" :title="configLabel(p)">
+            <div v-if="p.cpu || p.ram || p.oCung" class="d-flex flex-wrap align-items-center gap-2" style="font-size:0.74rem;">
+              <span v-if="p.cpu" class="d-inline-flex align-items-center gap-1"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
+              <span v-if="p.ram" class="d-inline-flex align-items-center gap-1"><MemoryStick :size="12" />{{ p.ram }}</span>
+              <span v-if="p.oCung" class="d-inline-flex align-items-center gap-1"><HardDrive :size="12" />{{ p.oCung }}</span>
+            </div>
+            <span v-else>—</span>
+          </td>
           <td class="text-truncate" style="max-width:100px;">{{ p.mauSac || '—' }}</td>
           <td class="text-nowrap">{{ formatPrice(p.giaBan) }}</td>
           <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.72rem;">{{ statusLabel(p.trangThai) }}</span></td>
@@ -364,17 +388,14 @@ const saveVariant = async () => {
             </div>
           </td>
         </tr>
-        <tr v-if="filteredVariants.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.variants.empty') }}</td></tr>
+        <tr v-if="filteredVariants.length===0"><td colspan="9" class="text-center text-secondary">{{ t('admin.variants.empty') }}</td></tr>
       </tbody>
     </table>
     <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
-  <!-- ══ MODAL BIEN THE (them/sua) ══ -->
   <div v-if="showVariantModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showVariantModal=false">
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:860px;max-width:96vw;max-height:92vh;">
-
-      <!-- Header -->
       <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color);">
         <div>
           <div class="fw-bold text-light" style="font-size:1rem;">{{ addVariantMode ? t('admin.variantModal.addVariant') : t('admin.productModal.titleEdit') }}</div>
@@ -384,7 +405,6 @@ const saveVariant = async () => {
         <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showVariantModal=false"></button>
       </div>
 
-      <!-- Buoc 1 (chi khi them moi): chon san pham -->
       <div v-if="addVariantMode && !addVariantSanPhamId" class="overflow-y-auto px-4 py-3">
         <label class="form-label small text-secondary mb-1">{{ t('admin.variantModal.pickProductLabel') }}</label>
         <input v-model="variantProductSearch" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" :placeholder="t('admin.variantModal.pickProductPlaceholder')" />
@@ -396,7 +416,6 @@ const saveVariant = async () => {
         </div>
       </div>
 
-      <!-- Buoc 2: form bien the (them, sau khi da chon san pham — hoac sua) -->
       <div v-else class="overflow-y-auto px-4 py-3" style="gap:0;">
         <div v-if="formError" class="alert alert-danger small py-2 mb-3">{{ formError }}</div>
 
@@ -405,11 +424,10 @@ const saveVariant = async () => {
           <button class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;" @click="changeProductForVariant">{{ t('admin.variantModal.changeProduct') }}</button>
         </div>
 
-        <!-- ── Thong tin co ban ── -->
         <div class="text-uppercase fw-bold mb-2" style="font-size:0.65rem;letter-spacing:0.1em;color:#60a5fa;">{{ t('admin.productModal.sectionBasic') }}</div>
         <div class="rounded-3 p-3 mb-3" style="background:var(--bg-input);border:1px solid var(--border-color);">
           <div class="row g-3">
-            <div class="col-8" v-if="!addVariantMode">
+            <div v-if="!addVariantMode" class="col-8">
               <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.nameLabel') }}</label>
               <input v-model="form.tenSanPham" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.namePlaceholder')" />
             </div>
@@ -417,7 +435,7 @@ const saveVariant = async () => {
               <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.skuLabel') }}</label>
               <input v-model="form.maSku" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); font-family:monospace;" :placeholder="t('admin.productModal.skuPlaceholder')" />
             </div>
-            <div class="col-3" v-if="!addVariantMode">
+            <div v-if="!addVariantMode" class="col-3">
               <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.typeLabel') }}</label>
               <select v-model="form.loaiSanPham" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
                 <option value="" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
@@ -442,27 +460,27 @@ const saveVariant = async () => {
               <input v-model="form.baoHanhThang" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
             </div>
             <template v-if="!addVariantMode">
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.brandLabel') }}</label>
-              <select v-model="form.thuongHieuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
-                <option v-for="b in brands" :key="b.thuongHieuId" :value="b.thuongHieuId">{{ b.tenThuongHieu }}</option>
-              </select>
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.categoryLabel') }}</label>
-              <select v-model="form.danhMucId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
-                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.tenDanhMuc }}</option>
-              </select>
-            </div>
-            <div class="col-4">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.supplierLabel') }}</label>
-              <select v-model="form.nhaCungCapId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">{{ s.tenNhaCungCap }}</option>
-              </select>
-            </div>
+              <div class="col-4">
+                <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.brandLabel') }}</label>
+                <select v-model="form.thuongHieuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                  <option :value="null" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
+                  <option v-for="b in brands" :key="b.thuongHieuId" :value="b.thuongHieuId">{{ b.tenThuongHieu }}</option>
+                </select>
+              </div>
+              <div class="col-4">
+                <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.categoryLabel') }}</label>
+                <select v-model="form.danhMucId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                  <option :value="null" disabled>{{ t('admin.productModal.selectPlaceholder') }}</option>
+                  <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.tenDanhMuc }}</option>
+                </select>
+              </div>
+              <div class="col-4">
+                <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.supplierLabel') }}</label>
+                <select v-model="form.nhaCungCapId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)">
+                  <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
+                  <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">{{ s.tenNhaCungCap }}</option>
+                </select>
+              </div>
             </template>
           </div>
         </div>
@@ -553,23 +571,27 @@ const saveVariant = async () => {
               </div>
             </div>
             <template v-if="!addVariantMode">
-            <div class="col-12">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.descLabel') }}</label>
-              <textarea v-model="form.moTa" rows="3" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"></textarea>
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagsLabel') }} <span class="text-warning small">{{ t('admin.productModal.tagsHint') }}</span></label>
-              <div class="d-flex flex-wrap gap-2">
-                <button v-for="opt in PHAN_LOAI_TAG_OPTIONS" :key="opt.value" type="button"
-                        class="btn btn-sm" :class="isTagSelected(opt.value) ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
-                        style="font-size:0.75rem;padding:3px 12px;border-radius:999px;"
-                        @click="toggleTag(opt.value)">{{ opt.label }}</button>
+              <div class="col-12">
+                <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.descLabel') }}</label>
+                <textarea v-model="form.moTa" rows="3" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"></textarea>
               </div>
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagNameLabel') }} <span class="text-muted small">{{ t('admin.productModal.tagNameHint') }}</span></label>
-              <input v-model="form.phanLoaiTen" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.tagNamePlaceholder')" />
-            </div>
+              <div class="col-6">
+                <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagsLabel') }} <span class="text-warning small">{{ t('admin.productModal.tagsHint') }}</span></label>
+                <div class="d-flex flex-wrap gap-2">
+                  <button
+                    v-for="opt in PHAN_LOAI_TAG_OPTIONS" :key="opt.value" type="button"
+                    class="btn btn-sm" :class="isTagSelected(opt.value) ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
+                    style="font-size:0.75rem;padding:3px 12px;border-radius:999px;"
+                    @click="toggleTag(opt.value)"
+                  >
+                    {{ opt.label }}
+                  </button>
+                </div>
+              </div>
+              <div class="col-6">
+                <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.tagNameLabel') }} <span class="text-muted small">{{ t('admin.productModal.tagNameHint') }}</span></label>
+                <input v-model="form.phanLoaiTen" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.productModal.tagNamePlaceholder')" />
+              </div>
             </template>
           </div>
         </div>
@@ -595,8 +617,6 @@ const saveVariant = async () => {
 </template>
 
 <style scoped>
-/* Bootstrap .text-light hardcode mau trang co dinh — ghi de theo theme hien tai, dong bo
-   ProductsTable.vue. CSS scoped khong ke thua qua bien gioi component nen phai copy lai. */
 .text-light {
   color: var(--text-primary) !important;
 }

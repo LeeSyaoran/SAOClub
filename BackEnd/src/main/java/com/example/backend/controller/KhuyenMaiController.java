@@ -20,8 +20,6 @@ public class KhuyenMaiController {
     @Autowired
     private KhuyenMaiService khuyenMaiService;
 
-    // Giữ mở — CheckoutModal.vue tải danh sách mã khuyến mãi cho cả khách vãng lai chưa
-    // đăng nhập lẫn khách đã đăng nhập.
     @GetMapping
     public List<KhuyenMaiResponse> getAll() {
         return khuyenMaiService.hienThiKhuyenMai();
@@ -32,9 +30,6 @@ public class KhuyenMaiController {
         return khuyenMaiService.getById(id);
     }
 
-    // Tạo/sửa/xoá mã khuyến mãi ảnh hưởng trực tiếp doanh thu — chỉ staff. Trước đây
-    // không khoá gì, bất kỳ khách hàng nào đăng nhập cũng tạo/sửa/xoá được mã khuyến mãi.
-    // POST — service tự set ngayTao và soLanDaDung=0
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PostMapping
     public ResponseEntity<KhuyenMai> create(@Valid @RequestBody KhuyenMaiRequest request) {

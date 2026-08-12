@@ -18,12 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-// /api/cai-dat/** — KHÔNG nằm trong permitAll() của SecurityConfig, nên mọi endpoint ở đây
-// tự động yêu cầu JWT hợp lệ qua .anyRequest().authenticated() (xem SecurityConfig.java).
-// get/update/ap-dung-nguong-ton-kho chỉ admin (xem cấu hình cửa hàng, đổi ngưỡng tồn kho hàng loạt).
-// doi-mat-khau và ho-so đặt ở đây (không phải AuthController) vì /api/auth/** đang permitAll()
-// toàn bộ, và CỐ Ý không giới hạn role — mọi tài khoản (admin, nhân viên, quản kho, khách hàng)
-// đều cần tự đổi mật khẩu/sửa hồ sơ của chính mình.
 @RestController
 @RequestMapping("/api/cai-dat")
 public class CaiDatController {

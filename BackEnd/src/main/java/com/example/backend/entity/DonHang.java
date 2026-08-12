@@ -21,7 +21,6 @@ public class DonHang extends BaseEntity {
     @Column(name = "don_hang_id")
     private Integer id;
 
-    // Sinh tự động bởi trigger DB (format: DH-YYYYMMDD-XXXX) → chỉ đọc, không ghi qua JPA
     @Column(name = "ma_don_hang", length = 30, insertable = false, updatable = false)
     private String maDonHang;
 
@@ -59,7 +58,6 @@ public class DonHang extends BaseEntity {
     @Column(name = "phi_van_chuyen", precision = 18, scale = 0)
     private BigDecimal phiVanChuyen;
 
-    // Computed column trong DB: tong_tien - giam_gia + phi_van_chuyen → chỉ đọc
     @Formula("(tong_tien - giam_gia + phi_van_chuyen)")
     private BigDecimal thanhTien;
 
@@ -72,24 +70,18 @@ public class DonHang extends BaseEntity {
     @Column(name = "ngay_giao_thuc_te")
     private LocalDateTime ngayGiaoThucTe;
 
-    // Giá trị: "pending" | "confirmed" | "processing" | "shipping" | "out_for_delivery" |
-    //          "delivered" | "cancelled" | "returned"
     @Column(name = "trang_thai_don_hang", length = 30)
     private String trangThaiDonHang;
 
-    // Giá trị: "unpaid" | "paid" | "partial" | "refunded"
     @Column(name = "trang_thai_thanh_toan", length = 30)
     private String trangThaiThanhToan;
 
-    // Giá trị: "online" | "offline" (POS tại quầy)
     @Column(name = "kenh_ban", length = 50)
     private String kenhBan;
 
     @Column(name = "ghi_chu", length = 500)
     private String ghiChu;
 
-    // Nhập tay bởi nhân viên/admin khi chuyển đơn sang "shipping" — text tự do, không phải
-    // mã tra cứu thật của đơn vị vận chuyển.
     @Column(name = "ma_van_don", length = 50)
     private String maVanDon;
 }

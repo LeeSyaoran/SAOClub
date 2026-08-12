@@ -119,13 +119,17 @@ const onSpin = async () => {
     <template v-else>
       <div class="position-relative" style="width:280px; height:280px;">
         <div class="position-absolute top-0 start-50 translate-middle-x" style="z-index:2; margin-top:-14px;"><Triangle :size="22" style="transform:rotate(180deg);" fill="currentColor" /></div>
-        <div class="rounded-circle position-relative"
-             style="width:100%; height:100%; transition:transform 4s cubic-bezier(0.17,0.67,0.12,0.99);"
-             :style="{ background: wheelBackground, transform: `rotate(${rotation}deg)` }">
-          <div v-for="(_, i) in sliceCount" :key="i"
-               class="position-absolute top-50 start-50 fw-bold text-white text-center"
-               style="width:120px; margin-left:-60px; margin-top:-10px; font-size:12px; text-shadow:0 1px 3px rgba(0,0,0,0.5);"
-               :style="{ transform: sliceLabelTransform(i) }">
+        <div
+          class="rounded-circle position-relative"
+          style="width:100%; height:100%; transition:transform 4s cubic-bezier(0.17,0.67,0.12,0.99);"
+          :style="{ background: wheelBackground, transform: `rotate(${rotation}deg)` }"
+        >
+          <div
+            v-for="(_, i) in sliceCount" :key="i"
+            class="position-absolute top-50 start-50 fw-bold text-white text-center"
+            style="width:120px; margin-left:-60px; margin-top:-10px; font-size:12px; text-shadow:0 1px 3px rgba(0,0,0,0.5);"
+            :style="{ transform: sliceLabelTransform(i) }"
+          >
             {{ sliceLabel(i) }}
           </div>
         </div>
@@ -133,9 +137,11 @@ const onSpin = async () => {
 
       <div class="text-center">
         <div class="small" style="color:var(--text-secondary);">{{ t('wheel.costLabel', { points: diemMoiLuot }) }}</div>
-        <button class="btn btn-warning fw-bold rounded-pill px-4 mt-2"
-                :disabled="!canSpin"
-                @click="onSpin">
+        <button
+          class="btn btn-warning fw-bold rounded-pill px-4 mt-2"
+          :disabled="!canSpin"
+          @click="onSpin"
+        >
           {{ spinning ? t('wheel.spinning') : t('wheel.spinButton') }}
         </button>
         <div v-if="spinError" class="alert alert-danger small mt-2 mb-0">{{ spinError }}</div>
@@ -155,8 +161,8 @@ const onSpin = async () => {
           <h5 class="fw-black mt-2" style="color:var(--text-heading);">{{ t('wheel.winTitle') }}</h5>
           <p class="mb-1" style="color:var(--text-primary);">
             {{ lastResult.khuyenMai.loai === 'percent'
-                ? t('wheel.winPercent', { value: lastResult.khuyenMai.giaTri })
-                : t('wheel.winFixed', { value: formatPrice(lastResult.khuyenMai.giaTri) }) }}
+              ? t('wheel.winPercent', { value: lastResult.khuyenMai.giaTri })
+              : t('wheel.winFixed', { value: formatPrice(lastResult.khuyenMai.giaTri) }) }}
           </p>
           <div class="small" style="color:var(--text-secondary);">{{ t('wheel.winCode', { code: lastResult.phieuGiamGia.maPhieu }) }}</div>
           <div v-if="lastResult.khuyenMai.donHangToiThieu" class="small mt-1" style="color:var(--text-secondary);">

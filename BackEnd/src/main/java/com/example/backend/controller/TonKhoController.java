@@ -10,9 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Tồn kho — chỉ staff (admin/nhân viên/quản kho) thao tác. Không có nơi nào trong code
-// khách hàng (checkout, AccountPage) gọi tới controller này — đã xác nhận qua grep toàn bộ
-// frontend trước khi thêm annotation.
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/ton-kho")
@@ -31,7 +28,6 @@ public class TonKhoController {
         return tonKhoService.getById(id);
     }
 
-    // GET theo bienTheId — dùng để kiểm tra số lượng tồn trước khi tạo đơn hàng
     @GetMapping("/bien-the/{bienTheId}")
     public TonKho getByBienTheId(@PathVariable Integer bienTheId) {
         return tonKhoService.getByBienTheId(bienTheId);

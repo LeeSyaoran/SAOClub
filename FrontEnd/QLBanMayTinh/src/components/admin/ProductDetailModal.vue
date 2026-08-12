@@ -57,7 +57,6 @@ const close = () => emit("update:modelValue", false);
       </div>
       <div class="overflow-y-auto p-3">
         <div v-for="v in detailModalList" :key="v.bienTheId" class="mb-4 rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
-          <!-- Header bien the -->
           <div class="d-flex align-items-center justify-content-between gap-3 p-3" style="background:var(--bg-input);">
             <div class="d-flex align-items-center gap-3">
               <img v-if="v.hinhAnhChinh" :src="v.hinhAnhChinh" style="width:72px;height:54px;object-fit:contain;background:var(--bg-card-inset);border-radius:6px;padding:4px;" />
@@ -68,7 +67,6 @@ const close = () => emit("update:modelValue", false);
               </div>
             </div>
           </div>
-          <!-- Bang thong tin 4 cot (label | value | label | value) -->
           <table class="w-100 mb-0" style="border-collapse:collapse;font-size:0.8rem;">
             <tbody>
               <tr style="border-top:1px solid var(--border-color-soft);">
@@ -136,10 +134,6 @@ const close = () => emit("update:modelValue", false);
 </template>
 
 <style scoped>
-/* Bootstrap .text-light hardcode mau trang co dinh — ghi de theo theme hien tai (dung
-   trong bang thong so variant, tren nen the/card, khong phai nen mau thuong hieu co
-   dinh, nen an toan khi ghi de theo bien theme). Scoped rieng cho component nay vi CSS
-   scoped khong ke thua qua bien gioi component. */
 .text-light {
   color: var(--text-primary) !important;
 }

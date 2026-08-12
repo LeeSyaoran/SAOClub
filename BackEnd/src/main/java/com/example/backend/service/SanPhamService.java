@@ -39,8 +39,6 @@ public class SanPhamService {
     @Autowired
     private BienTheSanPhamService bienTheSanPhamService;
 
-    // Chuỗi rỗng ("") không khớp ":keyword IS NULL" trong JPQL — chuẩn hóa về null ở đây
-    // để ô tìm kiếm trống trên frontend không vô tình lọc mất tất cả kết quả.
     public Page<SanPhamResponse> hienThiSanPham(String keyword, Integer danhMucId,
                                                  Integer thuongHieuId, String trangThai,
                                                  Pageable pageable) {
@@ -55,12 +53,10 @@ public class SanPhamService {
 
     @Transactional
     public SanPham createSanPham(SanPhamRequest request) {
-        // Tạo SanPham — BeanUtils chỉ copy field có cùng tên & kiểu (tenSanPham, loaiSanPham, moTa, hinhAnhChinh, trangThai)
         SanPham sanPham = new SanPham();
         BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao");
         sanPham.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());
 
-        // Xử lý khóa ngoại SanPham
         sanPham.setThuongHieu(thuongHieuRepository.getReferenceById(request.getThuongHieuId()));
         sanPham.setDanhMuc(danhMucRepository.getReferenceById(request.getDanhMucId()));
         if (request.getNhaCungCapId() != null)
@@ -68,13 +64,10 @@ public class SanPhamService {
 
         SanPham saved = sanPhamRepository.save(sanPham);
 
-        // Tạo BienTheSanPham — BeanUtils copy: maSku, giaBan, giaNhap, baoHanhThang, mauSac,
-        // kichThuocManHinh, heDieuHanh, pin, trongLuongKg, trangThai, hinhAnhBienThe
         BienTheSanPham bt = new BienTheSanPham();
         BeanUtils.copyProperties(request, bt, "bienTheId");
         bt.setSanPham(saved);
 
-        // Xử lý khóa ngoại linh kiện (cpuId/ramId/oCungId/gpuId khác tên với cpu/ram/oCung/gpu nên không bị copy)
         bt.setCpu(request.getCpuId() != null ? dmCpuRepository.getReferenceById(request.getCpuId()) : null);
         bt.setRam(request.getRamId() != null ? dmRamRepository.getReferenceById(request.getRamId()) : null);
         bt.setOCung(request.getOCungId() != null ? dmOcungRepository.getReferenceById(request.getOCungId()) : null);
@@ -100,7 +93,6 @@ public class SanPhamService {
 
         sanPhamRepository.save(sanPham);
 
-        // Cập nhật variant nếu bienTheId được truyền
         if (request.getBienTheId() != null) {
             BienTheSanPham bt = bienTheSanPhamRepository.findById(request.getBienTheId())
                     .orElseThrow(() -> new IllegalArgumentException("Biến thể không tồn tại với id: " + request.getBienTheId()));
@@ -116,8 +108,6 @@ public class SanPhamService {
         }
     }
 
-    // Sản phẩm đã có biến thể nào qua giao dịch chưa — dùng để FE hỏi trước khi hiện hộp
-    // thoại xóa.
     public boolean hasTransactionHistory(Integer sanPhamId) {
         return bienTheSanPhamRepository.hasTransactionHistoryBySanPhamId(sanPhamId);
     }

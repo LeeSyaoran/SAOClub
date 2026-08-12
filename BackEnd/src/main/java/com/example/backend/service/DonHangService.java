@@ -75,9 +75,6 @@ public class DonHangService {
     @Autowired
     private EntityManager entityManager;
 
-    // Trước đây không kiểm tra chủ đơn — khách hàng đăng nhập bất kỳ có thể tự truyền
-    // khachHangId của người khác trên URL để xem đơn hàng người khác. Ép về đúng chủ tài
-    // khoản đang gọi nếu là khách hàng, staff giữ nguyên (kể cả null = xem toàn bộ).
     public Page<DonHangResponse> hienThiDonHang(Integer khachHangId, Pageable pageable) {
         return donHangRepository.hienThiDonHang(resolveKhachHangIdForList(khachHangId), pageable);
     }
@@ -87,11 +84,6 @@ public class DonHangService {
                 .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại với id: " + id));
     }
 
-    // Dùng riêng cho GET /api/don-hang/{id} (route giữ mở cho mọi role đã đăng nhập, kể cả
-    // khách hàng) — trước đây không kiểm tra chủ đơn, khách hàng bất kỳ có thể đoán id rồi
-    // xem đơn của người khác (IDOR). Các luồng nội bộ khác (update/xacNhan/merge/recalculate)
-    // đã staff-only ở tầng controller nên dùng thẳng getById() thường, không cần kiểm tra lại
-    // (tránh NPE/lỗi khi gọi nội bộ không qua request HTTP có sẵn security context của khách).
     public DonHang getByIdChoNguoiXem(Integer id) {
         DonHang donHang = getById(id);
         if (!isStaffOrOwner(donHang.getKhachHang().getKhachHangId()))
@@ -102,32 +94,19 @@ public class DonHangService {
     @Transactional
     public DonHang create(DonHangRequest request) {
         DonHang entity = new DonHang();
-        // BeanUtils copies: maDonHang, diaChiGiaoHangText, nguoiNhan, sdtNguoiNhan,
-        //                   tongTien, phiVanChuyen, thanhTien, ngayDat,
-        //                   ngayGiaoDuKien, ngayGiaoThucTe, trangThaiDonHang,
-        //                   trangThaiThanhToan, kenhBan, ghiChu
-        // Bỏ qua: khachHangId, nhanVienId, khuyenMaiId, diaChiGiaoHangId (khác tên với entity),
-        //         giamGia (không tin số client gửi — luôn tự tính lại bên dưới, xem tinhGiamGia*()).
         BeanUtils.copyProperties(request, entity,
                 "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId", "giamGia");
 
         Integer khachHangId = resolveKhachHangIdForCreate(request.getKhachHangId());
         entity.setKhachHang(khachHangRepository.getReferenceById(khachHangId));
-        // nhanVienId nullable: nhân viên không bắt buộc (đơn hàng online)
         if (request.getNhanVienId() != null)
             entity.setNhanVien(nhanVienRepository.getReferenceById(request.getNhanVienId()));
         if (request.getDiaChiGiaoHangId() != null)
             entity.setDiaChiGiaoHang(diaChiGiaoHangRepository.getReferenceById(request.getDiaChiGiaoHangId()));
 
-        // Chặn dùng đồng thời mã khuyến mãi công khai + voucher cá nhân — giữ đúng quy tắc
-        // "chỉ 1 trong 2" đã chốt ở checkout, không chỉ dựa vào UI (client có thể gửi request
-        // tay kèm cả 2 id).
         if (request.getKhuyenMaiId() != null && request.getPhieuGiamGiaCaNhanId() != null)
             throw new IllegalArgumentException("Không thể dùng đồng thời mã khuyến mãi và voucher cá nhân");
 
-        // Không tin điều kiện (còn hạn/còn lượt/đạt đơn tối thiểu) hay số tiền giảm giá do
-        // client gửi lên — client có thể bỏ qua UI, gọi thẳng API với 1 mã đã hết hạn/hết lượt
-        // hoặc 1 số giamGia tự chọn. Validate lại toàn bộ và tự tính giamGia ở đây.
         PhieuGiamGiaCaNhan phieuDangDung = null;
         if (request.getKhuyenMaiId() != null) {
             KhuyenMai khuyenMai = khuyenMaiRepository.findById(request.getKhuyenMaiId())
@@ -149,10 +128,6 @@ public class DonHangService {
         }
 
         DonHang saved = donHangRepository.save(entity);
-        // maDonHang sinh bởi trigger DB (insertable=false) — không có sẵn trên entity vừa
-        // save() trong cùng transaction, phải refresh() lại mới đọc được (cùng pattern đã
-        // dùng cho maPhieu ở PhieuGiamGiaCaNhanService/VongQuayService). Thiếu bước này,
-        // response trả về cho khách sau khi đặt hàng thành công sẽ có maDonHang = null.
         entityManager.refresh(saved);
 
         if (phieuDangDung != null) {
@@ -165,17 +140,6 @@ public class DonHangService {
         return saved;
     }
 
-    // Trạng thái đơn hàng đi 1 chiều theo đúng luồng xử lý thực tế (xem NEXT_ORDER_STATUS ở
-    // OrdersTable.vue): pending -> confirmed -> processing -> shipping -> out_for_delivery ->
-    // awaiting_confirmation -> delivered, có thể "cancelled" ở bất kỳ bước nào trước khi giao,
-    // và chỉ đơn "delivered" mới đánh dấu được "returned". "awaiting_confirmation" là bước admin
-    // đã đánh dấu giao (shipper đã đưa hàng) nhưng chưa ai xác nhận — chỉ tự chuyển "delivered"
-    // qua route riêng xacNhanDaNhanHang() (khách tự bấm "Đã nhận hàng", hoặc staff xác nhận hộ),
-    // KHÔNG qua update() thường, để tách rõ "admin nói đã giao" và "đơn thật sự hoàn tất".
-    // Trước đây update() nhận thẳng trangThaiDonHang bất kỳ từ request — modal "Cập nhật trạng
-    // thái" (OrdersTable.vue) cho chọn tự do mọi trạng thái, nhân viên (hoặc tài khoản bị chiếm)
-    // có thể chuyển lùi tuỳ ý (vd shipping -> pending), làm sai lệch tồn kho/lịch sử/trigger
-    // tích điểm vốn chỉ tính đúng 1 lần theo 1 chiều.
     private static final Map<String, Set<String>> CHUYEN_TRANG_THAI_DON_HANG = Map.of(
             "pending",              Set.of("confirmed", "cancelled"),
             "confirmed",            Set.of("processing", "cancelled"),
@@ -188,11 +152,6 @@ public class DonHangService {
             "returned",             Set.of()
     );
 
-    // Đơn tại quầy (kenhBan="in_store"): khách nhận hàng ngay lúc thanh toán, không có khái
-    // niệm giao hàng online (processing/shipping/out_for_delivery — bước "shipping" còn bắt
-    // buộc nhập mã vận đơn, vô nghĩa với đơn tại quầy) — POS chuyển thẳng "confirmed" sang
-    // "delivered" ngay sau khi tạo đơn. CHỈ áp dụng cho in_store, đơn online vẫn phải đi tuần
-    // tự đúng luồng như cũ.
     private void kiemTraChuyenTrangThai(String trangThaiCu, String trangThaiMoi, String kenhBan) {
         if (trangThaiCu == null || trangThaiMoi == null || trangThaiCu.equals(trangThaiMoi)) return;
         if ("in_store".equals(kenhBan) && "confirmed".equals(trangThaiCu) && "delivered".equals(trangThaiMoi)) return;
@@ -205,9 +164,6 @@ public class DonHangService {
     public DonHang update(Integer id, DonHangRequest request) {
         DonHang entity = getById(id);
         String oldStatus = entity.getTrangThaiDonHang();
-        // Dùng kenhBan hiện có trên entity (trước khi copyProperties phía dưới), không lấy từ
-        // request — kenhBan chốt 1 lần lúc tạo đơn, không cho client tự xưng "in_store" trong
-        // cùng request update để lách luật chuyển trạng thái của đơn online.
         kiemTraChuyenTrangThai(oldStatus, request.getTrangThaiDonHang(), entity.getKenhBan());
         BeanUtils.copyProperties(request, entity,
                 "id", "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId");
@@ -222,24 +178,16 @@ public class DonHangService {
 
         DonHang saved = donHangRepository.save(entity);
 
-        // Đơn vừa chuyển sang "cancelled" (trước đó chưa hủy) -> trả serial đã giữ/đã bán
-        // về lại "trong_kho", giống hệt delete() — nếu không, serial sẽ kẹt vĩnh viễn ở
-        // "giu_hang"/"da_ban" dù đơn đã hủy, làm lệch tồn kho thật.
         if ("cancelled".equals(request.getTrangThaiDonHang()) && !"cancelled".equals(oldStatus)) {
             releaseSerialsToStock(id);
             giaiPhongKhuyenMaiVoucher(saved);
         }
 
-        // Báo real-time cho admin (tab khác) + trang khách hàng đang mở đơn này, khỏi cần F5.
         sseService.notifyOrderUpdate(id);
 
         return saved;
     }
 
-    // Khách hàng tự bấm "Đã nhận được hàng" khi đơn ở "awaiting_confirmation" (admin đã đánh
-    // dấu giao nhưng chưa ai xác nhận) — route mở cho khách (không staff-only như update()),
-    // tự kiểm tra đúng chủ đơn qua isStaffOrOwner() để khách A không xác nhận hộ đơn khách B.
-    // Sau bước này đơn mới thật sự "delivered" -> rơi vào tab "Hoàn tất" phía khách.
     @Transactional
     public void xacNhanDaNhanHang(Integer id) {
         DonHang donHang = getById(id);
@@ -251,19 +199,13 @@ public class DonHangService {
         sseService.notifyOrderUpdate(id);
     }
 
-    // Trả toàn bộ serial đã gắn với đơn hàng về lại "trong_kho" — dùng chung khi xóa đơn
-    // (delete) hoặc khi đơn chuyển sang trạng thái "cancelled" (update).
     private void releaseSerialsToStock(Integer donHangId) {
         List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(donHangId);
         for (ChiTietDonHang item : items) {
-            // Serial đại diện trên FK đơn (chi_tiet_id) — luôn có nếu dòng đã gán serial.
             if (item.getChiTietSanPham() != null) {
                 item.getChiTietSanPham().setTrangThai("trong_kho");
                 chiTietSanPhamRepository.save(item.getChiTietSanPham());
             }
-            // Đơn có so_luong > 1: các serial còn lại chỉ nằm trong bảng join, không nằm
-            // trên FK đại diện — phải trả riêng, nếu không sẽ kẹt vĩnh viễn ở "giu_hang"/
-            // "da_ban" dù đơn đã hủy, làm lệch tồn kho thật.
             for (ChiTietDonHangSerial link : chiTietDonHangSerialRepository.findByChiTietDonHang_Id(item.getId())) {
                 link.getChiTietSanPham().setTrangThai("trong_kho");
                 chiTietSanPhamRepository.save(link.getChiTietSanPham());
@@ -271,13 +213,6 @@ public class DonHangService {
         }
     }
 
-    // Tra lai suat dung khuyen mai chung/voucher ca nhan khi don bi huy (update -> cancelled
-    // hoac delete) — dung chung cho ca 2 noi goi, giong releaseSerialsToStock(). Truoc day:
-    // - khuyen_mai.so_lan_da_dung tang tu dong qua trigger DB luc INSERT don hang, nhung
-    //   khong bao gio duoc tru lai — huy don van tinh nhu da dung 1 suat, khuyen mai chung
-    //   co the het suat som du chua ai mua thanh cong that su.
-    // - phieu_giam_gia_ca_nhan.daSuDung set true luc tao don, cung khong bao gio reset lai
-    //   false — khach mat oan 1 voucher ca nhan (doi bang diem) neu don bi nhan vien huy.
     private void giaiPhongKhuyenMaiVoucher(DonHang donHang) {
         if (donHang.getKhuyenMai() != null) {
             KhuyenMai khuyenMai = donHang.getKhuyenMai();
@@ -291,12 +226,6 @@ public class DonHangService {
         });
     }
 
-    // Xoá đơn hàng — trước tiên xoá các dòng chi tiết + lịch sử tồn kho (FK) và trả
-    // seri đã bán về "trong_kho" (trigger DB tự cộng lại tồn kho), nếu không sẽ vỡ FK
-    // khi đơn đã có sản phẩm, và tồn kho sẽ bị lệch vì seri vẫn coi như đã bán.
-    // Giữ mở cho khách tự gọi (CheckoutModal.vue rollback đơn vừa tạo lỡ tạo dòng chi tiết
-    // lỗi) — nhưng phải kiểm tra chủ đơn, nếu không bất kỳ khách đăng nhập nào cũng xoá
-    // được đơn của người khác chỉ bằng cách đoán id.
     @Transactional
     public void delete(Integer id) {
         DonHang donHang = donHangRepository.findById(id)
@@ -307,23 +236,15 @@ public class DonHangService {
         releaseSerialsToStock(id);
         giaiPhongKhuyenMaiVoucher(donHang);
         List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(id);
-        // Dòng so_luong > 1 giữ các serial "phụ" trong bảng join chi_tiet_don_hang_serial
-        // (FK -> chi_tiet_don_hang) — phải xóa trước, nếu không Hibernate ném
-        // TransientPropertyValueException lúc flush (dòng ChiTietDonHangSerial persistent vẫn
-        // còn trỏ tới ChiTietDonHang vừa xóa), lộ ra ngoài thành lỗi 500.
         for (ChiTietDonHang item : items) {
             chiTietDonHangSerialRepository.deleteByChiTietDonHang_Id(item.getId());
         }
         chiTietDonHangRepository.deleteAll(items);
         lichSuTonKhoRepository.deleteAll(lichSuTonKhoRepository.findByDonHang_Id(id));
-        // Đơn đã ghi nhận thanh toán (thanh_toan.don_hang_id) phải xóa trước, nếu không vỡ FK
-        // FK_tt_don_hang khi xóa don_hang — chỉ lộ ra với đơn đã thanh toán (POS/checkout),
-        // đơn "Chờ xác nhận" chưa có dòng thanh_toan nên trước giờ không thấy lỗi.
         thanhToanRepository.deleteAll(thanhToanRepository.findByDonHang_Id(id));
         donHangRepository.deleteById(id);
     }
 
-    // ── Kiểm tra quyền: nhân viên/admin/quản kho xoá được mọi đơn, khách chỉ xoá đơn của mình ──
     private TaiKhoan currentAccount() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return taiKhoanRepository.findByUsername(username).orElse(null);
@@ -336,9 +257,6 @@ public class DonHangService {
         return tk.getKhachHang() != null && khachHangId.equals(tk.getKhachHang().getKhachHangId());
     }
 
-    // Khách hàng đăng nhập không được tự ý gửi khachHangId của người khác lên (IDOR — tạo
-    // đơn hộ/đốt voucher của khách khác) — luôn ép về đúng chủ tài khoản đang gọi. Staff thì
-    // giữ nguyên khachHangId từ request vì đơn tại quầy/hộ khách vãng lai do staff tạo thay.
     private Integer resolveKhachHangIdForCreate(Integer requestedKhachHangId) {
         TaiKhoan tk = currentAccount();
         if (tk == null)
@@ -350,9 +268,6 @@ public class DonHangService {
         return tk.getKhachHang().getKhachHangId();
     }
 
-    // Validate + tính giảm giá cho MÃ KHUYẾN MÃI công khai — dùng ở create() thay vì tin số
-    // giamGia client gửi lên, vì client có thể gọi thẳng API bỏ qua UI với 1 mã đã hết hạn/
-    // hết lượt/chưa đạt đơn tối thiểu.
     private BigDecimal tinhGiamGiaKhuyenMai(KhuyenMai khuyenMai, BigDecimal tongTien) {
         if (!"active".equals(khuyenMai.getTrangThai()))
             throw new IllegalArgumentException("Mã khuyến mãi không còn hiệu lực");
@@ -369,17 +284,12 @@ public class DonHangService {
         return tinhGiamGia(khuyenMai.getLoai(), khuyenMai.getGiaTri(), khuyenMai.getGiaTriToiDa(), tongTien);
     }
 
-    // Validate + tính giảm giá cho VOUCHER CÁ NHÂN — cùng lý do với tinhGiamGiaKhuyenMai().
-    // Điều kiện sở hữu/đã dùng/hết hạn được kiểm tra riêng ở create() (cần lock + so khách
-    // hàng), ở đây chỉ còn phần chung: đơn tối thiểu + tính số tiền giảm.
     private BigDecimal tinhGiamGiaVoucher(PhieuGiamGiaCaNhan phieu, BigDecimal tongTien) {
         if (phieu.getDonHangToiThieu() != null && tongTien.compareTo(phieu.getDonHangToiThieu()) < 0)
             throw new IllegalArgumentException("Đơn hàng chưa đạt giá trị tối thiểu để dùng voucher này");
         return tinhGiamGia(phieu.getLoai(), phieu.getGiaTri(), phieu.getGiaTriToiDa(), tongTien);
     }
 
-    // Công thức giảm giá dùng chung cho cả mã khuyến mãi công khai lẫn voucher cá nhân — y hệt
-    // calcDiscountFor() ở CheckoutModal.vue, chỉ khác chạy phía server để không tin số client gửi.
     private BigDecimal tinhGiamGia(String loai, BigDecimal giaTri, BigDecimal giaTriToiDa, BigDecimal tongTien) {
         if ("percent".equals(loai)) {
             BigDecimal giam = tongTien.multiply(giaTri).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
@@ -388,9 +298,6 @@ public class DonHangService {
         return giaTri != null ? giaTri : BigDecimal.ZERO;
     }
 
-    // Khách hàng đăng nhập không được tự ý truyền khachHangId của người khác trên query param
-    // để xem đơn người khác (IDOR) — ép về đúng chủ tài khoản đang gọi. Staff giữ nguyên
-    // (kể cả null = xem toàn bộ đơn hệ thống).
     private Integer resolveKhachHangIdForList(Integer requestedKhachHangId) {
         TaiKhoan tk = currentAccount();
         if (tk == null)
@@ -402,11 +309,6 @@ public class DonHangService {
         return tk.getKhachHang().getKhachHangId();
     }
 
-    // Chọn serial cho từng dòng + chốt "da_ban" + chuyển trạng thái "confirmed" trong 1
-    // transaction — chỉ áp dụng đơn online (đơn tại quầy đã chốt serial ngay lúc tạo dòng
-    // đơn, không qua bước xác nhận nên không cần gọi endpoint này). Sau khi xác nhận xong,
-    // bước "đóng gói" (confirmed → processing) chỉ còn là đổi trạng thái đơn thuần, serial
-    // đã chốt xong ở đây rồi.
     @Transactional
     public void xacNhanDonHang(Integer donHangId, XacNhanDonHangRequest request) {
         DonHang donHang = getById(donHangId);
@@ -435,9 +337,6 @@ public class DonHangService {
 
             List<ChiTietSanPham> finalSerials = new ArrayList<>();
             for (Integer serialId : serialIds) {
-                // Khoá PESSIMISTIC_WRITE — cùng lỗi race condition đã sửa ở ChiTietDonHangService.
-                // create() (2 nhân viên/2 tab cùng lúc xác nhận, cùng chọn trùng 1 serial): trước
-                // đây dùng findById() thường, đọc xong mới kiểm tra trạng thái thì đã trễ.
                 ChiTietSanPham serial = chiTietSanPhamRepository.findByIdForUpdate(serialId)
                         .orElseThrow(() -> new IllegalArgumentException("Serial không tồn tại với id: " + serialId));
                 if (!serial.getBienThe().getBienTheId().equals(item.getBienThe().getBienTheId()))
@@ -448,18 +347,12 @@ public class DonHangService {
                 finalSerials.add(serial);
             }
 
-            // Trả các serial đã giữ chỗ trước đó nhưng bị bỏ chọn (admin đổi ý) về lại kho
             for (ChiTietDonHangSerial link : existingLinks) {
                 if (!serialIds.contains(link.getChiTietSanPham().getChiTietId())) {
                     link.getChiTietSanPham().setTrangThai("trong_kho");
                     chiTietSanPhamRepository.save(link.getChiTietSanPham());
                 }
             }
-            // flush() ngay sau xoá — nếu không, Hibernate mặc định chạy INSERT trước DELETE lúc
-            // commit (thứ tự flush cố định, không theo thứ tự gọi trong code Java), nên bản ghi
-            // mới ở dưới (cùng cặp donHangId+serialId với bản vừa xoá — ví dụ xác nhận lại đúng
-            // serial đã giữ chỗ sẵn từ lúc đặt hàng) sẽ đụng UNIQUE constraint UX_ctdhs_pair
-            // trước khi DELETE kịp chạy, ra lỗi DataIntegrityViolationException.
             chiTietDonHangSerialRepository.deleteByChiTietDonHang_Id(item.getId());
             chiTietDonHangSerialRepository.flush();
 
@@ -472,8 +365,6 @@ public class DonHangService {
                 chiTietDonHangSerialRepository.save(link);
             }
 
-            // Đồng bộ serial đại diện trên FK đơn — nếu admin đổi serial khác lúc xác nhận,
-            // các nơi hiển thị dựa trên FK này (chi tiết đơn, bảo hành...) vẫn đúng.
             item.setChiTietSanPham(finalSerials.get(0));
             chiTietDonHangRepository.save(item);
         }
@@ -483,7 +374,6 @@ public class DonHangService {
         sseService.notifyOrderUpdate(donHangId);
     }
 
-    // Tính lại tong_tien từ tổng các dòng chi tiết (don_gia * so_luong - giam_gia_dong)
     @Transactional
     public void recalculateTongTien(Integer orderId) {
         DonHang order = getById(orderId);
@@ -498,15 +388,12 @@ public class DonHangService {
         donHangRepository.save(order);
     }
 
-    // Gộp nhiều đơn hàng vào 1 đơn đích — toàn bộ chi tiết chuyển sang targetId, các source bị xóa
     @Transactional
     public void mergeOrders(Integer targetId, List<Integer> sourceIds) {
         DonHang target = getById(targetId);
         for (Integer sourceId : sourceIds) {
             if (sourceId.equals(targetId)) continue;
             DonHang source = getById(sourceId);
-            // Đơn "pending" (chưa xác nhận) chưa chắc admin đã kiểm tra kỹ nội dung —
-            // gộp lúc này dễ gộp nhầm đơn khách vừa đặt lỡ tay. Bắt buộc xác nhận trước.
             if ("pending".equals(source.getTrangThaiDonHang()))
                 throw new IllegalArgumentException(
                         "Đơn #" + sourceId + " chưa được xác nhận, không thể gộp");
@@ -515,9 +402,6 @@ public class DonHangService {
                 item.setDonHang(target);
                 chiTietDonHangRepository.save(item);
             }
-            // Chuyển các bản ghi phụ thuộc khác sang targetId trước khi xóa source —
-            // nếu không, DELETE sẽ vi phạm FK (thanh_toan/lich_su_ton_kho/phieu_tra_hang/
-            // phieu_bao_hanh đều tham chiếu don_hang_id, không có ON DELETE CASCADE).
             for (ThanhToan tt : thanhToanRepository.findByDonHang_Id(sourceId)) {
                 tt.setDonHang(target);
                 thanhToanRepository.save(tt);

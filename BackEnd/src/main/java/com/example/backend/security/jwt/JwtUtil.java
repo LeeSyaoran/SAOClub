@@ -35,7 +35,6 @@ public class JwtUtil {
                 .compact();
     }
 
-    /** Ném JwtException nếu token không hợp lệ hoặc hết hạn. */
     public String extractUsername(String token) {
         Claims claims = Jwts.parser().verifyWith(key()).build()
                 .parseSignedClaims(token).getPayload();

@@ -2,16 +2,24 @@
   <!-- Radar nhiều trục, 1 series — không so sánh 2 kỳ (xem Global Constraints trong
        plan). Toạ độ mỗi trục chia đều 360°, bắt đầu từ đỉnh (12h). -->
   <svg v-if="data.length" :width="size" :height="size" :viewBox="`0 0 ${size} ${size}`">
-    <polygon v-for="ring in GRID_RINGS" :key="ring" :points="ringPoints(ring)"
-             fill="none" stroke="var(--border-color-soft)" stroke-width="1" />
-    <line v-for="(p, i) in axisPoints" :key="'axis' + i" :x1="center" :y1="center" :x2="p.x" :y2="p.y"
-          stroke="var(--border-color-soft)" stroke-width="1" />
-    <polygon :points="valuePolygon" fill="var(--accent-2)" fill-opacity="0.25" :stroke="color" stroke-width="2"
-              style="transition: points .6s ease;" />
+    <polygon
+      v-for="ring in GRID_RINGS" :key="ring" :points="ringPoints(ring)"
+      fill="none" stroke="var(--border-color-soft)" stroke-width="1"
+    />
+    <line
+      v-for="(p, i) in axisPoints" :key="'axis' + i" :x1="center" :y1="center" :x2="p.x" :y2="p.y"
+      stroke="var(--border-color-soft)" stroke-width="1"
+    />
+    <polygon
+      :points="valuePolygon" fill="var(--accent-2)" fill-opacity="0.25" :stroke="color" stroke-width="2"
+      style="transition: points .6s ease;"
+    />
     <circle v-for="(p, i) in valuePoints" :key="'dot' + i" :cx="p.x" :cy="p.y" r="3" :fill="color" />
-    <text v-for="(p, i) in labelPoints" :key="'label' + i" :x="p.x" :y="p.y"
-          :text-anchor="p.anchor" dominant-baseline="middle"
-          fill="var(--text-secondary)" style="font-size:10px;">{{ data[i].axis }}</text>
+    <text
+      v-for="(p, i) in labelPoints" :key="'label' + i" :x="p.x" :y="p.y"
+      :text-anchor="p.anchor" dominant-baseline="middle"
+      fill="var(--text-secondary)" style="font-size:10px;"
+    >{{ data[i].axis }}</text>
   </svg>
   <div v-else class="small text-center py-3" style="color:var(--text-muted);">{{ emptyText }}</div>
 </template>

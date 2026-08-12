@@ -21,7 +21,6 @@ public class DmDoiThuongController {
     @Autowired
     private DmDoiThuongService dmDoiThuongService;
 
-    // Giữ mở — khách hàng cần xem danh mục để chọn đổi (AccountPage.vue).
     @PreAuthorize("isAuthenticated()")
     @GetMapping
     public List<DmDoiThuongResponse> getAll() {

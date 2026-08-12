@@ -20,8 +20,6 @@ public class WarrantyStatusResponse {
     private Integer donHangId;
     private Integer bienTheId;
     private Integer khachHangId;
-    // Tính ở service (ngayGiaoThucTe + baoHanhThang tháng) — không lấy được thẳng bằng JPQL
-    // constructor-expression nên để trống ở đây, set sau khi query xong.
     private LocalDateTime ngayHetBaoHanh;
 
     public WarrantyStatusResponse(Integer chiTietId, String soSerial, String maSku, String tenSanPham,

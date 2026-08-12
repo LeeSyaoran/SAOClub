@@ -53,7 +53,6 @@ public class NhanVienService {
         entity.setNgayTao(LocalDateTime.now());
         NhanVien saved = nhanVienRepository.save(entity);
 
-        // Tạo tai_khoan nếu có username
         if (request.getUsername() != null && !request.getUsername().isBlank()) {
             String rawPassword = (request.getMatKhauHash() != null && !request.getMatKhauHash().isBlank())
                     ? request.getMatKhauHash() : "123456";
@@ -81,7 +80,6 @@ public class NhanVienService {
         entity.setTrangThai(request.getTrangThai());
         NhanVien saved = nhanVienRepository.save(entity);
 
-        // Cập nhật mật khẩu nếu được cung cấp
         if (request.getMatKhauHash() != null && !request.getMatKhauHash().isBlank()) {
             taiKhoanRepository.findByNhanVien_NhanVienId(id).ifPresent(tk -> {
                 tk.setMatKhauHash(passwordEncoder.encode(request.getMatKhauHash()));

@@ -34,7 +34,6 @@ public class ThanhToanService {
 
     public ThanhToan create(ThanhToanRequest request) {
         ThanhToan entity = new ThanhToan();
-        // BeanUtils copies: ngayThanhToan, phuongThucThanhToan, soTien, maGiaoDich, trangThai, ghiChu
         BeanUtils.copyProperties(request, entity, "donHangId");
         entity.setDonHang(donHangRepository.getReferenceById(request.getDonHangId()));
         return thanhToanRepository.save(entity);

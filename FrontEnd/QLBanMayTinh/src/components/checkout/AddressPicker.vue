@@ -1,23 +1,27 @@
 <template>
   <div class="position-relative">
-    <input v-model="query" @input="onInput" @focus="onFocus" @blur="onBlur"
-           class="form-control form-control-sm"
-           style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-           :placeholder="placeholder" />
+    <input
+      v-model="query" class="form-control form-control-sm" style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;" :placeholder="placeholder"
+      @input="onInput"
+      @focus="onFocus"
+      @blur="onBlur"
+    />
 
-    <!-- Gợi ý địa chỉ (Nominatim/OpenStreetMap) -->
-    <div v-if="showSuggestions && suggestions.length" class="position-absolute w-100 rounded-3 mt-1 shadow-lg"
-         style="z-index:20; background:var(--bg-card); border:1px solid var(--border-color-strong); max-height:220px; overflow-y:auto;">
-      <div v-for="s in suggestions" :key="s.place_id" class="px-3 py-2 small"
-           style="cursor:pointer;" @mousedown.prevent="selectSuggestion(s)"
-           @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
-           @mouseleave="$event.currentTarget.style.background=''">
+    <div
+      v-if="showSuggestions && suggestions.length" class="position-absolute w-100 rounded-3 mt-1 shadow-lg"
+      style="z-index:20; background:var(--bg-card); border:1px solid var(--border-color-strong); max-height:220px; overflow-y:auto;"
+    >
+      <div
+        v-for="s in suggestions" :key="s.place_id" class="px-3 py-2 small"
+        style="cursor:pointer;" @mousedown.prevent="selectSuggestion(s)"
+        @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
+        @mouseleave="$event.currentTarget.style.background=''"
+      >
         {{ s.display_name }}
       </div>
     </div>
     <div v-if="searching" class="small mt-1" style="color:var(--text-secondary);">{{ t('checkout.addressSearching') }}</div>
 
-    <!-- Bản đồ + ghim vị trí — chỉ hiện sau khi đã chọn 1 địa chỉ có tọa độ -->
     <div v-if="hasCoords" ref="mapEl" style="height:200px;border-radius:10px;margin-top:8px;overflow:hidden;"></div>
     <div v-if="hasCoords" class="small mt-1" style="color:var(--text-secondary);">{{ t('checkout.addressDragHint') }}</div>
   </div>

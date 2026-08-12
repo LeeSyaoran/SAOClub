@@ -16,12 +16,6 @@ import java.util.List;
 @Repository
 public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
 
-    // Trả về 1 dòng/biến thể, gộp đủ thông tin sản phẩm + biến thể vào SanPhamResponse.
-    // Dùng LEFT JOIN toàn bộ để sản phẩm thiếu danh mục / thương hiệu vẫn hiển thị.
-    // Kết quả mới nhất lên đầu (ORDER BY ngayTao DESC).
-    // Phân trang qua Pageable + lọc động (keyword/danhMucId/thuongHieuId/trangThai) —
-    // truyền null để bỏ qua điều kiện đó (":x IS NULL OR ..." pattern).
-    // countQuery riêng vì Spring Data không tự suy count đúng cho JPQL DTO projection nhiều JOIN.
     @Query(value = """
     SELECT new com.example.backend.response.SanPhamResponse(
         sp.sanPhamId,
@@ -51,6 +45,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
         sp.hinhAnhChinh,
         bt.trangThai,
         sp.ngayTao,
+        sp.ngayCapNhat,
         bt.phanLoaiTags,
         bt.phanLoaiTen,
         (SELECT COUNT(c) FROM ChiTietSanPham c WHERE c.bienThe = bt AND c.trangThai = 'trong_kho')
@@ -88,12 +83,6 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
             @Param("trangThai") String trangThai,
             Pageable pageable);
 
-    // Xếp hạng sản phẩm bán chạy/bán chậm — SUM ở SQL thay vì kéo hết chi_tiet_don_hang về
-    // JS cộng dồn. LEFT JOIN để sản phẩm chưa từng bán vẫn xuất hiện với soLuongDaBan = 0
-    // (cần cho "bán chậm"). tuNgay/denNgay null = không lọc (tab Dashboard gọi không kèm
-    // ngày, giữ nguyên hành vi cũ); có giá trị = chỉ tính đơn đặt trong khoảng đó (tab Báo
-    // cáo) — dùng cho "top bán chạy", nên sản phẩm 0 đơn trong khoảng có thể bị lọc khỏi
-    // kết quả thay vì hiện 0 (chấp nhận được, không ảnh hưởng vì chỉ lấy top N bán chạy).
     @Query("""
     SELECT new com.example.backend.response.ProductSalesResponse(sp.tenSanPham, COALESCE(SUM(ct.soLuong), 0))
     FROM SanPham sp

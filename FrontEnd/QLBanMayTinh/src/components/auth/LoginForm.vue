@@ -1,7 +1,6 @@
 <template>
   <!-- Form đăng nhập — dùng trong modal hoặc trang riêng -->
   <div class="mx-auto" style="max-width:420px;">
-
     <!-- Tiêu đề -->
     <div class="text-center mb-4">
       <div class="fw-black fs-5 mb-1" style="color:var(--text-heading);">{{ t('login.welcome') }}</div>
@@ -9,16 +8,17 @@
     </div>
 
     <!-- Form -->
-    <form @submit.prevent="onSubmit" class="d-flex flex-column gap-3">
-
+    <form class="d-flex flex-column gap-3" @submit.prevent="onSubmit">
       <!-- Username / Email -->
       <FormField :label="t('login.usernameLabel')" :errors="errors.username" :meta="meta">
         <template #default="{ errors: fieldErr }">
-          <input v-model="username" type="text"
-                 class="form-control form-control-sm"
-                 :class="{ 'is-invalid': fieldErr }"
-                 style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary);"
-                 :placeholder="t('login.usernamePlaceholder')" />
+          <input
+            v-model="username" type="text"
+            class="form-control form-control-sm"
+            :class="{ 'is-invalid': fieldErr }"
+            style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary);"
+            :placeholder="t('login.usernamePlaceholder')"
+          />
         </template>
       </FormField>
 
@@ -26,15 +26,19 @@
       <FormField :label="t('login.passwordLabel')" :errors="errors.password" :meta="meta">
         <template #default="{ errors: fieldErr }">
           <div class="input-group input-group-sm">
-            <input v-model="password" :type="showPassword ? 'text' : 'password'"
-                   class="form-control form-control-sm"
-                   :class="{ 'is-invalid': fieldErr }"
-                   style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary);"
-                   :placeholder="t('login.passwordPlaceholder')" />
-            <button type="button" class="btn btn-sm"
-                    style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
-                    :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
-                    @click="showPassword = !showPassword">
+            <input
+              v-model="password" :type="showPassword ? 'text' : 'password'"
+              class="form-control form-control-sm"
+              :class="{ 'is-invalid': fieldErr }"
+              style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary);"
+              :placeholder="t('login.passwordPlaceholder')"
+            />
+            <button
+              type="button" class="btn btn-sm"
+              style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
+              :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
+              @click="showPassword = !showPassword"
+            >
               <component :is="showPassword ? EyeOff : Eye" :size="16" />
             </button>
           </div>
@@ -58,9 +62,9 @@
     <div class="text-center mt-4 pt-3 border-top small" style="border-color:var(--border-color)!important; color:var(--text-secondary);">
       {{ t('login.noAccount') }}
       <button
-          type="button"
-          class="btn btn-link btn-sm text-warning fw-bold p-0 text-decoration-none"
-          @click="emit('open-register')"
+        type="button"
+        class="btn btn-link btn-sm text-warning fw-bold p-0 text-decoration-none"
+        @click="emit('open-register')"
       >
         {{ t('login.registerNow') }}
       </button>

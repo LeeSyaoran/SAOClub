@@ -22,8 +22,6 @@ public class DanhGiaController {
     @Autowired
     private DanhGiaService danhGiaService;
 
-    // Cong khai — xem duoc du chua dang nhap (giong xem san pham), khong can @PreAuthorize.
-    // SecurityConfig.java da permitAll rieng cho GET /api/danh-gia/**.
     @GetMapping("san-pham/{sanPhamId}")
     public List<DanhGiaResponse> hienThiTheoSanPham(@PathVariable Integer sanPhamId) {
         return danhGiaService.hienThiTheoSanPham(sanPhamId);
@@ -34,7 +32,6 @@ public class DanhGiaController {
         return danhGiaService.tongHopTatCa();
     }
 
-    // Chi khach hang da dang nhap (va da mua+nhan hang — service tu kiem tra) moi tao/xoa duoc.
     @PreAuthorize("isAuthenticated()")
     @PostMapping
     public ResponseEntity<DanhGia> themDanhGia(@Valid @RequestBody DanhGiaRequest request) {
@@ -48,7 +45,6 @@ public class DanhGiaController {
         return ResponseEntity.noContent().build();
     }
 
-    // Kiem duyet danh gia — admin/nhan_vien xem tat ca + xoa bat ky (khong can la chu so huu).
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN')")
     @GetMapping("admin")
     public List<DanhGiaAdminResponse> hienThiTatCaAdmin() {

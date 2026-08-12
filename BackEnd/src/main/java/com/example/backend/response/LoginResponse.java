@@ -15,7 +15,6 @@ public class LoginResponse {
     private String username;
     private String soDienThoai;
     private String email;
-    /** "khach_hang" | "nhan_vien" */
     private String role;
     private String token;
 }

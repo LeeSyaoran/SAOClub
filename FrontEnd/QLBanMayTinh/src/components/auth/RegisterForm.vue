@@ -1,21 +1,21 @@
 <template>
   <!-- Form đăng ký — dùng trong modal chung với LoginForm (không có overlay riêng) -->
   <div class="mx-auto" style="max-width:420px;">
-
     <!-- Tiêu đề -->
     <div class="text-center mb-4">
       <div class="fw-black fs-5 mb-1" style="color:var(--text-heading);">{{ t('register.title') }}</div>
       <div class="small" style="color:var(--text-secondary);">{{ t('register.subtitle') }}</div>
     </div>
 
-    <form @submit.prevent="onSubmit" class="d-flex flex-column gap-3" novalidate>
-
+    <form class="d-flex flex-column gap-3" novalidate @submit.prevent="onSubmit">
       <FormField :label="t('register.fullNameLabel')" :errors="errors.hoTen">
         <template #default="{ errors: fieldErr }">
-          <input v-model="hoTen" type="text"
-                 class="form-control form-control-sm"
-                 :class="{ 'is-invalid': fieldErr }"
-                 :placeholder="t('register.fullNamePlaceholder')" />
+          <input
+            v-model="hoTen" type="text"
+            class="form-control form-control-sm"
+            :class="{ 'is-invalid': fieldErr }"
+            :placeholder="t('register.fullNamePlaceholder')"
+          />
         </template>
       </FormField>
 
@@ -23,20 +23,24 @@
         <div class="col-6">
           <FormField :label="t('register.phoneLabel')" :errors="errors.soDienThoai">
             <template #default="{ errors: fieldErr }">
-              <input v-model="soDienThoai" type="text"
-                     class="form-control form-control-sm"
-                     :class="{ 'is-invalid': fieldErr }"
-                     :placeholder="t('register.phonePlaceholder')" />
+              <input
+                v-model="soDienThoai" type="text"
+                class="form-control form-control-sm"
+                :class="{ 'is-invalid': fieldErr }"
+                :placeholder="t('register.phonePlaceholder')"
+              />
             </template>
           </FormField>
         </div>
         <div class="col-6">
           <FormField :label="t('register.emailLabel')" :errors="errors.email">
             <template #default="{ errors: fieldErr }">
-              <input v-model="email" type="email"
-                     class="form-control form-control-sm"
-                     :class="{ 'is-invalid': fieldErr }"
-                     :placeholder="t('register.emailPlaceholder')" />
+              <input
+                v-model="email" type="email"
+                class="form-control form-control-sm"
+                :class="{ 'is-invalid': fieldErr }"
+                :placeholder="t('register.emailPlaceholder')"
+              />
             </template>
           </FormField>
         </div>
@@ -44,10 +48,12 @@
 
       <FormField :label="t('register.usernameLabel')" :errors="errors.username">
         <template #default="{ errors: fieldErr }">
-          <input v-model="username" type="text"
-                 class="form-control form-control-sm"
-                 :class="{ 'is-invalid': fieldErr }"
-                 :placeholder="t('register.usernamePlaceholder')" />
+          <input
+            v-model="username" type="text"
+            class="form-control form-control-sm"
+            :class="{ 'is-invalid': fieldErr }"
+            :placeholder="t('register.usernamePlaceholder')"
+          />
         </template>
       </FormField>
 
@@ -56,14 +62,18 @@
           <FormField :label="t('register.passwordLabel')" :errors="errors.password">
             <template #default="{ errors: fieldErr }">
               <div class="input-group input-group-sm">
-                <input v-model="password" :type="showPassword ? 'text' : 'password'"
-                       class="form-control form-control-sm"
-                       :class="{ 'is-invalid': fieldErr }"
-                       :placeholder="t('register.passwordPlaceholder')" />
-                <button type="button" class="btn btn-sm"
-                        style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
-                        :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
-                        @click="showPassword = !showPassword">
+                <input
+                  v-model="password" :type="showPassword ? 'text' : 'password'"
+                  class="form-control form-control-sm"
+                  :class="{ 'is-invalid': fieldErr }"
+                  :placeholder="t('register.passwordPlaceholder')"
+                />
+                <button
+                  type="button" class="btn btn-sm"
+                  style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
+                  :title="showPassword ? t('register.hidePassword') : t('register.showPassword')"
+                  @click="showPassword = !showPassword"
+                >
                   <component :is="showPassword ? EyeOff : Eye" :size="16" />
                 </button>
               </div>
@@ -74,14 +84,18 @@
           <FormField :label="t('register.confirmPasswordLabel')" :errors="errors.confirmPassword">
             <template #default="{ errors: fieldErr }">
               <div class="input-group input-group-sm">
-                <input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'"
-                       class="form-control form-control-sm"
-                       :class="{ 'is-invalid': fieldErr }"
-                       :placeholder="t('register.passwordPlaceholder')" />
-                <button type="button" class="btn btn-sm"
-                        style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
-                        :title="showConfirm ? t('register.hidePassword') : t('register.showPassword')"
-                        @click="showConfirm = !showConfirm">
+                <input
+                  v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'"
+                  class="form-control form-control-sm"
+                  :class="{ 'is-invalid': fieldErr }"
+                  :placeholder="t('register.passwordPlaceholder')"
+                />
+                <button
+                  type="button" class="btn btn-sm"
+                  style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-left:none; color:var(--text-secondary);"
+                  :title="showConfirm ? t('register.hidePassword') : t('register.showPassword')"
+                  @click="showConfirm = !showConfirm"
+                >
                   <component :is="showConfirm ? EyeOff : Eye" :size="16" />
                 </button>
               </div>
@@ -93,7 +107,7 @@
       <FormField :errors="errors.agree">
         <template #default="{ errors: fieldErr }">
           <label class="d-flex align-items-start gap-2 small" style="color:var(--text-secondary); cursor:pointer;">
-            <input type="checkbox" v-model="agree" class="form-check-input mt-1" style="flex-shrink:0;" />
+            <input v-model="agree" type="checkbox" class="form-check-input mt-1" style="flex-shrink:0;" />
             <span>{{ t('register.agreeText') }}</span>
           </label>
           <div v-if="fieldErr" class="small text-danger mt-1">{{ fieldErr }}</div>

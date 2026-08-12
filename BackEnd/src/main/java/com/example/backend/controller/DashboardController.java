@@ -18,9 +18,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
-// Endpoint tổng hợp cho Dashboard + Báo cáo admin — SUM/COUNT/GROUP BY chạy ở SQL, thay vì
-// tải toàn bộ san_pham/don_hang/chi_tiet_don_hang về trình duyệt rồi cộng dồn bằng JS.
-// Chứa doanh thu + thông tin khách hàng chi tiêu nhiều — chỉ staff được xem.
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/dashboard")

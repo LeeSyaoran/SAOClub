@@ -83,7 +83,6 @@ const heatmapYear = now.getFullYear();
   <section>
     <div v-if="anyStoreLoading" class="text-secondary small">{{ t('admin.dashboard.loading') }}</div>
     <template v-else>
-
       <!-- ══════════ HÀNG 1: Doanh thu/Đơn + 3 ring vận hành + Positions ══════════ -->
       <div class="row g-3 mb-4">
         <div class="col-12 col-xl-3">
@@ -92,8 +91,10 @@ const heatmapYear = now.getFullYear();
               <div class="fw-semibold small text-secondary mb-2 d-flex align-items-center gap-1"><Wallet :size="14" /> {{ t('admin.dashboard.revenueThisMonth') }}</div>
               <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                 <span class="fw-black" style="font-size:1.5rem; color:var(--text-heading);">{{ formatPrice(revenueThisMonth) }}</span>
-                <span v-if="revenueThisMonthDelta !== null" class="fw-bold" style="font-size:0.72rem;"
-                      :style="{ color: revenueThisMonthDelta >= 0 ? '#22c55e' : '#f87171' }">
+                <span
+                  v-if="revenueThisMonthDelta !== null" class="fw-bold" style="font-size:0.72rem;"
+                  :style="{ color: revenueThisMonthDelta >= 0 ? '#22c55e' : '#f87171' }"
+                >
                   {{ revenueThisMonthDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(revenueThisMonthDelta) }}%
                 </span>
               </div>
@@ -198,8 +199,10 @@ const heatmapYear = now.getFullYear();
       </div>
 
       <div v-if="lowStockItems.length" class="alert alert-danger small py-2 mb-3 d-flex align-items-center gap-2">
-        <span class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-              style="width:22px;height:22px;background:rgba(248,113,113,0.25);"><AlertTriangle :size="13" color="#f87171" /></span>
+        <span
+          class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+          style="width:22px;height:22px;background:rgba(248,113,113,0.25);"
+        ><AlertTriangle :size="13" color="#f87171" /></span>
         {{ t('admin.dashboard.lowStockAlert', { count: lowStockItems.length }) }}
       </div>
 
@@ -210,13 +213,17 @@ const heatmapYear = now.getFullYear();
               <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
                 <div class="fw-semibold small text-secondary d-flex align-items-center gap-1"><PieChart :size="14" /> {{ t('admin.dashboard.ordersByStatusChart') }}</div>
                 <div class="d-flex align-items-center gap-2">
-                  <input type="date" :value="statusChartDate" :max="toDateInputValue(new Date())"
-                         @input="$emit('update:statusChartDate', $event.target.value)"
-                         class="form-control form-control-sm"
-                         style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;" />
-                  <button v-if="!isStatusChartToday" type="button" class="btn btn-sm py-0 px-2"
-                          style="font-size:0.72rem; color:var(--accent-fg); border:1px solid var(--border-color-strong);"
-                          @click="$emit('backToToday')">
+                  <input
+                    type="date" :value="statusChartDate" :max="toDateInputValue(new Date())"
+                    class="form-control form-control-sm"
+                    style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;"
+                    @input="$emit('update:statusChartDate', $event.target.value)"
+                  />
+                  <button
+                    v-if="!isStatusChartToday" type="button" class="btn btn-sm py-0 px-2"
+                    style="font-size:0.72rem; color:var(--accent-fg); border:1px solid var(--border-color-strong);"
+                    @click="$emit('backToToday')"
+                  >
                     {{ t('admin.dashboard.backToToday') }}
                   </button>
                 </div>
@@ -232,7 +239,8 @@ const heatmapYear = now.getFullYear();
                 :data="orderStatusChartData"
                 :center-value="String(ordersOnStatusChartDate.length)"
                 :center-label="t('admin.dashboard.totalOrders')"
-                :empty-text="t('admin.dashboard.chartEmptyOrders')" />
+                :empty-text="t('admin.dashboard.chartEmptyOrders')"
+              />
             </div>
           </div>
         </div>
@@ -242,13 +250,17 @@ const heatmapYear = now.getFullYear();
               <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
                 <div class="fw-semibold small text-secondary d-flex align-items-center gap-1"><Calendar :size="14" /> {{ t('admin.dashboard.ordersByWeekChart') }}</div>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                  <input type="date" :value="weekChartAnchor" :max="toDateInputValue(new Date())"
-                         @input="$emit('update:weekChartAnchor', $event.target.value)"
-                         class="form-control form-control-sm"
-                         style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;" />
-                  <button v-if="!isWeekChartCurrentWeek" type="button" class="btn btn-sm py-0 px-2"
-                          style="font-size:0.72rem; color:var(--accent-fg); border:1px solid var(--border-color-strong);"
-                          @click="$emit('resetToCurrentWeek')">
+                  <input
+                    type="date" :value="weekChartAnchor" :max="toDateInputValue(new Date())"
+                    class="form-control form-control-sm"
+                    style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); width:auto; font-size:0.78rem; padding:2px 8px;"
+                    @input="$emit('update:weekChartAnchor', $event.target.value)"
+                  />
+                  <button
+                    v-if="!isWeekChartCurrentWeek" type="button" class="btn btn-sm py-0 px-2"
+                    style="font-size:0.72rem; color:var(--accent-fg); border:1px solid var(--border-color-strong);"
+                    @click="$emit('resetToCurrentWeek')"
+                  >
                     {{ t('admin.dashboard.backToThisWeek') }}
                   </button>
                 </div>
@@ -265,7 +277,8 @@ const heatmapYear = now.getFullYear();
                 :data="weekOrderStatusChartData"
                 :center-value="String(ordersInWeekRange.length)"
                 :center-label="t('admin.dashboard.totalOrders')"
-                :empty-text="t('admin.dashboard.chartEmptyOrders')" />
+                :empty-text="t('admin.dashboard.chartEmptyOrders')"
+              />
             </div>
           </div>
         </div>
@@ -293,16 +306,22 @@ const heatmapYear = now.getFullYear();
       <div class="small fw-semibold text-secondary mb-2 d-flex align-items-center gap-1"><Archive :size="14" /> {{ t('admin.dashboard.recentProducts') }}</div>
       <div class="table-responsive">
         <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-          <thead><tr>
-            <th></th><th><Monitor :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colName') }}</th><th><Tag :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colBrand') }}</th><th><FolderOpen :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colCategory') }}</th><th><Banknote :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colPrice') }}</th><th><Bookmark :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colStatus') }}</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th></th><th><Monitor :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colName') }}</th><th><Tag :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colBrand') }}</th><th><FolderOpen :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colCategory') }}</th><th><Banknote :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colPrice') }}</th><th><Bookmark :size="13" style="vertical-align:-2px;" /> {{ t('admin.dashboard.colStatus') }}</th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="p in products.slice(0,5)" :key="p.sanPhamId">
               <td style="width:48px;">
-                <div class="rounded-2 d-flex align-items-center justify-content-center overflow-hidden"
-                     style="width:38px;height:32px;background:var(--bg-card-inset);">
-                  <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham"
-                       style="width:100%;height:100%;object-fit:contain;padding:2px;" />
+                <div
+                  class="rounded-2 d-flex align-items-center justify-content-center overflow-hidden"
+                  style="width:38px;height:32px;background:var(--bg-card-inset);"
+                >
+                  <img
+                    v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham"
+                    style="width:100%;height:100%;object-fit:contain;padding:2px;"
+                  />
                   <span v-else><Laptop :size="16" color="var(--text-muted)" /></span>
                 </div>
               </td>

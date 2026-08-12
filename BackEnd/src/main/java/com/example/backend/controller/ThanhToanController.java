@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Thanh toán — chỉ staff. Dùng ở POS (tạo record khi chốt đơn tại quầy) và modal
-// "Chi tiết đơn hàng" (hiển thị lại phương thức đã dùng).
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/thanh-toan")
@@ -38,7 +36,6 @@ public class ThanhToanController {
         return thanhToanService.getById(id);
     }
 
-    // POST — service xử lý FK donHang
     @PostMapping
     public ResponseEntity<ThanhToan> create(@Valid @RequestBody ThanhToanRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(thanhToanService.create(request));

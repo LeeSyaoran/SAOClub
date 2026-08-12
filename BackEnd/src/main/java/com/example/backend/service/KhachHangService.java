@@ -55,13 +55,6 @@ public class KhachHangService {
         return khachHangRepository.hienThiKhachHang(pageable);
     }
 
-    // Tra cứu theo SĐT cho luồng checkout (khách vãng lai lẫn đã đăng nhập) — không kiểm
-    // tra staff-or-self như getById() vì lúc này người gọi CHƯA CHẮC đã có tài khoản/đăng
-    // nhập (khách vãng lai). Chỉ trả về đúng 1 khách khớp SĐT, không lộ toàn bộ danh sách
-    // như getAll() (vốn chỉ dành cho nhân viên/admin).
-    //
-    // Trả DTO rút gọn (KHÔNG phải entity KhachHang) — endpoint này permitAll, ai cũng gọi
-    // được kể cả dò số điện thoại ngẫu nhiên, nên tuyệt đối không lộ soDuVi/diemTichLuy.
     public KhachHangLookupResponse findBySoDienThoai(String soDienThoai) {
         return khachHangRepository.findBySoDienThoai(soDienThoai)
                 .map(k -> new KhachHangLookupResponse(
@@ -88,10 +81,8 @@ public class KhachHangService {
 
     @Transactional
     public KhachHang update(Integer id, KhachHangRequest request) {
-        KhachHang entity = getById(id); // đã kiểm tra staff-or-self ở trên
+        KhachHang entity = getById(id); 
 
-        // Khách tự sửa hồ sơ của mình: không cho đổi điểm tích lũy / trạng thái tài khoản —
-        // chỉ nhân viên/quản trị mới được sửa 2 trường này.
         if (isStaff()) {
             BeanUtils.copyProperties(request, entity, "khachHangId", "ngayTao");
         } else {
@@ -100,9 +91,6 @@ public class KhachHangService {
         return khachHangRepository.save(entity);
     }
 
-    // Tặng điểm — chỉ admin gọi (@PreAuthorize ở controller). Khóa ghi khách hàng đúng
-    // pattern PhieuGiamGiaCaNhanService.doiThuong() để tránh 2 request tặng điểm đồng thời
-    // đọc trùng số dư rồi cùng cộng (mất 1 lần cộng).
     @Transactional
     public void tangDiem(Integer khachHangId, TangDiemRequest request) {
         KhachHang khachHang = khachHangRepository.findWithLockByKhachHangId(khachHangId)
@@ -130,7 +118,6 @@ public class KhachHangService {
         return tk.getNhanVien();
     }
 
-    // ── Kiểm tra quyền: nhân viên/admin/quản kho xem tất cả, khách chỉ xem/sửa chính mình ──
     private TaiKhoan currentAccount() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return taiKhoanRepository.findByUsername(username).orElse(null);

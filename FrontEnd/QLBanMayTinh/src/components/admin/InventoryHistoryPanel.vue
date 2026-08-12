@@ -64,12 +64,14 @@ const { currentPage, totalPages, pagedItems: pagedHistory, pageSize } = usePagin
   <div v-if="loading" class="text-secondary small">{{ t('admin.inventoryHistory.loading') }}</div>
   <div v-else class="table-responsive">
     <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead><tr>
-        <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-        <th>{{ t('admin.inventoryHistory.colDate') }}</th><th>{{ t('admin.inventoryHistory.colSku') }}</th>
-        <th>{{ t('admin.inventoryHistory.colType') }}</th><th>{{ t('admin.inventoryHistory.colQty') }}</th>
-        <th>{{ t('admin.inventoryHistory.colNote') }}</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+          <th>{{ t('admin.inventoryHistory.colDate') }}</th><th>{{ t('admin.inventoryHistory.colSku') }}</th>
+          <th>{{ t('admin.inventoryHistory.colType') }}</th><th>{{ t('admin.inventoryHistory.colQty') }}</th>
+          <th>{{ t('admin.inventoryHistory.colNote') }}</th>
+        </tr>
+      </thead>
       <tbody>
         <tr v-for="(h, idx) in pagedHistory" :key="h.lichSuId">
           <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>

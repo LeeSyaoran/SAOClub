@@ -7,7 +7,7 @@ import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js"
 import * as DanhMucService from "../../services/DanhMucService.js";
 import * as DmService from "../../services/DmService.js";
 import { authHeaders } from "../../services/api.js";
-import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
+import { formatPrice, statusLabel, formatDateTime } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import {
@@ -19,6 +19,7 @@ import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
+import { Image } from "@lucide/vue";
 
 const props = defineProps({ readonly: { type: Boolean, default: false } });
 
@@ -365,10 +366,8 @@ const deleteProduct = async (id) => {
   <div
     class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2"
   >
-    <span class="text-secondary small"
-      >{{ filteredGroupedProducts.length }}/{{ groupedProducts.length }}
-      {{ t("admin.products.countSuffix") }}</span
-    >
+    <span class="text-secondary small">{{ filteredGroupedProducts.length }}/{{ groupedProducts.length }}
+      {{ t("admin.products.countSuffix") }}</span>
     <div class="d-flex gap-2 flex-wrap">
       <input
         v-model="productSearch"
@@ -407,32 +406,51 @@ const deleteProduct = async (id) => {
       <thead>
         <tr>
           <th style="width: 40px">{{ t("admin.common.stt") }}</th>
+          <th>{{ t("admin.products.colSku") }}</th>
           <th>{{ t("admin.products.colName") }}</th>
-          <th>{{ t("admin.products.colBrand") }}</th>
           <th>{{ t("admin.products.colCategory") }}</th>
-          <th>{{ t("admin.products.colVariant") }}</th>
+          <th>{{ t("admin.products.colBrand") }}</th>
           <th>{{ t("admin.products.colPriceFrom") }}</th>
+          <th>{{ t("admin.products.colPriceTo") }}</th>
           <th>{{ t("admin.products.colStatus") }}</th>
+          <th>{{ t("admin.products.colCreated") }}</th>
+          <th>{{ t("admin.products.colUpdated") }}</th>
           <th>{{ t("admin.products.colAction") }}</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(p, idx) in pagedProducts" :key="p.sanPhamId">
           <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-          <td>{{ p.tenSanPham }}</td>
-          <td>{{ p.tenThuongHieu }}</td>
-          <td>{{ p.tenDanhMuc }}</td>
-          <td class="text-center">
-            <span class="badge bg-secondary">{{ p.variantCount }}</span>
+          <td class="text-secondary" style="font-family: monospace; font-size: 0.8rem">{{ p.maSku }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div
+                class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width: 32px; height: 32px; background: var(--bg-card-inset); overflow: hidden"
+              >
+                <img
+                  v-if="p.hinhAnhChinh"
+                  :src="p.hinhAnhChinh"
+                  :alt="p.tenSanPham"
+                  style="width: 100%; height: 100%; object-fit: cover"
+                />
+                <Image v-else :size="14" color="var(--text-muted)" />
+              </div>
+              {{ p.tenSanPham }}
+            </div>
           </td>
+          <td>{{ p.tenDanhMuc }}</td>
+          <td>{{ p.tenThuongHieu }}</td>
           <td>{{ formatPrice(p.minPrice) }}</td>
+          <td>{{ formatPrice(p.maxPrice) }}</td>
           <td>
             <span
               class="badge"
               :class="p.trangThai === 'active' ? 'bg-success' : 'bg-secondary'"
-              >{{ statusLabel(p.trangThai) }}</span
-            >
+            >{{ statusLabel(p.trangThai) }}</span>
           </td>
+          <td class="text-secondary" style="font-size: 0.78rem">{{ formatDateTime(p.ngayTao) }}</td>
+          <td class="text-secondary" style="font-size: 0.78rem">{{ formatDateTime(p.ngayCapNhat) }}</td>
           <td>
             <div class="d-flex gap-1">
               <button
@@ -450,19 +468,11 @@ const deleteProduct = async (id) => {
               >
                 {{ t("admin.variants.edit") }}
               </button>
-              <button
-                v-if="!readonly"
-                class="btn btn-sm btn-outline-danger"
-                style="font-size: 0.78rem; padding: 2px 8px"
-                @click="deleteProduct(p.sanPhamId)"
-              >
-                {{ t("admin.products.delete") }}
-              </button>
             </div>
           </td>
         </tr>
         <tr v-if="filteredGroupedProducts.length === 0">
-          <td colspan="8" class="text-center text-secondary">
+          <td colspan="11" class="text-center text-secondary">
             {{ t("admin.products.empty") }}
           </td>
         </tr>
@@ -477,7 +487,6 @@ const deleteProduct = async (id) => {
     :san-pham-name="detailModalSanPhamName"
   />
 
-  <!-- ══ MODAL SAN PHAM ══ -->
   <div
     v-if="showProductModal"
     class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
@@ -494,7 +503,6 @@ const deleteProduct = async (id) => {
         max-height: 92vh;
       "
     >
-      <!-- Header -->
       <div
         class="d-flex justify-content-between align-items-center px-4 py-3"
         style="border-bottom: 1px solid var(--border-color)"
@@ -510,7 +518,6 @@ const deleteProduct = async (id) => {
         </div>
       </div>
 
-      <!-- Body -->
       <div class="overflow-y-auto px-4 py-3" style="gap: 0">
         <div v-if="formError" class="alert alert-danger small py-2 mb-3">
           {{ formError }}
@@ -520,7 +527,6 @@ const deleteProduct = async (id) => {
           hành...) sẽ bị khóa và không thể thay đổi.
         </div>
 
-        <!-- ── Thong tin co ban ── -->
         <div
           class="text-uppercase fw-bold mb-2"
           style="font-size: 0.65rem; letter-spacing: 0.1em; color: #60a5fa"
@@ -721,7 +727,6 @@ const deleteProduct = async (id) => {
           </div>
         </div>
 
-        <!-- ── Cau hinh ky thuat ── -->
         <div
           class="text-uppercase fw-bold mb-2"
           style="font-size: 0.65rem; letter-spacing: 0.1em; color: #60a5fa"
@@ -896,7 +901,6 @@ const deleteProduct = async (id) => {
           </div>
         </div>
 
-        <!-- ── Gia ca ── -->
         <div
           class="text-uppercase fw-bold mb-2"
           style="font-size: 0.65rem; letter-spacing: 0.1em; color: #60a5fa"
@@ -944,7 +948,6 @@ const deleteProduct = async (id) => {
           </div>
         </div>
 
-        <!-- ── Hinh anh, mo ta, phan loai ── -->
         <div
           class="text-uppercase fw-bold mb-2"
           style="font-size: 0.65rem; letter-spacing: 0.1em; color: #60a5fa"
@@ -1021,12 +1024,10 @@ const deleteProduct = async (id) => {
               ></textarea>
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1"
-                >{{ t("admin.productModal.tagsLabel") }}
+              <label class="form-label small text-secondary mb-1">{{ t("admin.productModal.tagsLabel") }}
                 <span class="text-warning small">{{
                   t("admin.productModal.tagsHint")
-                }}</span></label
-              >
+                }}</span></label>
               <div class="d-flex flex-wrap gap-2">
                 <button
                   v-for="opt in PHAN_LOAI_TAG_OPTIONS"
@@ -1050,12 +1051,10 @@ const deleteProduct = async (id) => {
               </div>
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1"
-                >{{ t("admin.productModal.tagNameLabel") }}
+              <label class="form-label small text-secondary mb-1">{{ t("admin.productModal.tagNameLabel") }}
                 <span class="text-muted small">{{
                   t("admin.productModal.tagNameHint")
-                }}</span></label
-              >
+                }}</span></label>
               <input
                 v-model="form.phanLoaiTen"
                 class="form-control form-control-sm"
@@ -1089,10 +1088,8 @@ const deleteProduct = async (id) => {
               border: 1px solid var(--border-color);
             "
           >
-            <label class="form-label small text-secondary mb-1"
-              >{{ t("admin.productModal.serialLabel") }}
-              <span class="text-danger">*</span></label
-            >
+            <label class="form-label small text-secondary mb-1">{{ t("admin.productModal.serialLabel") }}
+              <span class="text-danger">*</span></label>
             <input
               v-model="soSerialMoi"
               class="form-control form-control-sm"
@@ -1139,10 +1136,6 @@ const deleteProduct = async (id) => {
 </template>
 
 <style scoped>
-/* Bootstrap .text-light hardcode mau trang co dinh — ghi de theo theme hien tai (dung
-   tren nen the/card, khong phai nen mau thuong hieu co dinh, nen an toan khi ghi de
-   theo bien theme). Scoped rieng cho component nay vi CSS scoped khong ke thua qua bien
-   gioi component. */
 .text-light {
   color: var(--text-primary) !important;
 }

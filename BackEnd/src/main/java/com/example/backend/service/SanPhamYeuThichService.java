@@ -16,9 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// Danh sach yeu thich cua khach hang — luon lay khach hang tu SecurityContextHolder, khong
-// bao gio tin khachHangId tu client (giong pattern taoYeuCauTuKhachHang() trong
-// PhieuTraHangService) — khach A khong the xem/xoa yeu thich cua khach B chi bang doan URL.
 @Service
 public class SanPhamYeuThichService {
 
@@ -41,8 +38,6 @@ public class SanPhamYeuThichService {
         return sanPhamYeuThichRepository.hienThiTheoKhachHang(currentKhachHang().getKhachHangId());
     }
 
-    // Idempotent — bam tim lai 1 san pham da yeu thich se khong loi, chi tra ve dong da co san
-    // (tranh loi khi khach bam nut nhanh 2 lan lien tuc / double-submit).
     @Transactional
     public SanPhamYeuThich themVao(Integer bienTheId) {
         KhachHang kh = currentKhachHang();

@@ -10,10 +10,12 @@
         </linearGradient>
       </defs>
       <circle :cx="size / 2" :cy="size / 2" :r="radius" fill="none" stroke="var(--bg-hover)" :stroke-width="thickness" />
-      <circle :cx="size / 2" :cy="size / 2" :r="radius" fill="none" :stroke="`url(#${gradientId})`" :stroke-width="thickness"
-              stroke-linecap="round"
-              :stroke-dasharray="`${dash} ${circumference - dash}`"
-              style="transform:rotate(-90deg); transform-origin:center; transition:stroke-dasharray .6s ease;" />
+      <circle
+        :cx="size / 2" :cy="size / 2" :r="radius" fill="none" :stroke="`url(#${gradientId})`" :stroke-width="thickness"
+        stroke-linecap="round"
+        :stroke-dasharray="`${dash} ${circumference - dash}`"
+        style="transform:rotate(-90deg); transform-origin:center; transition:stroke-dasharray .6s ease;"
+      />
       <text :x="size / 2" :y="size / 2 + 7" text-anchor="middle" fill="var(--text-heading)" style="font-size:20px; font-weight:800;">{{ Math.round(clamped) }}%</text>
     </svg>
     <div v-if="label" class="small text-center mt-1" style="color:var(--text-secondary); max-width:100%;">{{ label }}</div>

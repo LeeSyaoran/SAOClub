@@ -121,7 +121,6 @@ class PhieuTraHangServiceTest {
         service.update(5, requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000)));
 
         assertThat(kh.getSoDuVi()).isEqualByComparingTo(BigDecimal.valueOf(150_000));
-        // Hoàn 50.000 -> trừ lại đúng floor(50000/10000) = 5 điểm đã cộng khi giao hàng trước đó.
         assertThat(kh.getDiemTichLuy()).isEqualTo(15);
         verify(khachHangRepository, times(2)).save(kh);
     }
@@ -153,13 +152,10 @@ class PhieuTraHangServiceTest {
         service.update(5, req);
 
         assertThat(kh.getSoDuVi()).isEqualByComparingTo(BigDecimal.valueOf(100_000));
-        // Hoàn tiền mặt không đụng ví, nhưng vẫn phải trừ lại điểm tích lũy đã cộng khi giao
-        // hàng — điểm gắn với đơn đã trả, không phụ thuộc hình thức hoàn tiền lần này.
         assertThat(kh.getDiemTichLuy()).isEqualTo(15);
         verify(khachHangRepository, times(1)).save(kh);
     }
 
-    // ── Cộng lại kho khi phiếu chuyển "da_xu_ly" ──────
 
     @Test
     void update_chuyenDaXuLy_dongConSerialKhongLoi_congLaiKho() {
@@ -182,7 +178,7 @@ class PhieuTraHangServiceTest {
         serial.setTrangThai("da_ban");
         ChiTietTraHang dongTra = new ChiTietTraHang();
         dongTra.setChiTietSanPham(serial);
-        dongTra.setTinhTrang("Đổi ý, máy còn nguyên"); // không chứa "lỗi"/"hỏng"
+        dongTra.setTinhTrang("Đổi ý, máy còn nguyên"); 
 
         when(phieuTraHangRepository.findById(5)).thenReturn(Optional.of(phieu));
         when(donHangRepository.findById(9)).thenReturn(Optional.of(donHang));
@@ -227,11 +223,10 @@ class PhieuTraHangServiceTest {
 
         service.update(5, requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000)));
 
-        assertThat(serial.getTrangThai()).isEqualTo("da_ban"); // giữ nguyên, không cộng lại kho
+        assertThat(serial.getTrangThai()).isEqualTo("da_ban"); 
         verify(chiTietSanPhamRepository, never()).save(any());
     }
 
-    // ── Cập nhật đơn hàng (thanh toán refunded + trạng thái returned) khi phiếu chuyển "da_xu_ly" ──────
 
     @Test
     void update_chuyenDaXuLy_donDangDelivered_chuyenReturnedVaRefunded() {
@@ -273,7 +268,7 @@ class PhieuTraHangServiceTest {
         DonHang donHang = new DonHang();
         donHang.setId(9);
         donHang.setKhachHang(kh);
-        donHang.setTrangThaiDonHang("shipping"); // nhan vien tao phieu tra som, don chua giao xong
+        donHang.setTrangThaiDonHang("shipping"); 
         donHang.setTrangThaiThanhToan("paid");
 
         PhieuTraHang phieu = new PhieuTraHang();
@@ -288,7 +283,6 @@ class PhieuTraHangServiceTest {
 
         service.update(5, requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000)));
 
-        // Van danh dau da hoan tien, nhung KHONG ep trang thai don nhay coc tu "shipping".
         assertThat(donHang.getTrangThaiThanhToan()).isEqualTo("refunded");
         assertThat(donHang.getTrangThaiDonHang()).isEqualTo("shipping");
     }
@@ -306,9 +300,7 @@ class PhieuTraHangServiceTest {
         PhieuTraHang phieu = new PhieuTraHang();
         phieu.setPhieuTraId(5);
         phieu.setDonHang(donHang);
-        phieu.setTrangThai("da_xu_ly"); // đã xử lý từ trước
-        // Khớp đúng giá trị requestDaXuLyQuaVi() gửi lên (hinhThucHoan="vi", soTienHoan=50_000)
-        // — không đổi trường tiền-liên-quan nào nên qua được guard chanSuaSauKhiDaCongVi().
+        phieu.setTrangThai("da_xu_ly"); 
         phieu.setHinhThucHoan("vi");
         phieu.setSoTienHoan(BigDecimal.valueOf(50_000));
 
@@ -323,7 +315,6 @@ class PhieuTraHangServiceTest {
         verify(khachHangRepository, never()).save(any());
     }
 
-    // ── Guard: chặn sửa các trường tiền-liên-quan sau khi đã hoàn tiền qua ví ──────
 
     private PhieuTraHang phieuDaCongViQua(Integer donHangId) {
         KhachHang kh = new KhachHang();
@@ -388,9 +379,6 @@ class PhieuTraHangServiceTest {
         verify(khachHangRepository, never()).save(any());
     }
 
-    // Phieu tien_mat da xu ly cung phai bi khoa nhu phieu vi — truoc day guard chi ap dung
-    // khi hinhThucHoan="vi", phieu tien_mat co the doi lui trang_thai roi luu lai "da_xu_ly"
-    // de tru diem tich luy 2 lan cho cung 1 lan hoan thuc te (xem truHoiDiemNeuVuaHoanTat).
     @Test
     void update_daXuLyRoiTienMat_doiTrangThai_nemLoi() {
         KhachHang kh = new KhachHang();
@@ -411,7 +399,7 @@ class PhieuTraHangServiceTest {
 
         PhieuTraHangRequest req = requestDaXuLyQuaVi(9, BigDecimal.valueOf(50_000));
         req.setHinhThucHoan("tien_mat");
-        req.setTrangThai("cho_xu_ly"); // thu doi lui de sau do luu lai "da_xu_ly"
+        req.setTrangThai("cho_xu_ly"); 
 
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
                 () -> service.update(5, req));
@@ -441,10 +429,6 @@ class PhieuTraHangServiceTest {
 
     @Test
     void create_ganMaPhieuSauKhiLuuMoi() {
-        // requestDaXuLyQuaVi() tạo phiếu "da_xu_ly" + hoàn "vi" ngay từ lúc tạo mới, nên
-        // create() cũng chạm nhánh cộng ví/trừ điểm (congViNeuVuaHoanTat) — phải gắn KhachHang
-        // đầy đủ vào donHang giống các test khác dùng chung helper này, nếu không NPE ở
-        // KhachHang.getSoDuVi() dù test này chỉ nhắm tới việc gán mã phiếu.
         KhachHang kh = new KhachHang();
         kh.setKhachHangId(1);
         kh.setSoDuVi(BigDecimal.valueOf(100_000));
@@ -470,7 +454,6 @@ class PhieuTraHangServiceTest {
         assertThat(saved.getMaPhieu()).isEqualTo("TR-101");
     }
 
-    // ── Khách hàng tự gửi yêu cầu trả hàng ──────
 
     @Test
     void taoYeuCau_hopLe_taoPhieuChoXuLyHoanVi() {
@@ -626,7 +609,6 @@ class PhieuTraHangServiceTest {
         dong.setDonGia(BigDecimal.valueOf(500_000));
         when(chiTietDonHangRepository.findById(100)).thenReturn(Optional.of(dong));
 
-        // Mỗi dòng riêng lẻ (2) vẫn <= số đã mua (3), nhưng cộng dồn (2+2=4) thì vượt.
         YeuCauTraHangRequest req = new YeuCauTraHangRequest(9, "Không vừa ý",
                 List.of(new DongTraRequest(100, 2), new DongTraRequest(100, 2)));
 

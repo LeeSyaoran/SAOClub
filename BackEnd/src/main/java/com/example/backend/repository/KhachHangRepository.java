@@ -12,8 +12,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
-	// Khóa ghi (PESSIMISTIC_WRITE) — chặn 2 request đổi điểm đồng thời của cùng 1 khách
-	// hàng đọc trùng số dư điểm rồi cùng trừ (chỉ có tác dụng trong 1 transaction đang mở).
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	java.util.Optional<KhachHang> findWithLockByKhachHangId(Integer khachHangId);
 
@@ -28,10 +26,6 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
 
 	java.util.Optional<KhachHang> findBySoDienThoai(String soDienThoai);
 
-	// Chi tiêu từng khách trong khoảng ngày — dùng cho báo cáo "Khách hàng nổi bật" (top
-	// chi tiêu + tỷ lệ mua lại). Không phân trang ở DB (Pageable ở service truyền
-	// Pageable.unpaged() khi cần đếm tỷ lệ mua lại trên toàn bộ, hoặc PageRequest khi
-	// service tự giới hạn) — JOIN thường vì 1 đơn luôn có khách hàng (NOT NULL).
 	@Query("""
 	SELECT new com.example.backend.response.CustomerSpendingResponse(kh.khachHangId, kh.hoTen, COUNT(d), SUM(d.thanhTien))
 	FROM DonHang d JOIN d.khachHang kh

@@ -12,13 +12,6 @@ import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// Xác nhận các endpoint phát hiện trong đợt audit bảo mật (2026-07-21/22) đã được khoá quyền
-// đúng — trước đó DashboardController/DiaChiGiaoHangController hoàn toàn không có
-// @PreAuthorize (lộ doanh thu, PII địa chỉ khách hàng cho mọi role đã đăng nhập), và
-// KhuyenMaiController.create/update/delete cũng vậy (ai đăng nhập cũng sửa được khuyến mãi).
-// Đợt 2: SanPham/DanhMuc/ThuongHieu (permitAll không giới hạn method ở SecurityConfig —
-// tạo/sửa/xoá không cần đăng nhập) và BienTheSanPham (không có @PreAuthorize — bất kỳ khách
-// đăng nhập nào cũng sửa được giá bán/giá nhập).
 class SecurityHardeningAuthorizationTest {
 
     private static final String STAFF_ROLES = "hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')";
@@ -44,9 +37,6 @@ class SecurityHardeningAuthorizationTest {
         assertThat(pa.value()).isEqualTo(STAFF_ROLES);
     }
 
-    // KhuyenMaiController.getAll()/getById() PHẢI giữ mở (CheckoutModal.vue tải mã khuyến
-    // mãi cho cả khách vãng lai chưa đăng nhập) — chỉ create/update/delete bị khoá riêng
-    // từng method, không khoá ở class-level.
     @Test
     void khuyenMaiController_khongCoKhoaClassLevel() {
         assertThat(KhuyenMaiController.class.getAnnotation(PreAuthorize.class)).isNull();

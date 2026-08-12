@@ -174,28 +174,31 @@ const saveClaim = async () => {
 </script>
 
 <template>
-  <!-- ══ BANG CON HAN BAO HANH ══ -->
   <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
     <span class="text-secondary small">{{ filteredWarranty.length }} {{ t('admin.warranty.countSuffix') }}</span>
     <span class="badge d-inline-flex align-items-center gap-1" style="background:rgba(148,163,184,0.15);color:#94a3b8;font-size:0.72rem;"><Calendar :size="11" /> {{ t('admin.warranty.today') }}: {{ formatDate(new Date()) }}</span>
-    <input v-model="warrantySearch" class="form-control form-control-sm ms-auto" style="max-width:260px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
-           :placeholder="t('admin.warranty.searchPlaceholder')" />
+    <input
+      v-model="warrantySearch" class="form-control form-control-sm ms-auto" style="max-width:260px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
+      :placeholder="t('admin.warranty.searchPlaceholder')"
+    />
   </div>
   <div v-if="warrantyLoading" class="text-secondary small text-center py-5">{{ t('admin.warranty.loading') }}</div>
   <div v-else class="table-responsive mb-4">
     <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead><tr>
-        <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-        <th>{{ t('admin.warranty.colSerial') }}</th>
-        <th>{{ t('admin.warranty.colProduct') }}</th>
-        <th>{{ t('admin.warranty.colCustomer') }}</th>
-        <th>{{ t('admin.warranty.colPhone') }}</th>
-        <th>{{ t('admin.warranty.colOrder') }}</th>
-        <th>{{ t('admin.warranty.colDelivered') }}</th>
-        <th>{{ t('admin.warranty.colExpires') }}</th>
-        <th>{{ t('admin.warranty.colRemaining') }}</th>
-        <th>{{ t('admin.warranty.colAction') }}</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+          <th>{{ t('admin.warranty.colSerial') }}</th>
+          <th>{{ t('admin.warranty.colProduct') }}</th>
+          <th>{{ t('admin.warranty.colCustomer') }}</th>
+          <th>{{ t('admin.warranty.colPhone') }}</th>
+          <th>{{ t('admin.warranty.colOrder') }}</th>
+          <th>{{ t('admin.warranty.colDelivered') }}</th>
+          <th>{{ t('admin.warranty.colExpires') }}</th>
+          <th>{{ t('admin.warranty.colRemaining') }}</th>
+          <th>{{ t('admin.warranty.colAction') }}</th>
+        </tr>
+      </thead>
       <tbody>
         <tr v-for="(w, idx) in pagedWarranty" :key="w.chiTietId">
           <td class="text-secondary">{{ wCurrentPage * wPageSize + idx + 1 }}</td>
@@ -207,11 +210,13 @@ const saveClaim = async () => {
           <td>{{ formatDate(w.ngayGiaoThucTe) }}</td>
           <td>{{ formatDate(w.ngayHetBaoHanh) }}</td>
           <td>
-            <span class="badge" :style="daysUntilExpiry(w.ngayHetBaoHanh) <= 30
-              ? { background: 'rgba(248,113,113,0.15)', color: '#f87171' }
-              : daysUntilExpiry(w.ngayHetBaoHanh) <= 90
-                ? { background: 'rgba(250,204,21,0.15)', color: '#facc15' }
-                : { background: 'rgba(34,197,94,0.15)', color: '#22c55e' }">
+            <span
+              class="badge" :style="daysUntilExpiry(w.ngayHetBaoHanh) <= 30
+                ? { background: 'rgba(248,113,113,0.15)', color: '#f87171' }
+                : daysUntilExpiry(w.ngayHetBaoHanh) <= 90
+                  ? { background: 'rgba(250,204,21,0.15)', color: '#facc15' }
+                  : { background: 'rgba(34,197,94,0.15)', color: '#22c55e' }"
+            >
               {{ t('admin.warranty.daysLeft', { count: daysUntilExpiry(w.ngayHetBaoHanh) }) }}
             </span>
           </td>
@@ -225,7 +230,6 @@ const saveClaim = async () => {
     <Pagination :current-page="wCurrentPage" :total-pages="wTotalPages" @page-change="wCurrentPage = $event" />
   </div>
 
-  <!-- ══ BANG PHIEU BAO HANH ══ -->
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <span class="text-secondary small">{{ filteredClaims.length }}/{{ (BaoHanhStore.items ?? []).length }} {{ t('admin.warrantyClaims.countSuffix') }}</span>
     <input v-model="claimSearch" class="form-control form-control-sm" style="width:240px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.warrantyClaims.searchPlaceholder')" />
@@ -233,12 +237,14 @@ const saveClaim = async () => {
   <div v-if="BaoHanhStore.loading" class="text-secondary small">{{ t('admin.warrantyClaims.loading') }}</div>
   <div v-else class="table-responsive">
     <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead><tr>
-        <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-        <th>{{ t('admin.warrantyClaims.colId') }}</th><th>{{ t('admin.warrantyClaims.colProduct') }}</th><th>{{ t('admin.warrantyClaims.colSerial') }}</th>
-        <th>{{ t('admin.warrantyClaims.colCustomer') }}</th><th>{{ t('admin.warrantyClaims.colOrder') }}</th>
-        <th>{{ t('admin.warrantyClaims.colCost') }}</th><th>{{ t('admin.warrantyClaims.colStatus') }}</th><th>{{ t('admin.warrantyClaims.colAction') }}</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+          <th>{{ t('admin.warrantyClaims.colId') }}</th><th>{{ t('admin.warrantyClaims.colProduct') }}</th><th>{{ t('admin.warrantyClaims.colSerial') }}</th>
+          <th>{{ t('admin.warrantyClaims.colCustomer') }}</th><th>{{ t('admin.warrantyClaims.colOrder') }}</th>
+          <th>{{ t('admin.warrantyClaims.colCost') }}</th><th>{{ t('admin.warrantyClaims.colStatus') }}</th><th>{{ t('admin.warrantyClaims.colAction') }}</th>
+        </tr>
+      </thead>
       <tbody>
         <tr v-for="(p, idx) in pagedClaims" :key="p.baoHanhId">
           <td class="text-secondary">{{ cCurrentPage * cPageSize + idx + 1 }}</td>
@@ -261,7 +267,6 @@ const saveClaim = async () => {
     <Pagination :current-page="cCurrentPage" :total-pages="cTotalPages" @page-change="cCurrentPage = $event" />
   </div>
 
-  <!-- ══ MODAL PHIEU BAO HANH ══ -->
   <div v-if="showModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showModal=false">
     <div class="rounded-3 p-3" style="background:var(--bg-card);width:560px;max-width:96vw;max-height:90vh;overflow-y:auto;">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -281,11 +286,11 @@ const saveClaim = async () => {
       <div class="row g-2 mb-2">
         <div class="col-6">
           <label class="form-label small text-secondary mb-1">{{ t('admin.warrantyClaimModal.purchaseDateLabel') }}</label>
-          <input type="datetime-local" v-model="form.ngayMua" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+          <input v-model="form.ngayMua" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
         </div>
         <div class="col-6">
           <label class="form-label small text-secondary mb-1">{{ t('admin.warrantyClaimModal.expiryDateLabel') }}</label>
-          <input type="datetime-local" v-model="form.ngayHetBh" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+          <input v-model="form.ngayHetBh" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
         </div>
       </div>
 
@@ -308,11 +313,11 @@ const saveClaim = async () => {
       <div class="row g-2 mb-2">
         <div class="col-6">
           <label class="form-label small text-secondary mb-1">{{ t('admin.warrantyClaimModal.receivedDateLabel') }}</label>
-          <input type="datetime-local" v-model="form.ngayTiepNhan" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+          <input v-model="form.ngayTiepNhan" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
         </div>
         <div class="col-6">
           <label class="form-label small text-secondary mb-1">{{ t('admin.warrantyClaimModal.returnedDateLabel') }}</label>
-          <input type="datetime-local" v-model="form.ngayTraKhach" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+          <input v-model="form.ngayTraKhach" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
         </div>
       </div>
 
@@ -323,7 +328,7 @@ const saveClaim = async () => {
 
       <div class="mb-2">
         <label class="form-label small text-secondary mb-1">{{ t('admin.warrantyClaimModal.costLabel') }}</label>
-        <input type="number" min="0" v-model.number="form.chiPhiPhatSinh" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+        <input v-model.number="form.chiPhiPhatSinh" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
       </div>
 
       <div class="mb-3">

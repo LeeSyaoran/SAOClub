@@ -38,10 +38,8 @@ public class LichSuTonKhoService {
 
     public LichSuTonKho create(LichSuTonKhoRequest request) {
         LichSuTonKho entity = new LichSuTonKho();
-        // BeanUtils copies: loaiBienDong, soLuongThayDoi, ghiChu
         BeanUtils.copyProperties(request, entity, "bienTheId", "chiTietId", "donHangId", "phieuNhapId", "nhanVienId", "ngayTao");
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
-        // Các FK optional — ghi lại nguồn gốc biến động (nhập kho / xuất đơn hàng)
         if (request.getChiTietId() != null)
             entity.setChiTietSanPham(chiTietSanPhamRepository.getReferenceById(request.getChiTietId()));
         if (request.getDonHangId() != null)

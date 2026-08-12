@@ -365,21 +365,23 @@ onUnmounted(() => {
 
 <template>
   <div style="min-height:100vh; background:var(--bg-page); color:var(--text-primary); font-family:'Nunito Sans','Segoe UI',sans-serif;">
-
-    <!-- Header -->
     <header class="sticky-top" style="background:var(--bg-header); backdrop-filter:blur(8px); border-bottom:1px solid var(--border-color);">
       <div class="container-xl d-flex flex-wrap align-items-center gap-3 py-3">
-        <button class="btn btn-sm fw-bold d-flex align-items-center gap-1"
-                style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary);"
-                @click="emit('go-home')">
+        <button
+          class="btn btn-sm fw-bold d-flex align-items-center gap-1"
+          style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary);"
+          @click="emit('go-home')"
+        >
           <ArrowLeft :size="14" style="vertical-align:-2px;" /> {{ t('common.backHome') }}
         </button>
 
         <div class="vr d-none d-sm-block" style="opacity:0.15; height:28px;"></div>
 
         <div class="d-flex align-items-center gap-3 flex-grow-1">
-          <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
-               style="width:44px; height:44px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:var(--accent-text); font-size:1.05rem; box-shadow:0 4px 14px rgba(244,63,94,0.25);">
+          <div
+            class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
+            style="width:44px; height:44px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:var(--accent-text); font-size:1.05rem; box-shadow:0 4px 14px rgba(244,63,94,0.25);"
+          >
             {{ (auth.user?.hoTen || auth.user?.username || '?').charAt(0).toUpperCase() }}
           </div>
           <div>
@@ -390,43 +392,46 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Điểm tích lũy -->
-        <div v-if="profile" class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-bold"
-             style="background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.25); color:var(--accent-fg); font-size:12px; white-space:nowrap;">
+        <div
+          v-if="profile" class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-bold"
+          style="background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.25); color:var(--accent-fg); font-size:12px; white-space:nowrap;"
+        >
           <Gift :size="13" style="vertical-align:-2px;" /> {{ t('account.points', { points: profile.diemTichLuy ?? 0 }) }}
         </div>
 
-        <!-- So du vi -->
-        <div v-if="profile" class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-bold"
-             style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.25); color:#22c55e; font-size:12px; white-space:nowrap;">
+        <div
+          v-if="profile" class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-bold"
+          style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.25); color:#22c55e; font-size:12px; white-space:nowrap;"
+        >
           <Wallet :size="13" style="vertical-align:-2px;" /> {{ t('account.walletBalance', { amount: formatPrice(profile.soDuVi ?? 0) }) }}
         </div>
       </div>
     </header>
 
     <div class="container-xl py-4">
-
-      <!-- Tabs -->
       <div class="d-flex flex-wrap gap-1 mb-4 border-bottom pb-0" style="border-color:var(--border-color)!important;">
-        <button v-for="tab in TABS" :key="tab.id"
-                class="btn btn-sm fw-black px-3 pb-2 pt-2 rounded-top-3 border-0 d-flex align-items-center gap-2"
-                style="font-size:12.5px; letter-spacing:0.02em; border-bottom:3px solid transparent!important; transition:background 0.15s;"
-                :style="activeTab === tab.id
-                  ? 'border-bottom:3px solid var(--accent)!important; background:rgba(244,63,94,0.06); color:var(--accent-fg);'
-                  : 'color:var(--text-secondary);'"
-                @mouseenter="e => { if (activeTab !== tab.id) e.currentTarget.style.background = 'var(--bg-hover)'; }"
-                @mouseleave="e => { if (activeTab !== tab.id) e.currentTarget.style.background = ''; }"
-                @click="activeTab = tab.id">
+        <button
+          v-for="tab in TABS" :key="tab.id"
+          class="btn btn-sm fw-black px-3 pb-2 pt-2 rounded-top-3 border-0 d-flex align-items-center gap-2"
+          style="font-size:12.5px; letter-spacing:0.02em; border-bottom:3px solid transparent!important; transition:background 0.15s;"
+          :style="activeTab === tab.id
+            ? 'border-bottom:3px solid var(--accent)!important; background:rgba(244,63,94,0.06); color:var(--accent-fg);'
+            : 'color:var(--text-secondary);'"
+          @mouseenter="e => { if (activeTab !== tab.id) e.currentTarget.style.background = 'var(--bg-hover)'; }"
+          @mouseleave="e => { if (activeTab !== tab.id) e.currentTarget.style.background = ''; }"
+          @click="activeTab = tab.id"
+        >
           <component :is="tab.icon" :size="16" />
           {{ tab.label }}
-          <span v-if="tabOrderCounts[tab.id]"
-                class="badge rounded-pill" style="background:var(--accent); color:var(--accent-text); font-size:10px;">
+          <span
+            v-if="tabOrderCounts[tab.id]"
+            class="badge rounded-pill" style="background:var(--accent); color:var(--accent-text); font-size:10px;"
+          >
             {{ tabOrderCounts[tab.id] }}
           </span>
         </button>
       </div>
 
-      <!-- ══ Tab: Chờ xác nhận / Đang giao — thẻ đầy đủ + timeline ══ -->
       <div v-if="activeTab === 'pending' || activeTab === 'shipping'">
         <div v-if="loading" class="d-flex flex-column gap-3">
           <div v-for="i in 2" :key="i" class="rounded-4 p-3" style="background:var(--bg-card); border:1px solid var(--border-color);">
@@ -435,9 +440,11 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div v-else-if="currentOrders.length === 0"
-             class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
-             style="background:var(--bg-card); border:1px dashed var(--border-color);">
+        <div
+          v-else-if="currentOrders.length === 0"
+          class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
+          style="background:var(--bg-card); border:1px dashed var(--border-color);"
+        >
           <div style="opacity:0.35;"><Package :size="42" /></div>
           <div class="fw-bold mt-2" style="color:var(--text-primary); font-size:0.95rem;">{{ t('account.ordersEmptyTitle') }}</div>
           <div class="mt-1" style="color:var(--text-secondary); font-size:12px;">{{ t('account.ordersEmptyDesc') }}</div>
@@ -447,15 +454,17 @@ onUnmounted(() => {
         </div>
 
         <div v-else class="d-flex flex-column gap-3">
-          <div v-for="o in currentOrders" :key="o.donHangId"
-               class="rounded-4 p-3 p-md-4"
-               style="background:var(--bg-card); border:1px solid var(--border-color); box-shadow:0 4px 18px var(--shadow-color); transition:border-color 0.15s;"
-               @mouseenter="e => e.currentTarget.style.borderColor = 'rgba(244,63,94,0.35)'"
-               @mouseleave="e => e.currentTarget.style.borderColor = 'var(--border-color)'">
-
-            <!-- Header đơn -->
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3"
-                 style="border-bottom:1px solid var(--border-color-soft);">
+          <div
+            v-for="o in currentOrders" :key="o.donHangId"
+            class="rounded-4 p-3 p-md-4"
+            style="background:var(--bg-card); border:1px solid var(--border-color); box-shadow:0 4px 18px var(--shadow-color); transition:border-color 0.15s;"
+            @mouseenter="e => e.currentTarget.style.borderColor = 'rgba(244,63,94,0.35)'"
+            @mouseleave="e => e.currentTarget.style.borderColor = 'var(--border-color)'"
+          >
+            <div
+              class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3"
+              style="border-bottom:1px solid var(--border-color-soft);"
+            >
               <div class="d-flex align-items-center gap-2">
                 <span><Receipt :size="18" /></span>
                 <div>
@@ -463,58 +472,66 @@ onUnmounted(() => {
                   <div style="color:var(--text-secondary); font-size:11px;">{{ formatDate(o.ngayDat) }}</div>
                 </div>
               </div>
-              <span class="badge d-flex align-items-center gap-1 px-3 py-2 rounded-pill fw-semibold"
-                    :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+              <span
+                class="badge d-flex align-items-center gap-1 px-3 py-2 rounded-pill fw-semibold"
+                :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }"
+              >
                 <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="12" />
                 {{ orderStatusLabel(o.trangThaiDonHang) }}
               </span>
             </div>
 
-            <!-- Timeline -->
             <div class="rounded-3 p-2 p-md-3 mb-3" style="background:var(--bg-card-alt);">
               <OrderStatusTimeline :status="o.trangThaiDonHang" />
             </div>
 
-            <!-- Ngày giao dự kiến / ngày nhận hàng thực tế -->
-            <div v-if="o.ngayGiaoDuKien || o.ngayGiaoThucTe"
-                 class="d-flex flex-wrap gap-3 mb-3 small" style="color:var(--text-secondary);">
+            <div
+              v-if="o.ngayGiaoDuKien || o.ngayGiaoThucTe"
+              class="d-flex flex-wrap gap-3 mb-3 small" style="color:var(--text-secondary);"
+            >
               <span v-if="o.ngayGiaoDuKien" class="d-inline-flex align-items-center gap-1"><Package :size="13" /> {{ t('account.expectedDelivery') }}: {{ formatDate(o.ngayGiaoDuKien) }}</span>
               <span v-if="o.ngayGiaoThucTe" class="d-inline-flex align-items-center gap-1"><CheckCircle2 :size="13" /> {{ t('account.actualDelivery') }}: {{ formatDate(o.ngayGiaoThucTe) }}</span>
             </div>
 
-            <!-- Xác nhận đã nhận hàng — luôn hiện từ lúc đơn sang "Đang giao" để khách biết
-                 trước sẽ có bước này, nhưng chỉ bấm được khi admin đã đánh dấu giao
-                 (awaiting_confirmation). Bấm xong đơn mới thật sự chuyển "delivered" và rơi
-                 vào tab "Hoàn tất". Xem confirmReceived() ở trên. -->
-            <div v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)"
-                 class="d-flex justify-content-end mb-3">
-              <button class="btn btn-warning btn-sm fw-bold rounded-pill px-4"
-                      :disabled="o.trangThaiDonHang !== 'awaiting_confirmation' || confirmingOrderId === o.donHangId"
-                      :title="o.trangThaiDonHang !== 'awaiting_confirmation' ? t('account.confirmReceivedDisabledHint') : ''"
-                      @click="confirmReceived(o)">
+            <div
+              v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)"
+              class="d-flex justify-content-end mb-3"
+            >
+              <button
+                class="btn btn-warning btn-sm fw-bold rounded-pill px-4"
+                :disabled="o.trangThaiDonHang !== 'awaiting_confirmation' || confirmingOrderId === o.donHangId"
+                :title="o.trangThaiDonHang !== 'awaiting_confirmation' ? t('account.confirmReceivedDisabledHint') : ''"
+                @click="confirmReceived(o)"
+              >
                 <CheckCircle2 :size="14" style="vertical-align:-2px;" /> {{ t('account.confirmReceived') }}
               </button>
             </div>
 
-            <!-- Mã vận đơn + lịch sử trạng thái -->
-            <OrderTrackingLog v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)"
-                               :ma-van-don="o.maVanDon || ''"
-                               :history="historyByOrder[o.donHangId] || []"
-                               class="mb-3" />
+            <OrderTrackingLog
+              v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)"
+              :ma-van-don="o.maVanDon || ''"
+              :history="historyByOrder[o.donHangId] || []"
+              class="mb-3"
+            />
 
-            <!-- Danh sách sản phẩm trong đơn -->
             <div class="d-flex flex-column gap-2">
-              <div v-for="item in itemsByOrder[o.donHangId] || []" :key="item.id"
-                   class="d-flex align-items-center gap-3 p-2 rounded-3"
-                   style="background:var(--bg-card-alt); border:1px solid var(--border-color-soft); transition:background 0.15s; cursor:pointer;"
-                   @click="viewProductDetail(item)"
-                   @mouseenter="e => e.currentTarget.style.background = 'var(--bg-hover)'"
-                   @mouseleave="e => e.currentTarget.style.background = 'var(--bg-card-alt)'">
-                <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width:48px; height:40px; background:var(--bg-card-inset); overflow:hidden;">
-                  <img v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
-                       :src="productByBienThe(item.bienTheId).hinhAnhChinh"
-                       style="width:100%; height:100%; object-fit:contain; padding:4px;" />
+              <div
+                v-for="item in itemsByOrder[o.donHangId] || []" :key="item.id"
+                class="d-flex align-items-center gap-3 p-2 rounded-3"
+                style="background:var(--bg-card-alt); border:1px solid var(--border-color-soft); transition:background 0.15s; cursor:pointer;"
+                @click="viewProductDetail(item)"
+                @mouseenter="e => e.currentTarget.style.background = 'var(--bg-hover)'"
+                @mouseleave="e => e.currentTarget.style.background = 'var(--bg-card-alt)'"
+              >
+                <div
+                  class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                  style="width:48px; height:40px; background:var(--bg-card-inset); overflow:hidden;"
+                >
+                  <img
+                    v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
+                    :src="productByBienThe(item.bienTheId).hinhAnhChinh"
+                    style="width:100%; height:100%; object-fit:contain; padding:4px;"
+                  />
                   <span v-else><Laptop :size="19" color="var(--text-muted)" /></span>
                 </div>
                 <span class="flex-grow-1" style="color:var(--text-primary); font-size:12.5px;">{{ productByBienThe(item.bienTheId)?.tenSanPham || item.maSku }}</span>
@@ -523,7 +540,6 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <!-- Tổng tiền -->
             <div class="d-flex justify-content-end align-items-center gap-2 mt-3 pt-3" style="border-top:1px solid var(--border-color-soft);">
               <span style="color:var(--text-secondary); font-size:12px;">{{ t('account.total') }}</span>
               <span class="fw-black" style="color:var(--accent-fg); font-size:1.05rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
@@ -532,28 +548,31 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- ══ Tab: Hoàn tất / Đã hủy-Trả hàng — dòng gọn, bấm mở xem sản phẩm ══ -->
       <div v-else-if="activeTab === 'completed' || activeTab === 'cancelled'">
         <div v-if="loading" class="d-flex flex-column gap-2">
           <Skeleton v-for="i in 3" :key="i" width="100%" height="64px" radius="14px" />
         </div>
 
-        <div v-else-if="historyOrders.length === 0"
-             class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
-             style="background:var(--bg-card); border:1px dashed var(--border-color);">
+        <div
+          v-else-if="historyOrders.length === 0"
+          class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
+          style="background:var(--bg-card); border:1px dashed var(--border-color);"
+        >
           <div style="opacity:0.35;"><History :size="42" /></div>
           <div class="fw-bold mt-2" style="color:var(--text-primary); font-size:0.95rem;">{{ t('account.historyEmptyTitle') }}</div>
           <div class="mt-1" style="color:var(--text-secondary); font-size:12px;">{{ t('account.historyEmptyDesc') }}</div>
         </div>
 
         <div v-else class="d-flex flex-column gap-2">
-          <div v-for="o in historyOrders" :key="o.donHangId"
-               class="rounded-4 p-3"
-               style="background:var(--bg-card); border:1px solid var(--border-color); border-left:4px solid; transition:transform 0.15s, box-shadow 0.15s; cursor:pointer;"
-               :style="{ borderLeftColor: orderStatusColor(o.trangThaiDonHang).text }"
-               @click="toggleHistoryOrder(o.donHangId)"
-               @mouseenter="e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 6px 20px var(--shadow-color)'; }"
-               @mouseleave="e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }">
+          <div
+            v-for="o in historyOrders" :key="o.donHangId"
+            class="rounded-4 p-3"
+            style="background:var(--bg-card); border:1px solid var(--border-color); border-left:4px solid; transition:transform 0.15s, box-shadow 0.15s; cursor:pointer;"
+            :style="{ borderLeftColor: orderStatusColor(o.trangThaiDonHang).text }"
+            @click="toggleHistoryOrder(o.donHangId)"
+            @mouseenter="e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 6px 20px var(--shadow-color)'; }"
+            @mouseleave="e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow=''; }"
+          >
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
               <div class="d-flex align-items-center gap-3">
                 <span style="opacity:0.6;"><Receipt :size="21" /></span>
@@ -568,57 +587,74 @@ onUnmounted(() => {
                 </div>
               </div>
               <div class="d-flex align-items-center gap-3">
-                <span class="badge d-flex align-items-center gap-1 px-3 py-2 rounded-pill fw-semibold"
-                      :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                <span
+                  class="badge d-flex align-items-center gap-1 px-3 py-2 rounded-pill fw-semibold"
+                  :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }"
+                >
                   <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="12" />
                   {{ orderStatusLabel(o.trangThaiDonHang) }}
                 </span>
                 <span class="fw-black" style="color:var(--accent-fg); font-size:0.95rem;">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
-                <button v-if="o.trangThaiDonHang === 'delivered'"
-                        class="btn btn-sm fw-bold rounded-pill px-3"
-                        style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
-                        @click.stop="buyAgainOrder(o)">
+                <button
+                  v-if="o.trangThaiDonHang === 'delivered'"
+                  class="btn btn-sm fw-bold rounded-pill px-3"
+                  style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
+                  @click.stop="buyAgainOrder(o)"
+                >
                   <RefreshCw :size="14" style="vertical-align:-2px;" /> {{ t('account.buyAgain') }}
                 </button>
-                <button v-if="canRequestReturn(o)"
-                        class="btn btn-sm fw-bold rounded-pill px-3"
-                        style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
-                        @click.stop="returnModalOrder = o">
+                <button
+                  v-if="canRequestReturn(o)"
+                  class="btn btn-sm fw-bold rounded-pill px-3"
+                  style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
+                  @click.stop="returnModalOrder = o"
+                >
                   <Undo2 :size="14" style="vertical-align:-2px;" /> {{ t('account.requestReturn') }}
                 </button>
                 <span style="color:var(--text-secondary); font-size:0.8rem;">{{ expandedHistoryOrders.has(o.donHangId) ? '▲' : '▼' }}</span>
               </div>
             </div>
 
-            <!-- Danh sách sản phẩm đã mua — chỉ hiện khi bấm mở đơn -->
-            <div v-if="expandedHistoryOrders.has(o.donHangId)"
-                 class="rounded-3 mt-3 p-2" style="background:var(--bg-card-inset);"
-                 @click.stop>
-              <div v-for="(item, idx) in (itemsByOrder[o.donHangId] || [])" :key="item.id"
-                   class="d-flex align-items-center gap-3 py-2"
-                   style="cursor:pointer;"
-                   :style="idx > 0 ? 'border-top:1px solid var(--border-color-soft);' : ''"
-                   @click="viewProductDetail(item)">
-                <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width:36px; height:30px; background:var(--bg-card-alt); overflow:hidden;">
-                  <img v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
-                       :src="productByBienThe(item.bienTheId).hinhAnhChinh"
-                       style="width:100%; height:100%; object-fit:contain; padding:3px;" />
+            <div
+              v-if="expandedHistoryOrders.has(o.donHangId)"
+              class="rounded-3 mt-3 p-2" style="background:var(--bg-card-inset);"
+              @click.stop
+            >
+              <div
+                v-for="(item, idx) in (itemsByOrder[o.donHangId] || [])" :key="item.id"
+                class="d-flex align-items-center gap-3 py-2"
+                style="cursor:pointer;"
+                :style="idx > 0 ? 'border-top:1px solid var(--border-color-soft);' : ''"
+                @click="viewProductDetail(item)"
+              >
+                <div
+                  class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
+                  style="width:36px; height:30px; background:var(--bg-card-alt); overflow:hidden;"
+                >
+                  <img
+                    v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
+                    :src="productByBienThe(item.bienTheId).hinhAnhChinh"
+                    style="width:100%; height:100%; object-fit:contain; padding:3px;"
+                  />
                   <span v-else><Laptop :size="16" color="var(--text-muted)" /></span>
                 </div>
                 <span class="flex-grow-1" style="color:var(--text-primary); font-size:12.5px;">{{ productByBienThe(item.bienTheId)?.tenSanPham || item.maSku }}</span>
                 <span class="text-secondary" style="font-size:12px;">x{{ item.soLuong }}</span>
                 <span class="fw-semibold" style="color:var(--accent-fg); font-size:12.5px; min-width:100px; text-align:right;">{{ formatPrice(item.thanhTien) }}</span>
               </div>
-              <OrderTrackingLog v-if="o.trangThaiDonHang === 'delivered'"
-                                 :ma-van-don="o.maVanDon || ''"
-                                 :history="historyByOrder[o.donHangId] || []"
-                                 class="mt-2" />
+              <OrderTrackingLog
+                v-if="o.trangThaiDonHang === 'delivered'"
+                :ma-van-don="o.maVanDon || ''"
+                :history="historyByOrder[o.donHangId] || []"
+                class="mt-2"
+              />
               <div v-if="(returnsByOrder[o.donHangId] || []).length" class="rounded-3 mt-2 p-2 d-flex flex-column gap-2" style="background:var(--bg-card-alt);">
                 <div v-for="r in returnsByOrder[o.donHangId]" :key="r.phieuTraId" class="d-flex flex-column gap-1">
                   <div class="d-flex align-items-center gap-2">
-                    <span class="badge px-2 py-1 rounded-pill fw-semibold"
-                          :style="{ background: RETURN_STATUS_COLOR[r.trangThai]?.bg, color: RETURN_STATUS_COLOR[r.trangThai]?.text }">
+                    <span
+                      class="badge px-2 py-1 rounded-pill fw-semibold"
+                      :style="{ background: RETURN_STATUS_COLOR[r.trangThai]?.bg, color: RETURN_STATUS_COLOR[r.trangThai]?.text }"
+                    >
                       {{ t(RETURN_STATUS_LABEL[r.trangThai]) }}
                     </span>
                     <span style="font-size:11px; color:var(--text-secondary);">{{ formatPrice(r.soTienHoan) }}</span>
@@ -631,15 +667,16 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- ══ Tab: Yêu thích ══ -->
       <div v-else-if="activeTab === 'wishlist'">
         <div v-if="wishlistLoading" class="d-flex flex-column gap-2">
           <Skeleton v-for="i in 3" :key="i" width="100%" height="56px" radius="12px" />
         </div>
 
-        <div v-else-if="wishlistItems.length === 0"
-             class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
-             style="background:var(--bg-card); border:1px dashed var(--border-color);">
+        <div
+          v-else-if="wishlistItems.length === 0"
+          class="d-flex flex-column align-items-center justify-content-center text-center rounded-4 py-5"
+          style="background:var(--bg-card); border:1px dashed var(--border-color);"
+        >
           <div style="opacity:0.35;"><Heart :size="42" /></div>
           <div class="mt-1" style="color:var(--text-secondary); font-size:12px;">{{ t('wishlist.empty') }}</div>
           <button class="btn btn-warning btn-sm fw-bold rounded-pill px-4 mt-3" @click="emit('go-home')">
@@ -648,14 +685,18 @@ onUnmounted(() => {
         </div>
 
         <div v-else class="d-flex flex-column gap-2">
-          <div v-for="item in wishlistItems" :key="item.bienTheId"
-               class="d-flex align-items-center gap-3 p-2 rounded-3"
-               style="background:var(--bg-card); border:1px solid var(--border-color-soft); transition:background 0.15s; cursor:pointer;"
-               @click="viewProductDetail(item)"
-               @mouseenter="e => e.currentTarget.style.background = 'var(--bg-hover)'"
-               @mouseleave="e => e.currentTarget.style.background = 'var(--bg-card)'">
-            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:52px; height:44px; background:var(--bg-card-inset); overflow:hidden;">
+          <div
+            v-for="item in wishlistItems" :key="item.bienTheId"
+            class="d-flex align-items-center gap-3 p-2 rounded-3"
+            style="background:var(--bg-card); border:1px solid var(--border-color-soft); transition:background 0.15s; cursor:pointer;"
+            @click="viewProductDetail(item)"
+            @mouseenter="e => e.currentTarget.style.background = 'var(--bg-hover)'"
+            @mouseleave="e => e.currentTarget.style.background = 'var(--bg-card)'"
+          >
+            <div
+              class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+              style="width:52px; height:44px; background:var(--bg-card-inset); overflow:hidden;"
+            >
               <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" style="width:100%; height:100%; object-fit:contain; padding:4px;" />
               <span v-else><Laptop :size="19" color="var(--text-muted)" /></span>
             </div>
@@ -664,33 +705,35 @@ onUnmounted(() => {
               <div style="color:var(--text-secondary); font-size:11px;">{{ item.tenThuongHieu }}</div>
             </div>
             <span class="fw-bold flex-shrink-0" style="color:var(--accent-fg); font-size:13px;">{{ formatPrice(item.giaBan) }}</span>
-            <span v-if="item.trangThai !== 'active' || (item.soLuongTon ?? 0) <= 0"
-                  class="badge flex-shrink-0" style="background:var(--bg-card-inset); color:var(--text-secondary); font-size:10px;">
+            <span
+              v-if="item.trangThai !== 'active' || (item.soLuongTon ?? 0) <= 0"
+              class="badge flex-shrink-0" style="background:var(--bg-card-inset); color:var(--text-secondary); font-size:10px;"
+            >
               {{ t('home.outOfStock') }}
             </span>
-            <button v-else class="btn btn-warning btn-sm fw-bold rounded-pill flex-shrink-0" style="font-size:11px;"
-                    @click.stop="addWishlistItemToCart(item)">
+            <button
+              v-else class="btn btn-warning btn-sm fw-bold rounded-pill flex-shrink-0" style="font-size:11px;"
+              @click.stop="addWishlistItemToCart(item)"
+            >
               <ShoppingCart :size="15" />
             </button>
-            <button class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                    style="width:30px; height:30px; padding:0; border:none; background:transparent; font-size:14px;"
-                    :aria-label="t('wishlist.remove')" :title="t('wishlist.remove')"
-                    @click.stop="removeWishlistItem(item)">
+            <button
+              class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+              style="width:30px; height:30px; padding:0; border:none; background:transparent; font-size:14px;"
+              :aria-label="t('wishlist.remove')" :title="t('wishlist.remove')"
+              @click.stop="removeWishlistItem(item)"
+            >
               <Heart :size="15" fill="currentColor" />
             </button>
           </div>
         </div>
       </div>
 
-      <!-- ══ Tab: Vòng quay may mắn ══ -->
       <div v-else-if="activeTab === 'wheel'" class="d-flex flex-column mx-auto" style="max-width:640px;">
         <LuckyWheelPanel :points="profile?.diemTichLuy ?? 0" @spun="fetchProfile" />
       </div>
 
-      <!-- ══ Tab: Cài đặt tài khoản ══ -->
       <div v-else class="d-flex flex-column gap-3 mx-auto" style="max-width:640px;">
-
-        <!-- Điểm & Voucher -->
         <div class="rounded-4 p-4" style="background:var(--bg-card); border:1px solid var(--border-color); box-shadow:0 4px 18px var(--shadow-color);">
           <div class="d-flex align-items-center gap-2 mb-4">
             <span><Gift :size="21" /></span>
@@ -704,16 +747,20 @@ onUnmounted(() => {
 
           <div class="mb-2 small fw-semibold" style="color:var(--text-secondary);">{{ t('account.rewards.catalogHeading') }}</div>
           <div class="d-flex flex-column gap-2 mb-4">
-            <div v-for="r in rewards.filter(x => x.trangThai === 'active')" :key="r.doiThuongId"
-                 class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background:var(--bg-card-inset);">
+            <div
+              v-for="r in rewards.filter(x => x.trangThai === 'active')" :key="r.doiThuongId"
+              class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background:var(--bg-card-inset);"
+            >
               <div>
                 <div class="fw-semibold" style="font-size:13px; color:var(--text-primary);">{{ r.ten }}</div>
                 <div style="font-size:11px; color:var(--text-secondary);">{{ t('account.rewards.pointsCost', { points: r.diemCan }) }}</div>
               </div>
-              <button class="btn btn-sm fw-bold rounded-pill px-3"
-                      :disabled="(profile?.diemTichLuy ?? 0) < r.diemCan || redeemingId === r.doiThuongId"
-                      style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
-                      @click="redeemReward(r)">
+              <button
+                class="btn btn-sm fw-bold rounded-pill px-3"
+                :disabled="(profile?.diemTichLuy ?? 0) < r.diemCan || redeemingId === r.doiThuongId"
+                style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--text-primary); font-size:11.5px;"
+                @click="redeemReward(r)"
+              >
                 {{ t('account.rewards.redeemButton') }}
               </button>
             </div>
@@ -722,15 +769,19 @@ onUnmounted(() => {
 
           <div class="mb-2 small fw-semibold" style="color:var(--text-secondary);">{{ t('account.rewards.myVouchersHeading') }}</div>
           <div class="d-flex flex-column gap-2">
-            <div v-for="v in myVouchers" :key="v.phieuId"
-                 class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background:var(--bg-card-inset);">
+            <div
+              v-for="v in myVouchers" :key="v.phieuId"
+              class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background:var(--bg-card-inset);"
+            >
               <div>
                 <div class="fw-bold" style="font-size:12.5px; color:var(--text-primary);">{{ v.maPhieu }}</div>
                 <div style="font-size:11px; color:var(--text-secondary);">{{ t('account.rewards.expiresOn', { date: formatDate(v.ngayHetHan) }) }}</div>
                 <div v-if="v.donHangToiThieu" style="font-size:11px; color:var(--text-secondary);">{{ t('account.rewards.minOrder', { amount: formatPrice(v.donHangToiThieu) }) }}</div>
               </div>
-              <span class="badge px-2 py-1 rounded-pill fw-semibold"
-                    :style="v.daSuDung ? 'background:rgba(107,114,128,0.15);color:#9ca3af;' : 'background:rgba(34,197,94,0.15);color:#22c55e;'">
+              <span
+                class="badge px-2 py-1 rounded-pill fw-semibold"
+                :style="v.daSuDung ? 'background:rgba(107,114,128,0.15);color:#9ca3af;' : 'background:rgba(34,197,94,0.15);color:#22c55e;'"
+              >
                 {{ v.daSuDung ? t('account.rewards.used') : t('account.rewards.available') }}
               </span>
             </div>
@@ -738,7 +789,6 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Thông tin cá nhân -->
         <div class="rounded-4 p-4" style="background:var(--bg-card); border:1px solid var(--border-color); box-shadow:0 4px 18px var(--shadow-color);">
           <div class="d-flex align-items-center gap-2 mb-4">
             <span><User :size="21" /></span>
@@ -752,54 +802,61 @@ onUnmounted(() => {
             <Skeleton v-for="i in 4" :key="i" width="100%" height="38px" radius="10px" />
           </div>
 
-          <form v-else @submit.prevent="saveProfile" class="d-flex flex-column gap-3">
+          <form v-else class="d-flex flex-column gap-3" @submit.prevent="saveProfile">
             <div>
               <label class="form-label small fw-semibold d-flex align-items-center gap-1" style="color:var(--text-secondary);"><User :size="13" /> {{ t('account.settings.fullName') }}</label>
-              <input v-model="profileForm.hoTen" type="text" required
-                     class="form-control"
-                     style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;" />
+              <input
+                v-model="profileForm.hoTen" type="text" required
+                class="form-control"
+                style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;"
+              />
             </div>
 
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label small fw-semibold d-flex align-items-center gap-1" style="color:var(--text-secondary);"><Smartphone :size="13" /> {{ t('account.settings.phone') }}</label>
-                <input v-model="profileForm.soDienThoai" type="text" required
-                       class="form-control"
-                       style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;" />
+                <input
+                  v-model="profileForm.soDienThoai" type="text" required
+                  class="form-control"
+                  style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;"
+                />
               </div>
               <div class="col-md-6">
                 <label class="form-label small fw-semibold d-flex align-items-center gap-1" style="color:var(--text-secondary);"><Mail :size="13" /> {{ t('account.settings.email') }}</label>
-                <input v-model="profileForm.email" type="email" required
-                       class="form-control"
-                       style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;" />
+                <input
+                  v-model="profileForm.email" type="email" required
+                  class="form-control"
+                  style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;"
+                />
               </div>
             </div>
 
             <div>
               <label class="form-label small fw-semibold d-flex align-items-center gap-1" style="color:var(--text-secondary);"><MapPin :size="13" /> {{ t('account.settings.address') }}</label>
-              <input v-model="profileForm.diaChi" type="text" required
-                     class="form-control"
-                     style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;" />
+              <input
+                v-model="profileForm.diaChi" type="text" required
+                class="form-control"
+                style="background:var(--bg-input); border-color:var(--border-color-strong); color:var(--text-primary); border-radius:10px; padding:0.55rem 0.85rem;"
+              />
             </div>
 
             <div v-if="profileError" class="alert alert-danger small py-2 mb-0 rounded-3 d-flex align-items-center gap-1"><AlertTriangle :size="14" /> {{ profileError }}</div>
             <div v-if="profileSuccess" class="alert alert-success small py-2 mb-0 rounded-3 d-flex align-items-center gap-1"><CheckCircle2 :size="14" /> {{ profileSuccess }}</div>
 
             <div class="d-flex justify-content-end pt-2" style="border-top:1px solid var(--border-color-soft);">
-              <button type="submit" class="btn btn-warning fw-bold rounded-pill px-4 py-2 mt-3" :disabled="profileSaving"
-                      style="font-size:0.85rem;">
+              <button
+                type="submit" class="btn btn-warning fw-bold rounded-pill px-4 py-2 mt-3" :disabled="profileSaving"
+                style="font-size:0.85rem;"
+              >
                 <span class="d-inline-flex align-items-center gap-1"><component :is="profileSaving ? Loader2 : Save" :size="14" :class="{ 'spin-icon': profileSaving }" /> {{ profileSaving ? t('common.saving') : t('common.save') }}</span>
               </button>
             </div>
           </form>
         </div>
-
       </div>
-
     </div>
   </div>
 
-  <!-- Chi tiết sản phẩm đã mua — bấm vào 1 sản phẩm trong đơn để xem lại + mua lại -->
   <ProductDetail
     v-if="selectedProductDetail"
     :key="selectedProductDetail.bienTheId"
@@ -813,10 +870,11 @@ onUnmounted(() => {
     @toggle-wishlist="toggleWishlistInDetail"
   />
 
-  <!-- Yêu cầu trả hàng — chọn sản phẩm + số lượng muốn trả -->
-  <ReturnRequestModal v-if="returnModalOrder"
-                       :order="returnModalOrder"
-                       :items="itemsByOrder[returnModalOrder.donHangId] || []"
-                       @close="returnModalOrder = null"
-                       @submitted="returnModalOrder = null; fetchData();" />
+  <ReturnRequestModal
+    v-if="returnModalOrder"
+    :order="returnModalOrder"
+    :items="itemsByOrder[returnModalOrder.donHangId] || []"
+    @close="returnModalOrder = null"
+    @submitted="returnModalOrder = null; fetchData();"
+  />
 </template>

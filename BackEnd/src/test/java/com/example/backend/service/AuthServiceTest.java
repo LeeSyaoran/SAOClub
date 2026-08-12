@@ -71,7 +71,7 @@ class AuthServiceTest {
         nv.setHoTen("Tên cũ");
         nv.setSoDienThoai("0900000000");
         nv.setEmail("cu@example.com");
-        nv.setChucVu(new ChucVu()); // giữ nguyên, không được đụng tới
+        nv.setChucVu(new ChucVu()); 
         TaiKhoan tk = new TaiKhoan();
         tk.setUsername("admin");
         tk.setNhanVien(nv);
@@ -87,7 +87,7 @@ class AuthServiceTest {
         assertThat(res.getHoTen()).isEqualTo("Tên mới");
         assertThat(res.getSoDienThoai()).isEqualTo("0911111111");
         assertThat(res.getEmail()).isEqualTo("moi@example.com");
-        assertThat(nv.getChucVu()).isNotNull(); // không bị đụng tới
+        assertThat(nv.getChucVu()).isNotNull(); 
         verify(nhanVienRepository).save(nv);
     }
 

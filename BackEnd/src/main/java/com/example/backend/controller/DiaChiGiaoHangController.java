@@ -13,11 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Không có luồng khách hàng nào trong frontend gọi tới controller này (grep xác nhận,
-// checkout chỉ lưu địa chỉ dạng text snapshot trực tiếp trên don_hang, không qua bảng
-// dia_chi_giao_hang) — khoá staff-only theo least-privilege, đúng tiền lệ
-// NhaCungCapController/PhieuTraHangController. getAll() trước đây trả về địa chỉ của
-// TẤT CẢ khách hàng cho bất kỳ ai đăng nhập — lỗ hổng lộ PII + IDOR.
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/dia-chi-giao-hang")

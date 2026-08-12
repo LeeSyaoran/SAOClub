@@ -37,7 +37,6 @@ public class PhieuNhapKhoService {
 
     public PhieuNhapKho create(PhieuNhapKhoRequest request) {
         PhieuNhapKho entity = new PhieuNhapKho();
-        // BeanUtils copies: maPhieuNhap, ngayNhap, tongTien, trangThai, ghiChu
         BeanUtils.copyProperties(request, entity, "nhaCungCapId", "nhanVienId");
         entity.setNhaCungCap(nhaCungCapRepository.getReferenceById(request.getNhaCungCapId()));
         if (request.getNhanVienId() != null)
@@ -54,8 +53,6 @@ public class PhieuNhapKhoService {
         return phieuNhapKhoRepository.save(entity);
     }
 
-    // Xóa cả dòng chi tiết trước rồi mới xóa phiếu — phiếu nhập không cascade sang tồn kho/serial
-    // (chỉ là chứng từ chi phí đối chiếu NCC), nên xóa an toàn, chỉ cần dọn FK chi_tiet_phieu_nhap.
     @Transactional
     public void delete(Integer id) {
         if (!phieuNhapKhoRepository.existsById(id))

@@ -50,9 +50,6 @@ public class DashboardService {
         return donHangRepository.doanhThuTheoNgay(tuNgay, denNgay);
     }
 
-    // Top khách chi tiêu nhiều nhất + tỷ lệ khách mua từ 2 đơn trở lên trong khoảng ngày —
-    // lấy hết (Pageable.unpaged()) để đếm đúng tỷ lệ mua lại trên toàn bộ khách có đơn
-    // trong khoảng, rồi mới cắt ra top N để hiển thị bảng.
     public CustomerReportResponse getCustomerReport(LocalDateTime tuNgay, LocalDateTime denNgay, int limit) {
         List<CustomerSpendingResponse> all = khachHangRepository.chiTieuTheoKhachHang(tuNgay, denNgay, Pageable.unpaged());
         long soKhachMuaLai = all.stream().filter(c -> c.getSoDonHang() >= 2).count();

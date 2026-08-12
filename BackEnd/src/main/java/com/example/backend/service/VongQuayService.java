@@ -43,7 +43,6 @@ public class VongQuayService {
 
     private static final Random RANDOM = new Random();
 
-    // Giống PhieuGiamGiaCaNhanService.currentKhachHangId() — chặn tài khoản staff gọi nhầm.
     private Integer currentKhachHangId() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         TaiKhoan tk = taiKhoanRepository.findByUsername(username).orElse(null);
@@ -67,8 +66,6 @@ public class VongQuayService {
         return new CauHinhVongQuayResponse(ch.getDiemMoiLuot(), ch.getTyLeTruot(), khaDung);
     }
 
-    // KhuyenMaiResponse chỉ có @AllArgsConstructor (13 field) — không có constructor nhận
-    // thẳng KhuyenMai, nên map tường minh, dùng lại ở cả getCauHinhChoKhachHang() lẫn quay().
     private static KhuyenMaiResponse toKhuyenMaiResponse(KhuyenMai k) {
         return new KhuyenMaiResponse(k.getKhuyenMaiId(), k.getMaKhuyenMai(), k.getTenKhuyenMai(),
                 k.getLoai(), k.getGiaTri(), k.getGiaTriToiDa(), k.getDonHangToiThieu(),
@@ -90,8 +87,6 @@ public class VongQuayService {
         Integer khachHangId = currentKhachHangId();
         CauHinhVongQuay cauHinh = getOrCreateCauHinh();
 
-        // Khoá ghi — chặn 2 lượt quay đồng thời cùng đọc trùng số dư điểm (double-spend),
-        // đúng pattern PhieuGiamGiaCaNhanService.doiThuong().
         KhachHang khachHang = khachHangRepository.findWithLockByKhachHangId(khachHangId)
                 .orElseThrow(() -> new IllegalArgumentException("Khách hàng không tồn tại"));
         if (khachHang.getDiemTichLuy() < cauHinh.getDiemMoiLuot())
@@ -118,25 +113,17 @@ public class VongQuayService {
 
         PhieuGiamGiaCaNhan phieu = new PhieuGiamGiaCaNhan();
         phieu.setKhachHang(khachHang);
-        phieu.setDoiThuong(null); // phiếu từ vòng quay, không gắn danh mục đổi thưởng
+        phieu.setDoiThuong(null); 
         phieu.setLoai(trung.getLoai());
-        // gia_tri của khuyen_mai là DECIMAL(18,2), của phieu_giam_gia_ca_nhan là DECIMAL(18,0)
-        // — làm tròn khi clone để tránh lệch giữa entity Java và cột DB.
         phieu.setGiaTri(trung.getGiaTri().setScale(0, RoundingMode.HALF_UP));
         phieu.setGiaTriToiDa(trung.getGiaTriToiDa() == null ? null
                 : trung.getGiaTriToiDa().setScale(0, RoundingMode.HALF_UP));
-        // Giữ nguyên đơn tối thiểu của khuyến mãi gốc — CheckoutModal.vue tính giảm giá cho
-        // voucher cá nhân bằng đúng hàm calcDiscountFor() dùng cho mã khuyến mãi công khai,
-        // nên chỉ cần field này có giá trị là điều kiện đơn tối thiểu tự động được áp dụng.
         phieu.setDonHangToiThieu(trung.getDonHangToiThieu() == null ? null
                 : trung.getDonHangToiThieu().setScale(0, RoundingMode.HALF_UP));
         phieu.setDaSuDung(false);
         phieu.setNgayDoi(LocalDateTime.now());
         phieu.setNgayHetHan(LocalDateTime.now().plusDays(30));
         PhieuGiamGiaCaNhan savedPhieu = phieuGiamGiaCaNhanRepository.save(phieu);
-        // Hibernate không tự động re-read DB-generated DEFAULT column (maPhieu).
-        // Trong @Transactional, findById() chỉ trả cached object — phải dùng entityManager.refresh()
-        // để buộc Hibernate SELECT lại từ DB và update fields của object hiện tại.
         entityManager.refresh(savedPhieu);
 
         lichSu.setKetQua("trung");

@@ -26,7 +26,6 @@ public class NhaCungCapService {
                 .orElseThrow(() -> new IllegalArgumentException("Nhà cung cấp không tồn tại với id: " + id));
     }
 
-    // Trước đây controller nhận thẳng entity JPA làm request body — xem DanhMucService lý do.
     public NhaCungCap create(NhaCungCapRequest request) {
         NhaCungCap entity = new NhaCungCap();
         BeanUtils.copyProperties(request, entity);

@@ -47,15 +47,17 @@ const deleteReview = async (d) => {
   <div v-if="loading" class="text-secondary small">{{ t('admin.reviews.loading') }}</div>
   <div v-else class="table-responsive">
     <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead><tr>
-        <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-        <th>{{ t('admin.reviews.colDate') }}</th>
-        <th>{{ t('admin.reviews.colProduct') }}</th>
-        <th>{{ t('admin.reviews.colCustomer') }}</th>
-        <th>{{ t('admin.reviews.colStars') }}</th>
-        <th>{{ t('admin.reviews.colContent') }}</th>
-        <th style="width:70px;"></th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+          <th>{{ t('admin.reviews.colDate') }}</th>
+          <th>{{ t('admin.reviews.colProduct') }}</th>
+          <th>{{ t('admin.reviews.colCustomer') }}</th>
+          <th>{{ t('admin.reviews.colStars') }}</th>
+          <th>{{ t('admin.reviews.colContent') }}</th>
+          <th style="width:70px;"></th>
+        </tr>
+      </thead>
       <tbody>
         <tr v-for="(d, idx) in pagedReviews" :key="d.danhGiaId">
           <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>

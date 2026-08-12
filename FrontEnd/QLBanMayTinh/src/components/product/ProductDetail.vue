@@ -12,7 +12,9 @@
         class="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
         style="width:36px; height:36px; padding:0;"
         @click="$emit('close')"
-      >‹</button>
+      >
+        ‹
+      </button>
       <span class="fw-semibold small text-truncate" style="color:var(--text-primary);">{{ activeVariant.tenSanPham }}</span>
       <button
         type="button"
@@ -20,7 +22,8 @@
         style="width:34px; height:34px; padding:0; border:none; background:transparent; font-size:15px;"
         :aria-label="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
         :title="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
-        @click="$emit('toggle-wishlist', activeVariant)">
+        @click="$emit('toggle-wishlist', activeVariant)"
+      >
         <Heart :size="18" :fill="isWishlisted ? 'currentColor' : 'none'" />
       </button>
       <span
@@ -32,7 +35,6 @@
 
     <div class="container-xl py-4">
       <div class="row g-4">
-
         <!-- ── Cột trái: ảnh ── -->
         <div class="col-12 col-lg-5">
           <div
@@ -61,7 +63,6 @@
 
         <!-- ── Cột phải: thông tin ── -->
         <div class="col-12 col-lg-7 d-flex flex-column gap-3">
-
           <!-- Tên + brand -->
           <div>
             <div class="small mb-1" style="color:var(--text-secondary);">
@@ -140,7 +141,6 @@
               {{ t('productDetail.specsHeading') }}
             </div>
             <div class="d-flex flex-column gap-3">
-
               <!-- Phần cứng -->
               <div v-if="specGroups.phancung.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
                 <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:var(--accent-fg); text-transform:uppercase;">
@@ -200,7 +200,6 @@
                   </tbody>
                 </table>
               </div>
-
             </div>
           </div>
 
@@ -215,7 +214,6 @@
               {{ t('productDetail.addToCart') }}
             </button>
           </div>
-
         </div>
       </div><!-- /row -->
 
@@ -235,17 +233,23 @@
             @click="$emit('open-product', p)"
           >
             <!-- Ảnh -->
-            <div class="d-flex align-items-center justify-content-center rounded-top"
-                 style="height:110px; background:var(--bg-card-inset); padding:8px;">
-              <img v-if="p.hinhAnhChinh"
-                   :src="p.hinhAnhChinh" :alt="p.tenSanPham"
-                   style="max-width:100%; max-height:90px; object-fit:contain;" />
+            <div
+              class="d-flex align-items-center justify-content-center rounded-top"
+              style="height:110px; background:var(--bg-card-inset); padding:8px;"
+            >
+              <img
+                v-if="p.hinhAnhChinh"
+                :src="p.hinhAnhChinh" :alt="p.tenSanPham"
+                style="max-width:100%; max-height:90px; object-fit:contain;"
+              />
               <span v-else><Laptop :size="40" color="var(--text-muted)" /></span>
             </div>
             <!-- Info -->
             <div class="p-2 d-flex flex-column gap-1 flex-grow-1">
-              <p class="fw-semibold mb-0"
-                 style="font-size:10px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-clamp:2; color:var(--text-primary);">
+              <p
+                class="fw-semibold mb-0"
+                style="font-size:10px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-clamp:2; color:var(--text-primary);"
+              >
                 {{ p.tenSanPham }}
               </p>
               <p class="mb-0" style="font-size:9px; color:var(--text-secondary);">{{ p.tenThuongHieu }}</p>
@@ -281,7 +285,9 @@
               v-for="n in 5" :key="n" type="button"
               class="btn btn-sm p-0" style="font-size:20px; background:transparent; border:none; line-height:1;"
               @click="newSoSao = n"
-            ><Star :size="20" :fill="n <= newSoSao ? 'currentColor' : 'none'" /></button>
+            >
+              <Star :size="20" :fill="n <= newSoSao ? 'currentColor' : 'none'" />
+            </button>
           </div>
           <textarea
             v-model="newNoiDung" class="form-control form-control-sm mb-2" rows="2" maxlength="1000"
@@ -297,8 +303,10 @@
         </div>
 
         <!-- Đánh giá của tôi -->
-        <div v-if="myReview" class="mb-4 p-3 rounded-3 d-flex justify-content-between align-items-start gap-2"
-             style="background:rgba(244,63,94,0.08); border:1px solid rgba(244,63,94,0.3);">
+        <div
+          v-if="myReview" class="mb-4 p-3 rounded-3 d-flex justify-content-between align-items-start gap-2"
+          style="background:rgba(244,63,94,0.08); border:1px solid rgba(244,63,94,0.3);"
+        >
           <div>
             <div class="small fw-semibold mb-1" style="color:var(--text-primary);">
               {{ t('review.yourReview') }} · <span class="d-inline-flex" style="gap:1px;"><Star v-for="n in myReview.soSao" :key="n" :size="13" fill="currentColor" /></span>
@@ -324,7 +332,6 @@
           <Pagination :current-page="reviewsPage" :total-pages="reviewsTotalPages" @page-change="reviewsPage = $event" />
         </div>
       </div>
-
     </div><!-- /container -->
   </div>
 </template>

@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 @Setter
 public class SanPhamRequest {
 
-    // Dùng cho update — null khi tạo mới
     private Integer bienTheId;
 
     @NotBlank(message = "Tên sản phẩm không được để trống")

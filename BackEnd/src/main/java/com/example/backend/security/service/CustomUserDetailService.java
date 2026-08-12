@@ -23,7 +23,7 @@ public class CustomUserDetailService implements UserDetailsService {
         if (!"active".equals(tk.getTrangThai()))
             throw new UsernameNotFoundException("Tài khoản đã bị khóa hoặc vô hiệu");
 
-        String role = tk.getChucVu().getMaChucVu().toUpperCase(); // "ADMIN", "NHAN_VIEN", ...
+        String role = tk.getChucVu().getMaChucVu().toUpperCase(); 
         return User.withUsername(tk.getUsername())
                 .password(tk.getMatKhauHash())
                 .roles(role)

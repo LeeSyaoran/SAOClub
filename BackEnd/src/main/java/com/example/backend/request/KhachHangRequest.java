@@ -18,8 +18,6 @@ public class KhachHangRequest {
     @Size(max = 20, message = "Số điện thoại không vượt quá 20 ký tự")
     private String soDienThoai;
 
-    // Khong bat buoc: khach mua tai quay / checkout online thuong khong co email —
-    // chi validate dinh dang neu co nhap (Bean Validation coi chuoi rong/null la hop le)
     @Email(message = "Email không hợp lệ")
     private String email;
 

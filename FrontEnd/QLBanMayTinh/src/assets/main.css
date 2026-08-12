@@ -13,9 +13,6 @@ a {
   color: inherit;
 }
 
-/* Accent Glow focus ring — thay cho outline mặc định của trình duyệt, áp dụng
-   cho mọi phần tử tương tác (input, button, a, select...) khi điều hướng bằng
-   bàn phím. :focus-visible bỏ qua click chuột nên không ảnh hưởng thẩm mỹ. */
 :focus-visible {
   outline: 2px solid var(--accent, #f43f5e);
   outline-offset: 2px;

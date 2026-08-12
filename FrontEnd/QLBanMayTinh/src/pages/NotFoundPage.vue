@@ -6,8 +6,10 @@ usePageMeta("404 - Không tìm thấy trang", "Trang bạn tìm kiếm không t�
 </script>
 
 <template>
-  <div class="d-flex align-items-center justify-content-center"
-       style="min-height:100vh; background:var(--bg-page); color:var(--text-primary); font-family:'Nunito Sans',sans-serif;">
+  <div
+    class="d-flex align-items-center justify-content-center"
+    style="min-height:100vh; background:var(--bg-page); color:var(--text-primary); font-family:'Nunito Sans',sans-serif;"
+  >
     <div class="text-center d-flex flex-column align-items-center gap-3">
       <div><Search :size="64" color="var(--text-muted)" /></div>
       <h2 class="fw-black mb-0" style="font-size:1.5rem">404</h2>

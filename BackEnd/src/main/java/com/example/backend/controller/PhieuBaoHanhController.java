@@ -35,7 +35,6 @@ public class PhieuBaoHanhController {
         return phieuBaoHanhService.getById(id);
     }
 
-    // POST — service xử lý FK: donHang, bienThe (qua sanPhamId), khachHang
     @PostMapping
     public ResponseEntity<PhieuBaoHanh> create(@Valid @RequestBody PhieuBaoHanhRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(phieuBaoHanhService.create(request));

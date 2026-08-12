@@ -105,7 +105,6 @@ class PhieuBaoHanhServiceTest {
         verify(phieuBaoHanhRepository, never()).save(any());
     }
 
-    // ── Gán trạng thái serial (loi_bao_hanh <-> da_ban) theo vòng đời phiếu ──────
 
     @Test
     void update_chuyenDangXuLy_ganSerialLoiBaoHanh() {
@@ -118,9 +117,6 @@ class PhieuBaoHanhServiceTest {
         entity.setChiTietSanPham(serial);
         when(phieuBaoHanhRepository.findById(1)).thenReturn(java.util.Optional.of(entity));
         when(phieuBaoHanhRepository.save(entity)).thenReturn(entity);
-        // update() gan lai chiTietSanPham tu chiTietId cua request — phai stub de tra ve
-        // DUNG object serial nay, khong thi entity bi gan chiTietSanPham=null (mac dinh cua
-        // Mockito) va capNhatSerialTheoTrangThai() se return som, khong lam gi ca.
         when(chiTietSanPhamRepository.getReferenceById(100)).thenReturn(serial);
 
         PhieuBaoHanhRequest req = requestCoBan();
@@ -144,9 +140,6 @@ class PhieuBaoHanhServiceTest {
         entity.setChiTietSanPham(serial);
         when(phieuBaoHanhRepository.findById(1)).thenReturn(java.util.Optional.of(entity));
         when(phieuBaoHanhRepository.save(entity)).thenReturn(entity);
-        // update() gan lai chiTietSanPham tu chiTietId cua request — phai stub de tra ve
-        // DUNG object serial nay, khong thi entity bi gan chiTietSanPham=null (mac dinh cua
-        // Mockito) va capNhatSerialTheoTrangThai() se return som, khong lam gi ca.
         when(chiTietSanPhamRepository.getReferenceById(100)).thenReturn(serial);
 
         PhieuBaoHanhRequest req = requestCoBan();
@@ -171,9 +164,6 @@ class PhieuBaoHanhServiceTest {
         entity.setChiTietSanPham(serial);
         when(phieuBaoHanhRepository.findById(1)).thenReturn(java.util.Optional.of(entity));
         when(phieuBaoHanhRepository.save(entity)).thenReturn(entity);
-        // update() gan lai chiTietSanPham tu chiTietId cua request — phai stub de tra ve
-        // DUNG object serial nay, khong thi entity bi gan chiTietSanPham=null (mac dinh cua
-        // Mockito) va capNhatSerialTheoTrangThai() se return som, khong lam gi ca.
         when(chiTietSanPhamRepository.getReferenceById(100)).thenReturn(serial);
 
         PhieuBaoHanhRequest req = requestCoBan();

@@ -14,13 +14,8 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// Xác nhận lỗ hổng path traversal (CWE-22) trong uploadImage() đã được chặn tận gốc —
-// trước đây dùng thẳng file.getOriginalFilename() làm tên đích, cho phép client ghi đè
-// file bất kỳ trong upload.dir (trỏ vào mã nguồn frontend).
 class UploadControllerTest {
 
-    // Magic bytes thật — uploadImage() giờ xác thực nội dung file, không chỉ đuôi file
-    // (xem UploadController.uploadImage()), nên nội dung giả phải đúng định dạng khai báo.
     private static final byte[] JPEG_HEADER = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0};
     private static final byte[] PNG_HEADER =
             {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};

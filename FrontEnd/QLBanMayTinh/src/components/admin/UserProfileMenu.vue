@@ -117,12 +117,14 @@ const goToSettingsFromMenu = () => {
 </script>
 
 <template>
-  <!-- Footer sidebar: thong tin user (bam mo dropdown ho so) + logout -->
-  <div class="p-3 border-top position-relative adm-sidebar-footer" style="border-color:var(--border-color-soft)!important;"
-       @keydown.esc="closeUserMenu" @focusout="onUserMenuFocusOut">
-    <!-- Dropdown menu ho so — mo LEN tren (bottom:100%) vi dang o cuoi sidebar -->
-    <div v-if="showUserMenu" class="position-absolute rounded-3 shadow-lg overflow-hidden"
-         style="left:12px; right:12px; bottom:100%; margin-bottom:8px; background:var(--bg-card); border:1px solid var(--border-color); z-index:50;">
+  <div
+    class="p-3 border-top position-relative adm-sidebar-footer" style="border-color:var(--border-color-soft)!important;"
+    @keydown.esc="closeUserMenu" @focusout="onUserMenuFocusOut"
+  >
+    <div
+      v-if="showUserMenu" class="position-absolute rounded-3 shadow-lg overflow-hidden"
+      style="left:12px; right:12px; bottom:100%; margin-bottom:8px; background:var(--bg-card); border:1px solid var(--border-color); z-index:50;"
+    >
       <button class="btn btn-sm w-100 text-start rounded-0 border-0" style="color:var(--text-primary);" @click="openEditProfileModal">
         {{ t('admin.profileMenu.editProfile') }}
       </button>
@@ -134,26 +136,33 @@ const goToSettingsFromMenu = () => {
       </button>
     </div>
 
-    <button ref="userMenuTriggerRef" type="button"
-            class="btn d-flex align-items-center gap-2 mb-2 w-100 text-start p-0 border-0"
-            style="background:transparent;"
-            aria-haspopup="true" :aria-expanded="showUserMenu"
-            @click="showUserMenu = !showUserMenu">
-      <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
-           style="width:34px;height:34px;background:var(--accent);color:var(--accent-text);font-size:0.9rem;">{{ userAvatar }}</div>
+    <button
+      ref="userMenuTriggerRef" type="button"
+      class="btn d-flex align-items-center gap-2 mb-2 w-100 text-start p-0 border-0"
+      style="background:transparent;"
+      aria-haspopup="true" :aria-expanded="showUserMenu"
+      @click="showUserMenu = !showUserMenu"
+    >
+      <div
+        class="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+        style="width:34px;height:34px;background:var(--accent);color:var(--accent-text);font-size:0.9rem;"
+      >
+        {{ userAvatar }}
+      </div>
       <div class="flex-grow-1" style="min-width:0;">
         <div class="fw-semibold text-truncate" style="font-size:0.85rem;">{{ userDisplayName }}</div>
         <div style="font-size:0.72rem;color:var(--text-muted);">{{ userDisplayRole }}</div>
       </div>
     </button>
-    <button class="btn btn-sm w-100 fw-semibold"
-            style="background:var(--bg-card); border:1px solid #7f1d1d; border-radius:8px; color:#f87171; font-size:0.78rem;"
-            @click="logout">
+    <button
+      class="btn btn-sm w-100 fw-semibold"
+      style="background:var(--bg-card); border:1px solid #7f1d1d; border-radius:8px; color:#f87171; font-size:0.78rem;"
+      @click="logout"
+    >
       {{ t('admin.sidebar.logout') }}
     </button>
   </div>
 
-  <!-- ══ MODAL CHINH SUA HO SO ══ -->
   <div v-if="showEditProfileModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="showEditProfileModal=false">
     <div class="rounded-3 p-3" style="background:var(--bg-card);width:420px;max-width:94vw;">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -181,7 +190,6 @@ const goToSettingsFromMenu = () => {
     </div>
   </div>
 
-  <!-- ══ MODAL DOI MAT KHAU NHANH (tu menu ho so) ══ -->
   <div v-if="showQuickPasswordModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="showQuickPasswordModal=false">
     <div class="rounded-3 p-3" style="background:var(--bg-card);width:420px;max-width:94vw;">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -190,15 +198,15 @@ const goToSettingsFromMenu = () => {
       </div>
       <div class="mb-2">
         <label class="form-label small text-secondary mb-1">{{ t('admin.settings.currentPassword') }}</label>
-        <input type="password" v-model="qpMatKhauCu" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+        <input v-model="qpMatKhauCu" type="password" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
       </div>
       <div class="mb-2">
         <label class="form-label small text-secondary mb-1">{{ t('admin.settings.newPassword') }}</label>
-        <input type="password" v-model="qpMatKhauMoi" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+        <input v-model="qpMatKhauMoi" type="password" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
       </div>
       <div class="mb-3">
         <label class="form-label small text-secondary mb-1">{{ t('admin.settings.confirmNewPassword') }}</label>
-        <input type="password" v-model="qpMatKhauXacNhan" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
+        <input v-model="qpMatKhauXacNhan" type="password" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
       </div>
       <div v-if="qpError" class="text-danger small mb-2">{{ qpError }}</div>
       <div v-if="qpSuccess" class="text-success small mb-2">{{ qpSuccess }}</div>

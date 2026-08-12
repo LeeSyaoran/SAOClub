@@ -34,7 +34,7 @@ public class AuthService {
         TaiKhoan tk = taiKhoanRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + username));
 
-        String role = tk.getChucVu().getMaChucVu(); // "admin", "nhan_vien", "quan_kho", "khach_hang"
+        String role = tk.getChucVu().getMaChucVu(); 
         String token = jwtUtil.generateToken(tk.getUsername(), role);
 
         if (tk.getNhanVien() != null) {
@@ -52,10 +52,6 @@ public class AuthService {
         throw new UsernameNotFoundException("Tài khoản không liên kết với người dùng: " + username);
     }
 
-    // Đổi mật khẩu tự phục vụ — dùng chung cho MỌI vai trò vì tất cả đều đăng nhập qua
-    // cùng 1 bảng tai_khoan. Nhận username (không phải id số) vì JWT chỉ mang username
-    // (xem JwtUtil) — controller lấy username từ SecurityContextHolder rồi truyền vào đây,
-    // giữ hàm này test được mà không cần mock SecurityContextHolder.
     public void doiMatKhau(String username, String matKhauCu, String matKhauMoi) {
         TaiKhoan tk = taiKhoanRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + username));
@@ -66,11 +62,6 @@ public class AuthService {
         taiKhoanRepository.save(tk);
     }
 
-    // Tự sửa hồ sơ (tên/SĐT/email) — chỉ đụng đúng 3 trường này trên NhanVien của người
-    // gọi, KHÔNG dùng NhanVienService.update() (nhận full request, có thể vô tình cho tự
-    // đổi chức vụ/lương/trạng thái nếu request thiếu field). Trang AdminPage.vue chỉ vào
-    // được khi auth.isAdmin (admin/nhân viên/quản kho) nên luôn có NhanVien liên kết —
-    // vẫn kiểm tra null để không lộ NPE nếu có trường hợp lạ.
     public HoSoResponse capNhatHoSo(String username, HoSoRequest req) {
         TaiKhoan tk = taiKhoanRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + username));

@@ -44,17 +44,12 @@ public class PhieuTraHangController {
         return ResponseEntity.ok().build();
     }
 
-    // Giữ mở cho MỌI người dùng đã đăng nhập (override @PreAuthorize class-level ở trên) —
-    // khách hàng tự gửi yêu cầu trả hàng cho đơn của chính mình. Service tự suy khách hàng
-    // qua SecurityContextHolder, không tin donHangId/khách hàng từ client.
     @PreAuthorize("isAuthenticated()")
     @PostMapping("tu-yeu-cau")
     public ResponseEntity<PhieuTraHang> taoYeuCauTuKhachHang(@Valid @RequestBody YeuCauTraHangRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(phieuTraHangService.taoYeuCauTuKhachHang(request));
     }
 
-    // Giữ mở cho MỌI người dùng đã đăng nhập — khách xem yêu cầu trả hàng của đơn mình,
-    // nhân viên xem được của bất kỳ đơn nào (service tự kiểm tra quyền theo vai trò).
     @PreAuthorize("isAuthenticated()")
     @GetMapping("don-hang/{donHangId}")
     public List<PhieuTraHangResponse> getByDonHang(@PathVariable Integer donHangId) {

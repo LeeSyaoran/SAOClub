@@ -1,7 +1,8 @@
 <template>
-  <!-- Khối nhấp nháy chờ dữ liệu — thay thế cho text "Đang tải..." -->
-  <div class="skeleton-pulse rounded-2"
-       :style="`width:${width}; height:${height}; border-radius:${radius};`"></div>
+  <div
+    class="skeleton-pulse rounded-2"
+    :style="`width:${width}; height:${height}; border-radius:${radius};`"
+  ></div>
 </template>
 
 <script setup>

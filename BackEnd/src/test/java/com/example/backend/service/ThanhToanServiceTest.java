@@ -32,8 +32,6 @@ class ThanhToanServiceTest {
     @InjectMocks
     private ThanhToanService service;
 
-    // Thanh toan tien mat tai quay khong co "ma giao dich" — dung use-case chinh khien
-    // validate cu (bat buoc maGiaoDich/ghiChu) sai, xem Task 1 Step 1.
     @Test
     void create_khongCoMaGiaoDichVaGhiChu_vanThanhCong() {
         DonHang donHang = new DonHang();

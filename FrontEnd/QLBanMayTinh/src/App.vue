@@ -363,9 +363,6 @@ onBeforeUnmount(() => {
       />
     </router-view>
 
-    <!-- ══════════════════════════════════════════════════════
-        TOAST NOTIFICATION
-    ══════════════════════════════════════════════════════ -->
     <Transition name="toast-slide">
       <div
         v-if="toast.show"
@@ -396,9 +393,6 @@ onBeforeUnmount(() => {
       </div>
     </Transition>
 
-    <!-- ══════════════════════════════════════════════════════
-        LOGIN MODAL
-    ══════════════════════════════════════════════════════ -->
     <Modal v-model="showLoginModal">
       <LoginForm
         v-if="authTab === 'login'"
@@ -418,9 +412,6 @@ onBeforeUnmount(() => {
       </div>
     </Modal>
 
-    <!-- ══════════════════════════════════════════════════════
-        CHECKOUT MODAL
-    ══════════════════════════════════════════════════════ -->
     <CheckoutModal
       v-model="showCheckout"
       :cart="cart"
@@ -428,9 +419,6 @@ onBeforeUnmount(() => {
       @order-placed="handleOrderPlaced"
     />
 
-    <!-- ══════════════════════════════════════════════════════
-        PRODUCT DETAIL OVERLAY
-    ══════════════════════════════════════════════════════ -->
     <Transition name="slide-up">
       <ProductDetail
         v-if="selectedProduct"

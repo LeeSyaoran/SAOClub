@@ -13,14 +13,11 @@ public interface ChiTietDonHangRepository extends JpaRepository<ChiTietDonHang, 
     @Query("SELECT new com.example.backend.response.ChiTietDonHangResponse(c.id, c.donHang.id, c.bienThe.bienTheId, c.bienThe.maSku, ctsp.chiTietId, ctsp.soSerial, c.soLuong, c.donGia, c.giamGiaDong, c.thanhTien, c.ghiChu) FROM ChiTietDonHang c LEFT JOIN c.chiTietSanPham ctsp")
     List<ChiTietDonHangResponse> hienThiChiTietDonHang();
 
-    // Lấy tất cả sản phẩm thuộc 1 đơn hàng cụ thể — dùng ?1 để tránh cần @Param
     @Query("SELECT new com.example.backend.response.ChiTietDonHangResponse(c.id, c.donHang.id, c.bienThe.bienTheId, c.bienThe.maSku, ctsp.chiTietId, ctsp.soSerial, c.soLuong, c.donGia, c.giamGiaDong, c.thanhTien, c.ghiChu) FROM ChiTietDonHang c LEFT JOIN c.chiTietSanPham ctsp WHERE c.donHang.id = ?1")
     List<ChiTietDonHangResponse> findByDonHangId(Integer donHangId);
 
-    // Trả về entity (không phải DTO) — dùng cho merge và recalculate
     @Query("SELECT c FROM ChiTietDonHang c WHERE c.donHang.id = ?1")
     List<ChiTietDonHang> findEntityByDonHangId(Integer donHangId);
 
-    // Biến thể đã từng bán chưa — dùng để chặn xóa biến thể/sản phẩm đã có lịch sử bán.
     boolean existsByBienThe_BienTheId(Integer bienTheId);
 }

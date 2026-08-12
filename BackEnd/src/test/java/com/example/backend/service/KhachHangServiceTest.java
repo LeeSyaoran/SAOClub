@@ -103,9 +103,6 @@ class KhachHangServiceTest {
                 .hasMessageContaining("Khách hàng không tồn tại");
     }
 
-    // Endpoint /tim-theo-sdt là permitAll (khách vãng lai chưa đăng nhập cũng gọi được) —
-    // không được lộ soDuVi/diemTichLuy/trangThai ra ngoài, chỉ trả đúng thông tin cần để
-    // tự điền form checkout.
     @Test
     void findBySoDienThoai_chiTraThongTinCanThiet_khongLoViVaDiem() {
         KhachHang khachHang = new KhachHang();

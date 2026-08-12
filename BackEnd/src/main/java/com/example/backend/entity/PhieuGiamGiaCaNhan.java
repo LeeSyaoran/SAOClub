@@ -28,7 +28,6 @@ public class PhieuGiamGiaCaNhan {
     @JoinColumn(name = "doi_thuong_id")
     private DmDoiThuong doiThuong;
 
-    // Sinh tự động bởi DB (UPPER(LEFT(NEWID()...))) → chỉ đọc, không ghi qua JPA
     @Column(name = "ma_phieu", length = 50, insertable = false, updatable = false)
     private String maPhieu;
 
@@ -54,10 +53,6 @@ public class PhieuGiamGiaCaNhan {
     @JoinColumn(name = "don_hang_id")
     private DonHang donHang;
 
-    // NULL = không yêu cầu đơn tối thiểu. Voucher trúng từ vòng quay copy nguyên giá trị này
-    // từ khuyen_mai gốc; voucher đổi từ dm_doi_thuong luôn để NULL (danh mục đó không có khái
-    // niệm đơn tối thiểu). Voucher admin tặng trực tiếp cũng dùng field này (NULL nếu admin
-    // không đặt điều kiện).
     @Column(name = "don_hang_toi_thieu", precision = 18, scale = 0)
     private BigDecimal donHangToiThieu;
 }

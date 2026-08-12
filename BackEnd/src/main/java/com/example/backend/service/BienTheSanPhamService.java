@@ -66,7 +66,6 @@ public class BienTheSanPhamService {
     @Transactional
     public BienTheSanPham create(BienTheSanPhamRequest request) {
         BienTheSanPham entity = new BienTheSanPham();
-        // Bỏ qua: sanPhamId, cpuId, ramId, oCungId, gpuId (khác tên với entity)
         BeanUtils.copyProperties(request, entity, "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId");
 
         entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));

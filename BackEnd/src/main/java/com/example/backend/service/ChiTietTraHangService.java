@@ -47,25 +47,15 @@ public class ChiTietTraHangService {
         kiemTraSoLuongTraKhongVuotMua(phieu.getDonHang(), request.getBienTheId(), null, request.getSoLuong());
 
         ChiTietTraHang entity = new ChiTietTraHang();
-        // BeanUtils copies: soLuong, donGiaHoan, tinhTrang
         BeanUtils.copyProperties(request, entity, "phieuTraId", "bienTheId", "chiTietId");
         entity.setPhieuTraHang(phieu);
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
-        // chiTietId (serial cụ thể) — optional. Việc cộng lại tồn kho (chuyển serial về
-        // "trong_kho") KHÔNG làm ở đây nữa — đã chuyển sang PhieuTraHangService.capNhatKhoNeuVuaHoanTat(),
-        // gắn đúng vào thời điểm phiếu chuyển "da_xu_ly" thay vì lúc tạo dòng (xem comment ở đó).
         if (request.getChiTietId() != null) {
             entity.setChiTietSanPham(chiTietSanPhamRepository.getReferenceById(request.getChiTietId()));
         }
         return chiTietTraHangRepository.save(entity);
     }
 
-    // Đối chiếu số lượng trả với số lượng ĐÃ MUA thật của đơn — trước đây chỉ luồng khách tự
-    // gửi yêu cầu (PhieuTraHangService.taoYeuCauTuKhachHang) mới kiểm tra việc này, luồng nhân
-    // viên tạo trực tiếp (ReturnsPanel.vue -> ChiTietTraHangController) không kiểm tra gì cả,
-    // có thể trả vượt số máy khách thực mua (kể cả cộng dồn qua nhiều phiếu/nhiều dòng khác
-    // nhau cho cùng 1 biến thể). excludeChiTietTraId: khi sửa 1 dòng có sẵn, loại đúng dòng đó
-    // ra khỏi tổng "đã trả" trước khi cộng số lượng mới, tránh đếm trùng chính nó.
     private void kiemTraSoLuongTraKhongVuotMua(DonHang donHang, Integer bienTheId, Integer excludeChiTietTraId, Integer soLuongMoi) {
         if (soLuongMoi == null || soLuongMoi <= 0) return;
 

@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Lịch sử tồn kho — chỉ staff, không có nơi nào trong code khách hàng gọi tới.
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/lich-su-ton-kho")
@@ -32,13 +31,11 @@ public class LichSuTonKhoController {
         return lichSuTonKhoService.getById(id);
     }
 
-    // POST — service xử lý nhiều FK optional (bienThe, chiTiet, donHang, phieuNhap, nhanVien)
     @PostMapping
     public ResponseEntity<LichSuTonKho> create(@Valid @RequestBody LichSuTonKhoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(lichSuTonKhoService.create(request));
     }
 
-    // Lịch sử tồn kho không cho phép cập nhật — chỉ ghi thêm và xóa (audit trail)
     @DeleteMapping("delete/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         lichSuTonKhoService.delete(id);

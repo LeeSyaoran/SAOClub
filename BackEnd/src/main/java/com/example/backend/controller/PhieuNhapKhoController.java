@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Phiếu nhập kho — chỉ staff, không có nơi nào trong code khách hàng gọi tới.
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/phieu-nhap-kho")
@@ -32,7 +31,6 @@ public class PhieuNhapKhoController {
         return phieuNhapKhoService.getById(id);
     }
 
-    // POST — service xử lý FK nhaCungCap, nhanVien
     @PostMapping
     public ResponseEntity<PhieuNhapKho> create(@Valid @RequestBody PhieuNhapKhoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(phieuNhapKhoService.create(request));

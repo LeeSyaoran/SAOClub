@@ -1,42 +1,33 @@
 <template>
-  <!-- ========================================================
-    NavBar.vue — Thanh điều hướng chính của trang khách hàng
-    Props nhận: cartCount (số lượng sản phẩm trong giỏ)
-    Emit ra:   toggle-cart | open-admin | open-account | search
-  ======================================================== -->
-
-  <!-- Topbar: dải thông báo nhỏ chạy ở trên cùng -->
-
   <div style="background:var(--bg-page-alt); border-bottom:1px solid var(--border-color);">
     <div class="container-xl d-flex justify-content-between align-items-center py-1 overflow-hidden">
-      <!-- Tên thương hiệu bên trái -->
       <span class="small fw-medium d-none d-md-inline" style="color:var(--text-secondary);">
         {{ t('nav.tagline') }}
       </span>
-      <!-- Các thông tin tiện ích bên phải -->
       <div class="d-flex align-items-center gap-3 small fw-semibold" style="color:var(--text-secondary);">
         <span class="d-none d-lg-flex align-items-center gap-1"><BadgeCheck :size="13" /> {{ t('nav.genuine') }}</span>
         <span class="d-none d-xl-flex align-items-center gap-1"><Truck :size="13" /> {{ t('nav.freeShip') }}</span>
         <span class="d-none d-xl-flex align-items-center gap-1"><RefreshCw :size="13" /> {{ t('nav.tradeIn') }}</span>
-        <!-- Số hotline nổi bật màu vàng -->
         <span class="text-warning fw-black">{{ t('nav.hotline') }}</span>
 
-        <!-- Đổi giao diện sáng/tối — dùng được kể cả khi chưa đăng nhập -->
-        <button type="button" class="btn btn-sm p-0 border-0 lh-1"
-                style="background:transparent; color:var(--text-secondary); font-size:14px;"
-                :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
-                :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
-                @click="toggleTheme">
+        <button
+          type="button" class="btn btn-sm p-0 border-0 lh-1"
+          style="background:transparent; color:var(--text-secondary); font-size:14px;"
+          :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+          :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+          @click="toggleTheme"
+        >
           <component :is="ThemeStore.mode === 'dark' ? Moon : Sun" :size="18" />
         </button>
 
-        <!-- Đổi ngôn ngữ — dùng được kể cả khi chưa đăng nhập -->
-        <select class="form-select form-select-sm fw-semibold py-0"
-                style="width:auto; background:transparent; border:none; color:var(--text-secondary); font-size:11px; cursor:pointer;"
-                :value="I18nStore.locale"
-                :title="t('language.label')"
-                :aria-label="t('language.label')"
-                @change="setLocale($event.target.value)">
+        <select
+          class="form-select form-select-sm fw-semibold py-0"
+          style="width:auto; background:transparent; border:none; color:var(--text-secondary); font-size:11px; cursor:pointer;"
+          :value="I18nStore.locale"
+          :title="t('language.label')"
+          :aria-label="t('language.label')"
+          @change="setLocale($event.target.value)"
+        >
           <option v-for="loc in LOCALES" :key="loc.code" :value="loc.code" style="background:var(--bg-card); color:var(--text-primary);">
             {{ loc.flag }} {{ loc.code.toUpperCase() }}
           </option>
@@ -45,24 +36,22 @@
     </div>
   </div>
 
-  <!-- Header chính: sticky ở trên khi scroll -->
   <header class="sticky-top" style="background:var(--bg-header); border-bottom:1px solid var(--border-color); z-index:100;">
     <div class="container-xl d-flex align-items-center gap-2 gap-md-3 py-2">
-
-      <!-- Logo SAOPHONE -->
-      <a href="/" class="text-decoration-none fw-black fs-5 me-1 flex-shrink-0"
-         style="letter-spacing:-0.04em; color:var(--text-heading);">
+      <a
+        href="/" class="text-decoration-none fw-black fs-5 me-1 flex-shrink-0"
+        style="letter-spacing:-0.04em; color:var(--text-heading);"
+      >
         SAO<span class="text-warning">PHONE</span>
       </a>
 
-      <!-- ── Nút Danh mục + Mega dropdown ── -->
-      <div class="position-relative flex-shrink-0"
-           @mouseenter="isMenuOpen = true"
-           @mouseleave="isMenuOpen = false"
-           @keydown.esc="closeMenu"
-           @focusout="onMenuFocusOut">
-
-        <!-- Nút trigger dropdown — click hoặc hover đều mở, bàn phím dùng được -->
+      <div
+        class="position-relative flex-shrink-0"
+        @mouseenter="isMenuOpen = true"
+        @mouseleave="isMenuOpen = false"
+        @keydown.esc="closeMenu"
+        @focusout="onMenuFocusOut"
+      >
         <button
           ref="menuTriggerRef"
           type="button"
@@ -71,18 +60,20 @@
           style="border:1px solid; border-radius:12px; background:var(--bg-input); color:var(--text-primary);"
           aria-haspopup="true"
           :aria-expanded="isMenuOpen"
-          @click="isMenuOpen = !isMenuOpen">
+          @click="isMenuOpen = !isMenuOpen"
+        >
           <Menu :size="16" style="vertical-align:-3px;" /> <span class="d-none d-sm-inline">{{ t('nav.categories') }}</span>
         </button>
 
-        <!-- Mega menu dropdown panel -->
-        <div v-if="isMenuOpen"
-             class="position-absolute top-100 start-0 mt-1 shadow-lg rounded-3 overflow-hidden"
-             style="width:820px; background:var(--bg-page-alt); border:1px solid var(--border-color); z-index:200; height:340px; display:flex;">
-
-          <!-- Cột trái: danh sách các loại laptop -->
-          <div class="d-flex flex-column gap-1 p-2 flex-shrink-0 overflow-y-auto"
-               style="width:280px; background:var(--bg-hover); border-right:1px solid var(--border-color);">
+        <div
+          v-if="isMenuOpen"
+          class="position-absolute top-100 start-0 mt-1 shadow-lg rounded-3 overflow-hidden"
+          style="width:820px; background:var(--bg-page-alt); border:1px solid var(--border-color); z-index:200; height:340px; display:flex;"
+        >
+          <div
+            class="d-flex flex-column gap-1 p-2 flex-shrink-0 overflow-y-auto"
+            style="width:280px; background:var(--bg-hover); border-right:1px solid var(--border-color);"
+          >
             <div
               v-for="cat in categories"
               :key="cat.id"
@@ -95,44 +86,47 @@
                 : 'cursor:pointer;') + (activeCategory === cat.id ? '' : ' color:var(--text-secondary);')"
               @mouseenter="activeCategory = cat.id"
               @focus="activeCategory = cat.id"
-              @click="onCategoryClick(cat)">
+              @click="onCategoryClick(cat)"
+            >
               <span>{{ cat.title }}</span>
               <span style="font-size:14px; opacity:0.5;">›</span>
             </div>
           </div>
 
-          <!-- Cột phải: hãng và phân khúc tương ứng -->
           <div class="p-4 flex-grow-1 overflow-y-auto" style="background:var(--bg-page-alt);">
             <template v-for="cat in categories" :key="cat.id">
               <div v-if="cat.id === activeCategory" class="row g-4">
-                <!-- Cột hãng sản xuất -->
                 <div class="col-6">
-                  <div class="text-warning fw-black text-uppercase small pb-2 mb-2"
-                       style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid var(--border-color);">
+                  <div
+                    class="text-warning fw-black text-uppercase small pb-2 mb-2"
+                    style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid var(--border-color);"
+                  >
                     {{ t('nav.brandsHeading') }}
                   </div>
-                  <button v-for="brand in cat.brands" :key="brand"
-                     type="button"
-                     class="d-flex align-items-center gap-1 text-decoration-none py-1 small fw-bold border-0 bg-transparent text-start"
-                     style="font-size:12px; color:var(--text-secondary);"
-                     @mouseenter="e => e.target.style.color='var(--text-heading)'"
-                     @mouseleave="e => e.target.style.color=''"
-                     @click="onBrandClick(brand)">
+                  <button
+                    v-for="brand in cat.brands" :key="brand"
+                    type="button"
+                    class="d-flex align-items-center gap-1 text-decoration-none py-1 small fw-bold border-0 bg-transparent text-start"
+                    style="font-size:12px; color:var(--text-secondary);"
+                    @mouseenter="e => e.target.style.color='var(--text-heading)'"
+                    @mouseleave="e => e.target.style.color=''"
+                    @click="onBrandClick(brand)"
+                  >
                     <span style="color:var(--border-color-strong);">·</span> {{ brand }}
                   </button>
                 </div>
-                <!-- Cột phân khúc nổi bật -->
                 <div class="col-6">
-                  <div class="text-warning fw-black text-uppercase small pb-2 mb-2"
-                       style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid var(--border-color);">
+                  <div
+                    class="text-warning fw-black text-uppercase small pb-2 mb-2"
+                    style="font-size:10px; letter-spacing:0.08em; border-bottom:1px solid var(--border-color);"
+                  >
                     {{ t('nav.tagsHeading') }}
                   </div>
-                  <!-- Text mô tả marketing, không map được vào bộ lọc thật (không có
-                       field dữ liệu tương ứng) — hiện dạng span thuần, không giả vờ
-                       là link để tránh gây hiểu lầm có thể bấm được. -->
-                  <span v-for="tag in cat.tags" :key="tag"
-                     class="d-block py-1 small fw-bold"
-                     style="font-size:12px; color:var(--text-secondary);">
+                  <span
+                    v-for="tag in cat.tags" :key="tag"
+                    class="d-block py-1 small fw-bold"
+                    style="font-size:12px; color:var(--text-secondary);"
+                  >
                     {{ tag }}
                   </span>
                 </div>
@@ -143,8 +137,10 @@
       </div><!-- /category dropdown -->
 
       <!-- Nút chọn thành phố (chỉ hiện trên màn to) -->
-      <button class="btn btn-sm fw-bold d-none d-xl-flex align-items-center gap-2 flex-shrink-0"
-              style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary);">
+      <button
+        class="btn btn-sm fw-bold d-none d-xl-flex align-items-center gap-2 flex-shrink-0"
+        style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary);"
+      >
         <MapPin :size="15" />
         <div class="text-start lh-1">
           <div style="font-size:10px; color:var(--text-muted);">{{ t('nav.changeCityLabel') }}</div>
@@ -166,22 +162,26 @@
         <button
           class="btn btn-sm"
           style="background:var(--bg-input); border-color:var(--border-color-strong); border-left:none; color:var(--text-secondary); border-radius:0 12px 12px 0;"
-          @click="emit('search', searchValue)">
+          @click="emit('search', searchValue)"
+        >
           <Search :size="15" />
         </button>
       </div>
 
       <!-- Nhóm nút bên phải: Giỏ hàng | Đăng nhập -->
       <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-1">
-
         <!-- Nút giỏ hàng: phát ra sự kiện toggle-cart khi click -->
-        <button class="btn btn-sm d-flex align-items-center gap-1 fw-bold"
-                style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary); font-size:12px; white-space:nowrap;"
-                @click="emit('toggle-cart')">
+        <button
+          class="btn btn-sm d-flex align-items-center gap-1 fw-bold"
+          style="background:var(--bg-input); border:1px solid var(--border-color-strong); border-radius:12px; color:var(--text-primary); font-size:12px; white-space:nowrap;"
+          @click="emit('toggle-cart')"
+        >
           <ShoppingCart :size="16" style="vertical-align:-3px;" /> <span class="d-none d-sm-inline">{{ t('nav.cart') }}</span>
           <!-- Badge hiển thị số lượng sản phẩm trong giỏ -->
-          <span class="badge fw-black"
-                style="background:var(--accent); color:var(--accent-text); border-radius:999px; font-size:11px;">
+          <span
+            class="badge fw-black"
+            style="background:var(--accent); color:var(--accent-text); border-radius:999px; font-size:11px;"
+          >
             {{ cartCount }}
           </span>
         </button>
@@ -189,15 +189,18 @@
         <!-- Đã đăng nhập: hiển thị tên (nhân viên → mở trang quản trị, khách → mở trang tài khoản) + nút đăng xuất -->
         <template v-if="user">
           <button
-              class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-semibold border-0"
-              style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--accent-fg); font-size:12px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; cursor:pointer;"
-              @click="emit(isStaff ? 'open-admin' : 'open-account')">
+            class="d-flex align-items-center gap-1 px-3 py-1 rounded-pill fw-semibold border-0"
+            style="background:var(--bg-input); border:1px solid var(--border-color-strong); color:var(--accent-fg); font-size:12px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; cursor:pointer;"
+            @click="emit(isStaff ? 'open-admin' : 'open-account')"
+          >
             <span style="font-size:10px;">●</span>
             {{ user.hoTen || user.username }}
           </button>
-          <button class="btn btn-sm fw-bold"
-                  style="background:var(--bg-input); border:1px solid #7f1d1d; border-radius:12px; color:#f87171; font-size:12px; white-space:nowrap;"
-                  @click="emit('logout')">
+          <button
+            class="btn btn-sm fw-bold"
+            style="background:var(--bg-input); border:1px solid #7f1d1d; border-radius:12px; color:#f87171; font-size:12px; white-space:nowrap;"
+            @click="emit('logout')"
+          >
             {{ t('nav.logout') }}
           </button>
         </template>
@@ -207,7 +210,6 @@
           {{ t('nav.login') }}
         </button>
       </div>
-
     </div><!-- /container-xl -->
   </header>
 </template>

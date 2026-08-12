@@ -16,8 +16,6 @@ import java.util.Optional;
 @Repository
 public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, Integer> {
 
-    // DTO query — tránh N+1 khi serialize các @ManyToOne lồng nhau (cpu, ram, oCung, gpu)
-    // Dùng LEFT JOIN vì cpu/ram/oCung/gpu đều nullable (điện thoại không có CPU laptop, ...)
     @Query("""
     SELECT new com.example.backend.response.BienTheSanPhamResponse(
         bt.bienTheId, sp.sanPhamId, bt.maSku, bt.giaNhap, bt.giaBan,
@@ -59,7 +57,6 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
     countQuery = "SELECT COUNT(bt) FROM BienTheSanPham bt JOIN bt.sanPham sp")
     Page<BienTheSanPhamResponse> hienThiBienTheSanPham(Pageable pageable);
 
-    // Toàn bộ biến thể của 1 sản phẩm — dùng khi xóa cả sản phẩm (SanPhamService.deleteSanPham).
     List<BienTheSanPham> findBySanPham_SanPhamId(Integer sanPhamId);
 
     @Query("""

@@ -25,7 +25,7 @@ class KhachHangRegisterRequestTest {
     @Test
     void password_duoi8KyTu_biTuChoi() {
         KhachHangRegisterRequest req = hopLe();
-        req.setPassword("abc1234"); // 7 ký tự
+        req.setPassword("abc1234"); 
 
         Set<ConstraintViolation<KhachHangRegisterRequest>> loi = validator.validate(req);
 
@@ -35,7 +35,7 @@ class KhachHangRegisterRequestTest {
     @Test
     void password_du8KyTu_hopLe() {
         KhachHangRegisterRequest req = hopLe();
-        req.setPassword("abc12345"); // đúng 8 ký tự
+        req.setPassword("abc12345"); 
 
         Set<ConstraintViolation<KhachHangRegisterRequest>> loi = validator.validate(req);
 

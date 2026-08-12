@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Chi tiết phiếu nhập kho — chỉ staff, không có nơi nào trong code khách hàng gọi tới.
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
 @RequestMapping("/api/chi-tiet-phieu-nhap")

@@ -45,8 +45,6 @@ public class CaiDatHeThongService {
         return get();
     }
 
-    // Lưu lại ngưỡng đã gõ (tiện gõ lại lần sau) VÀ ghi đè lên toàn bộ biến thể trong 1 hành
-    // động — đây KHÔNG phải giá trị mặc định cho biến thể mới, chỉ là bulk-update thủ công.
     @Transactional
     public int apDungNguongTonKhoChoTatCa(int nguong) {
         CaiDatHeThong c = getEntity();

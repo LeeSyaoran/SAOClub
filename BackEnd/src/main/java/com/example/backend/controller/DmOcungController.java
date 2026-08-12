@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Danh mục ổ cứng — dữ liệu tham chiếu đơn giản, không cần service riêng
 @RestController
 @RequestMapping("/api/dm-o-cung")
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
@@ -35,7 +34,6 @@ public class DmOcungController {
         return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(item));
     }
 
-    // DmOcung PK field name: oCungId — xem entity DmOcung
     @PutMapping("update/{id}")
     public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody DmOcung item) {
         item.setOCungId(id);

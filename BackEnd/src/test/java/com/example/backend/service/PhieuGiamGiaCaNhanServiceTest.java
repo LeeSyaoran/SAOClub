@@ -92,7 +92,7 @@ class PhieuGiamGiaCaNhanServiceTest {
 
         PhieuGiamGiaCaNhan saved = service.doiThuong(5);
 
-        assertThat(saved.getKhachHang().getDiemTichLuy()).isEqualTo(500); // 1000 - 500
+        assertThat(saved.getKhachHang().getDiemTichLuy()).isEqualTo(500); 
         assertThat(saved.getDaSuDung()).isFalse();
         assertThat(saved.getLoai()).isEqualTo("fixed");
         assertThat(saved.getGiaTri()).isEqualByComparingTo(java.math.BigDecimal.valueOf(50_000));
@@ -185,8 +185,6 @@ class PhieuGiamGiaCaNhanServiceTest {
 
     @Test
     void getByKhachHangIdForAdmin_trungVongQuay_ganNhanDaDoi() {
-        // Không có doiThuong (không tự đổi điểm) nhưng phieuId khớp lịch sử vòng quay
-        // → vẫn phải gắn nhãn "Khách tự đổi / trúng thưởng", không phải "Admin tặng".
         PhieuGiamGiaCaNhan trungVongQuay = new PhieuGiamGiaCaNhan();
         trungVongQuay.setPhieuId(3);
         trungVongQuay.setLoai("percent");

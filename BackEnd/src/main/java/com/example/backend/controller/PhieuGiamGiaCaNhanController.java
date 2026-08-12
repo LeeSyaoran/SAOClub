@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Chỉ đăng nhập là đủ — khách hàng tự đổi điểm/xem voucher của chính mình, service tự suy
-// khách hàng qua SecurityContextHolder, không nhận khachHangId từ client.
 @RestController
 @RequestMapping("/api/phieu-giam-gia-ca-nhan")
 @PreAuthorize("isAuthenticated()")

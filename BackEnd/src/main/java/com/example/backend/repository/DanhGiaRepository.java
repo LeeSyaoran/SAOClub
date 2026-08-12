@@ -25,8 +25,6 @@ public interface DanhGiaRepository extends JpaRepository<DanhGia, Integer> {
     """)
     List<DanhGiaResponse> hienThiTheoSanPham(@Param("sanPhamId") Integer sanPhamId);
 
-    // Tổng hợp điểm trung bình + số lượng của TẤT CA san pham trong 1 lan goi — luoi san pham
-    // can hien rating cho ca chuc the cung luc, goi rieng tung san pham se thanh N+1 query.
     @Query("""
     SELECT new com.example.backend.response.DanhGiaSummaryResponse(
         d.sanPham.sanPhamId, AVG(CAST(d.soSao AS double)), COUNT(d)
@@ -38,8 +36,6 @@ public interface DanhGiaRepository extends JpaRepository<DanhGia, Integer> {
 
     Optional<DanhGia> findByKhachHang_KhachHangIdAndSanPham_SanPhamId(Integer khachHangId, Integer sanPhamId);
 
-    // Danh sach TAT CA danh gia cho admin/nhan_vien kiem duyet — khac hienThiTheoSanPham()
-    // (chi 1 san pham, cong khai), o day can them ten san pham vi bang gop nhieu san pham.
     @Query("""
     SELECT new com.example.backend.response.DanhGiaAdminResponse(
         d.danhGiaId, kh.khachHangId, kh.hoTen, sp.sanPhamId, sp.tenSanPham, d.soSao, d.noiDung, d.ngayDanhGia
@@ -49,8 +45,6 @@ public interface DanhGiaRepository extends JpaRepository<DanhGia, Integer> {
     """)
     List<DanhGiaAdminResponse> hienThiTatCa();
 
-    // Xac minh "da mua hang" — chi khach co don DA GIAO chua san pham nay moi duoc danh gia.
-    // Lay don_hang_id gan nhat de luu lai lam bang chung (xem DanhGiaService.themDanhGia).
     @Query("""
     SELECT c.donHang.id
     FROM ChiTietDonHang c

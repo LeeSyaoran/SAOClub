@@ -1,13 +1,14 @@
 <template>
-  <!-- Toast thông báo lỗi/thành công (thay window.alert()) — dùng chung Admin/Staff/WarehouseManagement -->
   <Transition name="adm-toast-slide">
-    <div v-if="ToastState.show"
-         class="position-fixed d-flex align-items-start gap-2 px-4 py-3 rounded-3 fw-semibold small shadow-lg"
-         style="top:24px; right:24px; z-index:9999; min-width:260px; max-width:440px; pointer-events:none; line-height:1.4;"
-         :style="ToastState.type === 'success'
-           ? 'background:var(--state-success,#16a34a); color:#fff;'
-           : 'background:var(--state-danger,#dc2626); color:#fff;'"
-         role="status" aria-live="polite">
+    <div
+      v-if="ToastState.show"
+      class="position-fixed d-flex align-items-start gap-2 px-4 py-3 rounded-3 fw-semibold small shadow-lg"
+      style="top:24px; right:24px; z-index:9999; min-width:260px; max-width:440px; pointer-events:none; line-height:1.4;"
+      :style="ToastState.type === 'success'
+        ? 'background:var(--state-success,#16a34a); color:#fff;'
+        : 'background:var(--state-danger,#dc2626); color:#fff;'"
+      role="status" aria-live="polite"
+    >
       <span style="flex-shrink:0;"><component :is="ToastState.type === 'success' ? CheckCircle2 : XCircle" :size="18" /></span>
       <span>{{ ToastState.msg }}</span>
     </div>

@@ -31,7 +31,6 @@ public class LichSuDonHangService {
         return lichSuDonHangRepository.getByDonHangId(donHangId);
     }
 
-    // ── Kiểm tra quyền: nhân viên/admin/quản kho xem tất cả, khách chỉ xem đơn của chính mình ──
     private TaiKhoan currentAccount() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return taiKhoanRepository.findByUsername(username).orElse(null);

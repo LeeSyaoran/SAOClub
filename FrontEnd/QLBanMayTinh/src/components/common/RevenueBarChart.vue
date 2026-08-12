@@ -1,7 +1,4 @@
 <template>
-  <!-- Biểu đồ cột doanh thu — vẽ bằng SVG thuần, không cần thư viện ngoài. Cột tô gradient
-       hồng→tím (đúng cặp màu --accent/--accent-2 dùng cho gradient avatar/nút CTA nơi khác
-       trong app), cột cao nhất được gắn nhãn "★ đỉnh" làm điểm nhấn thay vì các cột đều màu. -->
   <div>
     <svg v-if="!allZero" :width="width" :height="height" :viewBox="`0 0 ${width} ${height}`" style="width:100%;height:auto;">
       <defs>
@@ -10,35 +7,38 @@
           <stop offset="100%" stop-color="var(--accent-2)" />
         </linearGradient>
       </defs>
-      <!-- gridline đáy (0) và đỉnh khung vẽ — hairline, màu recessive -->
       <line :x1="0" :x2="width" :y1="chartTop" :y2="chartTop" stroke="var(--border-color-soft)" stroke-width="1" style="pointer-events:none;" />
       <line :x1="0" :x2="width" :y1="chartBottom" :y2="chartBottom" stroke="var(--border-color-soft)" stroke-width="1" style="pointer-events:none;" />
 
-      <!-- Nhãn (trục X, "★ đỉnh") vẽ SAU cùng, tách khỏi từng <g> cột, và luôn pointer-events:none —
-           text ở cột hẹp (nhiều cột/ngày) thường rộng hơn cả ô của nó, tràn sang ô bên cạnh; nếu còn
-           nhận sự kiện chuột thì nó "cướp" hover của ô lân cận, khiến tooltip hiện sai ngày đang trỏ. -->
       <g v-for="(bar, i) in bars" :key="i">
-        <!-- vùng hover phủ cả ô (kể cả khi doanh thu ngày đó = 0) để luôn xem được giá trị -->
-        <rect :x="bar.slotX" :y="chartTop" :width="slotWidth" :height="chartBottom - chartTop"
-              fill="transparent" style="cursor:pointer;"
-              @mouseenter="hoverIndex = i" @mouseleave="hoverIndex = null" />
+        <rect
+          :x="bar.slotX" :y="chartTop" :width="slotWidth" :height="chartBottom - chartTop"
+          fill="transparent" style="cursor:pointer;"
+          @mouseenter="hoverIndex = i" @mouseleave="hoverIndex = null"
+        />
         <template v-if="bar.barHeight > 0">
-          <rect :x="bar.x" :y="bar.y" :width="barWidth" :height="bar.barHeight" rx="4"
-                :fill="`url(#${gradientId})`"
-                :style="hoverIndex === i ? 'pointer-events:none;filter:brightness(1.2);' : 'pointer-events:none;'" />
-          <!-- vuông lại đáy cột (chỉ bo góc trên) bằng cách đè 1 dải chữ nhật vuông lên đáy,
-               màu trùng điểm cuối gradient (--accent-2) nên nối liền mượt -->
-          <rect v-if="bar.barHeight > 4" :x="bar.x" :y="bar.y + bar.barHeight - 4" :width="barWidth" height="4"
-                fill="var(--accent-2)"
-                :style="hoverIndex === i ? 'pointer-events:none;filter:brightness(1.2);' : 'pointer-events:none;'" />
+          <rect
+            :x="bar.x" :y="bar.y" :width="barWidth" :height="bar.barHeight" rx="4"
+            :fill="`url(#${gradientId})`"
+            :style="hoverIndex === i ? 'pointer-events:none;filter:brightness(1.2);' : 'pointer-events:none;'"
+          />
+          <rect
+            v-if="bar.barHeight > 4" :x="bar.x" :y="bar.y + bar.barHeight - 4" :width="barWidth" height="4"
+            fill="var(--accent-2)"
+            :style="hoverIndex === i ? 'pointer-events:none;filter:brightness(1.2);' : 'pointer-events:none;'"
+          />
         </template>
       </g>
       <g style="pointer-events:none;">
         <!-- điểm nhấn: chỉ cột doanh thu cao nhất được gắn nhãn "★ đỉnh" phía trên -->
-        <text v-if="peakIndex >= 0" :x="bars[peakIndex].slotX + slotWidth / 2" :y="bars[peakIndex].y - 8"
-              text-anchor="middle" style="font-size:10px;font-weight:700;fill:var(--text-heading);">★ {{ formatCompact(bars[peakIndex].value) }}</text>
-        <text v-for="(bar, i) in bars" v-show="i % labelStep === 0" :key="i" :x="bar.slotX + slotWidth / 2" :y="height - 4"
-              text-anchor="middle" style="font-size:9px;fill:var(--text-secondary);">{{ bar.label }}</text>
+        <text
+          v-if="peakIndex >= 0" :x="bars[peakIndex].slotX + slotWidth / 2" :y="bars[peakIndex].y - 8"
+          text-anchor="middle" style="font-size:10px;font-weight:700;fill:var(--text-heading);"
+        >★ {{ formatCompact(bars[peakIndex].value) }}</text>
+        <text
+          v-for="(bar, i) in bars" v-show="i % labelStep === 0" :key="i" :x="bar.slotX + slotWidth / 2" :y="height - 4"
+          text-anchor="middle" style="font-size:9px;fill:var(--text-secondary);"
+        >{{ bar.label }}</text>
       </g>
     </svg>
     <div class="small mt-1" style="color:var(--text-secondary);min-height:1.2em;">

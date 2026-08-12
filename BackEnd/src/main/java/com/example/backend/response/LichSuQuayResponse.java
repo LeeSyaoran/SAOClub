@@ -15,6 +15,6 @@ public class LichSuQuayResponse {
     private Integer id;
     private LocalDateTime ngayQuay;
     private String ketQua;
-    private String tenKhuyenMai; // null nếu trượt
+    private String tenKhuyenMai; 
     private Integer diemDaTru;
 }

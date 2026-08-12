@@ -26,7 +26,6 @@ public class TonKhoService {
                 .orElseThrow(() -> new IllegalArgumentException("Tồn kho không tồn tại với id: " + id));
     }
 
-    // Tìm tồn kho theo biến thể — dùng để kiểm tra tồn kho trước khi tạo đơn hàng
     public TonKho getByBienTheId(Integer bienTheId) {
         return tonKhoRepository.findByBienTheBienTheId(bienTheId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tồn kho cho biến thể id: " + bienTheId));
@@ -37,9 +36,6 @@ public class TonKhoService {
         return tonKhoRepository.save(item);
     }
 
-    // soLuongTon KHÔNG được set trực tiếp qua endpoint này — chỉ tăng/giảm khi thêm/xóa
-    // số serial (chi_tiet_san_pham), DB tự tính lại. Nếu không, ai đó có thể gõ tay 1 con số
-    // tồn kho không khớp với số serial thực tế đang có.
     public TonKho update(Integer id, TonKho item) {
         TonKho existing = getById(id);
         if (item.getSoLuongGiu()     != null) existing.setSoLuongGiu(item.getSoLuongGiu());

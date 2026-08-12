@@ -38,7 +38,6 @@ public class ChiTietSanPhamService {
 
     public ChiTietSanPham create(ChiTietSanPhamRequest request) {
         ChiTietSanPham entity = new ChiTietSanPham();
-        // BeanUtils copies: soSerial, trangThai, ngayNhapKho, ghiChu
         BeanUtils.copyProperties(request, entity, "bienTheId");
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
         return chiTietSanPhamRepository.save(entity);
@@ -47,10 +46,6 @@ public class ChiTietSanPhamService {
     @Transactional
     public ChiTietSanPham update(Integer id, ChiTietSanPhamRequest request) {
         ChiTietSanPham entity;
-        // Giữ chỗ tại POS ("trong_kho" -> "giu_hang") là bước 2 nhân viên/2 tab có thể cùng
-        // lúc chọn trùng 1 serial (xem PosPanel.vue setSerialTrangThai) — khóa PESSIMISTIC_WRITE
-        // + kiểm tra lại trạng thái hiện tại ngay trong transaction trước khi ghi đè. Các chỉnh
-        // sửa khác (sửa ghi chú, đổi trạng thái mục đích khác...) không cần khóa.
         if ("giu_hang".equals(request.getTrangThai())) {
             entity = chiTietSanPhamRepository.findByIdForUpdate(id)
                     .orElseThrow(() -> new IllegalArgumentException("Chi tiết sản phẩm không tồn tại với id: " + id));
@@ -64,8 +59,6 @@ public class ChiTietSanPhamService {
         return chiTietSanPhamRepository.save(entity);
     }
 
-    // Chỉ cho xóa serial đang "trong_kho" (thêm nhầm, chưa bán/chưa dùng) — serial đã bán
-    // hoặc đã gắn vào đơn hàng/bảo hành mà xóa sẽ làm sai lịch sử giao dịch đã ghi nhận.
     public void delete(Integer id) {
         ChiTietSanPham entity = getById(id);
         if (!"trong_kho".equals(entity.getTrangThai())) {
@@ -74,10 +67,6 @@ public class ChiTietSanPhamService {
         chiTietSanPhamRepository.deleteById(id);
     }
 
-    // Danh sách serial đã bán CÒN trong hạn bảo hành — hạn tính từ ngày giao thực tế
-    // (không phải ngày đặt/ngày bán) cộng số tháng bảo hành của biến thể. Serial đã hết
-    // hạn tự động không còn xuất hiện ở đây nữa (không cần xóa dữ liệu, chỉ lọc theo ngày
-    // mỗi lần gọi) — sắp hết hạn nhất hiển thị trước để dễ theo dõi.
     public List<WarrantyStatusResponse> getStillUnderWarranty() {
         LocalDateTime now = LocalDateTime.now();
         List<WarrantyStatusResponse> list = chiTietSanPhamRepository.timSerialDaBanCoGiaoHang();

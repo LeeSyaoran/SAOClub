@@ -276,7 +276,7 @@ const deleteSerial = async (item) => {
 
       <div class="mb-3">
         <label class="form-label small text-secondary mb-1">{{ t('admin.serialManager.colLoai') }}</label>
-        <select v-model="form.loai" class="form-select form-select-sm" :disabled="!!editingId" @change="onLoaiChange" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);">
+        <select v-model="form.loai" class="form-select form-select-sm" :disabled="!!editingId" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" @change="onLoaiChange">
           <option value="sanPham">{{ t('admin.productsTabs.sanPham') }}</option>
           <option value="cpu">{{ t('admin.productsTabs.cpu') }}</option>
           <option value="ram">{{ t('admin.productsTabs.ram') }}</option>

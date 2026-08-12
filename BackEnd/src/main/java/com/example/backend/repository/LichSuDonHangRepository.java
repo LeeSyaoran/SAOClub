@@ -16,7 +16,5 @@ public interface LichSuDonHangRepository extends JpaRepository<LichSuDonHang, In
            "FROM LichSuDonHang l WHERE l.donHangId = :donHangId ORDER BY l.thoiGian ASC")
     List<LichSuDonHangResponse> getByDonHangId(@Param("donHangId") Integer donHangId);
 
-    // Dùng khi gộp đơn (DonHangService.mergeOrders, Task 3) — chuyển log của đơn nguồn sang
-    // đơn đích trước khi xóa đơn nguồn, giữ nguyên lịch sử thay vì mất do cascade delete.
     List<LichSuDonHang> findByDonHangId(Integer donHangId);
 }

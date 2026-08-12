@@ -2,7 +2,6 @@
   <!-- Trục thời gian theo dõi trạng thái đơn hàng -->
   <div class="card border-secondary" style="background:var(--bg-hover);">
     <div class="card-body">
-
       <!-- Desktop: mỗi icon có 2 "nửa đường nối" bên trái/phải (flex-grow:1, nằm ngay
            trong hàng chứa icon đó) thay vì 1 đường full-width tính theo % bề rộng cột (kỹ
            thuật cũ luôn thiếu hẳn đoạn nối vào icon CUỐI cùng dù cột đã đều nhau/hết gap —
@@ -11,29 +10,41 @@
            1 đoạn nối liền mạch — 2 nửa luôn bằng nhau vì 2 cột kề nhau bằng nhau tuyệt đối
            ("flex:1 1 0"), không phụ thuộc số liệu % nào cả nên không thể lệch. -->
       <div class="d-none d-md-flex justify-content-between">
-        <div v-for="(step, index) in steps" :key="index"
-             class="d-flex flex-column align-items-center" style="flex:1 1 0; min-width:0;">
+        <div
+          v-for="(step, index) in steps" :key="index"
+          class="d-flex flex-column align-items-center" style="flex:1 1 0; min-width:0;"
+        >
           <div class="d-flex align-items-center" style="width:100%;">
-            <div class="flex-grow-1" style="height:1.5px;"
-                 :style="index === 0 ? 'background:transparent;'
-                   : index <= currentStep ? 'background:var(--accent);' : 'background:var(--border-color-strong); opacity:0.4;'"></div>
-            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 position-relative"
-                 style="width:36px; height:36px; z-index:1;"
-                 :style="index <= currentStep
-                   ? 'background:var(--bg-hover); border:2px solid var(--accent);'
-                   : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'">
+            <div
+              class="flex-grow-1" style="height:1.5px;"
+              :style="index === 0 ? 'background:transparent;'
+                : index <= currentStep ? 'background:var(--accent);' : 'background:var(--border-color-strong); opacity:0.4;'"
+            ></div>
+            <div
+              class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 position-relative"
+              style="width:36px; height:36px; z-index:1;"
+              :style="index <= currentStep
+                ? 'background:var(--bg-hover); border:2px solid var(--accent);'
+                : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'"
+            >
               <component :is="step.icon" :size="18" :style="{ opacity: index <= currentStep ? 1 : 0.35 }" />
-              <span v-if="isStepDone(index)"
-                    class="rounded-circle d-flex align-items-center justify-content-center position-absolute"
-                    style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); opacity:0.55; border:1px solid var(--bg-hover); display:flex; align-items:center; justify-content:center;"><Check :size="9" /></span>
+              <span
+                v-if="isStepDone(index)"
+                class="rounded-circle d-flex align-items-center justify-content-center position-absolute"
+                style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); opacity:0.55; border:1px solid var(--bg-hover); display:flex; align-items:center; justify-content:center;"
+              ><Check :size="9" /></span>
             </div>
-            <div class="flex-grow-1" style="height:1.5px;"
-                 :style="index === steps.length - 1 ? 'background:transparent;'
-                   : index < currentStep ? 'background:var(--accent);' : 'background:var(--border-color-strong); opacity:0.4;'"></div>
+            <div
+              class="flex-grow-1" style="height:1.5px;"
+              :style="index === steps.length - 1 ? 'background:transparent;'
+                : index < currentStep ? 'background:var(--accent);' : 'background:var(--border-color-strong); opacity:0.4;'"
+            ></div>
           </div>
           <div class="text-center mt-2">
-            <div class="fw-bold" style="font-size:0.82rem;"
-                 :style="index === currentStep ? 'color:var(--accent-fg);' : index < currentStep ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'">
+            <div
+              class="fw-bold" style="font-size:0.82rem;"
+              :style="index === currentStep ? 'color:var(--accent-fg);' : index < currentStep ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'"
+            >
               {{ step.title }}
             </div>
             <div style="font-size:0.72rem; color:var(--text-secondary);">{{ step.desc }}</div>
@@ -44,26 +55,31 @@
       <!-- Mobile: dọc, icon + chữ từng dòng, không cần đường nối -->
       <div class="d-flex d-md-none flex-column gap-3">
         <div v-for="(step, index) in steps" :key="index" class="d-flex align-items-center gap-3">
-          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 position-relative"
-               style="width:36px; height:36px;"
-               :style="index <= currentStep
-                 ? 'background:var(--bg-hover); border:2px solid var(--accent);'
-                 : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'">
+          <div
+            class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 position-relative"
+            style="width:36px; height:36px;"
+            :style="index <= currentStep
+              ? 'background:var(--bg-hover); border:2px solid var(--accent);'
+              : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'"
+          >
             <component :is="step.icon" :size="18" :style="{ opacity: index <= currentStep ? 1 : 0.35 }" />
-            <span v-if="isStepDone(index)"
-                  class="rounded-circle d-flex align-items-center justify-content-center position-absolute"
-                  style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); opacity:0.55; border:1px solid var(--bg-hover); display:flex; align-items:center; justify-content:center;"><Check :size="9" /></span>
+            <span
+              v-if="isStepDone(index)"
+              class="rounded-circle d-flex align-items-center justify-content-center position-absolute"
+              style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); opacity:0.55; border:1px solid var(--bg-hover); display:flex; align-items:center; justify-content:center;"
+            ><Check :size="9" /></span>
           </div>
           <div>
-            <div class="fw-bold" style="font-size:0.82rem;"
-                 :style="index === currentStep ? 'color:var(--accent-fg);' : index < currentStep ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'">
+            <div
+              class="fw-bold" style="font-size:0.82rem;"
+              :style="index === currentStep ? 'color:var(--accent-fg);' : index < currentStep ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'"
+            >
               {{ step.title }}
             </div>
             <div style="font-size:0.72rem; color:var(--text-secondary);">{{ step.desc }}</div>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </template>

@@ -128,12 +128,14 @@ const showGiftVoucherModal = ref(false);
       <div v-if="customerOrders.length === 0" class="text-secondary small">{{ t('admin.customerDetail.ordersEmpty') }}</div>
       <div v-else class="table-responsive">
         <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-          <thead><tr>
-            <th>{{ t('admin.customerDetail.colOrderCode') }}</th>
-            <th>{{ t('admin.customerDetail.colOrderDate') }}</th>
-            <th>{{ t('admin.customerDetail.colOrderTotal') }}</th>
-            <th>{{ t('admin.customerDetail.colOrderStatus') }}</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th>{{ t('admin.customerDetail.colOrderCode') }}</th>
+              <th>{{ t('admin.customerDetail.colOrderDate') }}</th>
+              <th>{{ t('admin.customerDetail.colOrderTotal') }}</th>
+              <th>{{ t('admin.customerDetail.colOrderStatus') }}</th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="o in customerOrders" :key="o.donHangId">
               <td>{{ o.maDonHang }}</td>
@@ -152,14 +154,16 @@ const showGiftVoucherModal = ref(false);
       <div v-else-if="vouchers.length === 0" class="text-secondary small">{{ t('admin.customerDetail.vouchersEmpty') }}</div>
       <div v-else class="table-responsive">
         <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-          <thead><tr>
-            <th>{{ t('admin.customerDetail.colVoucherCode') }}</th>
-            <th>{{ t('admin.customerDetail.colVoucherType') }}</th>
-            <th>{{ t('admin.customerDetail.colVoucherValue') }}</th>
-            <th>{{ t('admin.customerDetail.colVoucherSource') }}</th>
-            <th>{{ t('admin.customerDetail.colVoucherStatus') }}</th>
-            <th>{{ t('admin.customerDetail.colVoucherExpiry') }}</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th>{{ t('admin.customerDetail.colVoucherCode') }}</th>
+              <th>{{ t('admin.customerDetail.colVoucherType') }}</th>
+              <th>{{ t('admin.customerDetail.colVoucherValue') }}</th>
+              <th>{{ t('admin.customerDetail.colVoucherSource') }}</th>
+              <th>{{ t('admin.customerDetail.colVoucherStatus') }}</th>
+              <th>{{ t('admin.customerDetail.colVoucherExpiry') }}</th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="v in vouchers" :key="v.phieuId">
               <td>{{ v.maPhieu }}</td>
@@ -180,12 +184,14 @@ const showGiftVoucherModal = ref(false);
       <div v-else-if="pointHistory.length === 0" class="text-secondary small">{{ t('admin.customerDetail.pointHistoryEmpty') }}</div>
       <div v-else class="table-responsive">
         <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-          <thead><tr>
-            <th>{{ t('admin.customerDetail.colPointAmount') }}</th>
-            <th>{{ t('admin.customerDetail.colPointReason') }}</th>
-            <th>{{ t('admin.customerDetail.colPointBy') }}</th>
-            <th>{{ t('admin.customerDetail.colPointDate') }}</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th>{{ t('admin.customerDetail.colPointAmount') }}</th>
+              <th>{{ t('admin.customerDetail.colPointReason') }}</th>
+              <th>{{ t('admin.customerDetail.colPointBy') }}</th>
+              <th>{{ t('admin.customerDetail.colPointDate') }}</th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="p in pointHistory" :key="p.id">
               <td class="fw-bold text-warning">+{{ p.soDiem }}</td>

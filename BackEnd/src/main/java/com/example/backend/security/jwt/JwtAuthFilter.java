@@ -30,7 +30,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         String token = (header != null && header.startsWith("Bearer ")) ? header.substring(7) : null;
 
-        // EventSource (SSE) không gửi được header tuỳ ý → truyền token qua cookie sse_token
         if (token == null && request.getRequestURI().endsWith("/api/don-hang/events")) {
             token = extractCookie(request, "sse_token");
         }

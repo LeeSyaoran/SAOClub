@@ -20,8 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// Danh gia san pham — chi khach hang co don hang DA GIAO chua san pham nay moi duoc danh
-// gia ("verified purchase"), moi khach chi danh gia 1 lan / 1 san pham (UQ_dg_kh_sp).
 @Service
 public class DanhGiaService {
 
@@ -50,14 +48,10 @@ public class DanhGiaService {
         return danhGiaRepository.tongHopTatCa();
     }
 
-    // Danh sach cho trang quan tri (admin/nhan_vien) — @PreAuthorize da chan role o controller,
-    // khong can kiem tra gi them o day.
     public List<DanhGiaAdminResponse> hienThiTatCaAdmin() {
         return danhGiaRepository.hienThiTatCa();
     }
 
-    // Xoa boi admin/nhan_vien — khong kiem tra chu so huu (khac xoa() cua khach hang tu xoa),
-    // dung khi can kiem duyet noi dung vi pham.
     @Transactional
     public void xoaBoiAdmin(Integer danhGiaId) {
         if (!danhGiaRepository.existsById(danhGiaId))

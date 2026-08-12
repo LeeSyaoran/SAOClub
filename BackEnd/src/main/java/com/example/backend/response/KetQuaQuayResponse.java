@@ -10,8 +10,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class KetQuaQuayResponse {
-    private String ketQua; // "trung" | "truot"
-    private KhuyenMaiResponse khuyenMai;             // null nếu trượt
-    private PhieuGiamGiaCaNhanResponse phieuGiamGia; // null nếu trượt
+    private String ketQua; 
+    private KhuyenMaiResponse khuyenMai;             
+    private PhieuGiamGiaCaNhanResponse phieuGiamGia; 
     private Integer diemConLai;
 }

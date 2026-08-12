@@ -20,23 +20,13 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c WHERE c.bienThe.bienTheId = :bienTheId")
     List<ChiTietSanPhamResponse> findByBienTheId(@Param("bienTheId") Integer bienTheId);
 
-    // Lay cac serial con trong kho (FIFO) de tu dong gan khi ban hang — nhap truoc xuat truoc.
-    // PESSIMISTIC_WRITE (SELECT ... FOR UPDATE): khoa cac dong nay lai trong pham vi transaction
-    // cua caller, tranh 2 don hang cung luc gianh cung 1 serial.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<ChiTietSanPham> findByBienThe_BienTheIdAndTrangThaiOrderByNgayNhapKhoAsc(Integer bienTheId, String trangThai);
 
-    // Nhan vien chon tay 1 serial cu the tai quay (POS) — cung can khoa PESSIMISTIC_WRITE nhu
-    // FIFO o tren, tranh 2 don hang cung luc chon trung 1 serial (vd double-click, 2 nhan vien
-    // cung ban 1 may). Dung @Query rieng vi findById() ke thua tu JpaRepository khong gan @Lock duoc.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM ChiTietSanPham c WHERE c.chiTietId = :id")
     java.util.Optional<ChiTietSanPham> findByIdForUpdate(@Param("id") Integer id);
 
-    // Serial đã bán, kèm ngày giao thực tế (thời điểm bắt đầu tính bảo hành) + số tháng bảo
-    // hành của biến thể — ngày hết bảo hành tính ở service (ngayGiaoThucTe + baoHanhThang).
-    // Chỉ lấy đơn đã có ngayGiaoThucTe (đã giao tới tay khách) — đơn chưa giao thì bảo hành
-    // chưa bắt đầu, không đưa vào đây.
     @Query("""
     SELECT new com.example.backend.response.WarrantyStatusResponse(
         c.chiTietId, c.soSerial, bt.maSku, sp.tenSanPham, bt.baoHanhThang,
@@ -53,10 +43,7 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     """)
     List<WarrantyStatusResponse> timSerialDaBanCoGiaoHang();
 
-    // Còn dòng nào KHÁC "trong_kho" (đã bán/giữ hàng/lỗi bảo hành/đã trả) không — dùng để
-    // chặn xóa biến thể/sản phẩm nếu đã có serial từng qua giao dịch.
     boolean existsByBienThe_BienTheIdAndTrangThaiNot(Integer bienTheId, String trangThai);
 
-    // Xóa hết serial (chỉ còn "trong_kho" nhờ guard ở trên) khi xóa hẳn biến thể/sản phẩm.
     void deleteByBienThe_BienTheId(Integer bienTheId);
 }

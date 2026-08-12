@@ -11,9 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Toan bo controller nay chi danh cho khach hang tu quan ly danh sach yeu thich cua chinh
-// minh — khac PhieuTraHangController (mac dinh staff-only, mo rieng vai endpoint cho khach),
-// o day khong co luong staff nao ca nen @PreAuthorize dat thang o class-level.
 @RestController
 @RequestMapping("/api/yeu-thich")
 @PreAuthorize("isAuthenticated()")

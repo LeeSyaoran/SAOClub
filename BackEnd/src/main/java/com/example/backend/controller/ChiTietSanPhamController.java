@@ -56,8 +56,6 @@ public class ChiTietSanPhamController {
         return ResponseEntity.noContent().build();
     }
 
-    // Serial đã bán còn trong hạn bảo hành (tính từ ngày giao thực tế) — serial hết hạn
-    // tự động không còn xuất hiện ở đây.
     @GetMapping("con-bao-hanh")
     public List<WarrantyStatusResponse> getStillUnderWarranty() {
         return chiTietSanPhamService.getStillUnderWarranty();

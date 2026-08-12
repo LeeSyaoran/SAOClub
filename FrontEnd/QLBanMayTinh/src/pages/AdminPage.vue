@@ -53,7 +53,7 @@ import * as DmDoiThuongService from "../services/DmDoiThuongService.js";
 import {
   BarChart3, Laptop, Receipt, Users, User, Package, Undo2, Star, Tag, Gift,
   Briefcase, ShoppingCart, TrendingUp, Settings, X, Menu, Moon, Sun, Bell,
-  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive,
+  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive, Layers,
 } from '@lucide/vue';
 
 defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
@@ -565,7 +565,17 @@ const outOfStockItems = computed(() =>
 // Thay cho khoTab cũ (giờ đã chuyển hẳn vào InventoryPanel.vue) — trang này chỉ còn
 // đúng 2 lựa chọn: "kho" (InventoryPanel — gồm Tồn kho + Phiếu nhập) và "bao-hanh".
 const inventoryMainTab = ref('kho');
+// Nhóm "Kho hàng" trong sidebar hiển thị dạng nhãn tĩnh (adm-nav-label) + danh sách mục
+// con luôn hiện sẵn bên dưới (không phải nút xổ/thu gọn) — bấm mục con để chuyển tab.
+const selectInventoryTab = (tab) => {
+  inventoryMainTab.value = tab;
+  navigate('inventory');
+};
 const productsMainTab = ref('sanPham');
+const selectProductsTab = (tab) => {
+  productsMainTab.value = tab;
+  navigate('products');
+};
 
 // khoTab + toàn bộ state/hàm của tab Tồn kho (inventorySearch, inventoryGrouped,
 // getVariantInfo, stockClass...) và tab Phiếu nhập kho (ensurePhieuNhapData,
@@ -1032,22 +1042,30 @@ onUnmounted(() => {
 <template>
   <!-- Layout chính: sidebar bên trái + main content bên phải -->
   <div class="d-flex overflow-hidden" style="height:100vh; background:var(--bg-page-alt); color:var(--text-primary); font-family:'Nunito Sans',sans-serif;">
-
     <!-- Lớp phủ mờ phía sau sidebar khi mở trên mobile — bấm ra ngoài để đóng -->
-    <div v-if="sidebarOpen" class="d-md-none position-fixed top-0 start-0 w-100 h-100"
-         style="background:rgba(0,0,0,0.5); z-index:1039;"
-         @click="sidebarOpen = false"></div>
+    <div
+      v-if="sidebarOpen" class="d-md-none position-fixed top-0 start-0 w-100 h-100"
+      style="background:rgba(0,0,0,0.5); z-index:1039;"
+      @click="sidebarOpen = false"
+    ></div>
 
     <!-- ══════════ SIDEBAR ══════════ -->
-    <aside class="d-flex flex-column border-end flex-shrink-0 adm-sidebar"
-           :class="{ 'adm-sidebar-open': sidebarOpen }"
-           style="background:var(--bg-card-inset); border-color:var(--border-color)!important; overflow-y:auto;">
-
+    <aside
+      class="d-flex flex-column border-end flex-shrink-0 adm-sidebar"
+      :class="{ 'adm-sidebar-open': sidebarOpen }"
+      style="background:var(--bg-card-inset); border-color:var(--border-color)!important; overflow-y:auto;"
+    >
       <!-- Logo -->
-      <div class="d-flex align-items-center gap-2 p-3 border-bottom adm-brand-row"
-           style="border-color:var(--border-color-soft)!important;">
-        <div class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
-             style="width:38px;height:38px;background:var(--gradient-brand);color:var(--accent-text);font-size:0.8rem;">SAO</div>
+      <div
+        class="d-flex align-items-center gap-2 p-3 border-bottom adm-brand-row"
+        style="border-color:var(--border-color-soft)!important;"
+      >
+        <div
+          class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
+          style="width:38px;height:38px;background:var(--gradient-brand);color:var(--accent-text);font-size:0.8rem;"
+        >
+          SAO
+        </div>
         <div class="adm-brand-text">
           <div class="fw-bold" style="font-size:0.95rem;">{{ t('admin.brand.name') }}</div>
           <div style="font-size:0.7rem;color:var(--text-muted);">{{ t('admin.brand.tagline') }}</div>
@@ -1056,64 +1074,90 @@ onUnmounted(() => {
 
       <!-- Nav admin -->
       <nav class="flex-grow-1 d-flex flex-column px-2 pb-2">
-        <div class="adm-nav-label">{{ t('admin.sidebar.groupOverview') }}</div>
         <div class="adm-nav" :class="{active: currentPage==='dashboard'}" @click="navigate('dashboard')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zM3 11a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3z"/></svg>
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zM3 11a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3z" /></svg>
           {{ t('admin.sidebar.dashboard') }}
         </div>
 
-        <div class="adm-nav-label">{{ t('admin.sidebar.groupManagement') }}</div>
-        <div class="adm-nav" :class="{active: currentPage==='products'}" @click="navigate('products')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-          {{ t('admin.sidebar.products') }}
-        </div>
-        <div class="adm-nav" :class="{active: currentPage==='orders'}" @click="navigate('orders')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
-          {{ t('admin.sidebar.orders') }}
+        <div class="adm-nav-label">{{ t('admin.sidebar.groupOrders') }}</div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='orders'}" @click="navigate('orders')">
+          <Receipt class="adm-icon" :size="15" /> {{ t('admin.sidebar.orders') }}
           <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ todayOrdersCount }}</span>
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='customers' || currentPage==='customer-detail'}" @click="navigate('customers')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
-          {{ t('admin.sidebar.customers') }}
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='ban-hang'}" @click="navigate('ban-hang')">
+          <ShoppingCart class="adm-icon" :size="15" /> {{ t('admin.sidebar.banHang') }}
+        </div>
+
+        <div class="adm-nav-label">{{ t('admin.sidebar.products') }}</div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='products' && productsMainTab==='sanPham'}" @click="selectProductsTab('sanPham')">
+          <Laptop class="adm-icon" :size="15" /> {{ t('admin.productsTabs.sanPham') }}
+        </div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='products' && productsMainTab==='bienThe'}" @click="selectProductsTab('bienThe')">
+          <Layers class="adm-icon" :size="15" /> {{ t('admin.productsTabs.bienThe') }}
+        </div>
+
+        <div class="adm-nav-label">{{ t('admin.sidebar.groupCustomers') }}</div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='customers' || currentPage==='customer-detail'}" @click="navigate('customers')">
+          <Users class="adm-icon" :size="15" /> {{ t('admin.sidebar.customers') }}
           <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ totalCustomers }}</span>
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='inventory'}" @click="navigate('inventory')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/><path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
-          {{ t('admin.sidebar.inventory') }}
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='tra-hang'}" @click="navigate('tra-hang')">
+          <Undo2 class="adm-icon" :size="15" /> {{ t('admin.sidebar.traHang') }}
+        </div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='reviews'}" @click="navigate('reviews')">
+          <Star class="adm-icon" :size="15" /> {{ t('admin.sidebar.reviews') }}
+        </div>
+
+        <div class="adm-nav-label">{{ t('admin.sidebar.inventory') }}</div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='kho'}" @click="selectInventoryTab('kho')">
+          <Package class="adm-icon" :size="15" /> {{ t('admin.inventory.tabStock') }} / {{ t('admin.inventory.tabReceipts') }}
           <span v-if="lowStockItems.length" class="badge bg-danger ms-auto" style="font-size:0.68rem;">{{ lowStockItems.length }}</span>
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='tra-hang'}" @click="navigate('tra-hang')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 3.293a1 1 0 010 1.414L7.414 7H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-          {{ t('admin.sidebar.traHang') }}
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='bao-hanh'}" @click="selectInventoryTab('bao-hanh')">
+          <Shield class="adm-icon" :size="15" /> {{ t('admin.inventory.tabWarranty') }}
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='reviews'}" @click="navigate('reviews')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.957c.3.922-.755 1.688-1.54 1.118l-3.367-2.446a1 1 0 00-1.175 0l-3.367 2.446c-.784.57-1.838-.196-1.539-1.118l1.286-3.957a1 1 0 00-.363-1.118l-3.368-2.447c-.783-.57-.38-1.81.588-1.81h4.163a1 1 0 00.95-.69l1.285-3.958z"/></svg>
-          {{ t('admin.sidebar.reviews') }}
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='serial'}" @click="selectInventoryTab('serial')">
+          <Hash class="adm-icon" :size="15" /> {{ t('admin.inventory.tabSerial') }}
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='promotions'}" @click="navigate('promotions')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clip-rule="evenodd"/><path d="M9 11H3v5a2 2 0 002 2h4v-7zm2 7h4a2 2 0 002-2v-5h-6v7z"/></svg>
-          {{ t('admin.sidebar.promotions') }}
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='suppliers'}" @click="selectInventoryTab('suppliers')">
+          <Truck class="adm-icon" :size="15" /> {{ t('admin.sidebar.suppliers') }}
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='doi-thuong'}" @click="navigate('doi-thuong')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clip-rule="evenodd"/><path d="M9 11H3v5a2 2 0 002 2h4v-7zm2 7h4a2 2 0 002-2v-5h-6v7z"/></svg>
-          {{ t('admin.sidebar.rewards') }}
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='lich-su'}" @click="selectInventoryTab('lich-su')">
+          <ScrollText class="adm-icon" :size="15" /> {{ t('admin.sidebar.inventoryHistory') }}
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='ban-hang'}" @click="navigate('ban-hang')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C4.328 11.142 4 11.574 4 12a2 2 0 002 2h10a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 4H6.28l-.31-1.243A1 1 0 005 2H3z"/><path d="M16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
-          {{ t('admin.sidebar.banHang') }}
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='cpu'}" @click="selectInventoryTab('cpu')">
+          <Cpu class="adm-icon" :size="15" /> {{ t('admin.productsTabs.cpu') }}
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='staff'}" @click="navigate('staff')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-          {{ t('admin.sidebar.staff') }}
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='ram'}" @click="selectInventoryTab('ram')">
+          <MemoryStick class="adm-icon" :size="15" /> {{ t('admin.productsTabs.ram') }}
+        </div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='gpu'}" @click="selectInventoryTab('gpu')">
+          <Gamepad2 class="adm-icon" :size="15" /> {{ t('admin.productsTabs.gpu') }}
+        </div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='o-cung'}" @click="selectInventoryTab('o-cung')">
+          <HardDrive class="adm-icon" :size="15" /> {{ t('admin.productsTabs.oCung') }}
+        </div>
+
+        <div class="adm-nav-label">{{ t('admin.sidebar.groupPromotions') }}</div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='promotions'}" @click="navigate('promotions')">
+          <Tag class="adm-icon" :size="15" /> {{ t('admin.sidebar.promotions') }}
+        </div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='doi-thuong'}" @click="navigate('doi-thuong')">
+          <Gift class="adm-icon" :size="15" /> {{ t('admin.sidebar.rewards') }}
+        </div>
+
+        <div class="adm-nav-label">{{ t('admin.sidebar.groupStaff') }}</div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='staff'}" @click="navigate('staff')">
+          <Briefcase class="adm-icon" :size="15" /> {{ t('admin.sidebar.staff') }}
         </div>
 
         <div class="adm-nav-label">{{ t('admin.sidebar.groupAnalytics') }}</div>
         <div class="adm-nav" :class="{active: currentPage==='reports'}" @click="navigate('reports')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
           {{ t('admin.sidebar.reports') }}
         </div>
         <div class="adm-nav" :class="{active: currentPage==='settings'}" @click="navigate('settings')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
           {{ t('admin.sidebar.settings') }}
         </div>
       </nav>
@@ -1123,36 +1167,46 @@ onUnmounted(() => {
 
     <!-- ══════════ MAIN CONTENT ══════════ -->
     <main class="flex-grow-1 d-flex flex-column overflow-hidden">
-
       <!-- Topbar: tieu de trang hien tai -->
-      <div class="d-flex align-items-center justify-content-between p-3 border-bottom"
-           style="background:var(--bg-card-inset); border-color:var(--border-color)!important;">
+      <div
+        class="d-flex align-items-center justify-content-between p-3 border-bottom"
+        style="background:var(--bg-card-inset); border-color:var(--border-color)!important;"
+      >
         <div class="d-flex align-items-center gap-2">
-          <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
-                  style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1.1rem;"
-                  :aria-label="t('admin.sidebar.toggleMenu')" :title="t('admin.sidebar.toggleMenu')"
-                  @click="sidebarOpen = !sidebarOpen"><component :is="sidebarOpen ? X : Menu" :size="20" /></button>
+          <button
+            type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
+            style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1.1rem;"
+            :aria-label="t('admin.sidebar.toggleMenu')" :title="t('admin.sidebar.toggleMenu')"
+            @click="sidebarOpen = !sidebarOpen"
+          >
+            <component :is="sidebarOpen ? X : Menu" :size="20" />
+          </button>
           <div>
             <div class="fw-bold d-flex align-items-center gap-1" style="font-size:1.05rem;"><component :is="topbarIcon" :size="18" /> {{ topbarTitle }}</div>
             <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-          <button type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
-                  style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1rem;"
-                  :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
-                  :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
-                  @click="toggleTheme">
+          <button
+            type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
+            style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1rem;"
+            :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+            :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+            @click="toggleTheme"
+          >
             <component :is="ThemeStore.mode === 'dark' ? Moon : Sun" :size="18" />
           </button>
-          <div class="d-flex align-items-center justify-content-center rounded-2"
-               style="width:34px;height:34px;background:var(--bg-hover);cursor:pointer;display:flex;align-items:center;justify-content:center;"><Bell :size="18" /></div>
+          <div
+            class="d-flex align-items-center justify-content-center rounded-2"
+            style="width:34px;height:34px;background:var(--bg-hover);cursor:pointer;display:flex;align-items:center;justify-content:center;"
+          >
+            <Bell :size="18" />
+          </div>
         </div>
       </div>
 
       <!-- Noi dung trang (scroll duoc) -->
       <div class="flex-grow-1 overflow-y-auto p-4">
-
         <!-- ── Dashboard ── -->
         <AdminDashboard
           v-show="currentPage === 'dashboard'"
@@ -1187,15 +1241,11 @@ onUnmounted(() => {
           @update:status-chart-date="statusChartDate = $event"
           @update:week-chart-anchor="weekChartAnchor = $event"
           @reset-to-current-week="resetToCurrentWeek"
-          @back-to-today="statusChartDate = toDateInputValue(new Date())" />
+          @back-to-today="statusChartDate = toDateInputValue(new Date())"
+        />
 
-        <!-- ── San pham ── -->
+        <!-- ── San pham: dieu huong qua submenu sidebar (adm-subnav) ── -->
         <section v-show="currentPage === 'products'">
-          <ul class="nav nav-tabs mb-3">
-            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='sanPham'}" @click="productsMainTab='sanPham'">{{ t('admin.productsTabs.sanPham') }}</button></li>
-            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='bienThe'}" @click="productsMainTab='bienThe'">{{ t('admin.productsTabs.bienThe') }}</button></li>
-          </ul>
-
           <div v-show="productsMainTab==='sanPham'">
             <ProductsTable />
           </div>
@@ -1219,38 +1269,8 @@ onUnmounted(() => {
           <CustomerDetailPage v-if="selectedCustomerId" :key="selectedCustomerId" :customer-id="selectedCustomerId" @back="() => { currentPage = 'customers'; selectedCustomerId = null; }" />
         </section>
 
-        <!-- ── Kho hang ── -->
+        <!-- ── Kho hang: dieu huong qua submenu sidebar (adm-subnav), khong con thanh tab ngang ── -->
         <section v-show="currentPage === 'inventory'">
-          <ul class="nav nav-tabs mb-3">
-            <li class="nav-item">
-              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='kho'}" @click="inventoryMainTab='kho'"><Package :size="15" /> {{ t('admin.inventory.tabStock') }} / {{ t('admin.inventory.tabReceipts') }}</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='bao-hanh'}" @click="inventoryMainTab='bao-hanh'"><Shield :size="15" /> {{ t('admin.inventory.tabWarranty') }}</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='serial'}" @click="inventoryMainTab='serial'"><Hash :size="15" /> {{ t('admin.inventory.tabSerial') }}</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='suppliers'}" @click="inventoryMainTab='suppliers'"><Truck :size="15" /> {{ t('admin.sidebar.suppliers') }}</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='lich-su'}" @click="inventoryMainTab='lich-su'"><ScrollText :size="15" /> {{ t('admin.sidebar.inventoryHistory') }}</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='cpu'}" @click="inventoryMainTab='cpu'"><Cpu :size="15" /> {{ t('admin.productsTabs.cpu') }}</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='ram'}" @click="inventoryMainTab='ram'"><MemoryStick :size="15" /> {{ t('admin.productsTabs.ram') }}</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='gpu'}" @click="inventoryMainTab='gpu'"><Gamepad2 :size="15" /> {{ t('admin.productsTabs.gpu') }}</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link d-inline-flex align-items-center gap-1" :class="{active: inventoryMainTab==='o-cung'}" @click="inventoryMainTab='o-cung'"><HardDrive :size="15" /> {{ t('admin.productsTabs.oCung') }}</button>
-            </li>
-          </ul>
-
           <div v-show="inventoryMainTab==='kho'">
             <InventoryPanel />
           </div>
@@ -1294,15 +1314,21 @@ onUnmounted(() => {
 
         <!-- ── Khuyen mai ── -->
         <section v-show="currentPage === 'promotions'">
-          <div class="d-flex align-items-center flex-wrap gap-3 p-3 mb-3 rounded-3"
-               style="background:var(--bg-card-inset); border:1px solid var(--border-color);">
+          <div
+            class="d-flex align-items-center flex-wrap gap-3 p-3 mb-3 rounded-3"
+            style="background:var(--bg-card-inset); border:1px solid var(--border-color);"
+          >
             <span class="fw-bold small">{{ t('admin.wheelConfig.title') }}</span>
             <label class="small text-secondary mb-0">{{ t('admin.wheelConfig.pointsPerSpin') }}</label>
-            <input v-model.number="wheelConfig.diemMoiLuot" type="number" min="1"
-                   class="form-control form-control-sm" style="width:90px;" />
+            <input
+              v-model.number="wheelConfig.diemMoiLuot" type="number" min="1"
+              class="form-control form-control-sm" style="width:90px;"
+            />
             <label class="small text-secondary mb-0">{{ t('admin.wheelConfig.missRate') }}</label>
-            <input v-model.number="wheelConfig.tyLeTruot" type="number" min="0" max="100"
-                   class="form-control form-control-sm" style="width:70px;" />
+            <input
+              v-model.number="wheelConfig.tyLeTruot" type="number" min="0" max="100"
+              class="form-control form-control-sm" style="width:70px;"
+            />
             <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="wheelConfigSaving" @click="saveWheelConfig">
               {{ t('admin.wheelConfig.save') }}
             </button>
@@ -1360,7 +1386,7 @@ onUnmounted(() => {
                   <td>
                     <div class="d-flex gap-1">
                       <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditReward(r)">{{ t('admin.rewards.edit') }}</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteReward(r.doiThuongId)">{{ t('admin.rewards.delete') }}</button>
+                      <button class="btn btn-sm btn-outline-danger" style="font-size:0.78rem; padding:2px 8px;" @click="deleteReward(r.doiThuongId)">{{ t('admin.rewards.delete') }}</button>
                     </div>
                   </td>
                 </tr>
@@ -1421,7 +1447,8 @@ onUnmounted(() => {
           @update:reports-group-by="reportsGroupBy = $event"
           @update:reports-date-range="reportsDateRange = $event"
           @update:reports-custom-from="reportsCustomFrom = $event"
-          @update:reports-custom-to="reportsCustomTo = $event" />
+          @update:reports-custom-to="reportsCustomTo = $event"
+        />
 
         <!-- ── Cai dat ── -->
         <AdminSettings
@@ -1447,13 +1474,13 @@ onUnmounted(() => {
           @handle-logo-file="handleLogoFile"
           @save-store="saveStoreInfo"
           @apply-threshold="apDungNguongTonKhoSubmit"
-          @save-appearance="saveAppearancePrefs" />
+          @save-appearance="saveAppearancePrefs"
+        />
 
         <!-- ── Ban hang (POS) ── -->
         <section v-show="currentPage === 'ban-hang'">
           <PosPanel />
         </section>
-
       </div><!-- /content -->
     </main>
   </div><!-- /dashboard-shell -->
@@ -1571,22 +1598,21 @@ onUnmounted(() => {
   user-select: none;
 }
 .adm-nav:hover { background: var(--bg-hover); color: var(--text-heading); }
-.adm-nav.active {
-  background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent) 80%, black));
-  color: var(--accent-text);
-  box-shadow: 0 2px 10px -2px rgba(244,63,94,0.5);
-}
+.adm-nav.active { background: rgba(244,63,94,0.12); color: var(--accent-fg); }
 .adm-nav.active .adm-icon { opacity: 1; }
 
 /* Icon trong nav */
 .adm-icon { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.75; }
 
+/* Muc con cua nhom "Quan ly san pham" / "Quan ly kho hang", thut le duoi nhan nhom */
+.adm-subnav { padding-left: 30px; font-size: 0.82rem; }
+
 /* Tieu de phan nhom trong sidebar */
 .adm-nav-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: #555;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-heading);
   text-transform: uppercase;
   padding: 10px 8px 3px;
 }

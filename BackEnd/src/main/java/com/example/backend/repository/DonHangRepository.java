@@ -17,17 +17,6 @@ import java.util.List;
 @Repository
 public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
 
-    // === BUG CŨ ===
-    // d.nhanVien.nhanVienId, d.khuyenMai.khuyenMaiId, d.diaChiGiaoHang.id
-    // → JPQL path navigation trên nullable @ManyToOne tạo ra IMPLICIT INNER JOIN
-    // → Đơn hàng không có nhân viên / khuyến mãi / địa chỉ bị BỎ SÓT khỏi kết quả
-    //
-    // === FIX ===
-    // Khai báo LEFT JOIN rõ ràng với alias (nv, km, dcgh)
-    // Dùng alias trong SELECT thay vì path navigation (nv.nhanVienId thay vì d.nhanVien.nhanVienId)
-    // khachHang NOT NULL trong DB nên dùng JOIN thường (không cần LEFT)
-    //
-    // Phân trang qua Pageable — countQuery riêng vì JPQL DTO projection không tự suy count được.
     @Query(value = """
     SELECT new com.example.backend.response.DonHangResponse(
         d.id, d.maDonHang,
@@ -54,15 +43,9 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     """)
     Page<DonHangResponse> hienThiDonHang(@Param("khachHangId") Integer khachHangId, Pageable pageable);
 
-    // Tổng doanh thu cho Dashboard KPI — SUM ở SQL thay vì kéo hết don_hang về JS cộng dồn.
-    // Loại đơn "cancelled" — đơn đã hủy không phải doanh thu thật, trước đây tính gộp làm
-    // sai lệch KPI.
     @Query("SELECT COALESCE(SUM(d.thanhTien), 0) FROM DonHang d WHERE d.trangThaiDonHang <> 'cancelled'")
     BigDecimal sumDoanhThu();
 
-    // Doanh thu gộp theo ngày trong khoảng — dùng cho biểu đồ cột "Doanh thu theo thời
-    // gian" ở tab Báo cáo. CAST sang LocalDate để gộp đúng theo ngày (ngayDat là
-    // LocalDateTime, có giờ phút giây khác nhau).
     @Query("""
     SELECT new com.example.backend.response.RevenueByDayResponse(CAST(d.ngayDat AS java.time.LocalDate), SUM(d.thanhTien))
     FROM DonHang d

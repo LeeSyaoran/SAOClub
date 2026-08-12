@@ -67,7 +67,6 @@ class DashboardServiceTest {
 
         var result = service.getCustomerReport(LocalDateTime.now().minusDays(7), LocalDateTime.now(), 2);
 
-        // 2/4 khách (A, C) có >= 2 đơn
         assertThat(result.getTyLeMuaLai()).isEqualTo(0.5);
         assertThat(result.getTongSoKhach()).isEqualTo(4);
         assertThat(result.getTopKhach()).hasSize(2);

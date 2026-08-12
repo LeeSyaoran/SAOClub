@@ -26,7 +26,6 @@ public class ThuongHieuService {
                 .orElseThrow(() -> new IllegalArgumentException("Thương hiệu không tồn tại với id: " + id));
     }
 
-    // Trước đây controller nhận thẳng entity JPA làm request body — xem DanhMucService lý do.
     public ThuongHieu create(ThuongHieuRequest request) {
         ThuongHieu entity = new ThuongHieu();
         BeanUtils.copyProperties(request, entity);

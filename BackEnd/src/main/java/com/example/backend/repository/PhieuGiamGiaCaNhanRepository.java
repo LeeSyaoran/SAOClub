@@ -15,8 +15,6 @@ public interface PhieuGiamGiaCaNhanRepository extends JpaRepository<PhieuGiamGia
     Optional<PhieuGiamGiaCaNhan> findByMaPhieu(String maPhieu);
     Optional<PhieuGiamGiaCaNhan> findByDonHang_Id(Integer donHangId);
 
-    // Khóa ghi (PESSIMISTIC_WRITE) — chặn 2 request tiêu cùng 1 voucher đồng thời (chỉ có
-    // tác dụng trong 1 transaction đang mở, xem DonHangService.create()).
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PhieuGiamGiaCaNhan> findWithLockByPhieuId(Integer phieuId);
 }

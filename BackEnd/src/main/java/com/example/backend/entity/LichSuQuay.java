@@ -27,7 +27,7 @@ public class LichSuQuay {
     private LocalDateTime ngayQuay;
 
     @Column(name = "ket_qua", length = 10, nullable = false)
-    private String ketQua; // "trung" | "truot"
+    private String ketQua; 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "khuyen_mai_id")

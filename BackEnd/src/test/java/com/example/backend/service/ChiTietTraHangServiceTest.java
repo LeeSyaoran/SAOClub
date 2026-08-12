@@ -66,7 +66,6 @@ class ChiTietTraHangServiceTest {
         PhieuTraHang phieu = phieuChoXuLy(5, donHang);
         when(phieuTraHangRepository.findByDonHang_Id(1)).thenReturn(List.of(phieu));
 
-        // Đã trả 1 (dòng khác, thuộc cùng phiếu) trước đó rồi.
         ChiTietTraHang dongDaTra = new ChiTietTraHang();
         dongDaTra.setId(100);
         BienTheSanPham bienThe = new BienTheSanPham();
@@ -75,7 +74,6 @@ class ChiTietTraHangServiceTest {
         dongDaTra.setSoLuong(1);
         when(chiTietTraHangRepository.findByPhieuTraHang_PhieuTraId(5)).thenReturn(List.of(dongDaTra));
 
-        // Đã mua 2, đã trả 1, giờ trả thêm 2 -> tổng 3 > 2 đã mua -> phải chặn.
         ChiTietTraHangRequest request = new ChiTietTraHangRequest(5, 10, null, 2, BigDecimal.TEN, "tot");
 
         assertThatThrownBy(() -> service.create(request))

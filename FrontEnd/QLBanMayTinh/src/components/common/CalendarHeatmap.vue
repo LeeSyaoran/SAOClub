@@ -3,10 +3,12 @@
   <div class="d-grid gap-1" style="grid-template-columns: repeat(7, 1fr);">
     <div v-for="dow in DOW_LABELS" :key="dow" class="text-center" style="font-size:9px; color:var(--text-muted);">{{ dow }}</div>
     <div v-for="n in leadingBlanks" :key="'blank' + n"></div>
-    <div v-for="cell in cells" :key="cell.day"
-         class="rounded-2 d-flex align-items-center justify-content-center"
-         :class="{ 'ring-today': cell.isToday }"
-         :style="{ aspectRatio: '1', background: cellColor(cell.count), fontSize: '9px', color: cell.count > 0 ? '#fff' : 'var(--text-muted)' }">
+    <div
+      v-for="cell in cells" :key="cell.day"
+      class="rounded-2 d-flex align-items-center justify-content-center"
+      :class="{ 'ring-today': cell.isToday }"
+      :style="{ aspectRatio: '1', background: cellColor(cell.count), fontSize: '9px', color: cell.count > 0 ? '#fff' : 'var(--text-muted)' }"
+    >
       {{ cell.day }}
     </div>
   </div>

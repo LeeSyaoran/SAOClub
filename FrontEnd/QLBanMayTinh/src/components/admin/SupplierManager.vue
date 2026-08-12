@@ -106,11 +106,13 @@ const saveSupplier = async () => {
   <div v-if="SuppliersStore.loading" class="text-secondary small">{{ t('admin.suppliers.loading') }}</div>
   <div v-else class="table-responsive">
     <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead><tr>
-        <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-        <th>{{ t('admin.suppliers.colName') }}</th><th>{{ t('admin.suppliers.colPhone') }}</th><th>{{ t('admin.suppliers.colEmail') }}</th>
-        <th>{{ t('admin.suppliers.colContact') }}</th><th>{{ t('admin.suppliers.colStatus') }}</th><th>{{ t('admin.suppliers.colAction') }}</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+          <th>{{ t('admin.suppliers.colName') }}</th><th>{{ t('admin.suppliers.colPhone') }}</th><th>{{ t('admin.suppliers.colEmail') }}</th>
+          <th>{{ t('admin.suppliers.colContact') }}</th><th>{{ t('admin.suppliers.colStatus') }}</th><th>{{ t('admin.suppliers.colAction') }}</th>
+        </tr>
+      </thead>
       <tbody>
         <tr v-for="(s, idx) in pagedSuppliers" :key="s.nhaCungCapId">
           <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
@@ -131,7 +133,6 @@ const saveSupplier = async () => {
     <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
   </div>
 
-  <!-- ══ MODAL NHA CUNG CAP ══ -->
   <div v-if="showModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showModal=false">
     <div class="rounded-3 p-3" style="background:var(--bg-card);width:460px;max-width:94vw;">
       <div class="d-flex justify-content-between align-items-center mb-3">

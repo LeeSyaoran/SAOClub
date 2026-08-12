@@ -27,7 +27,6 @@ public class ChucVuService {
         return chucVuRepository.save(item);
     }
 
-    // ChucVu dùng field "id" (không phải chucVuId) — xem entity ChucVu
     public ChucVu update(Integer id, ChucVu item) {
         if (!chucVuRepository.existsById(id))
             throw new IllegalArgumentException("Chức vụ không tồn tại với id: " + id);

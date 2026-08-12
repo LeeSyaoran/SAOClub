@@ -13,10 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Không @PreAuthorize cấp class — GET mở cho mọi role đã đăng nhập (đúng pattern
-// KhuyenMaiController), PUT chặn riêng ở method vì chỉ staff được đổi cấu hình. POST /quay
-// không cần @PreAuthorize role vì VongQuayService tự chặn qua currentKhachHangId() (đúng
-// pattern PhieuGiamGiaCaNhanController — chỉ khách hàng mới có KhachHang liên kết).
 @RestController
 @RequestMapping("/api/vong-quay")
 public class VongQuayController {

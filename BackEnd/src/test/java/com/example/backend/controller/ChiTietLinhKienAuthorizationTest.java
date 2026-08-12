@@ -5,9 +5,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// 4 controller nay la moi hoan toan (Task 1 cua plan tai cau truc serial linh kien) —
-// khoa dung khuon ChiTietSanPhamController vi Kho can them serial linh kien qua
-// SerialManager cho spec da co san.
 class ChiTietLinhKienAuthorizationTest {
 
     @Test

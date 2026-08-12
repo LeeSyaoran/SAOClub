@@ -47,9 +47,6 @@ public class BienTheSanPhamController {
         return bienTheSanPhamService.getResponseById(id);
     }
 
-    // POST — service xử lý FK: sanPham, cpu, ram, oCung, gpu. Chỉ staff — request chứa
-    // giaBan/giaNhap (giá vốn, dữ liệu tài chính nội bộ), trước đây bất kỳ khách hàng đăng
-    // nhập nào cũng sửa được vì không có @PreAuthorize.
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PostMapping
     public ResponseEntity<BienTheSanPham> create(@Valid @RequestBody BienTheSanPhamRequest request) {

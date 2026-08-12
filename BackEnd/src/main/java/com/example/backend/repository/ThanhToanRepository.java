@@ -14,8 +14,6 @@ public interface ThanhToanRepository extends JpaRepository<ThanhToan, Integer> {
     @Query("SELECT new com.example.backend.response.ThanhToanResponse(t.thanhToanId, t.donHang.id, t.ngayThanhToan, t.phuongThucThanhToan, t.soTien, t.maGiaoDich, t.trangThai, t.ghiChu) FROM ThanhToan t")
     List<ThanhToanResponse> hienThiThanhToan();
 
-    // Dung cho modal "Chi tiet don hang" (OrdersTable.vue) va POS — hien lai phuong
-    // thuc da thanh toan cua 1 don cu the.
     @Query("SELECT new com.example.backend.response.ThanhToanResponse(t.thanhToanId, t.donHang.id, t.ngayThanhToan, t.phuongThucThanhToan, t.soTien, t.maGiaoDich, t.trangThai, t.ghiChu) FROM ThanhToan t WHERE t.donHang.id = :donHangId")
     List<ThanhToanResponse> hienThiThanhToanTheoDonHang(@Param("donHangId") Integer donHangId);
 

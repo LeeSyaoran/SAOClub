@@ -171,8 +171,6 @@ class ChiTietDonHangServiceTest {
         bienThe.setBienTheId(20);
         when(bienTheSanPhamRepository.findById(20)).thenReturn(Optional.of(bienThe));
 
-        // Serial da bi don khac gianh mat ("giu_hang") giua luc nhan vien mo modal chon va
-        // luc bam xac nhan — findByIdForUpdate() phai tra ve dung trang thai moi nhat.
         ChiTietSanPham s1 = serialTrongKho(300, bienThe);
         s1.setTrangThai("giu_hang");
         when(chiTietSanPhamRepository.findByIdForUpdate(300)).thenReturn(Optional.of(s1));

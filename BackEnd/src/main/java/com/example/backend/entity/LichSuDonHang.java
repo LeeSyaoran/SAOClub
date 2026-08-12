@@ -19,10 +19,6 @@ public class LichSuDonHang {
     @Column(name = "lich_su_id")
     private Integer lichSuId;
 
-    // Plain FK column, không dùng @ManyToOne — bảng này chỉ được TRIGGER trong DB ghi (xem
-    // trg_don_hang_log_trangthai trong QLBanMayTinh.sql). Java chỉ đọc, trừ lúc gộp đơn cần
-    // đổi lại donHangId (xem DonHangService.mergeOrders() ở Task 3) — không cần điều hướng
-    // quan hệ JPA cho việc đó, set thẳng Integer là đủ.
     @Column(name = "don_hang_id", nullable = false)
     private Integer donHangId;
 

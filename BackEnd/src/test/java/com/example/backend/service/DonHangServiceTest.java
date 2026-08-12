@@ -255,10 +255,6 @@ class DonHangServiceTest {
         verify(phieuGiamGiaCaNhanRepository).save(voucher);
     }
 
-    // Đơn tại quầy: khách nhận hàng ngay lúc thanh toán, không qua các bước giao hàng
-    // online (processing/shipping/out_for_delivery) — POS gọi update() sang "delivered"
-    // ngay sau khi tạo đơn "confirmed", phải được phép dù bình thường confirmed chỉ được
-    // sang processing/cancelled (xem CHUYEN_TRANG_THAI_DON_HANG).
     @Test
     void update_donTaiQuay_confirmedSangDelivered_choPhep() {
         DonHang d = new DonHang();
@@ -278,8 +274,6 @@ class DonHangServiceTest {
         assertThat(d.getTrangThaiDonHang()).isEqualTo("delivered");
     }
 
-    // Đơn online KHÔNG được hưởng ngoại lệ trên — vẫn phải đi tuần tự qua processing/
-    // shipping/out_for_delivery, không được nhảy thẳng confirmed -> delivered.
     @Test
     void update_donOnline_confirmedSangDelivered_vanBiChan() {
         DonHang d = new DonHang();
@@ -383,8 +377,6 @@ class DonHangServiceTest {
         verify(phieuGiamGiaCaNhanRepository).save(phieu);
     }
 
-    // Không tin giamGia client gửi lên khi KHÔNG có mã/voucher nào — nếu không, ai đó gọi
-    // thẳng API (bỏ qua UI) có thể tự đặt giảm giá tuỳ ý mà chẳng cần mã gì cả.
     @Test
     void create_khongCoMaHayVoucher_giamGiaLuonBiEpVeKhong() {
         loginAs("khach1");
@@ -399,7 +391,7 @@ class DonHangServiceTest {
         req.setNguoiNhan("A");
         req.setSdtNguoiNhan("0900000000");
         req.setTongTien(java.math.BigDecimal.valueOf(1_000_000));
-        req.setGiamGia(java.math.BigDecimal.valueOf(999_999)); // bịa, không gắn mã/voucher nào
+        req.setGiamGia(java.math.BigDecimal.valueOf(999_999)); 
         req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
         req.setNgayDat(java.time.LocalDateTime.now());
 
@@ -408,8 +400,6 @@ class DonHangServiceTest {
         assertThat(saved.getGiamGia()).isEqualByComparingTo(java.math.BigDecimal.ZERO);
     }
 
-    // Mã khuyến mãi hết hạn vẫn có thể còn tồn tại trong DB (chỉ ẩn khỏi danh sách gợi ý ở
-    // UI) — request thẳng API với đúng id của nó phải bị chặn ở server, không chỉ ở UI.
     @Test
     void create_khuyenMaiHetHan_biTuChoi() {
         loginAs("khach1");
@@ -422,7 +412,7 @@ class DonHangServiceTest {
         km.setLoai("percent");
         km.setGiaTri(java.math.BigDecimal.TEN);
         km.setNgayBatDau(java.time.LocalDateTime.now().minusDays(30));
-        km.setNgayKetThuc(java.time.LocalDateTime.now().minusDays(1)); // đã hết hạn hôm qua
+        km.setNgayKetThuc(java.time.LocalDateTime.now().minusDays(1)); 
         when(khuyenMaiRepository.findById(3)).thenReturn(Optional.of(km));
 
         com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
@@ -444,8 +434,6 @@ class DonHangServiceTest {
         verify(donHangRepository, never()).save(any());
     }
 
-    // Voucher cá nhân trúng từ vòng quay giữ nguyên đơn tối thiểu của khuyến mãi gốc — phải
-    // bị chặn ở server nếu đơn chưa đạt, không chỉ ẩn khỏi danh sách chọn ở checkout.
     @Test
     void create_voucherChuaDatDonToiThieu_biTuChoi() {
         loginAs("khach1");
@@ -472,7 +460,7 @@ class DonHangServiceTest {
         req.setTrangThaiThanhToan("unpaid");
         req.setNguoiNhan("A");
         req.setSdtNguoiNhan("0900000000");
-        req.setTongTien(java.math.BigDecimal.valueOf(100_000)); // dưới xa đơn tối thiểu 10tr
+        req.setTongTien(java.math.BigDecimal.valueOf(100_000)); 
         req.setGiamGia(java.math.BigDecimal.ZERO);
         req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
         req.setNgayDat(java.time.LocalDateTime.now());
@@ -484,8 +472,6 @@ class DonHangServiceTest {
         verify(donHangRepository, never()).save(any());
     }
 
-    // Client có thể gửi giamGia sai (cố tình hoặc do bug UI) — server phải tự tính lại từ
-    // chính mã khuyến mãi + tongTien thật, bỏ qua hoàn toàn số client gửi.
     @Test
     void create_khuyenMaiHopLe_tuTinhLaiGiamGiaKhongTinSoClientGui() {
         loginAs("khach1");
@@ -497,7 +483,7 @@ class DonHangServiceTest {
         km.setKhuyenMaiId(3);
         km.setTrangThai("active");
         km.setLoai("percent");
-        km.setGiaTri(java.math.BigDecimal.TEN); // giảm 10%
+        km.setGiaTri(java.math.BigDecimal.TEN); 
         km.setNgayBatDau(java.time.LocalDateTime.now().minusDays(1));
         km.setNgayKetThuc(java.time.LocalDateTime.now().plusDays(1));
         when(khuyenMaiRepository.findById(3)).thenReturn(Optional.of(km));
@@ -509,8 +495,8 @@ class DonHangServiceTest {
         req.setTrangThaiThanhToan("unpaid");
         req.setNguoiNhan("A");
         req.setSdtNguoiNhan("0900000000");
-        req.setTongTien(java.math.BigDecimal.valueOf(1_000_000)); // 10% = 100.000
-        req.setGiamGia(java.math.BigDecimal.valueOf(999_999));    // client gửi bừa, phải bị bỏ qua
+        req.setTongTien(java.math.BigDecimal.valueOf(1_000_000)); 
+        req.setGiamGia(java.math.BigDecimal.valueOf(999_999));    
         req.setPhiVanChuyen(java.math.BigDecimal.ZERO);
         req.setNgayDat(java.time.LocalDateTime.now());
 
@@ -541,9 +527,6 @@ class DonHangServiceTest {
         req.setNgayDat(java.time.LocalDateTime.now());
         req.setPhieuGiamGiaCaNhanId(7);
 
-        // Kiểm tra "chỉ 1 trong 2" giờ chạy TRƯỚC khi đụng tới khuyenMaiRepository/
-        // donHangRepository.save() (xem create()) — không cần stub 2 cái đó nữa, request có
-        // cả 2 id là bị chặn ngay, chưa kịp lookup hay insert gì.
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("đồng thời");
@@ -605,11 +588,6 @@ class DonHangServiceTest {
         verify(donHangRepository).deleteById(1);
     }
 
-    // Dòng đơn hàng số_lượng > 1 giữ các serial "phụ" trong bảng join chi_tiet_don_hang_serial
-    // (FK -> chi_tiet_don_hang) — xóa chi_tiet_don_hang trước mà không dọn bảng join này trước
-    // sẽ làm Hibernate ném TransientPropertyValueException lúc flush (do 1 dòng
-    // ChiTietDonHangSerial persistent vẫn còn trỏ tới ChiTietDonHang vừa bị xóa), lộ ra ngoài
-    // thành lỗi 500 khi nhấn nút xóa đơn.
     @Test
     void delete_donCoSerialTrongBangJoin_xoaCaChiTietDonHangSerial() {
         loginAs("nv1");
@@ -630,9 +608,6 @@ class DonHangServiceTest {
         verify(donHangRepository).deleteById(1);
     }
 
-    // Đơn đã ghi nhận thanh toán (POS/checkout) có dòng thanh_toan trỏ FK về don_hang —
-    // xóa don_hang trước khi dọn thanh_toan sẽ vỡ constraint FK_tt_don_hang, lộ ra ngoài
-    // thành lỗi 400 khi bấm "Xóa" ở OrdersTable.vue.
     @Test
     void delete_donDaThanhToan_xoaCaThanhToan() {
         loginAs("nv1");
@@ -665,7 +640,7 @@ class DonHangServiceTest {
         when(donHangRepository.save(any(DonHang.class))).thenAnswer(inv -> inv.getArgument(0));
 
         com.example.backend.request.DonHangRequest req = new com.example.backend.request.DonHangRequest();
-        req.setKhachHangId(999); // giả mạo id của khách khác
+        req.setKhachHangId(999); 
         req.setTrangThaiDonHang("pending");
         req.setTrangThaiThanhToan("unpaid");
         req.setNguoiNhan("A");
@@ -707,7 +682,6 @@ class DonHangServiceTest {
         verify(khachHangRepository).getReferenceById(77);
     }
 
-    // ── xacNhanDaNhanHang: khách tự bấm "Đã nhận được hàng" ──────────────────────────────
     @Test
     void xacNhanDaNhanHang_laChuDon_dangChoXacNhan_chuyenDelivered() {
         loginAs("khach1");
@@ -737,8 +711,6 @@ class DonHangServiceTest {
         verify(donHangRepository, never()).save(any());
     }
 
-    // Đơn chưa tới bước "awaiting_confirmation" (vd còn "shipping") — khách chưa xác nhận
-    // được, tránh nhảy cóc trạng thái qua route riêng này.
     @Test
     void xacNhanDaNhanHang_chuaDenBuocChoXacNhan_biChan() {
         loginAs("khach1");

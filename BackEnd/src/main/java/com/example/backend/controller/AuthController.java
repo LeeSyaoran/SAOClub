@@ -22,15 +22,9 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
-    /**
-     * POST /api/auth/login
-     * 1. Spring Security xác thực username + password qua CustomUserDetailService + BCrypt
-     * 2. Nếu hợp lệ → lấy thông tin user đầy đủ từ DB và trả về (kèm role)
-     */
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
-            // Bước 1: Spring Security kiểm tra username/password (BCrypt so sánh tự động)
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getUsername().trim(),
@@ -38,7 +32,6 @@ public class AuthController {
                     )
             );
 
-            // Bước 2: Lấy thông tin đầy đủ từ DB (tên, SĐT, role...)
             return ResponseEntity.ok(authService.buildLoginResponse(request.getUsername().trim()));
 
         } catch (BadCredentialsException e) {

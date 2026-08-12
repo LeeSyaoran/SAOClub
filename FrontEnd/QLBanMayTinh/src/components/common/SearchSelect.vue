@@ -1,35 +1,39 @@
 <template>
-  <!-- Combobox tùy biến — thay <select> gốc trình duyệt (luôn trắng, không theo theme,
-       cắt chữ dài) bằng dropdown nổi theo theme app, có ô tìm kiếm khi danh sách dài.
-       Panel teleport ra <body> + position:fixed — nếu không, panel bị modal cha
-       (overflow-y-auto) cắt cụt khi nằm gần đáy vùng cuộn. -->
-  <div class="position-relative" ref="rootEl">
-    <button type="button" class="form-select form-select-sm text-start d-flex align-items-center"
-            :disabled="disabled"
-            :class="{ 'text-secondary': !selectedLabel }"
-            style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong);"
-            role="combobox" aria-haspopup="listbox" :aria-expanded="open"
-            @click="toggle" @keydown="onTriggerKeydown">
+  <div ref="rootEl" class="position-relative">
+    <button
+      type="button" class="form-select form-select-sm text-start d-flex align-items-center"
+      :disabled="disabled"
+      :class="{ 'text-secondary': !selectedLabel }"
+      style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong);"
+      role="combobox" aria-haspopup="listbox" :aria-expanded="open"
+      @click="toggle" @keydown="onTriggerKeydown"
+    >
       <span class="text-truncate">{{ selectedLabel || placeholder }}</span>
     </button>
 
     <Teleport to="body">
-      <div v-if="open" ref="panelEl" class="rounded-3 d-flex flex-column"
-           :style="{ position: 'fixed', top: panelPos.top + 'px', left: panelPos.left + 'px',
-                     minWidth: panelPos.width + 'px', width: 'max-content', maxWidth: '340px',
-                     background: 'var(--bg-card)', border: '1px solid var(--border-color-strong)',
-                     boxShadow: '0 12px 32px rgba(0,0,0,0.4)', zIndex: 2000 }">
-        <input v-if="options.length > 6" v-model="query" ref="searchEl"
-               class="form-control form-control-sm m-2"
-               style="width:auto;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong);"
-               :placeholder="t('common.searchPlaceholder')" @click.stop @keydown="onTriggerKeydown" />
+      <div
+        v-if="open" ref="panelEl" class="rounded-3 d-flex flex-column"
+        :style="{ position: 'fixed', top: panelPos.top + 'px', left: panelPos.left + 'px',
+                  minWidth: panelPos.width + 'px', width: 'max-content', maxWidth: '340px',
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color-strong)',
+                  boxShadow: '0 12px 32px rgba(0,0,0,0.4)', zIndex: 2000 }"
+      >
+        <input
+          v-if="options.length > 6" ref="searchEl" v-model="query"
+          class="form-control form-control-sm m-2"
+          style="width:auto;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong);"
+          :placeholder="t('common.searchPlaceholder')" @click.stop @keydown="onTriggerKeydown"
+        />
         <div class="overflow-y-auto" role="listbox" style="max-height:240px;">
-          <div v-for="(opt, idx) in filteredOptions" :key="opt.value" ref="optionEls"
-               class="px-3 py-2 small" role="option" :aria-selected="opt.value === modelValue"
-               style="cursor:pointer;white-space:normal;"
-               :style="(opt.value === modelValue || idx === highlightedIndex) ? { background: 'var(--accent)', color: 'var(--accent-text)' } : {}"
-               @mouseenter="highlightedIndex = idx"
-               @click="select(opt.value)">
+          <div
+            v-for="(opt, idx) in filteredOptions" :key="opt.value" ref="optionEls"
+            class="px-3 py-2 small" role="option" :aria-selected="opt.value === modelValue"
+            style="cursor:pointer;white-space:normal;"
+            :style="(opt.value === modelValue || idx === highlightedIndex) ? { background: 'var(--accent)', color: 'var(--accent-text)' } : {}"
+            @mouseenter="highlightedIndex = idx"
+            @click="select(opt.value)"
+          >
             {{ opt.label }}
           </div>
           <div v-if="filteredOptions.length === 0" class="px-3 py-3 text-secondary small text-center">{{ t('common.noResults') }}</div>

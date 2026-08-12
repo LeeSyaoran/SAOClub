@@ -14,9 +14,6 @@ class RateLimitingFilterTest {
 
     private final RateLimitingFilter filter = new RateLimitingFilter();
 
-    // Endpoint permitAll, ai cũng gọi được kể cả chưa đăng nhập — không giới hạn thì có
-    // thể dò số điện thoại ngẫu nhiên hàng loạt để biết ai đã là khách hàng (xem
-    // KhachHangController.findBySoDienThoai).
     @Test
     void timTheoSdt_qua5LanTrongMotPhut_chanLanThu6() throws Exception {
         for (int i = 1; i <= 5; i++) {

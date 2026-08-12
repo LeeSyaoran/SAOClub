@@ -36,7 +36,6 @@ public class DanhMucController {
         return ResponseEntity.status(HttpStatus.CREATED).body(danhMucService.create(request));
     }
 
-    // DanhMuc dùng field "id" (không phải danhMucId) — xem entity DanhMuc
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PutMapping("update/{id}")
     public ResponseEntity<Void> update(@PathVariable Integer id, @Valid @RequestBody DanhMucRequest request) {

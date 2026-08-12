@@ -62,8 +62,6 @@ public class PhieuGiamGiaCaNhanService {
         if (!"active".equals(doiThuong.getTrangThai()))
             throw new IllegalArgumentException("Phần thưởng này hiện không khả dụng");
 
-        // Khóa ghi để đọc số dư điểm mới nhất — chặn 2 request đổi điểm đồng thời cùng
-        // đọc trùng số dư rồi cùng trừ (double-spend điểm).
         KhachHang khachHang = khachHangRepository.findWithLockByKhachHangId(currentKhachHangId())
                 .orElseThrow(() -> new IllegalArgumentException("Khách hàng không tồn tại"));
         if (khachHang.getDiemTichLuy() < doiThuong.getDiemCan())
@@ -84,8 +82,6 @@ public class PhieuGiamGiaCaNhanService {
         return phieuGiamGiaCaNhanRepository.save(phieu);
     }
 
-    // Admin tặng voucher trực tiếp — không qua đổi điểm, doiThuong=null (giống hệt cách
-    // voucher trúng vòng quay cũng để doiThuong=null, xem VongQuayService.quay()).
     @Transactional
     public PhieuGiamGiaCaNhan taoVoucherAdmin(Integer khachHangId, TangVoucherRequest request) {
         if ("percent".equals(request.getLoai()) && request.getGiaTri().compareTo(BigDecimal.valueOf(100)) > 0)
@@ -106,14 +102,10 @@ public class PhieuGiamGiaCaNhanService {
         phieu.setNgayHetHan(request.getNgayHetHan());
         phieu.setDonHangToiThieu(request.getDonHangToiThieu());
         PhieuGiamGiaCaNhan savedPhieu = phieuGiamGiaCaNhanRepository.save(phieu);
-        // maPhieu là DEFAULT sinh bởi DB, insertable=false trên entity — Hibernate không tự
-        // re-select sau INSERT, phải refresh() để đọc lại giá trị thật (giống VongQuayService.quay()).
         entityManager.refresh(savedPhieu);
         return savedPhieu;
     }
 
-    // Admin xem toàn bộ voucher của 1 khách — khác getCuaToi() (tự phục vụ, suy khách hàng
-    // từ SecurityContextHolder) vì admin cần xem CỦA NGƯỜI KHÁC theo id truyền vào.
     public List<PhieuGiamGiaCaNhanResponse> getByKhachHangIdForAdmin(Integer khachHangId) {
         List<Integer> phieuIdTrungThuong = lichSuQuayRepository.findPhieuIdsByKhachHangId(khachHangId);
         return phieuGiamGiaCaNhanRepository.findByKhachHang_KhachHangId(khachHangId).stream()

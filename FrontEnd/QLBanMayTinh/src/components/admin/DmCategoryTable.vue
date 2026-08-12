@@ -223,8 +223,6 @@ const saveItem = async () => {
     </div>
   </div>
 
-  <!-- Modal xem danh sach serial cua 1 muc danh muc (CPU/RAM/GPU/O cung) — thuan xem,
-       sua/xoa tung serial van lam o tab Serial chung (SerialManager.vue) -->
   <div v-if="showSerialsModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showSerialsModal=false">
     <div class="rounded-3 p-3 d-flex flex-column" style="background:var(--bg-card);width:420px;max-width:94vw;max-height:80vh;">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -233,8 +231,10 @@ const saveItem = async () => {
       </div>
       <div class="overflow-y-auto d-flex flex-column gap-1">
         <div v-if="serialsOf(serialsModalItem).length===0" class="text-secondary small text-center py-3">{{ t('admin.serialManager.empty') }}</div>
-        <div v-for="s in serialsOf(serialsModalItem)" :key="s.soSerial"
-             class="d-flex justify-content-between align-items-center p-2 rounded-2" style="background:var(--bg-hover);font-size:0.82rem;">
+        <div
+          v-for="s in serialsOf(serialsModalItem)" :key="s.soSerial"
+          class="d-flex justify-content-between align-items-center p-2 rounded-2" style="background:var(--bg-hover);font-size:0.82rem;"
+        >
           <span class="font-monospace">{{ s.soSerial }}</span>
           <span class="text-secondary">{{ t(`admin.statusLabel.${s.trangThai}`) }}</span>
           <span class="text-secondary" style="font-size:0.72rem;">{{ formatDate(s.ngayNhapKho) }}</span>

@@ -118,13 +118,12 @@ class VongQuayServiceTest {
 
         assertThat(res.getKetQua()).isEqualTo("trung");
         assertThat(res.getKhuyenMai().getKhuyenMaiId()).isEqualTo(7);
-        assertThat(res.getDiemConLai()).isEqualTo(900); // 1000 - 100
+        assertThat(res.getDiemConLai()).isEqualTo(900); 
         verify(khachHangRepository).save(argThat(kh -> kh.getDiemTichLuy() == 900));
         verify(phieuGiamGiaCaNhanRepository).save(argThat(p ->
                 p.getDoiThuong() == null && "percent".equals(p.getLoai())
                         && p.getGiaTri().compareTo(BigDecimal.valueOf(20)) == 0));
         verify(lichSuQuayRepository).save(argThat(l -> "trung".equals(l.getKetQua()) && l.getDiemDaTru() == 100));
-        // Verify that entityManager.refresh() was called to re-read DB-generated maPhieu
         verify(entityManager).refresh(any(PhieuGiamGiaCaNhan.class));
     }
 
@@ -160,8 +159,8 @@ class VongQuayServiceTest {
     @Test
     void quay_danhSachKhuyenMaiRong_luonTruotBatKeTyLeTruot() {
         loginAsKhachHang("khach1", 42, 1000);
-        when(cauHinhRepository.findById(1)).thenReturn(Optional.of(cauHinh(100, 0))); // 0% trượt
-        when(khuyenMaiRepository.findActiveKhaDung()).thenReturn(List.of()); // nhưng rỗng
+        when(cauHinhRepository.findById(1)).thenReturn(Optional.of(cauHinh(100, 0))); 
+        when(khuyenMaiRepository.findActiveKhaDung()).thenReturn(List.of()); 
         when(khachHangRepository.save(any(KhachHang.class))).thenAnswer(inv -> inv.getArgument(0));
 
         KetQuaQuayResponse res = service.quay();
@@ -189,10 +188,6 @@ class VongQuayServiceTest {
 
         service.quay();
 
-        // Verify entityManager.refresh() được gọi trên saved phieu
-        // để buộc Hibernate re-read DB-generated maPhieu column từ DB.
-        // Trong @Transactional, findById() chỉ trả cached object, không đọc lại DB.
-        // Chỉ refresh() mới đảm bảo re-read thực sự.
         verify(entityManager).refresh(any(PhieuGiamGiaCaNhan.class));
     }
 }

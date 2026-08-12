@@ -28,11 +28,9 @@ public class KhuyenMaiService {
 
     public KhuyenMai create(KhuyenMaiRequest request) {
         KhuyenMai entity = new KhuyenMai();
-        // BeanUtils copies: maKhuyenMai, tenKhuyenMai, loai, giaTri, giaTriToiDa,
-        //                   donHangToiThieu, ngayBatDau, ngayKetThuc, soLuongToiDa, trangThai
         BeanUtils.copyProperties(request, entity);
         entity.setNgayTao(LocalDateTime.now());
-        entity.setSoLanDaDung(0); // khởi tạo số lần đã dùng = 0
+        entity.setSoLanDaDung(0); 
         return khuyenMaiRepository.save(entity);
     }
 

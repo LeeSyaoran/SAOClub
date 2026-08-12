@@ -27,11 +27,6 @@ public class DonHangController {
     @Autowired
     private SseService sseService;
 
-    // GET /api/don-hang?page=0&size=20&khachHangId=... — DTO query với LEFT JOIN nullable
-    // FKs (nhanVien, khuyenMai, diaChiGiaoHang có thể null), có phân trang.
-    // khachHangId optional: trang "Đơn hàng của tôi" truyền vào để chỉ lấy đơn của khách
-    // đó thay vì tải hết đơn toàn hệ thống rồi lọc ở trình duyệt (rất chậm khi số đơn lớn).
-    // Giữ mở cho mọi role đã đăng nhập — cả AccountPage (khách) lẫn Admin/Staff đều gọi.
     @GetMapping
     public Page<DonHangResponse> getAll(
             @RequestParam(defaultValue = "0") int page,
@@ -45,16 +40,11 @@ public class DonHangController {
         return donHangService.getByIdChoNguoiXem(id);
     }
 
-    // POST — service xử lý các FK: khachHang, nhanVien, khuyenMai, diaChiGiaoHang.
-    // Giữ mở ở tầng route — CheckoutModal.vue gọi khi khách đặt hàng — nhưng service tự ép
-    // khachHangId về đúng chủ tài khoản đang gọi nếu là khách hàng (chỉ staff mới được tạo
-    // đơn hộ người khác bằng khachHangId tự chọn trong request).
     @PostMapping
     public ResponseEntity<DonHang> create(@Valid @RequestBody DonHangRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(donHangService.create(request));
     }
 
-    // Cập nhật đơn hàng (trạng thái, thông tin giao...) — chỉ staff thao tác qua AdminPage.
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PutMapping("update/{id}")
     public ResponseEntity<Void> update(@PathVariable Integer id,
@@ -63,14 +53,12 @@ public class DonHangController {
         return ResponseEntity.ok().build();
     }
 
-    // Xoá đơn — giữ mở: CheckoutModal.vue gọi để rollback khi tạo đơn lỗi giữa chừng.
     @DeleteMapping("delete/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         donHangService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    // Gộp nhiều đơn hàng của cùng khách vào 1 đơn đích — chỉ staff (AdminPage).
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PostMapping("merge")
     public ResponseEntity<?> merge(@RequestBody MergeOrderRequest request) {
@@ -82,7 +70,6 @@ public class DonHangController {
         }
     }
 
-    // Tính lại tong_tien sau khi thêm/xóa sản phẩm trong đơn — chỉ staff (AdminPage).
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PatchMapping("{id}/recalculate")
     public ResponseEntity<Void> recalculate(@PathVariable Integer id) {
@@ -90,8 +77,6 @@ public class DonHangController {
         return ResponseEntity.ok().build();
     }
 
-    // Chọn serial cho từng dòng + chốt bán + chuyển sang "confirmed" — chỉ staff (AdminPage),
-    // đơn tại quầy đã chốt serial ngay lúc tạo, không qua bước này.
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PatchMapping("{id}/xac-nhan")
     public ResponseEntity<Void> xacNhan(@PathVariable Integer id, @Valid @RequestBody XacNhanDonHangRequest request) {
@@ -99,16 +84,12 @@ public class DonHangController {
         return ResponseEntity.ok().build();
     }
 
-    // Khách hàng tự bấm "Đã nhận được hàng" (đơn đang "awaiting_confirmation") — route mở cho
-    // mọi role đã đăng nhập (không @PreAuthorize staff-only như update()), service tự kiểm tra
-    // đúng chủ đơn qua isStaffOrOwner() để chặn khách A xác nhận hộ đơn khách B.
     @PatchMapping("{id}/xac-nhan-nhan-hang")
     public ResponseEntity<Void> xacNhanDaNhanHang(@PathVariable Integer id) {
         donHangService.xacNhanDaNhanHang(id);
         return ResponseEntity.ok().build();
     }
 
-    // SSE — giữ mở: cả AccountPage (khách theo dõi đơn của mình) lẫn AdminPage (staff) đều subscribe.
     @GetMapping(value = "events", produces = "text/event-stream")
     public SseEmitter subscribe() {
         return sseService.subscribe();

@@ -14,17 +14,6 @@ import java.util.List;
 @Repository
 public interface NhanVienRepository extends JpaRepository<NhanVien, Integer> {
 
-    // === BUG CŨ ===
-    // LEFT JOIN n.chucVu (không có alias) → alias không tồn tại trong SELECT
-    // → n.chucVu.id trong SELECT tạo ra IMPLICIT INNER JOIN thứ hai
-    // → Nhân viên không có chức vụ (chuc_vu_id IS NULL) bị loại khỏi kết quả
-    //
-    // === FIX ===
-    // Thêm alias "cv" vào LEFT JOIN, dùng cv.id trong SELECT
-    // Kết quả: nhân viên không có chức vụ vẫn xuất hiện, cv.id = null
-    // LEFT JOIN TaiKhoan qua ON (không phải quan hệ 2 chiều trên NhanVien) để lấy username —
-    // trước đây thiếu join này nên NhanVienResponse.username luôn null, khiến modal "Sửa nhân
-    // viên" tự động điền username rỗng và PUT luôn bị chặn 400 "Username không được để trống".
     @Query("""
     SELECT new com.example.backend.response.NhanVienResponse(
         n.nhanVienId, n.hoTen, n.soDienThoai, n.email,

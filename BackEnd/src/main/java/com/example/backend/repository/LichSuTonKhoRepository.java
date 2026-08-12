@@ -15,6 +15,5 @@ public interface LichSuTonKhoRepository extends JpaRepository<LichSuTonKho, Inte
 
     List<LichSuTonKho> findByDonHang_Id(Integer donHangId);
 
-    // Dọn log lịch sử tồn kho của 1 biến thể khi xóa hẳn biến thể/sản phẩm (chưa từng bán).
     void deleteByBienThe_BienTheId(Integer bienTheId);
 }

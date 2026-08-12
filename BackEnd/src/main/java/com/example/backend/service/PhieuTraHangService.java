@@ -86,7 +86,6 @@ public class PhieuTraHangService {
         kiemTraGioiHanSoTienHoan(donHang, null, request.getSoTienHoan());
 
         PhieuTraHang entity = new PhieuTraHang();
-        // BeanUtils copies: lyDo, ngayTra, trangThai, soTienHoan, hinhThucHoan, ghiChu
         BeanUtils.copyProperties(request, entity, "donHangId", "nhanVienId");
         entity.setDonHang(donHang);
         if (request.getNhanVienId() != null)
@@ -121,12 +120,6 @@ public class PhieuTraHangService {
         return saved;
     }
 
-    // Chặn tổng số tiền hoàn trên 1 đơn (cộng dồn mọi phiếu "cho_xu_ly"/"da_xu_ly" của đơn đó,
-    // trừ phiếu "tu_choi" không tính) vượt quá thanh_tien thực tế của đơn — trước đây soTienHoan
-    // copy thẳng từ request qua BeanUtils, staff (hoặc tài khoản bị chiếm) có thể tạo nhiều
-    // phiếu hoàn vượt xa số tiền khách đã trả, "vi" khách sẽ được cộng khống qua congViNeuVuaHoanTat().
-    // excludePhieuId: khi sửa 1 phiếu đang có sẵn, loại giá trị cũ của chính nó ra khỏi tổng
-    // trước khi cộng giá trị mới, tránh đếm trùng.
     private void kiemTraGioiHanSoTienHoan(DonHang donHang, Integer excludePhieuId, BigDecimal soTienHoanMoi) {
         if (soTienHoanMoi == null || soTienHoanMoi.signum() <= 0) return;
         BigDecimal daHoanCacPhieuKhac = phieuTraHangRepository.findByDonHang_Id(donHang.getId()).stream()
@@ -142,13 +135,6 @@ public class PhieuTraHangService {
                             + ") vượt quá số tiền đơn hàng đã thanh toán (" + gioiHan + ")");
     }
 
-    // Guard: một khi phiếu đã xử lý xong ("da_xu_ly"), chặn sửa trangThai/hinhThucHoan/
-    // soTienHoan — 3 trường này quyết định số dư ví (chỉ hinhThucHoan="vi") VÀ điểm tích lũy
-    // bị trừ (cả "vi" lẫn "tien_mat", xem truHoiDiemNeuVuaHoanTat), sửa "ngầm" rồi lưu lại sẽ
-    // làm lệch ví/điểm hoặc cộng/trừ trùng lần 2 (không có bảng ledger để đối soát lại). Trước
-    // đây chỉ chặn khi hinhThucHoan="vi" — phiếu "tien_mat" đã da_xu_ly vẫn đổi lui về
-    // "cho_xu_ly" rồi lưu lại "da_xu_ly" được, trừ điểm 2 lần cho cùng 1 lần hoàn thực tế. Các
-    // trường khác (lyDo, ghiChu, nhanVienId, ngayTra) vẫn sửa tự do.
     private void chanSuaSauKhiDaCongVi(PhieuTraHang entity, PhieuTraHangRequest request) {
         boolean daXuLyRoi = "da_xu_ly".equals(entity.getTrangThai());
         if (!daXuLyRoi) return;
@@ -165,9 +151,6 @@ public class PhieuTraHangService {
         }
     }
 
-    // Cộng tiền vào ví khách hàng khi phiếu VỪA chuyển sang "da_xu_ly" (trạng thái cũ khác
-    // "da_xu_ly" — tránh cộng 2 lần nếu sửa 1 phiếu đã xử lý) và hình thức hoàn là "vi".
-    // Hoàn "tien_mat" không đụng ví — nhân viên tự đưa tiền mặt ngoài hệ thống.
     private void congViNeuVuaHoanTat(String trangThaiCu, PhieuTraHang phieu) {
         boolean vuaChuyenSangDaXuLy = "da_xu_ly".equals(phieu.getTrangThai()) && !"da_xu_ly".equals(trangThaiCu);
         if (!vuaChuyenSangDaXuLy) return;
@@ -179,12 +162,6 @@ public class PhieuTraHangService {
         khachHangRepository.save(khachHang);
     }
 
-    // Điểm tích lũy được cộng qua trigger DB trg_don_hang_cong_diem khi đơn chuyển "delivered"
-    // (FLOOR(thanh_tien / 10000) điểm) — nhưng khi trả hàng/hoàn tiền sau đó, điểm đã cộng
-    // không tự động bị trừ lại, khách có thể "cày" điểm bằng cách mua rồi trả liên tục. Trừ
-    // lại đúng tỉ lệ (FLOOR(soTienHoan / 10000)) khi phiếu VỪA chuyển sang "da_xu_ly" — áp
-    // dụng cho cả 2 hình thức hoàn (tiền mặt lẫn ví), vì điểm được cộng dựa trên tiền đã trả
-    // của ĐƠN, không phụ thuộc cách hoàn tiền lần này. Không cho âm điểm (CHECK constraint DB).
     private void truHoiDiemNeuVuaHoanTat(String trangThaiCu, PhieuTraHang phieu) {
         boolean vuaChuyenSangDaXuLy = "da_xu_ly".equals(phieu.getTrangThai()) && !"da_xu_ly".equals(trangThaiCu);
         if (!vuaChuyenSangDaXuLy) return;
@@ -199,17 +176,6 @@ public class PhieuTraHangService {
         khachHangRepository.save(khachHang);
     }
 
-    // Cap nhat don hang khi phieu tra hang VUA chuyen sang "da_xu_ly":
-    // 1) trang_thai_thanh_toan -> "refunded" (so tien hoan > 0) — truoc day khong bao gio doi,
-    //    don da hoan tien van hien "paid" nhu binh thuong. Schema chi co 4 muc unpaid/partial/
-    //    paid/refunded (khong co "hoan mot phan" rieng) nen coi moi lan hoan tien (toan phan
-    //    hay 1 phan don) la "refunded" — thong nhat voi kiemTraGioiHanSoTienHoan() da gioi han
-    //    tong tien hoan theo don.
-    // 2) trang_thai_don_hang -> "returned" — truoc day don cu dung yen "delivered" mai mai du
-    //    thuc te da tra/hoan xong. Chi doi khi don DANG la "delivered" (dung y state machine
-    //    delivered->returned cua DonHangService), vi luong tao phieu truc tiep cua nhan vien
-    //    (khac voi taoYeuCauTuKhachHang) khong bat buoc don phai delivered — bo qua neu don
-    //    dang o trang thai khac de khong "nhay coc" state machine.
     private void capNhatDonHangNeuVuaHoanTat(String trangThaiCu, PhieuTraHang phieu) {
         boolean vuaChuyenSangDaXuLy = "da_xu_ly".equals(phieu.getTrangThai()) && !"da_xu_ly".equals(trangThaiCu);
         if (!vuaChuyenSangDaXuLy) return;
@@ -227,16 +193,6 @@ public class PhieuTraHangService {
         if (coDoi) donHangRepository.save(donHang);
     }
 
-    // Cong lai kho khi phieu VUA chuyen sang "da_xu_ly" — ap dung cho MOI dong tra hang hien
-    // co cua phieu nay tai thoi diem duyet, bat ke dong do duoc tao truoc hay sau, boi nhan
-    // vien (ReturnsPanel) hay boi khach tu gui yeu cau (taoYeuCauTuKhachHang). Truoc day logic
-    // nay nam o ChiTietTraHangService.create() nen chi chay khi TAO MOI 1 dong — cong kho qua
-    // som (truoc khi phieu duoc duyet, ke ca phieu sau do bi tu choi) va hoan toan khong chay
-    // voi luong khach tu gui (dong duoc luu thang qua repository, khong qua create()). Chuyen
-    // sang gan dung vao thoi diem duyet, doc truc tiep tu DB nen dung voi ca 2 luong.
-    // Hang loi/hong (tinhTrang co "loi"/"hong") khong duoc cong lai kho — giu nguyen trang thai
-    // serial hien tai (vd cho bao hanh/huy). Dong khong gan serial cu the (chiTietSanPham=null)
-    // thi khong dung toi kho — kho o he thong nay quan ly theo tung serial.
     private void capNhatKhoNeuVuaHoanTat(String trangThaiCu, PhieuTraHang phieu) {
         boolean vuaChuyenSangDaXuLy = "da_xu_ly".equals(phieu.getTrangThai()) && !"da_xu_ly".equals(trangThaiCu);
         if (!vuaChuyenSangDaXuLy) return;
@@ -256,15 +212,12 @@ public class PhieuTraHangService {
         return s.contains("lỗi") || s.contains("loi") || s.contains("hỏng") || s.contains("hong") || s.contains("hư");
     }
 
-    // ── Khách hàng tự gửi yêu cầu trả hàng (tách biệt hoàn toàn CRUD staff ở trên) ──────
 
     private TaiKhoan currentAccount() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return taiKhoanRepository.findByUsername(username).orElse(null);
     }
 
-    // Chỉ đúng chủ đơn mới được tự tạo yêu cầu — không cho staff bypass qua endpoint này
-    // (staff có luồng riêng: PhieuTraHangController CRUD + ReturnsPanel.vue).
     private void assertIsOwner(DonHang donHang) {
         TaiKhoan tk = currentAccount();
         boolean laChuDon = tk != null && tk.getKhachHang() != null && donHang.getKhachHang() != null
@@ -273,7 +226,6 @@ public class PhieuTraHangService {
             throw new AccessDeniedException("Không có quyền tạo yêu cầu trả hàng cho đơn này");
     }
 
-    // Staff xem được mọi đơn, khách chỉ xem đơn của chính mình — dùng cho getByDonHang().
     private boolean isStaffOrOwner(DonHang donHang) {
         TaiKhoan tk = currentAccount();
         if (tk == null) return false;
@@ -299,9 +251,6 @@ public class PhieuTraHangService {
         if (coPhieuActive)
             throw new IllegalArgumentException("Đơn này đã có yêu cầu trả hàng đang xử lý");
 
-        // Cộng dồn số lượng trả theo từng chiTietDonHangId trước khi kiểm tra — nếu client
-        // gửi cùng 1 dòng đơn hàng nhiều lần, tổng các lần đó không được vượt số đã mua
-        // (kiểm từng lần riêng lẻ sẽ lọt trường hợp 2 dòng cộng lại vượt số đã mua).
         java.util.Map<Integer, Integer> tongSoLuongTheoDong = new java.util.HashMap<>();
         for (DongTraRequest d : request.getDongTra())
             tongSoLuongTheoDong.merge(d.getChiTietDonHangId(), d.getSoLuong(), Integer::sum);

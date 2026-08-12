@@ -7,8 +7,6 @@ import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// Xác nhận VongQuayController phân quyền đúng: GET/POST mở cho mọi role đã đăng nhập (không
-// có @PreAuthorize class-level, giống KhuyenMaiController), riêng PUT cấu hình chỉ staff.
 class VongQuayAuthorizationTest {
 
     @Test

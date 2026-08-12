@@ -1,38 +1,48 @@
 <template>
-  <div v-if="modelValue"
-       class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-       style="background:rgba(0,0,0,0.8); z-index:1050; backdrop-filter:blur(4px);"
-       @click.self="$emit('update:modelValue', false)">
-
-    <div class="rounded-4 d-flex flex-column"
-         role="dialog" aria-modal="true"
-         style="background:var(--bg-card); border:1px solid var(--border-color); width:660px; max-width:96vw; max-height:92vh; box-shadow:0 24px 80px rgba(0,0,0,0.4);">
-
-      <!-- ══ Màn hình thành công ══ -->
+  <div
+    v-if="modelValue"
+    class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+    style="background:rgba(0,0,0,0.8); z-index:1050; backdrop-filter:blur(4px);"
+    @click.self="$emit('update:modelValue', false)"
+  >
+    <div
+      class="rounded-4 d-flex flex-column"
+      role="dialog" aria-modal="true"
+      style="background:var(--bg-card); border:1px solid var(--border-color); width:660px; max-width:96vw; max-height:92vh; box-shadow:0 24px 80px rgba(0,0,0,0.4);"
+    >
       <template v-if="checkoutSuccess">
         <div class="d-flex flex-column align-items-center justify-content-center gap-4 p-5 text-center">
-          <div class="d-flex align-items-center justify-content-center rounded-circle"
-               style="width:72px;height:72px;background:rgba(72,199,142,0.15);color:#48c78e;"><CheckCircle2 :size="32" /></div>
+          <div
+            class="d-flex align-items-center justify-content-center rounded-circle"
+            style="width:72px;height:72px;background:rgba(72,199,142,0.15);color:#48c78e;"
+          >
+            <CheckCircle2 :size="32" />
+          </div>
           <div>
             <h2 class="fw-black mb-1" style="font-size:1.4rem; color:var(--text-heading);">{{ t('checkout.successTitle') }}</h2>
             <p class="mb-0" style="font-size:0.9rem; color:var(--text-secondary);">
               {{ t('checkout.orderCode') }} <strong class="text-warning">{{ checkoutOrderCode }}</strong>
             </p>
           </div>
-          <!-- Hướng dẫn thanh toán theo phương thức đã chọn -->
-          <div v-if="selectedPayment === 'tien_mat'"
-               class="p-3 rounded-3 text-center small"
-               style="background:#1e2a1e; color:#6ee7b7; border:1px solid #2a3d2a; max-width:360px;">
+          <div
+            v-if="selectedPayment === 'tien_mat'"
+            class="p-3 rounded-3 text-center small"
+            style="background:#1e2a1e; color:#6ee7b7; border:1px solid #2a3d2a; max-width:360px;"
+          >
             <Banknote :size="13" style="vertical-align:-2px;" /> {{ t('checkout.cashInstruction', { amount: formatPrice(checkoutFinalTotal) }) }}
           </div>
-          <div v-else-if="selectedPayment === 'qr'"
-               class="p-3 rounded-3 text-center small"
-               style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;">
+          <div
+            v-else-if="selectedPayment === 'qr'"
+            class="p-3 rounded-3 text-center small"
+            style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;"
+          >
             <CheckCircle2 :size="13" style="vertical-align:-2px;" /> {{ t('checkout.qrInstruction') }}
           </div>
-          <div v-else
-               class="p-3 rounded-3 text-center small"
-               style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;">
+          <div
+            v-else
+            class="p-3 rounded-3 text-center small"
+            style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;"
+          >
             <Landmark :size="13" style="vertical-align:-2px;" /> {{ t('checkout.bankInstruction', { amount: formatPrice(checkoutFinalTotal) }) }}
           </div>
           <button class="btn btn-warning fw-bold px-5 rounded-pill" style="font-size:0.9rem;" @click="$emit('update:modelValue', false)">{{ t('checkout.close') }}</button>
@@ -41,8 +51,6 @@
 
       <!-- ══ Form đặt hàng ══ -->
       <template v-else>
-
-        <!-- Header + step indicator -->
         <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid var(--border-color-soft);">
           <div class="d-flex justify-content-between align-items-start">
             <div>
@@ -51,16 +59,24 @@
               </h5>
               <div class="d-flex align-items-center gap-2">
                 <div class="d-flex align-items-center gap-1">
-                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
-                       style="width:20px;height:20px;font-size:10px;"
-                       :style="checkoutStep >= 1 ? 'background:var(--accent);color:var(--accent-text);' : 'background:var(--bg-card-alt);color:var(--text-muted);'">1</div>
+                  <div
+                    class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                    style="width:20px;height:20px;font-size:10px;"
+                    :style="checkoutStep >= 1 ? 'background:var(--accent);color:var(--accent-text);' : 'background:var(--bg-card-alt);color:var(--text-muted);'"
+                  >
+                    1
+                  </div>
                   <span class="small" :style="checkoutStep >= 1 ? 'color:var(--accent-fg);' : 'color:var(--text-secondary);'" style="font-size:11px;">{{ t('checkout.stepInfo') }}</span>
                 </div>
                 <div style="font-size:10px; color:var(--text-secondary);">───</div>
                 <div class="d-flex align-items-center gap-1">
-                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
-                       style="width:20px;height:20px;font-size:10px;"
-                       :style="checkoutStep >= 2 ? 'background:var(--accent);color:var(--accent-text);' : 'background:var(--bg-card-alt);color:var(--text-muted);'">2</div>
+                  <div
+                    class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                    style="width:20px;height:20px;font-size:10px;"
+                    :style="checkoutStep >= 2 ? 'background:var(--accent);color:var(--accent-text);' : 'background:var(--bg-card-alt);color:var(--text-muted);'"
+                  >
+                    2
+                  </div>
                   <span class="small" :style="checkoutStep >= 2 ? 'color:var(--accent-fg);' : 'color:var(--text-secondary);'" style="font-size:11px;">{{ t('checkout.stepPayment') }}</span>
                 </div>
               </div>
@@ -69,20 +85,18 @@
           </div>
         </div>
 
-        <!-- Thông báo lỗi -->
         <div v-if="checkoutError" class="mx-4 mt-3">
           <div class="alert alert-danger small py-2 mb-0 rounded-3">{{ checkoutError }}</div>
         </div>
 
-        <!-- ── BƯỚC 1: Thông tin giao hàng ── -->
         <div v-if="checkoutStep === 1" class="overflow-y-auto flex-grow-1 px-4 py-3 d-flex flex-column gap-4">
-
-          <!-- Giỏ hàng tóm tắt -->
           <div>
             <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.orderSummary', { count: cart.length }) }}</div>
             <div class="d-flex flex-column gap-1 rounded-3 p-2" style="background:var(--bg-card-alt);">
-              <div v-for="item in cart" :key="item.bienTheId"
-                   class="d-flex align-items-center gap-3 px-2 py-1">
+              <div
+                v-for="item in cart" :key="item.bienTheId"
+                class="d-flex align-items-center gap-3 px-2 py-1"
+              >
                 <div style="width:36px;height:36px;flex-shrink:0;">
                   <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham" style="width:36px;height:36px;object-fit:contain;border-radius:6px;" />
                   <div v-else class="d-flex align-items-center justify-content-center rounded-2" style="width:36px;height:36px;background:var(--bg-card-inset);"><Laptop :size="16" color="var(--text-muted)" /></div>
@@ -94,19 +108,19 @@
             </div>
           </div>
 
-          <!-- Thông tin khách hàng -->
           <div>
             <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.customerHeading') }}</div>
-            <!-- Đã đăng nhập: đã biết chắc là khách hàng nào, khỏi cần tìm theo SĐT nữa -->
             <div v-if="isLoggedInCustomer" class="small p-2 rounded-3 mb-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
               <CheckCircle2 :size="13" style="vertical-align:-2px;" /> {{ t('checkout.loggedInAs') }} <strong>{{ checkoutForm.hoTen }}</strong> · {{ checkoutForm.soDienThoai }}
             </div>
             <template v-else>
               <div class="d-flex gap-2 mb-2">
-                <input v-model="checkoutForm.soDienThoai"
-                       class="form-control form-control-sm"
-                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-                       :placeholder="t('checkout.phonePlaceholder')" @keyup.enter="lookupCustomer" />
+                <input
+                  v-model="checkoutForm.soDienThoai"
+                  class="form-control form-control-sm"
+                  style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                  :placeholder="t('checkout.phonePlaceholder')" @keyup.enter="lookupCustomer"
+                />
                 <button class="btn btn-sm btn-outline-warning flex-shrink-0 px-3" style="border-radius:10px;" @click="lookupCustomer">{{ t('checkout.find') }}</button>
               </div>
               <div v-if="foundCustomer" class="small p-2 rounded-3 mb-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
@@ -118,14 +132,18 @@
             </template>
             <div class="row g-2">
               <div class="col-6">
-                <input v-model="checkoutForm.hoTen" class="form-control form-control-sm"
-                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-                       :placeholder="t('checkout.fullNamePlaceholder')" />
+                <input
+                  v-model="checkoutForm.hoTen" class="form-control form-control-sm"
+                  style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                  :placeholder="t('checkout.fullNamePlaceholder')"
+                />
               </div>
               <div class="col-6">
-                <input v-model="checkoutForm.email" class="form-control form-control-sm"
-                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-                       :placeholder="t('checkout.emailPlaceholder')" />
+                <input
+                  v-model="checkoutForm.email" class="form-control form-control-sm"
+                  style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                  :placeholder="t('checkout.emailPlaceholder')"
+                />
               </div>
             </div>
           </div>
@@ -135,14 +153,18 @@
             <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.shippingHeading') }}</div>
             <div class="row g-2 mb-2">
               <div class="col-6">
-                <input v-model="checkoutForm.nguoiNhan" class="form-control form-control-sm"
-                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-                       :placeholder="t('checkout.receiverPlaceholder')" />
+                <input
+                  v-model="checkoutForm.nguoiNhan" class="form-control form-control-sm"
+                  style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                  :placeholder="t('checkout.receiverPlaceholder')"
+                />
               </div>
               <div class="col-6">
-                <input v-model="checkoutForm.sdtNguoiNhan" class="form-control form-control-sm"
-                       style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-                       :placeholder="t('checkout.receiverPhonePlaceholder')" />
+                <input
+                  v-model="checkoutForm.sdtNguoiNhan" class="form-control form-control-sm"
+                  style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                  :placeholder="t('checkout.receiverPhonePlaceholder')"
+                />
               </div>
             </div>
             <AddressPicker v-model="checkoutForm.diaChiGiaoHangText" :placeholder="t('checkout.addressPlaceholder')" />
@@ -156,9 +178,11 @@
             <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.promoHeading') }}</div>
 
             <div class="d-flex gap-2">
-              <input v-model="checkoutForm.maKhuyenMai" class="form-control form-control-sm"
-                     style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
-                     :placeholder="t('checkout.promoPlaceholder')" @keyup.enter="applyPromo" />
+              <input
+                v-model="checkoutForm.maKhuyenMai" class="form-control form-control-sm"
+                style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;"
+                :placeholder="t('checkout.promoPlaceholder')" @keyup.enter="applyPromo"
+              />
               <button class="btn btn-sm flex-shrink-0" style="background:var(--bg-hover);color:var(--text-primary);border-radius:10px;" @click="applyPromo">{{ t('checkout.apply') }}</button>
             </div>
             <div v-if="promoMsg" class="small mt-2 px-1" :class="appliedPromo ? 'text-success' : 'text-danger'">{{ promoMsg }}</div>
@@ -168,11 +192,13 @@
           <div v-if="isLoggedInCustomer && eligibleVouchers.length">
             <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.voucherHeading') }}</div>
             <div class="d-flex flex-column gap-2">
-              <div v-for="v in eligibleVouchers" :key="v.phieuId"
-                   class="d-flex align-items-center justify-content-between p-2 rounded-3"
-                   style="cursor:pointer;border:1px solid;"
-                   :style="appliedVoucher?.phieuId===v.phieuId ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
-                   @click="selectVoucher(v)">
+              <div
+                v-for="v in eligibleVouchers" :key="v.phieuId"
+                class="d-flex align-items-center justify-content-between p-2 rounded-3"
+                style="cursor:pointer;border:1px solid;"
+                :style="appliedVoucher?.phieuId===v.phieuId ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                @click="selectVoucher(v)"
+              >
                 <span class="fw-bold small" style="color:var(--text-heading);">{{ v.maPhieu }}</span>
                 <div class="text-warning fw-bold small flex-shrink-0 ms-2">− {{ formatPrice(v.discount) }}</div>
               </div>
@@ -196,12 +222,10 @@
               <strong class="text-warning" style="font-size:1.05rem;">{{ formatPrice(checkoutTotal) }}</strong>
             </div>
           </div>
-
         </div><!-- /bước 1 -->
 
         <!-- ── BƯỚC 2: Phương thức thanh toán ── -->
         <div v-else class="overflow-y-auto flex-grow-1 px-4 py-3 d-flex flex-column gap-4">
-
           <!-- Số tiền cần thanh toán -->
           <div class="text-center py-2">
             <div class="small mb-1" style="color:var(--text-secondary);">{{ t('checkout.totalToPay') }}</div>
@@ -212,98 +236,117 @@
           <div>
             <div class="fw-semibold mb-3" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.choosePayment') }}</div>
             <div class="d-flex flex-column gap-2">
-
               <!-- Tiền mặt -->
-              <label class="d-flex align-items-center gap-3 p-3 rounded-3 cursor-pointer"
-                     style="border:2px solid; cursor:pointer;"
-                     :style="selectedPayment==='tien_mat' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
-                     @click="selectedPayment='tien_mat'">
-                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                     style="width:42px;height:42px;background:#2a2000;"><Banknote :size="20" color="#facc15" /></div>
+              <label
+                class="d-flex align-items-center gap-3 p-3 rounded-3 cursor-pointer"
+                style="border:2px solid; cursor:pointer;"
+                :style="selectedPayment==='tien_mat' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                @click="selectedPayment='tien_mat'"
+              >
+                <div
+                  class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                  style="width:42px;height:42px;background:#2a2000;"
+                ><Banknote :size="20" color="#facc15" /></div>
                 <div class="flex-grow-1">
                   <div class="fw-bold" style="font-size:0.9rem; color:var(--text-heading);">{{ t('checkout.cashTitle') }}</div>
                   <div style="font-size:11px; color:var(--text-secondary);">{{ t('checkout.cashDesc') }}</div>
                 </div>
-                <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width:20px;height:20px;"
-                     :style="selectedPayment==='tien_mat' ? 'border-color:var(--accent);background:var(--accent);' : 'border-color:var(--border-color-strong);background:transparent;'">
+                <div
+                  class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
+                  style="width:20px;height:20px;"
+                  :style="selectedPayment==='tien_mat' ? 'border-color:var(--accent);background:var(--accent);' : 'border-color:var(--border-color-strong);background:transparent;'"
+                >
                   <div v-if="selectedPayment==='tien_mat'" style="width:8px;height:8px;border-radius:50%;background:var(--accent-text);"></div>
                 </div>
               </label>
 
               <!-- QR Code -->
-              <label class="d-flex align-items-center gap-3 p-3 rounded-3"
-                     style="border:2px solid; cursor:pointer;"
-                     :style="selectedPayment==='qr' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
-                     @click="selectedPayment='qr'">
-                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                     style="width:42px;height:42px;background:#0a1a2a;"><Smartphone :size="20" color="#60a5fa" /></div>
+              <label
+                class="d-flex align-items-center gap-3 p-3 rounded-3"
+                style="border:2px solid; cursor:pointer;"
+                :style="selectedPayment==='qr' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                @click="selectedPayment='qr'"
+              >
+                <div
+                  class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                  style="width:42px;height:42px;background:#0a1a2a;"
+                ><Smartphone :size="20" color="#60a5fa" /></div>
                 <div class="flex-grow-1">
                   <div class="fw-bold" style="font-size:0.9rem; color:var(--text-heading);">{{ t('checkout.qrTitle') }}</div>
                   <div style="font-size:11px; color:var(--text-secondary);">{{ t('checkout.qrDesc') }}</div>
                 </div>
-                <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width:20px;height:20px;"
-                     :style="selectedPayment==='qr' ? 'border-color:var(--accent);background:var(--accent);' : 'border-color:var(--border-color-strong);background:transparent;'">
+                <div
+                  class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
+                  style="width:20px;height:20px;"
+                  :style="selectedPayment==='qr' ? 'border-color:var(--accent);background:var(--accent);' : 'border-color:var(--border-color-strong);background:transparent;'"
+                >
                   <div v-if="selectedPayment==='qr'" style="width:8px;height:8px;border-radius:50%;background:var(--accent-text);"></div>
                 </div>
               </label>
 
               <!-- Chuyển khoản -->
-              <label class="d-flex align-items-center gap-3 p-3 rounded-3"
-                     style="border:2px solid; cursor:pointer;"
-                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
-                     @click="selectedPayment='chuyen_khoan'">
-                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                     style="width:42px;height:42px;background:#0a1a0a;"><Landmark :size="20" color="#34d399" /></div>
+              <label
+                class="d-flex align-items-center gap-3 p-3 rounded-3"
+                style="border:2px solid; cursor:pointer;"
+                :style="selectedPayment==='chuyen_khoan' ? 'border-color:var(--accent);background:rgba(244,63,94,0.08);' : 'border-color:var(--border-color-soft);background:var(--bg-card-alt);'"
+                @click="selectedPayment='chuyen_khoan'"
+              >
+                <div
+                  class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                  style="width:42px;height:42px;background:#0a1a0a;"
+                ><Landmark :size="20" color="#34d399" /></div>
                 <div class="flex-grow-1">
                   <div class="fw-bold" style="font-size:0.9rem; color:var(--text-heading);">{{ t('checkout.bankTitle') }}</div>
                   <div style="font-size:11px; color:var(--text-secondary);">{{ t('checkout.bankDesc') }}</div>
                 </div>
-                <div class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width:20px;height:20px;"
-                     :style="selectedPayment==='chuyen_khoan' ? 'border-color:var(--accent);background:var(--accent);' : 'border-color:var(--border-color-strong);background:transparent;'">
+                <div
+                  class="rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0"
+                  style="width:20px;height:20px;"
+                  :style="selectedPayment==='chuyen_khoan' ? 'border-color:var(--accent);background:var(--accent);' : 'border-color:var(--border-color-strong);background:transparent;'"
+                >
                   <div v-if="selectedPayment==='chuyen_khoan'" style="width:8px;height:8px;border-radius:50%;background:var(--accent-text);"></div>
                 </div>
               </label>
-
             </div>
           </div>
 
           <!-- QR Code hiển thị khi chọn QR -->
           <Transition name="fade">
-          <div v-if="selectedPayment === 'qr'" class="d-flex flex-column align-items-center gap-3 p-4 rounded-3" style="background:var(--bg-card-inset);border:1px solid var(--border-color-soft);">
-            <div class="fw-bold small" style="color:var(--text-heading);">{{ t('checkout.scanQr') }}</div>
-            <img v-if="!qrImageFailed" :src="qrImageUrl" alt="VietQR" @error="qrImageFailed = true"
-                 style="width:220px;height:220px;border-radius:12px;background:#fff;padding:6px;" />
-            <div v-else class="d-flex flex-column align-items-center justify-content-center text-center small"
-                 style="width:220px;height:220px;border-radius:12px;background:var(--bg-card-alt);color:var(--text-secondary);gap:6px;">
-              <ImageOff :size="29" />{{ t('checkout.qrImageFailed') }}
+            <div v-if="selectedPayment === 'qr'" class="d-flex flex-column align-items-center gap-3 p-4 rounded-3" style="background:var(--bg-card-inset);border:1px solid var(--border-color-soft);">
+              <div class="fw-bold small" style="color:var(--text-heading);">{{ t('checkout.scanQr') }}</div>
+              <img
+                v-if="!qrImageFailed" :src="qrImageUrl" alt="VietQR" style="width:220px;height:220px;border-radius:12px;background:#fff;padding:6px;"
+                @error="qrImageFailed = true"
+              />
+              <div
+                v-else class="d-flex flex-column align-items-center justify-content-center text-center small"
+                style="width:220px;height:220px;border-radius:12px;background:var(--bg-card-alt);color:var(--text-secondary);gap:6px;"
+              >
+                <ImageOff :size="29" />{{ t('checkout.qrImageFailed') }}
+              </div>
+              <div class="text-center small" style="line-height:1.8; color:var(--text-secondary);">
+                {{ t('checkout.bank') }} <strong style="color:var(--text-heading);">Vietcombank (VCB)</strong><br />
+                {{ t('checkout.accountNumber') }} <strong class="text-warning">9876543210</strong><br />
+                {{ t('checkout.accountName') }} <strong style="color:var(--text-heading);">CÔNG TY SAO LAPTOP</strong><br />
+                {{ t('checkout.amount') }} <strong class="text-warning">{{ formatPrice(checkoutTotal) }}</strong><br />
+                {{ t('checkout.content') }} <strong style="color:var(--text-heading);">Thanh toan SAO LAPTOP</strong>
+              </div>
             </div>
-            <div class="text-center small" style="line-height:1.8; color:var(--text-secondary);">
-              {{ t('checkout.bank') }} <strong style="color:var(--text-heading);">Vietcombank (VCB)</strong><br />
-              {{ t('checkout.accountNumber') }} <strong class="text-warning">9876543210</strong><br />
-              {{ t('checkout.accountName') }} <strong style="color:var(--text-heading);">CÔNG TY SAO LAPTOP</strong><br />
-              {{ t('checkout.amount') }} <strong class="text-warning">{{ formatPrice(checkoutTotal) }}</strong><br />
-              {{ t('checkout.content') }} <strong style="color:var(--text-heading);">Thanh toan SAO LAPTOP</strong>
-            </div>
-          </div>
           </Transition>
 
           <!-- Thông tin chuyển khoản thủ công -->
           <Transition name="fade">
-          <div v-if="selectedPayment === 'chuyen_khoan'" class="p-4 rounded-3 small" style="background:var(--bg-card-inset);border:1px solid var(--border-color-soft);line-height:2;">
-            <div class="fw-bold mb-2" style="color:var(--text-heading);">{{ t('checkout.bankInfoHeading') }}</div>
-            <div style="color:var(--text-secondary);">
-              {{ t('checkout.bank') }} <strong style="color:var(--text-heading);">Vietcombank (VCB)</strong><br />
-              {{ t('checkout.accountNumber') }} <strong class="text-warning">9876543210</strong><br />
-              {{ t('checkout.accountNameFull') }} <strong style="color:var(--text-heading);">CÔNG TY SAO LAPTOP</strong><br />
-              {{ t('checkout.amount') }} <strong class="text-warning">{{ formatPrice(checkoutTotal) }}</strong><br />
-              {{ t('checkout.contentShort') }} <strong style="color:var(--text-heading);">Thanh toan SAO LAPTOP</strong>
+            <div v-if="selectedPayment === 'chuyen_khoan'" class="p-4 rounded-3 small" style="background:var(--bg-card-inset);border:1px solid var(--border-color-soft);line-height:2;">
+              <div class="fw-bold mb-2" style="color:var(--text-heading);">{{ t('checkout.bankInfoHeading') }}</div>
+              <div style="color:var(--text-secondary);">
+                {{ t('checkout.bank') }} <strong style="color:var(--text-heading);">Vietcombank (VCB)</strong><br />
+                {{ t('checkout.accountNumber') }} <strong class="text-warning">9876543210</strong><br />
+                {{ t('checkout.accountNameFull') }} <strong style="color:var(--text-heading);">CÔNG TY SAO LAPTOP</strong><br />
+                {{ t('checkout.amount') }} <strong class="text-warning">{{ formatPrice(checkoutTotal) }}</strong><br />
+                {{ t('checkout.contentShort') }} <strong style="color:var(--text-heading);">Thanh toan SAO LAPTOP</strong>
+              </div>
             </div>
-          </div>
           </Transition>
-
         </div><!-- /bước 2 -->
 
         <!-- Trạng thái tiến trình khi đang đặt hàng — aria-live để screen reader cũng đọc được -->
@@ -313,27 +356,38 @@
 
         <!-- Footer: nút điều hướng bước -->
         <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top:1px solid var(--border-color-soft);">
-          <button v-if="checkoutStep === 1"
-                  class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
-                  @click="$emit('update:modelValue', false)">{{ t('checkout.cancel') }}</button>
-          <button v-else
-                  class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
-                  :disabled="checkoutLoading"
-                  @click="checkoutStep = 1"><ArrowLeft :size="14" style="vertical-align:-2px;" /> {{ t('checkout.back') }}</button>
+          <button
+            v-if="checkoutStep === 1"
+            class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
+            @click="$emit('update:modelValue', false)"
+          >
+            {{ t('checkout.cancel') }}
+          </button>
+          <button
+            v-else
+            class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
+            :disabled="checkoutLoading"
+            @click="checkoutStep = 1"
+          >
+            <ArrowLeft :size="14" style="vertical-align:-2px;" /> {{ t('checkout.back') }}
+          </button>
 
-          <button v-if="checkoutStep === 1"
-                  class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
-                  @click="goToPayment">
+          <button
+            v-if="checkoutStep === 1"
+            class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
+            @click="goToPayment"
+          >
             {{ t('checkout.continue') }} <ArrowRight :size="14" style="vertical-align:-2px;" />
           </button>
-          <button v-else
-                  class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
-                  :disabled="checkoutLoading"
-                  @click="placeOrder">
+          <button
+            v-else
+            class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
+            :disabled="checkoutLoading"
+            @click="placeOrder"
+          >
             {{ checkoutLoading ? t('checkout.processing') : t('checkout.confirmOrder') }}
           </button>
         </div>
-
       </template>
     </div><!-- /modal box -->
   </div><!-- /checkout overlay -->
@@ -341,12 +395,12 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue';
-import { CheckCircle2, Laptop, Banknote, Smartphone, Landmark, ImageOff, ArrowLeft, ArrowRight } from '@lucide/vue';
 import { t } from '../../i18n/index.js';
 import { AuthStore } from '../../stores/index.js';
 import { nowLocalIso } from '../../utils/datetime.js';
 import { formatPrice as formatPriceRaw } from '../../utils/formatPrice.js';
 import { checkoutInfoSchema } from '../../utils/validators.js';
+import { CheckCircle2, Laptop, Banknote, Smartphone, Landmark, ImageOff, ArrowLeft, ArrowRight } from '@lucide/vue';
 import AddressPicker from './AddressPicker.vue';
 import * as KhachHangService from '../../services/KhachHangService.js';
 import * as KhuyenMaiService  from '../../services/KhuyenMaiService.js';

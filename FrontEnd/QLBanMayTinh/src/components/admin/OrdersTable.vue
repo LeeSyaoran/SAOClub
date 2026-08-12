@@ -578,10 +578,12 @@ const confirmXacNhanSerial = async () => {
     </div>
     <div v-if="OrdersStore.loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
     <div v-else class="d-flex flex-column gap-2">
-      <div v-for="d in orderDatesGrouped" :key="d.dateKey"
-           class="d-flex justify-content-between align-items-center px-3 py-3 rounded-3"
-           style="background:var(--bg-card); border:1px solid var(--border-color-soft); cursor:pointer;"
-           @click="openHistoryDay(d.dateKey)">
+      <div
+        v-for="d in orderDatesGrouped" :key="d.dateKey"
+        class="d-flex justify-content-between align-items-center px-3 py-3 rounded-3"
+        style="background:var(--bg-card); border:1px solid var(--border-color-soft); cursor:pointer;"
+        @click="openHistoryDay(d.dateKey)"
+      >
         <span class="fw-semibold" style="color:var(--text-primary);">{{ d.label }}</span>
         <span class="text-secondary small d-flex align-items-center gap-2">{{ d.count }} {{ t('admin.orders.countSuffix') }} <span style="font-size:1.1rem;">›</span></span>
       </div>
@@ -650,7 +652,7 @@ const confirmXacNhanSerial = async () => {
             </td>
             <td>
               <div class="d-flex gap-1">
-                <button class="btn btn-sm btn-outline-info"    style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
+                <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
                 <button v-if="NEXT_ORDER_STATUS[o.trangThaiDonHang]" class="btn btn-sm btn-outline-success" style="font-size:0.78rem;padding:2px 8px;" @click="advanceOrderStatus(o)">
                   <component :is="NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].icon" :size="14" /> {{ t(NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].key) }}
                 </button>
@@ -666,10 +668,11 @@ const confirmXacNhanSerial = async () => {
   </template>
 
   <!-- ══ MODAL THEM SAN PHAM CHI TIET ══ -->
-  <div v-if="showAddItemDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-       style="background:var(--bg-overlay);z-index:1070;" @click.self="showAddItemDetailModal=false">
+  <div
+    v-if="showAddItemDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+    style="background:var(--bg-overlay);z-index:1070;" @click.self="showAddItemDetailModal=false"
+  >
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card-inset);border:1px solid var(--border-color-strong);width:960px;max-width:97vw;max-height:93vh;">
-
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--bg-input);">
         <span class="text-secondary" style="font-size:0.8rem;">{{ t('admin.addItemDetailModal.chooseProduct') }}</span>
@@ -677,21 +680,26 @@ const confirmXacNhanSerial = async () => {
       </div>
 
       <!-- Body -->
-      <div class="overflow-y-auto flex-grow-1 p-0" v-if="addItemDetailGroup">
+      <div v-if="addItemDetailGroup" class="overflow-y-auto flex-grow-1 p-0">
         <div class="d-flex" style="min-height:400px;">
-
           <!-- Left: Anh san pham -->
-          <div class="d-flex flex-column align-items-center justify-content-center p-4"
-               style="width:42%;background:var(--bg-page-alt);border-right:1px solid var(--bg-input);flex-shrink:0;">
+          <div
+            class="d-flex flex-column align-items-center justify-content-center p-4"
+            style="width:42%;background:var(--bg-page-alt);border-right:1px solid var(--bg-input);flex-shrink:0;"
+          >
             <div style="width:100%;max-width:320px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:var(--bg-card-alt);border-radius:12px;overflow:hidden;padding:16px;">
-              <img v-if="(addItemCurrentVariant || addItemDetailGroup.variants[0])?.hinhAnhChinh"
-                   :src="(addItemCurrentVariant || addItemDetailGroup.variants[0]).hinhAnhChinh"
-                   style="max-width:100%;max-height:100%;object-fit:contain;" />
+              <img
+                v-if="(addItemCurrentVariant || addItemDetailGroup.variants[0])?.hinhAnhChinh"
+                :src="(addItemCurrentVariant || addItemDetailGroup.variants[0]).hinhAnhChinh"
+                style="max-width:100%;max-height:100%;object-fit:contain;"
+              />
               <span v-else><Laptop :size="64" color="var(--text-muted)" /></span>
             </div>
             <div class="mt-3 d-flex gap-1 flex-wrap justify-content-center">
-              <span v-for="tag in (addItemDetailGroup.variants[0]?.phanLoaiTen||'').split(',').filter(Boolean)"
-                    :key="tag" class="badge" style="background:rgba(244,63,94,0.12);color:var(--accent-fg);font-size:0.7rem;">{{ tag.trim() }}</span>
+              <span
+                v-for="tag in (addItemDetailGroup.variants[0]?.phanLoaiTen||'').split(',').filter(Boolean)"
+                :key="tag" class="badge" style="background:rgba(244,63,94,0.12);color:var(--accent-fg);font-size:0.7rem;"
+              >{{ tag.trim() }}</span>
             </div>
           </div>
 
@@ -713,13 +721,15 @@ const confirmXacNhanSerial = async () => {
                 {{ t('admin.addItemDetailModal.configCount', { count: addItemConfigs.length }) }}
               </div>
               <div class="d-flex flex-wrap gap-2">
-                <button v-for="cfg in addItemConfigs" :key="cfg.key"
-                        @click="selectConfig(cfg.key)"
-                        class="btn btn-sm text-start"
-                        style="padding:8px 12px;border-radius:8px;min-width:140px;"
-                        :style="addItemSelectedConfig === cfg.key
-                          ? 'background:rgba(244,63,94,0.12);border:2px solid var(--accent);color:var(--accent-fg);'
-                          : 'background:var(--bg-card);border:1px solid var(--border-color-strong);color:var(--text-secondary);'">
+                <button
+                  v-for="cfg in addItemConfigs" :key="cfg.key"
+                  class="btn btn-sm text-start"
+                  style="padding:8px 12px;border-radius:8px;min-width:140px;"
+                  :style="addItemSelectedConfig === cfg.key
+                    ? 'background:rgba(244,63,94,0.12);border:2px solid var(--accent);color:var(--accent-fg);'
+                    : 'background:var(--bg-card);border:1px solid var(--border-color-strong);color:var(--text-secondary);'"
+                  @click="selectConfig(cfg.key)"
+                >
                   <div style="font-size:0.78rem;font-weight:600;">{{ cfg.cpu || t('admin.addItemDetailModal.standard') }}</div>
                   <div style="font-size:0.68rem;">{{ [cfg.ram, cfg.oCung].filter(Boolean).join(' · ') }}</div>
                 </button>
@@ -730,13 +740,15 @@ const confirmXacNhanSerial = async () => {
             <div v-if="addItemColorsForConfig.length > 0" class="mb-3">
               <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">{{ t('admin.addItemDetailModal.color') }}</div>
               <div class="d-flex flex-wrap gap-2">
-                <button v-for="v in addItemColorsForConfig" :key="v.bienTheId"
-                        @click="addItemSelectedColor = v.mauSac"
-                        class="btn btn-sm"
-                        style="padding:6px 14px;border-radius:8px;"
-                        :style="addItemSelectedColor === v.mauSac
-                          ? 'background:rgba(244,63,94,0.12);border:2px solid var(--accent);color:var(--accent-fg);'
-                          : 'background:var(--bg-card);border:1px solid var(--border-color-strong);color:var(--text-primary);'">
+                <button
+                  v-for="v in addItemColorsForConfig" :key="v.bienTheId"
+                  class="btn btn-sm"
+                  style="padding:6px 14px;border-radius:8px;"
+                  :style="addItemSelectedColor === v.mauSac
+                    ? 'background:rgba(244,63,94,0.12);border:2px solid var(--accent);color:var(--accent-fg);'
+                    : 'background:var(--bg-card);border:1px solid var(--border-color-strong);color:var(--text-primary);'"
+                  @click="addItemSelectedColor = v.mauSac"
+                >
                   <div style="font-size:0.78rem;font-weight:600;">{{ v.mauSac }}</div>
                   <div style="font-size:0.7rem;color:var(--accent-fg);">{{ formatPrice(v.giaBan) }}</div>
                 </button>
@@ -759,16 +771,18 @@ const confirmXacNhanSerial = async () => {
             <div v-if="addItemCurrentVariant" class="mb-3">
               <div class="text-secondary mb-2" style="font-size:0.72rem;font-weight:700;letter-spacing:.05em;">{{ t('admin.addItemDetailModal.specsHeading') }}</div>
               <table style="width:100%;font-size:0.78rem;border-collapse:collapse;">
-                <tr v-for="([label, val]) in [
-                  [t('admin.addItemDetailModal.specCpu'), addItemCurrentVariant.cpu],
-                  [t('admin.addItemDetailModal.specRam'), addItemCurrentVariant.ram],
-                  [t('admin.addItemDetailModal.specStorage'), addItemCurrentVariant.oCung],
-                  [t('admin.addItemDetailModal.specGpu'), addItemCurrentVariant.gpu],
-                  [t('admin.addItemDetailModal.specScreen'), addItemCurrentVariant.kichThuocManHinh],
-                  [t('admin.addItemDetailModal.specOs'), addItemCurrentVariant.heDieuHanh],
-                  [t('admin.addItemDetailModal.specBattery'), addItemCurrentVariant.pin],
-                  [t('admin.addItemDetailModal.specWeight'), addItemCurrentVariant.trongLuongKg ? addItemCurrentVariant.trongLuongKg + ' kg' : null],
-                ].filter(([,v]) => v)" :key="label" style="border-top:1px solid var(--bg-input);">
+                <tr
+                  v-for="([label, val]) in [
+                    [t('admin.addItemDetailModal.specCpu'), addItemCurrentVariant.cpu],
+                    [t('admin.addItemDetailModal.specRam'), addItemCurrentVariant.ram],
+                    [t('admin.addItemDetailModal.specStorage'), addItemCurrentVariant.oCung],
+                    [t('admin.addItemDetailModal.specGpu'), addItemCurrentVariant.gpu],
+                    [t('admin.addItemDetailModal.specScreen'), addItemCurrentVariant.kichThuocManHinh],
+                    [t('admin.addItemDetailModal.specOs'), addItemCurrentVariant.heDieuHanh],
+                    [t('admin.addItemDetailModal.specBattery'), addItemCurrentVariant.pin],
+                    [t('admin.addItemDetailModal.specWeight'), addItemCurrentVariant.trongLuongKg ? addItemCurrentVariant.trongLuongKg + ' kg' : null],
+                  ].filter(([,v]) => v)" :key="label" style="border-top:1px solid var(--bg-input);"
+                >
                   <td class="py-1 text-secondary" style="padding-left:0;width:44%;">{{ label }}</td>
                   <td class="py-1 text-light fw-semibold">{{ val }}</td>
                 </tr>
@@ -781,12 +795,16 @@ const confirmXacNhanSerial = async () => {
       <!-- Footer: so luong + them -->
       <div class="px-4 py-3 d-flex align-items-center gap-3" style="border-top:1px solid var(--bg-input);background:var(--bg-page-alt);">
         <span class="text-secondary" style="font-size:0.85rem;">{{ t('admin.addItemDetailModal.qtyLabel') }}</span>
-        <input v-model.number="addItemQty" type="number" min="1" max="99"
-               class="form-control form-control-sm"
-               style="width:80px;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" />
-        <button class="btn btn-warning flex-grow-1 fw-bold" style="font-size:0.9rem;"
-                :disabled="!addItemCurrentVariant || addItemQty < 1 || addItemLoading"
-                @click="confirmAddFromDetail">
+        <input
+          v-model.number="addItemQty" type="number" min="1" max="99"
+          class="form-control form-control-sm"
+          style="width:80px;background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);"
+        />
+        <button
+          class="btn btn-warning flex-grow-1 fw-bold" style="font-size:0.9rem;"
+          :disabled="!addItemCurrentVariant || addItemQty < 1 || addItemLoading"
+          @click="confirmAddFromDetail"
+        >
           {{ addItemLoading ? t('admin.addItemDetailModal.adding') : t('admin.addItemDetailModal.addToOrder') }}
         </button>
       </div>
@@ -796,7 +814,6 @@ const confirmXacNhanSerial = async () => {
   <!-- ══ MODAL CHI TIET DON HANG ══ -->
   <div v-if="showOrderDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1050;" @click.self="showOrderDetailModal=false">
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:720px;max-width:96vw;max-height:90vh;">
-
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
         <div>
@@ -814,168 +831,190 @@ const confirmXacNhanSerial = async () => {
 
       <!-- Toan bo body scroll cung nhau -->
       <div class="overflow-y-auto flex-grow-1">
-      <!-- Danh sach san pham trong don -->
-      <div class="p-3">
-        <div v-if="orderDetailLoading" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.loading') }}</div>
-        <div v-else-if="orderDetailItems.length === 0" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.empty') }}</div>
-        <table v-else class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
-          <thead>
-            <tr style="background:var(--bg-input);">
-              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:38%;">{{ t('admin.orderDetailModal.colProduct') }}</th>
-              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:16%;font-family:monospace;">{{ t('admin.orderDetailModal.colSku') }}</th>
-              <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:8%;">{{ t('admin.orderDetailModal.colQty') }}</th>
-              <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colUnitPrice') }}</th>
-              <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colTotal') }}</th>
-              <th class="px-3 py-2 text-secondary" style="font-weight:600;width:10%;"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in orderDetailItems" :key="item.id" style="border-top:1px solid var(--border-color-soft);">
-              <td class="px-3 py-2">
-                <div class="d-flex align-items-center gap-2">
-                  <img v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
-                       :src="productByBienThe(item.bienTheId).hinhAnhChinh"
-                       style="width:36px;height:28px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;" />
-                  <span v-else style="flex-shrink:0;"><Laptop :size="19" color="var(--text-muted)" /></span>
-                  <span class="text-light">{{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}</span>
-                </div>
-              </td>
-              <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.75rem;">
-                {{ item.maSku }}
-                <div v-if="item.soSerial" class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
-              </td>
-              <td class="px-3 py-2 text-center fw-bold" style="color:var(--text-heading);">{{ item.soLuong }}</td>
-              <td class="px-3 py-2 text-end text-secondary">{{ formatPrice(item.donGia) }}</td>
-              <td class="px-3 py-2 text-end text-warning fw-semibold">{{ formatPrice(item.thanhTien) }}</td>
-              <td class="px-3 py-2">
-                <div class="d-flex gap-1 justify-content-center">
-                  <button v-if="productByBienThe(item.bienTheId)"
-                          class="btn btn-sm btn-outline-secondary"
-                          style="font-size:0.72rem;padding:2px 6px;"
-                          @click="openVariantDetail(item.bienTheId)">
-                    {{ t('admin.orderDetailModal.detail') }}
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger"
-                          style="font-size:0.72rem;padding:2px 6px;"
-                          @click="removeItemFromOrder(item.id)">
-                    {{ t('admin.orderDetailModal.delete') }}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Footer: tong ket -->
-      <div v-if="orderDetailData" class="px-4 py-3 d-flex flex-column gap-1" style="border-top:1px solid var(--border-color-soft);background:var(--bg-card-alt);">
-        <div class="d-flex justify-content-between small text-secondary">
-          <span>{{ t('admin.orderDetailModal.subtotal') }}</span><span>{{ formatPrice(orderDetailData.tongTien) }}</span>
-        </div>
-        <div v-if="orderDetailData.giamGia > 0" class="d-flex justify-content-between small text-success">
-          <span>{{ t('admin.orderDetailModal.discount') }}</span><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
-        </div>
-        <div class="d-flex justify-content-between small text-secondary">
-          <span>{{ t('admin.orderDetailModal.shippingFee') }}</span>
-          <span :class="orderDetailData.phiVanChuyen === 0 ? 'text-success' : ''">
-            {{ orderDetailData.phiVanChuyen === 0 ? t('admin.orderDetailModal.free') : formatPrice(orderDetailData.phiVanChuyen) }}
-          </span>
-        </div>
-        <div class="d-flex justify-content-between fw-bold pt-2 mt-1" style="border-top:1px solid var(--border-color);">
-          <span style="color:var(--text-heading);">{{ t('admin.orderDetailModal.total') }}</span>
-          <span class="text-warning" style="font-size:1rem;">{{ formatPrice(orderDetailData.thanhTien) }}</span>
-        </div>
-        <div class="d-flex justify-content-between small mt-2 pt-2" style="border-top:1px solid var(--bg-input);">
-          <span class="text-secondary">{{ t('admin.orderDetailModal.orderStatus') }}</span>
-          <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
-            <component :is="orderStatusIcon(orderDetailData.trangThaiDonHang)" :size="13" /> {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
-          </span>
-        </div>
-        <div class="d-flex justify-content-between small">
-          <span class="text-secondary">{{ t('admin.orderDetailModal.paymentStatus') }}</span>
-          <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: paymentStatusColor(orderDetailData.trangThaiThanhToan).bg, color: paymentStatusColor(orderDetailData.trangThaiThanhToan).text }">
-            <component :is="paymentStatusIcon(orderDetailData.trangThaiThanhToan)" :size="13" /> {{ orderDetailData.trangThaiThanhToan ? paymentStatusLabel(orderDetailData.trangThaiThanhToan) : '—' }}
-          </span>
-        </div>
-        <div v-if="orderDetailPayments.length" class="d-flex justify-content-between small">
-          <span class="text-secondary">{{ t('admin.orderDetailModal.paymentMethod') }}</span>
-          <span style="color:var(--text-primary);">
-            <template v-for="(g, idx) in orderDetailPaymentsSummary" :key="g.method">
-              <component :is="paymentMethodIcon(g.method)" :size="14" style="vertical-align:-2px;" /> {{ paymentMethodLabel(g.method) }}<template v-if="g.count > 1"> ×{{ g.count }} ({{ formatPrice(g.total) }})</template><span v-if="idx < orderDetailPaymentsSummary.length - 1">, </span>
-            </template>
-          </span>
-        </div>
-        <div v-if="orderDetailData.ngayGiaoDuKien" class="d-flex justify-content-between small">
-          <span class="text-secondary">{{ t('admin.orderStatusModal.expectedDeliveryLabel') }}</span>
-          <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoDuKien) }}</span>
-        </div>
-        <div v-if="orderDetailData.ngayGiaoThucTe" class="d-flex justify-content-between small">
-          <span class="text-secondary">{{ t('admin.orderStatusModal.actualDeliveryLabel') }}</span>
-          <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoThucTe) }}</span>
+        <!-- Danh sach san pham trong don -->
+        <div class="p-3">
+          <div v-if="orderDetailLoading" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.loading') }}</div>
+          <div v-else-if="orderDetailItems.length === 0" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.empty') }}</div>
+          <table v-else class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
+            <thead>
+              <tr style="background:var(--bg-input);">
+                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:38%;">{{ t('admin.orderDetailModal.colProduct') }}</th>
+                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:16%;font-family:monospace;">{{ t('admin.orderDetailModal.colSku') }}</th>
+                <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:8%;">{{ t('admin.orderDetailModal.colQty') }}</th>
+                <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colUnitPrice') }}</th>
+                <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colTotal') }}</th>
+                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:10%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in orderDetailItems" :key="item.id" style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <img
+                      v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
+                      :src="productByBienThe(item.bienTheId).hinhAnhChinh"
+                      style="width:36px;height:28px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;"
+                    />
+                    <span v-else style="flex-shrink:0;"><Laptop :size="19" color="var(--text-muted)" /></span>
+                    <span class="text-light">{{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}</span>
+                  </div>
+                </td>
+                <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.75rem;">
+                  {{ item.maSku }}
+                  <div v-if="item.soSerial" class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
+                </td>
+                <td class="px-3 py-2 text-center fw-bold" style="color:var(--text-heading);">{{ item.soLuong }}</td>
+                <td class="px-3 py-2 text-end text-secondary">{{ formatPrice(item.donGia) }}</td>
+                <td class="px-3 py-2 text-end text-warning fw-semibold">{{ formatPrice(item.thanhTien) }}</td>
+                <td class="px-3 py-2">
+                  <div class="d-flex gap-1 justify-content-center">
+                    <button
+                      v-if="productByBienThe(item.bienTheId)"
+                      class="btn btn-sm btn-outline-secondary"
+                      style="font-size:0.72rem;padding:2px 6px;"
+                      @click="openVariantDetail(item.bienTheId)"
+                    >
+                      {{ t('admin.orderDetailModal.detail') }}
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      style="font-size:0.72rem;padding:2px 6px;"
+                      @click="removeItemFromOrder(item.id)"
+                    >
+                      {{ t('admin.orderDetailModal.delete') }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <!-- Them san pham moi vao don -->
-        <div class="mt-3 pt-2" style="border-top:1px solid var(--bg-input);">
-          <div class="d-flex align-items-center justify-content-between mb-2" style="cursor:pointer;"
-               @click="addItemMode = !addItemMode; addItemBienTheId = ''; addItemSelectedSpId = null; addItemSearch = ''">
-            <span class="fw-semibold" style="font-size:0.85rem;color:var(--text-primary);">{{ t('admin.orderDetailModal.addNewItem') }}</span>
-            <span style="color:var(--text-muted);font-size:0.75rem;">{{ addItemMode ? '▲' : '▼' }}</span>
+        <!-- Footer: tong ket -->
+        <div v-if="orderDetailData" class="px-4 py-3 d-flex flex-column gap-1" style="border-top:1px solid var(--border-color-soft);background:var(--bg-card-alt);">
+          <div class="d-flex justify-content-between small text-secondary">
+            <span>{{ t('admin.orderDetailModal.subtotal') }}</span><span>{{ formatPrice(orderDetailData.tongTien) }}</span>
+          </div>
+          <div v-if="orderDetailData.giamGia > 0" class="d-flex justify-content-between small text-success">
+            <span>{{ t('admin.orderDetailModal.discount') }}</span><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
+          </div>
+          <div class="d-flex justify-content-between small text-secondary">
+            <span>{{ t('admin.orderDetailModal.shippingFee') }}</span>
+            <span :class="orderDetailData.phiVanChuyen === 0 ? 'text-success' : ''">
+              {{ orderDetailData.phiVanChuyen === 0 ? t('admin.orderDetailModal.free') : formatPrice(orderDetailData.phiVanChuyen) }}
+            </span>
+          </div>
+          <div class="d-flex justify-content-between fw-bold pt-2 mt-1" style="border-top:1px solid var(--border-color);">
+            <span style="color:var(--text-heading);">{{ t('admin.orderDetailModal.total') }}</span>
+            <span class="text-warning" style="font-size:1rem;">{{ formatPrice(orderDetailData.thanhTien) }}</span>
+          </div>
+          <div class="d-flex justify-content-between small mt-2 pt-2" style="border-top:1px solid var(--bg-input);">
+            <span class="text-secondary">{{ t('admin.orderDetailModal.orderStatus') }}</span>
+            <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
+              <component :is="orderStatusIcon(orderDetailData.trangThaiDonHang)" :size="13" /> {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
+            </span>
+          </div>
+          <div class="d-flex justify-content-between small">
+            <span class="text-secondary">{{ t('admin.orderDetailModal.paymentStatus') }}</span>
+            <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: paymentStatusColor(orderDetailData.trangThaiThanhToan).bg, color: paymentStatusColor(orderDetailData.trangThaiThanhToan).text }">
+              <component :is="paymentStatusIcon(orderDetailData.trangThaiThanhToan)" :size="13" /> {{ orderDetailData.trangThaiThanhToan ? paymentStatusLabel(orderDetailData.trangThaiThanhToan) : '—' }}
+            </span>
+          </div>
+          <div v-if="orderDetailPayments.length" class="d-flex justify-content-between small">
+            <span class="text-secondary">{{ t('admin.orderDetailModal.paymentMethod') }}</span>
+            <span style="color:var(--text-primary);">
+              <template v-for="(g, idx) in orderDetailPaymentsSummary" :key="g.method">
+                <component :is="paymentMethodIcon(g.method)" :size="14" style="vertical-align:-2px;" /> {{ paymentMethodLabel(g.method) }}<template v-if="g.count > 1"> ×{{ g.count }} ({{ formatPrice(g.total) }})</template><span v-if="idx < orderDetailPaymentsSummary.length - 1">, </span>
+              </template>
+            </span>
+          </div>
+          <div v-if="orderDetailData.ngayGiaoDuKien" class="d-flex justify-content-between small">
+            <span class="text-secondary">{{ t('admin.orderStatusModal.expectedDeliveryLabel') }}</span>
+            <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoDuKien) }}</span>
+          </div>
+          <div v-if="orderDetailData.ngayGiaoThucTe" class="d-flex justify-content-between small">
+            <span class="text-secondary">{{ t('admin.orderStatusModal.actualDeliveryLabel') }}</span>
+            <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoThucTe) }}</span>
           </div>
 
-          <div v-if="addItemMode">
-            <!-- Tim kiem -->
-            <input v-model="addItemSearch" type="text" :placeholder="t('admin.orderDetailModal.searchPlaceholder')"
-                   class="form-control form-control-sm mb-3"
-                   style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);font-size:0.8rem;" />
+          <!-- Them san pham moi vao don -->
+          <div class="mt-3 pt-2" style="border-top:1px solid var(--bg-input);">
+            <div
+              class="d-flex align-items-center justify-content-between mb-2" style="cursor:pointer;"
+              @click="addItemMode = !addItemMode; addItemBienTheId = ''; addItemSelectedSpId = null; addItemSearch = ''"
+            >
+              <span class="fw-semibold" style="font-size:0.85rem;color:var(--text-primary);">{{ t('admin.orderDetailModal.addNewItem') }}</span>
+              <span style="color:var(--text-muted);font-size:0.75rem;">{{ addItemMode ? '▲' : '▼' }}</span>
+            </div>
 
-            <!-- Grid san pham -->
-            <div class="d-grid gap-2 mb-2" style="grid-template-columns:repeat(3,1fr);max-height:280px;overflow-y:auto;">
-              <div v-for="g in addItemProductGroups" :key="g.sanPhamId"
-                   @click="openAddItemDetail(g)"
-                   class="rounded-3 overflow-hidden"
-                   style="cursor:pointer;border:1px solid var(--border-color);background:var(--bg-card);transition:border-color .15s;"
-                   @mouseenter="$event.currentTarget.style.borderColor='var(--accent)'"
-                   @mouseleave="$event.currentTarget.style.borderColor='var(--border-color)'">
-                <div style="background:var(--bg-card-inset);height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-                  <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh"
-                       style="max-height:76px;max-width:100%;object-fit:contain;" />
-                  <span v-else><Laptop :size="29" color="var(--text-muted)" /></span>
-                </div>
-                <div class="px-2 py-1">
-                  <div class="fw-semibold text-light" style="font-size:0.72rem;line-height:1.3;
-                       display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
-                    {{ g.tenSanPham }}
+            <div v-if="addItemMode">
+              <!-- Tim kiem -->
+              <input
+                v-model="addItemSearch" type="text" :placeholder="t('admin.orderDetailModal.searchPlaceholder')"
+                class="form-control form-control-sm mb-3"
+                style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);font-size:0.8rem;"
+              />
+
+              <!-- Grid san pham -->
+              <div class="d-grid gap-2 mb-2" style="grid-template-columns:repeat(3,1fr);max-height:280px;overflow-y:auto;">
+                <div
+                  v-for="g in addItemProductGroups" :key="g.sanPhamId"
+                  class="rounded-3 overflow-hidden"
+                  style="cursor:pointer;border:1px solid var(--border-color);background:var(--bg-card);transition:border-color .15s;"
+                  @click="openAddItemDetail(g)"
+                  @mouseenter="$event.currentTarget.style.borderColor='var(--accent)'"
+                  @mouseleave="$event.currentTarget.style.borderColor='var(--border-color)'"
+                >
+                  <div style="background:var(--bg-card-inset);height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                    <img
+                      v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh"
+                      style="max-height:76px;max-width:100%;object-fit:contain;"
+                    />
+                    <span v-else><Laptop :size="29" color="var(--text-muted)" /></span>
                   </div>
-                  <div class="text-secondary" style="font-size:0.65rem;">{{ g.tenThuongHieu }}</div>
-                  <div style="font-size:0.72rem;color:var(--accent-fg);font-weight:600;margin-top:2px;">
-                    {{ t('admin.orderDetailModal.priceFrom') }} {{ formatPrice(g.minPrice) }}
-                  </div>
-                  <div v-if="g.phanLoaiTen" class="mt-1">
-                    <span v-for="tag in (g.phanLoaiTen||'').split(',').filter(Boolean)" :key="tag"
-                          class="badge bg-secondary me-1" style="font-size:0.58rem;">{{ tag.trim() }}</span>
+                  <div class="px-2 py-1">
+                    <div
+                      class="fw-semibold text-light" style="font-size:0.72rem;line-height:1.3;
+                       display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"
+                    >
+                      {{ g.tenSanPham }}
+                    </div>
+                    <div class="text-secondary" style="font-size:0.65rem;">{{ g.tenThuongHieu }}</div>
+                    <div style="font-size:0.72rem;color:var(--accent-fg);font-weight:600;margin-top:2px;">
+                      {{ t('admin.orderDetailModal.priceFrom') }} {{ formatPrice(g.minPrice) }}
+                    </div>
+                    <div v-if="g.phanLoaiTen" class="mt-1">
+                      <span
+                        v-for="tag in (g.phanLoaiTen||'').split(',').filter(Boolean)" :key="tag"
+                        class="badge bg-secondary me-1" style="font-size:0.58rem;"
+                      >{{ tag.trim() }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div class="text-secondary text-center py-1" style="font-size:0.75rem;">{{ t('admin.orderDetailModal.selectVariantHint') }}</div>
+              <div class="text-secondary text-center py-1" style="font-size:0.75rem;">{{ t('admin.orderDetailModal.selectVariantHint') }}</div>
+            </div>
+          </div>
+
+          <!-- Canh bao gop don: chi 1 nut, tu dong gop tat ca don cung ngay -->
+          <div
+            v-if="mergeCandidates.length > 0" class="mt-2 pt-2 d-flex align-items-center justify-content-between gap-2"
+            style="border-top:1px solid var(--bg-input);background:#1a1500;border-radius:6px;padding:8px 12px;"
+          >
+            <span style="font-size:0.78rem;color:#fbbf24;">
+              {{ t('admin.orderDetailModal.mergeBannerText', { count: mergeCandidates.length }) }}
+              <span class="text-secondary ms-1">(#{{ mergeCandidates.map(o => o.donHangId).join(', #') }})</span>
+            </span>
+            <button
+              class="btn btn-sm btn-warning flex-shrink-0" style="font-size:0.78rem;padding:3px 10px;"
+              :disabled="mergeLoading"
+              @click="autoMergeOrders"
+            >
+              {{ mergeLoading ? t('admin.orderDetailModal.merging') : t('admin.orderDetailModal.mergeAll') }}
+            </button>
           </div>
         </div>
-
-        <!-- Canh bao gop don: chi 1 nut, tu dong gop tat ca don cung ngay -->
-        <div v-if="mergeCandidates.length > 0" class="mt-2 pt-2 d-flex align-items-center justify-content-between gap-2"
-             style="border-top:1px solid var(--bg-input);background:#1a1500;border-radius:6px;padding:8px 12px;">
-          <span style="font-size:0.78rem;color:#fbbf24;">
-            {{ t('admin.orderDetailModal.mergeBannerText', { count: mergeCandidates.length }) }}
-            <span class="text-secondary ms-1">(#{{ mergeCandidates.map(o => o.donHangId).join(', #') }})</span>
-          </span>
-          <button class="btn btn-sm btn-warning flex-shrink-0" style="font-size:0.78rem;padding:3px 10px;"
-                  :disabled="mergeLoading"
-                  @click="autoMergeOrders">
-            {{ mergeLoading ? t('admin.orderDetailModal.merging') : t('admin.orderDetailModal.mergeAll') }}
-          </button>
-        </div>
-      </div>
       </div><!-- end outer scroll wrapper -->
     </div>
   </div>
@@ -999,11 +1038,11 @@ const confirmXacNhanSerial = async () => {
           <div class="row g-2">
             <div class="col-6">
               <label class="form-label small text-secondary">{{ t('admin.orderStatusModal.expectedDeliveryLabel') }}</label>
-              <input type="datetime-local" v-model="orderStatusForm.ngayGiaoDuKien" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
+              <input v-model="orderStatusForm.ngayGiaoDuKien" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
             </div>
             <div class="col-6">
               <label class="form-label small text-secondary">{{ t('admin.orderStatusModal.actualDeliveryLabel') }}</label>
-              <input type="datetime-local" v-model="orderStatusForm.ngayGiaoThucTe" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
+              <input v-model="orderStatusForm.ngayGiaoThucTe" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
             </div>
           </div>
         </div>
@@ -1036,12 +1075,14 @@ const confirmXacNhanSerial = async () => {
           </div>
           <div v-if="xacNhanAvailableSerials(line).length === 0" class="text-danger small">{{ t('admin.packModal.noSerialAvailable') }}</div>
           <div v-else class="d-flex flex-wrap gap-2">
-            <button v-for="s in xacNhanAvailableSerials(line)" :key="s.chiTietId"
-                    class="btn btn-sm"
-                    :class="line.chosenSerialIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-                    style="font-family:monospace;font-size:0.75rem;"
-                    @click="xacNhanToggleSerial(line, s.chiTietId)">
-            {{ s.soSerial }}
+            <button
+              v-for="s in xacNhanAvailableSerials(line)" :key="s.chiTietId"
+              class="btn btn-sm"
+              :class="line.chosenSerialIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+              style="font-family:monospace;font-size:0.75rem;"
+              @click="xacNhanToggleSerial(line, s.chiTietId)"
+            >
+              {{ s.soSerial }}
             </button>
           </div>
         </div>

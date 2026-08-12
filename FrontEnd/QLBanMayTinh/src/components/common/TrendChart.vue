@@ -1,10 +1,11 @@
 <template>
-  <!-- Biểu đồ đường + vùng tô (trend theo thời gian) — vẽ bằng SVG thuần -->
   <div>
     <svg :width="width" :height="height" :viewBox="`0 0 ${width} ${height}`" style="display:block; width:100%; height:auto;">
       <path v-if="points.length > 1" :d="areaPath" :fill="color" fill-opacity="0.15" stroke="none" />
-      <polyline v-if="points.length > 1" :points="linePoints" fill="none" :stroke="color" stroke-width="2.5"
-                stroke-linejoin="round" stroke-linecap="round" />
+      <polyline
+        v-if="points.length > 1" :points="linePoints" fill="none" :stroke="color" stroke-width="2.5"
+        stroke-linejoin="round" stroke-linecap="round"
+      />
       <circle v-for="(p, i) in points" :key="i" :cx="p.x" :cy="p.y" r="3.5" :fill="color" />
     </svg>
     <div class="d-flex justify-content-between mt-1">

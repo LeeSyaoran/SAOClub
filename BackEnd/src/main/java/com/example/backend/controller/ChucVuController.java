@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Danh mục chức vụ — chỉ admin quản lý (dropdown khi tạo/sửa nhân viên)
 @PreAuthorize("hasRole('ADMIN')")
 @RestController
 @RequestMapping("/api/chuc-vu")
@@ -35,7 +34,6 @@ public class ChucVuController {
         return ResponseEntity.status(HttpStatus.CREATED).body(chucVuService.create(item));
     }
 
-    // ChucVu dùng field "id" (không phải chucVuId) — xem entity ChucVu
     @PutMapping("update/{id}")
     public ResponseEntity<Void> update(@PathVariable Integer id, @RequestBody ChucVu item) {
         chucVuService.update(id, item);

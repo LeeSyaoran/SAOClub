@@ -33,7 +33,6 @@ public class ChiTietPhieuNhapService {
 
     public ChiTietPhieuNhap create(ChiTietPhieuNhapRequest request) {
         ChiTietPhieuNhap entity = new ChiTietPhieuNhap();
-        // BeanUtils copies: soLuong, donGiaNhap
         BeanUtils.copyProperties(request, entity, "phieuNhapId", "bienTheId");
         entity.setPhieuNhapKho(phieuNhapKhoRepository.getReferenceById(request.getPhieuNhapId()));
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
