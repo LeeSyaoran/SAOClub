@@ -23,17 +23,17 @@
           <div v-if="selectedPayment === 'tien_mat'"
                class="p-3 rounded-3 text-center small"
                style="background:#1e2a1e; color:#6ee7b7; border:1px solid #2a3d2a; max-width:360px;">
-            {{ t('checkout.cashInstruction', { amount: formatPrice(checkoutFinalTotal) }) }}
+            <Banknote :size="13" style="vertical-align:-2px;" /> {{ t('checkout.cashInstruction', { amount: formatPrice(checkoutFinalTotal) }) }}
           </div>
           <div v-else-if="selectedPayment === 'qr'"
                class="p-3 rounded-3 text-center small"
                style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;">
-            {{ t('checkout.qrInstruction') }}
+            <CheckCircle2 :size="13" style="vertical-align:-2px;" /> {{ t('checkout.qrInstruction') }}
           </div>
           <div v-else
                class="p-3 rounded-3 text-center small"
                style="background:#1a1e2a; color:#93c5fd; border:1px solid #252e3a; max-width:360px;">
-            {{ t('checkout.bankInstruction', { amount: formatPrice(checkoutFinalTotal) }) }}
+            <Landmark :size="13" style="vertical-align:-2px;" /> {{ t('checkout.bankInstruction', { amount: formatPrice(checkoutFinalTotal) }) }}
           </div>
           <button class="btn btn-warning fw-bold px-5 rounded-pill" style="font-size:0.9rem;" @click="$emit('update:modelValue', false)">{{ t('checkout.close') }}</button>
         </div>
@@ -99,7 +99,7 @@
             <div class="fw-semibold mb-2" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">{{ t('checkout.customerHeading') }}</div>
             <!-- Đã đăng nhập: đã biết chắc là khách hàng nào, khỏi cần tìm theo SĐT nữa -->
             <div v-if="isLoggedInCustomer" class="small p-2 rounded-3 mb-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
-              {{ t('checkout.loggedInAs') }} <strong>{{ checkoutForm.hoTen }}</strong> · {{ checkoutForm.soDienThoai }}
+              <CheckCircle2 :size="13" style="vertical-align:-2px;" /> {{ t('checkout.loggedInAs') }} <strong>{{ checkoutForm.hoTen }}</strong> · {{ checkoutForm.soDienThoai }}
             </div>
             <template v-else>
               <div class="d-flex gap-2 mb-2">
@@ -110,7 +110,7 @@
                 <button class="btn btn-sm btn-outline-warning flex-shrink-0 px-3" style="border-radius:10px;" @click="lookupCustomer">{{ t('checkout.find') }}</button>
               </div>
               <div v-if="foundCustomer" class="small p-2 rounded-3 mb-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
-                {{ t('checkout.foundCustomer') }} <strong>{{ foundCustomer.hoTen }}</strong>
+                <CheckCircle2 :size="13" style="vertical-align:-2px;" /> {{ t('checkout.foundCustomer') }} <strong>{{ foundCustomer.hoTen }}</strong>
               </div>
               <div v-else-if="checkoutForm.soDienThoai" class="small p-2 rounded-3 mb-2" style="background:var(--bg-card-alt); color:var(--text-secondary);">
                 {{ t('checkout.newCustomer') }}
@@ -319,12 +319,12 @@
           <button v-else
                   class="btn btn-sm btn-outline-secondary px-4" style="border-radius:10px;"
                   :disabled="checkoutLoading"
-                  @click="checkoutStep = 1">{{ t('checkout.back') }}</button>
+                  @click="checkoutStep = 1"><ArrowLeft :size="14" style="vertical-align:-2px;" /> {{ t('checkout.back') }}</button>
 
           <button v-if="checkoutStep === 1"
                   class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
                   @click="goToPayment">
-            {{ t('checkout.continue') }}
+            {{ t('checkout.continue') }} <ArrowRight :size="14" style="vertical-align:-2px;" />
           </button>
           <button v-else
                   class="btn btn-warning fw-bold px-5" style="border-radius:10px;"
@@ -341,7 +341,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue';
-import { CheckCircle2, Laptop, Banknote, Smartphone, Landmark, ImageOff } from '@lucide/vue';
+import { CheckCircle2, Laptop, Banknote, Smartphone, Landmark, ImageOff, ArrowLeft, ArrowRight } from '@lucide/vue';
 import { t } from '../../i18n/index.js';
 import { AuthStore } from '../../stores/index.js';
 import { nowLocalIso } from '../../utils/datetime.js';
