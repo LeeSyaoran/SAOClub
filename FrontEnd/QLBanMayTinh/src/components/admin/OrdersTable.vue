@@ -110,6 +110,19 @@ const orderDetailItems     = ref([]);     // ChiTietDonHangResponse[]
 const orderDetailPayments  = ref([]);     // ThanhToanResponse[] — co the rong (don cu/don online)
 const orderDetailLoading   = ref(false);
 
+// Gom nhieu ThanhToan cung phuong thuc (vd don tai quay tra nhieu dot) thanh 1 dong —
+// hien so lan + tong tien thay vi lap ten phuong thuc nhieu lan trong theo nhau.
+const orderDetailPaymentsSummary = computed(() => {
+  const map = new Map();
+  for (const p of orderDetailPayments.value) {
+    const cur = map.get(p.phuongThucThanhToan) ?? { method: p.phuongThucThanhToan, count: 0, total: 0 };
+    cur.count += 1;
+    cur.total += p.soTien ?? 0;
+    map.set(p.phuongThucThanhToan, cur);
+  }
+  return [...map.values()];
+});
+
 const openOrderDetail = async (o) => {
   orderDetailData.value  = o;
   orderDetailItems.value = [];
@@ -887,8 +900,8 @@ const confirmXacNhanSerial = async () => {
         <div v-if="orderDetailPayments.length" class="d-flex justify-content-between small">
           <span class="text-secondary">{{ t('admin.orderDetailModal.paymentMethod') }}</span>
           <span style="color:var(--text-primary);">
-            <template v-for="(p, idx) in orderDetailPayments" :key="p.thanhToanId">
-              <component :is="paymentMethodIcon(p.phuongThucThanhToan)" :size="14" style="vertical-align:-2px;" /> {{ paymentMethodLabel(p.phuongThucThanhToan) }}<span v-if="idx < orderDetailPayments.length - 1">, </span>
+            <template v-for="(g, idx) in orderDetailPaymentsSummary" :key="g.method">
+              <component :is="paymentMethodIcon(g.method)" :size="14" style="vertical-align:-2px;" /> {{ paymentMethodLabel(g.method) }}<template v-if="g.count > 1"> ×{{ g.count }} ({{ formatPrice(g.total) }})</template><span v-if="idx < orderDetailPaymentsSummary.length - 1">, </span>
             </template>
           </span>
         </div>
