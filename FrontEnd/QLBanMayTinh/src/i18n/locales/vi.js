@@ -887,7 +887,6 @@ export default {
       colAction: "Thao tác",
       edit: "Sửa",
       viewDetail: "Chi tiết",
-      delete: "Xóa",
       empty: "Chưa có khách hàng",
       searchPlaceholder: "Tìm tên, SĐT, email...",
     },
@@ -1366,7 +1365,6 @@ export default {
       typePercent: "Phần trăm",
       typeFixed: "Số tiền",
       edit: "Sửa",
-      delete: "Xóa",
       empty: "Chưa có khuyến mãi",
     },
 
@@ -1452,7 +1450,6 @@ export default {
       colStatus: "Trạng thái",
       colAction: "Thao tác",
       edit: "Sửa",
-      delete: "Xóa",
       empty: "Chưa có nhân viên",
     },
 
@@ -1634,9 +1631,6 @@ export default {
     confirm: {
       deleteProductSimple: "Bạn có chắc chắn muốn xóa sản phẩm \"{name}\" không?",
       deleteVariantSimple: "Bạn có chắc chắn muốn xóa biến thể \"{sku}\" không? Toàn bộ serial/tồn kho chưa bán gắn với biến thể sẽ mất theo.",
-      deleteCustomer: "Xóa khách hàng này?",
-      deleteStaff: "Xóa nhân viên này?",
-      deletePromo: "Xóa khuyến mãi này?",
       deleteReward: "Xóa phần thưởng này?",
       deleteOrder: "Bạn có chắc muốn xóa đơn hàng này? Hành động này không thể hoàn tác.",
       removeItemFromOrder: "Xóa sản phẩm này khỏi đơn hàng?",

@@ -1,4 +1,4 @@
-import { get, post, put, del } from './api.js';
+import { get, post, put } from './api.js';
 
 export const getPage = ({ page = 0, size = 50 } = {}) => get(`/api/khach-hang?page=${page}&size=${size}`);
 
@@ -8,8 +8,6 @@ export const getById = (id) => get(`/api/khach-hang/${id}`);
 
 export const save = (id, body) =>
   id ? put(`/api/khach-hang/update/${id}`, body) : post('/api/khach-hang', body);
-
-export const remove = (id) => del(`/api/khach-hang/delete/${id}`);
 
 export const login = (username, password) =>
   post('/api/khach-hang/login', { username, password });

@@ -718,13 +718,6 @@ const saveStaff = async () => {
     staffFormError.value = e.message;
   }
 };
-const deleteStaff = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deleteStaff')))) return;
-  const res = await NhanVienService.remove(id);
-  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  await refreshStaff();
-};
-
 // ── Promotions CRUD ───────────────────────────────────────────────────────────
 const showPromoModal = ref(false);
 const editingPromoId = ref(null);
@@ -799,13 +792,6 @@ const savePromo = async () => {
     promoFormError.value = e.message;
   }
 };
-const deletePromo = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deletePromo')))) return;
-  const res = await KhuyenMaiService.remove(id);
-  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  await refreshPromotions();
-};
-
 // ── Rewards (Đổi thưởng) CRUD ─────────────────────────────────────────────────
 const showRewardModal = ref(false);
 const editingRewardId = ref(null);
@@ -1344,7 +1330,6 @@ onUnmounted(() => {
                   <td>
                     <div class="d-flex gap-1">
                       <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditPromo(p)">{{ t('admin.promotions.edit') }}</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deletePromo(p.khuyenMaiId)">{{ t('admin.promotions.delete') }}</button>
                     </div>
                   </td>
                 </tr>
@@ -1408,7 +1393,6 @@ onUnmounted(() => {
                   <td>
                     <div class="d-flex gap-1">
                       <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditStaff(s)">{{ t('admin.staff.edit') }}</button>
-                      <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteStaff(s.nhanVienId)">{{ t('admin.staff.delete') }}</button>
                     </div>
                   </td>
                 </tr>

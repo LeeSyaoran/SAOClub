@@ -28,13 +28,6 @@ const filteredCustomers = computed(() => {
 });
 const { currentPage, totalPages, pagedItems: pagedCustomers, pageSize } = usePagination(filteredCustomers);
 
-const deleteCustomer = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deleteCustomer')))) return;
-  const res = await KhachHangService.remove(id);
-  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  await refreshCustomers();
-};
-
 const showCustomerModal = ref(false);
 const customerModalRef = ref(null);
 </script>
@@ -64,7 +57,6 @@ const customerModalRef = ref(null);
             <div class="d-flex gap-1">
               <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem; padding:2px 8px;" @click="emit('view-detail', c.khachHangId)">{{ t('admin.customers.viewDetail') }}</button>
               <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="customerModalRef.openForEdit(c)">{{ t('admin.customers.edit') }}</button>
-              <button class="btn btn-sm btn-outline-danger"  style="font-size:0.78rem; padding:2px 8px;" @click="deleteCustomer(c.khachHangId)">{{ t('admin.customers.delete') }}</button>
             </div>
           </td>
         </tr>

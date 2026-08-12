@@ -887,7 +887,6 @@ export default {
       colAction: "Actions",
       edit: "Edit",
       viewDetail: "Detail",
-      delete: "Delete",
       empty: "No customers yet",
       searchPlaceholder: "Search name, phone, email...",
     },
@@ -1366,7 +1365,6 @@ export default {
       typePercent: "Percentage",
       typeFixed: "Fixed amount",
       edit: "Edit",
-      delete: "Delete",
       empty: "No promotions yet",
     },
 
@@ -1452,7 +1450,6 @@ export default {
       colStatus: "Status",
       colAction: "Actions",
       edit: "Edit",
-      delete: "Delete",
       empty: "No staff yet",
     },
 
@@ -1636,9 +1633,6 @@ export default {
       deleteProductSimple: "Are you sure you want to delete product \"{name}\"?",
       deleteVariant: "Delete this variant? All serials/stock linked to it will be lost too.",
       deleteVariantSimple: "Are you sure you want to delete variant \"{sku}\"? All unsold serials/stock linked to this variant will be lost too.",
-      deleteCustomer: "Delete this customer?",
-      deleteStaff: "Delete this staff member?",
-      deletePromo: "Delete this promotion?",
       deleteReward: "Delete this reward?",
       deleteOrder: "Are you sure you want to delete this order? This action cannot be undone.",
       removeItemFromOrder: "Remove this product from the order?",
