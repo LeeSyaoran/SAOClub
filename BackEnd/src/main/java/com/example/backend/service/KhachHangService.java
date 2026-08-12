@@ -149,13 +149,6 @@ public class KhachHangService {
     }
 
     @Transactional
-    public void delete(Integer id) {
-        if (!khachHangRepository.existsById(id))
-            throw new IllegalArgumentException("Khách hàng không tồn tại với id: " + id);
-        khachHangRepository.deleteById(id);
-    }
-
-    @Transactional
     public KhachHangLoginResponse register(KhachHangRegisterRequest request) {
         if (taiKhoanRepository.existsByUsername(request.getUsername()))
             throw new IllegalArgumentException("Username đã tồn tại");

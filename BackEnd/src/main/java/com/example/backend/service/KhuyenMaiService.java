@@ -42,9 +42,4 @@ public class KhuyenMaiService {
         return khuyenMaiRepository.save(entity);
     }
 
-    public void delete(Integer id) {
-        if (!khuyenMaiRepository.existsById(id))
-            throw new IllegalArgumentException("Khuyến mãi không tồn tại với id: " + id);
-        khuyenMaiRepository.deleteById(id);
-    }
 }

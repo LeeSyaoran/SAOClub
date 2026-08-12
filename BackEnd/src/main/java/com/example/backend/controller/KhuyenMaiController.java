@@ -49,10 +49,4 @@ public class KhuyenMaiController {
         return ResponseEntity.ok().build();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        khuyenMaiService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
 }

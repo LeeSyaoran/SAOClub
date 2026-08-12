@@ -69,13 +69,6 @@ public class KhachHangController {
         return khachHangService.layLichSuDiem(id);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        khachHangService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody KhachHangRegisterRequest request) {
         try {

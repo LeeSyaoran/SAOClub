@@ -91,10 +91,4 @@ public class NhanVienService {
         return saved;
     }
 
-    @Transactional
-    public void delete(Integer id) {
-        if (!nhanVienRepository.existsById(id))
-            throw new IllegalArgumentException("Nhân viên không tồn tại với id: " + id);
-        nhanVienRepository.deleteById(id);
-    }
 }

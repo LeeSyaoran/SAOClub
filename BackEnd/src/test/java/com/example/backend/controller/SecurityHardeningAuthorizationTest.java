@@ -69,14 +69,6 @@ class SecurityHardeningAuthorizationTest {
     }
 
     @Test
-    void khuyenMaiController_delete_khoaChoAdminNhanVienQuanKho() throws NoSuchMethodException {
-        Method m = KhuyenMaiController.class.getMethod("delete", Integer.class);
-        PreAuthorize pa = m.getAnnotation(PreAuthorize.class);
-        assertThat(pa).isNotNull();
-        assertThat(pa.value()).isEqualTo(STAFF_ROLES);
-    }
-
-    @Test
     void khuyenMaiController_getAll_khongBiKhoa() throws NoSuchMethodException {
         Method m = KhuyenMaiController.class.getMethod("getAll");
         assertThat(m.getAnnotation(PreAuthorize.class)).isNull();

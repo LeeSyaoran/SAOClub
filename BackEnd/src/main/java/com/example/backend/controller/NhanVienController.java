@@ -54,9 +54,4 @@ public class NhanVienController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        nhanVienService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
 }
