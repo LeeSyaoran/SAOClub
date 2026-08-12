@@ -34,6 +34,7 @@ public interface NhanVienRepository extends JpaRepository<NhanVien, Integer> {
     FROM NhanVien n
     LEFT JOIN n.chucVu cv
     LEFT JOIN TaiKhoan tk ON tk.nhanVien = n
+    WHERE cv.maChucVu <> 'admin'
     """)
     List<NhanVienResponse> hienThiNhanVien();
 
@@ -46,7 +47,12 @@ public interface NhanVienRepository extends JpaRepository<NhanVien, Integer> {
         FROM NhanVien n
         LEFT JOIN n.chucVu cv
         LEFT JOIN TaiKhoan tk ON tk.nhanVien = n
+        WHERE cv.maChucVu <> 'admin'
         """,
-        countQuery = "SELECT COUNT(n) FROM NhanVien n")
+        countQuery = """
+        SELECT COUNT(n) FROM NhanVien n
+        LEFT JOIN n.chucVu cv
+        WHERE cv.maChucVu <> 'admin'
+        """)
     Page<NhanVienResponse> hienThiNhanVien(Pageable pageable);
 }
