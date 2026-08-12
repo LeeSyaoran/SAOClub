@@ -48,9 +48,4 @@ public class PhieuBaoHanhController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        phieuBaoHanhService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
 }

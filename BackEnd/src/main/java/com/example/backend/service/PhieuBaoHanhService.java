@@ -111,9 +111,4 @@ public class PhieuBaoHanhService {
         }
     }
 
-    public void delete(Integer id) {
-        if (!phieuBaoHanhRepository.existsById(id))
-            throw new IllegalArgumentException("Phiếu bảo hành không tồn tại với id: " + id);
-        phieuBaoHanhRepository.deleteById(id);
-    }
 }

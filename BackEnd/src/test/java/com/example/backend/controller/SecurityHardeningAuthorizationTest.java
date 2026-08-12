@@ -111,12 +111,10 @@ class SecurityHardeningAuthorizationTest {
     }
 
     @Test
-    void bienTheSanPhamController_createUpdateDelete_khoaChoAdminNhanVienQuanKho() throws NoSuchMethodException {
+    void bienTheSanPhamController_createUpdate_khoaChoAdminNhanVienQuanKho() throws NoSuchMethodException {
         assertThat(BienTheSanPhamController.class.getMethod("create", BienTheSanPhamRequest.class)
                 .getAnnotation(PreAuthorize.class).value()).isEqualTo(STAFF_ROLES);
         assertThat(BienTheSanPhamController.class.getMethod("update", Integer.class, BienTheSanPhamRequest.class)
-                .getAnnotation(PreAuthorize.class).value()).isEqualTo(STAFF_ROLES);
-        assertThat(BienTheSanPhamController.class.getMethod("delete", Integer.class)
                 .getAnnotation(PreAuthorize.class).value()).isEqualTo(STAFF_ROLES);
     }
 }

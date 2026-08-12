@@ -44,12 +44,6 @@ public class PhieuTraHangController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        phieuTraHangService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
     // Giữ mở cho MỌI người dùng đã đăng nhập (override @PreAuthorize class-level ở trên) —
     // khách hàng tự gửi yêu cầu trả hàng cho đơn của chính mình. Service tự suy khách hàng
     // qua SecurityContextHolder, không tin donHangId/khách hàng từ client.

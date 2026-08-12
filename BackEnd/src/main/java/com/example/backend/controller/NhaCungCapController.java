@@ -43,9 +43,4 @@ public class NhaCungCapController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        nhaCungCapService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
 }

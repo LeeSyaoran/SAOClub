@@ -42,11 +42,4 @@ public class DmRamController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (!repository.existsById(id))
-            throw new IllegalArgumentException("RAM không tồn tại với id: " + id);
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
 }

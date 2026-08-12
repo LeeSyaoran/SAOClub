@@ -30,14 +30,6 @@ public class BienTheSanPhamService {
     @Autowired
     private DmGpuRepository dmGpuRepository;
     @Autowired
-    private ChiTietSanPhamRepository chiTietSanPhamRepository;
-    @Autowired
-    private ChiTietDonHangRepository chiTietDonHangRepository;
-    @Autowired
-    private ChiTietTraHangRepository chiTietTraHangRepository;
-    @Autowired
-    private PhieuBaoHanhRepository phieuBaoHanhRepository;
-    @Autowired
     private ChiTietPhieuNhapRepository chiTietPhieuNhapRepository;
     @Autowired
     private TonKhoRepository tonKhoRepository;
@@ -100,24 +92,4 @@ public class BienTheSanPhamService {
         return bienTheSanPhamRepository.save(entity);
     }
 
-    // Biến thể đã qua giao dịch chưa (đã bán/trả/bảo hành, hoặc có serial không còn
-    // "trong_kho") — dùng để FE hỏi trước khi hiện hộp thoại xóa (câu hỏi đơn giản nếu an
-    // toàn, cảnh báo rõ lý do nếu không) và để delete() tự chặn nếu ai đó gọi thẳng API.
-    public boolean hasTransactionHistory(Integer id) {
-        return chiTietDonHangRepository.existsByBienThe_BienTheId(id)
-                || chiTietTraHangRepository.existsByBienThe_BienTheId(id)
-                || phieuBaoHanhRepository.existsByBienThe_BienTheId(id)
-                || chiTietSanPhamRepository.existsByBienThe_BienTheIdAndTrangThaiNot(id, "trong_kho");
-    }
-
-    @Transactional
-    public void delete(Integer id) {
-        BienTheSanPham entity = getById(id);
-        if (hasTransactionHistory(id)) {
-            throw new IllegalArgumentException(
-                    "Không thể xóa biến thể \"" + entity.getMaSku() + "\": đã có lịch sử bán hàng/bảo hành. " +
-                    "Hãy chuyển trạng thái sang ngừng kinh doanh thay vì xóa.");
-        }
-        bienTheSanPhamRepository.deleteById(id);
-    }
 }

@@ -45,9 +45,4 @@ public class NhaCungCapService {
         return nhaCungCapRepository.save(entity);
     }
 
-    public void delete(Integer id) {
-        if (!nhaCungCapRepository.existsById(id))
-            throw new IllegalArgumentException("Nhà cung cấp không tồn tại với id: " + id);
-        nhaCungCapRepository.deleteById(id);
-    }
 }

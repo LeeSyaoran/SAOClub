@@ -64,16 +64,4 @@ public class BienTheSanPhamController {
         return ResponseEntity.ok().build();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        bienTheSanPhamService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    // GET /api/bien-the-san-pham/{id}/co-giao-dich — FE gọi trước khi hiện hộp thoại xóa.
-    @GetMapping("/{id}/co-giao-dich")
-    public boolean hasTransactionHistory(@PathVariable Integer id) {
-        return bienTheSanPhamService.hasTransactionHistory(id);
-    }
 }

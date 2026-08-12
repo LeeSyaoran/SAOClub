@@ -362,9 +362,4 @@ public class PhieuTraHangService {
                 .toList();
     }
 
-    public void delete(Integer id) {
-        if (!phieuTraHangRepository.existsById(id))
-            throw new IllegalArgumentException("Phiếu trả hàng không tồn tại với id: " + id);
-        phieuTraHangRepository.deleteById(id);
-    }
 }

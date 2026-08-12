@@ -43,11 +43,4 @@ public class DmOcungController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("delete/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (!repository.existsById(id))
-            throw new IllegalArgumentException("Ổ cứng không tồn tại với id: " + id);
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
 }
