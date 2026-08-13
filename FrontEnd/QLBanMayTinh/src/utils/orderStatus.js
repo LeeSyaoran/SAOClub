@@ -58,7 +58,7 @@ export const paymentStatusIcon = (s) => {
 // Phuong thuc thanh toan — dung o POS (chon luc tao don) va modal "Chi tiet don hang"
 // (hien lai). 1 nguon duy nhat cho danh sach gia tri + icon, tranh 2 noi tu dinh nghia
 // roi lech nhau (dung bai hoc tu vu colorDot o productGrouping.js).
-export const POS_PAYMENT_METHODS = ['tien_mat', 'vnpay', 'chuyen_khoan', 'the_tin_dung'];
+export const POS_PAYMENT_METHODS = ['tien_mat', 'chuyen_khoan', 'the_tin_dung'];
 
 export const paymentMethodLabel = (m) => t(`admin.paymentMethod.${m}`);
 

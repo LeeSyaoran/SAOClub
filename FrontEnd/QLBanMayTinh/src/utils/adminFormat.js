@@ -31,3 +31,14 @@ export const formatDateTime = (d) => {
 
 export const toLocalDT = (s) =>
   s ? (s.length === 16 ? s + ":00" : s.slice(0, 19)) : null;
+
+// Bỏ dấu tiếng Việt để so khớp tìm kiếm không phân biệt dấu (gõ "laptop dell"
+// vẫn khớp "Laptop Dell") — dùng NFD tách dấu khỏi ký tự gốc rồi xóa combining marks,
+// xử lý riêng đ/Đ vì Unicode không tách nó qua NFD như các ký tự có dấu khác.
+export const boDauTiengViet = (str) =>
+  (str ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();

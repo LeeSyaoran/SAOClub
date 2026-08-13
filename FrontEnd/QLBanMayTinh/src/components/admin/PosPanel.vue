@@ -4,7 +4,7 @@ import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import * as DonHangService from "../../services/DonHangService.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
-import { formatPrice, formatDate } from "../../utils/adminFormat.js";
+import { formatPrice, formatDate, boDauTiengViet } from "../../utils/adminFormat.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { PromotionsStore, ensurePromotions } from "../../stores/promotions.js";
@@ -15,7 +15,7 @@ import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot
 import { POS_PAYMENT_METHODS, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
 import * as ThanhToanService from "../../services/ThanhToanService.js";
 import { askConfirm } from "../../stores/confirm.js";
-import { Laptop, ShoppingCart, Receipt, Info, RefreshCw, X, Check } from '@lucide/vue';
+import { Laptop, ShoppingCart, Receipt, Info, RefreshCw, X, Check, ExternalLink, ImageOff } from '@lucide/vue';
 
 onMounted(() => { ensureProducts(); ensureCustomers(); ensurePromotions(); });
 
@@ -36,15 +36,23 @@ const posPromoCode = ref("");
 const posAppliedPromo = ref(null);
 const posPromoMsg = ref("");
 const posPaymentMethod = ref(null); // 1 trong POS_PAYMENT_METHODS — bat buoc chon truoc khi tao don
+// 'pickup' (mac dinh, khach tu lay tai quay — khong tinh phi/dia chi) hoac 'delivery'
+// (giao tan noi — tinh phi nhu online, don dung o "confirmed" thay vi nhay thang "delivered").
+const posDeliveryMode = ref('pickup');
+const posDeliveryAddress = ref('');
+// Xac nhan thu cong "da quet QR" — chua co webhook ngan hang that nen nhan vien tu bam
+// sau khi (gia lap) thay khach quet xong. Reset ve false moi khi doi phuong thuc thanh toan.
+const posQrScanned = ref(false);
+const posQrImageFailed = ref(false);
 
 const posProducts = computed(() => {
-  const q = posSearch.value.toLowerCase();
+  const q = boDauTiengViet(posSearch.value.toLowerCase());
   return ProductsStore.items.filter(
     (p) =>
       p.trangThai === "active" &&
       (!q ||
-        p.tenSanPham.toLowerCase().includes(q) ||
-        (p.maSku ?? "").toLowerCase().includes(q)),
+        boDauTiengViet(p.tenSanPham).includes(q) ||
+        boDauTiengViet(p.maSku ?? "").includes(q)),
   );
 });
 
@@ -87,7 +95,10 @@ const posCartGroups = computed(() => {
   return [...map.values()];
 });
 const posGroupTotal = (g) => g.items.reduce((s, i) => s + i.giaBan, 0);
-const posFee = computed(() => (posCartTotal.value >= 300000 ? 0 : 30000));
+const posFee = computed(() => {
+  if (posDeliveryMode.value !== 'delivery') return 0;
+  return posCartTotal.value >= 300000 ? 0 : 30000;
+});
 const posGiamGia = computed(() => {
   const p = posAppliedPromo.value;
   if (!p) return 0;
@@ -99,6 +110,15 @@ const posGiamGia = computed(() => {
   return Number(p.giaTri) || 0;
 });
 const posGrandTotal = computed(() => Math.max(0, posCartTotal.value + posFee.value - posGiamGia.value));
+
+// Tai dung dung cach CheckoutModal.vue tao QR — VietQR API, cung tai khoan VCB demo.
+const posQrImageUrl = computed(() => {
+  const bank    = 'VCB';
+  const account = '9876543210';
+  const info    = encodeURIComponent('Thanh toan SAO LAPTOP');
+  const name    = encodeURIComponent('SAO LAPTOP');
+  return `https://img.vietqr.io/image/${bank}-${account}-compact2.png?amount=${posGrandTotal.value}&addInfo=${info}&accountName=${name}`;
+});
 
 // Ap tu dong khi go xong (debounce), khong can bam nut "Ap dung" — giong luong online.
 let posPromoDebounce = null;
@@ -186,6 +206,9 @@ const posHoldOrder = () => {
   posAppliedPromo.value = null;
   posPromoMsg.value = "";
   posPaymentMethod.value = null;
+  posDeliveryMode.value = 'pickup';
+  posDeliveryAddress.value = '';
+  posQrScanned.value = false;
   posStage.value = 'start';
   posPhoneNotFound.value = false;
 };
@@ -306,6 +329,9 @@ const serialPickerLoading = ref(false);
 // Khac null khi mo picker de DOI serial cua 1 dong da co san trong gio (nut 🔄) — thay vi
 // them dong moi. Serial cu se duoc tra ve "trong_kho" sau khi chon xong (xem posSelectSerial).
 const serialPickerSwapChiTietId = ref(null);
+// Cac serial da duoc tick chon trong lan mo picker nay (chi dung khi them-moi, khong
+// dung khi doi-serial vi luong doi van la 1-doi-1).
+const serialPickerChosenIds = ref(new Set());
 
 const posOpenSerialPicker = async (p, swapChiTietId = null) => {
   // Chan them vao gio neu chua xac dinh khach hang — nhan vien duyet san pham
@@ -317,6 +343,7 @@ const posOpenSerialPicker = async (p, swapChiTietId = null) => {
   }
   serialPickerProduct.value = p;
   serialPickerSwapChiTietId.value = swapChiTietId;
+  serialPickerChosenIds.value = new Set();
   serialPickerList.value = [];
   showSerialPicker.value = true;
   serialPickerLoading.value = true;
@@ -326,6 +353,13 @@ const posOpenSerialPicker = async (p, swapChiTietId = null) => {
   // tu dong bi loai o day, khong can biet gio do thuoc phien nao.
   serialPickerList.value = all.filter((s) => s.trangThai === 'trong_kho');
   serialPickerLoading.value = false;
+};
+
+const posToggleSerial = (serial) => {
+  const next = new Set(serialPickerChosenIds.value);
+  if (next.has(serial.chiTietId)) next.delete(serial.chiTietId);
+  else next.add(serial.chiTietId);
+  serialPickerChosenIds.value = next;
 };
 
 // Doi trang thai 1 serial — dung khi chon vao gio (giu_hang) hoac tra lai kho (trong_kho).
@@ -367,6 +401,29 @@ const posSelectSerial = async (serial) => {
   if (oldItem) await setSerialTrangThai(oldItem, 'trong_kho');
 };
 
+// Them nhieu serial cung luc vao gio — chi dung khi KHONG phai doi-serial (swapChiTietId
+// null). Moi serial da chon tao 1 dong rieng trong posCart, giong het cau truc item cua
+// posSelectSerial(), roi danh dau giu_hang tung cai.
+const posAddChosenSerials = async () => {
+  const p = serialPickerProduct.value;
+  const chosen = serialPickerList.value.filter((s) => serialPickerChosenIds.value.has(s.chiTietId));
+  const items = chosen.map((serial) => ({
+    sanPhamId: p.sanPhamId,
+    bienTheId: p.bienTheId,
+    tenSanPham: p.tenSanPham,
+    maSku: p.maSku,
+    giaBan: p.giaBan,
+    hinhAnhChinh: p.hinhAnhChinh,
+    chiTietId: serial.chiTietId,
+    soSerial: serial.soSerial,
+    ngayNhapKho: serial.ngayNhapKho,
+    soLuong: 1,
+  }));
+  posCart.value = [...posCart.value, ...items];
+  showSerialPicker.value = false;
+  await Promise.all(items.map((item) => setSerialTrangThai(item, 'giu_hang')));
+};
+
 const posRemove = async (chiTietId) => {
   const item = posCart.value.find((i) => i.chiTietId === chiTietId);
   if (!item) return;
@@ -394,6 +451,9 @@ const posReset = async () => {
   posAppliedPromo.value = null;
   posPromoMsg.value = "";
   posPaymentMethod.value = null;
+  posDeliveryMode.value = 'pickup';
+  posDeliveryAddress.value = '';
+  posQrScanned.value = false;
   posStage.value = 'start';
   posPhoneNotFound.value = false;
 };
@@ -484,9 +544,12 @@ const posPlaceOrder = async () => {
     const khachHangId = posFoundCust.value.khachHangId;
     const nguoiNhan = posFoundCust.value.hoTen;
     const ngayDat = nowLocalIso();
+    const diaChiGiao = posDeliveryMode.value === 'delivery'
+      ? posDeliveryAddress.value.trim()
+      : (posFoundCust.value.diaChi ?? "Tai cua hang");
     const orderRes = await DonHangService.create({
       khachHangId, nguoiNhan, sdtNguoiNhan: posFoundCust.value.soDienThoai,
-      diaChiGiaoHangText: posFoundCust.value.diaChi ?? "Tai cua hang",
+      diaChiGiaoHangText: diaChiGiao,
       khuyenMaiId: posAppliedPromo.value?.khuyenMaiId ?? null,
       tongTien: posCartTotal.value, giamGia: posGiamGia.value,
       phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
@@ -534,17 +597,19 @@ const posPlaceOrder = async () => {
       // tao don + ghi nhan thanh toan xong. Backend chi cho phep nhay thang confirmed->delivered
       // voi kenhBan="in_store" (xem DonHangService.kiemTraChuyenTrangThai), don online van phai
       // di tuan tu nhu cu.
-      const finalizeRes = await DonHangService.update(donHangId, {
-        khachHangId, nguoiNhan, sdtNguoiNhan: posFoundCust.value.soDienThoai,
-        diaChiGiaoHangText: posFoundCust.value.diaChi ?? "Tai cua hang",
-        khuyenMaiId: posAppliedPromo.value?.khuyenMaiId ?? null,
-        tongTien: posCartTotal.value, giamGia: posGiamGia.value,
-        phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
-        ngayDat,
-        ngayGiaoThucTe: nowLocalIso(),
-        trangThaiDonHang: "delivered", trangThaiThanhToan: "paid", kenhBan: "in_store",
-      });
-      if (!finalizeRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(finalizeRes) }));
+      if (posDeliveryMode.value === 'pickup') {
+        const finalizeRes = await DonHangService.update(donHangId, {
+          khachHangId, nguoiNhan, sdtNguoiNhan: posFoundCust.value.soDienThoai,
+          diaChiGiaoHangText: diaChiGiao,
+          khuyenMaiId: posAppliedPromo.value?.khuyenMaiId ?? null,
+          tongTien: posCartTotal.value, giamGia: posGiamGia.value,
+          phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
+          ngayDat,
+          ngayGiaoThucTe: nowLocalIso(),
+          trangThaiDonHang: "delivered", trangThaiThanhToan: "paid", kenhBan: "in_store",
+        });
+        if (!finalizeRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(finalizeRes) }));
+      }
     } catch (e) {
       await DonHangService.remove(donHangId).catch(() => {});
       // Xoa xong nhung khong refresh thi danh sach don hang tren UI (da tang truoc do qua
@@ -556,6 +621,9 @@ const posPlaceOrder = async () => {
     posCart.value = []; posPhone.value = ""; posFoundCust.value = null;
     posPromoCode.value = ""; posAppliedPromo.value = null; posPromoMsg.value = "";
     posPaymentMethod.value = null;
+    posDeliveryMode.value = 'pickup';
+    posDeliveryAddress.value = '';
+    posQrScanned.value = false;
     posStage.value = 'start';
     await refreshOrders();
   } catch (e) {
@@ -584,8 +652,6 @@ const posPlaceOrder = async () => {
             </div>
             <div class="card-body p-2 d-flex flex-column gap-1">
               <div class="fw-semibold small text-light">{{ p.tenSanPham }}</div>
-              <div class="text-secondary" style="font-size:0.76rem;">{{ p.maSku }}</div>
-              <div class="text-secondary" style="font-size:0.75rem;">{{ p.tenThuongHieu }} · {{ p.tenDanhMuc }}</div>
               <div class="fw-bold text-warning" style="font-size:0.95rem;">
                 <span v-if="(posVariantCountMap.get(p.sanPhamId) || 0) > 1" class="fw-normal" style="font-size:0.7rem;color:var(--text-secondary);">{{ t('home.fromPrice') }} </span>{{ formatPrice(p.giaBan) }}
               </div>
@@ -711,6 +777,11 @@ const posPlaceOrder = async () => {
           <div class="d-flex gap-2 position-relative">
             <input v-model="posPromoCode" class="form-control form-control-sm" style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('checkout.promoPlaceholder')" @input="onPosPromoInput" @focus="onPosPromoFocus" @blur="showPosPromoSuggestions = false" @keyup.enter="posApplyPromo" />
             <button class="btn btn-sm btn-outline-warning flex-shrink-0" @click="posApplyPromo">{{ t('checkout.apply') }}</button>
+            <button
+              class="btn btn-sm btn-outline-secondary flex-shrink-0" style="padding:2px 8px;"
+              :aria-label="t('admin.pos.viewPromotionsTab')" :title="t('admin.pos.viewPromotionsTab')"
+              @click="() => window.open('/#/admin', '_blank')"
+            ><ExternalLink :size="14" /></button>
             <div v-if="showPosPromoSuggestions && posPromoSuggestions.length" class="position-absolute w-100 rounded-3 shadow-lg" style="top:100%; left:0; z-index:20; background:var(--bg-card); border:1px solid var(--border-color-strong); max-height:220px; overflow-y:auto;">
               <div
                 v-for="p in posPromoSuggestions" :key="p.khuyenMaiId" class="px-3 py-2 small d-flex justify-content-between gap-2"
@@ -725,11 +796,32 @@ const posPlaceOrder = async () => {
           </div>
           <div v-if="posPromoMsg" class="small" :class="posAppliedPromo ? 'text-success' : 'text-danger'">{{ posPromoMsg }}</div>
         </div>
+        <!-- Giao hang -->
+        <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
+          <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.deliveryModeLabel') }}</div>
+          <div class="d-flex gap-1">
+            <button
+              class="btn btn-sm flex-fill" style="font-size:0.75rem;"
+              :class="posDeliveryMode==='pickup' ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
+              @click="posDeliveryMode='pickup'"
+            >{{ t('admin.pos.pickupAtStore') }}</button>
+            <button
+              class="btn btn-sm flex-fill" style="font-size:0.75rem;"
+              :class="posDeliveryMode==='delivery' ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
+              @click="posDeliveryMode='delivery'"
+            >{{ t('admin.pos.deliverToAddress') }}</button>
+          </div>
+          <input
+            v-if="posDeliveryMode==='delivery'" v-model="posDeliveryAddress" class="form-control form-control-sm"
+            style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);"
+            :placeholder="t('admin.pos.deliveryAddressPlaceholder')"
+          />
+        </div>
         <!-- Tong tien -->
         <div class="p-2 border-top border-secondary d-flex flex-column gap-1">
           <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.subtotalLabel') }}</span><span>{{ formatPrice(posCartTotal) }}</span></div>
           <div v-if="posGiamGia > 0" class="d-flex justify-content-between text-success small"><span>{{ t('checkout.discount') }}</span><span>-{{ formatPrice(posGiamGia) }}</span></div>
-          <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.shippingFeeLabel') }}</span><span>{{ posFee===0?t('admin.pos.free'):formatPrice(posFee) }}</span></div>
+          <div v-if="posDeliveryMode==='delivery'" class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.shippingFeeLabel') }}</span><span>{{ posFee===0?t('admin.pos.free'):formatPrice(posFee) }}</span></div>
           <div class="d-flex justify-content-between fw-bold"><span>{{ t('admin.pos.totalLabel') }}</span><span>{{ formatPrice(posGrandTotal) }}</span></div>
         </div>
         <!-- Phuong thuc thanh toan -->
@@ -743,10 +835,29 @@ const posPlaceOrder = async () => {
               :style="posPaymentMethod === m
                 ? 'background:rgba(244,63,94,0.12);border:1.5px solid var(--accent);color:var(--accent-fg);'
                 : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
-              @click="posPaymentMethod = m"
+              @click="posPaymentMethod = m; posQrScanned = false"
             >
               <component :is="paymentMethodIcon(m)" :size="18" />
               <span>{{ paymentMethodLabel(m) }}</span>
+            </button>
+          </div>
+          <div v-if="posPaymentMethod === 'chuyen_khoan'" class="d-flex flex-column align-items-center gap-2 p-3 rounded-3" style="background:var(--bg-card-inset);">
+            <img
+              v-if="!posQrImageFailed" :src="posQrImageUrl" alt="VietQR" style="width:160px;height:160px;border-radius:10px;background:#fff;padding:4px;"
+              @error="posQrImageFailed = true"
+            />
+            <div
+              v-else class="d-flex flex-column align-items-center justify-content-center text-center small"
+              style="width:160px;height:160px;border-radius:10px;background:var(--bg-card-alt);color:var(--text-secondary);gap:6px;"
+            >
+              <ImageOff :size="24" />{{ t('checkout.qrImageFailed') }}
+            </div>
+            <button
+              class="btn btn-sm w-100" :class="posQrScanned ? 'btn-success' : 'btn-outline-warning'"
+              @click="posQrScanned = !posQrScanned"
+            >
+              <Check v-if="posQrScanned" :size="14" style="vertical-align:-2px;" />
+              {{ posQrScanned ? t('admin.pos.qrScannedConfirmed') : t('admin.pos.simulateQrScan') }}
             </button>
           </div>
         </div>
@@ -763,7 +874,7 @@ const posPlaceOrder = async () => {
           <div class="d-flex gap-2">
             <button class="btn btn-sm btn-outline-secondary" @click="posReset">{{ t('admin.pos.reset') }}</button>
             <button class="btn btn-sm btn-outline-info" :disabled="!posCart.length" @click="posHoldOrder">{{ t('admin.pos.holdOrder') }}</button>
-            <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" :disabled="posStage !== 'selling' || !posCart.length || !posPaymentMethod || posPlacing" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
+            <button class="btn btn-sm btn-warning text-dark fw-bold" style="flex:2;" :disabled="posStage !== 'selling' || !posCart.length || !posPaymentMethod || posPlacing || (posPaymentMethod === 'chuyen_khoan' && !posQrScanned)" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
           </div>
         </div>
       </template>
@@ -846,12 +957,21 @@ const posPlaceOrder = async () => {
         <div v-else-if="serialPickerList.length===0" class="text-secondary small text-center py-4">{{ t('admin.pos.noSerialAvailable') }}</div>
         <button
           v-for="s in serialPickerList" v-else :key="s.chiTietId"
-          class="btn btn-outline-warning d-flex justify-content-between align-items-center"
+          class="btn d-flex justify-content-between align-items-center"
+          :class="serialPickerSwapChiTietId == null && serialPickerChosenIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-warning'"
           style="font-family:monospace;font-size:0.85rem;"
-          @click="posSelectSerial(s)"
+          @click="serialPickerSwapChiTietId != null ? posSelectSerial(s) : posToggleSerial(s)"
         >
           <span>{{ s.soSerial }}</span>
           <span class="text-secondary" style="font-size:0.7rem;">{{ formatDate(s.ngayNhapKho) }}</span>
+        </button>
+      </div>
+      <div v-if="serialPickerSwapChiTietId == null" class="p-3 border-top border-secondary">
+        <button
+          class="btn btn-warning text-dark fw-bold w-100" :disabled="serialPickerChosenIds.size === 0"
+          @click="posAddChosenSerials"
+        >
+          {{ t('admin.pos.addChosenSerials', { count: serialPickerChosenIds.size }) }}
         </button>
       </div>
     </div>
