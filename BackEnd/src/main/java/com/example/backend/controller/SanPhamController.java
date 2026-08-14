@@ -3,7 +3,9 @@ package com.example.backend.controller;
 import com.example.backend.entity.SanPham;
 import com.example.backend.request.SanPhamRequest;
 import com.example.backend.response.SanPhamResponse;
+import com.example.backend.response.LichSuThayDoiSanPhamResponse;
 import com.example.backend.service.SanPhamService;
+import com.example.backend.service.LichSuThayDoiSanPhamService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/san-pham")
@@ -19,6 +22,9 @@ public class SanPhamController {
 
     @Autowired
     private SanPhamService sanPhamService;
+
+    @Autowired
+    private LichSuThayDoiSanPhamService lichSuThayDoiSanPhamService;
 
     @GetMapping("hien-thi")
     public Page<SanPhamResponse> getAll(
@@ -61,5 +67,11 @@ public class SanPhamController {
     @GetMapping("/{id}/co-giao-dich")
     public boolean hasTransactionHistory(@PathVariable Integer id) {
         return sanPhamService.hasTransactionHistory(id);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
+    @GetMapping("/{id}/lich-su")
+    public List<LichSuThayDoiSanPhamResponse> getLichSu(@PathVariable Integer id) {
+        return lichSuThayDoiSanPhamService.layLichSu(id);
     }
 }

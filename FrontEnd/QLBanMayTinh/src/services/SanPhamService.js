@@ -23,3 +23,5 @@ export const remove = (id) => del(`/api/san-pham/delete/${id}`);
 
 // Đã có biến thể nào qua giao dịch chưa — gọi trước khi hiện hộp thoại xóa.
 export const hasTransactionHistory = (id) => get(`/api/san-pham/${id}/co-giao-dich`);
+
+export const getLichSu = (id) => get(`/api/san-pham/${id}/lich-su`);
