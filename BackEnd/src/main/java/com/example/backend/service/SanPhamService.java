@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.BienTheSanPham;
+import com.example.backend.entity.NhanVien;
 import com.example.backend.entity.SanPham;
 import com.example.backend.repository.*;
 import com.example.backend.request.SanPhamRequest;
@@ -38,6 +39,8 @@ public class SanPhamService {
     private DmGpuRepository dmGpuRepository;
     @Autowired
     private BienTheSanPhamService bienTheSanPhamService;
+    @Autowired
+    private LichSuThayDoiSanPhamService lichSuThayDoiSanPhamService;
 
     public Page<SanPhamResponse> hienThiSanPham(String keyword, Integer danhMucId,
                                                  Integer thuongHieuId, String trangThai,
@@ -83,6 +86,15 @@ public class SanPhamService {
         SanPham sanPham = sanPhamRepository.findById(sanPhamId)
                 .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại với id: " + sanPhamId));
 
+        String oldTenSanPham = sanPham.getTenSanPham();
+        Integer oldThuongHieuId = sanPham.getThuongHieu() != null ? sanPham.getThuongHieu().getThuongHieuId() : null;
+        Integer oldDanhMucId = sanPham.getDanhMuc() != null ? sanPham.getDanhMuc().getId() : null;
+        Integer oldNhaCungCapId = sanPham.getNhaCungCap() != null ? sanPham.getNhaCungCap().getNhaCungCapId() : null;
+        String oldLoaiSanPham = sanPham.getLoaiSanPham();
+        String oldMoTa = sanPham.getMoTa();
+        String oldHinhAnhChinh = sanPham.getHinhAnhChinh();
+        String oldTrangThai = sanPham.getTrangThai();
+
         BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao");
         if (request.getNgayTao() != null) sanPham.setNgayTao(request.getNgayTao());
 
@@ -92,6 +104,16 @@ public class SanPhamService {
                 ? nhaCungCapRepository.getReferenceById(request.getNhaCungCapId()) : null);
 
         sanPhamRepository.save(sanPham);
+
+        NhanVien nguoiSua = lichSuThayDoiSanPhamService.nguoiSuaHienTai();
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, null, "san_pham", "tenSanPham", oldTenSanPham, sanPham.getTenSanPham(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, null, "san_pham", "thuongHieuId", oldThuongHieuId, request.getThuongHieuId(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, null, "san_pham", "danhMucId", oldDanhMucId, request.getDanhMucId(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, null, "san_pham", "nhaCungCapId", oldNhaCungCapId, request.getNhaCungCapId(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, null, "san_pham", "loaiSanPham", oldLoaiSanPham, sanPham.getLoaiSanPham(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, null, "san_pham", "moTa", oldMoTa, sanPham.getMoTa(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, null, "san_pham", "hinhAnhChinh", oldHinhAnhChinh, sanPham.getHinhAnhChinh(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, null, "san_pham", "trangThai", oldTrangThai, sanPham.getTrangThai(), nguoiSua);
 
         if (request.getBienTheId() != null) {
             BienTheSanPham bt = bienTheSanPhamRepository.findById(request.getBienTheId())
