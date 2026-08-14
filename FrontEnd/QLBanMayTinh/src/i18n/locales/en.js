@@ -729,6 +729,22 @@ export default {
       searchPlaceholder: "Search product name, SKU...",
     },
 
+    productDetail: {
+      loading: "Loading...",
+      breadcrumb: "Products",
+      editButton: "Edit",
+      tabInfo: "Product info",
+      tabVariants: "Variants",
+      tabHistory: "Change history",
+      cardBasic: "Basic info",
+      cardStats: "Quick stats",
+      releaseDate: "Release date",
+      variantCount: "Variant count",
+      priceRange: "Price range",
+      totalStock: "Total stock",
+      updatedAt: "Last updated",
+    },
+
     detailModal: {
       titlePrefix: "Details:",
       edit: "Edit",

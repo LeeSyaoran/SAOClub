@@ -9,6 +9,7 @@ const NotFoundPage = () => import("@/pages/NotFoundPage.vue");
 const routes = [
   { path: "/", name: "home", component: CustomerPage },
   { path: "/admin", name: "admin", component: AdminPage, meta: { requiresAuth: true, roles: ["admin"] } },
+  { path: "/admin/san-pham/:id", name: "admin-san-pham-detail", component: AdminPage, meta: { requiresAuth: true, roles: ["admin"] } },
   { path: "/staff", name: "staff", component: StaffPage, meta: { requiresAuth: true, roles: ["nhan_vien"] } },
   { path: "/kho", name: "warehouse", component: WarehouseManagementPage, meta: { requiresAuth: true, roles: ["quan_kho"] } },
   { path: "/account", name: "account", component: AccountPage, meta: { requiresAuth: true, roles: ["khach_hang"] } },

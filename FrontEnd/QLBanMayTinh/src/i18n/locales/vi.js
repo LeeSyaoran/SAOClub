@@ -729,6 +729,22 @@ export default {
       searchPlaceholder: "Tìm tên sản phẩm, SKU...",
     },
 
+    productDetail: {
+      loading: "Đang tải...",
+      breadcrumb: "Sản phẩm",
+      editButton: "Chỉnh sửa",
+      tabInfo: "Thông tin sản phẩm",
+      tabVariants: "Biến thể sản phẩm",
+      tabHistory: "Lịch sử thay đổi",
+      cardBasic: "Thông tin cơ bản",
+      cardStats: "Thống kê nhanh",
+      releaseDate: "Ngày ra mắt",
+      variantCount: "Số biến thể",
+      priceRange: "Khoảng giá bán",
+      totalStock: "Tổng tồn kho",
+      updatedAt: "Cập nhật gần nhất",
+    },
+
     detailModal: {
       titlePrefix: "Chi tiết:",
       edit: "Sửa",

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, reactive, watch } from "vue";
 import { AuthStore } from "../stores/index.js";
+import { useRoute } from "vue-router";
 import { t, I18nStore, LOCALES, setLocale } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
 import * as NhanVienService  from "../services/NhanVienService.js";
@@ -26,6 +27,7 @@ import ToastHost from "../components/common/ToastHost.vue";
 import ProductsTable from "../components/admin/ProductsTable.vue";
 import CustomersTable from "../components/admin/CustomersTable.vue";
 import CustomerDetailPage from "../components/admin/CustomerDetailPage.vue";
+import SanPhamDetailPage from "../components/admin/SanPhamDetailPage.vue";
 import OrdersTable from "../components/admin/OrdersTable.vue";
 import PosPanel from "../components/admin/PosPanel.vue";
 import InventoryPanel from "../components/admin/InventoryPanel.vue";
@@ -59,13 +61,15 @@ import {
 defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
 
 // ── Navigation ───────────────────────────────────────────────────────────────
-const currentPage = ref("dashboard");
+const route = useRoute();
+const currentPage = ref(route.params.id ? "san-pham-detail" : "dashboard");
 // Sidebar bật/tắt được ở MỌI kích thước màn hình bằng nút hamburger ở topbar — mặc định
 // mở trên desktop (>=768px), đóng trên mobile. Trên mobile sidebar hiện dạng overlay đè lên
 // nội dung; trên desktop nó ẩn/hiện ngay trong layout (xem CSS .adm-sidebar cuối file).
 // ponytail: không đồng bộ lại khi resize cửa sổ giữa chừng qua mốc 768px, F5 lại nếu cần.
 const sidebarOpen = ref(window.matchMedia("(min-width: 768px)").matches);
 const selectedCustomerId = ref(null);
+const selectedSanPhamId = ref(route.params.id ? Number(route.params.id) : null);
 const openCustomerDetail = (id) => {
   selectedCustomerId.value = id;
   currentPage.value = "customer-detail";
@@ -1267,6 +1271,11 @@ onUnmounted(() => {
         <!-- ── Chi tiet khach hang ── -->
         <section v-show="currentPage === 'customer-detail'">
           <CustomerDetailPage v-if="selectedCustomerId" :key="selectedCustomerId" :customer-id="selectedCustomerId" @back="() => { currentPage = 'customers'; selectedCustomerId = null; }" />
+        </section>
+
+        <!-- ── Chi tiet san pham (mo qua tab moi, xem ProductsTable.vue openDetail) ── -->
+        <section v-show="currentPage === 'san-pham-detail'">
+          <SanPhamDetailPage v-if="selectedSanPhamId" :key="selectedSanPhamId" :san-pham-id="selectedSanPhamId" />
         </section>
 
         <!-- ── Kho hang: dieu huong qua submenu sidebar (adm-subnav), khong con thanh tab ngang ── -->
