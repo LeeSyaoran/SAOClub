@@ -24,7 +24,10 @@ onMounted(() => { ensureProducts(); });
 // Danh sách PHẲNG mọi biến thể (sửa/thêm/xóa trực tiếp) — tách ra khỏi ProductsTable.vue
 // (vốn trước đây phải mở "Chi tiết sản phẩm" rồi mới sửa được 1 biến thể) để đứng ngang
 // hàng CPU/RAM/GPU/Ổ cứng, đúng yêu cầu "1 tab riêng bên ngoài".
-const props = defineProps({ readonly: { type: Boolean, default: false } });
+const props = defineProps({
+  readonly: { type: Boolean, default: false },
+  filterSanPhamId: { type: Number, default: null },
+});
 
 // ── Danh muc/hang/CPU/RAM/o cung/GPU — chi can khi mo form them/sua bien the. Copy nguyen
 // pattern tu ProductsTable.vue (Task goc) — 2 component doc lap, khong dang chia se state.
@@ -63,7 +66,10 @@ const suppliers = computed(() => SuppliersStore.items ?? []);
 const variantSearch = ref("");
 const filteredVariants = computed(() => {
   const q = variantSearch.value.trim().toLowerCase();
-  const all = ProductsStore.items ?? [];
+  let all = ProductsStore.items ?? [];
+  if (props.filterSanPhamId != null) {
+    all = all.filter((p) => p.sanPhamId === props.filterSanPhamId);
+  }
   if (!q) return all;
   return all.filter((p) =>
     (p.tenSanPham ?? '').toLowerCase().includes(q) ||
