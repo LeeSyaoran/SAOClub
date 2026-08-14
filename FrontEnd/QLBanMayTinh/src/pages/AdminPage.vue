@@ -70,6 +70,16 @@ const currentPage = ref(route.params.id ? "san-pham-detail" : "dashboard");
 const sidebarOpen = ref(window.matchMedia("(min-width: 768px)").matches);
 const selectedCustomerId = ref(null);
 const selectedSanPhamId = ref(route.params.id ? Number(route.params.id) : null);
+// AdminPage duoc lazy-import 1 lan (router/index.js) nen /admin va /admin/san-pham/:id dung
+// chung 1 instance component qua <router-view> (App.vue khong co :key) — setup() khong chay
+// lai khi chuyen giua 2 route nay, phai tu watch route.params.id de dong bo lai currentPage.
+watch(
+  () => route.params.id,
+  (id) => {
+    currentPage.value = id ? "san-pham-detail" : "dashboard";
+    selectedSanPhamId.value = id ? Number(id) : null;
+  },
+);
 const openCustomerDetail = (id) => {
   selectedCustomerId.value = id;
   currentPage.value = "customer-detail";

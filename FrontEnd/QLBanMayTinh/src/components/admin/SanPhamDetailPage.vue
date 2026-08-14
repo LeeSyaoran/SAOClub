@@ -111,10 +111,10 @@ const back = () => router.push("/admin");
               </div>
             </div>
             <div class="small text-secondary d-flex flex-column gap-1">
-              <div>{{ t("admin.productModal.brandLabel") }}: <span class="text-primary">{{ productInfo.tenThuongHieu }}</span></div>
-              <div>{{ t("admin.productModal.categoryLabel") }}: <span class="text-primary">{{ productInfo.tenDanhMuc }}</span></div>
-              <div>{{ t("admin.productModal.supplierLabel") }}: <span class="text-primary">{{ productInfo.tenNhaCungCap || t("admin.productModal.noneOption") }}</span></div>
-              <div>{{ t("admin.productModal.typeLabel") }}: <span class="text-primary">{{ productInfo.loaiSanPham }}</span></div>
+              <div>{{ t("admin.productModal.brandLabel").replace(" *", "") }}: <span class="text-primary">{{ productInfo.tenThuongHieu }}</span></div>
+              <div>{{ t("admin.productModal.categoryLabel").replace(" *", "") }}: <span class="text-primary">{{ productInfo.tenDanhMuc }}</span></div>
+              <div>{{ t("admin.productModal.supplierLabel").replace(" *", "") }}: <span class="text-primary">{{ productInfo.tenNhaCungCap || t("admin.productModal.noneOption") }}</span></div>
+              <div>{{ t("admin.productModal.typeLabel").replace(" *", "") }}: <span class="text-primary">{{ productInfo.loaiSanPham }}</span></div>
               <div>{{ t("admin.productDetail.releaseDate") }}: <span class="text-primary">{{ formatDateTime(productInfo.ngayTao) }}</span></div>
               <div v-if="productInfo.moTa">{{ t("admin.productModal.descLabel") }}: <span class="text-primary">{{ productInfo.moTa }}</span></div>
             </div>
