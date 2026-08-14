@@ -504,6 +504,29 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'lich_su_thay_doi_san_pham')
+BEGIN
+    CREATE TABLE lich_su_thay_doi_san_pham (
+        lich_su_id   INT           IDENTITY(1,1) PRIMARY KEY,
+        san_pham_id  INT           NOT NULL,
+        bien_the_id  INT           NULL,
+        doi_tuong    NVARCHAR(20)  NOT NULL
+            CONSTRAINT CK_lstsp_doi_tuong CHECK (doi_tuong IN (N'san_pham', N'bien_the')),
+        ten_truong   NVARCHAR(50)  NOT NULL,
+        gia_tri_cu   NVARCHAR(500) NULL,
+        gia_tri_moi  NVARCHAR(500) NULL,
+        nhan_vien_id INT           NULL,
+        thoi_gian    DATETIME      NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT FK_lstsp_san_pham  FOREIGN KEY (san_pham_id) REFERENCES san_pham(san_pham_id) ON DELETE CASCADE,
+        CONSTRAINT FK_lstsp_bien_the  FOREIGN KEY (bien_the_id) REFERENCES bien_the_san_pham(bien_the_id),
+        CONSTRAINT FK_lstsp_nhan_vien FOREIGN KEY (nhan_vien_id) REFERENCES nhan_vien(nhan_vien_id)
+    );
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_lstsp_san_pham')
+    CREATE INDEX IX_lstsp_san_pham ON lich_su_thay_doi_san_pham(san_pham_id, thoi_gian DESC);
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'thanh_toan')
 BEGIN
     CREATE TABLE thanh_toan (
