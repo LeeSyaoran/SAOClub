@@ -59,9 +59,13 @@ const showDetailModal = ref(false);
 const detailModalSanPhamId = ref(null);
 const detailModalSanPhamName = ref("");
 const openDetail = (sanPhamId, name) => {
-  detailModalSanPhamId.value = sanPhamId;
-  detailModalSanPhamName.value = name;
-  showDetailModal.value = true;
+  if (props.readonly) {
+    detailModalSanPhamId.value = sanPhamId;
+    detailModalSanPhamName.value = name;
+    showDetailModal.value = true;
+    return;
+  }
+  window.open(`${location.origin}${location.pathname}#/admin/san-pham/${sanPhamId}`, "_blank");
 };
 
 // ── Products CRUD (chỉ tạo mới — sửa/thêm biến thể đã chuyển sang BienTheTable.vue,
