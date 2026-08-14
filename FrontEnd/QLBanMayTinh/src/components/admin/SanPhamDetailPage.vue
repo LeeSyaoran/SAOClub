@@ -7,12 +7,27 @@ import { formatPrice, formatDateTime, statusLabel } from "../../utils/adminForma
 import ProductFormModal from "./ProductFormModal.vue";
 import BienTheTable from "./BienTheTable.vue";
 import { Image } from "@lucide/vue";
+import * as SanPhamService from "../../services/SanPhamService.js";
 
 const props = defineProps({ sanPhamId: { type: Number, required: true } });
 const router = useRouter();
 
+const history = ref([]);
+const historyLoading = ref(false);
+const loadHistory = async () => {
+  historyLoading.value = true;
+  try {
+    history.value = await SanPhamService.getLichSu(props.sanPhamId);
+  } catch (e) {
+    history.value = [];
+  } finally {
+    historyLoading.value = false;
+  }
+};
+
 onMounted(() => {
   ensureProducts();
+  loadHistory();
 });
 
 const productVariants = computed(() =>
@@ -143,7 +158,42 @@ const back = () => router.push("/admin");
       <BienTheTable :filter-san-pham-id="sanPhamId" />
     </section>
 
-    <section v-show="activeTab === 'history'"></section>
+    <section v-show="activeTab === 'history'">
+      <div v-if="historyLoading" class="text-secondary small">{{ t("admin.productDetail.loading") }}</div>
+      <div v-else class="table-responsive">
+        <table
+          class="table table-hover table-sm align-middle"
+          style="--bs-table-bg: var(--bg-card); --bs-table-color: var(--text-primary); --bs-table-border-color: var(--border-color-soft)"
+        >
+          <thead>
+            <tr>
+              <th>{{ t("admin.productDetail.historyColTime") }}</th>
+              <th>{{ t("admin.productDetail.historyColUser") }}</th>
+              <th>{{ t("admin.productDetail.historyColTarget") }}</th>
+              <th>{{ t("admin.productDetail.historyColField") }}</th>
+              <th>{{ t("admin.productDetail.historyColOld") }}</th>
+              <th>{{ t("admin.productDetail.historyColNew") }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="h in history" :key="h.lichSuId">
+              <td class="text-secondary" style="font-size: 0.78rem">{{ formatDateTime(h.thoiGian) }}</td>
+              <td>{{ h.tenNhanVien || t("admin.productDetail.historyUnknownUser") }}</td>
+              <td>
+                <span v-if="h.doiTuong === 'bien_the'">{{ t("admin.productDetail.historyTargetVariant") }} ({{ h.maSku }})</span>
+                <span v-else>{{ t("admin.productDetail.historyTargetProduct") }}</span>
+              </td>
+              <td>{{ t(`admin.productDetail.fields.${h.tenTruong}`) }}</td>
+              <td class="text-secondary">{{ h.giaTriCu ?? "—" }}</td>
+              <td class="text-primary">{{ h.giaTriMoi ?? "—" }}</td>
+            </tr>
+            <tr v-if="history.length === 0">
+              <td colspan="6" class="text-center text-secondary">{{ t("admin.productDetail.historyEmpty") }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <ProductFormModal v-model="showEditModal" mode="edit" :san-pham-id="sanPhamId" @saved="onSaved" />
   </div>
