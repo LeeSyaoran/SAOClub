@@ -139,7 +139,9 @@ const back = () => router.push("/admin");
       </div>
     </section>
 
-    <section v-show="activeTab === 'variants'"></section>
+    <section v-show="activeTab === 'variants'">
+      <BienTheTable :filter-san-pham-id="sanPhamId" />
+    </section>
 
     <section v-show="activeTab === 'history'"></section>
 
