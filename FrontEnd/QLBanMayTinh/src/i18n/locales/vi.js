@@ -549,6 +549,7 @@ export default {
     pageMeta: {
       dashboard:    { title: "Dashboard",              sub: "Tổng quan hệ thống" },
       products:     { title: "Sản phẩm",                sub: "Quản lý danh sách sản phẩm" },
+      bienThe:      { title: "Biến thể",                sub: "Toàn bộ biến thể của mọi sản phẩm" },
       orders:       { title: "Đơn hàng",                sub: "Quản lý đơn hàng" },
       customers:    { title: "Khách hàng",              sub: "Quản lý khách hàng" },
       customerDetail: { title: "Chi tiết khách hàng", sub: "Thông tin, lịch sử mua hàng, ưu đãi" },

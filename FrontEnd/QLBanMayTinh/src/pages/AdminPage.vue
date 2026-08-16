@@ -42,6 +42,7 @@ import AdminDashboard from "../components/admin/AdminDashboard.vue";
 import AdminReports from "../components/admin/AdminReports.vue";
 import AdminSettings from "../components/admin/AdminSettings.vue";
 import HangHoa from "../components/HangHoa.vue";
+import BienTheTable from "../components/admin/BienTheTable.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
@@ -54,7 +55,7 @@ import * as DmDoiThuongService from "../services/DmDoiThuongService.js";
 import {
   BarChart3, Laptop, Receipt, Users, User, Package, Undo2, Star, Tag, Gift,
   Briefcase, ShoppingCart, TrendingUp, Settings, X, Menu, Moon, Sun, Bell,
-  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive,
+  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive, Layers,
 } from '@lucide/vue';
 
 defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
@@ -97,6 +98,7 @@ const navigate = (page) => {
 const PAGE_META = {
   dashboard: { titleKey: "admin.pageMeta.dashboard.title", subKey: "admin.pageMeta.dashboard.sub", icon: BarChart3 },
   products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: Laptop },
+  "bien-the": { titleKey: "admin.pageMeta.bienThe.title", subKey: "admin.pageMeta.bienThe.sub", icon: Layers },
   orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: Receipt },
   customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: Users },
   "customer-detail": { titleKey: "admin.pageMeta.customerDetail.title", subKey: "admin.pageMeta.customerDetail.sub", icon: User },
@@ -1100,6 +1102,9 @@ onUnmounted(() => {
         <div class="adm-nav adm-subnav" :class="{active: currentPage==='products'}" @click="navigate('products')">
           <Laptop class="adm-icon" :size="15" /> {{ t('admin.productsTabs.sanPham') }}
         </div>
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='bien-the'}" @click="navigate('bien-the')">
+          <Layers class="adm-icon" :size="15" /> {{ t('admin.productsTabs.bienThe') }}
+        </div>
 
         <div class="adm-nav-label">{{ t('admin.sidebar.groupCustomers') }}</div>
         <div class="adm-nav adm-subnav" :class="{active: currentPage==='customers' || currentPage==='customer-detail'}" @click="navigate('customers')">
@@ -1252,6 +1257,11 @@ onUnmounted(() => {
         <!-- ── San pham ── -->
         <section v-show="currentPage === 'products'">
           <HangHoa />
+        </section>
+
+        <!-- ── Bien the: tat ca bien the cua moi san pham (khong loc theo 1 san pham) ── -->
+        <section v-show="currentPage === 'bien-the'">
+          <BienTheTable />
         </section>
 
         <!-- ── Don hang ── -->

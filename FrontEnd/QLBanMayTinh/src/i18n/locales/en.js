@@ -549,6 +549,7 @@ export default {
     pageMeta: {
       dashboard:    { title: "Dashboard",       sub: "System overview" },
       products:     { title: "Products",        sub: "Manage product list" },
+      bienThe:      { title: "Variants",        sub: "All variants across every product" },
       orders:       { title: "Orders",          sub: "Manage orders" },
       customers:    { title: "Customers",       sub: "Manage customers" },
       customerDetail: { title: "Customer Detail", sub: "Info, purchase history, perks" },
