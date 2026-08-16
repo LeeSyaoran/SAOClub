@@ -2508,5 +2508,6 @@ ALTER TABLE don_hang ADD CONSTRAINT CK_dh_trangthai
     CHECK (trang_thai_don_hang IN (N'pending', N'confirmed', N'processing', N'shipping', N'out_for_delivery', N'awaiting_confirmation', N'delivered', N'cancelled', N'returned'));
 GO
 GO
-select*from san_pham
+select*from ton_kho
 select*from bien_the_san_pham
+select*from chi_tiet_san_pham
