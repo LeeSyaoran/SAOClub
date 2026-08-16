@@ -625,7 +625,7 @@ const exportPhieuNhapExcel = () => {
     <template v-if="khoTab==='ton-kho'">
       <div class="row g-3 mb-3">
         <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #60a5fa;">
             <div class="card-body d-flex align-items-center gap-3">
               <div
                 class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -641,7 +641,7 @@ const exportPhieuNhapExcel = () => {
           </div>
         </div>
         <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #34d399;">
             <div class="card-body d-flex align-items-center gap-3">
               <div
                 class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -657,7 +657,7 @@ const exportPhieuNhapExcel = () => {
           </div>
         </div>
         <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #facc15;">
             <div class="card-body d-flex align-items-center gap-3">
               <div
                 class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -673,7 +673,7 @@ const exportPhieuNhapExcel = () => {
           </div>
         </div>
         <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid var(--accent-fg);">
             <div class="card-body d-flex align-items-center gap-3">
               <div
                 class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -707,7 +707,7 @@ const exportPhieuNhapExcel = () => {
           <input
             v-model="inventorySearch" class="form-control form-control-sm"
             :placeholder="t('admin.inventory.searchPlaceholder')"
-            style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
+            style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;border-radius:999px;padding-left:14px;"
           />
         </div>
       </div>
@@ -809,7 +809,7 @@ const exportPhieuNhapExcel = () => {
     <template v-else-if="khoTab==='phieu-nhap'">
       <div class="row g-3 mb-3">
         <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #a78bfa;">
             <div class="card-body d-flex align-items-center gap-3">
               <div
                 class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -825,7 +825,7 @@ const exportPhieuNhapExcel = () => {
           </div>
         </div>
         <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #facc15;">
             <div class="card-body d-flex align-items-center gap-3">
               <div
                 class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -841,7 +841,7 @@ const exportPhieuNhapExcel = () => {
           </div>
         </div>
         <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #22c55e;">
             <div class="card-body d-flex align-items-center gap-3">
               <div
                 class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -857,7 +857,7 @@ const exportPhieuNhapExcel = () => {
           </div>
         </div>
         <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);">
+          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid var(--accent-fg);">
             <div class="card-body d-flex align-items-center gap-3">
               <div
                 class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -876,7 +876,7 @@ const exportPhieuNhapExcel = () => {
 
       <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
         <input
-          v-model="phieuNhapSearch" class="form-control form-control-sm" style="max-width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;"
+          v-model="phieuNhapSearch" class="form-control form-control-sm" style="max-width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;border-radius:999px;padding-left:14px;"
           :placeholder="t('admin.phieuNhap.searchPlaceholder')"
         />
         <select v-model="phieuNhapStatusFilter" class="form-select form-select-sm" style="width:auto;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.8rem;">
@@ -1233,5 +1233,14 @@ const exportPhieuNhapExcel = () => {
 <style scoped>
 .text-light {
   color: var(--text-primary) !important;
+}
+
+/* Nut/badge bo tron pill — giu tinh than form cua KhoHang.vue nhung dung bien mau cua
+   theme hien tai (van doi mau theo dark/light mode). */
+.btn {
+  border-radius: 999px;
+}
+.badge {
+  border-radius: 999px;
 }
 </style>

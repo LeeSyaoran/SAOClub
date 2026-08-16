@@ -41,7 +41,7 @@ import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import AdminDashboard from "../components/admin/AdminDashboard.vue";
 import AdminReports from "../components/admin/AdminReports.vue";
 import AdminSettings from "../components/admin/AdminSettings.vue";
-import QuanLyHangHoa from "../components/QuanLyHangHoa.vue";
+import HangHoa from "../components/HangHoa.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
@@ -1257,9 +1257,9 @@ onUnmounted(() => {
           @back-to-today="statusChartDate = toDateInputValue(new Date())"
         />
 
-        <!-- ── San pham: gop San pham + Kho vao 1 component (QuanLyHangHoa.vue) ── -->
+        <!-- ── San pham ── -->
         <section v-show="currentPage === 'products'">
-          <QuanLyHangHoa />
+          <HangHoa />
         </section>
 
         <!-- ── Don hang ── -->
