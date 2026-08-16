@@ -26,10 +26,6 @@
           <i class="fa fa-plus"></i> Tạo mới
         </button>
 
-        <button class="hh-btn hh-btn--ghost" disabled title="Cần thêm API import ở backend">
-          <i class="fa fa-upload"></i> Nhập file
-        </button>
-
         <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDaLoc.length" @click="exportCsv">
           <i class="fa fa-download"></i> Xuất file
           <span v-if="selectedIds.length" class="hh-chip">{{ selectedIds.length }}</span>
@@ -108,16 +104,6 @@
           </label>
 
           <label class="hh-field">
-            <span>Tồn kho</span>
-            <select v-model="filters.tonKho">
-              <option value="">Tất cả</option>
-              <option value="con">Còn hàng</option>
-              <option value="sap_het">Sắp hết (≤ 5)</option>
-              <option value="het">Hết hàng</option>
-            </select>
-          </label>
-
-          <label class="hh-field">
             <span>Giá bán từ</span>
             <input type="number" min="0" step="100000" v-model="filters.giaTu" placeholder="0" />
           </label>
@@ -155,8 +141,6 @@
               <th>Tên sản phẩm</th>
               <th class="ta-r">Giá bán</th>
               <th class="ta-r">Giá vốn</th>
-              <th class="ta-r">Tồn kho</th>
-              <th class="ta-r">Khách đặt</th>
               <th>Trạng thái</th>
               <th>Ngày tạo</th>
               <th>Ngày cập nhật</th>
@@ -188,8 +172,6 @@
               </td>
               <td class="ta-r">{{ group.khoangGia }}</td>
               <td class="ta-r hh-muted">{{ group.khoangGiaVon }}</td>
-              <td class="ta-r"><strong>{{ formatNumber(group.tongTon) }}</strong></td>
-              <td class="ta-r">{{ formatNumber(group.tongDat) }}</td>
               <td><span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span></td>
               <td class="hh-muted">{{ formatDate(group.ngayTao) }}</td>
               <td class="hh-muted">{{ formatDate(group.ngayCapNhat) }}</td>
@@ -215,8 +197,6 @@
                   <td>{{ item.tenPhienBan }}</td>
                   <td class="ta-r"><strong>{{ formatNumber(item.giaBan) }}</strong></td>
                   <td class="ta-r hh-muted">{{ formatNumber(item.giaVon) }}</td>
-                  <td class="ta-r" :class="{ 'hh-danger': item.tonKho === 0 }">{{ formatNumber(item.tonKho) }}</td>
-                  <td class="ta-r">{{ formatNumber(item.khachDat) }}</td>
                   <td><span class="hh-tag" :class="tagClass(item.trangThai)">{{ nhanTrangThai(item.trangThai) }}</span></td>
                   <td class="hh-muted">{{ formatDate(item.ngayTao) }}</td>
                   <td></td>
@@ -225,7 +205,7 @@
 
                 <!-- ---- Chi tiết phiên bản ---- -->
                 <tr v-if="openedVariantId === item.bienTheId" class="hh-row-detail">
-                  <td colspan="12">
+                  <td colspan="10">
                     <div class="hh-detail">
                       <div class="hh-detail__head">
                         <img :src="item.hinhAnh || group.hinhAnh" class="hh-detail__img" alt="" @error="onImgError" />
@@ -250,8 +230,6 @@
                         <div><dt>Giá vốn</dt><dd>{{ formatNumber(item.giaVon) }} ₫</dd></div>
                         <div><dt>Giá bán</dt><dd>{{ formatNumber(item.giaBan) }} ₫</dd></div>
                         <div><dt>Bảo hành</dt><dd>{{ item.baoHanhThang ?? '—' }} tháng</dd></div>
-                        <div><dt>Tồn kho</dt><dd>{{ formatNumber(item.tonKho) }}</dd></div>
-                        <div><dt>Khách đặt</dt><dd>{{ formatNumber(item.khachDat) }}</dd></div>
                         <div><dt>CPU</dt><dd>{{ item.tenCpu || '—' }}</dd></div>
                         <div><dt>RAM</dt><dd>{{ item.tenRam || '—' }}</dd></div>
                         <div><dt>Ổ cứng</dt><dd>{{ item.tenOCung || '—' }}</dd></div>
@@ -800,7 +778,6 @@ const PIN_GOI_Y = ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh
 const HDH_GOI_Y = ['Windows 11 Home', 'Windows 11 Pro', 'macOS', 'Không kèm HĐH']
 
 const ANH_MAC_DINH = 'https://cdn-icons-png.flaticon.com/512/664/664457.png'
-const NGUONG_SAP_HET = 5
 const TOI_DA_BIEN_THE = 60
 
 /* ─── Tiện ích ─── */
@@ -847,7 +824,7 @@ const searchKeyword = ref('')
 const isFilterOpen = ref(false)
 const filters = reactive({
   trangThai: '', thuongHieuId: '', nhaCungCapId: '', phanLoai: '',
-  cpuId: '', ramId: '', mauSac: '', tonKho: '', giaTu: '', giaDen: ''
+  cpuId: '', ramId: '', mauSac: '', giaTu: '', giaDen: ''
 })
 
 const openedGroupId = ref(null)
@@ -1029,8 +1006,6 @@ const groups = computed(() => {
     return {
       ...g,
       phanLoai: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-      tongTon: g.variants.reduce((s, v) => s + v.tonKho, 0),
-      tongDat: g.variants.reduce((s, v) => s + v.khachDat, 0),
       khoangGia: khoangGia(g.variants.map((v) => v.giaBan)),
       khoangGiaVon: khoangGia(g.variants.map((v) => v.giaVon))
     }
@@ -1057,9 +1032,6 @@ const khopBoLoc = (group, v) => {
   if (filters.mauSac && v.mauSac !== filters.mauSac) return false
   if (filters.giaTu !== '' && v.giaBan < Number(filters.giaTu)) return false
   if (filters.giaDen !== '' && v.giaBan > Number(filters.giaDen)) return false
-  if (filters.tonKho === 'het' && v.tonKho !== 0) return false
-  if (filters.tonKho === 'sap_het' && (v.tonKho === 0 || v.tonKho > NGUONG_SAP_HET)) return false
-  if (filters.tonKho === 'con' && v.tonKho <= 0) return false
   return true
 }
 
@@ -1110,13 +1082,13 @@ const exportCsv = () => {
     : bienTheDaLoc.value
 
   const cols = ['Mã sản phẩm', 'Barcode', 'Tên sản phẩm', 'Mã SKU', 'Màu sắc', 'CPU', 'RAM', 'Ổ cứng', 'GPU',
-    'Màn hình', 'Giá vốn', 'Giá bán', 'Bảo hành (tháng)', 'Tồn kho', 'Khách đặt', 'Trạng thái', 'Thương hiệu', 'Nhà cung cấp']
+    'Màn hình', 'Giá vốn', 'Giá bán', 'Bảo hành (tháng)', 'Trạng thái', 'Thương hiệu', 'Nhà cung cấp']
   const esc = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`
   const lines = [cols.map(esc).join(',')]
 
   rows.forEach(({ g, v }) => {
     lines.push([g.maSanPham, g.barcode, g.tenSanPham, v.maSku, v.mauSac, v.tenCpu, v.tenRam, v.tenOCung, v.tenGpu,
-      v.kichThuocManHinh, v.giaVon, v.giaBan, v.baoHanhThang, v.tonKho, v.khachDat,
+      v.kichThuocManHinh, v.giaVon, v.giaBan, v.baoHanhThang,
       nhanTrangThai(v.trangThai), g.tenThuongHieu, g.tenNhaCungCap].map(esc).join(','))
   })
 
