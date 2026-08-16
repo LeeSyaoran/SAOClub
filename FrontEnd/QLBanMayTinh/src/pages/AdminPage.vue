@@ -54,7 +54,7 @@ import * as DmDoiThuongService from "../services/DmDoiThuongService.js";
 import {
   BarChart3, Laptop, Receipt, Users, User, Package, Undo2, Star, Tag, Gift,
   Briefcase, ShoppingCart, TrendingUp, Settings, X, Menu, Moon, Sun, Bell,
-  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive, Layers,
+  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive,
 } from '@lucide/vue';
 
 defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
@@ -584,11 +584,6 @@ const selectInventoryTab = (tab) => {
   inventoryMainTab.value = tab;
   navigate('inventory');
 };
-const productsMainTab = ref('sanPham');
-const selectProductsTab = (tab) => {
-  productsMainTab.value = tab;
-  navigate('products');
-};
 
 // khoTab + toàn bộ state/hàm của tab Tồn kho (inventorySearch, inventoryGrouped,
 // getVariantInfo, stockClass...) và tab Phiếu nhập kho (ensurePhieuNhapData,
@@ -1102,11 +1097,8 @@ onUnmounted(() => {
         </div>
 
         <div class="adm-nav-label">{{ t('admin.sidebar.products') }}</div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='products' && productsMainTab==='sanPham'}" @click="selectProductsTab('sanPham')">
+        <div class="adm-nav adm-subnav" :class="{active: currentPage==='products'}" @click="navigate('products')">
           <Laptop class="adm-icon" :size="15" /> {{ t('admin.productsTabs.sanPham') }}
-        </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='products' && productsMainTab==='bienThe'}" @click="selectProductsTab('bienThe')">
-          <Layers class="adm-icon" :size="15" /> {{ t('admin.productsTabs.bienThe') }}
         </div>
 
         <div class="adm-nav-label">{{ t('admin.sidebar.groupCustomers') }}</div>
