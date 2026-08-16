@@ -1,6 +1,11 @@
-﻿USE master;
+﻿use master;
 GO
 
+-- Luôn DROP + tạo lại database mỗi lần chạy file — SINGLE_USER trước để đá hết
+-- session khác đang giữ DB (vd tab query khác lỡ mở sẵn), tránh lỗi "database in use".
+-- Lưu ý: nếu vẫn treo ở bước này, khả năng cao là IntelliSense của SSMS đang tự giữ 1
+-- session nền trong chính DB này (Tools → Options → Text Editor → Transact-SQL →
+-- IntelliSense → tắt "Enable IntelliSense" rồi mở lại tab query để giải phóng session cũ).
 IF EXISTS (SELECT name FROM sys.databases WHERE name = N'QLBanMayTinh')
 BEGIN
     ALTER DATABASE QLBanMayTinh SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -15,6 +20,9 @@ GO
 USE QLBanMayTinh;
 GO
 
+-- ============================================================
+--  1. THƯƠNG HIỆU & DANH MỤC & NHÀ CUNG CẤP
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'thuong_hieu')
 BEGIN
     CREATE TABLE thuong_hieu (
@@ -40,14 +48,16 @@ BEGIN
     );
 END
 
+-- Bảng phân loại theo mục đích sử dụng (văn phòng, gaming, đồ họa,...)
+-- Tách riêng khỏi danh_muc để 1 sản phẩm có thể thuộc nhiều nhóm
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'phan_loai')
 BEGIN
     CREATE TABLE phan_loai (
         phan_loai_id    INT            IDENTITY(1,1) PRIMARY KEY,
-        ma_phan_loai    VARCHAR(30)    NOT NULL UNIQUE,   
-        ten_phan_loai   NVARCHAR(100)  NOT NULL,           
+        ma_phan_loai    VARCHAR(30)    NOT NULL UNIQUE,   -- key dùng cho query/filter: 'gaming', 'van_phong'...
+        ten_phan_loai   NVARCHAR(100)  NOT NULL,           -- tên hiển thị trên UI
         mo_ta           NVARCHAR(255)  NULL,
-        thu_tu          INT            NOT NULL DEFAULT 0, 
+        thu_tu          INT            NOT NULL DEFAULT 0, -- thứ tự hiện trên filter bar
         trang_thai      NVARCHAR(20)   NOT NULL DEFAULT N'active'
             CONSTRAINT CK_pl_trangthai CHECK (trang_thai IN (N'active', N'inactive'))
     );
@@ -70,6 +80,9 @@ BEGIN
 END
 GO
 
+-- ============================================================
+--  2. KHÁCH HÀNG & NHÂN VIÊN
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'khach_hang')
 BEGIN
     CREATE TABLE khach_hang (
@@ -95,7 +108,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chuc_vu')
 BEGIN
     CREATE TABLE chuc_vu (
         chuc_vu_id   INT            IDENTITY(1,1) PRIMARY KEY,
-        ma_chuc_vu   VARCHAR(30)    NOT NULL UNIQUE,  
+        ma_chuc_vu   VARCHAR(30)    NOT NULL UNIQUE,  -- role code dùng cho Spring Security
         ten_chuc_vu  NVARCHAR(100)  NOT NULL UNIQUE,
         cap_do       INT            NOT NULL DEFAULT 1 CONSTRAINT CK_cv_capdo CHECK (cap_do BETWEEN 0 AND 9),
         mo_ta        NVARCHAR(255)  NULL
@@ -139,10 +152,19 @@ BEGIN
 END
 GO
 
+-- ============================================================
+--  3. SẢN PHẨM GỐC
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham')
 BEGIN
     CREATE TABLE san_pham (
         san_pham_id     INT             IDENTITY(1,1) PRIMARY KEY,
+        -- Mã sản phẩm nội bộ hiển thị/tra cứu trên UI (vd 'SP0001') và mã vạch EAN-13 in
+        -- trên vỏ hộp (dùng cho máy quét ở quầy). Để NULL được: sản phẩm mới tạo từ form
+        -- admin có thể chưa gán mã / chưa dán tem, và các INSERT cũ không truyền 2 cột này
+        -- vẫn chạy bình thường. Tính duy nhất xử lý bằng filtered unique index bên dưới.
+        ma_san_pham     VARCHAR(50)     NULL,
+        barcode         VARCHAR(50)     NULL,
         ten_san_pham    NVARCHAR(200)   NOT NULL,
         thuong_hieu_id  INT             NOT NULL,
         danh_muc_id     INT             NOT NULL,
@@ -163,6 +185,17 @@ BEGIN
 END
 GO
 
+-- Mã sản phẩm & barcode phải duy nhất, nhưng phải cho phép NHIỀU dòng NULL (sản phẩm chưa
+-- gán mã / chưa dán tem) → dùng filtered unique index; UNIQUE constraint của SQL Server chỉ
+-- chấp nhận đúng 1 giá trị NULL nên không dùng được ở đây. Index này cũng giúp truy vấn
+-- quét barcode (WHERE barcode = ?) seek thẳng thay vì quét cả bảng.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_san_pham_ma')
+    CREATE UNIQUE INDEX UX_san_pham_ma ON san_pham(ma_san_pham) WHERE ma_san_pham IS NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_san_pham_barcode')
+    CREATE UNIQUE INDEX UX_san_pham_barcode ON san_pham(barcode) WHERE barcode IS NOT NULL;
+GO
+
+-- Junction table: 1 sản phẩm có thể thuộc nhiều phân loại (nhiều-nhiều)
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham_phan_loai')
 BEGIN
     CREATE TABLE san_pham_phan_loai (
@@ -175,6 +208,7 @@ BEGIN
 END
 GO
 
+-- Danh mục CPU/RAM/ổ cứng/GPU — lưu LOẠI linh kiện, không phải đơn vị vật lý
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'dm_cpu')
     CREATE TABLE dm_cpu    ( cpu_id    INT IDENTITY(1,1) PRIMARY KEY, ten_cpu     NVARCHAR(100) NOT NULL UNIQUE );
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'dm_ram')
@@ -185,6 +219,9 @@ IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'dm_gpu')
     CREATE TABLE dm_gpu    ( gpu_id    INT IDENTITY(1,1) PRIMARY KEY, ten_gpu     NVARCHAR(100) NOT NULL UNIQUE );
 GO
 
+-- ============================================================
+--  4. BIẾN THỂ SẢN PHẨM (ĐỊNH GIÁ & THÔNG SỐ KỸ THUẬT)
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'bien_the_san_pham')
 BEGIN
     CREATE TABLE bien_the_san_pham (
@@ -201,6 +238,7 @@ BEGIN
         da_xoa              BIT             NOT NULL DEFAULT 0,
         mau_sac             NVARCHAR(50)    NULL,
 
+        -- Thông số kỹ thuật Laptop
         cpu_id              INT             NULL,
         ram_id              INT             NULL,
         o_cung_id           INT             NULL,
@@ -210,6 +248,8 @@ BEGIN
         pin                 NVARCHAR(50)    NULL,
         trong_luong_kg      DECIMAL(5,2)    NULL,
 
+        -- Phân loại theo mục đích sử dụng — cache từ san_pham_phan_loai để filter nhanh
+        -- VD: 'gaming,do_hoa' | 'van_phong,sinh_vien'
         phan_loai_tags      NVARCHAR(200)   NULL,
         phan_loai_ten       NVARCHAR(200)   NULL,
         ngay_tao            DATETIME        NOT NULL DEFAULT GETDATE(),
@@ -224,6 +264,9 @@ BEGIN
 END
 GO
 
+-- ============================================================
+--  5. KHO HÀNG: TỒN KHO & TỪNG ĐƠN VỊ VẬT LÝ (CÓ SERIAL)
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ton_kho')
 BEGIN
     CREATE TABLE ton_kho (
@@ -240,6 +283,8 @@ BEGIN
 END
 GO
 
+-- Mỗi hàng = 1 đơn vị laptop/phụ kiện vật lý, nhận dạng qua số serial
+-- so_serial: bắt buộc (NOT NULL), in trên máy hoặc hộp đóng gói
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_san_pham')
 BEGIN
     CREATE TABLE chi_tiet_san_pham (
@@ -255,10 +300,15 @@ BEGIN
 END
 GO
 
+-- Serial phải duy nhất toàn hệ thống
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_ctsp_serial')
     CREATE UNIQUE INDEX UX_ctsp_serial ON chi_tiet_san_pham(so_serial);
 GO
 
+-- Serial linh kiện rời (CPU/RAM/GPU/Ổ cứng) — CHỈ để truy vết bảo hành/nhập kho nội bộ,
+-- KHÔNG bán rời (không có giá bán, không gắn đơn hàng) nên trạng thái khác chi_tiet_san_pham:
+-- trong_kho (còn hàng) / da_su_dung (đã lắp vào máy, không theo dõi lắp vào máy nào cụ thể)
+-- / loi_bao_hanh (lỗi, cần đổi trả nhà cung cấp).
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_cpu')
 BEGIN
     CREATE TABLE chi_tiet_cpu (
@@ -331,6 +381,9 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_ctocung_serial')
     CREATE UNIQUE INDEX UX_ctocung_serial ON chi_tiet_o_cung(so_serial);
 GO
 
+-- ============================================================
+--  6. KHUYẾN MÃI & ĐỊA CHỈ GIAO HÀNG
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'khuyen_mai')
 BEGIN
     CREATE TABLE khuyen_mai (
@@ -370,6 +423,9 @@ BEGIN
 END
 GO
 
+-- ============================================================
+--  7. PHIẾU NHẬP KHO & ĐƠN HÀNG
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'phieu_nhap_kho')
 BEGIN
     CREATE TABLE phieu_nhap_kho (
@@ -410,6 +466,7 @@ BEGIN
         nhan_vien_id           INT            NULL,
         khuyen_mai_id          INT            NULL,
         dia_chi_giao_hang_id   INT            NULL,
+        -- Snapshot địa chỉ tại thời điểm đặt — không bị ảnh hưởng khi KH đổi địa chỉ sau đó
         dia_chi_giao_hang_text NVARCHAR(255)  NULL,
         nguoi_nhan             NVARCHAR(150)  NULL,
         sdt_nguoi_nhan         VARCHAR(20)    NULL,
@@ -442,13 +499,16 @@ BEGIN
 END
 GO
 
+-- ============================================================
+--  8. CHI TIẾT ĐƠN HÀNG & LỊCH SỬ KHO
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_don_hang')
 BEGIN
     CREATE TABLE chi_tiet_don_hang (
         chi_tiet_don_hang_id INT            IDENTITY(1,1) PRIMARY KEY,
         don_hang_id          INT            NOT NULL,
         bien_the_id          INT            NOT NULL,
-        chi_tiet_id          INT            NULL,  
+        chi_tiet_id          INT            NULL,  -- FK đến máy vật lý cụ thể (serial)
         so_luong             INT            NOT NULL CONSTRAINT CK_ctdh_soluong CHECK (so_luong > 0),
         don_gia              DECIMAL(18,0)  NOT NULL CONSTRAINT CK_ctdh_dongia  CHECK (don_gia >= 0),
         giam_gia_dong        DECIMAL(18,0)  NOT NULL DEFAULT 0,
@@ -461,6 +521,11 @@ BEGIN
     );
 END
 
+-- Gắn nhiều serial cho 1 dòng đơn hàng — chi_tiet_don_hang.chi_tiet_id (FK đơn) chỉ giữ
+-- được 1 serial đại diện, bảng này là nguồn đầy đủ khi so_luong > 1. Dùng cho cả 2 kênh
+-- bán, nhưng chỉ đơn online thực sự cần luồng giữ chỗ ("giu_hang") -> chọn lại -> đóng gói.
+-- IF NOT EXISTS: file này giờ chạy được thẳng (nhấn Execute) vào DB đã có sẵn dữ liệu từ
+-- bản dump cũ, không chỉ vào DB trắng — bỏ qua nếu bảng đã tồn tại thay vì báo lỗi.
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_don_hang_serial')
 BEGIN
     CREATE TABLE chi_tiet_don_hang_serial (
@@ -474,6 +539,9 @@ BEGIN
 END
 GO
 
+-- DB đã có sẵn bảng lich_su_ton_kho (CREATE TABLE bên dưới sẽ báo lỗi "already an object"
+-- và không chạy) vẫn cần constraint cho phép "giu_hang" — áp dụng luôn ở đây, độc lập với
+-- CREATE TABLE bên dưới, drop-rồi-add nên chạy lại bao nhiêu lần cũng an toàn.
 IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_lsdk_loai')
     ALTER TABLE lich_su_ton_kho DROP CONSTRAINT CK_lsdk_loai;
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'lich_su_ton_kho')
@@ -488,6 +556,7 @@ BEGIN
         bien_the_id       INT            NOT NULL,
         chi_tiet_id       INT            NULL,
         loai_bien_dong    NVARCHAR(30)   NOT NULL
+            -- "giu_hang": giữ chỗ serial cho đơn online lúc đặt hàng, trước khi đóng gói chốt "da_ban".
             CONSTRAINT CK_lsdk_loai CHECK (loai_bien_dong IN (N'nhap', N'xuat_ban', N'tra_hang', N'dieu_chinh', N'huy', N'giu_hang')),
         so_luong_thay_doi INT            NOT NULL,
         don_hang_id       INT            NULL,
@@ -527,6 +596,9 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_lstsp_san_pham')
     CREATE INDEX IX_lstsp_san_pham ON lich_su_thay_doi_san_pham(san_pham_id, thoi_gian DESC);
 GO
 
+-- ============================================================
+--  9. THANH TOÁN & TRẢ HÀNG & BẢO HÀNH
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'thanh_toan')
 BEGIN
     CREATE TABLE thanh_toan (
@@ -557,6 +629,7 @@ BEGIN
         so_tien_hoan  DECIMAL(18,0)  NOT NULL DEFAULT 0 CONSTRAINT CK_pth_tienhoan CHECK (so_tien_hoan >= 0),
         ghi_chu       NVARCHAR(500)  NULL,
 
+        -- ma_phieu: generated, zero-padded 6 digits (e.g. TR-000123)
         ma_phieu AS ('TR-' + RIGHT('000000' + CONVERT(NVARCHAR(6), phieu_tra_id), 6)) PERSISTED,
         CONSTRAINT UQ_pth_ma_phieu UNIQUE (ma_phieu),
 
@@ -576,6 +649,7 @@ BEGIN
     ALTER TABLE phieu_tra_hang ADD hinh_thuc_hoan NVARCHAR(20) NOT NULL DEFAULT N'vi'
         CONSTRAINT CK_pth_hinhthuchoan CHECK (hinh_thuc_hoan IN (N'tien_mat', N'vi'));
 END
+-- `ma_phieu` đã được định nghĩa là cột computed trong CREATE TABLE, vì vậy không cần ALTER/UPDATE ở đây.
 
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_tra_hang')
 BEGIN
@@ -627,6 +701,7 @@ BEGIN
         bien_the_id   INT       NOT NULL,
         ngay_them     DATETIME  NOT NULL DEFAULT GETDATE(),
 
+        -- 1 khach chi luu 1 bien the vao yeu thich 1 lan — trung thi bo (unlike), khong tao dong moi.
         CONSTRAINT UQ_spyt_kh_bt UNIQUE (khach_hang_id, bien_the_id),
         CONSTRAINT FK_spyt_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
         CONSTRAINT FK_spyt_bien_the   FOREIGN KEY (bien_the_id)   REFERENCES bien_the_san_pham(bien_the_id)
@@ -644,6 +719,10 @@ BEGIN
         noi_dung      NVARCHAR(1000) NULL,
         ngay_danh_gia DATETIME       NOT NULL DEFAULT GETDATE(),
 
+        -- 1 khach chi danh gia 1 san pham 1 lan (theo san_pham_id, khong phai tung bien_the/
+        -- don_hang) — mua nhieu lan hoac nhieu cau hinh khac nhau cua cung 1 san pham khong
+        -- tao them danh gia moi, tranh spam. don_hang_id luu lai don nao dung de xac minh
+        -- "da mua" luc tao (xem DanhGiaService.themDanhGia).
         CONSTRAINT UQ_dg_kh_sp UNIQUE (khach_hang_id, san_pham_id),
         CONSTRAINT FK_dg_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
         CONSTRAINT FK_dg_san_pham   FOREIGN KEY (san_pham_id)   REFERENCES san_pham(san_pham_id),
@@ -652,7 +731,11 @@ BEGIN
 END
 GO
 
+-- ============================================================
+--  10. TRIGGERS
+-- ============================================================
 
+-- Trigger 1: Tự động cập nhật tồn kho khi thêm/đổi trạng thái/xóa đơn vị vật lý
 IF OBJECT_ID('trg_CapNhatTonKhoThucTe', 'TR') IS NOT NULL
     DROP TRIGGER trg_CapNhatTonKhoThucTe;
 GO
@@ -665,6 +748,7 @@ BEGIN
     SET NOCOUNT ON;
     DECLARE @TmpTable TABLE (bien_the_id INT, bien_dong INT);
 
+    -- INSERT mới → chỉ cộng nếu trạng thái là "trong_kho"
     IF EXISTS (SELECT 1 FROM inserted) AND NOT EXISTS (SELECT 1 FROM deleted)
     BEGIN
         INSERT INTO @TmpTable
@@ -673,14 +757,17 @@ BEGIN
         GROUP BY bien_the_id;
     END
 
+    -- UPDATE trạng thái
     IF EXISTS (SELECT 1 FROM deleted) AND EXISTS (SELECT 1 FROM inserted)
     BEGIN
+        -- Rời "trong_kho" → trừ tồn
         INSERT INTO @TmpTable
         SELECT d.bien_the_id, -COUNT(*)
         FROM deleted d JOIN inserted i ON d.chi_tiet_id = i.chi_tiet_id
         WHERE d.trang_thai = N'trong_kho' AND i.trang_thai <> N'trong_kho'
         GROUP BY d.bien_the_id;
 
+        -- Quay về "trong_kho" (trả hàng / hoàn bảo hành) → cộng tồn
         INSERT INTO @TmpTable
         SELECT i.bien_the_id, COUNT(*)
         FROM deleted d JOIN inserted i ON d.chi_tiet_id = i.chi_tiet_id
@@ -688,6 +775,7 @@ BEGIN
         GROUP BY i.bien_the_id;
     END
 
+    -- DELETE đơn vị đang ở trong kho → trừ tồn
     IF EXISTS (SELECT 1 FROM deleted) AND NOT EXISTS (SELECT 1 FROM inserted)
     BEGIN
         INSERT INTO @TmpTable
@@ -708,6 +796,13 @@ BEGIN
 END;
 GO
 
+-- Trigger 2: Kiểm tra khuyến mãi khi tạo đơn hàng
+-- Chặn: voucher hết hạn | hết lượt | đơn chưa đủ giá trị tối thiểu
+-- LƯU Ý: không dùng ROLLBACK TRANSACTION ở đây (anti-pattern trong AFTER INSERT trigger) —
+-- nó làm lệch trạng thái transaction mà connection pool (Hibernate/JDBC) đang theo dõi,
+-- khiến một số row bị mất ngầm sau khi client đã nhận response thành công, đặc biệt khi
+-- insert hàng loạt. Chỉ RAISERROR rồi RETURN, để lỗi lan ra ngoài và Spring's @Transactional
+-- tự rollback đúng cách theo exception.
 IF OBJECT_ID('trg_KiemTra_KhuyenMai', 'TR') IS NOT NULL
     DROP TRIGGER trg_KiemTra_KhuyenMai;
 GO
@@ -751,6 +846,7 @@ BEGIN
         RETURN;
     END
 
+    -- Tự động tăng số lần đã dùng
     UPDATE km
     SET so_lan_da_dung = so_lan_da_dung + 1
     FROM khuyen_mai km
@@ -759,6 +855,7 @@ BEGIN
 END;
 GO
 
+-- Trigger 3: Tự cập nhật ngay_cap_nhat khi đơn thay đổi
 IF OBJECT_ID('trg_CapNhat_TrangThai_DonHang', 'TR') IS NOT NULL
     DROP TRIGGER trg_CapNhat_TrangThai_DonHang;
 GO
@@ -775,6 +872,7 @@ BEGIN
 END;
 GO
 
+-- Trigger 4: Tự động sync phan_loai_tags vào bien_the_san_pham khi junction thay đổi
 IF OBJECT_ID('trg_SyncPhanLoaiTags', 'TR') IS NOT NULL
     DROP TRIGGER trg_SyncPhanLoaiTags;
 GO
@@ -786,6 +884,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- Lấy tất cả san_pham_id bị ảnh hưởng
     DECLARE @AffectedIds TABLE (san_pham_id INT);
     INSERT INTO @AffectedIds SELECT DISTINCT san_pham_id FROM inserted;
     INSERT INTO @AffectedIds SELECT DISTINCT san_pham_id FROM deleted;
@@ -809,6 +908,9 @@ BEGIN
 END;
 GO
 
+-- ============================================================
+--  11. INDEX TỐI ƯU HÓA TRUY VẤN
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_bien_the_san_pham')
     CREATE INDEX IX_bien_the_san_pham ON bien_the_san_pham(san_pham_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_bien_the_gia')
@@ -828,10 +930,14 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_lstk_bien_the')
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_khuyen_mai_ma')
     CREATE INDEX IX_khuyen_mai_ma ON khuyen_mai(ma_khuyen_mai, trang_thai);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_sppl_phan_loai')
-    CREATE INDEX IX_sppl_phan_loai ON san_pham_phan_loai(phan_loai_id);  
+    CREATE INDEX IX_sppl_phan_loai ON san_pham_phan_loai(phan_loai_id);  -- filter nhanh theo phân loại
 GO
 
+-- ============================================================
+--  12. VIEWS TỔNG HỢP
+-- ============================================================
 
+-- Tồn kho tổng quan — dùng cho màn hình quản lý kho
 IF OBJECT_ID('vw_ton_kho_tong_quan', 'V') IS NOT NULL
     DROP VIEW vw_ton_kho_tong_quan;
 GO
@@ -863,6 +969,7 @@ JOIN danh_muc    dm ON sp.danh_muc_id    = dm.danh_muc_id
 WHERE bt.trang_thai = N'active';
 GO
 
+-- Danh sách sản phẩm cho trang khách hàng
 IF OBJECT_ID('vw_san_pham_hien_thi', 'V') IS NOT NULL
     DROP VIEW vw_san_pham_hien_thi;
 GO
@@ -873,6 +980,8 @@ SELECT
     bt.bien_the_id,
     bt.ma_sku,
     sp.ten_san_pham,
+    sp.ma_san_pham,
+    sp.barcode,
     ISNULL(bt.hinh_anh_bien_the, sp.hinh_anh_chinh) AS hinh_anh_chinh,
     th.ten_thuong_hieu,
     dm.ten_danh_muc,
@@ -891,12 +1000,14 @@ SELECT
     bt.he_dieu_hanh,
     bt.pin,
     bt.trong_luong_kg,
+    -- Danh sách phân loại dạng chuỗi: 'van_phong,sinh_vien' — dùng cho filter trên frontend
     (
         SELECT STRING_AGG(pl.ma_phan_loai, ',')
         FROM san_pham_phan_loai sppl
         JOIN phan_loai pl ON sppl.phan_loai_id = pl.phan_loai_id
         WHERE sppl.san_pham_id = sp.san_pham_id AND pl.trang_thai = N'active'
     ) AS phan_loai_tags,
+    -- Tên hiển thị dạng chuỗi: 'Văn phòng,Sinh viên'
     (
         SELECT STRING_AGG(pl.ten_phan_loai, ', ')
         FROM san_pham_phan_loai sppl
@@ -915,18 +1026,33 @@ LEFT JOIN dm_gpu     gpu ON bt.gpu_id      = gpu.gpu_id
 WHERE sp.trang_thai = N'active' AND bt.trang_thai = N'active';
 GO
 
+-- ============================================================
+--  13. DỮ LIỆU MẪU
+-- ============================================================
+-- KHÔNG còn guard "IF NOT EXISTS" hay sentinel tạm nào ở đây nữa — vì phần đầu file đã
+-- luôn DROP + CREATE DATABASE mới toanh trước khi chạy tới đây, database CHẮC CHẮN rỗng
+-- mỗi lần, nên không cần kiểm tra "đã seed chưa" nữa, chạy thẳng.
+-- (Từng thử dùng 1 bảng tạm ##seed_run làm "cờ nhớ" xuyên suốt toàn bộ khối, nhưng cách
+-- đó có rủi ro: nếu công cụ chạy file (SSMS...) bị ngắt/kết nối lại kết nối giữa chừng
+-- — dễ xảy ra với script dài hàng nghìn dòng, nhiều batch GO — bảng tạm đó biến mất theo
+-- phiên cũ, khiến toàn bộ phần seed còn lại bị bỏ qua âm thầm không báo lỗi. Bỏ hẳn guard
+-- là cách chắc chắn nhất: không phụ thuộc gì vào việc kết nối có ổn định xuyên suốt hay
+-- không.)
     INSERT INTO chuc_vu (ma_chuc_vu, ten_chuc_vu, cap_do, mo_ta) VALUES
     ('admin',      N'Admin',       9, N'Toàn quyền hệ thống'),
     ('nhan_vien',  N'Nhân viên',   1, N'Bán hàng, tư vấn sản phẩm'),
     ('quan_kho',   N'Quản kho',    2, N'Nhập kho, xuất kho, kiểm kê'),
     ('khach_hang', N'Khách hàng',  0, N'Khách hàng mua sắm');
+    -- chuc_vu: admin=1, nhan_vien=2, quan_kho=3, khach_hang=4
 
+    -- nhan_vien: chuc_vu admin=1, nhan_vien=2, quan_kho=3, khach_hang=4
     INSERT INTO nhan_vien (ho_ten, so_dien_thoai, email, chuc_vu_id, luong_co_ban) VALUES
     (N'Quản trị viên',   '0900000001', 'admin@saoclub.vn',       1,       0),
     (N'Nguyễn Văn An',   '0987654321', 'nhanvienan@sao.vn',      2, 8000000),
     (N'Trần Thị Bảo',    '0978112233', 'nhanvienbao@sao.vn',     2, 7500000),
     (N'Lê Văn Cường',    '0967223344', 'nhanviencuong@sao.vn',   3, 6500000),
     (N'Phạm Quốc Dũng',  '0956334455', 'nhanviendung@sao.vn',    2, 9000000);
+    -- nhan_vien: Admin=1, An=2, Bao=3, Cuong=4, Dung=5
 
     INSERT INTO thuong_hieu (ten_thuong_hieu, quoc_gia, mo_ta) VALUES
     (N'Dell',    N'Mỹ',         N'Laptop cá nhân và doanh nghiệp, nổi tiếng với dòng XPS, Inspiron, Latitude'),
@@ -936,15 +1062,18 @@ GO
     (N'HP',      N'Mỹ',         N'Pavilion, Envy, Spectre, EliteBook — laptop cho mọi phân khúc'),
     (N'MSI',     N'Đài Loan',   N'Chuyên laptop gaming: Stealth, Raider, Katana, Titan'),
     (N'Acer',    N'Đài Loan',   N'Aspire, Swift, Nitro, Predator — laptop phổ thông và gaming');
+    -- thuong_hieu: Dell=1,Apple=2,Asus=3,Lenovo=4,HP=5,MSI=6,Acer=7
 
     INSERT INTO danh_muc (ten_danh_muc, mo_ta) VALUES
     (N'Laptop',   N'Máy tính xách tay các loại'),
     (N'Phụ kiện', N'Chuột, bàn phím, túi laptop, hub, sạc dự phòng...');
+    -- danh_muc: Laptop=1, Phu_kien=2
 
     INSERT INTO nha_cung_cap (ten_nha_cung_cap, so_dien_thoai, email, dia_chi, nguoi_lien_he, ma_so_thue) VALUES
     (N'Digiworld',   N'02862920999', N'trade@digiworld.com.vn', N'69 Võ Văn Tần, Q3, TP.HCM',    N'Nguyễn Hùng Việt',  N'0302598493'),
     (N'FPT Trading', N'02437820800', N'trading@fpt.com.vn',    N'Tòa nhà FPT, Cầu Giấy, Hà Nội', N'Nguyễn Hưng Cường', N'0101248141'),
     (N'Synnex FPT',  N'1800 6077',   N'laptop@synnex.vn',      N'391A Nam Kỳ Khởi Nghĩa, Q3, TP.HCM', N'Lê Minh Khoa', N'0302103976');
+    -- nha_cung_cap: Digiworld=1, FPT=2, Synnex=3
 
     INSERT INTO khach_hang (ho_ten, so_dien_thoai, email, dia_chi, loai_khach, diem_tich_luy) VALUES
     (N'Nghiêm Việt Anh',   '0912345678',  'anh.nghiem@gmail.com',  N'123 Phố Huế, Hoàn Kiếm, Hà Nội',      N'ca_nhan',      50),
@@ -954,7 +1083,11 @@ GO
     (N'Nguyễn Minh Đức',   '0956789012',  'duc.nguyen@gmail.com',  N'34 Hoàng Diệu, Hải Châu, Đà Nẵng',    N'ca_nhan',       0),
     (N'Cty Minh Anh Tech', '02838901234', 'purchase@minhanh.vn',   N'50 Lê Lợi, Quận 1, TP.HCM',           N'doanh_nghiep', 800),
     (N'Khách Hàng Demo',   '0900000002',  'demo@saoclub.vn',        N'123 Đường Demo, TP.HCM',              N'ca_nhan',       0);
+    -- khach_hang: VietAnh=1, Binh=2, Cuong=3, Duyen=4, Duc=5, MinhAnh=6, Demo=7
 
+    -- Sinh thêm 123 khách hàng nữa (tổng 130, gồm 7 khách "có tên" ở trên) — set-based,
+    -- ghép Họ x Tên (15x15=225 cặp) lấy 123 cặp đầu, số điện thoại & email suy ra từ rn
+    -- nên luôn duy nhất, không cần liệt kê tay từng dòng.
     ;WITH Ho(ho, ho_ascii) AS (
         SELECT * FROM (VALUES
             (N'Nguyễn','nguyen'),(N'Trần','tran'),(N'Lê','le'),(N'Phạm','pham'),(N'Hoàng','hoang'),
@@ -976,19 +1109,28 @@ GO
     INSERT INTO khach_hang (ho_ten, so_dien_thoai, email, loai_khach, diem_tich_luy)
     SELECT TOP (123)
         g.ho + N' ' + g.ten,
+        -- RIGHT('0000000' + số, 7): cách pad số 0 phía trước cho đủ 7 ký tự (T-SQL không
+        -- có hàm LPAD như MySQL) — vd rn=5 → '0000005', ghép với '097' ra SĐT 10 số.
         '097' + RIGHT('0000000' + CAST(g.rn AS VARCHAR(7)), 7),
         LOWER(g.ten_ascii) + '.' + LOWER(g.ho_ascii) + CAST(g.rn AS VARCHAR(10)) + '@gmail.com',
         N'ca_nhan',
         ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 300
     FROM Ganh g
     ORDER BY g.rn;
+    -- khach_hang: 8..130 sinh tự động
 
+    -- ── Tài khoản đăng nhập ───────────────────────────────────────────────────────
+    -- Mật khẩu tất cả: 123456  (BCrypt $2a$10$)
+    -- chuc_vu : admin=1, nhan_vien=2, quan_kho=3, khach_hang=4
+    -- nhan_vien: Admin=1, An=2, Bao=3, Cuong=4, Dung=5
+    -- khach_hang: ..., Demo=7
     INSERT INTO tai_khoan (username, mat_khau_hash, chuc_vu_id, nhan_vien_id, khach_hang_id) VALUES
     ('admin',        '$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 1, 1, NULL),
     ('nhanvienan',   '$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 2, 2, NULL),
     ('nhanvienbao',  '$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 2, 3, NULL),
     ('nhanviencuong','$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 3, 4, NULL),
     ('khachhang',    '$2a$10$iLnae2KuCuZ.BOPeLXRzde8wEWsgkze93MIooTzcqYkN/hZJkojFu', 4, NULL, 7);
+    -- tai_khoan: admin=1, nhanvienan=2, nhanvienbao=3, nhanviencuong=4, khachhang=5
 
     INSERT INTO dm_cpu (ten_cpu) VALUES
     (N'Intel Core i5-1235U'),
@@ -998,16 +1140,22 @@ GO
     (N'AMD Ryzen 5 7530U'),
     (N'AMD Ryzen 7 7745H'),
     (N'Intel Core i7-13700H');
+    -- dm_cpu: 1-7
 
     INSERT INTO dm_ram (dung_luong) VALUES
     (N'8GB DDR4'),(N'16GB DDR5'),(N'32GB DDR5'),(N'8GB LPDDR5'),(N'16GB LPDDR5');
+    -- dm_ram: 1-5
 
     INSERT INTO dm_o_cung (loai_o_cung) VALUES
     (N'256GB SSD'),(N'512GB SSD'),(N'1TB SSD'),(N'2TB SSD');
+    -- dm_o_cung: 1-4
 
     INSERT INTO dm_gpu (ten_gpu) VALUES
     (N'Intel Iris Xe'),(N'NVIDIA RTX 4050'),(N'NVIDIA RTX 4060'),(N'NVIDIA RTX 4070'),(N'AMD Radeon 780M');
+    -- dm_gpu: 1-5
 
+    -- Phân loại theo mục đích sử dụng
+    -- thu_tu: thứ tự xuất hiện trên filter bar của frontend
     INSERT INTO phan_loai (ma_phan_loai, ten_phan_loai, mo_ta, thu_tu) VALUES
     ('van_phong',  N'Văn phòng',       N'Mỏng nhẹ, pin bền, phù hợp công việc văn phòng hàng ngày',           1),
     ('sinh_vien',  N'Sinh viên',       N'Giá tốt, hiệu năng đủ dùng học tập, bền',                             2),
@@ -1016,53 +1164,72 @@ GO
     ('ky_thuat',   N'Kỹ thuật - AI',   N'Hiệu năng CPU/GPU cao cho lập trình, AI, kỹ thuật',                   5),
     ('macbook',    N'MacBook',         N'Apple Silicon, hệ sinh thái Apple, hiệu năng/watt tốt nhất thị trường',6),
     ('laptop_cu',  N'Laptop cũ',       N'Hàng refurbished còn bảo hành, đã kiểm tra kỹ',                        7);
+    -- phan_loai: van_phong=1, sinh_vien=2, gaming=3, do_hoa=4, ky_thuat=5, macbook=6, laptop_cu=7
 
-    INSERT INTO san_pham (ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
-    (N'Dell Inspiron 15 3520',    1, 1, 1, 'LAPTOP', N'Laptop văn phòng phổ thông 15.6" FHD, pin 54Wh, trọng lượng 1.7kg',   N'/images/Dell Inspiron 15 3520.webp'),
-    (N'Asus Vivobook 15 X1504VA', 3, 1, 2, 'LAPTOP', N'Mỏng nhẹ văn phòng, màn 15.6" FHD 60Hz, pin 50Wh cả ngày',          N'/images/Asus Vivobook 15 X1504VA.webp'),
-    (N'Lenovo IdeaPad 5 Pro 16',  4, 1, 2, 'LAPTOP', N'Màn 2.5K 16" 120Hz, AMD Ryzen mạnh, vỏ nhôm bền',                   N'/images/Lenovo IdeaPad 5 Pro 16.webp'),
-    (N'HP Envy x360 16 2024',     5, 1, 1, 'LAPTOP', N'2-in-1 cao cấp, màn OLED 2.8K cảm ứng, chip Intel Gen 13',          N'/images/HP Envy x360 16 2024.webp'),
-    (N'MSI Stealth 15M B12U',     6, 1, 3, 'LAPTOP', N'Gaming mỏng nhẹ RTX 4050, màn 144Hz, trọng lượng chỉ 1.7kg',        N'/images/MSI Stealth 15M B12U.webp');
+    -- Sản phẩm (chỉ LAPTOP)
+    -- ma_san_pham: mã nội bộ hiển thị trên UI  |  barcode: EAN-13 (số minh hoạ, tiền tố 893 của VN)
+    INSERT INTO san_pham (ma_san_pham, barcode, ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
+    ('SP0001', '8934567000015', N'Dell Inspiron 15 3520',    1, 1, 1, 'LAPTOP', N'Laptop văn phòng phổ thông 15.6" FHD, pin 54Wh, trọng lượng 1.7kg',   N'/images/Dell Inspiron 15 3520.webp'),
+    ('SP0002', '8934567000022', N'Asus Vivobook 15 X1504VA', 3, 1, 2, 'LAPTOP', N'Mỏng nhẹ văn phòng, màn 15.6" FHD 60Hz, pin 50Wh cả ngày',          N'/images/Asus Vivobook 15 X1504VA.webp'),
+    ('SP0003', '8934567000039', N'Lenovo IdeaPad 5 Pro 16',  4, 1, 2, 'LAPTOP', N'Màn 2.5K 16" 120Hz, AMD Ryzen mạnh, vỏ nhôm bền',                   N'/images/Lenovo IdeaPad 5 Pro 16.webp'),
+    ('SP0004', '8934567000046', N'HP Envy x360 16 2024',     5, 1, 1, 'LAPTOP', N'2-in-1 cao cấp, màn OLED 2.8K cảm ứng, chip Intel Gen 13',          N'/images/HP Envy x360 16 2024.webp'),
+    ('SP0005', '8934567000053', N'MSI Stealth 15M B12U',     6, 1, 3, 'LAPTOP', N'Gaming mỏng nhẹ RTX 4050, màn 144Hz, trọng lượng chỉ 1.7kg',        N'/images/MSI Stealth 15M B12U.webp');
+    -- san_pham: Dell=1, Asus=2, Lenovo=3, HP=4, MSI=5
 
+    -- Biến thể sản phẩm
     INSERT INTO bien_the_san_pham
         (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
          cpu_id, ram_id, o_cung_id, gpu_id,
          kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
     VALUES
+    -- Dell Inspiron 15 (sp=1)
     (1,'DELL-3520-I5-8G',  13000000, 15490000, 24, 1,1,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'54Wh', 1.70, N'Xám Bạc'),
     (1,'DELL-3520-I7-16G', 15500000, 17990000, 24, 2,2,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'54Wh', 1.70, N'Đen'),
+    -- Asus Vivobook 15 (sp=2)
     (2,'ASUS-X1504-I5-8G', 12500000, 14990000, 24, 3,1,2,5, N'15.6" FHD 60Hz', N'Windows 11 Home', N'50Wh', 1.70, N'Bạc'),
     (2,'ASUS-X1504-I7-16G',16000000, 19490000, 24, 7,2,2,5, N'15.6" FHD 60Hz', N'Windows 11 Home', N'50Wh', 1.70, N'Bạc'),
+    -- Lenovo IdeaPad 5 Pro (sp=3)
     (3,'LENO-IP5P-R5-8G',  14500000, 17490000, 24, 5,1,2,5, N'16" 2.5K 120Hz', N'Windows 11 Home', N'75Wh', 1.85, N'Xám Bão'),
     (3,'LENO-IP5P-R7-16G', 18000000, 22490000, 24, 6,2,3,5, N'16" 2.5K 120Hz', N'Windows 11 Home', N'75Wh', 1.85, N'Xám Bão'),
+    -- HP Envy x360 (sp=4)
     (4,'HP-ENVY-I7-16G',   22000000, 27490000, 24, 7,2,2,2, N'16" 2.8K OLED 120Hz', N'Windows 11 Home', N'86Wh', 2.10, N'Bạc Tự Nhiên'),
     (4,'HP-ENVY-I9-32G',   28000000, 34990000, 24, 4,3,3,3, N'16" 2.8K OLED 120Hz', N'Windows 11 Home', N'86Wh', 2.10, N'Bạc Tự Nhiên'),
+    -- MSI Stealth 15M (sp=5)
     (5,'MSI-STL15-RTX4050',22500000, 27990000, 24, 7,2,2,2, N'15.6" FHD 144Hz', N'Windows 11 Home', N'52Wh', 1.70, N'Đen'),
     (5,'MSI-STL15-RTX4070',30000000, 37490000, 24, 7,2,3,4, N'15.6" QHD 240Hz', N'Windows 11 Home', N'52Wh', 1.70, N'Đen');
+    -- bien_the: Dell_i5=1,Dell_i7=2, Asus_i5=3,Asus_i7=4, Leno_R5=5,Leno_R7=6, HP_i7=7,HP_i9=8, MSI_4050=9,MSI_4070=10
 
+    -- Tồn kho ban đầu
+    -- Dell (bien_the 1,2): khởi tạo 0, trigger tự cộng khi nhập serial bên dưới
+    -- Các model khác: số liệu nhập thủ công (chưa đăng ký serial chi tiết)
     INSERT INTO ton_kho (bien_the_id, so_luong_ton_thuc_te, so_luong_giu, ton_kho_toi_thieu) VALUES
-    ( 1,  0, 0, 5),  
-    ( 2,  0, 0, 3),  
-    ( 3, 10, 1, 5),  
-    ( 4,  7, 0, 3),  
-    ( 5, 12, 2, 5),  
-    ( 6,  5, 0, 3),  
-    ( 7,  8, 1, 4),  
-    ( 8,  3, 0, 2),  
-    ( 9,  6, 1, 3),  
-    (10,  4, 0, 2);  
+    ( 1,  0, 0, 5),  -- Dell i5 (trigger cộng)
+    ( 2,  0, 0, 3),  -- Dell i7 (trigger cộng)
+    ( 3, 10, 1, 5),  -- Asus i5
+    ( 4,  7, 0, 3),  -- Asus i7
+    ( 5, 12, 2, 5),  -- Lenovo R5
+    ( 6,  5, 0, 3),  -- Lenovo R7
+    ( 7,  8, 1, 4),  -- HP i7
+    ( 8,  3, 0, 2),  -- HP i9
+    ( 9,  6, 1, 3),  -- MSI RTX4050
+    (10,  4, 0, 2);  -- MSI RTX4070
 GO
 
+    -- Đơn vị vật lý (serial) — trigger tự cộng ton_kho cho Dell
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai) VALUES
     (1, 'SN-DELL-I5-001', N'trong_kho'),
     (1, 'SN-DELL-I5-002', N'trong_kho'),
     (1, 'SN-DELL-I5-003', N'trong_kho'),
     (2, 'SN-DELL-I7-001', N'trong_kho'),
     (2, 'SN-DELL-I7-002', N'trong_kho');
+    -- Sau INSERT: ton_kho bien_the 1 = 3, bien_the 2 = 2
 
+    -- Đánh dấu đã bán (trigger tự trừ tồn kho)
     UPDATE chi_tiet_san_pham SET trang_thai = N'da_ban' WHERE so_serial = 'SN-DELL-I5-001';
+    -- ton_kho bien_the 1: 3 → 2
 GO
 
+    -- Địa chỉ giao hàng mặc định
     INSERT INTO dia_chi_giao_hang (khach_hang_id, ho_ten_nguoi_nhan, so_dien_thoai, dia_chi, thanh_pho, la_mac_dinh) VALUES
     (1, N'Nghiêm Việt Anh',   '0912345678',  N'123 Phố Huế, Hoàn Kiếm',    N'Hà Nội',          1),
     (2, N'Trần Thị Bình',     '0901234567',  N'456 Nguyễn Trãi, Quận 5',   N'TP. Hồ Chí Minh', 1),
@@ -1072,74 +1239,104 @@ GO
     (6, N'Cty Minh Anh Tech', '02838901234', N'50 Lê Lợi, Quận 1',         N'TP. Hồ Chí Minh', 1);
 GO
 
+    -- Khuyến mãi
+    -- so_lan_da_dung: số lần dùng trước khi insert sample data dưới đây
+    -- VIP500 sẽ được trigger tăng thêm 1 khi DH3 (Lenovo) được chèn
     INSERT INTO khuyen_mai (ma_khuyen_mai, ten_khuyen_mai, loai, gia_tri, gia_tri_toi_da, don_hang_toi_thieu, ngay_bat_dau, ngay_ket_thuc, so_luong_toi_da, so_lan_da_dung, trang_thai) VALUES
     (N'SUMMER24',  N'Mùa hè 2024 - Giảm 10%',              N'percent', 10, 500000,  2000000, N'2024-06-01', N'2026-12-31', 200, 44, N'active'),
     (N'NEWCUST',   N'Khách hàng mới - Giảm 200.000đ',       N'fixed',  200000, NULL,  500000, N'2024-01-01', N'2026-12-31',1000,  7, N'active'),
     (N'LAPTOP20',  N'Laptop Festival - Giảm 20% tối đa 2tr',N'percent', 20,2000000,10000000, N'2024-08-01', N'2026-12-31',  50,  3, N'active'),
     (N'VIP500',    N'Khách VIP - Giảm 500.000đ',             N'fixed',  500000,NULL, 15000000, N'2024-01-01', N'2026-12-31', 100,  1, N'active'),
     (N'TECHFEST15',N'Tech Fest - Giảm 15%',                  N'percent', 15,1500000, 5000000, N'2024-07-01', N'2024-07-31',  50, 12, N'inactive');
+    -- Sau trigger DH3 insert: VIP500.so_lan_da_dung = 2
 GO
 
+    -- Phiếu nhập kho
+    -- P1: 5×13M + 3×15.5M = 65M + 46.5M = 111.500.000
+    -- P2: 10×12.5M+7×16M+12×14.5M+5×18M+8×22M+3×28M+6×22.5M+4×30M = 1.016.000.000
     INSERT INTO phieu_nhap_kho (nha_cung_cap_id, nhan_vien_id, ngay_nhap, tong_tien, trang_thai, ghi_chu) VALUES
     (1, 4, N'2024-05-01',  111500000, N'hoan_thanh', N'Nhập hàng đợt 1 - Dell Inspiron 15 từ Digiworld'),
     (2, 4, N'2024-06-15', 1016000000, N'hoan_thanh', N'Nhập hàng đợt 2 - Asus, Lenovo, HP, MSI từ FPT Trading');
+    -- phieu_nhap: P1=1, P2=2
 
     INSERT INTO chi_tiet_phieu_nhap (phieu_nhap_id, bien_the_id, so_luong, don_gia_nhap) VALUES
+    -- P1: Dell
     (1,  1,  5, 13000000),
     (1,  2,  3, 15500000),
+    -- P2: Asus, Lenovo, HP, MSI
     (2,  3, 10, 12500000), (2,  4,  7, 16000000),
     (2,  5, 12, 14500000), (2,  6,  5, 18000000),
     (2,  7,  8, 22000000), (2,  8,  3, 28000000),
     (2,  9,  6, 22500000), (2, 10,  4, 30000000);
 GO
 
+    -- Đơn hàng mẫu (chỉ laptop)
+    -- thanh_tien = tong_tien - giam_gia + phi_van_chuyen (computed, tự tính)
     INSERT INTO don_hang
         (khach_hang_id, nhan_vien_id, khuyen_mai_id, nguoi_nhan, sdt_nguoi_nhan,
          dia_chi_giao_hang_text, tong_tien, giam_gia, phi_van_chuyen,
          ngay_dat, ngay_giao_thuc_te, trang_thai_don_hang, trang_thai_thanh_toan, kenh_ban)
     VALUES
+    -- DH1: KH1 mua Dell i5 — đã giao, đã thanh toán, bán online
     (1, 2, NULL,
      N'Nghiêm Việt Anh', '0912345678', N'123 Phố Huế, Hoàn Kiếm, HN',
      15490000, 0, 30000,
      N'2024-06-10 10:30:00', N'2024-06-12 15:00:00', N'delivered', N'paid', N'online'),
 
+    -- DH2: KH3 mua HP Envy i9 — đang xử lý, đặt cọc
     (3, NULL, NULL,
      N'Lê Hoàng Cường', '0912345000', N'78 Đinh Tiên Hoàng, Q1, TP.HCM',
      34990000, 0, 0,
      N'2024-07-05 14:20:00', NULL, N'processing', N'partial', N'online'),
 
+    -- DH3: KH6 (doanh nghiệp) mua Lenovo R7 — km VIP500, đang giao, đã thanh toán
     (6, 3, 4,
      N'Cty Minh Anh Tech', '02838901234', N'50 Lê Lợi, Q1, TP.HCM',
      22490000, 500000, 0,
      N'2024-07-10 08:30:00', NULL, N'shipping', N'paid', N'online'),
 
+    -- DH4: KH5 mua MSI RTX4050 — đã hủy (khách đổi ý)
     (5, NULL, NULL,
      N'Nguyễn Minh Đức', '0956789012', N'34 Hoàng Diệu, Hải Châu, ĐN',
      27990000, 0, 30000,
      N'2024-07-12 10:00:00', NULL, N'cancelled', N'unpaid', N'online');
+    -- don_hang: DH1=1, DH2=2, DH3=3, DH4=4
+    -- Trigger VIP500: DH3 insert → so_lan_da_dung tăng 1→2
 GO
 
+    -- Chi tiết đơn hàng
     INSERT INTO chi_tiet_don_hang (don_hang_id, bien_the_id, so_luong, don_gia, giam_gia_dong) VALUES
-    (1,  1, 1, 15490000,      0),  
-    (2,  8, 1, 34990000,      0),  
-    (3,  6, 1, 22490000,      0),  
-    (4,  9, 1, 27990000,      0);  
+    (1,  1, 1, 15490000,      0),  -- DH1: Dell i5
+    (2,  8, 1, 34990000,      0),  -- DH2: HP Envy i9
+    (3,  6, 1, 22490000,      0),  -- DH3: Lenovo R7 (giảm giá ghi trong don_hang.giam_gia)
+    (4,  9, 1, 27990000,      0);  -- DH4: MSI RTX4050 (hủy)
 GO
 
+    -- Thanh toán
     INSERT INTO thanh_toan (don_hang_id, ngay_thanh_toan, phuong_thuc_thanh_toan, so_tien, trang_thai, ghi_chu) VALUES
     (1, N'2024-06-10 10:35:00', N'chuyen_khoan', 15520000, N'success', N'CK Vietcombank — DH1 (bao gồm 30K phí ship)'),
     (2, N'2024-07-05 14:25:00', N'tien_mat',     10000000, N'success', N'Đặt cọc 10 triệu tiền mặt — DH2'),
     (3, N'2024-07-10 08:40:00', N'chuyen_khoan', 21990000, N'success', N'CK doanh nghiệp Minh Anh — DH3');
 GO
 
+    -- Gán phân loại cho từng sản phẩm (nhiều-nhiều)
+    -- san_pham: Dell=1, Asus=2, Lenovo=3, HP=4, MSI=5
+    -- phan_loai: van_phong=1, sinh_vien=2, gaming=3, do_hoa=4, ky_thuat=5, macbook=6
     INSERT INTO san_pham_phan_loai (san_pham_id, phan_loai_id) VALUES
+    -- Dell Inspiron 15: văn phòng + sinh viên (giá phải chăng, dùng hàng ngày)
     (1, 1), (1, 2),
+    -- Asus Vivobook 15: văn phòng + sinh viên (tương tự Dell, thị trường phổ thông)
     (2, 1), (2, 2),
+    -- Lenovo IdeaPad 5 Pro: văn phòng + kỹ thuật (màn 2.5K, Ryzen mạnh, dân lập trình hay dùng)
     (3, 1), (3, 5),
+    -- HP Envy x360: đồ họa + kỹ thuật (màn OLED chuẩn màu, 2-in-1 cao cấp)
     (4, 4), (4, 5),
+    -- MSI Stealth 15M: gaming + đồ họa (RTX 4050/4070, render được video & 3D)
     (5, 3), (5, 4);
 GO
 
+    -- Sync cột phan_loai_tags / phan_loai_ten trong bien_the_san_pham từ junction table
+    -- Chạy sau mỗi lần thay đổi san_pham_phan_loai (hoặc dùng trigger bên dưới)
     UPDATE bt
     SET
         bt.phan_loai_tags = (
@@ -1159,37 +1356,57 @@ GO
     FROM bien_the_san_pham bt;
 GO
 
+    -- Lịch sử xuất kho
     INSERT INTO lich_su_ton_kho (bien_the_id, loai_bien_dong, so_luong_thay_doi, don_hang_id, nhan_vien_id, ghi_chu) VALUES
     (1, N'xuat_ban', -1, 1, 2, N'Xuất bán DH1 - Dell Inspiron i5'),
     (8, N'xuat_ban', -1, 2, NULL, N'Xuất bán DH2 - HP Envy i9/32GB'),
     (6, N'xuat_ban', -1, 3, 3, N'Xuất bán DH3 - Lenovo R7/16GB');
 GO
 
+    -- ============================================================
+    -- 13.B. DỮ LIỆU BỔ SUNG — Thêm sản phẩm mới + màu sắc
+    -- ============================================================
 
-    INSERT INTO san_pham (ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
-    (N'Acer Aspire 5 A515-58',   7, 1, 3, N'LAPTOP', N'Laptop học tập văn phòng phổ thông 15.6" FHD, pin 48Wh cả ngày, giá hợp lý',                 N'/images/Acer Aspire 5 A515-58.webp'),
-    (N'Asus ROG Strix G16 G614', 3, 1, 2, N'LAPTOP', N'Gaming cao cấp RTX 40 series, màn 16" 165Hz, tản nhiệt triple fan, RGB Aura Sync',            N'/images/Asus ROG Strix G16 G614.webp'),
-    (N'Lenovo Legion 5 Pro 16',  4, 1, 2, N'LAPTOP', N'Gaming-đồ họa chuyên nghiệp, màn WQXGA 165Hz, AMD Ryzen + NVIDIA RTX, vỏ nhôm',              N'/images/Lenovo Legion 5 Pro 16.webp'),
-    (N'HP Pavilion 15',          5, 1, 1, N'LAPTOP', N'Laptop gia đình phổ thông 15.6" FHD 144Hz, màu sắc đa dạng, giá cạnh tranh',                  N'/images/HP Pavilion 15.webp'),
-    (N'Dell XPS 15 9530',        1, 1, 1, N'LAPTOP', N'Màn OLED 3.5K siêu nét, thiết kế siêu mỏng, lý tưởng cho sáng tạo nội dung chuyên nghiệp',  N'/images/Dell XPS 15 9530.webp'),
-    (N'Acer Nitro V 15',         7, 1, 3, N'LAPTOP', N'Gaming tầm trung RTX 40 series, màn 144Hz, tản nhiệt mạnh, giá tốt nhất phân khúc',           N'/images/Acer Nitro V 15.webp');
+    -- ── Sản phẩm mới (sp 6-11) ───────────────────────────────────────────────────
+    -- thuong_hieu: Dell=1,Apple=2,Asus=3,Lenovo=4,HP=5,MSI=6,Acer=7
+    -- nha_cung_cap: Digiworld=1, FPT=2, Synnex=3
+    -- ma_san_pham / barcode: đánh tiếp từ SP0005 & dải barcode ở mục 13
+    INSERT INTO san_pham (ma_san_pham, barcode, ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
+    ('SP0006', '8934567000060', N'Acer Aspire 5 A515-58',   7, 1, 3, N'LAPTOP', N'Laptop học tập văn phòng phổ thông 15.6" FHD, pin 48Wh cả ngày, giá hợp lý',                 N'/images/Acer Aspire 5 A515-58.webp'),
+    ('SP0007', '8934567000077', N'Asus ROG Strix G16 G614', 3, 1, 2, N'LAPTOP', N'Gaming cao cấp RTX 40 series, màn 16" 165Hz, tản nhiệt triple fan, RGB Aura Sync',            N'/images/Asus ROG Strix G16 G614.webp'),
+    ('SP0008', '8934567000084', N'Lenovo Legion 5 Pro 16',  4, 1, 2, N'LAPTOP', N'Gaming-đồ họa chuyên nghiệp, màn WQXGA 165Hz, AMD Ryzen + NVIDIA RTX, vỏ nhôm',              N'/images/Lenovo Legion 5 Pro 16.webp'),
+    ('SP0009', '8934567000091', N'HP Pavilion 15',          5, 1, 1, N'LAPTOP', N'Laptop gia đình phổ thông 15.6" FHD 144Hz, màu sắc đa dạng, giá cạnh tranh',                  N'/images/HP Pavilion 15.webp'),
+    ('SP0010', '8934567000107', N'Dell XPS 15 9530',        1, 1, 1, N'LAPTOP', N'Màn OLED 3.5K siêu nét, thiết kế siêu mỏng, lý tưởng cho sáng tạo nội dung chuyên nghiệp',  N'/images/Dell XPS 15 9530.webp'),
+    ('SP0011', '8934567000114', N'Acer Nitro V 15',         7, 1, 3, N'LAPTOP', N'Gaming tầm trung RTX 40 series, màn 144Hz, tản nhiệt mạnh, giá tốt nhất phân khúc',           N'/images/Acer Nitro V 15.webp');
+    -- san_pham: Acer_Aspire5=6, ROG_Strix=7, Legion5Pro=8, Pavilion15=9, XPS15=10, NitroV=11
 GO
 
+    -- ── Biến thể bổ sung: thêm màu cho sp hiện có (1-5) ─────────────────────────
+    -- dm_cpu: i5-1235U=1,i7-13620H=2,i5-13420H=3,i9-13900H=4,R5-7530U=5,R7-7745H=6,i7-13700H=7
+    -- dm_ram: 8GB DDR4=1,16GB DDR5=2,32GB DDR5=3,8GB LPDDR5=4,16GB LPDDR5=5
+    -- dm_o_cung: 256GB=1,512GB=2,1TB=3,2TB=4  |  dm_gpu: IrisXe=1,RTX4050=2,RTX4060=3,RTX4070=4,Radeon780M=5
     INSERT INTO bien_the_san_pham
         (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
          cpu_id, ram_id, o_cung_id, gpu_id,
          kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
     VALUES
+    -- Dell Inspiron 15 3520 (sp=1): Đen cho cấu hình i5
     (1,'DELL-3520-I5-8G-BLK',  13000000, 15490000, 24, 1,1,2,1, N'15.6" FHD 60Hz',      N'Windows 11 Home', N'54Wh', 1.70, N'Đen'),
+    -- Asus Vivobook 15 (sp=2): Đen cho cả i5 & i7
     (2,'ASUS-X1504-I5-8G-BLK', 12500000, 14990000, 24, 3,1,2,5, N'15.6" FHD 60Hz',      N'Windows 11 Home', N'50Wh', 1.70, N'Đen'),
     (2,'ASUS-X1504-I7-16G-BLK',16000000, 19490000, 24, 7,2,2,5, N'15.6" FHD 60Hz',      N'Windows 11 Home', N'50Wh', 1.70, N'Đen'),
+    -- Lenovo IdeaPad 5 Pro (sp=3): Xanh Dương cho R5 & R7
     (3,'LENO-IP5P-R5-8G-BLU',  14500000, 17490000, 24, 5,1,2,5, N'16" 2.5K 120Hz',      N'Windows 11 Home', N'75Wh', 1.85, N'Xanh Dương'),
     (3,'LENO-IP5P-R7-16G-BLU', 18000000, 22490000, 24, 6,2,3,5, N'16" 2.5K 120Hz',      N'Windows 11 Home', N'75Wh', 1.85, N'Xanh Dương'),
+    -- HP Envy x360 (sp=4): Vàng Citrus cho i7, Đen Midnight cho i9
     (4,'HP-ENVY-I7-16G-GLD',   22000000, 27490000, 24, 7,2,2,2, N'16" 2.8K OLED 120Hz', N'Windows 11 Home', N'86Wh', 2.10, N'Vàng Citrus'),
     (4,'HP-ENVY-I9-32G-BLK',   28000000, 34990000, 24, 4,3,3,3, N'16" 2.8K OLED 120Hz', N'Windows 11 Home', N'86Wh', 2.10, N'Đen Midnight'),
+    -- MSI Stealth 15M (sp=5): Bạc cho RTX4050
     (5,'MSI-STL15-RTX4050-SLV',22500000, 27990000, 24, 7,2,2,2, N'15.6" FHD 144Hz',     N'Windows 11 Home', N'52Wh', 1.70, N'Bạc');
+    -- bien_the 11-18
 GO
 
+    -- ── Acer Aspire 5 A515-58 (sp=6) — 2 cấu hình × 2 màu ───────────────────────
     INSERT INTO bien_the_san_pham
         (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
          cpu_id, ram_id, o_cung_id, gpu_id,
@@ -1199,8 +1416,10 @@ GO
     (6,'ACER-A515-I5-8G-BLU', 11000000, 13490000, 12, 1,1,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'48Wh', 1.76, N'Xanh Dương'),
     (6,'ACER-A515-I7-16G-SLV',14000000, 16990000, 12, 2,2,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'48Wh', 1.76, N'Bạc'),
     (6,'ACER-A515-I7-16G-BLK',14000000, 16990000, 12, 2,2,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'48Wh', 1.76, N'Đen');
+    -- bien_the 19-22
 GO
 
+    -- ── Asus ROG Strix G16 G614 (sp=7) — 2 cấu hình, 3 biến thể ─────────────────
     INSERT INTO bien_the_san_pham
         (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
          cpu_id, ram_id, o_cung_id, gpu_id,
@@ -1209,8 +1428,10 @@ GO
     (7,'ROG-G614-I7-16G-BLK', 26000000, 32490000, 24, 7,2,2,3, N'16" FHD 165Hz',  N'Windows 11 Home', N'90Wh', 2.50, N'Đen'),
     (7,'ROG-G614-I7-16G-GRY', 26000000, 32490000, 24, 7,2,2,3, N'16" FHD 165Hz',  N'Windows 11 Home', N'90Wh', 2.50, N'Xám Eclipse'),
     (7,'ROG-G614-I9-32G-BLK', 35000000, 42990000, 24, 4,3,3,4, N'16" QHD 240Hz',  N'Windows 11 Home', N'90Wh', 2.50, N'Đen');
+    -- bien_the 23-25
 GO
 
+    -- ── Lenovo Legion 5 Pro 16 (sp=8) — 2 cấu hình × 2 màu ──────────────────────
     INSERT INTO bien_the_san_pham
         (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
          cpu_id, ram_id, o_cung_id, gpu_id,
@@ -1220,8 +1441,10 @@ GO
     (8,'LEGI-5P-R7-16G-WHT', 23000000, 28490000, 24, 6,2,2,3, N'16" WQXGA 165Hz', N'Windows 11 Home', N'80Wh', 2.49, N'Trắng'),
     (8,'LEGI-5P-R7-32G-GRY', 30000000, 36990000, 24, 6,3,3,4, N'16" WQXGA 165Hz', N'Windows 11 Home', N'80Wh', 2.49, N'Xám'),
     (8,'LEGI-5P-R7-32G-BLK', 30000000, 36990000, 24, 6,3,3,4, N'16" WQXGA 165Hz', N'Windows 11 Home', N'80Wh', 2.49, N'Đen');
+    -- bien_the 26-29
 GO
 
+    -- ── HP Pavilion 15 (sp=9) — i5 có 3 màu, i7 có 2 màu ────────────────────────
     INSERT INTO bien_the_san_pham
         (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
          cpu_id, ram_id, o_cung_id, gpu_id,
@@ -1232,8 +1455,10 @@ GO
     (9,'HP-PAV15-I5-8G-BLU', 10000000, 12490000, 12, 1,1,1,1, N'15.6" FHD 144Hz', N'Windows 11 Home', N'41Wh', 1.75, N'Xanh Dương'),
     (9,'HP-PAV15-I7-16G-SLV',13000000, 15990000, 12, 2,2,2,1, N'15.6" FHD 144Hz', N'Windows 11 Home', N'41Wh', 1.75, N'Bạc'),
     (9,'HP-PAV15-I7-16G-BLK',13000000, 15990000, 12, 2,2,2,1, N'15.6" FHD 144Hz', N'Windows 11 Home', N'41Wh', 1.75, N'Đen');
+    -- bien_the 30-34
 GO
 
+    -- ── Dell XPS 15 9530 (sp=10) — i7 2 màu, i9 1 màu ───────────────────────────
     INSERT INTO bien_the_san_pham
         (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
          cpu_id, ram_id, o_cung_id, gpu_id,
@@ -1242,8 +1467,10 @@ GO
     (10,'DELL-XPS15-I7-16G-PLT',35000000, 42990000, 24, 7,5,2,3, N'15.6" OLED 3.5K 60Hz', N'Windows 11 Pro', N'86Wh', 1.86, N'Bạc Bạch Kim'),
     (10,'DELL-XPS15-I7-16G-BLK',35000000, 42990000, 24, 7,5,2,3, N'15.6" OLED 3.5K 60Hz', N'Windows 11 Pro', N'86Wh', 1.86, N'Đen Graphite'),
     (10,'DELL-XPS15-I9-32G-PLT',48000000, 57990000, 24, 4,3,3,4, N'15.6" OLED 3.5K 60Hz', N'Windows 11 Pro', N'86Wh', 1.86, N'Bạc Bạch Kim');
+    -- bien_the 35-37
 GO
 
+    -- ── Acer Nitro V 15 (sp=11) — 2 cấu hình × 2 màu ────────────────────────────
     INSERT INTO bien_the_san_pham
         (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
          cpu_id, ram_id, o_cung_id, gpu_id,
@@ -1253,51 +1480,70 @@ GO
     (11,'ACER-NV15-I5-8G-RED', 18000000, 22490000, 12, 3,1,2,2, N'15.6" FHD 144Hz', N'Windows 11 Home', N'57Wh', 2.10, N'Đỏ Đen'),
     (11,'ACER-NV15-I7-16G-BLK',24000000, 29990000, 12, 2,2,2,3, N'15.6" FHD 144Hz', N'Windows 11 Home', N'57Wh', 2.10, N'Đen'),
     (11,'ACER-NV15-I7-16G-WHT',24000000, 29990000, 12, 2,2,2,3, N'15.6" FHD 144Hz', N'Windows 11 Home', N'57Wh', 2.10, N'Trắng');
+    -- bien_the 38-41
 GO
 
+    -- ── Tồn kho cho tất cả biến thể mới (bien_the 11-41) ─────────────────────────
     INSERT INTO ton_kho (bien_the_id, so_luong_ton_thuc_te, so_luong_giu, ton_kho_toi_thieu) VALUES
-    (11,  8, 0, 3),  
-    (12,  6, 0, 3),  
-    (13,  4, 0, 2),  
-    (14,  5, 0, 3),  
-    (15,  3, 0, 2),  
-    (16,  4, 0, 2),  
-    (17,  2, 0, 1),  
-    (18,  3, 0, 2),  
-    (19,  8, 0, 3),  
-    (20,  6, 0, 3),  
-    (21,  5, 0, 2),  
-    (22,  4, 0, 2),  
-    (23,  5, 0, 2),  
-    (24,  3, 0, 2),  
-    (25,  2, 0, 1),  
-    (26,  6, 0, 3),  
-    (27,  4, 0, 2),  
-    (28,  3, 0, 2),  
-    (29,  2, 0, 1),  
-    (30, 10, 0, 5),  
-    (31,  8, 0, 4),  
-    (32,  7, 0, 4),  
-    (33,  6, 0, 3),  
-    (34,  5, 0, 3),  
-    (35,  4, 0, 2),  
-    (36,  3, 0, 2),  
-    (37,  2, 0, 1),  
-    (38,  7, 0, 3),  
-    (39,  5, 0, 3),  
-    (40,  4, 0, 2),  
-    (41,  3, 0, 2);  
+    -- Extra màu sp 1-5 (bien_the 11-18)
+    (11,  8, 0, 3),  -- Dell i5 Đen
+    (12,  6, 0, 3),  -- Asus i5 Đen
+    (13,  4, 0, 2),  -- Asus i7 Đen
+    (14,  5, 0, 3),  -- Lenovo R5 Xanh Dương
+    (15,  3, 0, 2),  -- Lenovo R7 Xanh Dương
+    (16,  4, 0, 2),  -- HP Envy i7 Vàng Citrus
+    (17,  2, 0, 1),  -- HP Envy i9 Đen Midnight
+    (18,  3, 0, 2),  -- MSI RTX4050 Bạc
+    -- Acer Aspire 5 (bien_the 19-22)
+    (19,  8, 0, 3),  -- i5 Bạc
+    (20,  6, 0, 3),  -- i5 Xanh Dương
+    (21,  5, 0, 2),  -- i7 Bạc
+    (22,  4, 0, 2),  -- i7 Đen
+    -- ROG Strix G16 (bien_the 23-25)
+    (23,  5, 0, 2),  -- i7 RTX4060 Đen
+    (24,  3, 0, 2),  -- i7 RTX4060 Xám Eclipse
+    (25,  2, 0, 1),  -- i9 RTX4070 Đen
+    -- Lenovo Legion 5 Pro (bien_the 26-29)
+    (26,  6, 0, 3),  -- R7 RTX4060 Xám
+    (27,  4, 0, 2),  -- R7 RTX4060 Trắng
+    (28,  3, 0, 2),  -- R7 RTX4070 Xám
+    (29,  2, 0, 1),  -- R7 RTX4070 Đen
+    -- HP Pavilion 15 (bien_the 30-34)
+    (30, 10, 0, 5),  -- i5 Bạc
+    (31,  8, 0, 4),  -- i5 Hồng
+    (32,  7, 0, 4),  -- i5 Xanh Dương
+    (33,  6, 0, 3),  -- i7 Bạc
+    (34,  5, 0, 3),  -- i7 Đen
+    -- Dell XPS 15 9530 (bien_the 35-37)
+    (35,  4, 0, 2),  -- i7 Bạc Bạch Kim
+    (36,  3, 0, 2),  -- i7 Đen Graphite
+    (37,  2, 0, 1),  -- i9 Bạc Bạch Kim
+    -- Acer Nitro V 15 (bien_the 38-41)
+    (38,  7, 0, 3),  -- i5 RTX4050 Đen
+    (39,  5, 0, 3),  -- i5 RTX4050 Đỏ Đen
+    (40,  4, 0, 2),  -- i7 RTX4060 Đen
+    (41,  3, 0, 2);  -- i7 RTX4060 Trắng
 GO
-
+select*from bien_the_san_pham
+    -- ── Phân loại cho sản phẩm mới (sp 6-11) ────────────────────────────────────
+    -- phan_loai: van_phong=1,sinh_vien=2,gaming=3,do_hoa=4,ky_thuat=5,macbook=6,laptop_cu=7
     INSERT INTO san_pham_phan_loai (san_pham_id, phan_loai_id) VALUES
+    -- Acer Aspire 5: văn phòng + sinh viên (phổ thông giá rẻ)
     (6, 1), (6, 2),
+    -- ROG Strix G16: gaming + đồ họa (RTX 40, màn cao tần)
     (7, 3), (7, 4),
+    -- Legion 5 Pro: gaming (AMD Ryzen + RTX, màn WQXGA)
     (8, 3),
+    -- HP Pavilion 15: văn phòng + sinh viên (đa màu, giá phải chăng)
     (9, 1), (9, 2),
+    -- Dell XPS 15: đồ họa + kỹ thuật (OLED 3.5K, thiết kế cao cấp)
     (10, 4), (10, 5),
+    -- Acer Nitro V: gaming (RTX 40 tầm trung, tản nhiệt tốt)
     (11, 3);
 GO
 
+    -- Sync phan_loai_tags / phan_loai_ten cho sp mới (trigger đã xử lý khi INSERT,
+    -- block này sync thủ công phòng trường hợp trigger chưa active)
     UPDATE bt
     SET
         bt.phan_loai_tags = (
@@ -1316,10 +1562,15 @@ GO
     WHERE bt.san_pham_id IN (6, 7, 8, 9, 10, 11);
 GO
 
+    -- ── Serial numbers cho tất cả biến thể (bt 3-41) ─────────────────────────────
+    -- Format: N{năm}{brand}{bt_id:02d}{seq:04d}  (10 ký tự, giống serial laptop thật)
+    -- Trước khi INSERT: reset ton_kho về 0 để trigger tính lại đúng
     UPDATE ton_kho SET so_luong_ton_thuc_te = 0, so_luong_giu = 0 WHERE bien_the_id BETWEEN 3 AND 41;
 GO
 
+    -- ── Asus Vivobook 15 X1504VA ──────────────────────────────────────────────────
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=3  ASUS-X1504-I5-8G Bạc: 11 trong_kho + 3 đã bán + 1 bảo hành
     (3,'N24A030001',N'trong_kho','2024-06-16'),(3,'N24A030002',N'trong_kho','2024-06-16'),
     (3,'N24A030003',N'trong_kho','2024-06-16'),(3,'N24A030004',N'trong_kho','2024-06-16'),
     (3,'N24A030005',N'trong_kho','2024-06-16'),(3,'N24A030006',N'trong_kho','2024-06-16'),
@@ -1328,6 +1579,7 @@ GO
     (3,'N24A030011',N'trong_kho','2024-06-16'),
     (3,'N24A030012',N'da_ban',   '2024-06-16'),(3,'N24A030013',N'da_ban',   '2024-06-16'),
     (3,'N24A030014',N'da_ban',   '2024-06-16'),(3,'N24A030015',N'loi_bao_hanh', '2024-06-16'),
+    -- bt=4  ASUS-X1504-I7-16G Bạc: 8 trong_kho + 2 đã bán + 1 bảo hành
     (4,'N24A040001',N'trong_kho','2024-06-16'),(4,'N24A040002',N'trong_kho','2024-06-16'),
     (4,'N24A040003',N'trong_kho','2024-06-16'),(4,'N24A040004',N'trong_kho','2024-06-16'),
     (4,'N24A040005',N'trong_kho','2024-06-16'),(4,'N24A040006',N'trong_kho','2024-06-16'),
@@ -1337,6 +1589,7 @@ GO
 GO
 
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=5  LENO-IP5P-R5-8G Xám Bão: 13 trong_kho + 4 đã bán + 1 bảo hành
     (5,'N24L050001',N'trong_kho','2024-06-16'),(5,'N24L050002',N'trong_kho','2024-06-16'),
     (5,'N24L050003',N'trong_kho','2024-06-16'),(5,'N24L050004',N'trong_kho','2024-06-16'),
     (5,'N24L050005',N'trong_kho','2024-06-16'),(5,'N24L050006',N'trong_kho','2024-06-16'),
@@ -1347,6 +1600,7 @@ GO
     (5,'N24L050014',N'da_ban',   '2024-06-16'),(5,'N24L050015',N'da_ban',   '2024-06-16'),
     (5,'N24L050016',N'da_ban',   '2024-06-16'),(5,'N24L050017',N'da_ban',   '2024-06-16'),
     (5,'N24L050018',N'loi_bao_hanh', '2024-06-16'),
+    -- bt=6  LENO-IP5P-R7-16G Xám Bão: 5 trong_kho + 2 đã bán + 1 bảo hành
     (6,'N24L060001',N'trong_kho','2024-06-16'),(6,'N24L060002',N'trong_kho','2024-06-16'),
     (6,'N24L060003',N'trong_kho','2024-06-16'),(6,'N24L060004',N'trong_kho','2024-06-16'),
     (6,'N24L060005',N'trong_kho','2024-06-16'),
@@ -1355,6 +1609,7 @@ GO
 GO
 
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=7  HP-ENVY-I7-16G Bạc Tự Nhiên: 9 trong_kho + 3 đã bán
     (7,'N24H070001',N'trong_kho','2024-06-16'),(7,'N24H070002',N'trong_kho','2024-06-16'),
     (7,'N24H070003',N'trong_kho','2024-06-16'),(7,'N24H070004',N'trong_kho','2024-06-16'),
     (7,'N24H070005',N'trong_kho','2024-06-16'),(7,'N24H070006',N'trong_kho','2024-06-16'),
@@ -1362,6 +1617,7 @@ GO
     (7,'N24H070009',N'trong_kho','2024-06-16'),
     (7,'N24H070010',N'da_ban',   '2024-06-16'),(7,'N24H070011',N'da_ban',   '2024-06-16'),
     (7,'N24H070012',N'da_ban',   '2024-06-16'),
+    -- bt=8  HP-ENVY-I9-32G Bạc Tự Nhiên: 3 trong_kho + 2 đã bán + 1 bảo hành
     (8,'N24H080001',N'trong_kho','2024-06-16'),(8,'N24H080002',N'trong_kho','2024-06-16'),
     (8,'N24H080003',N'trong_kho','2024-06-16'),
     (8,'N24H080004',N'da_ban',   '2024-06-16'),(8,'N24H080005',N'da_ban',   '2024-06-16'),
@@ -1369,98 +1625,125 @@ GO
 GO
 
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=9  MSI-STL15-RTX4050 Đen: 7 trong_kho + 3 đã bán + 1 bảo hành
     (9,'N24M090001',N'trong_kho','2024-06-16'),(9,'N24M090002',N'trong_kho','2024-06-16'),
     (9,'N24M090003',N'trong_kho','2024-06-16'),(9,'N24M090004',N'trong_kho','2024-06-16'),
     (9,'N24M090005',N'trong_kho','2024-06-16'),(9,'N24M090006',N'trong_kho','2024-06-16'),
     (9,'N24M090007',N'trong_kho','2024-06-16'),
     (9,'N24M090008',N'da_ban',   '2024-06-16'),(9,'N24M090009',N'da_ban',   '2024-06-16'),
     (9,'N24M090010',N'da_ban',   '2024-06-16'),(9,'N24M090011',N'loi_bao_hanh', '2024-06-16'),
+    -- bt=10 MSI-STL15-RTX4070 Đen: 5 trong_kho + 2 đã bán
     (10,'N24M100001',N'trong_kho','2024-06-16'),(10,'N24M100002',N'trong_kho','2024-06-16'),
     (10,'N24M100003',N'trong_kho','2024-06-16'),(10,'N24M100004',N'trong_kho','2024-06-16'),
     (10,'N24M100005',N'trong_kho','2024-06-16'),
     (10,'N24M100006',N'da_ban',   '2024-06-16'),(10,'N24M100007',N'da_ban',   '2024-06-16');
 GO
 
+    -- ── Extra màu sp 1-5 (bien_the 11-18) ────────────────────────────────────────
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=11 DELL-3520-I5-8G-BLK Đen: 8 trong_kho + 3 đã bán
     (11,'N24D110001',N'trong_kho','2024-10-01'),(11,'N24D110002',N'trong_kho','2024-10-01'),
     (11,'N24D110003',N'trong_kho','2024-10-01'),(11,'N24D110004',N'trong_kho','2024-10-01'),
     (11,'N24D110005',N'trong_kho','2024-10-01'),(11,'N24D110006',N'trong_kho','2024-10-01'),
     (11,'N24D110007',N'trong_kho','2024-10-01'),(11,'N24D110008',N'trong_kho','2024-10-01'),
     (11,'N24D110009',N'da_ban',   '2024-10-01'),(11,'N24D110010',N'da_ban',   '2024-10-01'),
     (11,'N24D110011',N'da_ban',   '2024-10-01'),
+    -- bt=12 ASUS-X1504-I5-8G-BLK Đen: 6 trong_kho + 2 đã bán
     (12,'N24A120001',N'trong_kho','2024-10-01'),(12,'N24A120002',N'trong_kho','2024-10-01'),
     (12,'N24A120003',N'trong_kho','2024-10-01'),(12,'N24A120004',N'trong_kho','2024-10-01'),
     (12,'N24A120005',N'trong_kho','2024-10-01'),(12,'N24A120006',N'trong_kho','2024-10-01'),
     (12,'N24A120007',N'da_ban',   '2024-10-01'),(12,'N24A120008',N'da_ban',   '2024-10-01'),
+    -- bt=13 ASUS-X1504-I7-16G-BLK Đen: 4 trong_kho + 1 đã bán + 1 bảo hành
     (13,'N24A130001',N'trong_kho','2024-10-01'),(13,'N24A130002',N'trong_kho','2024-10-01'),
     (13,'N24A130003',N'trong_kho','2024-10-01'),(13,'N24A130004',N'trong_kho','2024-10-01'),
     (13,'N24A130005',N'da_ban',   '2024-10-01'),(13,'N24A130006',N'loi_bao_hanh', '2024-10-01');
 GO
 
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=14 LENO-IP5P-R5-8G-BLU Xanh Dương: 5 trong_kho + 2 đã bán
     (14,'N24L140001',N'trong_kho','2024-10-01'),(14,'N24L140002',N'trong_kho','2024-10-01'),
     (14,'N24L140003',N'trong_kho','2024-10-01'),(14,'N24L140004',N'trong_kho','2024-10-01'),
     (14,'N24L140005',N'trong_kho','2024-10-01'),
     (14,'N24L140006',N'da_ban',   '2024-10-01'),(14,'N24L140007',N'da_ban',   '2024-10-01'),
+    -- bt=15 LENO-IP5P-R7-16G-BLU Xanh Dương: 3 trong_kho + 1 đã bán
     (15,'N24L150001',N'trong_kho','2024-10-01'),(15,'N24L150002',N'trong_kho','2024-10-01'),
     (15,'N24L150003',N'trong_kho','2024-10-01'),(15,'N24L150004',N'da_ban',   '2024-10-01'),
+    -- bt=16 HP-ENVY-I7-16G-GLD Vàng Citrus: 4 trong_kho + 1 đã bán
     (16,'N24H160001',N'trong_kho','2024-10-01'),(16,'N24H160002',N'trong_kho','2024-10-01'),
     (16,'N24H160003',N'trong_kho','2024-10-01'),(16,'N24H160004',N'trong_kho','2024-10-01'),
     (16,'N24H160005',N'da_ban',   '2024-10-01'),
+    -- bt=17 HP-ENVY-I9-32G-BLK Đen Midnight: 2 trong_kho + 1 đã bán
     (17,'N24H170001',N'trong_kho','2024-10-01'),(17,'N24H170002',N'trong_kho','2024-10-01'),
     (17,'N24H170003',N'da_ban',   '2024-10-01'),
+    -- bt=18 MSI-STL15-RTX4050-SLV Bạc: 3 trong_kho + 1 đã bán
     (18,'N24M180001',N'trong_kho','2024-10-01'),(18,'N24M180002',N'trong_kho','2024-10-01'),
     (18,'N24M180003',N'trong_kho','2024-10-01'),(18,'N24M180004',N'da_ban',   '2024-10-01');
 GO
 
+    -- ── Acer Aspire 5 A515-58 (bien_the 19-22) ───────────────────────────────────
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=19 ACER-A515-I5-8G-SLV Bạc: 8 trong_kho + 2 đã bán
     (19,'N24C190001',N'trong_kho','2024-11-01'),(19,'N24C190002',N'trong_kho','2024-11-01'),
     (19,'N24C190003',N'trong_kho','2024-11-01'),(19,'N24C190004',N'trong_kho','2024-11-01'),
     (19,'N24C190005',N'trong_kho','2024-11-01'),(19,'N24C190006',N'trong_kho','2024-11-01'),
     (19,'N24C190007',N'trong_kho','2024-11-01'),(19,'N24C190008',N'trong_kho','2024-11-01'),
     (19,'N24C190009',N'da_ban',   '2024-11-01'),(19,'N24C190010',N'da_ban',   '2024-11-01'),
+    -- bt=20 ACER-A515-I5-8G-BLU Xanh Dương: 6 trong_kho + 2 đã bán
     (20,'N24C200001',N'trong_kho','2024-11-01'),(20,'N24C200002',N'trong_kho','2024-11-01'),
     (20,'N24C200003',N'trong_kho','2024-11-01'),(20,'N24C200004',N'trong_kho','2024-11-01'),
     (20,'N24C200005',N'trong_kho','2024-11-01'),(20,'N24C200006',N'trong_kho','2024-11-01'),
     (20,'N24C200007',N'da_ban',   '2024-11-01'),(20,'N24C200008',N'da_ban',   '2024-11-01'),
+    -- bt=21 ACER-A515-I7-16G-SLV Bạc: 5 trong_kho + 2 đã bán + 1 bảo hành
     (21,'N24C210001',N'trong_kho','2024-11-01'),(21,'N24C210002',N'trong_kho','2024-11-01'),
     (21,'N24C210003',N'trong_kho','2024-11-01'),(21,'N24C210004',N'trong_kho','2024-11-01'),
     (21,'N24C210005',N'trong_kho','2024-11-01'),
     (21,'N24C210006',N'da_ban',   '2024-11-01'),(21,'N24C210007',N'da_ban',   '2024-11-01'),
     (21,'N24C210008',N'loi_bao_hanh', '2024-11-01'),
+    -- bt=22 ACER-A515-I7-16G-BLK Đen: 4 trong_kho + 1 đã bán
     (22,'N24C220001',N'trong_kho','2024-11-01'),(22,'N24C220002',N'trong_kho','2024-11-01'),
     (22,'N24C220003',N'trong_kho','2024-11-01'),(22,'N24C220004',N'trong_kho','2024-11-01'),
     (22,'N24C220005',N'da_ban',   '2024-11-01');
 GO
 
+    -- ── Asus ROG Strix G16 G614 (bien_the 23-25) ─────────────────────────────────
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=23 ROG-G614-I7-16G-BLK Đen: 5 trong_kho + 2 đã bán
     (23,'N24R230001',N'trong_kho','2024-11-15'),(23,'N24R230002',N'trong_kho','2024-11-15'),
     (23,'N24R230003',N'trong_kho','2024-11-15'),(23,'N24R230004',N'trong_kho','2024-11-15'),
     (23,'N24R230005',N'trong_kho','2024-11-15'),
     (23,'N24R230006',N'da_ban',   '2024-11-15'),(23,'N24R230007',N'da_ban',   '2024-11-15'),
+    -- bt=24 ROG-G614-I7-16G-GRY Xám Eclipse: 3 trong_kho + 1 đã bán + 1 bảo hành
     (24,'N24R240001',N'trong_kho','2024-11-15'),(24,'N24R240002',N'trong_kho','2024-11-15'),
     (24,'N24R240003',N'trong_kho','2024-11-15'),
     (24,'N24R240004',N'da_ban',   '2024-11-15'),(24,'N24R240005',N'loi_bao_hanh', '2024-11-15'),
+    -- bt=25 ROG-G614-I9-32G-BLK Đen: 2 trong_kho + 1 đã bán
     (25,'N24R250001',N'trong_kho','2024-11-15'),(25,'N24R250002',N'trong_kho','2024-11-15'),
     (25,'N24R250003',N'da_ban',   '2024-11-15');
 GO
 
+    -- ── Lenovo Legion 5 Pro 16 (bien_the 26-29) ──────────────────────────────────
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=26 LEGI-5P-R7-16G-GRY Xám: 6 trong_kho + 2 đã bán
     (26,'N24G260001',N'trong_kho','2024-11-15'),(26,'N24G260002',N'trong_kho','2024-11-15'),
     (26,'N24G260003',N'trong_kho','2024-11-15'),(26,'N24G260004',N'trong_kho','2024-11-15'),
     (26,'N24G260005',N'trong_kho','2024-11-15'),(26,'N24G260006',N'trong_kho','2024-11-15'),
     (26,'N24G260007',N'da_ban',   '2024-11-15'),(26,'N24G260008',N'da_ban',   '2024-11-15'),
+    -- bt=27 LEGI-5P-R7-16G-WHT Trắng: 4 trong_kho + 2 đã bán + 1 bảo hành
     (27,'N24G270001',N'trong_kho','2024-11-15'),(27,'N24G270002',N'trong_kho','2024-11-15'),
     (27,'N24G270003',N'trong_kho','2024-11-15'),(27,'N24G270004',N'trong_kho','2024-11-15'),
     (27,'N24G270005',N'da_ban',   '2024-11-15'),(27,'N24G270006',N'da_ban',   '2024-11-15'),
     (27,'N24G270007',N'loi_bao_hanh', '2024-11-15'),
+    -- bt=28 LEGI-5P-R7-32G-GRY Xám: 3 trong_kho + 1 đã bán
     (28,'N24G280001',N'trong_kho','2024-11-15'),(28,'N24G280002',N'trong_kho','2024-11-15'),
     (28,'N24G280003',N'trong_kho','2024-11-15'),(28,'N24G280004',N'da_ban',   '2024-11-15'),
+    -- bt=29 LEGI-5P-R7-32G-BLK Đen: 2 trong_kho + 1 đã bán
     (29,'N24G290001',N'trong_kho','2024-11-15'),(29,'N24G290002',N'trong_kho','2024-11-15'),
     (29,'N24G290003',N'da_ban',   '2024-11-15');
 GO
 
+    -- ── HP Pavilion 15 (bien_the 30-34) ──────────────────────────────────────────
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=30 HP-PAV15-I5-8G-SLV Bạc: 10 trong_kho + 3 đã bán + 1 bảo hành
     (30,'N24H300001',N'trong_kho','2024-12-01'),(30,'N24H300002',N'trong_kho','2024-12-01'),
     (30,'N24H300003',N'trong_kho','2024-12-01'),(30,'N24H300004',N'trong_kho','2024-12-01'),
     (30,'N24H300005',N'trong_kho','2024-12-01'),(30,'N24H300006',N'trong_kho','2024-12-01'),
@@ -1468,6 +1751,7 @@ GO
     (30,'N24H300009',N'trong_kho','2024-12-01'),(30,'N24H300010',N'trong_kho','2024-12-01'),
     (30,'N24H300011',N'da_ban',   '2024-12-01'),(30,'N24H300012',N'da_ban',   '2024-12-01'),
     (30,'N24H300013',N'da_ban',   '2024-12-01'),(30,'N24H300014',N'loi_bao_hanh', '2024-12-01'),
+    -- bt=31 HP-PAV15-I5-8G-PNK Hồng: 8 trong_kho + 3 đã bán
     (31,'N24H310001',N'trong_kho','2024-12-01'),(31,'N24H310002',N'trong_kho','2024-12-01'),
     (31,'N24H310003',N'trong_kho','2024-12-01'),(31,'N24H310004',N'trong_kho','2024-12-01'),
     (31,'N24H310005',N'trong_kho','2024-12-01'),(31,'N24H310006',N'trong_kho','2024-12-01'),
@@ -1477,51 +1761,73 @@ GO
 GO
 
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=32 HP-PAV15-I5-8G-BLU Xanh Dương: 7 trong_kho + 2 đã bán
     (32,'N24H320001',N'trong_kho','2024-12-01'),(32,'N24H320002',N'trong_kho','2024-12-01'),
     (32,'N24H320003',N'trong_kho','2024-12-01'),(32,'N24H320004',N'trong_kho','2024-12-01'),
     (32,'N24H320005',N'trong_kho','2024-12-01'),(32,'N24H320006',N'trong_kho','2024-12-01'),
     (32,'N24H320007',N'trong_kho','2024-12-01'),
     (32,'N24H320008',N'da_ban',   '2024-12-01'),(32,'N24H320009',N'da_ban',   '2024-12-01'),
+    -- bt=33 HP-PAV15-I7-16G-SLV Bạc: 6 trong_kho + 2 đã bán + 1 bảo hành
     (33,'N24H330001',N'trong_kho','2024-12-01'),(33,'N24H330002',N'trong_kho','2024-12-01'),
     (33,'N24H330003',N'trong_kho','2024-12-01'),(33,'N24H330004',N'trong_kho','2024-12-01'),
     (33,'N24H330005',N'trong_kho','2024-12-01'),(33,'N24H330006',N'trong_kho','2024-12-01'),
     (33,'N24H330007',N'da_ban',   '2024-12-01'),(33,'N24H330008',N'da_ban',   '2024-12-01'),
     (33,'N24H330009',N'loi_bao_hanh', '2024-12-01'),
+    -- bt=34 HP-PAV15-I7-16G-BLK Đen: 5 trong_kho + 2 đã bán
     (34,'N24H340001',N'trong_kho','2024-12-01'),(34,'N24H340002',N'trong_kho','2024-12-01'),
     (34,'N24H340003',N'trong_kho','2024-12-01'),(34,'N24H340004',N'trong_kho','2024-12-01'),
     (34,'N24H340005',N'trong_kho','2024-12-01'),
     (34,'N24H340006',N'da_ban',   '2024-12-01'),(34,'N24H340007',N'da_ban',   '2024-12-01');
 GO
 
+    -- ── Dell XPS 15 9530 (bien_the 35-37) ────────────────────────────────────────
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=35 XPS-9530-I7-16G Bạc Bạch Kim: 4 trong_kho + 2 đã bán
     (35,'N24D350001',N'trong_kho','2024-12-15'),(35,'N24D350002',N'trong_kho','2024-12-15'),
     (35,'N24D350003',N'trong_kho','2024-12-15'),(35,'N24D350004',N'trong_kho','2024-12-15'),
     (35,'N24D350005',N'da_ban',   '2024-12-15'),(35,'N24D350006',N'da_ban',   '2024-12-15'),
+    -- bt=36 XPS-9530-I7-16G Đen Graphite: 3 trong_kho + 1 đã bán + 1 bảo hành
     (36,'N24D360001',N'trong_kho','2024-12-15'),(36,'N24D360002',N'trong_kho','2024-12-15'),
     (36,'N24D360003',N'trong_kho','2024-12-15'),
     (36,'N24D360004',N'da_ban',   '2024-12-15'),(36,'N24D360005',N'loi_bao_hanh', '2024-12-15'),
+    -- bt=37 XPS-9530-I9-32G Bạc Bạch Kim: 2 trong_kho + 1 đã bán
     (37,'N24D370001',N'trong_kho','2024-12-15'),(37,'N24D370002',N'trong_kho','2024-12-15'),
     (37,'N24D370003',N'da_ban',   '2024-12-15');
 GO
 
+    -- ── Acer Nitro V 15 (bien_the 38-41) ─────────────────────────────────────────
     INSERT INTO chi_tiet_san_pham (bien_the_id, so_serial, trang_thai, ngay_nhap_kho) VALUES
+    -- bt=38 NTV15-I5-RTX4050 Đen: 7 trong_kho + 3 đã bán + 1 bảo hành
     (38,'N25C380001',N'trong_kho','2025-01-10'),(38,'N25C380002',N'trong_kho','2025-01-10'),
     (38,'N25C380003',N'trong_kho','2025-01-10'),(38,'N25C380004',N'trong_kho','2025-01-10'),
     (38,'N25C380005',N'trong_kho','2025-01-10'),(38,'N25C380006',N'trong_kho','2025-01-10'),
     (38,'N25C380007',N'trong_kho','2025-01-10'),
     (38,'N25C380008',N'da_ban',   '2025-01-10'),(38,'N25C380009',N'da_ban',   '2025-01-10'),
     (38,'N25C380010',N'da_ban',   '2025-01-10'),(38,'N25C380011',N'loi_bao_hanh', '2025-01-10'),
+    -- bt=39 NTV15-I5-RTX4050 Đỏ Đen: 5 trong_kho + 2 đã bán
     (39,'N25C390001',N'trong_kho','2025-01-10'),(39,'N25C390002',N'trong_kho','2025-01-10'),
     (39,'N25C390003',N'trong_kho','2025-01-10'),(39,'N25C390004',N'trong_kho','2025-01-10'),
     (39,'N25C390005',N'trong_kho','2025-01-10'),
     (39,'N25C390006',N'da_ban',   '2025-01-10'),(39,'N25C390007',N'da_ban',   '2025-01-10'),
+    -- bt=40 NTV15-I7-RTX4060 Đen: 4 trong_kho + 2 đã bán + 1 bảo hành
     (40,'N25C400001',N'trong_kho','2025-01-10'),(40,'N25C400002',N'trong_kho','2025-01-10'),
     (40,'N25C400003',N'trong_kho','2025-01-10'),(40,'N25C400004',N'trong_kho','2025-01-10'),
     (40,'N25C400005',N'da_ban',   '2025-01-10'),(40,'N25C400006',N'da_ban',   '2025-01-10'),
     (40,'N25C400007',N'loi_bao_hanh', '2025-01-10'),
+    -- bt=41 NTV15-I7-RTX4060 Trắng: 3 trong_kho + 1 đã bán
     (41,'N25C410001',N'trong_kho','2025-01-10'),(41,'N25C410002',N'trong_kho','2025-01-10'),
     (41,'N25C410003',N'trong_kho','2025-01-10'),(41,'N25C410004',N'da_ban',   '2025-01-10');
 GO
+-- ============================================================
+--  13.C. DỮ LIỆU ĐƠN HÀNG MỞ RỘNG — 20-30 đơn/ngày, đa số đã giao + đã thanh toán
+-- Từ 01/01/2026 đến 03/07/2026 (khớp khoảng ngày gốc file này từng dùng).
+-- Set-based (Tally + random rn rồi JOIN), không liệt kê tay từng dòng như trước.
+-- Không dùng UPDATE để vá lại tong_tien sau khi insert — các bước làm ĐÚNG THỨ TỰ:
+-- chọn sản phẩm & tính tổng tiền trước (bảng tạm #Staging) → insert don_hang với
+-- tong_tien đã đúng ngay từ đầu → MERGE...OUTPUT lấy don_hang_id IDENTITY mới sinh,
+-- khớp lại đúng dòng nguồn (INSERT...OUTPUT thường không cho output cột nguồn ngoài
+-- inserted.*, MERGE thì được) → insert chi_tiet_don_hang/thanh_toan dựa trên mapping đó.
+-- ============================================================
     IF OBJECT_ID('tempdb..#Days') IS NOT NULL DROP TABLE #Days;
     IF OBJECT_ID('tempdb..#Slots') IS NOT NULL DROP TABLE #Slots;
     IF OBJECT_ID('tempdb..#KhachSo') IS NOT NULL DROP TABLE #KhachSo;
@@ -1546,16 +1852,47 @@ GO
     DECLARE @SoKhach INT = (SELECT COUNT(*) FROM khach_hang);
     DECLARE @SoBienThe INT = (SELECT COUNT(*) FROM bien_the_san_pham WHERE trang_thai = N'active');
 
+    -- Bước 1: chọn khách hàng + sản phẩm + tính tổng tiền cho từng đơn, TRƯỚC khi insert
+    --
+    -- Giải thích các "hàm lạ" dùng bên dưới, để lần sau đọc lại không phải tra cứu:
+    --
+    -- 1) Tally (E1→E2→E4): T-SQL không có hàm "sinh dãy số 1..N" dựng sẵn (khác
+    --    GENERATE_SERIES của Postgres). Đây là idiom kinh điển để tự tạo: E1 có 10 dòng
+    --    (từ VALUES), CROSS JOIN E1 với chính nó ra E2 = 10×10 = 100 dòng, CROSS JOIN E2
+    --    với chính nó ra E4 = 100×100 = 10.000 dòng — nhân đôi số mũ mỗi bước nên rất ít
+    --    dòng CTE mà ra được tập lớn. ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) chỉ để
+    --    đánh số thứ tự 1..10000 cho các dòng đó — ORDER BY (SELECT NULL) nghĩa là "thứ
+    --    tự nào cũng được, tôi chỉ cần con số tăng dần", không có cột nào thật để sort.
+    --
+    -- 2) ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % N: cách chuẩn để sinh số nguyên ngẫu
+    --    nhiên 0..N-1 cho MỖI DÒNG trong T-SQL. Không dùng RAND() vì RAND() chỉ tính 1
+    --    lần cho cả câu lệnh (mọi dòng ra cùng 1 số) — NEWID() thì luôn duy nhất mỗi
+    --    dòng. CAST sang BIGINT trước ABS() để tránh tràn số (CHECKSUM trả về INT, có 1
+    --    giá trị INT âm nhỏ nhất mà ABS() không biểu diễn nổi dưới dạng INT dương).
+    --
+    -- 3) VẬT CHẤT HOÁ TỪNG GIAI ĐOẠN VÀO BẢNG TẠM (#Days, #Slots...) thay vì lồng CTE
+    --    nhiều tầng dùng chung: từng thử dùng toàn CTE lồng nhau, kết quả là SQL Server
+    --    có thể tính lại cả nhánh chứa NEWID() nhiều lần trong 1 câu lệnh — vừa chạy rất
+    --    chậm (đã gặp: hơn 1 phút cho ~4600 đơn, đáng lẽ chỉ vài giây), vừa tràn số nguyên
+    --    (Msg 8115) do CHECKSUM(NEWID()) bị gọi nhiều hơn hẳn dự tính. Bảng tạm ép SQL
+    --    Server tính xong 1 giai đoạn, lưu lại, rồi mới sang giai đoạn tiếp theo — không
+    --    còn mập mờ "tính bao nhiêu lần" nữa, tốc độ ổn định và dự đoán được.
     ;WITH E1(n) AS (SELECT n FROM (VALUES(1),(1),(1),(1),(1),(1),(1),(1),(1),(1)) v(n)),
     E2(n) AS (SELECT 1 FROM E1 a CROSS JOIN E1 b),
     E4(n) AS (SELECT 1 FROM E2 a CROSS JOIN E2 b),
     Tally AS (SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n FROM E4)
     SELECT DATEADD(DAY, n - 1, @TuNgay) AS ngay,
-           20 + ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 11 AS so_don   
+           20 + ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 11 AS so_don   -- 20..30 đơn/ngày
     INTO #Days
     FROM Tally
     WHERE n <= DATEDIFF(DAY, @TuNgay, @DenNgay) + 1;
 
+    -- LƯU Ý: sinh số ngẫu nhiên (kh_rn/bt1_rn/bt2_rn...) NGAY trong SELECT trên #Days×Tally
+    -- (bảng tạm × tally, nhiều dòng thật) rồi mới JOIN sang #KhachSo/#BienTheSo theo rn ở
+    -- bước sau — KHÔNG dùng CROSS APPLY (SELECT TOP 1 ... ORDER BY NEWID()) để chọn ngẫu
+    -- nhiên, vì APPLY không tương quan (không tham chiếu cột nào của bảng ngoài) có thể bị
+    -- SQL Server tối ưu gộp thành CROSS JOIN và chỉ tính NEWID() MỘT LẦN cho cả tập kết
+    -- quả — đúng lỗi thực tế gặp phải khi test: mọi đơn trong ngày ra cùng 1 khách/1 sp.
     ;WITH E1(n) AS (SELECT n FROM (VALUES(1),(1),(1),(1),(1),(1),(1),(1),(1),(1)) v(n)),
     E2(n) AS (SELECT 1 FROM E1 a CROSS JOIN E1 b),
     Tally30 AS (SELECT TOP (30) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n FROM E2)
@@ -1572,6 +1909,7 @@ GO
     CROSS JOIN Tally30 s
     WHERE s.n <= d.so_don;
 
+    -- Đánh số khách hàng/biến thể để JOIN theo rn (thay vì chọn ngẫu nhiên qua APPLY)
     SELECT khach_hang_id, ho_ten, so_dien_thoai,
            ROW_NUMBER() OVER (ORDER BY khach_hang_id) AS rn
     INTO #KhachSo
@@ -1587,6 +1925,7 @@ GO
                           item2_bien_the_id, item2_gia, item2_soluong, tong_tien)
     SELECT
         kh.khach_hang_id, kh.ho_ten, kh.so_dien_thoai, sl.ngay_dat,
+        -- đa số delivered/paid, phần nhỏ còn lại rải các trạng thái khác như dữ liệu gốc
         CASE
             WHEN sl.roll < 70 THEN N'delivered'
             WHEN sl.roll < 80 THEN N'shipping'
@@ -1613,6 +1952,14 @@ GO
     JOIN #BienTheSo bt1 ON bt1.rn = sl.bt1_rn
     JOIN #BienTheSo bt2 ON bt2.rn = sl.bt2_rn;
 
+    -- Bước 2: insert don_hang với tong_tien ĐÃ ĐÚNG ngay từ đầu — dùng MERGE thay vì
+    -- INSERT thường vì lý do sau: sau khi insert cần biết "dòng #Staging nào ứng với
+    -- don_hang_id (IDENTITY) nào vừa sinh ra" để bước 3/4 insert đúng chi_tiet_don_hang.
+    -- INSERT ... OUTPUT chỉ cho lấy cột của bảng đích (inserted.*), KHÔNG cho lấy cột từ
+    -- bảng nguồn (#Staging) — nên không thể output staging_key kèm theo. MERGE thì OUTPUT
+    -- lấy được cả 2 phía. "ON 1 = 0" là điều kiện luôn sai, có nghĩa ép mọi dòng #Staging
+    -- rơi vào nhánh WHEN NOT MATCHED (không tìm được khớp), tức là always insert — MERGE
+    -- ở đây chỉ dùng như một cách "INSERT có OUTPUT nguồn", không thật sự merge/update gì.
     MERGE don_hang AS tgt
     USING #Staging AS src
     ON 1 = 0
@@ -1623,6 +1970,7 @@ GO
                 src.ngay_dat, src.trang_thai_don_hang, src.trang_thai_thanh_toan, N'online')
     OUTPUT src.staging_key, inserted.don_hang_id INTO #Mapping(staging_key, don_hang_id);
 
+    -- Bước 3: sinh chi_tiet_don_hang từ đúng sản phẩm đã chọn ở bước 1
     INSERT INTO chi_tiet_don_hang (don_hang_id, bien_the_id, so_luong, don_gia)
     SELECT m.don_hang_id, s.item1_bien_the_id, s.item1_soluong, s.item1_gia
     FROM #Mapping m JOIN #Staging s ON m.staging_key = s.staging_key;
@@ -1632,6 +1980,8 @@ GO
     FROM #Mapping m JOIN #Staging s ON m.staging_key = s.staging_key
     WHERE s.item2_bien_the_id IS NOT NULL;
 
+    -- Bước 4: sinh thanh_toan cho các đơn đã 'paid' — so_tien tính thẳng từ staging
+    -- (tong_tien - giam_gia(=0) + phi_van_chuyen), không cần đọc lại don_hang.
     INSERT INTO thanh_toan (don_hang_id, ngay_thanh_toan, phuong_thuc_thanh_toan, so_tien, trang_thai)
     SELECT m.don_hang_id, s.ngay_dat,
            CASE ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 5
@@ -1650,6 +2000,22 @@ GO
     DROP TABLE #Mapping;
 GO
 
+-- ============================================================
+--  13b. PHIẾU TRẢ HÀNG + VÍ KHÁCH HÀNG DEMO
+-- ============================================================
+-- Random ~5% đơn "delivered" (vừa sinh ở mục 13) thành có phiếu trả hàng — đa dạng
+-- trạng thái (da_xu_ly/cho_xu_ly/tu_choi) và hình thức hoàn (vi/tien_mat) để có sẵn dữ
+-- liệu demo cho tính năng Trả hàng + Ví khách hàng mỗi lần chạy lại file. Sản phẩm trả =
+-- dòng chi_tiet_don_hang đầu tiên (id nhỏ nhất) của đơn đó — không gán chi_tiet_id
+-- (serial cụ thể) vì đơn demo không theo dõi serial theo từng đơn.
+--
+-- Random dùng NEWID() trực tiếp trong SELECT list, VẬT CHẤT HOÁ ngay vào bảng tạm thật
+-- (#DonDaGiao) trước khi JOIN/lọc tiếp — đúng bài học đã rút ra ở mục 13: nếu chỉ dùng
+-- CTE (không vật chất hoá) rồi JOIN/CROSS APPLY/WHERE lên các cột NEWID() của nó, SQL
+-- Server có thể tính lại các cột NEWID() nhiều lần cho cùng 1 dòng logic (từng thực tế
+-- gặp lỗi trùng khoá ở #MapTraHang khi thử theo cách CTE thuần). CROSS APPLY
+-- chi_tiet_don_hang bên dưới có tương quan (WHERE don_hang_id = dg.don_hang_id) nên an
+-- toàn dù không vật chất hoá riêng.
 IF OBJECT_ID('tempdb..#NhanVienSo') IS NOT NULL DROP TABLE #NhanVienSo;
 IF OBJECT_ID('tempdb..#DonDaGiao') IS NOT NULL DROP TABLE #DonDaGiao;
 IF OBJECT_ID('tempdb..#DonTra') IS NOT NULL DROP TABLE #DonTra;
@@ -1718,6 +2084,10 @@ SELECT m.phieu_tra_id, s.bien_the_id, s.so_luong, s.don_gia,
 FROM #MapTraHang m
 JOIN #DonTra s ON s.don_hang_id = m.don_hang_id;
 
+-- Đồng bộ ví: logic cộng ví (PhieuTraHangService.congViNeuVuaHoanTat) chỉ chạy khi đi
+-- qua tầng ứng dụng Java lúc tạo/sửa phiếu qua API — INSERT thẳng bằng SQL ở đây không
+-- tự kích hoạt, nên phải tự đồng bộ so_du_vi = tổng so_tien_hoan các phiếu da_xu_ly+vi
+-- của khách đó. Khách không có phiếu nào qua ví thì giữ nguyên so_du_vi = 0 mặc định.
 UPDATE kh
 SET so_du_vi = tong.so_tien
 FROM khach_hang kh
@@ -1735,6 +2105,19 @@ DROP TABLE #DonTra;
 DROP TABLE #MapTraHang;
 GO
 
+-- ============================================================
+--  13c. PHIẾU BẢO HÀNH DEMO
+-- ============================================================
+-- Random ~5% đơn "delivered" thành có phiếu bảo hành — đa dạng trạng thái xử lý
+-- (con_bao_hanh/dang_xu_ly/da_xu_ly/het_bao_hanh/tu_choi) để có sẵn dữ liệu demo. Sản
+-- phẩm bảo hành = dòng chi_tiet_don_hang đầu tiên (id nhỏ nhất) của đơn đó — không gán
+-- chi_tiet_id (serial cụ thể) vì đơn demo không theo dõi serial theo từng đơn. ngay_mua
+-- lấy từ ngay_dat của đơn (đơn demo không có ngay_giao_thuc_te), ngay_het_bh = ngay_mua +
+-- 12-24 tháng ngẫu nhiên. phieu_bao_hanh không có cột nhân viên xử lý nên không cần bảng
+-- tạm kiểu #NhanVienSo như mục 13b.
+--
+-- Vật chất hoá NEWID() vào bảng tạm thật (#DonBaoHanh) trước khi CROSS APPLY/lọc — cùng
+-- lý do đã ghi ở mục 13b (tránh SQL Server tính lại NEWID() nhiều lần cho cùng 1 dòng).
 IF OBJECT_ID('tempdb..#DonBaoHanh') IS NOT NULL DROP TABLE #DonBaoHanh;
 IF OBJECT_ID('tempdb..#PhieuBaoHanh') IS NOT NULL DROP TABLE #PhieuBaoHanh;
 
@@ -1806,6 +2189,15 @@ DROP TABLE #DonBaoHanh;
 DROP TABLE #PhieuBaoHanh;
 GO
 
+-- ============================================================
+--  14. NÂNG TỒN KHO DEMO (mỗi biến thể ~20-30 máy, trừ 1 biến thể sắp hết hàng)
+-- ============================================================
+-- Đồng bộ ton_kho TRƯỚC — nhiều biến thể ngoài Dell đang bị lệch (so_luong_ton_thuc_te
+-- sai lệch so với số serial "trong_kho" thật) do 1 dòng UPDATE reset cũ trong file này.
+-- Trigger trg_CapNhatTonKhoThucTe chỉ CỘNG/TRỪ phần thay đổi (delta) mỗi khi serial đổi
+-- trạng thái — nếu baseline sai từ trước, delta cộng/trừ vẫn cho ra kết quả sai và có
+-- thể vi phạm CHECK (>= 0). Phải sửa đúng baseline ở đây trước khi các bước bên dưới
+-- thêm/đổi trạng thái serial.
 UPDATE tk
 SET so_luong_ton_thuc_te = ISNULL(tinh_lai.trong_kho, 0),
     so_luong_giu         = ISNULL(tinh_lai.giu_hang, 0)
@@ -1819,6 +2211,8 @@ LEFT JOIN (
 ) tinh_lai ON tk.bien_the_id = tinh_lai.bien_the_id;
 GO
 
+-- Chỉ chạy 1 lần (đánh dấu bằng tiền tố serial 'RESTOCK-') dù file được Execute lại
+-- bao nhiêu lần — không cộng dồn thêm máy mỗi lần chạy.
 IF NOT EXISTS (SELECT 1 FROM chi_tiet_san_pham WHERE so_serial LIKE N'RESTOCK-%')
 BEGIN
     ;WITH Numbers AS (
@@ -1826,6 +2220,9 @@ BEGIN
         UNION ALL SELECT n + 1 FROM Numbers WHERE n < 30
     ),
     Targets AS (
+        -- Mỗi biến thể mục tiêu 20-30 máy (rải theo bien_the_id cho đa dạng), riêng
+        -- bien_the_id=37 (Dell XPS 15 i9 32GB, ton_kho_toi_thieu=1) giữ mục tiêu chỉ 1
+        -- máy để luôn hiện "sắp hết hàng" làm demo.
         SELECT bien_the_id,
                CASE WHEN bien_the_id = 37 THEN 1 ELSE 20 + (bien_the_id % 11) END AS muc_tieu
         FROM bien_the_san_pham
@@ -1847,6 +2244,9 @@ BEGIN
 END
 GO
 
+-- bien_the_id=37 đã có sẵn vài máy trong_kho — đánh dấu bớt còn đúng 1 máy để mô phỏng
+-- sản phẩm sắp hết hàng. Tách guard riêng theo số lượng thật (không dùng chung guard
+-- 'RESTOCK-%' ở trên) — tự chạy lại đến khi đúng còn 1 máy, kể cả khi lần trước lỡ dở.
 IF (SELECT COUNT(*) FROM chi_tiet_san_pham WHERE bien_the_id = 37 AND trang_thai = N'trong_kho') > 1
 BEGIN
     UPDATE TOP (1) chi_tiet_san_pham
@@ -1855,6 +2255,8 @@ BEGIN
 END
 GO
 
+-- Đồng bộ lại lần nữa sau khi thêm máy demo + đánh dấu bán ở trên — an toàn chạy lại
+-- nhiều lần, luôn tính lại từ dữ liệu thật, không cộng dồn sai.
 UPDATE tk
 SET so_luong_ton_thuc_te = ISNULL(tinh_lai.trong_kho, 0),
     so_luong_giu         = ISNULL(tinh_lai.giu_hang, 0)
@@ -1868,6 +2270,10 @@ LEFT JOIN (
 ) tinh_lai ON tk.bien_the_id = tinh_lai.bien_the_id;
 GO
 
+-- Serial mẫu cho linh kiện rời (CPU/RAM/GPU/Ổ cứng) — 10 serial/loại, rải đều qua các
+-- mục danh mục đã seed ở trên (dm_cpu 1-7, dm_ram 1-5, dm_gpu 1-5, dm_o_cung 1-4).
+-- Trước đây các bảng chi_tiet_cpu/ram/gpu/o_cung không có dữ liệu mẫu nên tab "Serial"
+-- (Kho hàng) chỉ thấy serial sản phẩm, không thấy serial linh kiện.
 ;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
 INSERT INTO chi_tiet_cpu (cpu_id, so_serial, trang_thai)
 SELECT ((n - 1) % 7) + 1, N'CPU-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
@@ -1892,6 +2298,9 @@ SELECT ((n - 1) % 4) + 1, N'OCUNG-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N't
 FROM Seq;
 GO
 
+-- ============================================================
+--  CÀI ĐẶT HỆ THỐNG (singleton — luôn đúng 1 dòng, cai_dat_id = 1)
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'cai_dat_he_thong')
 BEGIN
     CREATE TABLE cai_dat_he_thong (
@@ -1916,6 +2325,9 @@ BEGIN
 END
 GO
 
+-- ============================================================
+--  Mã vận đơn & Lịch sử trạng thái đơn hàng
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('don_hang') AND name = 'ma_van_don')
 BEGIN
     ALTER TABLE don_hang ADD ma_van_don VARCHAR(50) NULL;
@@ -1939,6 +2351,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_lsdh_don_hang')
     CREATE INDEX IX_lsdh_don_hang ON lich_su_don_hang(don_hang_id, thoi_gian);
 GO
 
+-- Tự ghi log mỗi khi trạng thái đơn đổi — chỗ duy nhất phát sinh log, không cần backend
+-- Java can thiệp, không sợ thiếu dòng nếu sau này có thêm đường cập nhật trạng thái khác.
 CREATE OR ALTER TRIGGER trg_don_hang_log_trangthai
 ON don_hang
 AFTER UPDATE
@@ -1956,12 +2370,20 @@ BEGIN
 END
 GO
 
+-- ============================================================
+--  Tích điểm mua hàng & Đổi điểm lấy voucher
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('don_hang') AND name = 'da_cong_diem')
 BEGIN
     ALTER TABLE don_hang ADD da_cong_diem BIT NOT NULL DEFAULT 0;
 END
 GO
 
+-- Cộng điểm khi đơn chuyển "delivered" — tức lúc khách bấm "Xác nhận đã nhận hàng" (đơn
+-- online, xem xacNhanDaNhanHang() ở DonHangService) hoặc lúc bán tại quầy (đơn in_store vào
+-- thẳng "delivered"). Không cộng sớm hơn (lúc đặt/thanh toán) để tránh khách "cày" điểm bằng
+-- cách đặt rồi hủy liên tục — đơn đã "delivered" không còn hủy được nữa (xem
+-- CHUYEN_TRANG_THAI_DON_HANG), nên không cần trigger trừ điểm riêng cho trường hợp hủy.
 IF EXISTS (SELECT 1 FROM sys.triggers WHERE name = 'trg_don_hang_tru_diem_huy')
     DROP TRIGGER trg_don_hang_tru_diem_huy;
 GO
@@ -1974,6 +2396,9 @@ BEGIN
     SET NOCOUNT ON;
     IF UPDATE(trang_thai_don_hang)
     BEGIN
+        -- Cộng dồn theo GROUP BY khach_hang_id trước khi UPDATE — 1 câu UPDATE...FROM...JOIN
+        -- trực tiếp trên "many" side chỉ lấy được giá trị từ 1 dòng khớp bất kỳ khi 1 khách có
+        -- nhiều đơn cùng chuyển "delivered" trong cùng 1 batch, làm mất điểm âm thầm.
         UPDATE kh
         SET kh.diem_tich_luy = kh.diem_tich_luy + x.diem_cong
         FROM khach_hang kh
@@ -2036,6 +2461,9 @@ BEGIN
 END
 GO
 
+-- Voucher cá nhân trúng từ vòng quay giữ nguyên đơn tối thiểu của khuyến mãi gốc (khách vẫn
+-- phải đạt đơn tối thiểu mới áp được, y hệt mã khuyến mãi công khai) — cột thêm sau, ALTER
+-- idempotent cho DB đã có sẵn bảng từ trước.
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('phieu_giam_gia_ca_nhan') AND name = 'don_hang_toi_thieu')
 BEGIN
     ALTER TABLE phieu_giam_gia_ca_nhan ADD don_hang_toi_thieu DECIMAL(18,0) NULL;
@@ -2089,9 +2517,20 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_pggcn_khach_hang')
     CREATE INDEX IX_pggcn_khach_hang ON phieu_giam_gia_ca_nhan(khach_hang_id, da_su_dung);
 GO
 
+-- ============================================================
+--  Mở rộng danh sách trạng thái đơn hàng theo thời gian (out_for_delivery, rồi
+--  awaiting_confirmation) — Drop-rồi-add (không gói trong CREATE TABLE) nên chạy lại file
+--  bao nhiêu lần trên DB đã có sẵn cũng an toàn. "awaiting_confirmation": admin đã bấm "Đã
+--  giao" nhưng khách chưa bấm "Xác nhận đã nhận hàng" — chỉ khách (hoặc staff) xác nhận mới
+--  chuyển tiếp "delivered", đơn mới thật sự rơi vào tab "Hoàn tất" phía khách hàng. Xem
+--  DonHangService.xacNhanDaNhanHang() (BackEnd) và CHUYEN_TRANG_THAI_DON_HANG.
+-- ============================================================
 IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_dh_trangthai')
     ALTER TABLE don_hang DROP CONSTRAINT CK_dh_trangthai;
 ALTER TABLE don_hang ADD CONSTRAINT CK_dh_trangthai
     CHECK (trang_thai_don_hang IN (N'pending', N'confirmed', N'processing', N'shipping', N'out_for_delivery', N'awaiting_confirmation', N'delivered', N'cancelled', N'returned'));
 GO
 GO
+select*from ton_kho
+select*from bien_the_san_pham
+select*from chi_tiet_san_pham

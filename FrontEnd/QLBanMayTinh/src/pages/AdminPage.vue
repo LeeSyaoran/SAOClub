@@ -24,7 +24,6 @@ import { authHeaders } from "../services/api.js";
 import { formatPrice, formatDate, formatDateTime, statusLabel, toLocalDT } from "../utils/adminFormat.js";
 import { showToast } from "../stores/toast.js";
 import ToastHost from "../components/common/ToastHost.vue";
-import ProductsTable from "../components/admin/ProductsTable.vue";
 import CustomersTable from "../components/admin/CustomersTable.vue";
 import CustomerDetailPage from "../components/admin/CustomerDetailPage.vue";
 import SanPhamDetailPage from "../components/admin/SanPhamDetailPage.vue";
@@ -36,13 +35,13 @@ import InventoryHistoryPanel from "../components/admin/InventoryHistoryPanel.vue
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
 import DanhGiaPanel from "../components/admin/DanhGiaPanel.vue";
-import BienTheTable from "../components/admin/BienTheTable.vue";
 import SerialManager from "../components/admin/SerialManager.vue";
 import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import AdminDashboard from "../components/admin/AdminDashboard.vue";
 import AdminReports from "../components/admin/AdminReports.vue";
 import AdminSettings from "../components/admin/AdminSettings.vue";
+import QuanLyHangHoa from "../components/QuanLyHangHoa.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
@@ -1258,14 +1257,9 @@ onUnmounted(() => {
           @back-to-today="statusChartDate = toDateInputValue(new Date())"
         />
 
-        <!-- ── San pham: dieu huong qua submenu sidebar (adm-subnav) ── -->
+        <!-- ── San pham: gop San pham + Kho vao 1 component (QuanLyHangHoa.vue) ── -->
         <section v-show="currentPage === 'products'">
-          <div v-show="productsMainTab==='sanPham'">
-            <ProductsTable />
-          </div>
-          <div v-show="productsMainTab==='bienThe'">
-            <BienTheTable />
-          </div>
+          <QuanLyHangHoa />
         </section>
 
         <!-- ── Don hang ── -->

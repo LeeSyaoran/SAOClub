@@ -16,9 +16,21 @@ import java.util.List;
 @Repository
 public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
 
+    // Kiểm tra trùng mã/barcode TRƯỚC khi insert để báo lỗi tiếng Việt rõ ràng, thay vì
+    // để unique index UX_san_pham_ma / UX_san_pham_barcode bắn SQLServerException khó đọc.
+    boolean existsByMaSanPham(String maSanPham);
+
+    boolean existsByBarcode(String barcode);
+
+    boolean existsByMaSanPhamAndSanPhamIdNot(String maSanPham, Integer sanPhamId);
+
+    boolean existsByBarcodeAndSanPhamIdNot(String barcode, Integer sanPhamId);
+
     @Query(value = """
     SELECT new com.example.backend.response.SanPhamResponse(
         sp.sanPhamId,
+        sp.maSanPham,
+        sp.barcode,
         bt.bienTheId,
         sp.tenSanPham,
         dm.id,
@@ -59,19 +71,25 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
     LEFT JOIN bt.ram ram
     LEFT JOIN bt.oCung oCung
     LEFT JOIN bt.gpu gpu
-    WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')))
+    WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
+           OR LOWER(sp.maSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
+           OR LOWER(sp.barcode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(bt.maSku) LIKE LOWER(CONCAT('%', :keyword, '%')))
       AND (:danhMucId IS NULL OR dm.id = :danhMucId)
       AND (:thuongHieuId IS NULL OR th.thuongHieuId = :thuongHieuId)
       AND (:trangThai IS NULL OR bt.trangThai = :trangThai)
     ORDER BY sp.ngayTao DESC
     """,
-    countQuery = """
+            countQuery = """
     SELECT COUNT(bt)
     FROM BienTheSanPham bt
     JOIN bt.sanPham sp
     LEFT JOIN sp.danhMuc dm
     LEFT JOIN sp.thuongHieu th
-    WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')))
+    WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(sp.maSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
+           OR LOWER(sp.barcode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(bt.maSku) LIKE LOWER(CONCAT('%', :keyword, '%')))
       AND (:danhMucId IS NULL OR dm.id = :danhMucId)
       AND (:thuongHieuId IS NULL OR th.thuongHieuId = :thuongHieuId)
       AND (:trangThai IS NULL OR bt.trangThai = :trangThai)
