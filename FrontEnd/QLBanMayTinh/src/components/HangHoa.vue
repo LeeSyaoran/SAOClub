@@ -731,6 +731,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { get, put } from '@/services/api.js'
 import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '@/services/DmService.js'
@@ -1442,9 +1443,10 @@ const openAddVariant = (group) => {
   dungLaiMaTran()
 }
 
-// Mo trang chi tiet san pham (route /admin/san-pham/:id) o tab moi, giong ProductsTable.vue
+// Mo trang chi tiet san pham (route /admin/san-pham/:id) ngay trong tab hien tai.
+const router = useRouter()
 const xemChiTietDayDu = (sanPhamId) => {
-  window.open(`${location.origin}${location.pathname}#/admin/san-pham/${sanPhamId}`, "_blank");
+  router.push(`/admin/san-pham/${sanPhamId}`);
 };
 
 const openEdit = (group, item) => {
