@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { t } from "../../i18n/index.js";
 import * as SanPhamService from "../../services/SanPhamService.js";
 import { formatPrice, statusLabel, formatDateTime } from "../../utils/adminFormat.js";
@@ -17,6 +18,7 @@ import { usePagination } from "../../composables/usePagination.js";
 import { Image } from "@lucide/vue";
 
 const props = defineProps({ readonly: { type: Boolean, default: false } });
+const router = useRouter();
 
 onMounted(() => {
   ensureProducts();
@@ -65,7 +67,7 @@ const openDetail = (sanPhamId, name) => {
     showDetailModal.value = true;
     return;
   }
-  window.open(`${location.origin}${location.pathname}#/admin/san-pham/${sanPhamId}`, "_blank");
+  router.push(`/admin/san-pham/${sanPhamId}`);
 };
 
 // ── Products CRUD (chỉ tạo mới — sửa/thêm biến thể đã chuyển sang BienTheTable.vue,

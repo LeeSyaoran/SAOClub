@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, reactive, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
@@ -18,7 +18,8 @@ import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { CheckCircle2, Package, Truck, Bike, Inbox, Laptop, User } from '@lucide/vue';
+import { CheckCircle2, Package, Truck, Bike, Inbox, Laptop, User, Printer } from '@lucide/vue';
+import InvoiceModal from "./InvoiceModal.vue";
 
 onMounted(() => { ensureOrders(); ensureCustomers(); ensureProducts(); });
 
@@ -109,6 +110,10 @@ const orderDetailData      = ref(null);   // don hang dang xem
 const orderDetailItems     = ref([]);     // ChiTietDonHangResponse[]
 const orderDetailPayments  = ref([]);     // ThanhToanResponse[] — co the rong (don cu/don online)
 const orderDetailLoading   = ref(false);
+
+// Invoice modal
+const showInvoice = ref(false);
+const invoiceOrder = ref(null);
 
 // Gom nhieu ThanhToan cung phuong thuc (vd don tai quay tra nhieu dot) thanh 1 dong —
 // hien so lan + tong tien thay vi lap ten phuong thuc nhieu lan trong theo nhau.
@@ -651,13 +656,7 @@ const confirmXacNhanSerial = async () => {
               </div>
             </td>
             <td>
-              <div class="d-flex gap-1">
-                <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
-                <button v-if="NEXT_ORDER_STATUS[o.trangThaiDonHang]" class="btn btn-sm btn-outline-success" style="font-size:0.78rem;padding:2px 8px;" @click="advanceOrderStatus(o)">
-                  <component :is="NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].icon" :size="14" /> {{ t(NEXT_ORDER_STATUS_LABEL[o.trangThaiDonHang].key) }}
-                </button>
-                <button v-if="!['delivered','cancelled','returned'].includes(o.trangThaiDonHang)" class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openOrderStatus(o)">{{ t('admin.orders.update') }}</button>
-              </div>
+              <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 10px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
             </td>
           </tr>
           <tr v-if="filteredOrders.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.orders.empty') }}</td></tr>
@@ -826,7 +825,13 @@ const confirmXacNhanSerial = async () => {
             · {{ formatDate(orderDetailData?.ngayDat) }}
           </div>
         </div>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showOrderDetailModal=false"></button>
+        <div class="d-flex align-items-center gap-2">
+          <button
+            class="btn btn-sm btn-warning text-dark fw-bold d-flex align-items-center gap-1"
+            @click="invoiceOrder = orderDetailData; showInvoice = true"
+          ><Printer :size="13" /> In hóa đơn</button>
+          <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showOrderDetailModal=false"></button>
+        </div>
       </div>
 
       <!-- Toan bo body scroll cung nhau -->
@@ -838,50 +843,61 @@ const confirmXacNhanSerial = async () => {
           <table v-else class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
             <thead>
               <tr style="background:var(--bg-input);">
-                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:38%;">{{ t('admin.orderDetailModal.colProduct') }}</th>
-                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:16%;font-family:monospace;">{{ t('admin.orderDetailModal.colSku') }}</th>
+                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:55%;">{{ t('admin.orderDetailModal.colProduct') }}</th>
                 <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:8%;">{{ t('admin.orderDetailModal.colQty') }}</th>
                 <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colUnitPrice') }}</th>
                 <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colTotal') }}</th>
-                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:10%;"></th>
+                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:9%;"></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="item in orderDetailItems" :key="item.id" style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-2">
-                  <div class="d-flex align-items-center gap-2">
-                    <img
-                      v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
-                      :src="productByBienThe(item.bienTheId).hinhAnhChinh"
-                      style="width:36px;height:28px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;"
-                    />
-                    <span v-else style="flex-shrink:0;"><Laptop :size="19" color="var(--text-muted)" /></span>
-                    <span class="text-light">{{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}</span>
+                <!-- San pham: anh + ten + SKU + serial -->
+                <td class="px-3 py-3" colspan="1">
+                  <div class="d-flex align-items-start gap-3">
+                    <!-- Anh -->
+                    <div style="flex-shrink:0;width:52px;height:44px;background:var(--bg-card-inset);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                      <img
+                        v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
+                        :src="productByBienThe(item.bienTheId).hinhAnhChinh"
+                        style="max-width:48px;max-height:40px;object-fit:contain;"
+                      />
+                      <Laptop v-else :size="22" color="var(--text-muted)" />
+                    </div>
+                    <!-- Info -->
+                    <div style="min-width:0;">
+                      <div class="fw-semibold" style="color:var(--text-heading);font-size:0.88rem;line-height:1.3;">
+                        {{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}
+                      </div>
+                      <!-- Bien the: CPU / RAM / O cung / Mau -->
+                      <div
+                        v-if="[productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).length"
+                        class="mt-1"
+                        style="font-size:0.74rem;color:var(--text-secondary);"
+                      >
+                        {{ [productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).join(' · ') }}
+                      </div>
+                      <div v-if="item.maSku" class="mt-1" style="font-size:0.72rem;color:var(--text-muted);">
+                        Mã hàng: <span style="font-family:monospace;color:var(--text-secondary);">{{ item.maSku }}</span>
+                      </div>
+                      <div v-if="item.soSerial" class="mt-1" style="font-size:0.75rem;color:var(--text-secondary);">
+                        Số serial: <strong style="font-family:monospace;color:var(--text-primary);letter-spacing:0.03em;">{{ item.soSerial }}</strong>
+                      </div>
+                    </div>
                   </div>
                 </td>
-                <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.75rem;">
-                  {{ item.maSku }}
-                  <div v-if="item.soSerial" class="text-info" style="font-size:0.7rem;">S/N: {{ item.soSerial }}</div>
-                </td>
-                <td class="px-3 py-2 text-center fw-bold" style="color:var(--text-heading);">{{ item.soLuong }}</td>
-                <td class="px-3 py-2 text-end text-secondary">{{ formatPrice(item.donGia) }}</td>
-                <td class="px-3 py-2 text-end text-warning fw-semibold">{{ formatPrice(item.thanhTien) }}</td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-3 text-center fw-bold" style="color:var(--text-heading);vertical-align:middle;">{{ item.soLuong }}</td>
+                <td class="px-3 py-3 text-end text-secondary" style="vertical-align:middle;">{{ formatPrice(item.donGia) }}</td>
+                <td class="px-3 py-3 text-end fw-semibold" style="color:var(--accent-fg);vertical-align:middle;">{{ formatPrice(item.thanhTien) }}</td>
+                <td class="px-3 py-3" style="vertical-align:middle;">
                   <div class="d-flex gap-1 justify-content-center">
                     <button
                       v-if="productByBienThe(item.bienTheId)"
                       class="btn btn-sm btn-outline-secondary"
-                      style="font-size:0.72rem;padding:2px 6px;"
+                      style="font-size:0.72rem;padding:2px 8px;"
                       @click="openVariantDetail(item.bienTheId)"
                     >
                       {{ t('admin.orderDetailModal.detail') }}
-                    </button>
-                    <button
-                      class="btn btn-sm btn-outline-danger"
-                      style="font-size:0.72rem;padding:2px 6px;"
-                      @click="removeItemFromOrder(item.id)"
-                    >
-                      {{ t('admin.orderDetailModal.delete') }}
                     </button>
                   </div>
                 </td>
@@ -937,65 +953,6 @@ const confirmXacNhanSerial = async () => {
             <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoThucTe) }}</span>
           </div>
 
-          <!-- Them san pham moi vao don -->
-          <div class="mt-3 pt-2" style="border-top:1px solid var(--bg-input);">
-            <div
-              class="d-flex align-items-center justify-content-between mb-2" style="cursor:pointer;"
-              @click="addItemMode = !addItemMode; addItemBienTheId = ''; addItemSelectedSpId = null; addItemSearch = ''"
-            >
-              <span class="fw-semibold" style="font-size:0.85rem;color:var(--text-primary);">{{ t('admin.orderDetailModal.addNewItem') }}</span>
-              <span style="color:var(--text-muted);font-size:0.75rem;">{{ addItemMode ? '▲' : '▼' }}</span>
-            </div>
-
-            <div v-if="addItemMode">
-              <!-- Tim kiem -->
-              <input
-                v-model="addItemSearch" type="text" :placeholder="t('admin.orderDetailModal.searchPlaceholder')"
-                class="form-control form-control-sm mb-3"
-                style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);font-size:0.8rem;"
-              />
-
-              <!-- Grid san pham -->
-              <div class="d-grid gap-2 mb-2" style="grid-template-columns:repeat(3,1fr);max-height:280px;overflow-y:auto;">
-                <div
-                  v-for="g in addItemProductGroups" :key="g.sanPhamId"
-                  class="rounded-3 overflow-hidden"
-                  style="cursor:pointer;border:1px solid var(--border-color);background:var(--bg-card);transition:border-color .15s;"
-                  @click="openAddItemDetail(g)"
-                  @mouseenter="$event.currentTarget.style.borderColor='var(--accent)'"
-                  @mouseleave="$event.currentTarget.style.borderColor='var(--border-color)'"
-                >
-                  <div style="background:var(--bg-card-inset);height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-                    <img
-                      v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh"
-                      style="max-height:76px;max-width:100%;object-fit:contain;"
-                    />
-                    <span v-else><Laptop :size="29" color="var(--text-muted)" /></span>
-                  </div>
-                  <div class="px-2 py-1">
-                    <div
-                      class="fw-semibold text-light" style="font-size:0.72rem;line-height:1.3;
-                       display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"
-                    >
-                      {{ g.tenSanPham }}
-                    </div>
-                    <div class="text-secondary" style="font-size:0.65rem;">{{ g.tenThuongHieu }}</div>
-                    <div style="font-size:0.72rem;color:var(--accent-fg);font-weight:600;margin-top:2px;">
-                      {{ t('admin.orderDetailModal.priceFrom') }} {{ formatPrice(g.minPrice) }}
-                    </div>
-                    <div v-if="g.phanLoaiTen" class="mt-1">
-                      <span
-                        v-for="tag in (g.phanLoaiTen||'').split(',').filter(Boolean)" :key="tag"
-                        class="badge bg-secondary me-1" style="font-size:0.58rem;"
-                      >{{ tag.trim() }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="text-secondary text-center py-1" style="font-size:0.75rem;">{{ t('admin.orderDetailModal.selectVariantHint') }}</div>
-            </div>
-          </div>
 
           <!-- Canh bao gop don: chi 1 nut, tu dong gop tat ca don cung ngay -->
           <div
@@ -1100,6 +1057,14 @@ const confirmXacNhanSerial = async () => {
     :san-pham-id="detailModalSanPhamId"
     :san-pham-name="detailModalSanPhamName"
     :only-bien-the-ids="detailModalBienTheIds"
+  />
+
+  <!-- Modal in hoa don -->
+  <InvoiceModal
+    :show="showInvoice"
+    :don-hang-id="invoiceOrder?.donHangId"
+    :order="invoiceOrder"
+    @close="showInvoice = false"
   />
 </template>
 

@@ -15,7 +15,8 @@ import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot
 import { POS_PAYMENT_METHODS, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
 import * as ThanhToanService from "../../services/ThanhToanService.js";
 import { askConfirm } from "../../stores/confirm.js";
-import { Laptop, ShoppingCart, Receipt, Info, RefreshCw, X, Check, ExternalLink, ImageOff } from '@lucide/vue';
+import { Laptop, ShoppingCart, Receipt, Info, RefreshCw, X, Check, ExternalLink, ImageOff, Printer } from '@lucide/vue';
+import InvoiceModal from "./InvoiceModal.vue";
 
 onMounted(() => { ensureProducts(); ensureCustomers(); ensurePromotions(); });
 
@@ -32,12 +33,13 @@ const posFoundCust = ref(null);
 const posError = ref("");
 const posPlacing = ref(false);
 const posSuccess = ref(false);
+const posLastOrder = ref(null);   // don hang vua tao thanh cong — de mo modal in hoa don
+const showInvoiceModal = ref(false);
 const posPromoCode = ref("");
 const posAppliedPromo = ref(null);
 const posPromoMsg = ref("");
 const posPaymentMethod = ref(null); // 1 trong POS_PAYMENT_METHODS — bat buoc chon truoc khi tao don
-// 'pickup' (mac dinh, khach tu lay tai quay — khong tinh phi/dia chi) hoac 'delivery'
-// (giao tan noi — tinh phi nhu online, don dung o "confirmed" thay vi nhay thang "delivered").
+// POS luon la ban tai quay — phi van chuyen luon = 0, khong co UI chon hinh thuc nhan hang.
 const posDeliveryMode = ref('pickup');
 const posDeliveryAddress = ref('');
 // Xac nhan thu cong "da quet QR" — chua co webhook ngan hang that nen nhan vien tu bam
@@ -97,7 +99,10 @@ const posCartGroups = computed(() => {
 const posGroupTotal = (g) => g.items.reduce((s, i) => s + i.giaBan, 0);
 const posFee = computed(() => {
   if (posDeliveryMode.value !== 'delivery') return 0;
-  return posCartTotal.value >= 300000 ? 0 : 30000;
+  if (posCartTotal.value >= POS_FREE_SHIP_THRESHOLD) return 0;
+  const km = parseFloat(posDistanceKm.value) || 0;
+  const tier = POS_SHIP_TIERS.find(t => km <= t.maxKm);
+  return tier ? tier.fee : POS_SHIP_TIERS[POS_SHIP_TIERS.length - 1].fee;
 });
 const posGiamGia = computed(() => {
   const p = posAppliedPromo.value;
@@ -208,6 +213,7 @@ const posHoldOrder = () => {
   posPaymentMethod.value = null;
   posDeliveryMode.value = 'pickup';
   posDeliveryAddress.value = '';
+  posDistanceKm.value = '';
   posQrScanned.value = false;
   posStage.value = 'start';
   posPhoneNotFound.value = false;
@@ -453,6 +459,7 @@ const posReset = async () => {
   posPaymentMethod.value = null;
   posDeliveryMode.value = 'pickup';
   posDeliveryAddress.value = '';
+  posDistanceKm.value = '';
   posQrScanned.value = false;
   posStage.value = 'start';
   posPhoneNotFound.value = false;
@@ -618,11 +625,15 @@ const posPlaceOrder = async () => {
       throw e;
     }
     posSuccess.value = true;
+    // Luu don va khach hang de mo modal in hoa don
+    posLastOrder.value = { ...created, khachHangId, maDonHang: created.maDonHang, thanhTien: posGrandTotal.value, tongTien: posCartTotal.value, giamGia: posGiamGia.value, phiVanChuyen: posFee.value, ngayDat, kenhBan: 'in_store' };
+    const _custSnapshot = posFoundCust.value ? { ...posFoundCust.value } : null;
     posCart.value = []; posPhone.value = ""; posFoundCust.value = null;
     posPromoCode.value = ""; posAppliedPromo.value = null; posPromoMsg.value = "";
     posPaymentMethod.value = null;
     posDeliveryMode.value = 'pickup';
     posDeliveryAddress.value = '';
+    posDistanceKm.value = '';
     posQrScanned.value = false;
     posStage.value = 'start';
     await refreshOrders();
@@ -682,8 +693,7 @@ const posPlaceOrder = async () => {
         <template v-else-if="posStage === 'phone'">
           <div class="fw-bold text-light">{{ t('admin.pos.enterPhoneTitle') }}</div>
           <div class="d-flex gap-2 w-100 position-relative">
-            <input v-model="posPhone" class="form-control form-control-sm" style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.pos.phonePlaceholder')" @input="showPosSuggestions = true" @focus="onPosPhoneFocus" @blur="showPosSuggestions = false" @keyup.enter="posLookup" />
-            <button class="btn btn-sm btn-warning text-dark fw-bold flex-shrink-0" @click="posLookup">{{ t('admin.pos.find') }}</button>
+            <input v-model="posPhone" class="form-control form-control-sm w-100" style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.pos.phonePlaceholder')" @input="showPosSuggestions = true" @focus="onPosPhoneFocus" @blur="showPosSuggestions = false" @keyup.enter="posLookup" />
             <div v-if="showPosSuggestions && posPhoneSuggestions.length" class="position-absolute w-100 rounded-3 shadow-lg" style="top:100%; left:0; z-index:20; background:var(--bg-card); border:1px solid var(--border-color-strong); max-height:220px; overflow-y:auto;">
               <div
                 v-for="c in posPhoneSuggestions" :key="c.khachHangId" class="px-3 py-2 small d-flex justify-content-between gap-2"
@@ -796,32 +806,10 @@ const posPlaceOrder = async () => {
           </div>
           <div v-if="posPromoMsg" class="small" :class="posAppliedPromo ? 'text-success' : 'text-danger'">{{ posPromoMsg }}</div>
         </div>
-        <!-- Giao hang -->
-        <div class="p-2 border-top border-secondary d-flex flex-column gap-2">
-          <div class="text-uppercase text-secondary fw-bold" style="font-size:0.78rem;letter-spacing:0.04em;">{{ t('admin.pos.deliveryModeLabel') }}</div>
-          <div class="d-flex gap-1">
-            <button
-              class="btn btn-sm flex-fill" style="font-size:0.75rem;"
-              :class="posDeliveryMode==='pickup' ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
-              @click="posDeliveryMode='pickup'"
-            >{{ t('admin.pos.pickupAtStore') }}</button>
-            <button
-              class="btn btn-sm flex-fill" style="font-size:0.75rem;"
-              :class="posDeliveryMode==='delivery' ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
-              @click="posDeliveryMode='delivery'"
-            >{{ t('admin.pos.deliverToAddress') }}</button>
-          </div>
-          <input
-            v-if="posDeliveryMode==='delivery'" v-model="posDeliveryAddress" class="form-control form-control-sm"
-            style="background:var(--bg-hover);border-color:var(--border-color-strong);color:var(--text-primary);"
-            :placeholder="t('admin.pos.deliveryAddressPlaceholder')"
-          />
-        </div>
         <!-- Tong tien -->
         <div class="p-2 border-top border-secondary d-flex flex-column gap-1">
           <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.subtotalLabel') }}</span><span>{{ formatPrice(posCartTotal) }}</span></div>
           <div v-if="posGiamGia > 0" class="d-flex justify-content-between text-success small"><span>{{ t('checkout.discount') }}</span><span>-{{ formatPrice(posGiamGia) }}</span></div>
-          <div v-if="posDeliveryMode==='delivery'" class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.shippingFeeLabel') }}</span><span>{{ posFee===0?t('admin.pos.free'):formatPrice(posFee) }}</span></div>
           <div class="d-flex justify-content-between fw-bold"><span>{{ t('admin.pos.totalLabel') }}</span><span>{{ formatPrice(posGrandTotal) }}</span></div>
         </div>
         <!-- Phuong thuc thanh toan -->
@@ -870,7 +858,12 @@ const posPlaceOrder = async () => {
           </div>
           <div v-else class="small text-secondary">{{ t('admin.pos.noCustomerYet') }}</div>
           <div v-if="posError" class="small p-2 rounded-2" style="background:rgba(220,53,69,0.1);color:#e05252;">{{ posError }}</div>
-          <div v-if="posSuccess" class="small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">{{ t('admin.pos.orderCreated') }}</div>
+          <div v-if="posSuccess" class="d-flex flex-column align-items-center gap-2 w-100 p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#48c78e;">
+            <div>{{ t('admin.pos.orderCreated') }}</div>
+            <button class="btn btn-sm btn-warning text-dark fw-bold d-flex align-items-center gap-1" @click="showInvoiceModal = true">
+              <Printer :size="13" /> In hóa đơn
+            </button>
+          </div>
           <div class="d-flex gap-2">
             <button class="btn btn-sm btn-outline-secondary" @click="posReset">{{ t('admin.pos.reset') }}</button>
             <button class="btn btn-sm btn-outline-info" :disabled="!posCart.length" @click="posHoldOrder">{{ t('admin.pos.holdOrder') }}</button>
@@ -1011,6 +1004,14 @@ const posPlaceOrder = async () => {
     :san-pham-id="posDetailSanPhamId"
     :san-pham-name="posDetailSanPhamName"
     :only-bien-the-ids="posDetailOnlyBienTheIds"
+  />
+
+  <!-- Modal in hoa don POS -->
+  <InvoiceModal
+    :show="showInvoiceModal"
+    :don-hang-id="posLastOrder?.donHangId ?? posLastOrder?.id"
+    :order="posLastOrder"
+    @close="showInvoiceModal = false"
   />
 </template>
 

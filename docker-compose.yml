@@ -1,8 +1,9 @@
-version: '3.8'
+version: "3.8"
 
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    env_file: .env
     environment:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "${DB_PASSWORD}"
@@ -14,11 +15,11 @@ services:
       - ./Database:/scripts
       - ./Database/backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
-      interval: 5s
-      timeout: 5s
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $$SA_PASSWORD -Q 'SELECT 1' -b"]
+      interval: 10s
+      timeout: 10s
       retries: 10
-      start_period: 30s
+      start_period: 60s
 
   backend:
     build: ./BackEnd
