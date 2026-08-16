@@ -159,6 +159,8 @@
               <th class="ta-r">Khách đặt</th>
               <th>Trạng thái</th>
               <th>Ngày tạo</th>
+              <th>Ngày cập nhật</th>
+              <th></th>
             </tr>
           </thead>
 
@@ -190,6 +192,12 @@
               <td class="ta-r">{{ formatNumber(group.tongDat) }}</td>
               <td><span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span></td>
               <td class="hh-muted">{{ formatDate(group.ngayTao) }}</td>
+              <td class="hh-muted">{{ formatDate(group.ngayCapNhat) }}</td>
+              <td @click.stop>
+                <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="xemChiTietDayDu(group.sanPhamId)">
+                  <i class="fa fa-arrow-up-right-from-square"></i> Chi tiết
+                </button>
+              </td>
             </tr>
 
             <!-- ---- Các phiên bản bên trong ---- -->
@@ -211,11 +219,13 @@
                   <td class="ta-r">{{ formatNumber(item.khachDat) }}</td>
                   <td><span class="hh-tag" :class="tagClass(item.trangThai)">{{ nhanTrangThai(item.trangThai) }}</span></td>
                   <td class="hh-muted">{{ formatDate(item.ngayTao) }}</td>
+                  <td></td>
+                  <td></td>
                 </tr>
 
                 <!-- ---- Chi tiết phiên bản ---- -->
                 <tr v-if="openedVariantId === item.bienTheId" class="hh-row-detail">
-                  <td colspan="10">
+                  <td colspan="12">
                     <div class="hh-detail">
                       <div class="hh-detail__head">
                         <img :src="item.hinhAnh || group.hinhAnh" class="hh-detail__img" alt="" @error="onImgError" />
@@ -1003,6 +1013,7 @@ const groups = computed(() => {
         loaiSanPham: sp.loaiSanPham || 'LAPTOP',
         trangThai: sp.trangThai || 'active',
         ngayTao: sp.ngayTao,
+        ngayCapNhat: sp.ngayCapNhat,
         tenThuongHieu: sp.tenThuongHieu || tra(mapThuongHieu.value, sp.thuongHieuId),
         tenNhaCungCap: sp.tenNhaCungCap || tra(mapNhaCungCap.value, sp.nhaCungCapId),
         variants: []
