@@ -17,6 +17,12 @@ public class SanPham extends BaseEntity {
     @Column(name = "san_pham_id")
     private Integer sanPhamId;
 
+    @Column(name = "ma_san_pham", length = 50, unique = true)
+    private String maSanPham; // Thêm cột Mã sản phẩm
+
+    @Column(name = "barcode", length = 100, unique = true)
+    private String barcode; // Thêm cột Barcode
+
     @Column(name = "ten_san_pham", length = 200)
     private String tenSanPham;
 

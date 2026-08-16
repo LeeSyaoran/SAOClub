@@ -41,6 +41,7 @@ import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import AdminDashboard from "../components/admin/AdminDashboard.vue";
 import AdminReports from "../components/admin/AdminReports.vue";
 import AdminSettings from "../components/admin/AdminSettings.vue";
+import QuanLyHangHoa from "../components/QuanLyHangHoa.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
@@ -1091,11 +1092,7 @@ onUnmounted(() => {
           {{ t('admin.sidebar.customers') }}
           <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ totalCustomers }}</span>
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='inventory'}" @click="navigate('inventory')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/><path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
-          {{ t('admin.sidebar.inventory') }}
-          <span v-if="lowStockItems.length" class="badge bg-danger ms-auto" style="font-size:0.68rem;">{{ lowStockItems.length }}</span>
-        </div>
+       
         <div class="adm-nav" :class="{active: currentPage==='tra-hang'}" @click="navigate('tra-hang')">
           <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 3.293a1 1 0 010 1.414L7.414 7H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
           {{ t('admin.sidebar.traHang') }}
@@ -1203,20 +1200,10 @@ onUnmounted(() => {
           @reset-to-current-week="resetToCurrentWeek"
           @back-to-today="statusChartDate = toDateInputValue(new Date())" />
 
-        <!-- ── San pham ── -->
-        <section v-show="currentPage === 'products'">
-          <ul class="nav nav-tabs mb-3">
-            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='sanPham'}" @click="productsMainTab='sanPham'">{{ t('admin.productsTabs.sanPham') }}</button></li>
-            <li class="nav-item"><button class="nav-link" :class="{active: productsMainTab==='bienThe'}" @click="productsMainTab='bienThe'">{{ t('admin.productsTabs.bienThe') }}</button></li>
-          </ul>
-
-          <div v-show="productsMainTab==='sanPham'">
-            <ProductsTable />
-          </div>
-          <div v-show="productsMainTab==='bienThe'">
-            <BienTheTable />
-          </div>
-        </section>
+       <!-- ── San pham ── -->
+<section v-show="currentPage === 'products'">
+  <QuanLyHangHoa />
+</section>
 
         <!-- ── Don hang ── -->
         <section v-show="currentPage === 'orders'">

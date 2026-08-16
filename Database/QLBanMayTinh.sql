@@ -1,4 +1,4 @@
-﻿USE master;
+﻿use master;
 GO
 
 -- Luôn DROP + tạo lại database mỗi lần chạy file — SINGLE_USER trước để đá hết
@@ -159,6 +159,12 @@ IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham')
 BEGIN
     CREATE TABLE san_pham (
         san_pham_id     INT             IDENTITY(1,1) PRIMARY KEY,
+        -- Mã sản phẩm nội bộ hiển thị/tra cứu trên UI (vd 'SP0001') và mã vạch EAN-13 in
+        -- trên vỏ hộp (dùng cho máy quét ở quầy). Để NULL được: sản phẩm mới tạo từ form
+        -- admin có thể chưa gán mã / chưa dán tem, và các INSERT cũ không truyền 2 cột này
+        -- vẫn chạy bình thường. Tính duy nhất xử lý bằng filtered unique index bên dưới.
+        ma_san_pham     VARCHAR(50)     NULL,
+        barcode         VARCHAR(50)     NULL,
         ten_san_pham    NVARCHAR(200)   NOT NULL,
         thuong_hieu_id  INT             NOT NULL,
         danh_muc_id     INT             NOT NULL,
@@ -177,6 +183,16 @@ BEGIN
         CONSTRAINT FK_san_pham_nha_cung_cap FOREIGN KEY (nha_cung_cap_id) REFERENCES nha_cung_cap(nha_cung_cap_id)
     );
 END
+GO
+
+-- Mã sản phẩm & barcode phải duy nhất, nhưng phải cho phép NHIỀU dòng NULL (sản phẩm chưa
+-- gán mã / chưa dán tem) → dùng filtered unique index; UNIQUE constraint của SQL Server chỉ
+-- chấp nhận đúng 1 giá trị NULL nên không dùng được ở đây. Index này cũng giúp truy vấn
+-- quét barcode (WHERE barcode = ?) seek thẳng thay vì quét cả bảng.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_san_pham_ma')
+    CREATE UNIQUE INDEX UX_san_pham_ma ON san_pham(ma_san_pham) WHERE ma_san_pham IS NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_san_pham_barcode')
+    CREATE UNIQUE INDEX UX_san_pham_barcode ON san_pham(barcode) WHERE barcode IS NOT NULL;
 GO
 
 -- Junction table: 1 sản phẩm có thể thuộc nhiều phân loại (nhiều-nhiều)
@@ -941,6 +957,8 @@ SELECT
     bt.bien_the_id,
     bt.ma_sku,
     sp.ten_san_pham,
+    sp.ma_san_pham,
+    sp.barcode,
     ISNULL(bt.hinh_anh_bien_the, sp.hinh_anh_chinh) AS hinh_anh_chinh,
     th.ten_thuong_hieu,
     dm.ten_danh_muc,
@@ -1126,12 +1144,13 @@ GO
     -- phan_loai: van_phong=1, sinh_vien=2, gaming=3, do_hoa=4, ky_thuat=5, macbook=6, laptop_cu=7
 
     -- Sản phẩm (chỉ LAPTOP)
-    INSERT INTO san_pham (ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
-    (N'Dell Inspiron 15 3520',    1, 1, 1, 'LAPTOP', N'Laptop văn phòng phổ thông 15.6" FHD, pin 54Wh, trọng lượng 1.7kg',   N'/images/Dell Inspiron 15 3520.webp'),
-    (N'Asus Vivobook 15 X1504VA', 3, 1, 2, 'LAPTOP', N'Mỏng nhẹ văn phòng, màn 15.6" FHD 60Hz, pin 50Wh cả ngày',          N'/images/Asus Vivobook 15 X1504VA.webp'),
-    (N'Lenovo IdeaPad 5 Pro 16',  4, 1, 2, 'LAPTOP', N'Màn 2.5K 16" 120Hz, AMD Ryzen mạnh, vỏ nhôm bền',                   N'/images/Lenovo IdeaPad 5 Pro 16.webp'),
-    (N'HP Envy x360 16 2024',     5, 1, 1, 'LAPTOP', N'2-in-1 cao cấp, màn OLED 2.8K cảm ứng, chip Intel Gen 13',          N'/images/HP Envy x360 16 2024.webp'),
-    (N'MSI Stealth 15M B12U',     6, 1, 3, 'LAPTOP', N'Gaming mỏng nhẹ RTX 4050, màn 144Hz, trọng lượng chỉ 1.7kg',        N'/images/MSI Stealth 15M B12U.webp');
+    -- ma_san_pham: mã nội bộ hiển thị trên UI  |  barcode: EAN-13 (số minh hoạ, tiền tố 893 của VN)
+    INSERT INTO san_pham (ma_san_pham, barcode, ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
+    ('SP0001', '8934567000015', N'Dell Inspiron 15 3520',    1, 1, 1, 'LAPTOP', N'Laptop văn phòng phổ thông 15.6" FHD, pin 54Wh, trọng lượng 1.7kg',   N'/images/Dell Inspiron 15 3520.webp'),
+    ('SP0002', '8934567000022', N'Asus Vivobook 15 X1504VA', 3, 1, 2, 'LAPTOP', N'Mỏng nhẹ văn phòng, màn 15.6" FHD 60Hz, pin 50Wh cả ngày',          N'/images/Asus Vivobook 15 X1504VA.webp'),
+    ('SP0003', '8934567000039', N'Lenovo IdeaPad 5 Pro 16',  4, 1, 2, 'LAPTOP', N'Màn 2.5K 16" 120Hz, AMD Ryzen mạnh, vỏ nhôm bền',                   N'/images/Lenovo IdeaPad 5 Pro 16.webp'),
+    ('SP0004', '8934567000046', N'HP Envy x360 16 2024',     5, 1, 1, 'LAPTOP', N'2-in-1 cao cấp, màn OLED 2.8K cảm ứng, chip Intel Gen 13',          N'/images/HP Envy x360 16 2024.webp'),
+    ('SP0005', '8934567000053', N'MSI Stealth 15M B12U',     6, 1, 3, 'LAPTOP', N'Gaming mỏng nhẹ RTX 4050, màn 144Hz, trọng lượng chỉ 1.7kg',        N'/images/MSI Stealth 15M B12U.webp');
     -- san_pham: Dell=1, Asus=2, Lenovo=3, HP=4, MSI=5
 
     -- Biến thể sản phẩm
@@ -1328,13 +1347,14 @@ GO
     -- ── Sản phẩm mới (sp 6-11) ───────────────────────────────────────────────────
     -- thuong_hieu: Dell=1,Apple=2,Asus=3,Lenovo=4,HP=5,MSI=6,Acer=7
     -- nha_cung_cap: Digiworld=1, FPT=2, Synnex=3
-    INSERT INTO san_pham (ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
-    (N'Acer Aspire 5 A515-58',   7, 1, 3, N'LAPTOP', N'Laptop học tập văn phòng phổ thông 15.6" FHD, pin 48Wh cả ngày, giá hợp lý',                 N'/images/Acer Aspire 5 A515-58.webp'),
-    (N'Asus ROG Strix G16 G614', 3, 1, 2, N'LAPTOP', N'Gaming cao cấp RTX 40 series, màn 16" 165Hz, tản nhiệt triple fan, RGB Aura Sync',            N'/images/Asus ROG Strix G16 G614.webp'),
-    (N'Lenovo Legion 5 Pro 16',  4, 1, 2, N'LAPTOP', N'Gaming-đồ họa chuyên nghiệp, màn WQXGA 165Hz, AMD Ryzen + NVIDIA RTX, vỏ nhôm',              N'/images/Lenovo Legion 5 Pro 16.webp'),
-    (N'HP Pavilion 15',          5, 1, 1, N'LAPTOP', N'Laptop gia đình phổ thông 15.6" FHD 144Hz, màu sắc đa dạng, giá cạnh tranh',                  N'/images/HP Pavilion 15.webp'),
-    (N'Dell XPS 15 9530',        1, 1, 1, N'LAPTOP', N'Màn OLED 3.5K siêu nét, thiết kế siêu mỏng, lý tưởng cho sáng tạo nội dung chuyên nghiệp',  N'/images/Dell XPS 15 9530.webp'),
-    (N'Acer Nitro V 15',         7, 1, 3, N'LAPTOP', N'Gaming tầm trung RTX 40 series, màn 144Hz, tản nhiệt mạnh, giá tốt nhất phân khúc',           N'/images/Acer Nitro V 15.webp');
+    -- ma_san_pham / barcode: đánh tiếp từ SP0005 & dải barcode ở mục 13
+    INSERT INTO san_pham (ma_san_pham, barcode, ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
+    ('SP0006', '8934567000060', N'Acer Aspire 5 A515-58',   7, 1, 3, N'LAPTOP', N'Laptop học tập văn phòng phổ thông 15.6" FHD, pin 48Wh cả ngày, giá hợp lý',                 N'/images/Acer Aspire 5 A515-58.webp'),
+    ('SP0007', '8934567000077', N'Asus ROG Strix G16 G614', 3, 1, 2, N'LAPTOP', N'Gaming cao cấp RTX 40 series, màn 16" 165Hz, tản nhiệt triple fan, RGB Aura Sync',            N'/images/Asus ROG Strix G16 G614.webp'),
+    ('SP0008', '8934567000084', N'Lenovo Legion 5 Pro 16',  4, 1, 2, N'LAPTOP', N'Gaming-đồ họa chuyên nghiệp, màn WQXGA 165Hz, AMD Ryzen + NVIDIA RTX, vỏ nhôm',              N'/images/Lenovo Legion 5 Pro 16.webp'),
+    ('SP0009', '8934567000091', N'HP Pavilion 15',          5, 1, 1, N'LAPTOP', N'Laptop gia đình phổ thông 15.6" FHD 144Hz, màu sắc đa dạng, giá cạnh tranh',                  N'/images/HP Pavilion 15.webp'),
+    ('SP0010', '8934567000107', N'Dell XPS 15 9530',        1, 1, 1, N'LAPTOP', N'Màn OLED 3.5K siêu nét, thiết kế siêu mỏng, lý tưởng cho sáng tạo nội dung chuyên nghiệp',  N'/images/Dell XPS 15 9530.webp'),
+    ('SP0011', '8934567000114', N'Acer Nitro V 15',         7, 1, 3, N'LAPTOP', N'Gaming tầm trung RTX 40 series, màn 144Hz, tản nhiệt mạnh, giá tốt nhất phân khúc',           N'/images/Acer Nitro V 15.webp');
     -- san_pham: Acer_Aspire5=6, ROG_Strix=7, Legion5Pro=8, Pavilion15=9, XPS15=10, NitroV=11
 GO
 
@@ -1481,7 +1501,7 @@ GO
     (40,  4, 0, 2),  -- i7 RTX4060 Đen
     (41,  3, 0, 2);  -- i7 RTX4060 Trắng
 GO
-
+select*from bien_the_san_pham
     -- ── Phân loại cho sản phẩm mới (sp 6-11) ────────────────────────────────────
     -- phan_loai: van_phong=1,sinh_vien=2,gaming=3,do_hoa=4,ky_thuat=5,macbook=6,laptop_cu=7
     INSERT INTO san_pham_phan_loai (san_pham_id, phan_loai_id) VALUES
@@ -2488,3 +2508,5 @@ ALTER TABLE don_hang ADD CONSTRAINT CK_dh_trangthai
     CHECK (trang_thai_don_hang IN (N'pending', N'confirmed', N'processing', N'shipping', N'out_for_delivery', N'awaiting_confirmation', N'delivered', N'cancelled', N'returned'));
 GO
 GO
+select*from san_pham
+select*from bien_the_san_pham

@@ -76,4 +76,6 @@ public class BienTheSanPhamController {
     public boolean hasTransactionHistory(@PathVariable Integer id) {
         return bienTheSanPhamService.hasTransactionHistory(id);
     }
+
+
 }

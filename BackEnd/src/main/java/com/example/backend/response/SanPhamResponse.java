@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 @Setter
 public class SanPhamResponse {
     private Integer sanPhamId;
+    private String maSanPham;      // Thêm mới
+    private String barcode;        // Thêm mới
     private Integer bienTheId;
     private String tenSanPham;
     private Integer danhMucId;
