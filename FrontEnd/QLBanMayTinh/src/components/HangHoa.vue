@@ -136,7 +136,6 @@
           <thead>
             <tr>
               <th class="hh-col-check"><input type="checkbox" :checked="allChecked" @change="toggleAll" /></th>
-              <th class="hh-col-caret"></th>
               <th>Mã sản phẩm</th>
               <th>Tên sản phẩm</th>
               <th class="ta-r">Giá bán</th>
@@ -149,10 +148,9 @@
           </thead>
 
           <tbody v-for="group in pagedGroups" :key="group.sanPhamId">
-            <!-- ---- Dòng sản phẩm chính ---- -->
-            <tr class="hh-row-group" :class="{ 'is-open': openedGroupId === group.sanPhamId }" @click="toggleGroup(group.sanPhamId)">
+            <!-- ---- Dòng sản phẩm — chỉ xem nhanh, xem/sửa biến thể qua "Chi tiết" ---- -->
+            <tr class="hh-row-group">
               <td @click.stop><input type="checkbox" :checked="isGroupChecked(group)" @change="toggleGroupCheck(group)" /></td>
-              <td><i class="fa hh-caret" :class="openedGroupId === group.sanPhamId ? 'fa-chevron-down' : 'fa-chevron-right'"></i></td>
               <td>
                 <div class="hh-code">
                   <span class="hh-code__main">{{ group.maSanPham }}</span>
@@ -175,89 +173,12 @@
               <td><span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span></td>
               <td class="hh-muted">{{ formatDate(group.ngayTao) }}</td>
               <td class="hh-muted">{{ formatDate(group.ngayCapNhat) }}</td>
-              <td @click.stop>
+              <td>
                 <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="xemChiTietDayDu(group.sanPhamId)">
                   <i class="fa fa-arrow-up-right-from-square"></i> Chi tiết
                 </button>
               </td>
             </tr>
-
-            <!-- ---- Các phiên bản bên trong ---- -->
-            <template v-if="openedGroupId === group.sanPhamId">
-              <template v-for="item in group.variants" :key="item.bienTheId">
-                <tr class="hh-row-variant" :class="{ 'is-open': openedVariantId === item.bienTheId }" @click="toggleVariant(item.bienTheId)">
-                  <td @click.stop><input type="checkbox" :checked="selectedIds.includes(item.bienTheId)" @change="toggleOne(item.bienTheId)" /></td>
-                  <td></td>
-                  <td>
-                    <div class="hh-code hh-code--indent">
-                      <img :src="item.hinhAnh || group.hinhAnh" class="hh-thumb hh-thumb--sm" alt="" @error="onImgError" />
-                      <span class="hh-code__sku">{{ item.maSku }}</span>
-                    </div>
-                  </td>
-                  <td>{{ item.tenPhienBan }}</td>
-                  <td class="ta-r"><strong>{{ formatNumber(item.giaBan) }}</strong></td>
-                  <td class="ta-r hh-muted">{{ formatNumber(item.giaVon) }}</td>
-                  <td><span class="hh-tag" :class="tagClass(item.trangThai)">{{ nhanTrangThai(item.trangThai) }}</span></td>
-                  <td class="hh-muted">{{ formatDate(item.ngayTao) }}</td>
-                  <td></td>
-                  <td></td>
-                </tr>
-
-                <!-- ---- Chi tiết phiên bản ---- -->
-                <tr v-if="openedVariantId === item.bienTheId" class="hh-row-detail">
-                  <td colspan="10">
-                    <div class="hh-detail">
-                      <div class="hh-detail__head">
-                        <img :src="item.hinhAnh || group.hinhAnh" class="hh-detail__img" alt="" @error="onImgError" />
-                        <div class="hh-detail__intro">
-                          <h3>{{ group.tenSanPham }}</h3>
-                          <div class="hh-detail__tags">
-                            <span class="hh-tag hh-tag--soft">{{ group.maSanPham }}</span>
-                            <span v-if="item.mauSac" class="hh-tag hh-tag--soft">{{ item.mauSac }}</span>
-                            <span v-if="item.tenCpu" class="hh-tag hh-tag--soft">{{ item.tenCpu }}</span>
-                            <span v-if="item.tenRam" class="hh-tag hh-tag--soft">{{ item.tenRam }}</span>
-                            <span v-if="item.tenOCung" class="hh-tag hh-tag--soft">{{ item.tenOCung }}</span>
-                            <span v-for="pl in group.phanLoai" :key="pl" class="hh-tag hh-tag--outline">{{ pl }}</span>
-                          </div>
-                          <div class="hh-detail__desc" v-html="group.moTa || '<em>Chưa có mô tả cho sản phẩm này.</em>'"></div>
-                        </div>
-                      </div>
-
-                      <dl class="hh-specs">
-                        <div><dt>Mã sản phẩm</dt><dd>{{ group.maSanPham }}</dd></div>
-                        <div><dt>Barcode</dt><dd>{{ group.barcode || 'Chưa gán' }}</dd></div>
-                        <div><dt>Mã SKU</dt><dd>{{ item.maSku }}</dd></div>
-                        <div><dt>Giá vốn</dt><dd>{{ formatNumber(item.giaVon) }} ₫</dd></div>
-                        <div><dt>Giá bán</dt><dd>{{ formatNumber(item.giaBan) }} ₫</dd></div>
-                        <div><dt>Bảo hành</dt><dd>{{ item.baoHanhThang ?? '—' }} tháng</dd></div>
-                        <div><dt>CPU</dt><dd>{{ item.tenCpu || '—' }}</dd></div>
-                        <div><dt>RAM</dt><dd>{{ item.tenRam || '—' }}</dd></div>
-                        <div><dt>Ổ cứng</dt><dd>{{ item.tenOCung || '—' }}</dd></div>
-                        <div><dt>GPU</dt><dd>{{ item.tenGpu || '—' }}</dd></div>
-                        <div><dt>Màn hình</dt><dd>{{ item.kichThuocManHinh || '—' }}</dd></div>
-                        <div><dt>Hệ điều hành</dt><dd>{{ item.heDieuHanh || '—' }}</dd></div>
-                        <div><dt>Pin</dt><dd>{{ item.pin || '—' }}</dd></div>
-                        <div><dt>Trọng lượng</dt><dd>{{ item.trongLuongKg ? item.trongLuongKg + ' kg' : '—' }}</dd></div>
-                        <div><dt>Thương hiệu</dt><dd>{{ group.tenThuongHieu || '—' }}</dd></div>
-                        <div><dt>Nhà cung cấp</dt><dd>{{ group.tenNhaCungCap || '—' }}</dd></div>
-                      </dl>
-
-                      <div class="hh-detail__foot">
-                        <button class="hh-btn hh-btn--ghost hh-btn--sm" @click.stop="openAddVariant(group)">
-                          <i class="fa fa-plus"></i> Thêm phiên bản
-                        </button>
-                        <button class="hh-btn hh-btn--primary hh-btn--sm" @click.stop="openEdit(group, item)">
-                          <i class="fa fa-edit"></i> Chỉnh sửa
-                        </button>
-                        <button class="hh-btn hh-btn--ghost hh-btn--sm" @click.stop="xemChiTietDayDu(group.sanPhamId)">
-                          <i class="fa fa-arrow-up-right-from-square"></i> Trang chi tiết
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </template>
           </tbody>
         </table>
 
@@ -827,8 +748,6 @@ const filters = reactive({
   cpuId: '', ramId: '', mauSac: '', giaTu: '', giaDen: ''
 })
 
-const openedGroupId = ref(null)
-const openedVariantId = ref(null)
 const selectedIds = ref([])
 const page = ref(1)
 const pageSize = ref(10)
@@ -1048,18 +967,7 @@ const totalPages = computed(() => Math.ceil(groupsDaLoc.value.length / pageSize.
 const pagedGroups = computed(() => groupsDaLoc.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
 watch([searchKeyword, filters, pageSize], () => { page.value = 1 }, { deep: true })
 
-/* ════════════ MỞ RỘNG DÒNG & CHỌN ════════════ */
-const toggleGroup = (id) => {
-  openedGroupId.value = openedGroupId.value === id ? null : id
-  openedVariantId.value = null
-}
-const toggleVariant = (id) => { openedVariantId.value = openedVariantId.value === id ? null : id }
-
-const toggleOne = (id) => {
-  const i = selectedIds.value.indexOf(id)
-  if (i === -1) selectedIds.value.push(id)
-  else selectedIds.value.splice(i, 1)
-}
+/* ════════════ CHỌN DÒNG (xuất file) ════════════ */
 const isGroupChecked = (g) => g.variants.length > 0 && g.variants.every((v) => selectedIds.value.includes(v.bienTheId))
 const toggleGroupCheck = (g) => {
   const ids = g.variants.map((v) => v.bienTheId)
@@ -1389,75 +1297,12 @@ const openCreate = () => {
   dungLaiMaTran()
 }
 
-const openAddVariant = (group) => {
-  resetForm({
-    sanPhamId: group.sanPhamId,
-    maSanPham: group.maSanPham,
-    barcode: group.barcode,
-    tenSanPham: group.tenSanPham,
-    thuongHieuId: group.thuongHieuId ?? '',
-    danhMucId: group.danhMucId ?? '',
-    nhaCungCapId: group.nhaCungCapId ?? '',
-    loaiSanPham: group.loaiSanPham,
-    trangThaiSanPham: group.trangThai,
-    moTa: group.moTa,
-    hinhAnhChinh: group.hinhAnh === ANH_MAC_DINH ? '' : group.hinhAnh,
-    giaNhap: group.variants[0]?.giaVon ?? 0,
-    giaBan: group.variants[0]?.giaBan ?? 0,
-    baoHanhThang: group.variants[0]?.baoHanhThang ?? 24,
-    kichThuocManHinh: group.variants[0]?.kichThuocManHinh || '',
-    heDieuHanh: group.variants[0]?.heDieuHanh || 'Windows 11 Home',
-    pin: group.variants[0]?.pin || ''
-  })
-  modalMode.value = 'variant'
-  tab.value = 'bienthe'
-  showModal.value = true
-  dungLaiMaTran()
-}
-
 // Mo trang chi tiet san pham (route /admin/san-pham/:id) ngay trong tab hien tai.
 const router = useRouter()
 const xemChiTietDayDu = (sanPhamId) => {
   router.push(`/admin/san-pham/${sanPhamId}`);
 };
 
-const openEdit = (group, item) => {
-  resetForm({
-    sanPhamId: group.sanPhamId,
-    bienTheId: item.bienTheId,
-    maSanPham: group.coMaThat ? group.maSanPham : '',
-    barcode: group.barcode,
-    tenSanPham: group.tenSanPham,
-    thuongHieuId: group.thuongHieuId ?? '',
-    danhMucId: group.danhMucId ?? '',
-    nhaCungCapId: group.nhaCungCapId ?? '',
-    loaiSanPham: group.loaiSanPham,
-    trangThaiSanPham: group.trangThai,
-    moTa: group.moTa,
-    hinhAnhChinh: group.hinhAnh === ANH_MAC_DINH ? '' : group.hinhAnh,
-    maSku: item.maSku === '—' ? '' : item.maSku,
-    mauSac: item.mauSac,
-    giaNhap: item.giaVon,
-    giaBan: item.giaBan,
-    baoHanhThang: item.baoHanhThang ?? 24,
-    cpuId: item.cpuId ?? '',
-    ramId: item.ramId ?? '',
-    oCungId: item.oCungId ?? '',
-    gpuId: item.gpuId ?? '',
-    kichThuocManHinh: item.kichThuocManHinh,
-    heDieuHanh: item.heDieuHanh,
-    pin: item.pin,
-    trongLuongKg: item.trongLuongKg ?? '',
-    hinhAnhBienThe: item.hinhAnh
-  })
-  modalMode.value = 'edit'
-  showModal.value = true
-
-  // Tích sẵn các phân loại sản phẩm đang có
-  get(`/api/phan-loai/san-pham/${group.sanPhamId}`)
-    .then((ids) => { form.phanLoaiIds = (Array.isArray(ids) ? ids : []).map(Number) })
-    .catch(() => {})
-}
 
 const closeModal = () => {
   showModal.value = false
@@ -1904,58 +1749,23 @@ const chuanBiBanSao = () => {
 }
 .hh-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
 .hh-col-check { width: 36px; }
-.hh-col-caret { width: 28px; }
 .hh-table input[type="checkbox"] { accent-color: var(--pink-600); cursor: pointer; }
 
-.hh-row-group { cursor: pointer; }
-.hh-row-group:hover { background: var(--pink-50); }
-.hh-row-group.is-open { background: var(--pink-100); }
 .hh-row-group td { font-weight: 600; }
-.hh-row-group.is-open td:first-child { box-shadow: inset 3px 0 0 var(--pink-600); }
-
-.hh-row-variant { cursor: pointer; background: #fff; }
-.hh-row-variant:hover, .hh-row-variant.is-open { background: var(--pink-50); }
-.hh-row-variant td { font-weight: 400; }
 
 .hh-code { display: flex; flex-direction: column; gap: 2px; }
-.hh-code--indent { flex-direction: row; align-items: center; gap: 8px; padding-left: 18px; }
 .hh-code__main { color: var(--pink-700); font-weight: 700; letter-spacing: .3px; }
 .hh-code__sub { font-size: 11px; color: var(--muted); font-weight: 400; }
-.hh-code__sku { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; }
 
 .hh-name { display: flex; align-items: center; gap: 10px; }
 .hh-name__main { font-weight: 600; }
 .hh-name__sub { font-size: 11.5px; color: var(--muted); font-weight: 400; }
 .hh-thumb { width: 34px; height: 34px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: #fff; flex-shrink: 0; }
-.hh-thumb--sm { width: 26px; height: 26px; border-radius: 6px; }
 
 .hh-tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
 .hh-tag--ok { background: var(--ok-bg); color: var(--ok-text); }
 .hh-tag--off { background: #f3f4f6; color: var(--muted); }
 .hh-tag--soft { background: var(--pink-100); color: var(--pink-700); font-weight: 500; }
-.hh-tag--outline { background: #fff; color: var(--pink-700); border: 1px solid var(--pink-200); font-weight: 500; }
-
-/* ═══════════ CHI TIẾT PHIÊN BẢN ═══════════ */
-.hh-row-detail td { background: var(--pink-50); padding: 0; white-space: normal; }
-.hh-detail { margin: 12px; padding: 16px; background: #fff; border: 1px solid var(--pink-200); border-radius: 12px; }
-.hh-detail__head { display: flex; gap: 16px; align-items: flex-start; }
-.hh-detail__img {
-  width: 108px; height: 108px; object-fit: contain; padding: 6px;
-  border: 1px solid var(--line); border-radius: 10px; background: var(--pink-50); flex-shrink: 0;
-}
-.hh-detail__intro h3 { margin: 0 0 6px; font-size: 16px; font-weight: 700; }
-.hh-detail__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.hh-detail__desc { font-size: 13px; color: var(--muted); line-height: 1.55; }
-.hh-detail__desc :deep(p) { margin: 0 0 6px; }
-.hh-detail__desc :deep(ul), .hh-detail__desc :deep(ol) { margin: 0 0 6px; padding-left: 20px; }
-
-.hh-specs {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 12px 16px; margin: 16px 0 0; padding-top: 14px; border-top: 1px dashed var(--line);
-}
-.hh-specs dt { font-size: 11.5px; color: var(--muted); margin-bottom: 2px; }
-.hh-specs dd { margin: 0; font-size: 13px; font-weight: 600; }
-.hh-detail__foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 
 /* ═══════════ RỖNG / LOADING / PHÂN TRANG ═══════════ */
 .hh-overlay { position: absolute; inset: 0; background: rgba(255,255,255,.65); display: flex; align-items: center; justify-content: center; }
@@ -2083,7 +1893,7 @@ const chuanBiBanSao = () => {
 @media (max-width: 768px) {
   .hh-bar__actions { width: 100%; margin-left: 0; }
   .hh-search { width: 100%; }
-  .hh-detail__head, .hh-upload { flex-direction: column; }
+  .hh-upload { flex-direction: column; }
   .hh-modal__foot { flex-direction: column-reverse; align-items: stretch; }
   .hh-modal__foot-right { justify-content: flex-end; }
 }
