@@ -25,3 +25,6 @@ export const remove = (id) => del(`/api/san-pham/delete/${id}`);
 export const hasTransactionHistory = (id) => get(`/api/san-pham/${id}/co-giao-dich`);
 
 export const getLichSu = (id) => get(`/api/san-pham/${id}/lich-su`);
+
+// Gallery nhiều ảnh (ngoài ảnh đại diện hinhAnhChinh) — trang chi tiết khách hàng dùng.
+export const getHinhAnh = (id) => get(`/api/san-pham/${id}/hinh-anh`);

@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -76,6 +77,11 @@ public class SanPhamRequest {
 
     private String moTa;
     private String hinhAnhChinh;
+
+    // Danh sách toàn bộ ảnh gallery (thứ tự = thu_tu, phần tử đầu = ảnh đại diện). null =
+    // không đụng tới gallery hiện có (form sửa biến thể ở BienTheTable.vue không gửi trường
+    // này); rỗng [] = xoá hết ảnh gallery. Xem SanPhamService.luuDanhSachHinhAnh().
+    private List<String> hinhAnhList;
 
     // Một giá trị dùng chung cho cả SanPham lẫn BienTheSanPham (service copy sang cả hai).
     // Bảng bien_the_san_pham chỉ nhận active/inactive nên service tự quy đổi giá trị khác về

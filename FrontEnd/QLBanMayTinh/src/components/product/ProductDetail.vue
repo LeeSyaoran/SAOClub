@@ -42,12 +42,25 @@
             style="background:var(--bg-card); border:1px solid var(--border-color); min-height:320px; padding:24px;"
           >
             <img
-              v-if="activeVariant.hinhAnhChinh"
-              :src="activeVariant.hinhAnhChinh"
+              v-if="displayedImage"
+              :src="displayedImage"
               :alt="activeVariant.tenSanPham"
               style="max-width:100%; max-height:360px; object-fit:contain;"
             />
             <span v-else><Laptop :size="96" color="var(--text-muted)" /></span>
+          </div>
+
+          <!-- Gallery ảnh -->
+          <div v-if="galleryImages.length > 1" class="d-flex gap-2 mt-2" style="overflow-x:auto;">
+            <button
+              v-for="(url, i) in galleryImages" :key="i" type="button"
+              class="p-0 flex-shrink-0 rounded-2 overflow-hidden"
+              style="width:56px; height:56px; background:var(--bg-card);"
+              :style="activeImageIndex === i ? 'border:2px solid var(--accent);' : 'border:1px solid var(--border-color);'"
+              @click="activeImageIndex = i"
+            >
+              <img :src="url" alt="" style="width:100%; height:100%; object-fit:cover;" />
+            </button>
           </div>
 
           <!-- Tags phân loại -->
@@ -342,6 +355,7 @@ import { t } from '../../i18n/index.js';
 import { formatPrice as formatPriceRaw } from '../../utils/formatPrice.js';
 import { configKey, configLabel, colorDot } from '../../utils/productGrouping.js';
 import * as DanhGiaService from '../../services/DanhGiaService.js';
+import * as SanPhamService from '../../services/SanPhamService.js';
 import Pagination from '../common/Pagination.vue';
 import { usePagination } from '../../composables/usePagination.js';
 import { Heart, Laptop, Palette, Shield, Star } from '@lucide/vue';
@@ -410,6 +424,29 @@ const activeVariant = computed(() =>
 );
 
 const isWishlisted = computed(() => props.wishlistIds.has(activeVariant.value.bienTheId));
+
+// ── Gallery ảnh — server trả thêm ảnh ngoài ảnh đại diện (hinhAnhChinh) theo sanPhamId,
+// dùng chung cho mọi biến thể/màu nên chỉ cần tải lại khi đổi sang sản phẩm khác. ────────
+const galleryExtra = ref([]);
+const activeImageIndex = ref(0);
+const loadGallery = async (sanPhamId) => {
+  activeImageIndex.value = 0;
+  try {
+    galleryExtra.value = await SanPhamService.getHinhAnh(sanPhamId);
+  } catch {
+    galleryExtra.value = [];
+  }
+};
+onMounted(() => loadGallery(props.product.sanPhamId));
+watch(() => props.product.sanPhamId, (id) => loadGallery(id));
+
+// Ảnh đại diện (hinhAnhChinh) luôn là ảnh đầu — tránh trùng nếu backfill gallery đã có nó.
+const galleryImages = computed(() => {
+  const anh = activeVariant.value.hinhAnhChinh;
+  const list = anh ? [anh, ...galleryExtra.value.filter((u) => u !== anh)] : galleryExtra.value;
+  return list;
+});
+const displayedImage = computed(() => galleryImages.value[activeImageIndex.value] ?? activeVariant.value.hinhAnhChinh);
 
 // Ngưỡng "sắp hết hàng" — dùng chung với ProductCard.vue.
 const LOW_STOCK_THRESHOLD = 5;

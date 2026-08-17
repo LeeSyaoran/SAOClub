@@ -82,6 +82,12 @@ public class SanPhamController {
         return sanPhamService.hasTransactionHistory(id);
     }
 
+    // GET /api/san-pham/{id}/hinh-anh — gallery nhiều ảnh, trang chi tiết khách hàng gọi.
+    @GetMapping("/{id}/hinh-anh")
+    public List<String> getHinhAnh(@PathVariable Integer id) {
+        return sanPhamService.layDanhSachHinhAnh(id);
+    }
+
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @GetMapping("/{id}/lich-su")
     public List<LichSuThayDoiSanPhamResponse> getLichSu(@PathVariable Integer id) {

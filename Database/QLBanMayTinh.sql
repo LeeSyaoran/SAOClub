@@ -214,6 +214,22 @@ BEGIN
 END
 GO
 
+-- Gallery nhiều ảnh/sản phẩm — san_pham.hinh_anh_chinh vẫn giữ nguyên làm ảnh đại diện
+-- (dùng ở mọi nơi hiện có: giỏ hàng, bảng admin, thẻ sản phẩm...) để không phải sửa lại
+-- những chỗ đó; bảng này chỉ phục vụ thêm khu vực gallery nhiều ảnh (form tạo sản phẩm +
+-- trang chi tiết khách hàng). thu_tu = 0 luôn trùng với hinh_anh_chinh.
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham_hinh_anh')
+BEGIN
+    CREATE TABLE san_pham_hinh_anh (
+        hinh_anh_id  INT             IDENTITY(1,1) PRIMARY KEY,
+        san_pham_id  INT             NOT NULL,
+        duong_dan    NVARCHAR(500)   NOT NULL,
+        thu_tu       INT             NOT NULL DEFAULT 0,
+        CONSTRAINT FK_sphinhanh_san_pham FOREIGN KEY (san_pham_id) REFERENCES san_pham(san_pham_id) ON DELETE CASCADE
+    );
+END
+GO
+
 -- Danh mục CPU/RAM/ổ cứng/GPU — lưu LOẠI linh kiện, không phải đơn vị vật lý
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'dm_cpu')
     CREATE TABLE dm_cpu    ( cpu_id    INT IDENTITY(1,1) PRIMARY KEY, ten_cpu     NVARCHAR(100) NOT NULL UNIQUE );
@@ -2555,6 +2571,17 @@ GO
 UPDATE bien_the_san_pham
 SET barcode = '893' + RIGHT('0000000000' + CAST(bien_the_id AS VARCHAR(10)), 10)
 WHERE barcode IS NULL;
+GO
+
+-- Backfill gallery: sản phẩm seed sẵn có hinh_anh_chinh nhưng chưa có dòng gallery nào ->
+-- tạo dòng đầu tiên. Đặt Ở ĐÂY (cuối file, sau khi toàn bộ san_pham đã được INSERT ở trên)
+-- chứ không phải ngay sau CREATE TABLE — DB bị DROP + tạo lại mỗi lần chạy file (xem đầu
+-- file), nên đặt sớm sẽ chạy trên bảng san_pham còn rỗng và không backfill được gì.
+INSERT INTO san_pham_hinh_anh (san_pham_id, duong_dan, thu_tu)
+SELECT sp.san_pham_id, sp.hinh_anh_chinh, 0
+FROM san_pham sp
+WHERE sp.hinh_anh_chinh IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM san_pham_hinh_anh h WHERE h.san_pham_id = sp.san_pham_id);
 GO
 
 GO

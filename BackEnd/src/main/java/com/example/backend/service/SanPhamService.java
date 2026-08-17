@@ -3,6 +3,7 @@ package com.example.backend.service;
 import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.NhanVien;
 import com.example.backend.entity.SanPham;
+import com.example.backend.entity.SanPhamHinhAnh;
 import com.example.backend.repository.*;
 import com.example.backend.request.SanPhamRequest;
 import com.example.backend.response.SanPhamCreatedResponse;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class SanPhamService {
@@ -39,6 +42,8 @@ public class SanPhamService {
     private DmGpuRepository dmGpuRepository;
     @Autowired
     private LichSuThayDoiSanPhamService lichSuThayDoiSanPhamService;
+    @Autowired
+    private SanPhamHinhAnhRepository sanPhamHinhAnhRepository;
 
     public Page<SanPhamResponse> hienThiSanPham(String keyword, Integer danhMucId,
                                                 Integer thuongHieuId, String trangThai,
@@ -71,6 +76,10 @@ public class SanPhamService {
         sanPham.setMaSanPham(maSanPham);
         sanPham.setBarcode(barcode);
         sanPham.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());
+        // hinhAnhList (nếu FE gửi) là nguồn dữ liệu chuẩn cho ảnh đại diện — phần tử đầu
+        // luôn thắng field hinhAnhChinh rời, tránh 2 giá trị lệch nhau.
+        if (request.getHinhAnhList() != null && !request.getHinhAnhList().isEmpty())
+            sanPham.setHinhAnhChinh(request.getHinhAnhList().get(0));
 
         sanPham.setThuongHieu(thuongHieuRepository.getReferenceById(request.getThuongHieuId()));
         sanPham.setDanhMuc(danhMucRepository.getReferenceById(request.getDanhMucId()));
@@ -84,6 +93,8 @@ public class SanPhamService {
             saved.setMaSanPham(String.format("SP%04d", saved.getSanPhamId()));
             saved = sanPhamRepository.save(saved);
         }
+
+        if (request.getHinhAnhList() != null) luuDanhSachHinhAnh(saved.getSanPhamId(), request.getHinhAnhList());
 
         BienTheSanPham bt = new BienTheSanPham();
         // Loại trừ ngayTao khỏi BeanUtils: request.ngayTao null sẽ ghi đè null lên cột
@@ -123,6 +134,8 @@ public class SanPhamService {
         sanPham.setMaSanPham(maSanPham);
         sanPham.setBarcode(barcode);
         if (request.getNgayTao() != null) sanPham.setNgayTao(request.getNgayTao());
+        if (request.getHinhAnhList() != null && !request.getHinhAnhList().isEmpty())
+            sanPham.setHinhAnhChinh(request.getHinhAnhList().get(0));
 
         sanPham.setThuongHieu(thuongHieuRepository.getReferenceById(request.getThuongHieuId()));
         sanPham.setDanhMuc(danhMucRepository.getReferenceById(request.getDanhMucId()));
@@ -130,6 +143,7 @@ public class SanPhamService {
                 ? nhaCungCapRepository.getReferenceById(request.getNhaCungCapId()) : null);
 
         sanPhamRepository.save(sanPham);
+        if (request.getHinhAnhList() != null) luuDanhSachHinhAnh(sanPhamId, request.getHinhAnhList());
 
         NhanVien nguoiSua = lichSuThayDoiSanPhamService.nguoiSuaHienTai();
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, null, "san_pham", "tenSanPham", oldTenSanPham, sanPham.getTenSanPham(), nguoiSua);
@@ -166,6 +180,11 @@ public class SanPhamService {
         return bienTheSanPhamRepository.hasTransactionHistoryBySanPhamId(sanPhamId);
     }
 
+    /** Gallery ảnh ngoài ảnh đại diện — trang chi tiết khách hàng hiển thị dạng nhiều ảnh. */
+    public List<String> layDanhSachHinhAnh(Integer sanPhamId) {
+        return sanPhamHinhAnhRepository.layDuongDanTheoSanPham(sanPhamId);
+    }
+
     @Transactional
     public void deleteSanPham(Integer sanPhamId) {
         if (!sanPhamRepository.existsById(sanPhamId))
@@ -183,6 +202,24 @@ public class SanPhamService {
         bt.setRam(request.getRamId() != null ? dmRamRepository.getReferenceById(request.getRamId()) : null);
         bt.setOCung(request.getOCungId() != null ? dmOcungRepository.getReferenceById(request.getOCungId()) : null);
         bt.setGpu(request.getGpuId() != null ? dmGpuRepository.getReferenceById(request.getGpuId()) : null);
+    }
+
+    /** Xoá hết gallery cũ rồi ghi lại đúng danh sách mới — đơn giản hơn nhiều so với API
+     *  add/remove/reorder từng ảnh, và ảnh sản phẩm không phải dữ liệu cần audit trail. */
+    private void luuDanhSachHinhAnh(Integer sanPhamId, List<String> duongDanList) {
+        sanPhamHinhAnhRepository.deleteBySanPhamId(sanPhamId);
+        SanPham ref = sanPhamRepository.getReferenceById(sanPhamId);
+        List<SanPhamHinhAnh> rows = new ArrayList<>();
+        int thuTu = 0;
+        for (String duongDan : duongDanList) {
+            if (duongDan == null || duongDan.isBlank()) continue;
+            SanPhamHinhAnh h = new SanPhamHinhAnh();
+            h.setSanPham(ref);
+            h.setDuongDan(duongDan.trim());
+            h.setThuTu(thuTu++);
+            rows.add(h);
+        }
+        sanPhamHinhAnhRepository.saveAll(rows);
     }
 
     /** Chuỗi rỗng phải về null: hai sản phẩm cùng để barcode "" sẽ đụng unique index. */

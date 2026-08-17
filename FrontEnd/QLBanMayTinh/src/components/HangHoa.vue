@@ -239,19 +239,14 @@
 
                 <div class="hh-grid">
                   <label class="hh-field">
-                    <span>Mã sản phẩm <b>*</b></span>
-                    <div class="hh-inline">
-                      <input v-model.trim="form.maSanPham" placeholder="VD: SP0012" />
-                      <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" @click="form.maSanPham = sinhMaSanPham()">
-                        <i class="fa fa-magic"></i> Tự sinh
-                      </button>
-                    </div>
+                    <span>Mã sản phẩm</span>
+                    <input v-model.trim="form.maSanPham" disabled />
                     <em v-if="errors.maSanPham" class="hh-err">{{ errors.maSanPham }}</em>
                   </label>
 
                   <label class="hh-field">
                     <span>Barcode</span>
-                    <input v-model.trim="form.barcode" placeholder="8–13 chữ số, VD: 8934567000121" />
+                    <input v-model.trim="form.barcode" disabled />
                     <em v-if="errors.barcode" class="hh-err">{{ errors.barcode }}</em>
                   </label>
 
@@ -310,47 +305,38 @@
 
                   <div class="hh-field hh-field--wide">
                     <span>Phân loại sử dụng</span>
-                    <div class="hh-inline">
-                      <select v-model="chon.phanLoai">
-                        <option value="">-- Chọn phân loại --</option>
-                        <option v-for="pl in phanLoaiConLai" :key="pl.phanLoaiId" :value="pl.phanLoaiId">{{ pl.tenPhanLoai }}</option>
-                      </select>
-                      <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" :disabled="!chon.phanLoai" @click="themPhanLoai()">
-                        <i class="fa fa-plus"></i> Thêm
-                      </button>
+                    <div class="hh-chip-select">
+                      <button
+                        v-for="pl in phanLoaiOptions" :key="pl.phanLoaiId" type="button"
+                        class="hh-chip-toggle" :class="{ 'is-on': form.phanLoaiIds.includes(pl.phanLoaiId) }"
+                        @click="togglePhanLoai(pl.phanLoaiId)"
+                      >{{ tenPhanLoai(pl.phanLoaiId) }}</button>
                     </div>
-                    <div v-if="form.phanLoaiIds.length" class="hh-tags">
-                      <span v-for="id in form.phanLoaiIds" :key="id" class="hh-tag-pill">
-                        {{ tenPhanLoai(id) }}
-                        <button type="button" @click="xoaPhanLoai(id)" aria-label="Bỏ phân loại">&times;</button>
-                      </span>
-                    </div>
-                    <em class="hh-hint">
-                      Tag: {{ form.phanLoaiTags || '—' }} · Tên: {{ form.phanLoaiTen || '—' }}
-                    </em>
                   </div>
 
                   <div class="hh-field hh-field--wide">
-                    <span>Ảnh đại diện sản phẩm</span>
-                    <div class="hh-upload">
-                      <div class="hh-upload__preview">
-                        <img v-if="anhXemTruoc || form.hinhAnhChinh" :src="anhXemTruoc || form.hinhAnhChinh" alt="" @error="onImgError" />
-                        <i v-else class="fa fa-image"></i>
-                      </div>
-                      <div class="hh-upload__body">
-                        <input ref="fileEl" type="file" accept="image/*" class="hh-hidden" @change="chonAnhSanPham" />
-                        <div class="hh-inline">
-                          <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" @click="fileEl?.click()">
-                            <i class="fa fa-upload"></i> Chọn ảnh từ máy
+                    <span>Ảnh sản phẩm</span>
+                    <div class="hh-gallery">
+                      <div v-for="(url, i) in form.hinhAnhList" :key="i" class="hh-gallery__item">
+                        <img :src="url" alt="" @error="onImgError" />
+                        <span v-if="i === 0" class="hh-gallery__badge">Ảnh chính</span>
+                        <div class="hh-gallery__actions">
+                          <button v-if="i !== 0" type="button" class="hh-icon-btn hh-icon-btn--sm" title="Đặt làm ảnh chính" @click="datLamAnhChinh(i)">
+                            <i class="fa fa-star"></i>
                           </button>
-                          <button v-if="form.hinhAnhChinh" type="button" class="hh-btn hh-btn--ghost hh-btn--sm" @click="xoaAnh">
-                            <i class="fa fa-trash"></i> Bỏ ảnh
+                          <button type="button" class="hh-icon-btn hh-icon-btn--sm" title="Xóa ảnh" @click="xoaAnhTaiViTri(i)">
+                            <i class="fa fa-trash"></i>
                           </button>
                         </div>
-                        <input v-model.trim="form.hinhAnhChinh" class="hh-mt6" placeholder="Hoặc dán đường dẫn: /images/ten-anh.webp" />
-                        <em class="hh-hint">{{ ghiChuAnh }}</em>
                       </div>
+                      <label class="hh-gallery__add">
+                        <input type="file" accept="image/*" multiple class="hh-hidden" @change="chonAnhSanPham" />
+                        <i class="fa" :class="dangTaiAnh ? 'fa-spinner fa-spin' : 'fa-plus'"></i>
+                        <span>{{ dangTaiAnh ? 'Đang tải…' : 'Thêm ảnh' }}</span>
+                      </label>
                     </div>
+                    <input class="hh-mt6" placeholder="Hoặc dán đường dẫn ảnh rồi nhấn Enter" @keydown.enter.prevent="themAnhTuUrl" />
+                    <em class="hh-hint">{{ ghiChuAnh }}</em>
                   </div>
                 </div>
 
@@ -374,7 +360,10 @@
                   </label>
                   <label class="hh-field">
                     <span>Màu sắc</span>
-                    <input v-model.trim="form.mauSac" placeholder="VD: Đen" />
+                    <select v-model="form.mauSac">
+                      <option value="">-- Chọn màu --</option>
+                      <option v-for="m in optMauSac" :key="m" :value="m">{{ m }}</option>
+                    </select>
                   </label>
                   <label class="hh-field">
                     <span>CPU</span>
@@ -422,7 +411,7 @@
               <!-- Sinh nhiều phiên bản -->
               <template v-else>
                 <fieldset class="hh-block">
-                  <legend>Thuộc tính dùng để trộn ra phiên bản</legend>
+                  <legend>Bước 1 · Chọn thuộc tính để tạo nhiều phiên bản cùng lúc</legend>
                   <p class="hh-note hh-note--plain">
                     Chọn nhiều giá trị cho mỗi thuộc tính, hệ thống ghép chúng lại thành các phiên bản bên dưới.
                     Không chọn gì thì sản phẩm chỉ có một phiên bản duy nhất.
@@ -430,13 +419,16 @@
 
                   <div class="hh-grid">
                     <div class="hh-field">
-                      <span>Màu sắc — gõ rồi nhấn Enter</span>
-                      <input
-                        v-model.trim="chon.mauSac"
-                        placeholder="VD: Đen ↵ Bạc ↵ Xanh Dương"
-                        @keydown.enter.prevent="themMau()"
-                        @keydown.delete="xoaMauCuoi"
-                      />
+                      <span>Màu sắc</span>
+                      <div class="hh-inline">
+                        <select v-model="chon.mauSac">
+                          <option value="">-- Chọn màu --</option>
+                          <option v-for="m in optMauSac" :key="m" :value="m">{{ m }}</option>
+                        </select>
+                        <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" :disabled="!chon.mauSac" @click="themMau()">
+                          <i class="fa fa-plus"></i>
+                        </button>
+                      </div>
                       <div v-if="form.mauSacList.length" class="hh-tags">
                         <span v-for="m in form.mauSacList" :key="m" class="hh-tag-pill">
                           {{ m }}
@@ -467,7 +459,7 @@
                 </fieldset>
 
                 <fieldset class="hh-block">
-                  <legend>Thông số chung cho mọi phiên bản</legend>
+                  <legend>Bước 2 · Thông số &amp; giá mặc định — áp dụng cho mọi phiên bản</legend>
                   <div class="hh-grid">
                     <label class="hh-field">
                       <span>Màn hình</span>
@@ -518,7 +510,7 @@
 
                 <fieldset class="hh-block">
                   <legend>
-                    Các phiên bản sẽ được tạo
+                    Bước 3 · Danh sách phiên bản sẽ tạo — sửa trực tiếp SKU/mã vạch/giá từng dòng nếu cần
                     <span class="hh-chip">{{ bienTheRows.length }}</span>
                   </legend>
 
@@ -601,21 +593,14 @@
 
           <footer class="hh-modal__foot">
             <button type="button" class="hh-btn hh-btn--ghost" @click="closeModal">Bỏ qua</button>
-            <div class="hh-modal__foot-right">
-              <button
-                v-if="modalMode !== 'edit'"
-                type="button"
-                class="hh-btn hh-btn--soft"
-                :disabled="isSaving"
-                @click="submitForm(true)"
-              >
-                <i class="fa fa-copy"></i> Lưu và sao chép
-              </button>
-              <button type="button" class="hh-btn hh-btn--primary" :disabled="isSaving" @click="submitForm(false)">
-                <i class="fa" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
-                {{ isSaving ? 'Đang lưu…' : 'Lưu' }}
-              </button>
-            </div>
+            <button
+              type="button" class="hh-btn hh-btn--primary"
+              :disabled="isSaving || !formHopLe" :title="!formHopLe ? 'Điền đủ các ô bắt buộc (*) để lưu' : ''"
+              @click="submitForm"
+            >
+              <i class="fa" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+              {{ isSaving ? 'Đang lưu…' : 'Lưu' }}
+            </button>
           </footer>
         </div>
       </div>
@@ -758,6 +743,7 @@ const PHAN_LOAI_DU_PHONG = [
 const MAN_HINH_GOI_Y = ['15.6" FHD 60Hz', '15.6" FHD 144Hz', '15.6" QHD 240Hz', '16" 2.5K 120Hz', '16" FHD 165Hz', '16" WQXGA 165Hz', '16" 2.8K OLED 120Hz']
 const PIN_GOI_Y = ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh', '86Wh', '90Wh']
 const HDH_GOI_Y = ['Windows 11 Home', 'Windows 11 Pro', 'macOS', 'Không kèm HĐH']
+const MAU_SAC_GOI_Y = ['Đen', 'Trắng', 'Bạc', 'Xám', 'Xanh Dương', 'Xanh Lá', 'Đỏ', 'Vàng', 'Hồng', 'Tím', 'Cam', 'Nâu']
 
 const ANH_MAC_DINH = 'https://cdn-icons-png.flaticon.com/512/664/664457.png'
 const TOI_DA_BIEN_THE = 60
@@ -1108,10 +1094,9 @@ const tab = ref('info')
 const isSaving = ref(false)
 const saveError = ref('')
 const errors = reactive({})
-const fileEl = ref(null)
 const moTaEl = ref(null)
-const anhXemTruoc = ref('')
-const ghiChuAnh = ref('Ảnh tải lên sẽ được lưu về server; nếu backend chưa có API upload, hệ thống dùng đường dẫn /images/<tên file>.')
+const dangTaiAnh = ref(false)
+const ghiChuAnh = ref('Ảnh tải lên sẽ được lưu về server; nếu backend chưa có API upload, hệ thống dùng đường dẫn /images/<tên file>. Ảnh đầu tiên trong danh sách là ảnh đại diện.')
 
 const tabs = [
   { key: 'info', label: 'Thông tin' },
@@ -1126,7 +1111,7 @@ const formRong = () => ({
   maSanPham: '', barcode: '', tenSanPham: '',
   thuongHieuId: '', danhMucId: '', nhaCungCapId: '',
   loaiSanPham: 'LAPTOP', trangThaiSanPham: 'active',
-  moTa: '', hinhAnhChinh: '', phanLoaiIds: [], phanLoaiTags: '', phanLoaiTen: '',
+  moTa: '', hinhAnhList: [], phanLoaiIds: [], phanLoaiTags: '', phanLoaiTen: '',
   // thông số chung của phiên bản
   giaNhap: 0, giaBan: 0, baoHanhThang: 24,
   kichThuocManHinh: '', heDieuHanh: 'Windows 11 Home', pin: '', trongLuongKg: '',
@@ -1138,7 +1123,7 @@ const formRong = () => ({
 })
 
 const form = reactive(formRong())
-const chon = reactive({ mauSac: '', ramIds: '', cpuIds: '', oCungIds: '', gpuIds: '', phanLoai: '' })
+const chon = reactive({ mauSac: '', ramIds: '', cpuIds: '', oCungIds: '', gpuIds: '' })
 const bienTheRows = ref([])
 
 const tieuDeModal = computed(() =>
@@ -1165,6 +1150,7 @@ const gopGoiY = (key, goiY) =>
 const optManHinh = computed(() => gopGoiY('kichThuocManHinh', MAN_HINH_GOI_Y))
 const optPin = computed(() => gopGoiY('pin', PIN_GOI_Y))
 const optHeDieuHanh = computed(() => gopGoiY('heDieuHanh', HDH_GOI_Y))
+const optMauSac = computed(() => gopGoiY('mauSac', MAU_SAC_GOI_Y))
 
 /* ─── Thuộc tính dùng để trộn ─── */
 const thuocTinhTron = [
@@ -1203,19 +1189,15 @@ const themMau = () => {
   chon.mauSac = ''
 }
 const xoaMau = (m) => { form.mauSacList = form.mauSacList.filter((x) => x !== m) }
-const xoaMauCuoi = (e) => {
-  if (!chon.mauSac && form.mauSacList.length && e.key === 'Backspace') form.mauSacList.pop()
-}
 
-/* ─── Phân loại ─── */
+/* ─── Phân loại (chọn nhiều bằng chip bật/tắt) ─── */
 const tenPhanLoai = (id) => phanLoaiOptions.value.find((p) => String(p.phanLoaiId) === String(id))?.tenPhanLoai || id
 const maPhanLoai = (id) => phanLoaiOptions.value.find((p) => String(p.phanLoaiId) === String(id))?.maPhanLoai || ''
-const phanLoaiConLai = computed(() => phanLoaiOptions.value.filter((p) => !form.phanLoaiIds.includes(p.phanLoaiId)))
-const themPhanLoai = () => {
-  if (chon.phanLoai !== '' && !form.phanLoaiIds.includes(chon.phanLoai)) form.phanLoaiIds.push(chon.phanLoai)
-  chon.phanLoai = ''
+const togglePhanLoai = (id) => {
+  form.phanLoaiIds = form.phanLoaiIds.includes(id)
+    ? form.phanLoaiIds.filter((x) => x !== id)
+    : [...form.phanLoaiIds, id]
 }
-const xoaPhanLoai = (id) => { form.phanLoaiIds = form.phanLoaiIds.filter((x) => x !== id) }
 
 /* Hai cột cache phan_loai_tags / phan_loai_ten trong CSDL */
 watch(() => form.phanLoaiIds.slice(), (ids) => {
@@ -1251,22 +1233,31 @@ const uploadAnh = async (file) => {
 }
 
 const chonAnhSanPham = async (e) => {
-  const file = e.target.files?.[0]
-  if (!file) return
-  anhXemTruoc.value = URL.createObjectURL(file)
-  try {
-    form.hinhAnhChinh = await uploadAnh(file)
-    ghiChuAnh.value = 'Đã tải ảnh lên server.'
-  } catch {
-    form.hinhAnhChinh = THU_MUC_ANH + file.name
-    ghiChuAnh.value = `Chưa có API upload — đã đặt đường dẫn ${form.hinhAnhChinh}. Hãy chép file ảnh vào thư mục public${THU_MUC_ANH} của FrontEnd.`
+  const files = Array.from(e.target.files || [])
+  if (!files.length) return
+  dangTaiAnh.value = true
+  for (const file of files) {
+    try {
+      form.hinhAnhList.push(await uploadAnh(file))
+    } catch {
+      const duongDan = THU_MUC_ANH + file.name
+      form.hinhAnhList.push(duongDan)
+      ghiChuAnh.value = `Chưa có API upload — đã đặt đường dẫn ${duongDan}. Hãy chép file ảnh vào thư mục public${THU_MUC_ANH} của FrontEnd.`
+    }
   }
+  dangTaiAnh.value = false
   e.target.value = ''
 }
 
-const xoaAnh = () => {
-  form.hinhAnhChinh = ''
-  anhXemTruoc.value = ''
+const themAnhTuUrl = (e) => {
+  const url = e.target.value.trim()
+  if (url) form.hinhAnhList.push(url)
+  e.target.value = ''
+}
+const xoaAnhTaiViTri = (i) => { form.hinhAnhList.splice(i, 1) }
+const datLamAnhChinh = (i) => {
+  const [anh] = form.hinhAnhList.splice(i, 1)
+  form.hinhAnhList.unshift(anh)
 }
 
 /* ─── Trình soạn mô tả ─── */
@@ -1288,12 +1279,21 @@ watch([showModal, tab], async () => {
   if (moTaEl.value && moTaEl.value.innerHTML !== form.moTa) moTaEl.value.innerHTML = form.moTa || ''
 })
 
-/* ─── Sinh mã sản phẩm ─── */
+/* ─── Sinh mã sản phẩm / barcode (2 ô này giờ chỉ đọc, không cho gõ tay) ─── */
 const sinhMaSanPham = () => {
   const so = danhSachSanPham.value
     .map((p) => Number(String(p.maSanPham || '').replace(/\D/g, '')))
     .filter((n) => !Number.isNaN(n) && n > 0)
   return 'SP' + String((so.length ? Math.max(...so) : 0) + 1).padStart(4, '0')
+}
+
+const sinhBarcode = () => {
+  const daCo = new Set(danhSachSanPham.value.map((p) => p.barcode).filter(Boolean))
+  let ma
+  do {
+    ma = '893' + String(Math.floor(Math.random() * 1e10)).padStart(10, '0')
+  } while (daCo.has(ma))
+  return ma
 }
 
 /* ─── Ma trận phiên bản ─── */
@@ -1374,14 +1374,13 @@ const resetForm = (patch = {}) => {
   Object.keys(errors).forEach((k) => delete errors[k])
   Object.keys(chon).forEach((k) => (chon[k] = ''))
   bienTheRows.value = []
-  anhXemTruoc.value = ''
   saveError.value = ''
   tab.value = 'info'
   if (moTaEl.value) moTaEl.value.innerHTML = form.moTa || ''
 }
 
 const openCreate = () => {
-  resetForm({ maSanPham: sinhMaSanPham() })
+  resetForm({ maSanPham: sinhMaSanPham(), barcode: sinhBarcode() })
   modalMode.value = 'create'
   showModal.value = true
   dungLaiMaTran()
@@ -1398,6 +1397,22 @@ const closeModal = () => {
   showModal.value = false
   resetForm()
 }
+
+/* ─── Form đã đủ điều kiện lưu chưa (chỉ soi điều kiện, không set lỗi) — dùng để bật/tắt
+ *  nút Lưu; mô tả không nằm trong điều kiện vì cho phép để trống. ─── */
+const formHopLe = computed(() => {
+  const coCoBan = !!(form.tenSanPham && form.maSanPham && form.thuongHieuId && form.danhMucId)
+  const nhap = Number(form.giaNhap)
+  const ban = Number(form.giaBan)
+  const coGia = nhap >= 0 && ban >= 0 && ban >= nhap * 0.5
+  const coBaoHanh = Number(form.baoHanhThang) >= 0
+  const coBienThe = () => bienTheRows.value.length > 0 &&
+    bienTheRows.value.every((r) => r.maSku && Number(r.giaBan) >= Number(r.giaNhap) * 0.5)
+
+  if (modalMode.value === 'edit') return coCoBan && coGia && coBaoHanh && !!form.maSku
+  if (modalMode.value === 'variant') return coGia && coBaoHanh && coBienThe()
+  return coCoBan && coGia && coBaoHanh && coBienThe()
+})
 
 /* ─── Kiểm tra trước khi gửi ─── */
 const validate = () => {
@@ -1490,7 +1505,8 @@ const payloadSanPham = (row) => ({
   nhaCungCapId: soHoacNull(form.nhaCungCapId),
   loaiSanPham: form.loaiSanPham,
   moTa: form.moTa || null,
-  hinhAnhChinh: form.hinhAnhChinh || null,
+  hinhAnhChinh: form.hinhAnhList[0] || null,
+  hinhAnhList: form.hinhAnhList.length ? form.hinhAnhList : null,
   ngayTao: bayGio(),
   ...phanChungBienThe(),
   ...(row
@@ -1592,7 +1608,7 @@ const luuPhanLoai = async (sanPhamId) => {
  * Sửa:      PUT  /api/san-pham/update/{id} kèm bienTheId — service tự cập nhật cả hai
  * Thêm phiên bản: chỉ POST /api/bien-the-san-pham
  */
-const submitForm = async (saoChep) => {
+const submitForm = async () => {
   saveError.value = ''
   if (!validate()) {
     saveError.value = 'Vui lòng sửa các ô được đánh dấu.'
@@ -1629,8 +1645,7 @@ const submitForm = async (saoChep) => {
         daTao++
       }
       hienToast(`Đã thêm ${daTao} phiên bản`)
-      if (saoChep) chuanBiBanSao()
-      else closeModal()
+      closeModal()
     } else {
       const [dauTien, ...conLai] = bienTheRows.value
 
@@ -1659,8 +1674,7 @@ const submitForm = async (saoChep) => {
 
       await luuPhanLoai(spId)
       hienToast(`Đã lưu sản phẩm cùng ${daTao} phiên bản`)
-      if (saoChep) chuanBiBanSao()
-      else closeModal()
+      closeModal()
     }
 
     await fetchData()
@@ -1679,20 +1693,6 @@ const submitForm = async (saoChep) => {
   }
 }
 
-/** Giữ lại toàn bộ dữ liệu vừa nhập, chỉ xóa những thứ buộc phải duy nhất:
- *  mã sản phẩm, barcode, id và mã SKU của từng phiên bản. */
-const chuanBiBanSao = () => {
-  modalMode.value = 'create'
-  form.sanPhamId = null
-  form.bienTheId = null
-  form.barcode = ''
-  form.maSanPham = sinhMaSanPham()
-  form.tenSanPham = form.tenSanPham + ' (bản sao)'
-  bienTheRows.value = bienTheRows.value.map((r, i) => ({ ...r, maSku: sinhSku(r, i) }))
-  tab.value = 'info'
-  saveError.value = ''
-  hienToast('Đã sao chép dữ liệu sang form mới — nhớ đổi lại tên và mã cho đúng')
-}
 </script>
 
 <style scoped>
@@ -1970,19 +1970,44 @@ const chuanBiBanSao = () => {
 }
 .hh-note--plain { margin: 0 0 14px; }
 
-/* upload ảnh */
-.hh-upload { display: flex; gap: 14px; align-items: flex-start; }
-.hh-upload__preview {
-  width: 104px; height: 104px; flex-shrink: 0;
+/* chip bật/tắt — phân loại sử dụng (chọn nhiều) */
+.hh-chip-select { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.hh-chip-toggle {
+  padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: 12.5px; font-weight: 500;
+  background: #fff; border: 1px solid var(--pink-200); color: var(--muted); font-family: inherit;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.hh-chip-toggle:hover { border-color: var(--pink-300); color: var(--pink-700); }
+.hh-chip-toggle.is-on { background: var(--pink-600); border-color: var(--pink-600); color: #fff; }
+
+/* gallery nhiều ảnh */
+.hh-gallery { display: flex; flex-wrap: wrap; gap: 10px; }
+.hh-gallery__item {
+  position: relative; width: 92px; height: 92px; flex-shrink: 0;
+  border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff;
+}
+.hh-gallery__item img { width: 100%; height: 100%; object-fit: cover; }
+.hh-gallery__badge {
+  position: absolute; left: 4px; bottom: 4px; background: var(--pink-600); color: #fff;
+  font-size: 9.5px; font-weight: 600; padding: 2px 6px; border-radius: 999px; line-height: 1.4;
+}
+.hh-gallery__actions {
+  position: absolute; top: 0; right: 0; display: flex; gap: 2px; padding: 3px;
+  background: linear-gradient(180deg, rgba(0,0,0,.45), transparent);
+  opacity: 0; transition: opacity .15s;
+}
+.hh-gallery__item:hover .hh-gallery__actions { opacity: 1; }
+.hh-icon-btn--sm {
+  width: 22px; height: 22px; background: rgba(255,255,255,.9); color: var(--pink-700);
+}
+.hh-gallery__add {
+  width: 92px; height: 92px; flex-shrink: 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   border: 1px dashed var(--pink-300); border-radius: 10px; background: var(--pink-50);
-  display: grid; place-items: center; overflow: hidden;
+  color: var(--pink-600); font-size: 11px; font-weight: 500; text-align: center;
 }
-.hh-upload__preview img { width: 100%; height: 100%; object-fit: contain; }
-.hh-upload__preview i { font-size: 26px; color: var(--pink-300); }
-.hh-upload__body { flex: 1; min-width: 0; }
-.hh-upload__body input[type="text"], .hh-upload__body input:not([type]) {
-  width: 100%; padding: 9px 11px; border: 1px solid var(--field); border-radius: 8px; font-size: 13px; font-family: inherit;
-}
+.hh-gallery__add:hover { background: var(--pink-100); }
+.hh-gallery__add i { font-size: 18px; }
 
 /* ma trận phiên bản */
 .hh-matrix-wrap { border: 1px solid var(--line); border-radius: 10px; overflow: auto; max-height: 320px; }
@@ -2029,7 +2054,6 @@ const chuanBiBanSao = () => {
 @media (max-width: 768px) {
   .hh-bar__actions { width: 100%; margin-left: 0; }
   .hh-search { width: 100%; }
-  .hh-upload { flex-direction: column; }
   .hh-modal__foot { flex-direction: column-reverse; align-items: stretch; }
   .hh-modal__foot-right { justify-content: flex-end; }
 }
