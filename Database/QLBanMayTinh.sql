@@ -20,6 +20,12 @@ GO
 USE QLBanMayTinh;
 GO
 
+-- sqlcmd mặc định QUOTED_IDENTIFIER OFF (khác SSMS mặc định ON) — các CREATE INDEX có
+-- WHERE (filtered index) bên dưới sẽ báo lỗi Msg 1934 và dừng cả file giữa chừng nếu
+-- thiếu dòng này. Đặt 1 lần ở đây, giữ nguyên suốt phiên (không cần lặp lại sau mỗi GO).
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ============================================================
 --  1. THƯƠNG HIỆU & DANH MỤC & NHÀ CUNG CẤP
 -- ============================================================
