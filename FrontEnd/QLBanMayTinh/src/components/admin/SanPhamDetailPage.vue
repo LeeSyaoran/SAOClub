@@ -1,7 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import JsBarcode from "jsbarcode";
 import { t } from "../../i18n/index.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { formatDateTime, statusLabel } from "../../utils/adminFormat.js";
@@ -37,14 +36,6 @@ const productVariants = computed(() =>
 const productInfo = computed(() => productVariants.value[0] ?? null);
 
 const activeTab = ref("info");
-const barcodeEl = ref(null);
-watch([() => productInfo.value?.barcode, activeTab], async ([barcode, tab]) => {
-  if (!barcode || tab !== "info") return;
-  await nextTick();
-  if (!barcodeEl.value) return;
-  JsBarcode(barcodeEl.value, barcode, { format: "CODE128", height: 50, displayValue: false, margin: 0 });
-}, { immediate: true });
-
 const showEditModal = ref(false);
 const onSaved = () => refreshProducts();
 const back = () => router.push("/admin");
@@ -127,18 +118,6 @@ const back = () => router.push("/admin");
               <div>{{ t("admin.productDetail.releaseDate") }}: <span class="text-primary">{{ formatDateTime(productInfo.ngayTao) }}</span></div>
               <div v-if="productInfo.moTa">{{ t("admin.productModal.descLabel") }}: <span class="text-primary">{{ productInfo.moTa }}</span></div>
             </div>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="rounded-3 p-3" style="background: var(--bg-card); border: 1px solid var(--border-color)">
-            <div class="text-uppercase fw-bold mb-2" style="font-size: 0.65rem; letter-spacing: 0.1em; color: #60a5fa">
-              {{ t("admin.productDetail.cardStats") }}
-            </div>
-            <div v-if="productInfo.barcode" class="d-flex flex-column align-items-center gap-2 py-2">
-              <svg ref="barcodeEl"></svg>
-              <span class="text-primary fw-bold" style="font-family: monospace; letter-spacing: 0.15em">{{ productInfo.barcode }}</span>
-            </div>
-            <div v-else class="small text-secondary">{{ t("admin.productDetail.noBarcode") }}</div>
           </div>
         </div>
       </div>

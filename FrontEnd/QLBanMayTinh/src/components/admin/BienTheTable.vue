@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
+import JsBarcode from "jsbarcode";
 import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import * as SanPhamService from "../../services/SanPhamService.js";
@@ -81,6 +82,13 @@ const { currentPage, totalPages, pagedItems: pagedVariants, pageSize } = usePagi
 // tên đầy đủ vẫn hiện nguyên trong ProductDetailModal.vue lúc xem chi tiết.
 const shortCpu = (cpu) => cpu?.replace(/^(Intel Core|AMD Ryzen)\s+/i, '') ?? '';
 const configLabel = (p) => [shortCpu(p.cpu), p.ram, p.oCung].filter(Boolean).join(' · ') || '—';
+
+// Ve barcode qua ref callback ngay khi <svg> mount — chi render cho dong dang hien
+// (pagedVariants), khong ton cong ve het 41+ bien the cung luc.
+const renderBarcode = (el, value) => {
+  if (!el || !value) return;
+  JsBarcode(el, value, { format: 'CODE128', height: 24, width: 1.2, displayValue: false, margin: 0 });
+};
 
 // ── Modal them/sua bien the ───────────────────────────────────────────────────────────
 const showVariantModal = ref(false);
@@ -356,7 +364,7 @@ const saveVariant = async () => {
         <tr>
           <th style="width:36px;">{{ t('admin.common.stt') }}</th>
           <th style="width:48px;">{{ t('admin.variants.colImage') }}</th>
-          <th style="width:150px;">{{ t('admin.variants.colSku') }}</th><th style="width:220px;">{{ t('admin.variants.colProduct') }}</th>
+          <th style="width:150px;">{{ t('admin.variants.colSku') }}</th><th style="width:130px;">{{ t('admin.variants.colBarcode') }}</th><th style="width:220px;">{{ t('admin.variants.colProduct') }}</th>
           <th>{{ t('admin.variants.colConfig') }}</th><th style="width:100px;">{{ t('admin.variants.colColor') }}</th>
           <th style="width:120px;">{{ t('admin.variants.colPriceSell') }}</th><th style="width:100px;">{{ t('admin.variants.colStatus') }}</th><th style="width:110px;">{{ t('admin.variants.colAction') }}</th>
         </tr>
@@ -379,6 +387,10 @@ const saveVariant = async () => {
             </div>
           </td>
           <td class="text-secondary text-truncate" style="font-family:monospace; font-size:0.76rem; max-width:150px;" :title="p.maSku">{{ p.maSku }}</td>
+          <td>
+            <svg v-if="p.barcodeBienThe" :ref="(el) => renderBarcode(el, p.barcodeBienThe)"></svg>
+            <span v-else class="text-secondary">—</span>
+          </td>
           <td class="text-truncate" style="max-width:220px;" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
           <td class="text-secondary" style="max-width:260px;" :title="configLabel(p)">
             <div v-if="p.cpu || p.ram || p.oCung" class="d-flex flex-wrap align-items-center gap-2" style="font-size:0.74rem;">
