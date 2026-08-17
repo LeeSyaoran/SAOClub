@@ -33,37 +33,44 @@ const customerModalRef = ref(null);
 </script>
 
 <template>
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredCustomers.length }}/{{ (CustomersStore.items ?? []).length }} {{ t('admin.customers.countSuffix') }}</span>
-    <div class="d-flex gap-2 flex-wrap">
-      <input v-model="customerSearch" class="form-control form-control-sm" style="width:240px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.customers.searchPlaceholder')" />
-      <button class="btn btn-sm btn-warning text-dark fw-bold" @click="customerModalRef.openForCreate()">{{ t('admin.customers.add') }}</button>
+  <div class="alt-card">
+    <div class="alt-toolbar">
+      <span class="alt-toolbar__count">{{ filteredCustomers.length }}/{{ (CustomersStore.items ?? []).length }} {{ t('admin.customers.countSuffix') }}</span>
+      <div class="alt-toolbar__actions">
+        <div class="alt-search">
+          <i class="fa fa-search alt-search__icon"></i>
+          <input v-model="customerSearch" :placeholder="t('admin.customers.searchPlaceholder')" />
+        </div>
+        <button class="alt-btn alt-btn--primary" @click="customerModalRef.openForCreate()">{{ t('admin.customers.add') }}</button>
+      </div>
     </div>
-  </div>
-  <div v-if="CustomersStore.loading" class="text-secondary small">{{ t('admin.customers.loading') }}</div>
-  <div v-else class="table-responsive">
-    <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.customers.colFullName') }}</th><th>{{ t('admin.customers.colPhone') }}</th><th>{{ t('admin.customers.colEmail') }}</th><th>{{ t('admin.customers.colCustomerType') }}</th><th>{{ t('admin.customers.colPoints') }}</th><th>{{ t('admin.customers.colStatus') }}</th><th>{{ t('admin.customers.colAction') }}</th></tr></thead>
-      <tbody>
-        <tr v-for="(c, idx) in pagedCustomers" :key="c.khachHangId">
-          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-          <td>{{ c.hoTen }}</td>
-          <td class="text-secondary">{{ c.soDienThoai }}</td>
-          <td class="text-secondary">{{ c.email }}</td>
-          <td>{{ c.loaiKhach||'—' }}</td>
-          <td>{{ c.diemTichLuy??0 }}</td>
-          <td><span class="badge" :class="c.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(c.trangThai) }}</span></td>
-          <td>
-            <div class="d-flex gap-1">
-              <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem; padding:2px 8px;" @click="emit('view-detail', c.khachHangId)">{{ t('admin.customers.viewDetail') }}</button>
-              <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="customerModalRef.openForEdit(c)">{{ t('admin.customers.edit') }}</button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="filteredCustomers.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.customers.empty') }}</td></tr>
-      </tbody>
-    </table>
-    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
+    <div v-if="CustomersStore.loading" class="alt-empty">{{ t('admin.customers.loading') }}</div>
+    <div v-else class="alt-table-wrap">
+      <table class="alt-table">
+        <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.customers.colFullName') }}</th><th>{{ t('admin.customers.colPhone') }}</th><th>{{ t('admin.customers.colEmail') }}</th><th>{{ t('admin.customers.colCustomerType') }}</th><th>{{ t('admin.customers.colPoints') }}</th><th>{{ t('admin.customers.colStatus') }}</th><th>{{ t('admin.customers.colAction') }}</th></tr></thead>
+        <tbody>
+          <tr v-for="(c, idx) in pagedCustomers" :key="c.khachHangId">
+            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td>{{ c.hoTen }}</td>
+            <td class="text-secondary">{{ c.soDienThoai }}</td>
+            <td class="text-secondary">{{ c.email }}</td>
+            <td>{{ c.loaiKhach||'—' }}</td>
+            <td>{{ c.diemTichLuy??0 }}</td>
+            <td>
+              <span class="alt-tag" :style="c.trangThai==='active' ? 'background:rgba(22,163,74,0.14);color:var(--state-success);' : 'background:var(--bg-card-alt);color:var(--text-secondary);'">{{ statusLabel(c.trangThai) }}</span>
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="emit('view-detail', c.khachHangId)">{{ t('admin.customers.viewDetail') }}</button>
+                <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="customerModalRef.openForEdit(c)">{{ t('admin.customers.edit') }}</button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="filteredCustomers.length===0"><td colspan="8" class="alt-empty">{{ t('admin.customers.empty') }}</td></tr>
+        </tbody>
+      </table>
+      <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
+    </div>
   </div>
 
   <CustomerFormModal ref="customerModalRef" v-model="showCustomerModal" />

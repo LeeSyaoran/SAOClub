@@ -279,106 +279,82 @@ const saveReturn = async () => {
 </script>
 
 <template>
-  <div
-    class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2"
-  >
-    <span class="text-secondary small">{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
-      {{ t("admin.returns.countSuffix") }}</span>
-    <div class="d-flex gap-2 flex-wrap">
-      <input
-        v-model="search"
-        class="form-control form-control-sm"
-        style="
-          width: 240px;
-          background: var(--bg-input);
-          border-color: var(--border-color-strong);
-          color: var(--text-primary);
-        "
-        :placeholder="t('admin.returns.searchPlaceholder')"
-      />
-      <button
-        v-if="!readonly"
-        class="btn btn-sm btn-warning text-dark fw-bold"
-        @click="openAdd"
-      >
-        {{ t("admin.returns.add") }}
-      </button>
+  <div class="alt-card">
+    <div class="alt-toolbar">
+      <span class="alt-toolbar__count">{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
+        {{ t("admin.returns.countSuffix") }}</span>
+      <div class="alt-toolbar__actions">
+        <div class="alt-search">
+          <i class="fa fa-search alt-search__icon"></i>
+          <input v-model="search" :placeholder="t('admin.returns.searchPlaceholder')" />
+        </div>
+        <button v-if="!readonly" class="alt-btn alt-btn--primary" @click="openAdd">
+          {{ t("admin.returns.add") }}
+        </button>
+      </div>
     </div>
-  </div>
 
-  <div v-if="ReturnsStore.loading" class="text-secondary small">
-    {{ t("admin.returns.loading") }}
-  </div>
-  <div v-else class="table-responsive">
-    <table
-      class="table table-hover table-sm align-middle"
-      style="
-        --bs-table-bg: var(--bg-card);
-        --bs-table-color: var(--text-primary);
-        --bs-table-hover-bg: var(--bg-hover);
-        --bs-table-hover-color: var(--text-primary);
-        --bs-table-border-color: var(--border-color-soft);
-      "
-    >
-      <thead>
-        <tr>
-          <th style="width: 40px">{{ t("admin.common.stt") }}</th>
-          <th>{{ t("admin.returns.colId") }}</th>
-          <th>{{ t("admin.returns.colOrder") }}</th>
-          <th>{{ t("admin.returns.colCustomer") }}</th>
-          <th>{{ t("admin.returns.colAmount") }}</th>
-          <th>{{ t("admin.returns.colHinhThucHoan") }}</th>
-          <th>{{ t("admin.returns.colStatus") }}</th>
-          <th>{{ t("admin.returns.colAction") }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(p, idx) in pagedReturns" :key="p.phieuTraId">
-          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-          <td class="text-secondary" style="font-family: monospace">
-            {{ p.maPhieu || "#" + p.phieuTraId }}
-          </td>
-          <td class="text-secondary">
-            {{ orderById(p.donHangId)?.maDonHang || "#" + p.donHangId }}
-          </td>
-          <td>{{ customerName(orderById(p.donHangId)?.khachHangId ?? -1) }}</td>
-          <td class="text-warning fw-semibold">
-            {{ formatPrice(p.soTienHoan) }}
-          </td>
-          <td class="text-secondary">
-            {{ hinhThucHoanLabel(p.hinhThucHoan) }}
-          </td>
-          <td>
-            <span
-              class="badge"
-              :style="{
-                background: statusColor(p.trangThai).bg,
-                color: statusColor(p.trangThai).text,
-              }"
-            >{{ statusLabel(p.trangThai) }}</span>
-          </td>
-          <td>
-            <div class="d-flex gap-1">
-              <button
-                class="btn btn-sm btn-outline-warning"
-                style="font-size: 0.78rem; padding: 2px 8px"
-                @click="openDetail(p)"
-              >
-                {{
-                  readonly ? t("admin.returns.view") : t("admin.returns.edit")
-                }}
-              </button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="filteredReturns.length === 0">
-          <td colspan="8" class="text-center text-secondary">
-            {{ t("admin.returns.empty") }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
+    <div v-if="ReturnsStore.loading" class="alt-empty">
+      {{ t("admin.returns.loading") }}
+    </div>
+    <div v-else class="alt-table-wrap">
+      <table class="alt-table">
+        <thead>
+          <tr>
+            <th style="width: 40px">{{ t("admin.common.stt") }}</th>
+            <th>{{ t("admin.returns.colId") }}</th>
+            <th>{{ t("admin.returns.colOrder") }}</th>
+            <th>{{ t("admin.returns.colCustomer") }}</th>
+            <th>{{ t("admin.returns.colAmount") }}</th>
+            <th>{{ t("admin.returns.colHinhThucHoan") }}</th>
+            <th>{{ t("admin.returns.colStatus") }}</th>
+            <th>{{ t("admin.returns.colAction") }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(p, idx) in pagedReturns" :key="p.phieuTraId">
+            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td class="text-secondary" style="font-family: monospace">
+              {{ p.maPhieu || "#" + p.phieuTraId }}
+            </td>
+            <td class="text-secondary">
+              {{ orderById(p.donHangId)?.maDonHang || "#" + p.donHangId }}
+            </td>
+            <td>{{ customerName(orderById(p.donHangId)?.khachHangId ?? -1) }}</td>
+            <td class="fw-semibold" style="color: var(--accent-fg)">
+              {{ formatPrice(p.soTienHoan) }}
+            </td>
+            <td class="text-secondary">
+              {{ hinhThucHoanLabel(p.hinhThucHoan) }}
+            </td>
+            <td>
+              <span
+                class="alt-tag"
+                :style="{
+                  background: statusColor(p.trangThai).bg,
+                  color: statusColor(p.trangThai).text,
+                }"
+              >{{ statusLabel(p.trangThai) }}</span>
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <button class="alt-btn alt-btn--ghost" style="padding: 4px 12px" @click="openDetail(p)">
+                  {{
+                    readonly ? t("admin.returns.view") : t("admin.returns.edit")
+                  }}
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="filteredReturns.length === 0">
+            <td colspan="8" class="alt-empty">
+              {{ t("admin.returns.empty") }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
+    </div>
   </div>
 
   <div

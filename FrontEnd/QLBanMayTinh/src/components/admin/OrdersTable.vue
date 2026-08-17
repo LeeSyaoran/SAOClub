@@ -577,92 +577,101 @@ const confirmXacNhanSerial = async () => {
 <template>
   <!-- Chế độ: danh sách các ngày có đơn hàng (Lịch sử đơn hàng) -->
   <template v-if="orderViewMode === 'history-dates'">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-      <span class="fw-bold" style="color:var(--text-heading);">{{ t('admin.orders.history') }}</span>
-      <button class="btn btn-sm btn-outline-secondary" @click="backToToday">{{ t('admin.orders.backToToday') }}</button>
-    </div>
-    <div v-if="OrdersStore.loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
-    <div v-else class="d-flex flex-column gap-2">
-      <div
-        v-for="d in orderDatesGrouped" :key="d.dateKey"
-        class="d-flex justify-content-between align-items-center px-3 py-3 rounded-3"
-        style="background:var(--bg-card); border:1px solid var(--border-color-soft); cursor:pointer;"
-        @click="openHistoryDay(d.dateKey)"
-      >
-        <span class="fw-semibold" style="color:var(--text-primary);">{{ d.label }}</span>
-        <span class="text-secondary small d-flex align-items-center gap-2">{{ d.count }} {{ t('admin.orders.countSuffix') }} <span style="font-size:1.1rem;">›</span></span>
+    <div class="alt-card">
+      <div class="alt-toolbar">
+        <span class="fw-bold" style="color:var(--text-heading);">{{ t('admin.orders.history') }}</span>
+        <div class="alt-toolbar__actions">
+          <button class="alt-btn alt-btn--ghost" @click="backToToday">{{ t('admin.orders.backToToday') }}</button>
+        </div>
       </div>
-      <div v-if="orderDatesGrouped.length===0" class="text-center text-secondary py-3">{{ t('admin.orders.empty') }}</div>
+      <div v-if="OrdersStore.loading" class="alt-empty">{{ t('admin.orders.loading') }}</div>
+      <div v-else class="d-flex flex-column" style="padding:8px;">
+        <div
+          v-for="d in orderDatesGrouped" :key="d.dateKey"
+          class="d-flex justify-content-between align-items-center px-3 py-3 rounded-3"
+          style="cursor:pointer;"
+          @click="openHistoryDay(d.dateKey)"
+        >
+          <span class="fw-semibold" style="color:var(--text-primary);">{{ d.label }}</span>
+          <span class="text-secondary small d-flex align-items-center gap-2">{{ d.count }} {{ t('admin.orders.countSuffix') }} <span style="font-size:1.1rem;">›</span></span>
+        </div>
+        <div v-if="orderDatesGrouped.length===0" class="alt-empty">{{ t('admin.orders.empty') }}</div>
+      </div>
     </div>
   </template>
 
   <!-- Chế độ: đơn hôm nay (mặc định) hoặc đơn của 1 ngày lịch sử đã chọn -->
   <template v-else>
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-      <div class="d-flex align-items-center gap-2">
-        <button v-if="orderViewMode==='history-day'" class="btn btn-sm btn-outline-secondary" @click="backToDateList">{{ t('admin.orders.backToDateList') }}</button>
-        <span class="text-secondary small">
-          <span v-if="orderViewMode==='history-day'" class="fw-semibold" style="color:var(--text-primary);">{{ formatDateHeading(historySelectedDate) }} · </span>
-          {{ filteredOrders.length }}/{{ ordersBaseList.length }} {{ t('admin.orders.countSuffix') }}
-        </span>
+    <div class="alt-card">
+      <div class="alt-toolbar">
+        <div class="alt-toolbar__left">
+          <button v-if="orderViewMode==='history-day'" class="alt-btn alt-btn--ghost" @click="backToDateList">{{ t('admin.orders.backToDateList') }}</button>
+          <span class="alt-toolbar__count">
+            <span v-if="orderViewMode==='history-day'" class="fw-semibold" style="color:var(--text-primary);">{{ formatDateHeading(historySelectedDate) }} · </span>
+            {{ filteredOrders.length }}/{{ ordersBaseList.length }} {{ t('admin.orders.countSuffix') }}
+          </span>
+        </div>
+        <div class="alt-toolbar__actions">
+          <div class="alt-search">
+            <i class="fa fa-search alt-search__icon"></i>
+            <input v-model="orderSearch" :placeholder="t('admin.orders.searchPlaceholder')" />
+          </div>
+          <select v-model="orderStatusFilter" class="alt-select">
+            <option value="">{{ t('admin.orders.allStatuses') }}</option>
+            <option value="pending">{{ orderStatusLabel('pending') }}</option>
+            <option value="confirmed">{{ orderStatusLabel('confirmed') }}</option>
+            <option value="processing">{{ orderStatusLabel('processing') }}</option>
+            <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
+            <option value="out_for_delivery">{{ orderStatusLabel('out_for_delivery') }}</option>
+            <option value="awaiting_confirmation">{{ orderStatusLabel('awaiting_confirmation') }}</option>
+            <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
+            <option value="cancelled">{{ orderStatusLabel('cancelled') }}</option>
+            <option value="returned">{{ orderStatusLabel('returned') }}</option>
+          </select>
+          <select v-model="orderPaymentFilter" class="alt-select">
+            <option value="">{{ t('admin.orders.allPayments') }}</option>
+            <option value="paid">{{ t('admin.orders.paid') }}</option>
+            <option value="unpaid">{{ t('admin.orders.unpaid') }}</option>
+          </select>
+          <button v-if="orderViewMode==='today'" class="alt-btn alt-btn--ghost" @click="openOrderHistory">{{ t('admin.orders.history') }}</button>
+        </div>
       </div>
-      <div class="d-flex gap-2 flex-wrap">
-        <input v-model="orderSearch" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.orders.searchPlaceholder')" />
-        <select v-model="orderStatusFilter" class="form-select form-select-sm" style="width:170px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);">
-          <option value="">{{ t('admin.orders.allStatuses') }}</option>
-          <option value="pending">{{ orderStatusLabel('pending') }}</option>
-          <option value="confirmed">{{ orderStatusLabel('confirmed') }}</option>
-          <option value="processing">{{ orderStatusLabel('processing') }}</option>
-          <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
-          <option value="out_for_delivery">{{ orderStatusLabel('out_for_delivery') }}</option>
-          <option value="awaiting_confirmation">{{ orderStatusLabel('awaiting_confirmation') }}</option>
-          <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
-          <option value="cancelled">{{ orderStatusLabel('cancelled') }}</option>
-          <option value="returned">{{ orderStatusLabel('returned') }}</option>
-        </select>
-        <select v-model="orderPaymentFilter" class="form-select form-select-sm" style="width:150px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);">
-          <option value="">{{ t('admin.orders.allPayments') }}</option>
-          <option value="paid">{{ t('admin.orders.paid') }}</option>
-          <option value="unpaid">{{ t('admin.orders.unpaid') }}</option>
-        </select>
-        <button v-if="orderViewMode==='today'" class="btn btn-sm btn-outline-warning" @click="openOrderHistory">{{ t('admin.orders.history') }}</button>
+      <div v-if="OrdersStore.loading" class="alt-empty">{{ t('admin.orders.loading') }}</div>
+      <div v-else class="alt-table-wrap">
+        <table class="alt-table">
+          <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
+          <tbody>
+            <tr v-for="(o, idx) in pagedOrders" :key="o.donHangId">
+              <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+              <td class="text-secondary">{{ o.maDonHang || ('#' + o.donHangId) }}</td>
+              <td>{{ customerName(o.khachHangId) }}</td>
+              <td>{{ formatPrice(o.thanhTien) }}</td>
+              <td>
+                <span class="alt-tag" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                  <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="13" /> {{ orderStatusLabel(o.trangThaiDonHang) }}
+                </span>
+              </td>
+              <td>
+                <span v-if="o.trangThaiThanhToan" class="alt-tag" :style="{ background: paymentStatusColor(o.trangThaiThanhToan).bg, color: paymentStatusColor(o.trangThaiThanhToan).text }">
+                  <component :is="paymentStatusIcon(o.trangThaiThanhToan)" :size="13" /> {{ paymentStatusLabel(o.trangThaiThanhToan) }}
+                </span>
+                <span v-else class="text-secondary">—</span>
+              </td>
+              <td>
+                {{ formatDate(o.ngayDat) }}
+                <div v-if="o.ngayGiaoThucTe" class="text-success" style="font-size:0.72rem;">
+                  <CheckCircle2 :size="13" style="vertical-align:-2px;" /> {{ t('admin.orderStatusModal.actualDeliveryLabel') }}: {{ formatDateTime(o.ngayGiaoThucTe) }}
+                </div>
+              </td>
+              <td>
+                <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
+              </td>
+            </tr>
+            <tr v-if="filteredOrders.length===0"><td colspan="8" class="alt-empty">{{ t('admin.orders.empty') }}</td></tr>
+          </tbody>
+        </table>
+        <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
       </div>
-    </div>
-    <div v-if="OrdersStore.loading" class="text-secondary small">{{ t('admin.orders.loading') }}</div>
-    <div v-else class="table-responsive">
-      <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-        <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
-        <tbody>
-          <tr v-for="(o, idx) in pagedOrders" :key="o.donHangId">
-            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-            <td class="text-secondary">{{ o.maDonHang || ('#' + o.donHangId) }}</td>
-            <td>{{ customerName(o.khachHangId) }}</td>
-            <td>{{ formatPrice(o.thanhTien) }}</td>
-            <td>
-              <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
-                <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="13" /> {{ orderStatusLabel(o.trangThaiDonHang) }}
-              </span>
-            </td>
-            <td>
-              <span v-if="o.trangThaiThanhToan" class="badge d-inline-flex align-items-center gap-1" :style="{ background: paymentStatusColor(o.trangThaiThanhToan).bg, color: paymentStatusColor(o.trangThaiThanhToan).text }">
-                <component :is="paymentStatusIcon(o.trangThaiThanhToan)" :size="13" /> {{ paymentStatusLabel(o.trangThaiThanhToan) }}
-              </span>
-              <span v-else class="text-secondary">—</span>
-            </td>
-            <td>
-              {{ formatDate(o.ngayDat) }}
-              <div v-if="o.ngayGiaoThucTe" class="text-success" style="font-size:0.72rem;">
-                <CheckCircle2 :size="13" style="vertical-align:-2px;" /> {{ t('admin.orderStatusModal.actualDeliveryLabel') }}: {{ formatDateTime(o.ngayGiaoThucTe) }}
-              </div>
-            </td>
-            <td>
-              <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 10px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
-            </td>
-          </tr>
-          <tr v-if="filteredOrders.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.orders.empty') }}</td></tr>
-        </tbody>
-      </table>
-      <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
     </div>
   </template>
 

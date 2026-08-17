@@ -690,25 +690,26 @@ const exportPhieuNhapExcel = () => {
         </div>
       </div>
 
-      <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-        <span class="text-secondary small">{{ t('admin.inventory.summary', { groups: inventoryGrouped.length, skus: inventory.length }) }}</span>
-        <span v-if="outOfStockItems.length" class="badge d-inline-flex align-items-center gap-1" style="background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="12" /> {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
-        <span v-if="lowStockItems.length" class="badge d-inline-flex align-items-center gap-1" style="background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="12" /> {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
-        <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 10px;" @click="toggleAllGroups">
-          {{ allGroupsExpanded ? '▲ ' + t('admin.inventory.collapseAll') : '▼ ' + t('admin.inventory.expandAll') }}
-        </button>
-        <select v-model="inventoryStatusFilter" class="form-select form-select-sm" style="width:auto;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.8rem;">
-          <option value="all">{{ t('admin.inventory.filterAll') }}</option>
-          <option value="out">{{ t('admin.inventory.filterOut') }}</option>
-          <option value="low">{{ t('admin.inventory.filterLow') }}</option>
-          <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
-        </select>
-        <div class="ms-auto" style="min-width:200px;">
-          <input
-            v-model="inventorySearch" class="form-control form-control-sm"
-            :placeholder="t('admin.inventory.searchPlaceholder')"
-            style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;border-radius:999px;padding-left:14px;"
-          />
+      <div class="alt-toolbar" style="border-radius:14px;margin-bottom:14px;">
+        <div class="alt-toolbar__left">
+          <span class="alt-toolbar__count">{{ t('admin.inventory.summary', { groups: inventoryGrouped.length, skus: inventory.length }) }}</span>
+          <span v-if="outOfStockItems.length" class="alt-tag" style="background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="12" /> {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
+          <span v-if="lowStockItems.length" class="alt-tag" style="background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="12" /> {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
+          <button class="alt-btn alt-btn--ghost" @click="toggleAllGroups">
+            {{ allGroupsExpanded ? '▲ ' + t('admin.inventory.collapseAll') : '▼ ' + t('admin.inventory.expandAll') }}
+          </button>
+          <select v-model="inventoryStatusFilter" class="alt-select">
+            <option value="all">{{ t('admin.inventory.filterAll') }}</option>
+            <option value="out">{{ t('admin.inventory.filterOut') }}</option>
+            <option value="low">{{ t('admin.inventory.filterLow') }}</option>
+            <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
+          </select>
+        </div>
+        <div class="alt-toolbar__actions">
+          <div class="alt-search">
+            <i class="fa fa-search alt-search__icon"></i>
+            <input v-model="inventorySearch" :placeholder="t('admin.inventory.searchPlaceholder')" />
+          </div>
         </div>
       </div>
 
@@ -874,67 +875,71 @@ const exportPhieuNhapExcel = () => {
         </div>
       </div>
 
-      <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-        <input
-          v-model="phieuNhapSearch" class="form-control form-control-sm" style="max-width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.82rem;border-radius:999px;padding-left:14px;"
-          :placeholder="t('admin.phieuNhap.searchPlaceholder')"
-        />
-        <select v-model="phieuNhapStatusFilter" class="form-select form-select-sm" style="width:auto;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);font-size:0.8rem;">
-          <option value="">{{ t('admin.inventory.filterAll') }}</option>
-          <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
-          <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
-          <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
-        </select>
-        <div class="ms-auto d-flex gap-2">
-          <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapList"><Printer :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.printPdf') }}</button>
-          <button class="btn btn-sm btn-outline-success" @click="exportPhieuNhapExcel"><Download :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.exportExcel') }}</button>
-          <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPhieuNhap"><Plus :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.add') }}</button>
+      <div class="alt-card">
+        <div class="alt-toolbar">
+          <div class="alt-toolbar__left">
+            <div class="alt-search">
+              <i class="fa fa-search alt-search__icon"></i>
+              <input v-model="phieuNhapSearch" :placeholder="t('admin.phieuNhap.searchPlaceholder')" />
+            </div>
+            <select v-model="phieuNhapStatusFilter" class="alt-select">
+              <option value="">{{ t('admin.inventory.filterAll') }}</option>
+              <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
+              <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
+              <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
+            </select>
+          </div>
+          <div class="alt-toolbar__actions">
+            <button class="alt-btn alt-btn--ghost" @click="printPhieuNhapList"><Printer :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.printPdf') }}</button>
+            <button class="alt-btn alt-btn--ghost" @click="exportPhieuNhapExcel"><Download :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.exportExcel') }}</button>
+            <button class="alt-btn alt-btn--primary" @click="openAddPhieuNhap"><Plus :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.add') }}</button>
+          </div>
         </div>
-      </div>
 
-      <div class="table-responsive">
-        <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-          <thead>
-            <tr>
-              <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-              <th>{{ t('admin.phieuNhap.colCode') }}</th>
-              <th>{{ t('admin.phieuNhap.colDate') }}</th>
-              <th>{{ t('admin.phieuNhap.colSupplier') }}</th>
-              <th>{{ t('admin.phieuNhap.colStaff') }}</th>
-              <th>{{ t('admin.phieuNhap.colTotal') }}</th>
-              <th>{{ t('admin.phieuNhap.colStatus') }}</th>
-              <th>{{ t('admin.phieuNhap.colAction') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(p, idx) in pagedPhieuNhap" :key="p.phieuNhapId">
-              <td class="text-secondary">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
-              <td class="text-secondary" style="font-family:monospace;">{{ p.maPhieuNhap }}</td>
-              <td>{{ formatDate(p.ngayNhap) }}</td>
-              <td>{{ supplierName(p.nhaCungCapId) }}</td>
-              <td>{{ staffName(p.nhanVienId) }}</td>
-              <td>{{ formatPrice(p.tongTien) }}</td>
-              <td>
-                <span class="badge" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
-                  <component :is="phieuNhapStatusIcon(p.trangThai)" :size="13" /> {{ statusLabel(p.trangThai) }}
-                </span>
-              </td>
-              <td>
-                <div class="d-flex gap-1">
-                  <button class="btn btn-sm btn-outline-info" style="font-size:0.72rem;padding:2px 8px;" @click="openPhieuNhapDetail(p)"><Search :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.viewDetail') }}</button>
-                  <template v-if="p.trangThai==='cho_duyet'">
-                    <button class="btn btn-sm btn-outline-success" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'hoan_thanh')"><Check :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.approve') }}</button>
-                    <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="updatePhieuNhapStatus(p,'huy')"><X :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.cancel') }}</button>
-                    <button class="btn btn-sm btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" @click="openEditPhieuNhap(p)"><Pencil :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.editAction') }}</button>
-                    <button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" @click="deletePhieuNhap(p.phieuNhapId)"><Trash2 :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.deleteAction') }}</button>
-                  </template>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="filteredPhieuNhap.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.phieuNhap.empty') }}</td></tr>
-          </tbody>
-        </table>
-        <Pagination :current-page="pnCurrentPage" :total-pages="pnTotalPages" @page-change="pnCurrentPage = $event" />
+        <div class="alt-table-wrap">
+          <table class="alt-table">
+            <thead>
+              <tr>
+                <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+                <th>{{ t('admin.phieuNhap.colCode') }}</th>
+                <th>{{ t('admin.phieuNhap.colDate') }}</th>
+                <th>{{ t('admin.phieuNhap.colSupplier') }}</th>
+                <th>{{ t('admin.phieuNhap.colStaff') }}</th>
+                <th>{{ t('admin.phieuNhap.colTotal') }}</th>
+                <th>{{ t('admin.phieuNhap.colStatus') }}</th>
+                <th>{{ t('admin.phieuNhap.colAction') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(p, idx) in pagedPhieuNhap" :key="p.phieuNhapId">
+                <td class="text-secondary">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
+                <td class="text-secondary" style="font-family:monospace;">{{ p.maPhieuNhap }}</td>
+                <td>{{ formatDate(p.ngayNhap) }}</td>
+                <td>{{ supplierName(p.nhaCungCapId) }}</td>
+                <td>{{ staffName(p.nhanVienId) }}</td>
+                <td>{{ formatPrice(p.tongTien) }}</td>
+                <td>
+                  <span class="alt-tag" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
+                    <component :is="phieuNhapStatusIcon(p.trangThai)" :size="13" /> {{ statusLabel(p.trangThai) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;" @click="openPhieuNhapDetail(p)"><Search :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.viewDetail') }}</button>
+                    <template v-if="p.trangThai==='cho_duyet'">
+                      <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;color:var(--state-success);border-color:var(--state-success);" @click="updatePhieuNhapStatus(p,'hoan_thanh')"><Check :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.approve') }}</button>
+                      <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;color:var(--state-danger);border-color:var(--state-danger);" @click="updatePhieuNhapStatus(p,'huy')"><X :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.cancel') }}</button>
+                      <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;" @click="openEditPhieuNhap(p)"><Pencil :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.editAction') }}</button>
+                      <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;color:var(--state-danger);border-color:var(--state-danger);" @click="deletePhieuNhap(p.phieuNhapId)"><Trash2 :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.deleteAction') }}</button>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="filteredPhieuNhap.length===0"><td colspan="8" class="alt-empty">{{ t('admin.phieuNhap.empty') }}</td></tr>
+            </tbody>
+          </table>
+          <div v-if="pnTotalPages > 1" class="alt-pager"><Pagination :current-page="pnCurrentPage" :total-pages="pnTotalPages" @page-change="pnCurrentPage = $event" /></div>
+        </div>
       </div>
     </template>
   </div>

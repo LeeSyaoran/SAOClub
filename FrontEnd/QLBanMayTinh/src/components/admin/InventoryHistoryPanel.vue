@@ -46,44 +46,49 @@ const { currentPage, totalPages, pagedItems: pagedHistory, pageSize } = usePagin
 </script>
 
 <template>
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredItems.length }}/{{ items.length }} {{ t('admin.inventoryHistory.countSuffix') }}</span>
-    <div class="d-flex gap-2 flex-wrap">
-      <input v-model="search" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.inventoryHistory.searchPlaceholder')" />
-      <select v-model="typeFilter" class="form-select form-select-sm" style="width:170px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);">
-        <option value="">{{ t('admin.inventoryHistory.allTypes') }}</option>
-        <option value="nhap">{{ t('admin.inventoryHistory.typeNhap') }}</option>
-        <option value="xuat_ban">{{ t('admin.inventoryHistory.typeXuatBan') }}</option>
-        <option value="tra_hang">{{ t('admin.inventoryHistory.typeTraHang') }}</option>
-        <option value="dieu_chinh">{{ t('admin.inventoryHistory.typeDieuChinh') }}</option>
-        <option value="huy">{{ t('admin.inventoryHistory.typeHuy') }}</option>
-        <option value="giu_hang">{{ t('admin.inventoryHistory.typeGiuHang') }}</option>
-      </select>
+  <div class="alt-card">
+    <div class="alt-toolbar">
+      <span class="alt-toolbar__count">{{ filteredItems.length }}/{{ items.length }} {{ t('admin.inventoryHistory.countSuffix') }}</span>
+      <div class="alt-toolbar__actions">
+        <div class="alt-search">
+          <i class="fa fa-search alt-search__icon"></i>
+          <input v-model="search" :placeholder="t('admin.inventoryHistory.searchPlaceholder')" />
+        </div>
+        <select v-model="typeFilter" class="alt-select">
+          <option value="">{{ t('admin.inventoryHistory.allTypes') }}</option>
+          <option value="nhap">{{ t('admin.inventoryHistory.typeNhap') }}</option>
+          <option value="xuat_ban">{{ t('admin.inventoryHistory.typeXuatBan') }}</option>
+          <option value="tra_hang">{{ t('admin.inventoryHistory.typeTraHang') }}</option>
+          <option value="dieu_chinh">{{ t('admin.inventoryHistory.typeDieuChinh') }}</option>
+          <option value="huy">{{ t('admin.inventoryHistory.typeHuy') }}</option>
+          <option value="giu_hang">{{ t('admin.inventoryHistory.typeGiuHang') }}</option>
+        </select>
+      </div>
     </div>
-  </div>
-  <div v-if="loading" class="text-secondary small">{{ t('admin.inventoryHistory.loading') }}</div>
-  <div v-else class="table-responsive">
-    <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead>
-        <tr>
-          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-          <th>{{ t('admin.inventoryHistory.colDate') }}</th><th>{{ t('admin.inventoryHistory.colSku') }}</th>
-          <th>{{ t('admin.inventoryHistory.colType') }}</th><th>{{ t('admin.inventoryHistory.colQty') }}</th>
-          <th>{{ t('admin.inventoryHistory.colNote') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(h, idx) in pagedHistory" :key="h.lichSuId">
-          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-          <td class="text-secondary">{{ formatDateTime(h.ngayTao) }}</td>
-          <td style="font-family:monospace;">{{ h.maSku }}</td>
-          <td><span class="badge" :style="{ background: typeColor(h.loaiBienDong) }">{{ typeLabel(h.loaiBienDong) }}</span></td>
-          <td :class="h.soLuongThayDoi >= 0 ? 'text-success' : 'text-danger'" class="fw-bold">{{ h.soLuongThayDoi >= 0 ? '+' : '' }}{{ h.soLuongThayDoi }}</td>
-          <td class="text-secondary">{{ h.ghiChu || '—' }}</td>
-        </tr>
-        <tr v-if="filteredItems.length===0"><td colspan="6" class="text-center text-secondary">{{ t('admin.inventoryHistory.empty') }}</td></tr>
-      </tbody>
-    </table>
-    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
+    <div v-if="loading" class="alt-empty">{{ t('admin.inventoryHistory.loading') }}</div>
+    <div v-else class="alt-table-wrap">
+      <table class="alt-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+            <th>{{ t('admin.inventoryHistory.colDate') }}</th><th>{{ t('admin.inventoryHistory.colSku') }}</th>
+            <th>{{ t('admin.inventoryHistory.colType') }}</th><th>{{ t('admin.inventoryHistory.colQty') }}</th>
+            <th>{{ t('admin.inventoryHistory.colNote') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(h, idx) in pagedHistory" :key="h.lichSuId">
+            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td class="text-secondary">{{ formatDateTime(h.ngayTao) }}</td>
+            <td style="font-family:monospace;">{{ h.maSku }}</td>
+            <td><span class="alt-tag" :style="{ background: typeColor(h.loaiBienDong) + '26', color: typeColor(h.loaiBienDong) }">{{ typeLabel(h.loaiBienDong) }}</span></td>
+            <td :class="h.soLuongThayDoi >= 0 ? 'text-success' : 'text-danger'" class="fw-bold">{{ h.soLuongThayDoi >= 0 ? '+' : '' }}{{ h.soLuongThayDoi }}</td>
+            <td class="text-secondary">{{ h.ghiChu || '—' }}</td>
+          </tr>
+          <tr v-if="filteredItems.length===0"><td colspan="6" class="alt-empty">{{ t('admin.inventoryHistory.empty') }}</td></tr>
+        </tbody>
+      </table>
+      <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
+    </div>
   </div>
 </template>

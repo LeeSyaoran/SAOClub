@@ -153,39 +153,44 @@ const saveItem = async () => {
 </script>
 
 <template>
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredItems.length }}/{{ items.length }} {{ t('admin.dmCategory.countSuffix', { label }) }}</span>
-    <div class="d-flex gap-2 flex-wrap">
-      <input v-model="search" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.dmCategory.searchPlaceholder', { label })" />
-      <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAdd">{{ t('admin.dmCategory.add', { label }) }}</button>
+  <div class="alt-card">
+    <div class="alt-toolbar">
+      <span class="alt-toolbar__count">{{ filteredItems.length }}/{{ items.length }} {{ t('admin.dmCategory.countSuffix', { label }) }}</span>
+      <div class="alt-toolbar__actions">
+        <div class="alt-search">
+          <i class="fa fa-search alt-search__icon"></i>
+          <input v-model="search" :placeholder="t('admin.dmCategory.searchPlaceholder', { label })" />
+        </div>
+        <button class="alt-btn alt-btn--primary" @click="openAdd">{{ t('admin.dmCategory.add', { label }) }}</button>
+      </div>
     </div>
-  </div>
 
-  <div v-if="loading" class="text-secondary small">{{ t('admin.dmCategory.loading') }}</div>
-  <div v-else class="table-responsive">
-    <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead>
-        <tr>
-          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-          <th>{{ nameLabel }}</th>
-          <th style="width:140px;">{{ t('admin.dmCategory.colAction') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(item, idx) in pagedRows" :key="item[idField]">
-          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-          <td>{{ item[nameField] }}</td>
-          <td>
-            <div class="d-flex gap-1">
-              <button class="btn btn-sm btn-outline-info" style="font-size:0.78rem;padding:2px 8px;" @click="openSerials(item)"><Hash :size="12" style="vertical-align:-2px;" /> {{ t('admin.dmCategory.viewSerials', { count: stockCountOf(item) }) }}</button>
-              <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openEdit(item)">{{ t('admin.dmCategory.edit') }}</button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="filteredItems.length===0"><td colspan="3" class="text-center text-secondary">{{ t('admin.dmCategory.empty', { label }) }}</td></tr>
-      </tbody>
-    </table>
-    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
+    <div v-if="loading" class="alt-empty">{{ t('admin.dmCategory.loading') }}</div>
+    <div v-else class="alt-table-wrap">
+      <table class="alt-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+            <th>{{ nameLabel }}</th>
+            <th style="width:140px;">{{ t('admin.dmCategory.colAction') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, idx) in pagedRows" :key="item[idField]">
+            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td>{{ item[nameField] }}</td>
+            <td>
+              <div class="d-flex gap-1">
+                <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openSerials(item)"><Hash :size="12" style="vertical-align:-2px;" /> {{ t('admin.dmCategory.viewSerials', { count: stockCountOf(item) }) }}</button>
+                <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEdit(item)">{{ t('admin.dmCategory.edit') }}</button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="filteredItems.length===0"><td colspan="3" class="alt-empty">{{ t('admin.dmCategory.empty', { label }) }}</td></tr>
+        </tbody>
+      </table>
+      <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
+    </div>
   </div>
 
   <div v-if="showModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showModal=false">

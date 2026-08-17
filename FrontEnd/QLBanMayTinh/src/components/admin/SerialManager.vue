@@ -217,53 +217,58 @@ const deleteSerial = async (item) => {
 </script>
 
 <template>
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredItems.length }}/{{ items.length }} serial</span>
-    <div class="d-flex gap-2 flex-wrap">
-      <input v-model="search" class="form-control form-control-sm" style="width:260px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.serialManager.searchPlaceholder')" />
-      <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAdd">{{ t('admin.serialManager.add') }}</button>
+  <div class="alt-card">
+    <div class="alt-toolbar">
+      <span class="alt-toolbar__count">{{ filteredItems.length }}/{{ items.length }} serial</span>
+      <div class="alt-toolbar__actions">
+        <div class="alt-search">
+          <i class="fa fa-search alt-search__icon"></i>
+          <input v-model="search" :placeholder="t('admin.serialManager.searchPlaceholder')" />
+        </div>
+        <button class="alt-btn alt-btn--primary" @click="openAdd">{{ t('admin.serialManager.add') }}</button>
+      </div>
     </div>
-  </div>
 
-  <div v-if="loading" class="text-secondary small">{{ t('admin.serialManager.loading') }}</div>
-  <div v-else class="table-responsive">
-    <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead>
-        <tr>
-          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-          <th>{{ t('admin.serialManager.colLoai') }}</th>
-          <th>{{ t('admin.serialManager.colVariant') }}</th>
-          <th>{{ t('admin.serialManager.colSerial') }}</th>
-          <th>{{ t('admin.serialManager.colStatus') }}</th>
-          <th>{{ t('admin.serialManager.colDate') }}</th>
-          <th>{{ t('admin.serialManager.colNote') }}</th>
-          <th style="width:140px;">{{ t('admin.serialManager.colAction') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(item, idx) in pagedItems" :key="`${item.loai}-${item.rowId}`">
-          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-          <td>{{ t(`admin.productsTabs.${item.loai}`) }}</td>
-          <td>{{ rowSpecLabel(item) }}</td>
-          <td>{{ item.soSerial }}</td>
-          <td>
-            <span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;" :style="{ background: statusColor(item.trangThai) }"></span>
-            {{ statusLabel(item.trangThai) }}
-          </td>
-          <td class="text-secondary">{{ formatDate(item.ngayNhapKho) }}</td>
-          <td class="text-secondary">{{ item.ghiChu }}</td>
-          <td>
-            <div class="d-flex gap-1">
-              <button v-if="item.loai === 'sanPham'" class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;padding:2px 8px;" @click="openDetail(item)">{{ t('admin.products.detail') }}</button>
-              <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem;padding:2px 8px;" @click="openEdit(item)">{{ t('admin.serialManager.edit') }}</button>
-              <button v-if="item.trangThai === 'trong_kho'" class="btn btn-sm btn-outline-danger" style="font-size:0.78rem;padding:2px 8px;" @click="deleteSerial(item)">{{ t('admin.serialManager.delete') }}</button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="filteredItems.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.serialManager.empty') }}</td></tr>
-      </tbody>
-    </table>
-    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
+    <div v-if="loading" class="alt-empty">{{ t('admin.serialManager.loading') }}</div>
+    <div v-else class="alt-table-wrap">
+      <table class="alt-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+            <th>{{ t('admin.serialManager.colLoai') }}</th>
+            <th>{{ t('admin.serialManager.colVariant') }}</th>
+            <th>{{ t('admin.serialManager.colSerial') }}</th>
+            <th>{{ t('admin.serialManager.colStatus') }}</th>
+            <th>{{ t('admin.serialManager.colDate') }}</th>
+            <th>{{ t('admin.serialManager.colNote') }}</th>
+            <th style="width:140px;">{{ t('admin.serialManager.colAction') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, idx) in pagedItems" :key="`${item.loai}-${item.rowId}`">
+            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td>{{ t(`admin.productsTabs.${item.loai}`) }}</td>
+            <td>{{ rowSpecLabel(item) }}</td>
+            <td style="font-family:monospace;">{{ item.soSerial }}</td>
+            <td>
+              <span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;" :style="{ background: statusColor(item.trangThai) }"></span>
+              {{ statusLabel(item.trangThai) }}
+            </td>
+            <td class="text-secondary">{{ formatDate(item.ngayNhapKho) }}</td>
+            <td class="text-secondary">{{ item.ghiChu }}</td>
+            <td>
+              <div class="d-flex gap-1">
+                <button v-if="item.loai === 'sanPham'" class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openDetail(item)">{{ t('admin.products.detail') }}</button>
+                <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEdit(item)">{{ t('admin.serialManager.edit') }}</button>
+                <button v-if="item.trangThai === 'trong_kho'" class="alt-btn alt-btn--ghost" style="padding:4px 12px;color:var(--state-danger);border-color:var(--state-danger);" @click="deleteSerial(item)">{{ t('admin.serialManager.delete') }}</button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="filteredItems.length===0"><td colspan="8" class="alt-empty">{{ t('admin.serialManager.empty') }}</td></tr>
+        </tbody>
+      </table>
+      <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
+    </div>
   </div>
 
   <div v-if="showModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showModal=false">

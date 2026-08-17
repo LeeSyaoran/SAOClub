@@ -364,70 +364,77 @@ const saveVariant = async () => {
 </script>
 
 <template>
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredVariants.length }}/{{ (ProductsStore.items ?? []).length }} {{ t('admin.variants.countSuffix') }}</span>
-    <div class="d-flex gap-2 flex-wrap">
-      <input v-model="variantSearch" class="form-control form-control-sm" style="width:220px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.variants.searchPlaceholder')" />
-      <button v-if="!readonly" class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddVariantFlow">{{ t('admin.variants.add') }}</button>
+  <div class="alt-card">
+    <div class="alt-toolbar">
+      <span class="alt-toolbar__count">{{ filteredVariants.length }}/{{ (ProductsStore.items ?? []).length }} {{ t('admin.variants.countSuffix') }}</span>
+      <div class="alt-toolbar__actions">
+        <div class="alt-search">
+          <i class="fa fa-search alt-search__icon"></i>
+          <input v-model="variantSearch" :placeholder="t('admin.variants.searchPlaceholder')" />
+        </div>
+        <button v-if="!readonly" class="alt-btn alt-btn--primary" @click="openAddVariantFlow">{{ t('admin.variants.add') }}</button>
+      </div>
     </div>
-  </div>
-  <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.variants.loading') }}</div>
-  <div v-else class="table-responsive">
-    <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft); font-size:0.82rem;">
-      <thead>
-        <tr>
-          <th style="width:36px;">{{ t('admin.common.stt') }}</th>
-          <th style="width:48px;">{{ t('admin.variants.colImage') }}</th>
-          <th style="width:150px;">{{ t('admin.variants.colSku') }}</th><th style="width:130px;">{{ t('admin.variants.colBarcode') }}</th><th style="width:220px;">{{ t('admin.variants.colProduct') }}</th>
-          <th>{{ t('admin.variants.colConfig') }}</th><th style="width:100px;">{{ t('admin.variants.colColor') }}</th>
-          <th style="width:120px;">{{ t('admin.variants.colPriceSell') }}</th><th style="width:100px;">{{ t('admin.variants.colStatus') }}</th><th style="width:170px;">{{ t('admin.variants.colAction') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(p, idx) in pagedVariants" :key="p.bienTheId">
-          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-          <td>
-            <div
-              class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
-              style="width:36px;height:36px;background:var(--bg-card-inset);overflow:hidden;"
-            >
-              <img
-                v-if="p.hinhAnhChinh"
-                :src="p.hinhAnhChinh"
-                :alt="p.tenSanPham"
-                style="width:100%;height:100%;object-fit:cover;"
-              />
-              <Image v-else :size="14" color="var(--text-muted)" />
-            </div>
-          </td>
-          <td class="text-secondary text-truncate" style="font-family:monospace; font-size:0.76rem; max-width:150px;" :title="p.maSku">{{ p.maSku }}</td>
-          <td>
-            <svg v-if="p.barcodeBienThe" :ref="(el) => renderBarcode(el, p.barcodeBienThe)"></svg>
-            <span v-else class="text-secondary">—</span>
-          </td>
-          <td class="text-truncate" style="max-width:220px;" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
-          <td class="text-secondary" style="max-width:260px;" :title="configLabel(p)">
-            <div v-if="p.cpu || p.ram || p.oCung" class="d-flex flex-wrap align-items-center gap-2" style="font-size:0.74rem;">
-              <span v-if="p.cpu" class="d-inline-flex align-items-center gap-1"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
-              <span v-if="p.ram" class="d-inline-flex align-items-center gap-1"><MemoryStick :size="12" />{{ p.ram }}</span>
-              <span v-if="p.oCung" class="d-inline-flex align-items-center gap-1"><HardDrive :size="12" />{{ p.oCung }}</span>
-            </div>
-            <span v-else>—</span>
-          </td>
-          <td class="text-truncate" style="max-width:100px;">{{ p.mauSac || '—' }}</td>
-          <td class="text-nowrap">{{ formatPrice(p.giaBan) }}</td>
-          <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.72rem;">{{ statusLabel(p.trangThai) }}</span></td>
-          <td>
-            <div class="d-flex gap-1">
-              <button class="btn btn-sm btn-outline-info" style="font-size:0.72rem; padding:2px 7px;" @click="openDetail(p)">{{ t('admin.variants.detail') }}</button>
-              <button v-if="!readonly" class="btn btn-sm btn-outline-warning" style="font-size:0.72rem; padding:2px 7px;" @click="openEdit(p)">{{ t('admin.variants.edit') }}</button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="filteredVariants.length===0"><td colspan="9" class="text-center text-secondary">{{ t('admin.variants.empty') }}</td></tr>
-      </tbody>
-    </table>
-    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
+    <div v-if="ProductsStore.loading" class="alt-empty">{{ t('admin.variants.loading') }}</div>
+    <div v-else class="alt-table-wrap">
+      <table class="alt-table" style="font-size:0.82rem;">
+        <thead>
+          <tr>
+            <th style="width:36px;">{{ t('admin.common.stt') }}</th>
+            <th style="width:48px;">{{ t('admin.variants.colImage') }}</th>
+            <th style="width:150px;">{{ t('admin.variants.colSku') }}</th><th style="width:130px;">{{ t('admin.variants.colBarcode') }}</th><th style="width:220px;">{{ t('admin.variants.colProduct') }}</th>
+            <th>{{ t('admin.variants.colConfig') }}</th><th style="width:100px;">{{ t('admin.variants.colColor') }}</th>
+            <th style="width:120px;">{{ t('admin.variants.colPriceSell') }}</th><th style="width:100px;">{{ t('admin.variants.colStatus') }}</th><th style="width:170px;">{{ t('admin.variants.colAction') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(p, idx) in pagedVariants" :key="p.bienTheId">
+            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td>
+              <div
+                class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:36px;height:36px;background:var(--bg-card-inset);overflow:hidden;"
+              >
+                <img
+                  v-if="p.hinhAnhChinh"
+                  :src="p.hinhAnhChinh"
+                  :alt="p.tenSanPham"
+                  style="width:100%;height:100%;object-fit:cover;"
+                />
+                <Image v-else :size="14" color="var(--text-muted)" />
+              </div>
+            </td>
+            <td class="text-secondary text-truncate" style="font-family:monospace; font-size:0.76rem; max-width:150px;" :title="p.maSku">{{ p.maSku }}</td>
+            <td>
+              <svg v-if="p.barcodeBienThe" :ref="(el) => renderBarcode(el, p.barcodeBienThe)"></svg>
+              <span v-else class="text-secondary">—</span>
+            </td>
+            <td class="text-truncate" style="max-width:220px;" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
+            <td class="text-secondary" style="max-width:260px;" :title="configLabel(p)">
+              <div v-if="p.cpu || p.ram || p.oCung" class="d-flex flex-wrap align-items-center gap-2" style="font-size:0.74rem;">
+                <span v-if="p.cpu" class="d-inline-flex align-items-center gap-1"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
+                <span v-if="p.ram" class="d-inline-flex align-items-center gap-1"><MemoryStick :size="12" />{{ p.ram }}</span>
+                <span v-if="p.oCung" class="d-inline-flex align-items-center gap-1"><HardDrive :size="12" />{{ p.oCung }}</span>
+              </div>
+              <span v-else>—</span>
+            </td>
+            <td class="text-truncate" style="max-width:100px;">{{ p.mauSac || '—' }}</td>
+            <td class="text-nowrap">{{ formatPrice(p.giaBan) }}</td>
+            <td>
+              <span class="alt-tag" :style="p.trangThai==='active' ? 'background:rgba(22,163,74,0.14);color:var(--state-success);' : 'background:var(--bg-card-alt);color:var(--text-secondary);'">{{ statusLabel(p.trangThai) }}</span>
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;" @click="openDetail(p)">{{ t('admin.variants.detail') }}</button>
+                <button v-if="!readonly" class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;" @click="openEdit(p)">{{ t('admin.variants.edit') }}</button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="filteredVariants.length===0"><td colspan="9" class="alt-empty">{{ t('admin.variants.empty') }}</td></tr>
+        </tbody>
+      </table>
+      <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
+    </div>
   </div>
 
   <div v-if="showVariantModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showVariantModal=false">

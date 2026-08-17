@@ -1349,97 +1349,115 @@ onUnmounted(() => {
             </button>
             <span v-if="wheelConfigError" class="text-danger small">{{ wheelConfigError }}</span>
           </div>
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-secondary small">{{ promotions.length }} {{ t('admin.promotions.countSuffix') }}</span>
-            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddPromo">{{ t('admin.promotions.add') }}</button>
-          </div>
-          <div v-if="PromotionsStore.loading" class="text-secondary small">{{ t('admin.promotions.loading') }}</div>
-          <div v-else class="table-responsive">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.promotions.colCode') }}</th><th>{{ t('admin.promotions.colName') }}</th><th>{{ t('admin.promotions.colType') }}</th><th>{{ t('admin.promotions.colValue') }}</th><th>{{ t('admin.promotions.colStart') }}</th><th>{{ t('admin.promotions.colEnd') }}</th><th>{{ t('admin.promotions.colUsed') }}</th><th>{{ t('admin.promotions.colStatus') }}</th><th>{{ t('admin.promotions.colAction') }}</th></tr></thead>
-              <tbody>
-                <tr v-for="(p, idx) in promotions" :key="p.khuyenMaiId">
-                  <td class="text-secondary">{{ idx + 1 }}</td>
-                  <td class="text-secondary">{{ p.maKhuyenMai }}</td>
-                  <td>{{ p.tenKhuyenMai }}</td>
-                  <td>{{ p.loai==='percent'?t('admin.promotions.typePercent'):t('admin.promotions.typeFixed') }}</td>
-                  <td>{{ p.loai==='percent'?`${p.giaTri}%`:formatPrice(p.giaTri) }}</td>
-                  <td>{{ formatDate(p.ngayBatDau) }}</td>
-                  <td>{{ formatDate(p.ngayKetThuc) }}</td>
-                  <td>{{ p.soLanDaDung??0 }}/{{ p.soLuongToiDa??'∞' }}</td>
-                  <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(p.trangThai) }}</span></td>
-                  <td>
-                    <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditPromo(p)">{{ t('admin.promotions.edit') }}</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="promotions.length===0"><td colspan="9" class="text-center text-secondary">{{ t('admin.promotions.empty') }}</td></tr>
-              </tbody>
-            </table>
+          <div class="alt-card">
+            <div class="alt-toolbar">
+              <span class="alt-toolbar__count">{{ promotions.length }} {{ t('admin.promotions.countSuffix') }}</span>
+              <div class="alt-toolbar__actions">
+                <button class="alt-btn alt-btn--primary" @click="openAddPromo">{{ t('admin.promotions.add') }}</button>
+              </div>
+            </div>
+            <div v-if="PromotionsStore.loading" class="alt-empty">{{ t('admin.promotions.loading') }}</div>
+            <div v-else class="alt-table-wrap">
+              <table class="alt-table">
+                <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.promotions.colCode') }}</th><th>{{ t('admin.promotions.colName') }}</th><th>{{ t('admin.promotions.colType') }}</th><th>{{ t('admin.promotions.colValue') }}</th><th>{{ t('admin.promotions.colStart') }}</th><th>{{ t('admin.promotions.colEnd') }}</th><th>{{ t('admin.promotions.colUsed') }}</th><th>{{ t('admin.promotions.colStatus') }}</th><th>{{ t('admin.promotions.colAction') }}</th></tr></thead>
+                <tbody>
+                  <tr v-for="(p, idx) in promotions" :key="p.khuyenMaiId">
+                    <td class="text-secondary">{{ idx + 1 }}</td>
+                    <td class="text-secondary">{{ p.maKhuyenMai }}</td>
+                    <td>{{ p.tenKhuyenMai }}</td>
+                    <td>{{ p.loai==='percent'?t('admin.promotions.typePercent'):t('admin.promotions.typeFixed') }}</td>
+                    <td>{{ p.loai==='percent'?`${p.giaTri}%`:formatPrice(p.giaTri) }}</td>
+                    <td>{{ formatDate(p.ngayBatDau) }}</td>
+                    <td>{{ formatDate(p.ngayKetThuc) }}</td>
+                    <td>{{ p.soLanDaDung??0 }}/{{ p.soLuongToiDa??'∞' }}</td>
+                    <td>
+                      <span class="alt-tag" :style="p.trangThai==='active' ? 'background:rgba(22,163,74,0.14);color:var(--state-success);' : 'background:var(--bg-card-alt);color:var(--text-secondary);'">{{ statusLabel(p.trangThai) }}</span>
+                    </td>
+                    <td>
+                      <div class="d-flex gap-1">
+                        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEditPromo(p)">{{ t('admin.promotions.edit') }}</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="promotions.length===0"><td colspan="9" class="alt-empty">{{ t('admin.promotions.empty') }}</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 
         <!-- ── Doi thuong ── -->
         <section v-show="currentPage === 'doi-thuong'">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-secondary small">{{ rewards.length }} {{ t('admin.rewards.countSuffix') }}</span>
-            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddReward">{{ t('admin.rewards.add') }}</button>
-          </div>
-          <div v-if="DoiThuongStore.loading" class="text-secondary small">{{ t('admin.rewards.loading') }}</div>
-          <div v-else class="table-responsive">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.rewards.colName') }}</th><th>{{ t('admin.rewards.colPoints') }}</th><th>{{ t('admin.rewards.colType') }}</th><th>{{ t('admin.rewards.colValue') }}</th><th>{{ t('admin.rewards.colStatus') }}</th><th>{{ t('admin.rewards.colAction') }}</th></tr></thead>
-              <tbody>
-                <tr v-for="(r, idx) in rewards" :key="r.doiThuongId">
-                  <td class="text-secondary">{{ idx + 1 }}</td>
-                  <td>{{ r.ten }}</td>
-                  <td>{{ r.diemCan }}</td>
-                  <td>{{ r.loai==='percent'?t('admin.rewards.typePercent'):t('admin.rewards.typeFixed') }}</td>
-                  <td>{{ r.loai==='percent'?`${r.giaTri}%`:formatPrice(r.giaTri) }}</td>
-                  <td><span class="badge" :class="r.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(r.trangThai) }}</span></td>
-                  <td>
-                    <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditReward(r)">{{ t('admin.rewards.edit') }}</button>
-                      <button class="btn btn-sm btn-outline-danger" style="font-size:0.78rem; padding:2px 8px;" @click="deleteReward(r.doiThuongId)">{{ t('admin.rewards.delete') }}</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="rewards.length===0"><td colspan="7" class="text-center text-secondary">{{ t('admin.rewards.empty') }}</td></tr>
-              </tbody>
-            </table>
+          <div class="alt-card">
+            <div class="alt-toolbar">
+              <span class="alt-toolbar__count">{{ rewards.length }} {{ t('admin.rewards.countSuffix') }}</span>
+              <div class="alt-toolbar__actions">
+                <button class="alt-btn alt-btn--primary" @click="openAddReward">{{ t('admin.rewards.add') }}</button>
+              </div>
+            </div>
+            <div v-if="DoiThuongStore.loading" class="alt-empty">{{ t('admin.rewards.loading') }}</div>
+            <div v-else class="alt-table-wrap">
+              <table class="alt-table">
+                <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.rewards.colName') }}</th><th>{{ t('admin.rewards.colPoints') }}</th><th>{{ t('admin.rewards.colType') }}</th><th>{{ t('admin.rewards.colValue') }}</th><th>{{ t('admin.rewards.colStatus') }}</th><th>{{ t('admin.rewards.colAction') }}</th></tr></thead>
+                <tbody>
+                  <tr v-for="(r, idx) in rewards" :key="r.doiThuongId">
+                    <td class="text-secondary">{{ idx + 1 }}</td>
+                    <td>{{ r.ten }}</td>
+                    <td>{{ r.diemCan }}</td>
+                    <td>{{ r.loai==='percent'?t('admin.rewards.typePercent'):t('admin.rewards.typeFixed') }}</td>
+                    <td>{{ r.loai==='percent'?`${r.giaTri}%`:formatPrice(r.giaTri) }}</td>
+                    <td>
+                      <span class="alt-tag" :style="r.trangThai==='active' ? 'background:rgba(22,163,74,0.14);color:var(--state-success);' : 'background:var(--bg-card-alt);color:var(--text-secondary);'">{{ statusLabel(r.trangThai) }}</span>
+                    </td>
+                    <td>
+                      <div class="d-flex gap-1">
+                        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEditReward(r)">{{ t('admin.rewards.edit') }}</button>
+                        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;color:var(--state-danger);border-color:var(--state-danger);" @click="deleteReward(r.doiThuongId)">{{ t('admin.rewards.delete') }}</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="rewards.length===0"><td colspan="7" class="alt-empty">{{ t('admin.rewards.empty') }}</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 
         <!-- ── Nhan vien ── -->
         <section v-show="currentPage === 'staff'">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-secondary small">{{ staff.length }} {{ t('admin.staff.countSuffix') }}</span>
-            <button class="btn btn-sm btn-warning text-dark fw-bold" @click="openAddStaff">{{ t('admin.staff.add') }}</button>
-          </div>
-          <div v-if="StaffStore.loading" class="text-secondary small">{{ t('admin.staff.loading') }}</div>
-          <div v-else class="table-responsive">
-            <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-              <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.staff.colFullName') }}</th><th>{{ t('admin.staff.colPhone') }}</th><th>{{ t('admin.staff.colEmail') }}</th><th>{{ t('admin.staff.colPosition') }}</th><th>{{ t('admin.staff.colUsername') }}</th><th>{{ t('admin.staff.colBaseSalary') }}</th><th>{{ t('admin.staff.colStatus') }}</th><th>{{ t('admin.staff.colAction') }}</th></tr></thead>
-              <tbody>
-                <tr v-for="(s, idx) in staff" :key="s.nhanVienId">
-                  <td class="text-secondary">{{ idx + 1 }}</td>
-                  <td>{{ s.hoTen }}</td>
-                  <td class="text-secondary">{{ s.soDienThoai }}</td>
-                  <td class="text-secondary">{{ s.email }}</td>
-                  <td>{{ chucVuName(s.chucVuId) }}</td>
-                  <td class="text-secondary">{{ s.username }}</td>
-                  <td>{{ formatPrice(s.luongCoBan) }}</td>
-                  <td><span class="badge" :class="s.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(s.trangThai) }}</span></td>
-                  <td>
-                    <div class="d-flex gap-1">
-                      <button class="btn btn-sm btn-outline-warning" style="font-size:0.78rem; padding:2px 8px;" @click="openEditStaff(s)">{{ t('admin.staff.edit') }}</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="staff.length===0"><td colspan="8" class="text-center text-secondary">{{ t('admin.staff.empty') }}</td></tr>
-              </tbody>
-            </table>
+          <div class="alt-card">
+            <div class="alt-toolbar">
+              <span class="alt-toolbar__count">{{ staff.length }} {{ t('admin.staff.countSuffix') }}</span>
+              <div class="alt-toolbar__actions">
+                <button class="alt-btn alt-btn--primary" @click="openAddStaff">{{ t('admin.staff.add') }}</button>
+              </div>
+            </div>
+            <div v-if="StaffStore.loading" class="alt-empty">{{ t('admin.staff.loading') }}</div>
+            <div v-else class="alt-table-wrap">
+              <table class="alt-table">
+                <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.staff.colFullName') }}</th><th>{{ t('admin.staff.colPhone') }}</th><th>{{ t('admin.staff.colEmail') }}</th><th>{{ t('admin.staff.colPosition') }}</th><th>{{ t('admin.staff.colUsername') }}</th><th>{{ t('admin.staff.colBaseSalary') }}</th><th>{{ t('admin.staff.colStatus') }}</th><th>{{ t('admin.staff.colAction') }}</th></tr></thead>
+                <tbody>
+                  <tr v-for="(s, idx) in staff" :key="s.nhanVienId">
+                    <td class="text-secondary">{{ idx + 1 }}</td>
+                    <td>{{ s.hoTen }}</td>
+                    <td class="text-secondary">{{ s.soDienThoai }}</td>
+                    <td class="text-secondary">{{ s.email }}</td>
+                    <td>{{ chucVuName(s.chucVuId) }}</td>
+                    <td class="text-secondary">{{ s.username }}</td>
+                    <td>{{ formatPrice(s.luongCoBan) }}</td>
+                    <td>
+                      <span class="alt-tag" :style="s.trangThai==='active' ? 'background:rgba(22,163,74,0.14);color:var(--state-success);' : 'background:var(--bg-card-alt);color:var(--text-secondary);'">{{ statusLabel(s.trangThai) }}</span>
+                    </td>
+                    <td>
+                      <div class="d-flex gap-1">
+                        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEditStaff(s)">{{ t('admin.staff.edit') }}</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="staff.length===0"><td colspan="8" class="alt-empty">{{ t('admin.staff.empty') }}</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 

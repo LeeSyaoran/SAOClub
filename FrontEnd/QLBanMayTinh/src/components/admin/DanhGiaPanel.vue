@@ -40,39 +40,46 @@ const deleteReview = async (d) => {
 </script>
 
 <template>
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <span class="text-secondary small">{{ filteredItems.length }}/{{ items.length }} {{ t('admin.reviews.countSuffix') }}</span>
-    <input v-model="search" class="form-control form-control-sm" style="width:260px;background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('admin.reviews.searchPlaceholder')" />
-  </div>
-  <div v-if="loading" class="text-secondary small">{{ t('admin.reviews.loading') }}</div>
-  <div v-else class="table-responsive">
-    <table class="table table-hover table-sm align-middle" style="--bs-table-bg:var(--bg-card); --bs-table-color:var(--text-primary); --bs-table-hover-bg:var(--bg-hover); --bs-table-hover-color:var(--text-primary); --bs-table-border-color:var(--border-color-soft)">
-      <thead>
-        <tr>
-          <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-          <th>{{ t('admin.reviews.colDate') }}</th>
-          <th>{{ t('admin.reviews.colProduct') }}</th>
-          <th>{{ t('admin.reviews.colCustomer') }}</th>
-          <th>{{ t('admin.reviews.colStars') }}</th>
-          <th>{{ t('admin.reviews.colContent') }}</th>
-          <th style="width:70px;"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(d, idx) in pagedReviews" :key="d.danhGiaId">
-          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-          <td class="text-secondary">{{ formatDateTime(d.ngayDanhGia) }}</td>
-          <td>{{ d.tenSanPham }}</td>
-          <td>{{ d.tenKhachHang }}</td>
-          <td><span class="d-inline-flex" style="gap:1px;"><Star v-for="n in d.soSao" :key="n" :size="12" fill="currentColor" /></span></td>
-          <td class="text-secondary">{{ d.noiDung || '—' }}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-danger" @click="deleteReview(d)">{{ t('admin.common.delete') }}</button>
-          </td>
-        </tr>
-        <tr v-if="filteredItems.length===0"><td colspan="7" class="text-center text-secondary">{{ t('admin.reviews.empty') }}</td></tr>
-      </tbody>
-    </table>
-    <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
+  <div class="alt-card">
+    <div class="alt-toolbar">
+      <span class="alt-toolbar__count">{{ filteredItems.length }}/{{ items.length }} {{ t('admin.reviews.countSuffix') }}</span>
+      <div class="alt-toolbar__actions">
+        <div class="alt-search">
+          <i class="fa fa-search alt-search__icon"></i>
+          <input v-model="search" :placeholder="t('admin.reviews.searchPlaceholder')" />
+        </div>
+      </div>
+    </div>
+    <div v-if="loading" class="alt-empty">{{ t('admin.reviews.loading') }}</div>
+    <div v-else class="alt-table-wrap">
+      <table class="alt-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">{{ t('admin.common.stt') }}</th>
+            <th>{{ t('admin.reviews.colDate') }}</th>
+            <th>{{ t('admin.reviews.colProduct') }}</th>
+            <th>{{ t('admin.reviews.colCustomer') }}</th>
+            <th>{{ t('admin.reviews.colStars') }}</th>
+            <th>{{ t('admin.reviews.colContent') }}</th>
+            <th style="width:70px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(d, idx) in pagedReviews" :key="d.danhGiaId">
+            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td class="text-secondary">{{ formatDateTime(d.ngayDanhGia) }}</td>
+            <td>{{ d.tenSanPham }}</td>
+            <td>{{ d.tenKhachHang }}</td>
+            <td><span class="d-inline-flex" style="gap:1px;color:var(--accent-fg);"><Star v-for="n in d.soSao" :key="n" :size="12" fill="currentColor" /></span></td>
+            <td class="text-secondary">{{ d.noiDung || '—' }}</td>
+            <td>
+              <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;color:var(--state-danger);border-color:var(--state-danger);" @click="deleteReview(d)">{{ t('admin.common.delete') }}</button>
+            </td>
+          </tr>
+          <tr v-if="filteredItems.length===0"><td colspan="7" class="alt-empty">{{ t('admin.reviews.empty') }}</td></tr>
+        </tbody>
+      </table>
+      <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
+    </div>
   </div>
 </template>
