@@ -728,6 +728,7 @@ export default {
       colPriceSell: "Giá bán",
       colStatus: "Trạng thái",
       colAction: "Thao tác",
+      detail: "Chi tiết",
       edit: "Sửa",
       empty: "Chưa có biến thể",
       searchPlaceholder: "Tìm tên sản phẩm, SKU...",
@@ -781,6 +782,7 @@ export default {
     detailModal: {
       titlePrefix: "Chi tiết:",
       edit: "Sửa",
+      barcode: "Mã vạch",
       brand: "Thương hiệu",
       category: "Danh mục",
       supplier: "Nhà cung cấp",

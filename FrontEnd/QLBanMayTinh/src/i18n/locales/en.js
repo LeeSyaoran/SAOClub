@@ -728,6 +728,7 @@ export default {
       colPriceSell: "Price",
       colStatus: "Status",
       colAction: "Actions",
+      detail: "Detail",
       edit: "Edit",
       empty: "No variants yet",
       searchPlaceholder: "Search product name, SKU...",
@@ -781,6 +782,7 @@ export default {
     detailModal: {
       titlePrefix: "Details:",
       edit: "Edit",
+      barcode: "Barcode",
       brand: "Brand",
       category: "Category",
       supplier: "Supplier",

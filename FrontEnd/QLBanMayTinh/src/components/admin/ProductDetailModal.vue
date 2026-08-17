@@ -69,6 +69,10 @@ const close = () => emit("update:modelValue", false);
           </div>
           <table class="w-100 mb-0" style="border-collapse:collapse;font-size:0.8rem;">
             <tbody>
+              <tr v-if="v.barcodeBienThe" style="border-top:1px solid var(--border-color-soft);">
+                <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.barcode') }}</td>
+                <td class="px-3 py-1 text-light" style="background:var(--bg-card);font-family:monospace;" colspan="3">{{ v.barcodeBienThe }}</td>
+              </tr>
               <tr style="border-top:1px solid var(--border-color-soft);">
                 <td class="px-3 py-1 text-secondary" style="background:var(--bg-card-alt);font-weight:600;">{{ t('admin.detailModal.brand') }}</td>
                 <td class="px-3 py-1 text-light" style="background:var(--bg-card);">{{ v.tenThuongHieu }}</td>

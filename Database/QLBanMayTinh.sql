@@ -2544,6 +2544,13 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_bien_the_barcode')
     CREATE UNIQUE INDEX UX_bien_the_barcode ON bien_the_san_pham(barcode) WHERE barcode IS NOT NULL;
 GO
 
+-- Sinh barcode minh hoạ (893 + bien_the_id đệm 10 số = đủ 13 số) cho các biến thể seed
+-- sẵn chưa có mã — chỉ điền chỗ NULL, không đụng barcode đã gán tay/qua UI.
+UPDATE bien_the_san_pham
+SET barcode = '893' + RIGHT('0000000000' + CAST(bien_the_id AS VARCHAR(10)), 10)
+WHERE barcode IS NULL;
+GO
+
 GO
 select*from ton_kho
 select*from bien_the_san_pham

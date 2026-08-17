@@ -17,6 +17,7 @@ import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import { Camera, Image, Cpu, MemoryStick, HardDrive } from '@lucide/vue';
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
+import ProductDetailModal from "./ProductDetailModal.vue";
 
 // Không dựa vào ProductsTable.vue (tab anh em) đã tải sẵn ProductsStore — self-contained,
 // đúng pattern ensureX() dùng chung toàn app (no-op nếu đã tải/đang tải).
@@ -88,6 +89,19 @@ const configLabel = (p) => [shortCpu(p.cpu), p.ram, p.oCung].filter(Boolean).joi
 const renderBarcode = (el, value) => {
   if (!el || !value) return;
   JsBarcode(el, value, { format: 'CODE128', height: 24, width: 1.2, displayValue: false, margin: 0 });
+};
+
+// ── Modal "Chi tiet" (chi xem, dung lai ProductDetailModal.vue) — loc dung 1 bien the
+// qua onlyBienTheIds, khac voi "Sua" mo form chinh sua ────────────────────────────────
+const showDetailModal = ref(false);
+const detailSanPhamId = ref(null);
+const detailSanPhamName = ref("");
+const detailBienTheId = ref(null);
+const openDetail = (p) => {
+  detailSanPhamId.value = p.sanPhamId;
+  detailSanPhamName.value = p.tenSanPham;
+  detailBienTheId.value = p.bienTheId;
+  showDetailModal.value = true;
 };
 
 // ── Modal them/sua bien the ───────────────────────────────────────────────────────────
@@ -366,7 +380,7 @@ const saveVariant = async () => {
           <th style="width:48px;">{{ t('admin.variants.colImage') }}</th>
           <th style="width:150px;">{{ t('admin.variants.colSku') }}</th><th style="width:130px;">{{ t('admin.variants.colBarcode') }}</th><th style="width:220px;">{{ t('admin.variants.colProduct') }}</th>
           <th>{{ t('admin.variants.colConfig') }}</th><th style="width:100px;">{{ t('admin.variants.colColor') }}</th>
-          <th style="width:120px;">{{ t('admin.variants.colPriceSell') }}</th><th style="width:100px;">{{ t('admin.variants.colStatus') }}</th><th style="width:110px;">{{ t('admin.variants.colAction') }}</th>
+          <th style="width:120px;">{{ t('admin.variants.colPriceSell') }}</th><th style="width:100px;">{{ t('admin.variants.colStatus') }}</th><th style="width:170px;">{{ t('admin.variants.colAction') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -405,6 +419,7 @@ const saveVariant = async () => {
           <td><span class="badge" :class="p.trangThai==='active'?'bg-success':'bg-secondary'" style="font-size:0.72rem;">{{ statusLabel(p.trangThai) }}</span></td>
           <td>
             <div class="d-flex gap-1">
+              <button class="btn btn-sm btn-outline-info" style="font-size:0.72rem; padding:2px 7px;" @click="openDetail(p)">{{ t('admin.variants.detail') }}</button>
               <button v-if="!readonly" class="btn btn-sm btn-outline-warning" style="font-size:0.72rem; padding:2px 7px;" @click="openEdit(p)">{{ t('admin.variants.edit') }}</button>
             </div>
           </td>
@@ -639,6 +654,13 @@ const saveVariant = async () => {
       </div>
     </div>
   </div>
+
+  <ProductDetailModal
+    v-model="showDetailModal"
+    :san-pham-id="detailSanPhamId"
+    :san-pham-name="detailSanPhamName"
+    :only-bien-the-ids="detailBienTheId"
+  />
 </template>
 
 <style scoped>
