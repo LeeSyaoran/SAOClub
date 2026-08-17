@@ -2,6 +2,7 @@ package com.example.backend.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,6 +20,9 @@ public class BienTheSanPhamRequest {
 
     @NotBlank(message = "Mã SKU không được để trống")
     private String maSku;
+
+    @Pattern(regexp = "^$|^\\d{8,13}$", message = "Barcode phải gồm 8–13 chữ số")
+    private String barcode;
 
     @NotNull(message = "Giá nhập không được để trống")
     private BigDecimal giaNhap;

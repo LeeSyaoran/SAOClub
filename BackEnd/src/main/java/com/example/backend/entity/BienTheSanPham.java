@@ -26,6 +26,9 @@ public class BienTheSanPham extends BaseEntity {
     @Column(name = "ma_sku", length = 50, unique = true)
     private String maSku;
 
+    @Column(name = "barcode", length = 50)
+    private String barcode;
+
     @Column(name = "gia_nhap", precision = 18, scale = 0)
     private BigDecimal giaNhap;
 

@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
+import JsBarcode from "jsbarcode";
 import { t } from "../../i18n/index.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
-import { formatPrice, formatDateTime, statusLabel } from "../../utils/adminFormat.js";
+import { formatDateTime, statusLabel } from "../../utils/adminFormat.js";
 import ProductFormModal from "./ProductFormModal.vue";
 import BienTheTable from "./BienTheTable.vue";
 import { Image } from "@lucide/vue";
@@ -34,23 +35,16 @@ const productVariants = computed(() =>
   (ProductsStore.items ?? []).filter((p) => p.sanPhamId === props.sanPhamId),
 );
 const productInfo = computed(() => productVariants.value[0] ?? null);
-const variantCount = computed(() => productVariants.value.length);
-const priceRange = computed(() => {
-  if (!productVariants.value.length) return null;
-  const prices = productVariants.value.map((p) => Number(p.giaBan));
-  return { min: Math.min(...prices), max: Math.max(...prices) };
-});
-const totalStock = computed(() =>
-  productVariants.value.reduce((sum, p) => sum + (Number(p.soLuongTon) || 0), 0),
-);
-const lastUpdated = computed(() =>
-  productVariants.value.reduce(
-    (latest, p) => (!latest || (p.ngayCapNhat && new Date(p.ngayCapNhat) > new Date(latest)) ? p.ngayCapNhat : latest),
-    null,
-  ),
-);
 
 const activeTab = ref("info");
+const barcodeEl = ref(null);
+watch([() => productInfo.value?.barcode, activeTab], async ([barcode, tab]) => {
+  if (!barcode || tab !== "info") return;
+  await nextTick();
+  if (!barcodeEl.value) return;
+  JsBarcode(barcodeEl.value, barcode, { format: "CODE128", height: 50, displayValue: false, margin: 0 });
+}, { immediate: true });
+
 const showEditModal = ref(false);
 const onSaved = () => refreshProducts();
 const back = () => router.push("/admin");
@@ -86,7 +80,7 @@ const back = () => router.push("/admin");
         style="border-radius: 6px 6px 0 0"
         @click="activeTab = 'variants'"
       >
-        {{ t("admin.productDetail.tabVariants") }} ({{ variantCount }})
+        {{ t("admin.productDetail.tabVariants") }}
       </button>
       <button
         class="btn btn-sm"
@@ -140,15 +134,11 @@ const back = () => router.push("/admin");
             <div class="text-uppercase fw-bold mb-2" style="font-size: 0.65rem; letter-spacing: 0.1em; color: #60a5fa">
               {{ t("admin.productDetail.cardStats") }}
             </div>
-            <div class="small text-secondary d-flex flex-column gap-2">
-              <div>{{ t("admin.productDetail.variantCount") }}: <span class="text-primary fw-bold">{{ variantCount }}</span></div>
-              <div v-if="priceRange">
-                {{ t("admin.productDetail.priceRange") }}:
-                <span class="text-primary fw-bold">{{ formatPrice(priceRange.min) }} – {{ formatPrice(priceRange.max) }}</span>
-              </div>
-              <div>{{ t("admin.productDetail.totalStock") }}: <span class="text-primary fw-bold">{{ totalStock }}</span></div>
-              <div>{{ t("admin.productDetail.updatedAt") }}: <span class="text-primary">{{ formatDateTime(lastUpdated) }}</span></div>
+            <div v-if="productInfo.barcode" class="d-flex flex-column align-items-center gap-2 py-2">
+              <svg ref="barcodeEl"></svg>
+              <span class="text-primary fw-bold" style="font-family: monospace; letter-spacing: 0.15em">{{ productInfo.barcode }}</span>
             </div>
+            <div v-else class="small text-secondary">{{ t("admin.productDetail.noBarcode") }}</div>
           </div>
         </div>
       </div>

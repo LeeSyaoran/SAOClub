@@ -2530,6 +2530,20 @@ IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_dh_trangthai')
 ALTER TABLE don_hang ADD CONSTRAINT CK_dh_trangthai
     CHECK (trang_thai_don_hang IN (N'pending', N'confirmed', N'processing', N'shipping', N'out_for_delivery', N'awaiting_confirmation', N'delivered', N'cancelled', N'returned'));
 GO
+
+-- ============================================================
+--  Mã vạch ở CẤP BIẾN THỂ — để sau này quét bán/quét nhập kho ra đúng biến thể
+--  (màu/cấu hình cụ thể), khác với san_pham.barcode chỉ là mã tra cứu chung chung.
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('bien_the_san_pham') AND name = 'barcode')
+BEGIN
+    ALTER TABLE bien_the_san_pham ADD barcode VARCHAR(50) NULL;
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_bien_the_barcode')
+    CREATE UNIQUE INDEX UX_bien_the_barcode ON bien_the_san_pham(barcode) WHERE barcode IS NOT NULL;
+GO
+
 GO
 select*from ton_kho
 select*from bien_the_san_pham

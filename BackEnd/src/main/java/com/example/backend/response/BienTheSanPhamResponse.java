@@ -15,6 +15,7 @@ public class BienTheSanPhamResponse {
     private Integer bienTheId;
     private Integer sanPhamId;
     private String maSku;
+    private String barcode;
     private BigDecimal giaNhap;
     private BigDecimal giaBan;
     private Integer baoHanhThang;

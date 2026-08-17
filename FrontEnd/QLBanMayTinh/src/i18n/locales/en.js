@@ -711,6 +711,8 @@ export default {
       pickProductPlaceholder: "Search product name...",
       pickProductEmpty: "No product found",
       changeProduct: "Change product",
+      barcodeLabel: "Barcode",
+      barcodePlaceholder: "8–13 digits, leave blank if none",
     },
 
     variants: {
@@ -738,12 +740,9 @@ export default {
       tabVariants: "Variants",
       tabHistory: "Change history",
       cardBasic: "Basic info",
-      cardStats: "Quick stats",
+      cardStats: "Product barcode",
+      noBarcode: "No barcode assigned yet",
       releaseDate: "Release date",
-      variantCount: "Variant count",
-      priceRange: "Price range",
-      totalStock: "Total stock",
-      updatedAt: "Last updated",
       historyColTime: "Time",
       historyColUser: "Changed by",
       historyColTarget: "Target",

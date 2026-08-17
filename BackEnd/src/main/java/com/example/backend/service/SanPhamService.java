@@ -63,6 +63,8 @@ public class SanPhamService {
         String maSanPham = chuanHoa(request.getMaSanPham());
         String barcode = chuanHoa(request.getBarcode());
         kiemTraTrungMa(maSanPham, barcode, null);
+        String barcodeBienThe = chuanHoa(request.getBarcodeBienThe());
+        kiemTraTrungBarcodeBienThe(barcodeBienThe, null);
 
         SanPham sanPham = new SanPham();
         BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham", "barcode");
@@ -90,6 +92,7 @@ public class SanPhamService {
         bt.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());
         bt.setSanPham(saved);
         bt.setTrangThai(trangThaiBienThe(request.getTrangThai()));
+        bt.setBarcode(barcodeBienThe);
         ganLinhKien(bt, request);
 
         BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
@@ -143,13 +146,19 @@ public class SanPhamService {
                     .orElseThrow(() -> new IllegalArgumentException(
                             "Biến thể không tồn tại với id: " + request.getBienTheId()));
 
+            String oldBarcodeBienThe = bt.getBarcode();
+            String barcodeBienThe = chuanHoa(request.getBarcodeBienThe());
+            kiemTraTrungBarcodeBienThe(barcodeBienThe, bt.getBienTheId());
+
             // Giữ nguyên ngày tạo gốc của biến thể, chỉ cập nhật phần dữ liệu nghiệp vụ
             BeanUtils.copyProperties(request, bt, "bienTheId", "ngayTao");
             bt.setSanPham(sanPham);
             bt.setTrangThai(trangThaiBienThe(request.getTrangThai()));
+            bt.setBarcode(barcodeBienThe);
             ganLinhKien(bt, request);
 
-            bienTheSanPhamRepository.save(bt);
+            BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "barcode", oldBarcodeBienThe, savedBt.getBarcode(), nguoiSua);
         }
     }
 
@@ -203,5 +212,14 @@ public class SanPhamService {
                     : sanPhamRepository.existsByBarcodeAndSanPhamIdNot(barcode, boQuaId);
             if (trung) throw new IllegalArgumentException("Barcode '" + barcode + "' đã được dùng");
         }
+    }
+
+    /** Barcode cấp biến thể — bảng bien_the_san_pham riêng, không chung index với san_pham. */
+    private void kiemTraTrungBarcodeBienThe(String barcode, Integer boQuaBienTheId) {
+        if (barcode == null) return;
+        boolean trung = boQuaBienTheId == null
+                ? bienTheSanPhamRepository.existsByBarcode(barcode)
+                : bienTheSanPhamRepository.existsByBarcodeAndBienTheIdNot(barcode, boQuaBienTheId);
+        if (trung) throw new IllegalArgumentException("Barcode '" + barcode + "' đã được dùng");
     }
 }

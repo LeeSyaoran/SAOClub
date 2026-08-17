@@ -44,6 +44,10 @@ public class SanPhamRequest {
     @NotBlank(message = "Mã SKU không được để trống")
     private String maSku;
 
+    // Mã vạch CẤP BIẾN THỂ — khác "barcode" ở trên (cấp sản phẩm). Cho phép để trống.
+    @Pattern(regexp = "^$|^\\d{8,13}$", message = "Barcode phải gồm 8–13 chữ số")
+    private String barcodeBienThe;
+
     private Integer cpuId;
     private Integer ramId;
     private Integer oCungId;

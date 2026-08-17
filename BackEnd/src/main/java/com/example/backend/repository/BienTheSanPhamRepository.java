@@ -18,7 +18,7 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
 
     @Query("""
     SELECT new com.example.backend.response.BienTheSanPhamResponse(
-        bt.bienTheId, sp.sanPhamId, bt.maSku, bt.giaNhap, bt.giaBan,
+        bt.bienTheId, sp.sanPhamId, bt.maSku, bt.barcode, bt.giaNhap, bt.giaBan,
         bt.baoHanhThang, bt.hinhAnhBienThe, bt.trangThai, bt.mauSac,
         cpu.cpuId, cpu.tenCpu,
         ram.ramId, ram.dungLuong,
@@ -38,7 +38,7 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
 
     @Query(value = """
     SELECT new com.example.backend.response.BienTheSanPhamResponse(
-        bt.bienTheId, sp.sanPhamId, bt.maSku, bt.giaNhap, bt.giaBan,
+        bt.bienTheId, sp.sanPhamId, bt.maSku, bt.barcode, bt.giaNhap, bt.giaBan,
         bt.baoHanhThang, bt.hinhAnhBienThe, bt.trangThai, bt.mauSac,
         cpu.cpuId, cpu.tenCpu,
         ram.ramId, ram.dungLuong,
@@ -58,6 +58,11 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
     Page<BienTheSanPhamResponse> hienThiBienTheSanPham(Pageable pageable);
 
     List<BienTheSanPham> findBySanPham_SanPhamId(Integer sanPhamId);
+
+    // Kiểm tra trùng barcode TRƯỚC khi insert/update — cùng lý do với SanPhamRepository.
+    boolean existsByBarcode(String barcode);
+
+    boolean existsByBarcodeAndBienTheIdNot(String barcode, Integer bienTheId);
 
     @Query("""
     SELECT new com.example.backend.response.BienTheSanPhamPublicResponse(
@@ -101,7 +106,7 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
 
     @Query("""
     SELECT new com.example.backend.response.BienTheSanPhamResponse(
-        bt.bienTheId, sp.sanPhamId, bt.maSku, bt.giaNhap, bt.giaBan,
+        bt.bienTheId, sp.sanPhamId, bt.maSku, bt.barcode, bt.giaNhap, bt.giaBan,
         bt.baoHanhThang, bt.hinhAnhBienThe, bt.trangThai, bt.mauSac,
         cpu.cpuId, cpu.tenCpu,
         ram.ramId, ram.dungLuong,

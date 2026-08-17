@@ -26,6 +26,7 @@ public class SanPhamResponse {
     private Integer nhaCungCapId;
     private String loaiSanPham;
     private String maSku;
+    private String barcodeBienThe;  // mã vạch cấp biến thể — khac barcode (cap san pham) o tren
     private String cpu;
     private String ram;
     private String oCung;

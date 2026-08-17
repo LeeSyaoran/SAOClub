@@ -711,6 +711,8 @@ export default {
       pickProductPlaceholder: "Tìm tên sản phẩm...",
       pickProductEmpty: "Không tìm thấy sản phẩm",
       changeProduct: "Đổi sản phẩm",
+      barcodeLabel: "Mã vạch",
+      barcodePlaceholder: "8–13 chữ số, để trống nếu chưa có",
     },
 
     variants: {
@@ -738,12 +740,9 @@ export default {
       tabVariants: "Biến thể sản phẩm",
       tabHistory: "Lịch sử thay đổi",
       cardBasic: "Thông tin cơ bản",
-      cardStats: "Thống kê nhanh",
+      cardStats: "Mã vạch sản phẩm",
+      noBarcode: "Sản phẩm chưa gán mã vạch",
       releaseDate: "Ngày ra mắt",
-      variantCount: "Số biến thể",
-      priceRange: "Khoảng giá bán",
-      totalStock: "Tổng tồn kho",
-      updatedAt: "Cập nhật gần nhất",
       historyColTime: "Thời gian",
       historyColUser: "Người sửa",
       historyColTarget: "Đối tượng",

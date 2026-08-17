@@ -542,6 +542,7 @@
                         <tr>
                           <th>#</th>
                           <th>Mã SKU</th>
+                          <th>Mã vạch</th>
                           <th>Cấu hình</th>
                           <th class="ta-r">Giá nhập</th>
                           <th class="ta-r">Giá bán</th>
@@ -552,6 +553,7 @@
                         <tr v-for="(row, i) in bienTheRows" :key="row.key">
                           <td class="hh-muted">{{ i + 1 }}</td>
                           <td><input v-model.trim="row.maSku" class="hh-cell hh-cell--sku" /></td>
+                          <td><input v-model.trim="row.barcode" class="hh-cell hh-cell--sku" placeholder="8–13 số" /></td>
                           <td class="hh-matrix__cfg">{{ moTaCauHinh(row) || 'Phiên bản tiêu chuẩn' }}</td>
                           <td><input type="number" min="0" step="1000" v-model="row.giaNhap" class="hh-cell ta-r" /></td>
                           <td><input type="number" min="0" step="1000" v-model="row.giaBan" class="hh-cell ta-r" /></td>
@@ -562,7 +564,7 @@
                           </td>
                         </tr>
                         <tr v-if="!bienTheRows.length">
-                          <td colspan="6" class="hh-matrix__empty">Chưa có phiên bản nào — bấm “Dựng lại danh sách”.</td>
+                          <td colspan="7" class="hh-matrix__empty">Chưa có phiên bản nào — bấm “Dựng lại danh sách”.</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1256,6 +1258,7 @@ const dungLaiMaTran = () => {
       oCungId: c.oCungId,
       gpuId: c.gpuId,
       maSku: truoc?.maSku || sinhSku(c, i),
+      barcode: truoc?.barcode || '',
       giaNhap: truoc?.giaNhap ?? form.giaNhap,
       giaBan: truoc?.giaBan ?? form.giaBan
     }
@@ -1349,6 +1352,10 @@ const validate = () => {
       else {
         const saiGia = bienTheRows.value.find((r) => Number(r.giaBan) < Number(r.giaNhap) * 0.5)
         if (saiGia) errors.bienThe = `Phiên bản ${saiGia.maSku}: giá bán phải ≥ 50% giá nhập`
+        else {
+          const saiBarcode = bienTheRows.value.find((r) => r.barcode && !/^\d{8,13}$/.test(r.barcode))
+          if (saiBarcode) errors.bienThe = `Phiên bản ${saiBarcode.maSku}: barcode phải gồm 8–13 chữ số`
+        }
       }
     }
   }
@@ -1403,6 +1410,7 @@ const payloadSanPham = (row) => ({
     ? {
         ...(row.bienTheId ? { bienTheId: Number(row.bienTheId) } : {}),
         maSku: row.maSku,
+        barcodeBienThe: row.barcode || null,
         giaNhap: Number(row.giaNhap || 0),
         giaBan: Number(row.giaBan || 0),
         mauSac: row.mauSac || null,
@@ -1419,6 +1427,7 @@ const payloadSanPham = (row) => ({
 const payloadBienThe = (sanPhamId, row) => ({
   sanPhamId: soHoacNull(sanPhamId),
   maSku: row.maSku,
+  barcode: row.barcode || null,
   giaNhap: Number(row.giaNhap || 0),
   giaBan: Number(row.giaBan || 0),
   mauSac: row.mauSac || null,

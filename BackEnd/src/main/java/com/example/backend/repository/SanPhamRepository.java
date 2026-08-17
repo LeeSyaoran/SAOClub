@@ -41,6 +41,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
         ncc.nhaCungCapId,
         sp.loaiSanPham,
         bt.maSku,
+        bt.barcode,
         cpu.tenCpu,
         ram.dungLuong,
         oCung.loaiOcung,
@@ -74,7 +75,8 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
     WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
            OR LOWER(sp.maSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
            OR LOWER(sp.barcode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-           OR LOWER(bt.maSku) LIKE LOWER(CONCAT('%', :keyword, '%')))
+           OR LOWER(bt.maSku) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(bt.barcode) LIKE LOWER(CONCAT('%', :keyword, '%')))
       AND (:danhMucId IS NULL OR dm.id = :danhMucId)
       AND (:thuongHieuId IS NULL OR th.thuongHieuId = :thuongHieuId)
       AND (:trangThai IS NULL OR bt.trangThai = :trangThai)
@@ -89,7 +91,8 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
     WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(sp.maSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
            OR LOWER(sp.barcode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-           OR LOWER(bt.maSku) LIKE LOWER(CONCAT('%', :keyword, '%')))
+           OR LOWER(bt.maSku) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(bt.barcode) LIKE LOWER(CONCAT('%', :keyword, '%')))
       AND (:danhMucId IS NULL OR dm.id = :danhMucId)
       AND (:thuongHieuId IS NULL OR th.thuongHieuId = :thuongHieuId)
       AND (:trangThai IS NULL OR bt.trangThai = :trangThai)

@@ -122,6 +122,7 @@ const emptyForm = () => ({
   nhaCungCapId: null,
   loaiSanPham: "",
   maSku: "",
+  barcodeBienThe: "",
   cpuId: null,
   ramId: null,
   oCungId: null,
@@ -202,6 +203,7 @@ const openEdit = async (p) => {
     nhaCungCapId: p.nhaCungCapId,
     loaiSanPham: p.loaiSanPham,
     maSku: p.maSku,
+    barcodeBienThe: p.barcodeBienThe ?? "",
     cpuId: cpuList.value.find((c) => c.tenCpu === p.cpu)?.cpuId ?? null,
     ramId: ramList.value.find((r) => r.dungLuong === p.ram)?.ramId ?? null,
     oCungId: oCungList.value.find((o) => o.loaiOcung === p.oCung)?.oCungId ?? null,
@@ -266,6 +268,7 @@ const saveVariant = async () => {
     const variantBody = {
       sanPhamId: addVariantSanPhamId.value,
       maSku: form.maSku,
+      barcode: form.barcodeBienThe || null,
       giaNhap: Number(form.giaNhap),
       giaBan: Number(form.giaBan),
       baoHanhThang: Number(form.baoHanhThang) || 0,
@@ -440,6 +443,10 @@ const saveVariant = async () => {
             <div class="col-4">
               <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.skuLabel') }}</label>
               <input v-model="form.maSku" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); font-family:monospace;" :placeholder="t('admin.productModal.skuPlaceholder')" />
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary mb-1">{{ t('admin.variantModal.barcodeLabel') }}</label>
+              <input v-model.trim="form.barcodeBienThe" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong); font-family:monospace;" :placeholder="t('admin.variantModal.barcodePlaceholder')" />
             </div>
             <div v-if="!addVariantMode" class="col-3">
               <label class="form-label small text-secondary mb-1">{{ t('admin.productModal.typeLabel') }}</label>

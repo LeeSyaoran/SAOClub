@@ -69,8 +69,12 @@ public class BienTheSanPhamService {
 
     @Transactional
     public BienTheSanPham create(BienTheSanPhamRequest request) {
+        String barcode = chuanHoa(request.getBarcode());
+        kiemTraTrungBarcode(barcode, null);
+
         BienTheSanPham entity = new BienTheSanPham();
-        BeanUtils.copyProperties(request, entity, "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId");
+        BeanUtils.copyProperties(request, entity, "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode");
+        entity.setBarcode(barcode);
 
         entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));
         entity.setCpu(request.getCpuId() != null ? dmCpuRepository.getReferenceById(request.getCpuId()) : null);
@@ -87,6 +91,7 @@ public class BienTheSanPhamService {
 
         Integer sanPhamId = entity.getSanPham().getSanPhamId();
         String oldMaSku = entity.getMaSku();
+        String oldBarcode = entity.getBarcode();
         BigDecimal oldGiaNhap = entity.getGiaNhap();
         BigDecimal oldGiaBan = entity.getGiaBan();
         Integer oldBaoHanhThang = entity.getBaoHanhThang();
@@ -102,7 +107,11 @@ public class BienTheSanPhamService {
         String oldPin = entity.getPin();
         BigDecimal oldTrongLuongKg = entity.getTrongLuongKg();
 
-        BeanUtils.copyProperties(request, entity, "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId");
+        String barcode = chuanHoa(request.getBarcode());
+        kiemTraTrungBarcode(barcode, id);
+
+        BeanUtils.copyProperties(request, entity, "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode");
+        entity.setBarcode(barcode);
 
         entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));
         entity.setCpu(request.getCpuId() != null ? dmCpuRepository.getReferenceById(request.getCpuId()) : null);
@@ -114,6 +123,7 @@ public class BienTheSanPhamService {
 
         NhanVien nguoiSua = lichSuThayDoiSanPhamService.nguoiSuaHienTai();
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "maSku", oldMaSku, saved.getMaSku(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "barcode", oldBarcode, saved.getBarcode(), nguoiSua);
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "giaNhap", oldGiaNhap, saved.getGiaNhap(), nguoiSua);
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "giaBan", oldGiaBan, saved.getGiaBan(), nguoiSua);
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "baoHanhThang", oldBaoHanhThang, saved.getBaoHanhThang(), nguoiSua);
@@ -130,6 +140,20 @@ public class BienTheSanPhamService {
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "trongLuongKg", oldTrongLuongKg, saved.getTrongLuongKg(), nguoiSua);
 
         return saved;
+    }
+
+    /** Chuỗi rỗng phải về null: hai biến thể cùng để barcode "" sẽ đụng unique index. */
+    private String chuanHoa(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
+    }
+
+    /** Báo lỗi rõ ràng trước khi để SQL Server bắn unique violation khó đọc. */
+    private void kiemTraTrungBarcode(String barcode, Integer boQuaId) {
+        if (barcode == null) return;
+        boolean trung = boQuaId == null
+                ? bienTheSanPhamRepository.existsByBarcode(barcode)
+                : bienTheSanPhamRepository.existsByBarcodeAndBienTheIdNot(barcode, boQuaId);
+        if (trung) throw new IllegalArgumentException("Barcode '" + barcode + "' đã được dùng");
     }
 
 }
