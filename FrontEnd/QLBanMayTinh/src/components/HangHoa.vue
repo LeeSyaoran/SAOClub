@@ -26,9 +26,8 @@
           <i class="fa fa-plus"></i> Tạo mới
         </button>
 
-        <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDaLoc.length" @click="exportCsv">
+        <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDaLoc.length" @click="openExportModal">
           <i class="fa fa-download"></i> Xuất file
-          <span v-if="selectedIds.length" class="hh-chip">{{ selectedIds.length }}</span>
         </button>
 
         <button class="hh-icon-btn" title="Tải lại dữ liệu" @click="fetchData">
@@ -135,7 +134,6 @@
         <table class="hh-table">
           <thead>
             <tr>
-              <th class="hh-col-check"><input type="checkbox" :checked="allChecked" @change="toggleAll" /></th>
               <th>Mã sản phẩm</th>
               <th>Tên sản phẩm</th>
               <th class="ta-r">Giá bán</th>
@@ -150,7 +148,6 @@
           <tbody v-for="group in pagedGroups" :key="group.sanPhamId">
             <!-- ---- Dòng sản phẩm — chỉ xem nhanh, xem/sửa biến thể qua "Chi tiết" ---- -->
             <tr class="hh-row-group">
-              <td @click.stop><input type="checkbox" :checked="isGroupChecked(group)" @change="toggleGroupCheck(group)" /></td>
               <td>
                 <div class="hh-code">
                   <span class="hh-code__main">{{ group.maSanPham }}</span>
@@ -624,6 +621,68 @@
       </div>
     </teleport>
 
+    <!-- ══════════════ MODAL XUẤT FILE ══════════════ -->
+    <teleport to="body">
+      <div v-if="showExportModal" class="hh-modal-mask" @click.self="showExportModal = false">
+        <div class="hh-modal hh-modal--hep" role="dialog" aria-modal="true">
+          <header class="hh-modal__head">
+            <div>
+              <h2>Xuất file</h2>
+              <p>Chọn sản phẩm / phiên bản muốn xuất</p>
+            </div>
+            <button class="hh-icon-btn" @click="showExportModal = false" aria-label="Đóng"><i class="fa fa-times"></i></button>
+          </header>
+
+          <div class="hh-modal__body">
+            <div class="hh-export-toolbar">
+              <label class="hh-export-checkall">
+                <input type="checkbox" :checked="allChecked" @change="toggleAll" />
+                <span>Chọn tất cả</span>
+                <span class="hh-export-count">{{ selectedIds.length }}/{{ bienTheDaLoc.length }}</span>
+              </label>
+              <div class="hh-search hh-export-search">
+                <i class="fa fa-search hh-search__icon"></i>
+                <input type="text" v-model="exportSearch" placeholder="Tìm sản phẩm, SKU..." />
+              </div>
+            </div>
+
+            <div class="hh-export-list">
+              <div v-for="group in exportGroups" :key="group.sanPhamId" class="hh-export-group">
+                <label class="hh-export-group__head">
+                  <input
+                    type="checkbox"
+                    :checked="isGroupChecked(group)"
+                    :ref="(el) => setIndeterminate(el, group)"
+                    @change="toggleGroupCheck(group)"
+                  />
+                  <img :src="group.hinhAnh" class="hh-export-group__thumb" alt="" @error="onImgError" />
+                  <div class="hh-export-group__info">
+                    <div class="hh-export-group__name">{{ group.tenSanPham }}</div>
+                    <div class="hh-export-group__meta">{{ group.maSanPham }} · {{ group.variants.length }} phiên bản</div>
+                  </div>
+                  <div class="hh-export-group__price">{{ group.khoangGia }}</div>
+                </label>
+                <label v-for="item in group.variants" :key="item.bienTheId" class="hh-export-variant">
+                  <input type="checkbox" :checked="selectedIds.includes(item.bienTheId)" @change="toggleVariantCheck(item.bienTheId)" />
+                  <span class="hh-export-variant__sku">{{ item.maSku }}</span>
+                  <span class="hh-export-variant__spec">{{ [item.mauSac, item.tenCpu, item.tenRam].filter(Boolean).join(' · ') || '—' }}</span>
+                  <span class="hh-export-variant__price">{{ formatNumber(item.giaBan) }} ₫</span>
+                </label>
+              </div>
+              <div v-if="!exportGroups.length" class="hh-empty-cell">Không tìm thấy sản phẩm/phiên bản nào khớp</div>
+            </div>
+          </div>
+
+          <footer class="hh-modal__foot">
+            <button type="button" class="hh-btn hh-btn--ghost" @click="showExportModal = false">Hủy</button>
+            <button type="button" class="hh-btn hh-btn--primary" :disabled="!selectedIds.length" @click="exportCsv">
+              <i class="fa fa-download"></i> Xuất file ({{ selectedIds.length }})
+            </button>
+          </footer>
+        </div>
+      </div>
+    </teleport>
+
     <teleport to="body">
       <div v-if="toast" class="hh-toast">{{ toast }}</div>
     </teleport>
@@ -969,7 +1028,31 @@ const totalPages = computed(() => Math.ceil(groupsDaLoc.value.length / pageSize.
 const pagedGroups = computed(() => groupsDaLoc.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
 watch([searchKeyword, filters, pageSize], () => { page.value = 1 }, { deep: true })
 
-/* ════════════ CHỌN DÒNG (xuất file) ════════════ */
+const resetFilters = () => {
+  Object.keys(filters).forEach((k) => (filters[k] = ''))
+  searchKeyword.value = ''
+}
+
+/* ════════════ MODAL XUẤT FILE — chọn san pham/bien the roi moi xuat ════════════ */
+const showExportModal = ref(false)
+const exportSearch = ref('')
+
+// Mac dinh chon het (giu dung hanh vi cu: khong dong gi thi xuat toan bo) — nguoi dung
+// bo chon bot neu chi can 1 phan.
+const openExportModal = () => {
+  selectedIds.value = bienTheDaLoc.value.map(({ v }) => v.bienTheId)
+  exportSearch.value = ''
+  showExportModal.value = true
+}
+
+const exportGroups = computed(() => {
+  const q = khongDau(exportSearch.value.trim())
+  if (!q) return groupsDaLoc.value
+  return groupsDaLoc.value.filter((g) =>
+    khongDau(g.tenSanPham).includes(q) || g.variants.some((v) => khongDau(v.maSku).includes(q))
+  )
+})
+
 const isGroupChecked = (g) => g.variants.length > 0 && g.variants.every((v) => selectedIds.value.includes(v.bienTheId))
 const toggleGroupCheck = (g) => {
   const ids = g.variants.map((v) => v.bienTheId)
@@ -977,19 +1060,23 @@ const toggleGroupCheck = (g) => {
     ? selectedIds.value.filter((id) => !ids.includes(id))
     : [...new Set([...selectedIds.value, ...ids])]
 }
+const toggleVariantCheck = (id) => {
+  const i = selectedIds.value.indexOf(id)
+  if (i === -1) selectedIds.value.push(id)
+  else selectedIds.value.splice(i, 1)
+}
+const setIndeterminate = (el, g) => {
+  if (!el) return
+  const checkedCount = g.variants.filter((v) => selectedIds.value.includes(v.bienTheId)).length
+  el.indeterminate = checkedCount > 0 && checkedCount < g.variants.length
+}
 const allChecked = computed(() => bienTheDaLoc.value.length > 0 && bienTheDaLoc.value.every(({ v }) => selectedIds.value.includes(v.bienTheId)))
 const toggleAll = () => { selectedIds.value = allChecked.value ? [] : bienTheDaLoc.value.map(({ v }) => v.bienTheId) }
 
-const resetFilters = () => {
-  Object.keys(filters).forEach((k) => (filters[k] = ''))
-  searchKeyword.value = ''
-}
-
 /* ════════════ XUẤT FILE CSV ════════════ */
 const exportCsv = () => {
-  const rows = selectedIds.value.length
-    ? bienTheDaLoc.value.filter(({ v }) => selectedIds.value.includes(v.bienTheId))
-    : bienTheDaLoc.value
+  const rows = bienTheDaLoc.value.filter(({ v }) => selectedIds.value.includes(v.bienTheId))
+  showExportModal.value = false
 
   const cols = ['Mã sản phẩm', 'Barcode', 'Tên sản phẩm', 'Mã SKU', 'Màu sắc', 'CPU', 'RAM', 'Ổ cứng', 'GPU',
     'Màn hình', 'Giá vốn', 'Giá bán', 'Bảo hành (tháng)', 'Trạng thái', 'Thương hiệu', 'Nhà cung cấp']
@@ -1810,6 +1897,46 @@ const chuanBiBanSao = () => {
 }
 .hh-modal__head h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--pink-700); }
 .hh-modal__head p { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.hh-modal--hep { width: 620px; }
+
+/* Modal xuat file */
+.hh-export-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.hh-export-checkall { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink); }
+.hh-export-count { font-weight: 500; color: var(--muted); }
+.hh-export-search { width: 240px; }
+.hh-empty-cell { text-align: center; color: var(--muted); padding: 24px; font-size: 13px; }
+
+.hh-export-list {
+  margin-top: 12px; max-height: 50vh; overflow-y: auto;
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.hh-export-group { border-bottom: 1px solid var(--line); }
+.hh-export-group:last-child { border-bottom: none; }
+
+.hh-export-group__head {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  padding: 10px 12px; background: var(--pink-50);
+}
+.hh-export-group__thumb { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: #fff; border: 1px solid var(--line); }
+.hh-export-group__info { flex: 1; min-width: 0; }
+.hh-export-group__name { font-weight: 700; font-size: 13.5px; color: var(--pink-700); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hh-export-group__meta { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.hh-export-group__price { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+.hh-export-variant {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  padding: 8px 12px 8px 40px; border-top: 1px dashed var(--line); font-size: 13px;
+}
+.hh-export-variant__sku {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; font-weight: 600;
+  min-width: 110px; color: var(--ink);
+}
+.hh-export-variant__spec { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hh-export-variant__price { white-space: nowrap; color: var(--pink-600); font-weight: 600; }
+
+.hh-export-group__head input,
+.hh-export-variant input { flex-shrink: 0; accent-color: var(--pink-600); cursor: pointer; }
+.hh-export-checkall input { accent-color: var(--pink-600); cursor: pointer; }
 
 .hh-tabs { display: flex; gap: 4px; padding: 0 20px; background: var(--pink-50); border-bottom: 1px solid var(--line); }
 .hh-tab {
