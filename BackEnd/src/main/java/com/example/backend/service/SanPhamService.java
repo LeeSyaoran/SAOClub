@@ -66,15 +66,16 @@ public class SanPhamService {
     @Transactional
     public SanPhamCreatedResponse createSanPham(SanPhamRequest request) {
         String maSanPham = chuanHoa(request.getMaSanPham());
-        String barcode = chuanHoa(request.getBarcode());
-        kiemTraTrungMa(maSanPham, barcode, null);
+        kiemTraTrungMaSanPham(maSanPham, null);
+
+        // Barcode giờ thuộc về biến thể, kiểm tra trùng barcode biến thể
         String barcodeBienThe = chuanHoa(request.getBarcodeBienThe());
         kiemTraTrungBarcodeBienThe(barcodeBienThe, null);
 
         SanPham sanPham = new SanPham();
-        BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham", "barcode");
+        // Loại bỏ barcode khỏi SanPham vì đã chuyển sang bảng biến thể
+        BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham");
         sanPham.setMaSanPham(maSanPham);
-        sanPham.setBarcode(barcode);
         sanPham.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());
         // hinhAnhList (nếu FE gửi) là nguồn dữ liệu chuẩn cho ảnh đại diện — phần tử đầu
         // luôn thắng field hinhAnhChinh rời, tránh 2 giá trị lệch nhau.
@@ -109,7 +110,7 @@ public class SanPhamService {
         BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
 
         return new SanPhamCreatedResponse(saved.getSanPhamId(), saved.getMaSanPham(),
-                saved.getBarcode(), savedBt.getBienTheId(), savedBt.getMaSku());
+                savedBt.getBarcode(), savedBt.getBienTheId(), savedBt.getMaSku());
     }
 
     @Transactional
@@ -127,12 +128,10 @@ public class SanPhamService {
         String oldTrangThai = sanPham.getTrangThai();
 
         String maSanPham = chuanHoa(request.getMaSanPham());
-        String barcode = chuanHoa(request.getBarcode());
-        kiemTraTrungMa(maSanPham, barcode, sanPhamId);
+        kiemTraTrungMaSanPham(maSanPham, sanPhamId);
 
-        BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham", "barcode");
+        BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham");
         sanPham.setMaSanPham(maSanPham);
-        sanPham.setBarcode(barcode);
         if (request.getNgayTao() != null) sanPham.setNgayTao(request.getNgayTao());
         if (request.getHinhAnhList() != null && !request.getHinhAnhList().isEmpty())
             sanPham.setHinhAnhChinh(request.getHinhAnhList().get(0));
@@ -222,7 +221,7 @@ public class SanPhamService {
         sanPhamHinhAnhRepository.saveAll(rows);
     }
 
-    /** Chuỗi rỗng phải về null: hai sản phẩm cùng để barcode "" sẽ đụng unique index. */
+    /** Chuỗi rỗng phải về null. */
     private String chuanHoa(String s) {
         return (s == null || s.isBlank()) ? null : s.trim();
     }
@@ -235,23 +234,17 @@ public class SanPhamService {
         return "active".equalsIgnoreCase(trangThai) ? "active" : "inactive";
     }
 
-    /** Báo lỗi rõ ràng trước khi để SQL Server bắn unique violation khó đọc. */
-    private void kiemTraTrungMa(String maSanPham, String barcode, Integer boQuaId) {
+    /** Báo lỗi rõ ràng trước khi để SQL Server bắn unique violation cho mã sản phẩm. */
+    private void kiemTraTrungMaSanPham(String maSanPham, Integer boQuaId) {
         if (maSanPham != null) {
             boolean trung = boQuaId == null
                     ? sanPhamRepository.existsByMaSanPham(maSanPham)
                     : sanPhamRepository.existsByMaSanPhamAndSanPhamIdNot(maSanPham, boQuaId);
             if (trung) throw new IllegalArgumentException("Mã sản phẩm '" + maSanPham + "' đã được dùng");
         }
-        if (barcode != null) {
-            boolean trung = boQuaId == null
-                    ? sanPhamRepository.existsByBarcode(barcode)
-                    : sanPhamRepository.existsByBarcodeAndSanPhamIdNot(barcode, boQuaId);
-            if (trung) throw new IllegalArgumentException("Barcode '" + barcode + "' đã được dùng");
-        }
     }
 
-    /** Barcode cấp biến thể — bảng bien_the_san_pham riêng, không chung index với san_pham. */
+    /** Barcode cấp biến thể — bảng bien_the_san_pham riêng, kiểm tra trùng barcode biến thể. */
     private void kiemTraTrungBarcodeBienThe(String barcode, Integer boQuaBienTheId) {
         if (barcode == null) return;
         boolean trung = boQuaBienTheId == null

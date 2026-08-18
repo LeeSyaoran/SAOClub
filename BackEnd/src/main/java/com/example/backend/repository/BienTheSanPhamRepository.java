@@ -54,12 +54,12 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
     LEFT JOIN bt.gpu gpu
     ORDER BY sp.sanPhamId
     """,
-    countQuery = "SELECT COUNT(bt) FROM BienTheSanPham bt JOIN bt.sanPham sp")
+            countQuery = "SELECT COUNT(bt) FROM BienTheSanPham bt JOIN bt.sanPham sp")
     Page<BienTheSanPhamResponse> hienThiBienTheSanPham(Pageable pageable);
 
     List<BienTheSanPham> findBySanPham_SanPhamId(Integer sanPhamId);
 
-    // Kiểm tra trùng barcode TRƯỚC khi insert/update — cùng lý do với SanPhamRepository.
+    // Kiểm tra trùng barcode TRƯỚC khi insert/update
     boolean existsByBarcode(String barcode);
 
     boolean existsByBarcodeAndBienTheIdNot(String barcode, Integer bienTheId);

@@ -6,8 +6,6 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
 @Entity
 @Table(name = "san_pham")
 public class SanPham extends BaseEntity {
@@ -18,10 +16,7 @@ public class SanPham extends BaseEntity {
     private Integer sanPhamId;
 
     @Column(name = "ma_san_pham", length = 50, unique = true)
-    private String maSanPham; // Thêm cột Mã sản phẩm
-
-    @Column(name = "barcode", length = 100, unique = true)
-    private String barcode; // Thêm cột Barcode
+    private String maSanPham;
 
     @Column(name = "ten_san_pham", length = 200)
     private String tenSanPham;

@@ -16,21 +16,15 @@ import java.util.List;
 @Repository
 public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
 
-    // Kiểm tra trùng mã/barcode TRƯỚC khi insert để báo lỗi tiếng Việt rõ ràng, thay vì
-    // để unique index UX_san_pham_ma / UX_san_pham_barcode bắn SQLServerException khó đọc.
+    // Kiểm tra trùng mã TRƯỚC khi insert để báo lỗi tiếng Việt rõ ràng
     boolean existsByMaSanPham(String maSanPham);
 
-    boolean existsByBarcode(String barcode);
-
     boolean existsByMaSanPhamAndSanPhamIdNot(String maSanPham, Integer sanPhamId);
-
-    boolean existsByBarcodeAndSanPhamIdNot(String barcode, Integer sanPhamId);
 
     @Query(value = """
     SELECT new com.example.backend.response.SanPhamResponse(
         sp.sanPhamId,
         sp.maSanPham,
-        sp.barcode,
         bt.bienTheId,
         sp.tenSanPham,
         dm.id,
@@ -74,7 +68,6 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
     LEFT JOIN bt.gpu gpu
     WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
            OR LOWER(sp.maSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
-           OR LOWER(sp.barcode) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(bt.maSku) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(bt.barcode) LIKE LOWER(CONCAT('%', :keyword, '%')))
       AND (:danhMucId IS NULL OR dm.id = :danhMucId)
@@ -90,7 +83,6 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
     LEFT JOIN sp.thuongHieu th
     WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(sp.maSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
-           OR LOWER(sp.barcode) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(bt.maSku) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(bt.barcode) LIKE LOWER(CONCAT('%', :keyword, '%')))
       AND (:danhMucId IS NULL OR dm.id = :danhMucId)

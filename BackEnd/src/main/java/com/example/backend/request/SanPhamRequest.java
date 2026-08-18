@@ -18,15 +18,9 @@ public class SanPhamRequest {
 
     private Integer bienTheId;
 
-    // Mã nội bộ hiển thị/tra cứu trên UI (SP0001...). Để trống thì service tự sinh
-    // theo id vừa lưu, nên cột ma_san_pham không bao giờ rỗng.
+    // Mã nội bộ hiển thị/tra cứu trên UI (SP0001...). Để trống thì service tự sinh theo id vừa lưu
     @Size(max = 50, message = "Mã sản phẩm tối đa 50 ký tự")
     private String maSanPham;
-
-    // Mã vạch in trên vỏ hộp. Cho phép để trống; đã nhập thì phải là 8–13 chữ số.
-    @Pattern(regexp = "^$|^\\d{8,13}$", message = "Barcode phải gồm 8–13 chữ số")
-    @Size(max = 100, message = "Barcode tối đa 100 ký tự")
-    private String barcode;
 
     @NotBlank(message = "Tên sản phẩm không được để trống")
     private String tenSanPham;
@@ -45,7 +39,7 @@ public class SanPhamRequest {
     @NotBlank(message = "Mã SKU không được để trống")
     private String maSku;
 
-    // Mã vạch CẤP BIẾN THỂ — khác "barcode" ở trên (cấp sản phẩm). Cho phép để trống.
+    // Barcode chuẩn thuộc về BIẾN THỂ (vì sản phẩm cha không dùng barcode nữa)
     @Pattern(regexp = "^$|^\\d{8,13}$", message = "Barcode phải gồm 8–13 chữ số")
     private String barcodeBienThe;
 
@@ -78,14 +72,9 @@ public class SanPhamRequest {
     private String moTa;
     private String hinhAnhChinh;
 
-    // Danh sách toàn bộ ảnh gallery (thứ tự = thu_tu, phần tử đầu = ảnh đại diện). null =
-    // không đụng tới gallery hiện có (form sửa biến thể ở BienTheTable.vue không gửi trường
-    // này); rỗng [] = xoá hết ảnh gallery. Xem SanPhamService.luuDanhSachHinhAnh().
+    // Danh sách toàn bộ ảnh gallery
     private List<String> hinhAnhList;
 
-    // Một giá trị dùng chung cho cả SanPham lẫn BienTheSanPham (service copy sang cả hai).
-    // Bảng bien_the_san_pham chỉ nhận active/inactive nên service tự quy đổi giá trị khác về
-    // inactive trước khi lưu biến thể.
     @NotBlank(message = "Trạng thái không được để trống")
     private String trangThai;
 

@@ -54,6 +54,7 @@
 .alt-btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
 .alt-btn--ghost { background: transparent; color: var(--accent-fg); border-color: var(--border-color-strong); }
 .alt-btn--ghost:hover:not(:disabled) { background: var(--bg-hover); }
+.alt-btn--ghost.is-on { background: var(--bg-hover); border-color: var(--accent-fg); }
 .alt-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ───────── bang ───────── */

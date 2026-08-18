@@ -8,8 +8,6 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
 @Entity
 @Table(name = "bien_the_san_pham")
 public class BienTheSanPham extends BaseEntity {
@@ -26,7 +24,7 @@ public class BienTheSanPham extends BaseEntity {
     @Column(name = "ma_sku", length = 50, unique = true)
     private String maSku;
 
-    @Column(name = "barcode", length = 50)
+    @Column(name = "barcode", length = 50, unique = true) // Đã chuyển sang đây và thêm unique nếu cần
     private String barcode;
 
     @Column(name = "gia_nhap", precision = 18, scale = 0)

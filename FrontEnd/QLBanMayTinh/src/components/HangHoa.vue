@@ -1,129 +1,132 @@
 <template>
   <div class="hh">
-    <!-- ══════════════ THANH CÔNG CỤ ══════════════ -->
-    <header class="hh-bar">
-      <div class="hh-bar__left">
-        <h1 class="hh-title">Hàng hóa</h1>
+    <!-- ══════════ THANH CÔNG CỤ + BỘ LỌC — khóa trên đầu, tự ẩn khi cuộn xuống ══════════ -->
+    <div ref="stickyHeadEl" class="hh-sticky-head" :class="{ 'is-hidden': hhBarHidden }">
+      <!-- ══════════════ THANH CÔNG CỤ ══════════════ -->
+      <header class="hh-bar">
+        <div class="hh-bar__left">
+         
 
-        <div class="hh-search">
-          <i class="fa fa-search hh-search__icon"></i>
-          <input type="text" v-model="searchKeyword" placeholder="Tìm theo mã sản phẩm, tên, SKU, barcode" />
-          <button v-if="searchKeyword" class="hh-search__clear" title="Xóa tìm kiếm" @click="searchKeyword = ''">
-            <i class="fa fa-times"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="hh-bar__actions">
-        <button class="hh-btn hh-btn--ghost" :class="{ 'is-on': isFilterOpen }" @click="isFilterOpen = !isFilterOpen">
-          <i class="fa fa-filter"></i>
-          <span>Bộ lọc</span>
-          <span v-if="soBoLocDangDung" class="hh-chip">{{ soBoLocDangDung }}</span>
-          <i class="fa fa-chevron-down hh-caret" :class="{ 'is-open': isFilterOpen }"></i>
-        </button>
-
-        <button class="hh-btn hh-btn--primary" @click="openCreate">
-          <i class="fa fa-plus"></i> Tạo mới
-        </button>
-
-        <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDaLoc.length" @click="openExportModal">
-          <i class="fa fa-download"></i> Xuất file
-        </button>
-
-        <button class="hh-icon-btn" title="Tải lại dữ liệu" @click="fetchData">
-          <i class="fa fa-refresh" :class="{ 'fa-spin': isLoading }"></i>
-        </button>
-      </div>
-    </header>
-
-    <!-- ══════════════ BỘ LỌC ══════════════ -->
-    <section class="hh-filter" :class="{ 'is-open': isFilterOpen }">
-      <div class="hh-filter__panel">
-        <div class="hh-filter__grid">
-          <label class="hh-field">
-            <span>Trạng thái</span>
-            <select v-model="filters.trangThai">
-              <option value="">Tất cả</option>
-              <option v-for="t in TRANG_THAI_SAN_PHAM" :key="t.value" :value="t.value">{{ t.label }}</option>
-            </select>
-          </label>
-
-          <label class="hh-field">
-            <span>Thương hiệu</span>
-            <select v-model="filters.thuongHieuId">
-              <option value="">Tất cả</option>
-              <option v-for="th in danhSachThuongHieu" :key="idOf(th, 'thuongHieuId')" :value="idOf(th, 'thuongHieuId')">
-                {{ th.tenThuongHieu }}
-              </option>
-            </select>
-          </label>
-
-          <label class="hh-field">
-            <span>Nhà cung cấp</span>
-            <select v-model="filters.nhaCungCapId">
-              <option value="">Tất cả</option>
-              <option v-for="ncc in danhSachNhaCungCap" :key="idOf(ncc, 'nhaCungCapId')" :value="idOf(ncc, 'nhaCungCapId')">
-                {{ ncc.tenNhaCungCap }}
-              </option>
-            </select>
-          </label>
-
-          <label class="hh-field">
-            <span>Phân loại</span>
-            <select v-model="filters.phanLoai">
-              <option value="">Tất cả</option>
-              <option v-for="pl in phanLoaiOptions" :key="pl.maPhanLoai" :value="pl.maPhanLoai">{{ pl.tenPhanLoai }}</option>
-            </select>
-          </label>
-
-          <label class="hh-field">
-            <span>CPU</span>
-            <select v-model="filters.cpuId">
-              <option value="">Tất cả</option>
-              <option v-for="cpu in danhSachCpu" :key="idOf(cpu, 'cpuId')" :value="idOf(cpu, 'cpuId')">{{ cpu.tenCpu }}</option>
-            </select>
-          </label>
-
-          <label class="hh-field">
-            <span>RAM</span>
-            <select v-model="filters.ramId">
-              <option value="">Tất cả</option>
-              <option v-for="ram in danhSachRam" :key="idOf(ram, 'ramId')" :value="idOf(ram, 'ramId')">
-                {{ ram.dungLuong || ram.tenRam }}
-              </option>
-            </select>
-          </label>
-
-          <label class="hh-field">
-            <span>Màu sắc</span>
-            <select v-model="filters.mauSac">
-              <option value="">Tất cả</option>
-              <option v-for="mau in danhSachMauSac" :key="mau" :value="mau">{{ mau }}</option>
-            </select>
-          </label>
-
-          <label class="hh-field">
-            <span>Giá bán từ</span>
-            <input type="number" min="0" step="100000" v-model="filters.giaTu" placeholder="0" />
-          </label>
-
-          <label class="hh-field">
-            <span>Giá bán đến</span>
-            <input type="number" min="0" step="100000" v-model="filters.giaDen" placeholder="Không giới hạn" />
-          </label>
-        </div>
-
-        <div class="hh-filter__foot">
-          <span class="hh-filter__count">{{ groupsDaLoc.length }} sản phẩm · {{ bienTheDaLoc.length }} phiên bản</span>
-          <div class="hh-filter__btns">
-            <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters"><i class="fa fa-eraser"></i> Xóa lọc</button>
-            <button class="hh-btn hh-btn--primary hh-btn--sm" @click="isFilterOpen = false">Xong</button>
+          <div class="hh-search">
+            <i class="fa fa-search hh-search__icon"></i>
+            <input v-model="searchKeyword" type="text" placeholder="Tìm theo mã sản phẩm, tên, SKU, mã vạch" />
+            <button v-if="searchKeyword" class="hh-search__clear" title="Xóa tìm kiếm" @click="searchKeyword = ''">
+              <i class="fa fa-times"></i>
+            </button>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- ══════════════ BẢNG DỮ LIỆU ══════════════ -->
+        <div class="hh-bar__actions">
+          <button class="hh-btn hh-btn--ghost" :class="{ 'is-on': isFilterOpen }" @click="isFilterOpen = !isFilterOpen">
+            <i class="fa fa-filter"></i>
+            <span>Bộ lọc</span>
+            <span v-if="soBoLocDangDung" class="hh-chip">{{ soBoLocDangDung }}</span>
+            <i class="fa fa-chevron-down hh-caret" :class="{ 'is-open': isFilterOpen }"></i>
+          </button>
+
+          <button class="hh-btn hh-btn--primary" @click="openCreate">
+            <i class="fa fa-plus"></i> Tạo mới
+          </button>
+
+          <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDaLoc.length" @click="openExportModal">
+            <i class="fa fa-download"></i> Xuất file
+          </button>
+
+          <button class="hh-icon-btn" title="Tải lại dữ liệu" @click="fetchData">
+            <i class="fa fa-refresh" :class="{ 'fa-spin': isLoading }"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- ══════════════ BỘ LỌC ══════════════ -->
+      <section class="hh-filter" :class="{ 'is-open': isFilterOpen }">
+        <div class="hh-filter__panel">
+          <div class="hh-filter__grid">
+            <label class="hh-field">
+              <span>Trạng thái</span>
+              <select v-model="filters.trangThai">
+                <option value="">Tất cả</option>
+                <option v-for="t in TRANG_THAI_SAN_PHAM" :key="t.value" :value="t.value">{{ t.label }}</option>
+              </select>
+            </label>
+
+            <label class="hh-field">
+              <span>Thương hiệu</span>
+              <select v-model="filters.thuongHieuId">
+                <option value="">Tất cả</option>
+                <option v-for="th in danhSachThuongHieu" :key="idOf(th, 'thuongHieuId')" :value="idOf(th, 'thuongHieuId')">
+                  {{ th.tenThuongHieu }}
+                </option>
+              </select>
+            </label>
+
+            <label class="hh-field">
+              <span>Nhà cung cấp</span>
+              <select v-model="filters.nhaCungCapId">
+                <option value="">Tất cả</option>
+                <option v-for="ncc in danhSachNhaCungCap" :key="idOf(ncc, 'nhaCungCapId')" :value="idOf(ncc, 'nhaCungCapId')">
+                  {{ ncc.tenNhaCungCap }}
+                </option>
+              </select>
+            </label>
+
+            <label class="hh-field">
+              <span>Phân loại</span>
+              <select v-model="filters.phanLoai">
+                <option value="">Tất cả</option>
+                <option v-for="pl in phanLoaiOptions" :key="pl.maPhanLoai" :value="pl.maPhanLoai">{{ pl.tenPhanLoai }}</option>
+              </select>
+            </label>
+
+            <label class="hh-field">
+              <span>CPU</span>
+              <select v-model="filters.cpuId">
+                <option value="">Tất cả</option>
+                <option v-for="cpu in danhSachCpu" :key="idOf(cpu, 'cpuId')" :value="idOf(cpu, 'cpuId')">{{ cpu.tenCpu }}</option>
+              </select>
+            </label>
+
+            <label class="hh-field">
+              <span>RAM</span>
+              <select v-model="filters.ramId">
+                <option value="">Tất cả</option>
+                <option v-for="ram in danhSachRam" :key="idOf(ram, 'ramId')" :value="idOf(ram, 'ramId')">
+                  {{ ram.dungLuong || ram.tenRam }}
+                </option>
+              </select>
+            </label>
+
+            <label class="hh-field">
+              <span>Màu sắc</span>
+              <select v-model="filters.mauSac">
+                <option value="">Tất cả</option>
+                <option v-for="mau in danhSachMauSac" :key="mau" :value="mau">{{ mau }}</option>
+              </select>
+            </label>
+
+            <label class="hh-field">
+              <span>Giá bán từ</span>
+              <input v-model="filters.giaTu" type="number" min="0" step="100000" placeholder="0" />
+            </label>
+
+            <label class="hh-field">
+              <span>Giá bán đến</span>
+              <input v-model="filters.giaDen" type="number" min="0" step="100000" placeholder="Không giới hạn" />
+            </label>
+          </div>
+
+          <div class="hh-filter__foot">
+            <span class="hh-filter__count">{{ groupsDaLoc.length }} sản phẩm · {{ bienTheDaLoc.length }} phiên bản</span>
+            <div class="hh-filter__btns">
+              <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters"><i class="fa fa-eraser"></i> Xóa lọc</button>
+              <button class="hh-btn hh-btn--primary hh-btn--sm" @click="isFilterOpen = false">Xong</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ══════════════ BẢNG DỮ LIỆU — bấm vào dòng để xem chi tiết ══════════════ -->
     <section class="hh-card">
       <p v-if="loadError" class="hh-alert">
         {{ loadError }}
@@ -134,47 +137,48 @@
         <table class="hh-table">
           <thead>
             <tr>
-              <th>Mã sản phẩm</th>
-              <th>Tên sản phẩm</th>
+              <th class="hh-col-ma">Mã sản phẩm</th>
+              <th class="hh-col-ten">Tên sản phẩm</th>
               <th class="ta-r">Giá bán</th>
               <th class="ta-r">Giá vốn</th>
+              <th class="ta-c">Tồn kho</th>
               <th>Trạng thái</th>
               <th>Ngày tạo</th>
               <th>Ngày cập nhật</th>
-              <th></th>
+              <th class="hh-col-go"></th>
             </tr>
           </thead>
 
-          <tbody v-for="group in pagedGroups" :key="group.sanPhamId">
-            <!-- ---- Dòng sản phẩm — chỉ xem nhanh, xem/sửa biến thể qua "Chi tiết" ---- -->
-            <tr class="hh-row-group">
-              <td>
-                <div class="hh-code">
-                  <span class="hh-code__main">{{ group.maSanPham }}</span>
-                  <span v-if="group.barcode" class="hh-code__sub"><i class="fa fa-barcode"></i> {{ group.barcode }}</span>
-                </div>
+          <tbody>
+            <tr
+              v-for="group in pagedGroups" :key="group.sanPhamId"
+              class="hh-row" tabindex="0"
+              :title="'Xem chi tiết ' + group.tenSanPham"
+              @click="moChiTiet(group)" @keydown.enter.prevent="moChiTiet(group)"
+            >
+              <td class="hh-td-ma">
+                <span class="hh-code__main">{{ group.maSanPham }}</span>
               </td>
-              <td>
+              <td class="hh-td-ten">
                 <div class="hh-name">
                   <img :src="group.hinhAnh" class="hh-thumb" alt="" @error="onImgError" />
-                  <div>
+                  <div class="hh-name__text">
                     <div class="hh-name__main">{{ group.tenSanPham }}</div>
                     <div class="hh-name__sub">
-                      {{ group.tenThuongHieu }}<template v-if="group.variants.length"> · {{ group.variants.length }} phiên bản</template>
+                      {{ group.tenThuongHieu || '—' }}<template v-if="group.variants.length"> · {{ group.variants.length }} phiên bản</template>
                     </div>
                   </div>
                 </div>
               </td>
-              <td class="ta-r">{{ group.khoangGia }}</td>
-              <td class="ta-r hh-muted">{{ group.khoangGiaVon }}</td>
-              <td><span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span></td>
-              <td class="hh-muted">{{ formatDate(group.ngayTao) }}</td>
-              <td class="hh-muted">{{ formatDate(group.ngayCapNhat) }}</td>
-              <td>
-                <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="xemChiTietDayDu(group.sanPhamId)">
-                  <i class="fa fa-arrow-up-right-from-square"></i> Chi tiết
-                </button>
+              <td class="ta-r hh-td-gia">{{ group.khoangGia }}</td>
+              <td class="ta-r hh-td-gia hh-muted">{{ group.khoangGiaVon }}</td>
+              <td class="ta-c">
+                <span class="hh-ton" :class="{ 'is-het': group.tonKho === 0 }">{{ group.tonKho }}</span>
               </td>
+              <td><span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span></td>
+              <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayTao) }}</td>
+              <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayCapNhat) }}</td>
+              <td class="hh-col-go"><i class="fa fa-angle-right"></i></td>
             </tr>
           </tbody>
         </table>
@@ -207,19 +211,216 @@
       </footer>
     </section>
 
+    <!-- ══════════════ MODAL CHI TIẾT SẢN PHẨM ══════════════ -->
+    <teleport to="body">
+      <div v-if="showDetail && chiTiet" class="hh-modal-mask" @click.self="dongChiTiet">
+        <div class="hh-modal hh-modal--rong" role="dialog" aria-modal="true">
+          <header class="hh-modal__head">
+            <div class="hh-head-main">
+              <h2>{{ chiTiet.tenSanPham }}</h2>
+              <p>
+                <span class="hh-tag hh-tag--soft">{{ chiTiet.maSanPham }}</span>
+                <span class="hh-head-path">
+                  Nhóm hàng: {{ chiTiet.tenDanhMuc || 'Chưa phân nhóm' }} » {{ chiTiet.tenThuongHieu || 'Chưa có thương hiệu' }}
+                </span>
+              </p>
+            </div>
+            <button class="hh-icon-btn" aria-label="Đóng" @click="dongChiTiet"><i class="fa fa-times"></i></button>
+          </header>
+
+          <nav class="hh-tabs">
+            <button class="hh-tab" :class="{ 'is-on': tabCT === 'info' }" @click="tabCT = 'info'">Thông tin</button>
+            <button class="hh-tab" :class="{ 'is-on': tabCT === 'bienthe' }" @click="tabCT = 'bienthe'">
+              Biến thể <span class="hh-chip">{{ chiTiet.variants.length }}</span>
+            </button>
+            <button class="hh-tab" :class="{ 'is-on': tabCT === 'lichsu' }" @click="tabCT = 'lichsu'">
+              Lịch sử thay đổi <span v-if="lichSuHienTai.length" class="hh-chip">{{ lichSuHienTai.length }}</span>
+            </button>
+          </nav>
+
+          <div class="hh-modal__body">
+            <!-- ─────────── CHI TIẾT · THÔNG TIN ─────────── -->
+            <div v-show="tabCT === 'info'" class="hh-pane">
+              <div class="hh-ct-top">
+                <div class="hh-ct-media">
+                  <img :src="anhDangXem" class="hh-ct-media__main" alt="" @error="onImgError" />
+                  <div v-if="anhSanPham.length > 1" class="hh-ct-media__strip">
+                    <button
+                      v-for="(a, i) in anhSanPham" :key="i" type="button"
+                      class="hh-ct-media__thumb" :class="{ 'is-on': a === anhDangXem }" @click="anhDangXem = a"
+                    >
+                      <img :src="a" alt="" @error="onImgError" />
+                    </button>
+                  </div>
+                </div>
+
+                <div class="hh-ct-main">
+                  <div class="hh-ct-tags">
+                    <span class="hh-tag" :class="tagClass(chiTiet.trangThai)">{{ nhanTrangThai(chiTiet.trangThai) }}</span>
+                    <span class="hh-tag hh-tag--soft">{{ nhanLoaiSanPham(chiTiet.loaiSanPham) }}</span>
+                    <span v-for="ma in chiTiet.phanLoai" :key="ma" class="hh-tag hh-tag--outline">{{ tenTheoMaPhanLoai(ma) }}</span>
+                  </div>
+
+                  <dl class="hh-ct-grid">
+                    <div class="hh-ct-item"><dt>Mã sản phẩm</dt><dd>{{ chiTiet.maSanPham }}</dd></div>
+                    <div class="hh-ct-item"><dt>Số phiên bản</dt><dd>{{ chiTiet.variants.length }}</dd></div>
+                    <div class="hh-ct-item"><dt>Tồn kho</dt><dd>{{ chiTiet.tonKho }}</dd></div>
+                    <div class="hh-ct-item"><dt>Khách đặt</dt><dd>{{ chiTiet.khachDat }}</dd></div>
+                    <div class="hh-ct-item"><dt>Giá vốn</dt><dd>{{ chiTiet.khoangGiaVon }} ₫</dd></div>
+                    <div class="hh-ct-item"><dt>Giá bán</dt><dd class="hh-ct-item__manh">{{ chiTiet.khoangGia }} ₫</dd></div>
+                    <div class="hh-ct-item"><dt>Thương hiệu</dt><dd>{{ chiTiet.tenThuongHieu || 'Chưa có' }}</dd></div>
+                    <div class="hh-ct-item"><dt>Nhà cung cấp</dt><dd>{{ chiTiet.tenNhaCungCap || 'Chưa có' }}</dd></div>
+                    <div class="hh-ct-item"><dt>Danh mục</dt><dd>{{ chiTiet.tenDanhMuc || 'Chưa có' }}</dd></div>
+                    <div class="hh-ct-item"><dt>Bảo hành</dt><dd>{{ chiTiet.baoHanh }}</dd></div>
+                    <div class="hh-ct-item"><dt>Ngày tạo</dt><dd>{{ formatDate(chiTiet.ngayTao) }}</dd></div>
+                    <div class="hh-ct-item"><dt>Ngày cập nhật</dt><dd>{{ formatDate(chiTiet.ngayCapNhat) }}</dd></div>
+                  </dl>
+                </div>
+              </div>
+
+              <section class="hh-ct-block">
+                <h3>Thông số chung</h3>
+                <dl class="hh-ct-grid">
+                  <div class="hh-ct-item"><dt>Màn hình</dt><dd>{{ chiTiet.thongSo.kichThuocManHinh || 'Chưa có' }}</dd></div>
+                  <div class="hh-ct-item"><dt>Hệ điều hành</dt><dd>{{ chiTiet.thongSo.heDieuHanh || 'Chưa có' }}</dd></div>
+                  <div class="hh-ct-item"><dt>Pin</dt><dd>{{ chiTiet.thongSo.pin || 'Chưa có' }}</dd></div>
+                  <div class="hh-ct-item"><dt>Trọng lượng</dt><dd>{{ chiTiet.thongSo.trongLuongKg ? chiTiet.thongSo.trongLuongKg + ' kg' : 'Chưa có' }}</dd></div>
+                </dl>
+              </section>
+
+              <section class="hh-ct-block">
+                <h3>Mô tả</h3>
+                <div v-if="chiTiet.moTa" class="hh-ct-mota" v-html="chiTiet.moTa"></div>
+                <p v-else class="hh-muted">Chưa có mô tả. Bấm “Chỉnh sửa” để bổ sung.</p>
+              </section>
+            </div>
+
+            <!-- ─────────── CHI TIẾT · BIẾN THỂ ─────────── -->
+            <div v-show="tabCT === 'bienthe'" class="hh-pane">
+              <p class="hh-note hh-note--plain">
+                <i class="fa fa-hand-o-up"></i>
+                Bấm vào một dòng để chọn phiên bản, các nút thao tác nằm ở cuối cửa sổ.
+              </p>
+
+              <div class="hh-vt-wrap">
+                <table class="hh-vt">
+                  <thead>
+                    <tr>
+                      <th>Mã SKU</th>
+                      <th>Mã vạch</th>
+                      <th>Cấu hình</th>
+                      <th class="ta-r">Giá vốn</th>
+                      <th class="ta-r">Giá bán</th>
+                      <th class="ta-c">Tồn</th>
+                      <th>Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="v in chiTiet.variants" :key="v.bienTheId"
+                      class="hh-vt__row" :class="{ 'is-on': String(v.bienTheId) === String(bienTheChonId) }"
+                      @click="bienTheChonId = v.bienTheId"
+                    >
+                      <td class="hh-vt__sku">{{ v.maSku }}</td>
+                      <td class="hh-vt__barcode">
+                        <template v-if="v.barcode"><i class="fa fa-barcode"></i> {{ v.barcode }}</template>
+                        <span v-else class="hh-muted">Chưa có</span>
+                      </td>
+                      <td class="hh-vt__cfg">{{ moTaBienThe(v) || 'Phiên bản tiêu chuẩn' }}</td>
+                      <td class="ta-r hh-muted">{{ formatNumber(v.giaVon) }}</td>
+                      <td class="ta-r hh-vt__gia">{{ formatNumber(v.giaBan) }}</td>
+                      <td class="ta-c"><span class="hh-ton" :class="{ 'is-het': v.tonKho === 0 }">{{ v.tonKho }}</span></td>
+                      <td><span class="hh-tag" :class="tagClass(v.trangThai)">{{ nhanTrangThai(v.trangThai) }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- ─────────── CHI TIẾT · LỊCH SỬ THAY ĐỔI ─────────── -->
+            <div v-show="tabCT === 'lichsu'" class="hh-pane">
+              <ol v-if="lichSuHienTai.length" class="hh-ls">
+                <li v-for="(m, i) in lichSuHienTai" :key="i" class="hh-ls__item">
+                  <span class="hh-ls__dot" :class="'is-' + m.loai"></span>
+                  <div class="hh-ls__body">
+                    <div class="hh-ls__head">
+                      <strong>{{ m.hanhDong }}</strong>
+                      <span class="hh-muted">{{ formatDate(m.thoiGian) }}</span>
+                    </div>
+                    <div v-if="m.doiTuong" class="hh-ls__target">{{ m.doiTuong }}</div>
+                    <ul v-if="m.thayDoi && m.thayDoi.length" class="hh-ls__changes">
+                      <li v-for="(t, j) in m.thayDoi" :key="j">
+                        <span class="hh-ls__field">{{ t.truong }}</span>
+                        <em>{{ t.cu || '—' }}</em>
+                        <i class="fa fa-long-arrow-right"></i>
+                        <b>{{ t.moi || '—' }}</b>
+                      </li>
+                    </ul>
+                    <div class="hh-ls__by">Người thực hiện: {{ m.nguoiDung }}</div>
+                  </div>
+                </li>
+              </ol>
+
+              <div v-else class="hh-empty">
+                <i class="fa fa-history"></i>
+                <p>Chưa ghi nhận thay đổi nào cho sản phẩm này.</p>
+              </div>
+            </div>
+          </div>
+
+          <footer class="hh-modal__foot">
+            <div class="hh-modal__foot-left">
+              <button class="hh-btn hh-btn--ghost" @click="dongChiTiet">Đóng</button>
+              <button v-if="tabCT === 'bienthe'" class="hh-btn hh-btn--ghost" @click="themPhienBan(chiTiet)">
+                <i class="fa fa-plus"></i> Thêm phiên bản
+              </button>
+            </div>
+
+            <div class="hh-modal__foot-right">
+              <template v-if="tabCT === 'info'">
+                <button class="hh-btn hh-btn--soft" @click="saoChepSanPham(chiTiet)"><i class="fa fa-clone"></i> Sao chép</button>
+                <button class="hh-btn hh-btn--primary" @click="suaSanPham(chiTiet)"><i class="fa fa-pencil"></i> Chỉnh sửa</button>
+              </template>
+
+              <template v-else-if="tabCT === 'bienthe'">
+                <span v-if="bienTheDangChon" class="hh-foot-hint">Đang chọn: <b>{{ bienTheDangChon.maSku }}</b></span>
+                <span v-else class="hh-foot-hint">Chọn một phiên bản để thao tác</span>
+                <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDangChon" @click="inTemMa(bienTheDangChon)">
+                  <i class="fa fa-barcode"></i> In tem mã
+                </button>
+                <button class="hh-btn hh-btn--soft" :disabled="!bienTheDangChon" @click="saoChepBienThe(bienTheDangChon)">
+                  <i class="fa fa-clone"></i> Sao chép
+                </button>
+                <button class="hh-btn hh-btn--primary" :disabled="!bienTheDangChon" @click="suaBienThe(bienTheDangChon)">
+                  <i class="fa fa-pencil"></i> Chỉnh sửa
+                </button>
+              </template>
+
+              <template v-else>
+                <span class="hh-foot-hint">Nhật ký ghi lại mỗi lần lưu thành công trên máy này.</span>
+                <button class="hh-btn hh-btn--ghost" :disabled="!lichSuHienTai.length" @click="xoaLichSu">
+                  <i class="fa fa-eraser"></i> Xóa nhật ký
+                </button>
+              </template>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </teleport>
+
     <!-- ══════════════ MODAL THÊM / SỬA ══════════════ -->
     <teleport to="body">
       <div v-if="showModal" class="hh-modal-mask" @click.self="closeModal">
         <div class="hh-modal" role="dialog" aria-modal="true">
           <header class="hh-modal__head">
-            <div>
+            <div class="hh-head-main">
               <h2>{{ tieuDeModal }}</h2>
               <p>
                 <span class="hh-tag hh-tag--soft">{{ form.maSanPham || 'Chưa có mã' }}</span>
-                <span v-if="form.tenSanPham"> · {{ form.tenSanPham }}</span>
+                <span v-if="form.tenSanPham" class="hh-head-path">{{ form.tenSanPham }}</span>
               </p>
             </div>
-            <button class="hh-icon-btn" @click="closeModal" aria-label="Đóng"><i class="fa fa-times"></i></button>
+            <button class="hh-icon-btn" aria-label="Đóng" @click="closeModal"><i class="fa fa-times"></i></button>
           </header>
 
           <nav class="hh-tabs">
@@ -241,13 +442,7 @@
                   <label class="hh-field">
                     <span>Mã sản phẩm</span>
                     <input v-model.trim="form.maSanPham" disabled />
-                    <em v-if="errors.maSanPham" class="hh-err">{{ errors.maSanPham }}</em>
-                  </label>
-
-                  <label class="hh-field">
-                    <span>Barcode</span>
-                    <input v-model.trim="form.barcode" disabled />
-                    <em v-if="errors.barcode" class="hh-err">{{ errors.barcode }}</em>
+                    <em class="hh-hint">Hệ thống tự sinh, không sửa tay. Mã vạch nằm ở từng phiên bản.</em>
                   </label>
 
                   <label class="hh-field hh-field--wide">
@@ -310,7 +505,9 @@
                         v-for="pl in phanLoaiOptions" :key="pl.phanLoaiId" type="button"
                         class="hh-chip-toggle" :class="{ 'is-on': form.phanLoaiIds.includes(pl.phanLoaiId) }"
                         @click="togglePhanLoai(pl.phanLoaiId)"
-                      >{{ tenPhanLoai(pl.phanLoaiId) }}</button>
+                      >
+                        {{ tenPhanLoai(pl.phanLoaiId) }}
+                      </button>
                     </div>
                   </div>
 
@@ -349,7 +546,7 @@
 
             <!-- ─────────── TAB 2: PHIÊN BẢN ─────────── -->
             <div v-show="tab === 'bienthe'" class="hh-pane">
-              <!-- Sửa 1 phiên bản -->
+              <!-- Sửa một phiên bản -->
               <fieldset v-if="modalMode === 'edit'" class="hh-block">
                 <legend>Phiên bản đang sửa</legend>
                 <div class="hh-grid">
@@ -359,11 +556,21 @@
                     <em v-if="errors.maSku" class="hh-err">{{ errors.maSku }}</em>
                   </label>
                   <label class="hh-field">
+                    <span>Mã vạch</span>
+                    <div class="hh-inline">
+                      <input v-model.trim="form.barcode" placeholder="8–13 chữ số" />
+                      <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" title="Sinh mã vạch EAN-13" @click="form.barcode = sinhBarcode(barcodeDaDung)">
+                        <i class="fa fa-refresh"></i>
+                      </button>
+                    </div>
+                    <em v-if="errors.barcode" class="hh-err">{{ errors.barcode }}</em>
+                  </label>
+                  <label class="hh-field">
                     <span>Màu sắc</span>
-                    <select v-model="form.mauSac">
-                      <option value="">-- Chọn màu --</option>
-                      <option v-for="m in optMauSac" :key="m" :value="m">{{ m }}</option>
-                    </select>
+                    <input v-model.trim="form.mauSac" list="dl-mau-sua" placeholder="VD: Đen" />
+                    <datalist id="dl-mau-sua">
+                      <option v-for="m in optMauSac" :key="m" :value="m"></option>
+                    </datalist>
                   </label>
                   <label class="hh-field">
                     <span>CPU</span>
@@ -397,12 +604,12 @@
                   </label>
                   <label class="hh-field">
                     <span>Giá nhập (₫) <b>*</b></span>
-                    <input type="number" min="0" step="1000" v-model="form.giaNhap" />
+                    <input v-model="form.giaNhap" type="number" min="0" step="1000" />
                     <em v-if="errors.giaNhap" class="hh-err">{{ errors.giaNhap }}</em>
                   </label>
                   <label class="hh-field">
                     <span>Giá bán (₫) <b>*</b></span>
-                    <input type="number" min="0" step="1000" v-model="form.giaBan" />
+                    <input v-model="form.giaBan" type="number" min="0" step="1000" />
                     <em v-if="errors.giaBan" class="hh-err">{{ errors.giaBan }}</em>
                   </label>
                 </div>
@@ -411,47 +618,45 @@
               <!-- Sinh nhiều phiên bản -->
               <template v-else>
                 <fieldset class="hh-block">
-                  <legend>Bước 1 · Chọn thuộc tính để tạo nhiều phiên bản cùng lúc</legend>
+                  <legend>Bước 1 · Thuộc tính để ghép ra phiên bản</legend>
                   <p class="hh-note hh-note--plain">
-                    Chọn nhiều giá trị cho mỗi thuộc tính, hệ thống ghép chúng lại thành các phiên bản bên dưới.
-                    Không chọn gì thì sản phẩm chỉ có một phiên bản duy nhất.
+                    Gõ hoặc chọn gợi ý rồi <b>nhấn Enter</b> để thêm thành thẻ. Mỗi thuộc tính thêm được nhiều giá trị,
+                    hệ thống tự ghép thành danh sách phiên bản bên dưới. Không thêm gì thì sản phẩm chỉ có một phiên bản.
                   </p>
 
                   <div class="hh-grid">
                     <div class="hh-field">
                       <span>Màu sắc</span>
-                      <div class="hh-inline">
-                        <select v-model="chon.mauSac">
-                          <option value="">-- Chọn màu --</option>
-                          <option v-for="m in optMauSac" :key="m" :value="m">{{ m }}</option>
-                        </select>
-                        <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" :disabled="!chon.mauSac" @click="themMau()">
-                          <i class="fa fa-plus"></i>
-                        </button>
-                      </div>
+                      <input
+                        v-model="chon.mauSac" class="hh-combo" list="dl-mau"
+                        placeholder="Gõ màu rồi nhấn Enter"
+                        @keydown.enter.prevent="themMau()" @change="themMau(true)"
+                      />
+                      <datalist id="dl-mau">
+                        <option v-for="m in optMauSac" :key="m" :value="m"></option>
+                      </datalist>
                       <div v-if="form.mauSacList.length" class="hh-tags">
                         <span v-for="m in form.mauSacList" :key="m" class="hh-tag-pill">
                           {{ m }}
-                          <button type="button" @click="xoaMau(m)" aria-label="Bỏ màu">&times;</button>
+                          <button type="button" aria-label="Bỏ màu" @click="xoaMau(m)">&times;</button>
                         </span>
                       </div>
                     </div>
 
                     <div v-for="attr in thuocTinhTron" :key="attr.field" class="hh-field">
                       <span>{{ attr.label }}</span>
-                      <div class="hh-inline">
-                        <select v-model="chon[attr.field]">
-                          <option value="">-- Chọn {{ attr.label.toLowerCase() }} --</option>
-                          <option v-for="o in attr.options()" :key="o.id" :value="o.id">{{ o.ten }}</option>
-                        </select>
-                        <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" :disabled="!chon[attr.field]" @click="themThuocTinh(attr.field)">
-                          <i class="fa fa-plus"></i>
-                        </button>
-                      </div>
+                      <input
+                        v-model="chon[attr.field]" class="hh-combo" :list="'dl-' + attr.field"
+                        :placeholder="'Gõ ' + attr.label.toLowerCase() + ' rồi nhấn Enter'"
+                        @keydown.enter.prevent="themThuocTinh(attr.field)" @change="themThuocTinh(attr.field, true)"
+                      />
+                      <datalist :id="'dl-' + attr.field">
+                        <option v-for="o in attr.options()" :key="o.id" :value="o.ten"></option>
+                      </datalist>
                       <div v-if="form[attr.field].length" class="hh-tags">
                         <span v-for="id in form[attr.field]" :key="id" class="hh-tag-pill">
                           {{ attr.ten(id) }}
-                          <button type="button" @click="xoaThuocTinh(attr.field, id)" aria-label="Bỏ giá trị">&times;</button>
+                          <button type="button" aria-label="Bỏ giá trị" @click="xoaThuocTinh(attr.field, id)">&times;</button>
                         </span>
                       </div>
                     </div>
@@ -459,7 +664,7 @@
                 </fieldset>
 
                 <fieldset class="hh-block">
-                  <legend>Bước 2 · Thông số &amp; giá mặc định — áp dụng cho mọi phiên bản</legend>
+                  <legend>Bước 2 · Thông số chung cho mọi phiên bản</legend>
                   <div class="hh-grid">
                     <label class="hh-field">
                       <span>Màn hình</span>
@@ -484,44 +689,29 @@
                     </label>
                     <label class="hh-field">
                       <span>Trọng lượng (kg)</span>
-                      <input type="number" step="0.01" min="0" v-model="form.trongLuongKg" placeholder="VD: 1.70" />
+                      <input v-model="form.trongLuongKg" type="number" step="0.01" min="0" placeholder="VD: 1.70" />
                     </label>
                     <label class="hh-field">
                       <span>Bảo hành (tháng) <b>*</b></span>
-                      <input type="number" min="0" step="1" v-model="form.baoHanhThang" />
+                      <input v-model="form.baoHanhThang" type="number" min="0" step="1" />
                       <em v-if="errors.baoHanhThang" class="hh-err">{{ errors.baoHanhThang }}</em>
-                    </label>
-                    <label class="hh-field">
-                      <span>Giá nhập mặc định (₫) <b>*</b></span>
-                      <input type="number" min="0" step="1000" v-model="form.giaNhap" />
-                      <em v-if="errors.giaNhap" class="hh-err">{{ errors.giaNhap }}</em>
-                    </label>
-                    <label class="hh-field">
-                      <span>Giá bán mặc định (₫) <b>*</b></span>
-                      <input type="number" min="0" step="1000" v-model="form.giaBan" />
-                      <em v-if="errors.giaBan" class="hh-err">{{ errors.giaBan }}</em>
                     </label>
                     <label class="hh-field">
                       <span>Tiền tố mã SKU</span>
                       <input v-model.trim="form.skuPrefix" placeholder="Để trống sẽ lấy theo mã sản phẩm" />
                     </label>
                   </div>
+                  <p class="hh-note">
+                    <i class="fa fa-info-circle"></i>
+                    Giá vốn và giá bán đặt sau — mở chi tiết sản phẩm, chọn phiên bản rồi bấm “Chỉnh sửa”, hoặc để phiếu nhập kho ghi giá vốn.
+                  </p>
                 </fieldset>
 
                 <fieldset class="hh-block">
                   <legend>
-                    Bước 3 · Danh sách phiên bản sẽ tạo — sửa trực tiếp SKU/mã vạch/giá từng dòng nếu cần
+                    Bước 3 · Danh sách phiên bản sẽ tạo
                     <span class="hh-chip">{{ bienTheRows.length }}</span>
                   </legend>
-
-                  <div class="hh-inline hh-mb8">
-                    <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" @click="dungLaiMaTran">
-                      <i class="fa fa-refresh"></i> Dựng lại danh sách
-                    </button>
-                    <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" @click="apGiaChoTatCa">
-                      <i class="fa fa-money"></i> Áp giá mặc định cho tất cả
-                    </button>
-                  </div>
 
                   <em v-if="errors.bienThe" class="hh-err hh-mb8">{{ errors.bienThe }}</em>
 
@@ -529,31 +719,27 @@
                     <table class="hh-matrix">
                       <thead>
                         <tr>
-                          <th>#</th>
+                          <th class="hh-matrix__stt">#</th>
                           <th>Mã SKU</th>
                           <th>Mã vạch</th>
                           <th>Cấu hình</th>
-                          <th class="ta-r">Giá nhập</th>
-                          <th class="ta-r">Giá bán</th>
                           <th></th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr v-for="(row, i) in bienTheRows" :key="row.key">
-                          <td class="hh-muted">{{ i + 1 }}</td>
+                          <td class="hh-muted hh-matrix__stt">{{ i + 1 }}</td>
                           <td><input v-model.trim="row.maSku" class="hh-cell hh-cell--sku" /></td>
-                          <td><input v-model.trim="row.barcode" class="hh-cell hh-cell--sku" placeholder="8–13 số" /></td>
+                          <td><input v-model.trim="row.barcode" class="hh-cell hh-cell--ma" placeholder="8–13 số" /></td>
                           <td class="hh-matrix__cfg">{{ moTaCauHinh(row) || 'Phiên bản tiêu chuẩn' }}</td>
-                          <td><input type="number" min="0" step="1000" v-model="row.giaNhap" class="hh-cell ta-r" /></td>
-                          <td><input type="number" min="0" step="1000" v-model="row.giaBan" class="hh-cell ta-r" /></td>
-                          <td>
+                          <td class="ta-c">
                             <button type="button" class="hh-icon-btn" title="Bỏ phiên bản này" @click="xoaDong(row.key)">
                               <i class="fa fa-times"></i>
                             </button>
                           </td>
                         </tr>
                         <tr v-if="!bienTheRows.length">
-                          <td colspan="7" class="hh-matrix__empty">Chưa có phiên bản nào — bấm “Dựng lại danh sách”.</td>
+                          <td colspan="5" class="hh-matrix__empty">Chưa có phiên bản nào — thêm thuộc tính ở Bước 1.</td>
                         </tr>
                       </tbody>
                     </table>
@@ -592,15 +778,19 @@
           </div>
 
           <footer class="hh-modal__foot">
-            <button type="button" class="hh-btn hh-btn--ghost" @click="closeModal">Bỏ qua</button>
-            <button
-              type="button" class="hh-btn hh-btn--primary"
-              :disabled="isSaving || !formHopLe" :title="!formHopLe ? 'Điền đủ các ô bắt buộc (*) để lưu' : ''"
-              @click="submitForm"
-            >
-              <i class="fa" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
-              {{ isSaving ? 'Đang lưu…' : 'Lưu' }}
-            </button>
+            <div class="hh-modal__foot-left">
+              <button type="button" class="hh-btn hh-btn--ghost" @click="closeModal">Bỏ qua</button>
+            </div>
+            <div class="hh-modal__foot-right">
+              <button
+                type="button" class="hh-btn hh-btn--primary"
+                :disabled="isSaving || !formHopLe" :title="!formHopLe ? 'Điền đủ các ô bắt buộc (*) để lưu' : ''"
+                @click="submitForm"
+              >
+                <i class="fa" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                {{ isSaving ? 'Đang lưu…' : 'Lưu' }}
+              </button>
+            </div>
           </footer>
         </div>
       </div>
@@ -611,11 +801,11 @@
       <div v-if="showExportModal" class="hh-modal-mask" @click.self="showExportModal = false">
         <div class="hh-modal hh-modal--hep" role="dialog" aria-modal="true">
           <header class="hh-modal__head">
-            <div>
+            <div class="hh-head-main">
               <h2>Xuất file</h2>
-              <p>Chọn sản phẩm / phiên bản muốn xuất</p>
+              <p><span class="hh-head-path">Chọn sản phẩm / phiên bản muốn xuất</span></p>
             </div>
-            <button class="hh-icon-btn" @click="showExportModal = false" aria-label="Đóng"><i class="fa fa-times"></i></button>
+            <button class="hh-icon-btn" aria-label="Đóng" @click="showExportModal = false"><i class="fa fa-times"></i></button>
           </header>
 
           <div class="hh-modal__body">
@@ -627,7 +817,7 @@
               </label>
               <div class="hh-search hh-export-search">
                 <i class="fa fa-search hh-search__icon"></i>
-                <input type="text" v-model="exportSearch" placeholder="Tìm sản phẩm, SKU..." />
+                <input v-model="exportSearch" type="text" placeholder="Tìm sản phẩm, SKU..." />
               </div>
             </div>
 
@@ -635,9 +825,9 @@
               <div v-for="group in exportGroups" :key="group.sanPhamId" class="hh-export-group">
                 <label class="hh-export-group__head">
                   <input
+                    :ref="(el) => setIndeterminate(el, group)"
                     type="checkbox"
                     :checked="isGroupChecked(group)"
-                    :ref="(el) => setIndeterminate(el, group)"
                     @change="toggleGroupCheck(group)"
                   />
                   <img :src="group.hinhAnh" class="hh-export-group__thumb" alt="" @error="onImgError" />
@@ -659,10 +849,14 @@
           </div>
 
           <footer class="hh-modal__foot">
-            <button type="button" class="hh-btn hh-btn--ghost" @click="showExportModal = false">Hủy</button>
-            <button type="button" class="hh-btn hh-btn--primary" :disabled="!selectedIds.length" @click="exportCsv">
-              <i class="fa fa-download"></i> Xuất file ({{ selectedIds.length }})
-            </button>
+            <div class="hh-modal__foot-left">
+              <button type="button" class="hh-btn hh-btn--ghost" @click="showExportModal = false">Hủy</button>
+            </div>
+            <div class="hh-modal__foot-right">
+              <button type="button" class="hh-btn hh-btn--primary" :disabled="!selectedIds.length" @click="exportCsv">
+                <i class="fa fa-download"></i> Xuất file ({{ selectedIds.length }})
+              </button>
+            </div>
           </footer>
         </div>
       </div>
@@ -676,8 +870,8 @@
 
 <script setup>
 import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
 
+import { useAutoHideOnScroll } from '@/composables/useAutoHideOnScroll.js'
 import { get, put } from '@/services/api.js'
 import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '@/services/DmService.js'
 import * as bienTheApi from '@/services/bienTheSanPhamService.js'
@@ -765,12 +959,29 @@ const formatDate = (v) => {
     : d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 const nhanTrangThai = (tt) => ({ active: 'Đang bán', inactive: 'Tạm ngừng', ngung_kinh_doanh: 'Ngừng KD' }[tt] || tt || '—')
+const nhanLoaiSanPham = (l) => LOAI_SAN_PHAM.find((x) => x.value === l)?.label || l || '—'
 const tagClass = (tt) => (tt === 'active' ? 'hh-tag--ok' : 'hh-tag--off')
 const onImgError = (e) => { e.target.src = ANH_MAC_DINH }
 const khongDau = (s) =>
   String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase()
 const vietTat = (s, n = 4) => khongDau(s).replace(/[^a-z0-9]/g, '').toUpperCase().slice(0, n)
 const tenOCung = (oc) => oc?.loaiOCung || oc?.loaiOcung || oc?.ten || ''
+const chuThuong = (s) => String(s || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+
+/* ─── Mã vạch EAN-13: chữ số kiểm tra + bộ sinh mã ─── */
+const chuSoKiemTra = (base12) => {
+  let tong = 0
+  for (let i = 0; i < 12; i++) tong += Number(base12[i] || 0) * (i % 2 === 0 ? 1 : 3)
+  return String((10 - (tong % 10)) % 10)
+}
+const sinhBarcode = (daDung = new Set()) => {
+  for (let i = 0; i < 60; i++) {
+    const base = '893' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0')
+    const ma = base + chuSoKiemTra(base)
+    if (!daDung.has(ma)) { daDung.add(ma); return ma }
+  }
+  return ''
+}
 
 /* ─── Trạng thái màn hình ─── */
 const isLoading = ref(false)
@@ -790,6 +1001,11 @@ const danhSachPhanLoai = ref([])
 
 const searchKeyword = ref('')
 const isFilterOpen = ref(false)
+
+// Thanh cong cu + bo loc dinh sticky tren dau trang, tu an khi cuon xuong / hien lai
+// khi cuon len — chi khoa phan tren, phan duoi (bang du lieu) van cuon binh thuong.
+const stickyHeadEl = ref(null)
+const { hidden: hhBarHidden } = useAutoHideOnScroll(stickyHeadEl)
 const filters = reactive({
   trangThai: '', thuongHieuId: '', nhaCungCapId: '', phanLoai: '',
   cpuId: '', ramId: '', mauSac: '', giaTu: '', giaDen: ''
@@ -873,9 +1089,11 @@ const mapOCung = computed(() => lapMap(danhSachOCung.value, 'oCungId', ['loaiOCu
 const mapGpu = computed(() => lapMap(danhSachGpu.value, 'gpuId', ['tenGpu', 'ten']))
 const mapThuongHieu = computed(() => lapMap(danhSachThuongHieu.value, 'thuongHieuId', ['tenThuongHieu']))
 const mapNhaCungCap = computed(() => lapMap(danhSachNhaCungCap.value, 'nhaCungCapId', ['tenNhaCungCap']))
+const mapDanhMuc = computed(() => lapMap(danhSachDanhMuc.value, 'danhMucId', ['tenDanhMuc']))
 const tra = (map, id) => (id == null || id === '' ? '' : map.get(String(id)) || '')
 
 const phanLoaiOptions = computed(() => (danhSachPhanLoai.value.length ? danhSachPhanLoai.value : PHAN_LOAI_DU_PHONG))
+const tenTheoMaPhanLoai = (ma) => phanLoaiOptions.value.find((p) => p.maPhanLoai === ma)?.tenPhanLoai || ma
 
 /* ════════════ CHUẨN HÓA + GOM NHÓM ════════════ */
 
@@ -903,6 +1121,8 @@ const bienTheChuan = computed(() =>
       bienTheId: idOf(raw, 'bienTheId'),
       sanPhamId,
       maSku: raw.maSku || '—',
+      // Mã vạch nay thuộc về TỪNG PHIÊN BẢN (bien_the_san_pham.barcode), không còn ở san_pham.
+      barcode: raw.barcode || raw.barcodeBienThe || '',
       mauSac: raw.mauSac || '',
       giaBan: Number(raw.giaBan || 0),
       giaVon: Number(raw.giaNhap ?? raw.giaVon ?? 0),
@@ -926,6 +1146,9 @@ const bienTheChuan = computed(() =>
   })
 )
 
+const barcodeDaDung = computed(() => new Set(bienTheChuan.value.map((v) => v.barcode).filter(Boolean)))
+const moTaBienThe = (v) => [v.mauSac, v.tenCpu, v.tenRam, v.tenOCung, v.tenGpu].filter(Boolean).join(' · ')
+
 const khoangGia = (ds) => {
   if (!ds.length) return '—'
   const min = Math.min(...ds)
@@ -947,7 +1170,6 @@ const groups = computed(() => {
         sanPhamId: key,
         maSanPham: maHienThi(sp, key),
         coMaThat: !!sp.maSanPham,
-        barcode: sp.barcode || '',
         tenSanPham: sp.tenSanPham || 'Sản phẩm chưa đặt tên',
         moTa: sp.moTa || '',
         hinhAnh: sp.hinhAnhChinh || ANH_MAC_DINH,
@@ -960,6 +1182,7 @@ const groups = computed(() => {
         ngayCapNhat: sp.ngayCapNhat,
         tenThuongHieu: sp.tenThuongHieu || tra(mapThuongHieu.value, sp.thuongHieuId),
         tenNhaCungCap: sp.tenNhaCungCap || tra(mapNhaCungCap.value, sp.nhaCungCapId),
+        tenDanhMuc: sp.tenDanhMuc || tra(mapDanhMuc.value, sp.danhMucId),
         variants: []
       })
     }
@@ -968,12 +1191,23 @@ const groups = computed(() => {
   })
 
   return [...map.values()].map((g) => {
-    const tags = g.variants[0]?.phanLoaiTags
+    const dau = g.variants[0] || {}
+    const tags = dau.phanLoaiTags
+    const soThang = [...new Set(g.variants.map((v) => v.baoHanhThang).filter((x) => x != null))]
     return {
       ...g,
       phanLoai: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
       khoangGia: khoangGia(g.variants.map((v) => v.giaBan)),
-      khoangGiaVon: khoangGia(g.variants.map((v) => v.giaVon))
+      khoangGiaVon: khoangGia(g.variants.map((v) => v.giaVon)),
+      tonKho: g.variants.reduce((s, v) => s + v.tonKho, 0),
+      khachDat: g.variants.reduce((s, v) => s + v.khachDat, 0),
+      baoHanh: soThang.length ? soThang.join(' / ') + ' tháng' : 'Chưa có',
+      thongSo: {
+        kichThuocManHinh: dau.kichThuocManHinh,
+        heDieuHanh: dau.heDieuHanh,
+        pin: dau.pin,
+        trongLuongKg: dau.trongLuongKg
+      }
     }
   })
 })
@@ -985,7 +1219,7 @@ const coBoLoc = computed(() => !!searchKeyword.value || soBoLocDangDung.value > 
 const khopTuKhoa = (group, v) => {
   const kw = khongDau(searchKeyword.value.trim())
   if (!kw) return true
-  return [group.maSanPham, group.barcode, group.tenSanPham, v.maSku, v.mauSac, v.tenCpu].some((f) => khongDau(f).includes(kw))
+  return [group.maSanPham, group.tenSanPham, v.maSku, v.barcode, v.mauSac, v.tenCpu].some((f) => khongDau(f).includes(kw))
 }
 
 const khopBoLoc = (group, v) => {
@@ -1019,12 +1253,10 @@ const resetFilters = () => {
   searchKeyword.value = ''
 }
 
-/* ════════════ MODAL XUẤT FILE — chọn san pham/bien the roi moi xuat ════════════ */
+/* ════════════ MODAL XUẤT FILE ════════════ */
 const showExportModal = ref(false)
 const exportSearch = ref('')
 
-// Mac dinh chon het (giu dung hanh vi cu: khong dong gi thi xuat toan bo) — nguoi dung
-// bo chon bot neu chi can 1 phan.
 const openExportModal = () => {
   selectedIds.value = bienTheDaLoc.value.map(({ v }) => v.bienTheId)
   exportSearch.value = ''
@@ -1059,19 +1291,18 @@ const setIndeterminate = (el, g) => {
 const allChecked = computed(() => bienTheDaLoc.value.length > 0 && bienTheDaLoc.value.every(({ v }) => selectedIds.value.includes(v.bienTheId)))
 const toggleAll = () => { selectedIds.value = allChecked.value ? [] : bienTheDaLoc.value.map(({ v }) => v.bienTheId) }
 
-/* ════════════ XUẤT FILE CSV ════════════ */
 const exportCsv = () => {
   const rows = bienTheDaLoc.value.filter(({ v }) => selectedIds.value.includes(v.bienTheId))
   showExportModal.value = false
 
-  const cols = ['Mã sản phẩm', 'Barcode', 'Tên sản phẩm', 'Mã SKU', 'Màu sắc', 'CPU', 'RAM', 'Ổ cứng', 'GPU',
-    'Màn hình', 'Giá vốn', 'Giá bán', 'Bảo hành (tháng)', 'Trạng thái', 'Thương hiệu', 'Nhà cung cấp']
+  const cols = ['Mã sản phẩm', 'Tên sản phẩm', 'Mã SKU', 'Mã vạch', 'Màu sắc', 'CPU', 'RAM', 'Ổ cứng', 'GPU',
+    'Màn hình', 'Giá vốn', 'Giá bán', 'Tồn kho', 'Bảo hành (tháng)', 'Trạng thái', 'Thương hiệu', 'Nhà cung cấp']
   const esc = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`
   const lines = [cols.map(esc).join(',')]
 
   rows.forEach(({ g, v }) => {
-    lines.push([g.maSanPham, g.barcode, g.tenSanPham, v.maSku, v.mauSac, v.tenCpu, v.tenRam, v.tenOCung, v.tenGpu,
-      v.kichThuocManHinh, v.giaVon, v.giaBan, v.baoHanhThang,
+    lines.push([g.maSanPham, g.tenSanPham, v.maSku, v.barcode, v.mauSac, v.tenCpu, v.tenRam, v.tenOCung, v.tenGpu,
+      v.kichThuocManHinh, v.giaVon, v.giaBan, v.tonKho, v.baoHanhThang,
       nhanTrangThai(v.trangThai), g.tenThuongHieu, g.tenNhaCungCap].map(esc).join(','))
   })
 
@@ -1086,6 +1317,130 @@ const exportCsv = () => {
 }
 
 /* ════════════════════════════════════════════════════════════
+ *              NHẬT KÝ THAY ĐỔI (tab "Lịch sử thay đổi")
+ * CSDL chưa có bảng lịch sử cho hàng hóa, nên nhật ký lưu ở localStorage của
+ * máy đang dùng: mỗi lần LƯU THÀNH CÔNG mới ghi một dòng. Khi backend có bảng
+ * riêng, chỉ cần thay 2 hàm docNhatKy/ghiNhatKy bằng lời gọi API là xong.
+ * ══════════════════════════════════════════════════════════ */
+const KHOA_NHAT_KY = 'saophone_nhatky_hang_hoa'
+const docNhatKy = () => {
+  try { return JSON.parse(localStorage.getItem(KHOA_NHAT_KY) || '{}') } catch { return {} }
+}
+const nhatKy = ref(docNhatKy())
+
+const nguoiDangDangNhap = () => {
+  try {
+    const j = JSON.parse(sessionStorage.getItem('saophone_session') || '{}')
+    return j?.hoTen || j?.username || j?.user?.username || 'không rõ'
+  } catch { return 'không rõ' }
+}
+
+const ghiNhatKy = (sanPhamId, muc) => {
+  if (!sanPhamId) return
+  const key = String(sanPhamId)
+  const kho = { ...nhatKy.value }
+  kho[key] = [{ thoiGian: new Date().toISOString(), nguoiDung: nguoiDangDangNhap(), ...muc }, ...(kho[key] || [])].slice(0, 50)
+  nhatKy.value = kho
+  try { localStorage.setItem(KHOA_NHAT_KY, JSON.stringify(kho)) } catch (e) { console.warn('[Hàng hóa] không ghi được nhật ký:', e) }
+}
+
+/* ════════════════════════════════════════════════════════════
+ *                    MODAL CHI TIẾT SẢN PHẨM
+ * ══════════════════════════════════════════════════════════ */
+const showDetail = ref(false)
+const tabCT = ref('info')
+const chiTietId = ref(null)
+const bienTheChonId = ref(null)
+const anhDangXem = ref('')
+
+/* Lấy thẳng từ groups nên sau mỗi lần lưu + fetchData, cửa sổ chi tiết tự cập nhật */
+const chiTiet = computed(() => groups.value.find((g) => String(g.sanPhamId) === String(chiTietId.value)) || null)
+const anhSanPham = computed(() => {
+  if (!chiTiet.value) return []
+  const ds = [chiTiet.value.hinhAnh, ...chiTiet.value.variants.map((v) => v.hinhAnh)].filter(Boolean)
+  return [...new Set(ds)]
+})
+const bienTheDangChon = computed(() =>
+  chiTiet.value?.variants.find((v) => String(v.bienTheId) === String(bienTheChonId.value)) || null
+)
+const lichSuHienTai = computed(() => (chiTiet.value ? nhatKy.value[String(chiTiet.value.sanPhamId)] || [] : []))
+
+const moChiTiet = (group) => {
+  chiTietId.value = group.sanPhamId
+  bienTheChonId.value = group.variants[0]?.bienTheId ?? null
+  anhDangXem.value = group.hinhAnh || ANH_MAC_DINH
+  tabCT.value = 'info'
+  showDetail.value = true
+}
+const dongChiTiet = () => { showDetail.value = false }
+
+const xoaLichSu = () => {
+  if (!chiTiet.value) return
+  const kho = { ...nhatKy.value }
+  delete kho[String(chiTiet.value.sanPhamId)]
+  nhatKy.value = kho
+  try { localStorage.setItem(KHOA_NHAT_KY, JSON.stringify(kho)) } catch { /* bỏ qua */ }
+  hienToast('Đã xóa nhật ký của sản phẩm này')
+}
+
+/* ─── In tem mã: vẽ mã vạch EAN-13 bằng SVG rồi mở cửa sổ in ─── */
+const EAN_L = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011']
+const EAN_G = ['0100111', '0110011', '0011011', '0100001', '0011101', '0111001', '0000101', '0010001', '0001001', '0010111']
+const EAN_R = ['1110010', '1100110', '1101100', '1000010', '1011100', '1001110', '1010000', '1000100', '1001000', '1110100']
+const EAN_PARITY = ['LLLLLL', 'LLGLGG', 'LLGGLG', 'LLGGGL', 'LGLLGG', 'LGGLLG', 'LGGGLL', 'LGLGLG', 'LGLGGL', 'LGGLGL']
+
+const veMaVach = (ma) => {
+  const s = String(ma || '')
+  if (!/^\d{13}$/.test(s)) return ''
+  const parity = EAN_PARITY[Number(s[0])]
+  let bits = '101'
+  for (let i = 1; i <= 6; i++) bits += (parity[i - 1] === 'L' ? EAN_L : EAN_G)[Number(s[i])]
+  bits += '01010'
+  for (let i = 7; i <= 12; i++) bits += EAN_R[Number(s[i])]
+  bits += '101'
+
+  const w = 2
+  const h = 56
+  let rects = ''
+  for (let i = 0; i < bits.length; i++) if (bits[i] === '1') rects += `<rect x="${i * w}" y="0" width="${w}" height="${h}"/>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${bits.length * w}" height="${h}" viewBox="0 0 ${bits.length * w} ${h}" fill="#000">${rects}</svg>`
+}
+
+const thoat = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+const inTemMa = (v) => {
+  if (!v || !chiTiet.value) return
+  const g = chiTiet.value
+  const svg = veMaVach(v.barcode)
+  const cua = window.open('', '_blank', 'width=460,height=600')
+  if (!cua) { hienToast('Trình duyệt đang chặn cửa sổ in — cho phép pop-up rồi thử lại'); return }
+
+  cua.document.write(`<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8" />
+    <title>Tem ${thoat(v.maSku)}</title>
+    <style>
+      *{box-sizing:border-box} body{margin:0;padding:16px;font-family:"Segoe UI",Roboto,Arial,sans-serif;color:#111}
+      .tem{width:58mm;border:1px dashed #bbb;border-radius:6px;padding:8px 10px;text-align:center}
+      .ten{font-size:11px;font-weight:700;line-height:1.3;margin-bottom:2px;word-break:break-word}
+      .cfg{font-size:9px;color:#555;line-height:1.3;margin-bottom:4px;word-break:break-word}
+      .sku{font-size:9px;font-family:ui-monospace,Menlo,monospace;margin-bottom:4px}
+      .so{font-size:11px;font-family:ui-monospace,Menlo,monospace;letter-spacing:2px;margin-top:2px}
+      .gia{font-size:13px;font-weight:700;margin-top:4px}
+      @media print{ body{padding:0} .tem{border:none} }
+    </style></head><body>
+    <div class="tem">
+      <div class="ten">${thoat(g.tenSanPham)}</div>
+      <div class="cfg">${thoat(moTaBienThe(v) || 'Phiên bản tiêu chuẩn')}</div>
+      <div class="sku">SKU: ${thoat(v.maSku)}</div>
+      ${svg || '<div class="cfg">Phiên bản này chưa có mã vạch EAN-13</div>'}
+      <div class="so">${thoat(v.barcode || '')}</div>
+      <div class="gia">${formatNumber(v.giaBan)} đ</div>
+    </div></body></html>`)
+  cua.document.close()
+  cua.focus()
+  setTimeout(() => cua.print(), 350)
+}
+
+/* ════════════════════════════════════════════════════════════
  *                    MODAL THÊM / SỬA
  * ══════════════════════════════════════════════════════════ */
 const showModal = ref(false)
@@ -1097,6 +1452,7 @@ const errors = reactive({})
 const moTaEl = ref(null)
 const dangTaiAnh = ref(false)
 const ghiChuAnh = ref('Ảnh tải lên sẽ được lưu về server; nếu backend chưa có API upload, hệ thống dùng đường dẫn /images/<tên file>. Ảnh đầu tiên trong danh sách là ảnh đại diện.')
+const moLaiChiTiet = ref(null) // sanPhamId cần mở lại cửa sổ chi tiết sau khi lưu
 
 const tabs = [
   { key: 'info', label: 'Thông tin' },
@@ -1107,8 +1463,8 @@ const tabs = [
 const formRong = () => ({
   sanPhamId: null,
   bienTheId: null,
-  // san_pham
-  maSanPham: '', barcode: '', tenSanPham: '',
+  // san_pham (không còn barcode ở cấp sản phẩm)
+  maSanPham: '', tenSanPham: '',
   thuongHieuId: '', danhMucId: '', nhaCungCapId: '',
   loaiSanPham: 'LAPTOP', trangThaiSanPham: 'active',
   moTa: '', hinhAnhList: [], phanLoaiIds: [], phanLoaiTags: '', phanLoaiTen: '',
@@ -1119,7 +1475,7 @@ const formRong = () => ({
   // thuộc tính trộn ra phiên bản
   mauSacList: [], ramIds: [], cpuIds: [], oCungIds: [], gpuIds: [],
   // chỉ dùng khi sửa 1 phiên bản
-  maSku: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '', hinhAnhBienThe: ''
+  maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '', hinhAnhBienThe: ''
 })
 
 const form = reactive(formRong())
@@ -1152,7 +1508,7 @@ const optPin = computed(() => gopGoiY('pin', PIN_GOI_Y))
 const optHeDieuHanh = computed(() => gopGoiY('heDieuHanh', HDH_GOI_Y))
 const optMauSac = computed(() => gopGoiY('mauSac', MAU_SAC_GOI_Y))
 
-/* ─── Thuộc tính dùng để trộn ─── */
+/* ─── Thuộc tính dùng để trộn — gõ rồi Enter là ra thẻ ─── */
 const thuocTinhTron = [
   {
     field: 'cpuIds', label: 'CPU',
@@ -1176,16 +1532,35 @@ const thuocTinhTron = [
   }
 ]
 
-const themThuocTinh = (field) => {
-  const val = chon[field]
-  if (val !== '' && !form[field].includes(val)) form[field].push(val)
+/** Thêm giá trị đang gõ vào danh sách thẻ.
+ *  imLang = true khi gọi từ sự kiện change (người dùng bấm chọn trong gợi ý hoặc rời ô)
+ *  — chỉ nhận giá trị khớp chính xác, không báo lỗi để khỏi làm phiền khi gõ dở. */
+const themThuocTinh = (field, imLang = false) => {
+  const attr = thuocTinhTron.find((a) => a.field === field)
+  if (!attr) return
+  const raw = String(chon[field] || '').trim()
+  if (!raw) return
+
+  const ds = attr.options().filter((o) => o.id != null && o.ten)
+  const chinhXac = ds.find((o) => khongDau(o.ten) === khongDau(raw))
+  const gan = chinhXac || (imLang ? null : ds.find((o) => khongDau(o.ten).includes(khongDau(raw))))
+
+  if (!gan) {
+    if (!imLang) hienToast(`Không có ${attr.label} nào tên “${raw}” — chọn trong danh sách gợi ý`)
+    return
+  }
+  if (!form[field].includes(gan.id)) form[field].push(gan.id)
   chon[field] = ''
 }
 const xoaThuocTinh = (field, id) => { form[field] = form[field].filter((x) => x !== id) }
 
-const themMau = () => {
-  const v = chon.mauSac.trim()
-  if (v && !form.mauSacList.includes(v)) form.mauSacList.push(v)
+const themMau = (imLang = false) => {
+  const raw = String(chon.mauSac || '').trim()
+  if (!raw) return
+  // Màu là chữ tự do (CSDL không có bảng màu) — gõ gì nhận nấy, chỉ chuẩn hóa nếu trùng gợi ý
+  const chuan = optMauSac.value.find((m) => khongDau(m) === khongDau(raw)) || raw
+  if (imLang && !optMauSac.value.some((m) => khongDau(m) === khongDau(raw))) return
+  if (!form.mauSacList.includes(chuan)) form.mauSacList.push(chuan)
   chon.mauSac = ''
 }
 const xoaMau = (m) => { form.mauSacList = form.mauSacList.filter((x) => x !== m) }
@@ -1193,6 +1568,8 @@ const xoaMau = (m) => { form.mauSacList = form.mauSacList.filter((x) => x !== m)
 /* ─── Phân loại (chọn nhiều bằng chip bật/tắt) ─── */
 const tenPhanLoai = (id) => phanLoaiOptions.value.find((p) => String(p.phanLoaiId) === String(id))?.tenPhanLoai || id
 const maPhanLoai = (id) => phanLoaiOptions.value.find((p) => String(p.phanLoaiId) === String(id))?.maPhanLoai || ''
+const idPhanLoaiTuMa = (dsMa = []) =>
+  dsMa.map((ma) => phanLoaiOptions.value.find((p) => p.maPhanLoai === ma)?.phanLoaiId).filter((x) => x != null)
 const togglePhanLoai = (id) => {
   form.phanLoaiIds = form.phanLoaiIds.includes(id)
     ? form.phanLoaiIds.filter((x) => x !== id)
@@ -1279,21 +1656,12 @@ watch([showModal, tab], async () => {
   if (moTaEl.value && moTaEl.value.innerHTML !== form.moTa) moTaEl.value.innerHTML = form.moTa || ''
 })
 
-/* ─── Sinh mã sản phẩm / barcode (2 ô này giờ chỉ đọc, không cho gõ tay) ─── */
+/* ─── Sinh mã sản phẩm (ô này chỉ đọc, không cho gõ tay) ─── */
 const sinhMaSanPham = () => {
   const so = danhSachSanPham.value
     .map((p) => Number(String(p.maSanPham || '').replace(/\D/g, '')))
     .filter((n) => !Number.isNaN(n) && n > 0)
   return 'SP' + String((so.length ? Math.max(...so) : 0) + 1).padStart(4, '0')
-}
-
-const sinhBarcode = () => {
-  const daCo = new Set(danhSachSanPham.value.map((p) => p.barcode).filter(Boolean))
-  let ma
-  do {
-    ma = '893' + String(Math.floor(Math.random() * 1e10)).padStart(10, '0')
-  } while (daCo.has(ma))
-  return ma
 }
 
 /* ─── Ma trận phiên bản ─── */
@@ -1315,8 +1683,18 @@ const sinhSku = (c, index) => {
   return [prefix, ...phan].join('-') || `${prefix}-${index + 1}`
 }
 
+/** SKU phải là duy nhất toàn hệ thống — nếu trùng thì thêm hậu tố -2, -3…
+ *  (hay gặp khi bấm "Sao chép" một phiên bản: cấu hình giống hệt nên SKU sinh ra y như cũ) */
+const skuKhongTrung = (goc, daDung) => {
+  let ma = goc
+  let i = 2
+  while (daDung.has(ma)) { ma = `${goc}-${i}`; i++ }
+  daDung.add(ma)
+  return ma
+}
+
 /** Trộn các thuộc tính đã chọn thành danh sách phiên bản.
- *  Giữ nguyên SKU/giá mà người dùng đã sửa tay (khớp theo khóa cấu hình). */
+ *  Giữ nguyên SKU/mã vạch mà người dùng đã sửa tay (khớp theo khóa cấu hình). */
 const dungLaiMaTran = () => {
   const chieu = [
     form.mauSacList.length ? form.mauSacList.map((m) => ({ mauSac: m })) : [{ mauSac: '' }],
@@ -1334,9 +1712,14 @@ const dungLaiMaTran = () => {
   }
 
   const cu = new Map(bienTheRows.value.map((r) => [r.key, r]))
+  const skuDaDung = new Set(bienTheChuan.value.map((v) => v.maSku).filter((s) => s && s !== '—'))
+  const barcodeDangDung = new Set(barcodeDaDung.value)
+
   bienTheRows.value = tohop.map((c, i) => {
     const key = khoaDong(c)
     const truoc = cu.get(key)
+    const sku = truoc?.maSku || skuKhongTrung(sinhSku(c, i), skuDaDung)
+    if (truoc?.barcode) barcodeDangDung.add(truoc.barcode)
     return {
       key,
       mauSac: c.mauSac,
@@ -1344,10 +1727,8 @@ const dungLaiMaTran = () => {
       ramId: c.ramId,
       oCungId: c.oCungId,
       gpuId: c.gpuId,
-      maSku: truoc?.maSku || sinhSku(c, i),
-      barcode: truoc?.barcode || '',
-      giaNhap: truoc?.giaNhap ?? form.giaNhap,
-      giaBan: truoc?.giaBan ?? form.giaBan
+      maSku: sku,
+      barcode: truoc?.barcode || sinhBarcode(barcodeDangDung)
     }
   })
 
@@ -1355,13 +1736,8 @@ const dungLaiMaTran = () => {
 }
 
 const xoaDong = (key) => { bienTheRows.value = bienTheRows.value.filter((r) => r.key !== key) }
-const apGiaChoTatCa = () => {
-  bienTheRows.value.forEach((r) => {
-    r.giaNhap = form.giaNhap
-    r.giaBan = form.giaBan
-  })
-}
 
+/* Danh sách phiên bản tự dựng lại mỗi khi thuộc tính đổi — không cần bấm nút nào */
 watch(
   () => [form.mauSacList.slice(), form.cpuIds.slice(), form.ramIds.slice(), form.oCungIds.slice(), form.gpuIds.slice()],
   () => { if (showModal.value && modalMode.value !== 'edit') dungLaiMaTran() },
@@ -1379,87 +1755,227 @@ const resetForm = (patch = {}) => {
   if (moTaEl.value) moTaEl.value.innerHTML = form.moTa || ''
 }
 
+/** Phần thông tin sản phẩm chính dùng chung cho sửa / sao chép / thêm phiên bản */
+const duLieuSanPham = (g) => ({
+  tenSanPham: g.tenSanPham,
+  thuongHieuId: g.thuongHieuId ?? '',
+  danhMucId: g.danhMucId ?? '',
+  nhaCungCapId: g.nhaCungCapId ?? '',
+  loaiSanPham: g.loaiSanPham || 'LAPTOP',
+  trangThaiSanPham: g.trangThai === 'inactive' ? 'inactive' : 'active',
+  moTa: g.moTa || '',
+  hinhAnhList: g.hinhAnh && g.hinhAnh !== ANH_MAC_DINH ? [g.hinhAnh] : [],
+  phanLoaiIds: idPhanLoaiTuMa(g.phanLoai)
+})
+
+/** Thông số chung lấy theo một phiên bản cụ thể */
+const duLieuThongSo = (v = {}) => ({
+  baoHanhThang: v.baoHanhThang ?? 24,
+  kichThuocManHinh: v.kichThuocManHinh || '',
+  heDieuHanh: v.heDieuHanh || 'Windows 11 Home',
+  pin: v.pin || '',
+  trongLuongKg: v.trongLuongKg ?? ''
+})
+
 const openCreate = () => {
-  resetForm({ maSanPham: sinhMaSanPham(), barcode: sinhBarcode() })
+  moLaiChiTiet.value = null
+  resetForm({ maSanPham: sinhMaSanPham() })
   modalMode.value = 'create'
+  showDetail.value = false
   showModal.value = true
   dungLaiMaTran()
 }
 
-// Mo trang chi tiet san pham (route /admin/san-pham/:id) ngay trong tab hien tai.
-const router = useRouter()
-const xemChiTietDayDu = (sanPhamId) => {
-  router.push(`/admin/san-pham/${sanPhamId}`);
-};
+/* ─── Ảnh chụp form để so sánh trước/sau khi sửa (dựng ra tab Lịch sử thay đổi) ─── */
+let banGoc = null
+const anhChupForm = () => ({
+  'Tên sản phẩm': form.tenSanPham,
+  'Thương hiệu': tra(mapThuongHieu.value, form.thuongHieuId),
+  'Danh mục': tra(mapDanhMuc.value, form.danhMucId),
+  'Nhà cung cấp': tra(mapNhaCungCap.value, form.nhaCungCapId),
+  'Loại sản phẩm': nhanLoaiSanPham(form.loaiSanPham),
+  'Trạng thái': nhanTrangThai(form.trangThaiSanPham),
+  'Phân loại': form.phanLoaiTen,
+  'Ảnh chính': form.hinhAnhList[0] || '',
+  'Mô tả': chuThuong(form.moTa).slice(0, 60),
+  'Mã SKU': form.maSku,
+  'Mã vạch': form.barcode,
+  'Màu sắc': form.mauSac,
+  CPU: tra(mapCpu.value, form.cpuId),
+  RAM: tra(mapRam.value, form.ramId),
+  'Ổ cứng': tra(mapOCung.value, form.oCungId),
+  GPU: tra(mapGpu.value, form.gpuId),
+  'Màn hình': form.kichThuocManHinh,
+  'Hệ điều hành': form.heDieuHanh,
+  Pin: form.pin,
+  'Trọng lượng (kg)': form.trongLuongKg,
+  'Bảo hành (tháng)': form.baoHanhThang,
+  'Giá nhập': formatNumber(form.giaNhap),
+  'Giá bán': formatNumber(form.giaBan)
+})
+const soSanhAnhChup = (cu, moi) =>
+  Object.keys(moi)
+    .filter((k) => String(cu?.[k] ?? '') !== String(moi[k] ?? ''))
+    .map((k) => ({ truong: k, cu: cu?.[k], moi: moi[k] }))
 
+const openEdit = (g, v) => {
+  if (!g || !v) return
+  moLaiChiTiet.value = g.sanPhamId
+  resetForm({
+    sanPhamId: g.sanPhamId,
+    bienTheId: v.bienTheId,
+    maSanPham: g.maSanPham,
+    ...duLieuSanPham(g),
+    ...duLieuThongSo(v),
+    maSku: v.maSku === '—' ? '' : v.maSku,
+    barcode: v.barcode || '',
+    mauSac: v.mauSac || '',
+    cpuId: v.cpuId ?? '',
+    ramId: v.ramId ?? '',
+    oCungId: v.oCungId ?? '',
+    gpuId: v.gpuId ?? '',
+    hinhAnhBienThe: v.hinhAnh || '',
+    giaNhap: v.giaVon,
+    giaBan: v.giaBan
+  })
+  modalMode.value = 'edit'
+  banGoc = anhChupForm()
+  showDetail.value = false
+  showModal.value = true
+}
+
+const suaSanPham = (g) => openEdit(g, g.variants[0])
+const suaBienThe = (v) => openEdit(chiTiet.value, v)
+
+const themPhienBan = (g) => {
+  if (!g) return
+  moLaiChiTiet.value = g.sanPhamId
+  resetForm({
+    sanPhamId: g.sanPhamId,
+    maSanPham: g.maSanPham,
+    ...duLieuSanPham(g),
+    ...duLieuThongSo(g.variants[0])
+  })
+  modalMode.value = 'variant'
+  tab.value = 'bienthe'
+  showDetail.value = false
+  showModal.value = true
+  dungLaiMaTran()
+}
+
+/** Sao chép một phiên bản: giữ nguyên cấu hình, chỉ sinh SKU + mã vạch mới */
+const saoChepBienThe = (v) => {
+  const g = chiTiet.value
+  if (!g || !v) return
+  moLaiChiTiet.value = g.sanPhamId
+  resetForm({
+    sanPhamId: g.sanPhamId,
+    maSanPham: g.maSanPham,
+    ...duLieuSanPham(g),
+    ...duLieuThongSo(v),
+    mauSacList: v.mauSac ? [v.mauSac] : [],
+    cpuIds: v.cpuId ? [v.cpuId] : [],
+    ramIds: v.ramId ? [v.ramId] : [],
+    oCungIds: v.oCungId ? [v.oCungId] : [],
+    gpuIds: v.gpuId ? [v.gpuId] : []
+  })
+  modalMode.value = 'variant'
+  tab.value = 'bienthe'
+  showDetail.value = false
+  showModal.value = true
+  dungLaiMaTran()
+  hienToast('Đã nhân bản cấu hình — kiểm tra SKU/mã vạch rồi bấm Lưu')
+}
+
+/** Sao chép cả sản phẩm: tạo sản phẩm mới với đủ thuộc tính của các phiên bản cũ */
+const saoChepSanPham = (g) => {
+  if (!g) return
+  const v0 = g.variants[0] || {}
+  moLaiChiTiet.value = null
+  resetForm({
+    maSanPham: sinhMaSanPham(),
+    ...duLieuSanPham(g),
+    ...duLieuThongSo(v0),
+    tenSanPham: `${g.tenSanPham} (bản sao)`,
+    mauSacList: [...new Set(g.variants.map((v) => v.mauSac).filter(Boolean))],
+    cpuIds: [...new Set(g.variants.map((v) => v.cpuId).filter(Boolean))],
+    ramIds: [...new Set(g.variants.map((v) => v.ramId).filter(Boolean))],
+    oCungIds: [...new Set(g.variants.map((v) => v.oCungId).filter(Boolean))],
+    gpuIds: [...new Set(g.variants.map((v) => v.gpuId).filter(Boolean))]
+  })
+  modalMode.value = 'create'
+  showDetail.value = false
+  showModal.value = true
+  dungLaiMaTran()
+  hienToast('Đã sao chép — đổi tên sản phẩm rồi bấm Lưu')
+}
 
 const closeModal = () => {
   showModal.value = false
   resetForm()
 }
 
-/* ─── Form đã đủ điều kiện lưu chưa (chỉ soi điều kiện, không set lỗi) — dùng để bật/tắt
- *  nút Lưu; mô tả không nằm trong điều kiện vì cho phép để trống. ─── */
+/* ─── Form đã đủ điều kiện lưu chưa (chỉ soi điều kiện, không set lỗi) ─── */
 const formHopLe = computed(() => {
   const coCoBan = !!(form.tenSanPham && form.maSanPham && form.thuongHieuId && form.danhMucId)
-  const nhap = Number(form.giaNhap)
-  const ban = Number(form.giaBan)
-  const coGia = nhap >= 0 && ban >= 0 && ban >= nhap * 0.5
   const coBaoHanh = Number(form.baoHanhThang) >= 0
-  const coBienThe = () => bienTheRows.value.length > 0 &&
-    bienTheRows.value.every((r) => r.maSku && Number(r.giaBan) >= Number(r.giaNhap) * 0.5)
+  const coBienThe = bienTheRows.value.length > 0 && bienTheRows.value.every((r) => r.maSku)
 
-  if (modalMode.value === 'edit') return coCoBan && coGia && coBaoHanh && !!form.maSku
-  if (modalMode.value === 'variant') return coGia && coBaoHanh && coBienThe()
-  return coCoBan && coGia && coBaoHanh && coBienThe()
+  if (modalMode.value === 'edit') {
+    const nhap = Number(form.giaNhap)
+    const ban = Number(form.giaBan)
+    return coCoBan && coBaoHanh && !!form.maSku && nhap >= 0 && ban >= 0 && ban >= nhap * 0.5
+  }
+  if (modalMode.value === 'variant') return coBaoHanh && coBienThe
+  return coCoBan && coBaoHanh && coBienThe
 })
 
 /* ─── Kiểm tra trước khi gửi ─── */
+const laMaVachHopLe = (ma) => /^\d{8,13}$/.test(ma)
+
 const validate = () => {
   Object.keys(errors).forEach((k) => delete errors[k])
   const laVariant = modalMode.value === 'variant'
-  const skuDaCo = new Set(bienTheChuan.value.filter((v) => String(v.bienTheId) !== String(form.bienTheId)).map((v) => v.maSku))
+  const khacBienThe = (v) => String(v.bienTheId) !== String(form.bienTheId)
+  const skuDaCo = new Set(bienTheChuan.value.filter(khacBienThe).map((v) => v.maSku))
+  const barcodeDaCo = new Set(bienTheChuan.value.filter(khacBienThe).map((v) => v.barcode).filter(Boolean))
 
   if (!laVariant) {
     if (!form.tenSanPham) errors.tenSanPham = 'Nhập tên sản phẩm'
-    if (!form.maSanPham) errors.maSanPham = 'Nhập hoặc bấm tự sinh mã'
     if (!form.thuongHieuId) errors.thuongHieuId = 'Chọn thương hiệu'
     if (!form.danhMucId) errors.danhMucId = 'Chọn danh mục'
-
-    const khac = (p) => String(idOf(p, 'sanPhamId')) !== String(form.sanPhamId)
-    if (form.maSanPham && danhSachSanPham.value.some((p) => p.maSanPham === form.maSanPham && khac(p)))
-      errors.maSanPham = 'Mã này đã có sản phẩm khác dùng'
-    if (form.barcode && danhSachSanPham.value.some((p) => p.barcode === form.barcode && khac(p)))
-      errors.barcode = 'Barcode này đã có sản phẩm khác dùng'
-    if (form.barcode && !/^\d{8,13}$/.test(form.barcode)) errors.barcode = 'Barcode chỉ gồm 8–13 chữ số'
   }
-
-  const nhap = Number(form.giaNhap)
-  const ban = Number(form.giaBan)
-  if (!(nhap >= 0)) errors.giaNhap = 'Giá nhập không hợp lệ'
-  if (!(ban >= 0)) errors.giaBan = 'Giá bán không hợp lệ'
-  else if (ban < nhap * 0.5) errors.giaBan = 'Giá bán phải ≥ 50% giá nhập (ràng buộc của CSDL)'
   if (!(Number(form.baoHanhThang) >= 0)) errors.baoHanhThang = 'Số tháng bảo hành không hợp lệ'
 
   if (modalMode.value === 'edit') {
+    const nhap = Number(form.giaNhap)
+    const ban = Number(form.giaBan)
+    if (!(nhap >= 0)) errors.giaNhap = 'Giá nhập không hợp lệ'
+    if (!(ban >= 0)) errors.giaBan = 'Giá bán không hợp lệ'
+    else if (ban < nhap * 0.5) errors.giaBan = 'Giá bán phải ≥ 50% giá nhập (ràng buộc của CSDL)'
+
     if (!form.maSku) errors.maSku = 'Nhập mã SKU'
     else if (skuDaCo.has(form.maSku)) errors.maSku = 'SKU này đã tồn tại'
+
+    if (form.barcode && !laMaVachHopLe(form.barcode)) errors.barcode = 'Mã vạch chỉ gồm 8–13 chữ số'
+    else if (form.barcode && barcodeDaCo.has(form.barcode)) errors.barcode = 'Mã vạch này đã có phiên bản khác dùng'
+  } else if (!bienTheRows.value.length) {
+    errors.bienThe = 'Chưa có phiên bản nào để lưu'
   } else {
-    if (!bienTheRows.value.length) errors.bienThe = 'Chưa có phiên bản nào để lưu'
-    else {
-      const trung = bienTheRows.value.filter((r) => !r.maSku || skuDaCo.has(r.maSku))
-      const trungTrongForm = bienTheRows.value.length !== new Set(bienTheRows.value.map((r) => r.maSku)).size
-      if (trung.length) errors.bienThe = `SKU trống hoặc đã tồn tại: ${trung.map((r) => r.maSku || '(trống)').join(', ')}`
-      else if (trungTrongForm) errors.bienThe = 'Có hai phiên bản trùng mã SKU'
-      else {
-        const saiGia = bienTheRows.value.find((r) => Number(r.giaBan) < Number(r.giaNhap) * 0.5)
-        if (saiGia) errors.bienThe = `Phiên bản ${saiGia.maSku}: giá bán phải ≥ 50% giá nhập`
-        else {
-          const saiBarcode = bienTheRows.value.find((r) => r.barcode && !/^\d{8,13}$/.test(r.barcode))
-          if (saiBarcode) errors.bienThe = `Phiên bản ${saiBarcode.maSku}: barcode phải gồm 8–13 chữ số`
-        }
-      }
-    }
+    const skuTrong = bienTheRows.value.filter((r) => !r.maSku || skuDaCo.has(r.maSku))
+    const trungTrongForm = bienTheRows.value.length !== new Set(bienTheRows.value.map((r) => r.maSku)).size
+    const maVachXau = bienTheRows.value.find((r) => r.barcode && !laMaVachHopLe(r.barcode))
+    const maVachTrung = bienTheRows.value.find((r) => r.barcode && barcodeDaCo.has(r.barcode))
+    const maVachTrungForm = (() => {
+      const ds = bienTheRows.value.map((r) => r.barcode).filter(Boolean)
+      return ds.length !== new Set(ds).size
+    })()
+
+    if (skuTrong.length) errors.bienThe = `SKU trống hoặc đã tồn tại: ${skuTrong.map((r) => r.maSku || '(trống)').join(', ')}`
+    else if (trungTrongForm) errors.bienThe = 'Có hai phiên bản trùng mã SKU'
+    else if (maVachXau) errors.bienThe = `Phiên bản ${maVachXau.maSku}: mã vạch phải gồm 8–13 chữ số`
+    else if (maVachTrung) errors.bienThe = `Phiên bản ${maVachTrung.maSku}: mã vạch đã có phiên bản khác dùng`
+    else if (maVachTrungForm) errors.bienThe = 'Có hai phiên bản trùng mã vạch'
   }
 
   return Object.keys(errors).length === 0
@@ -1473,6 +1989,8 @@ const validate = () => {
  * bắt buộc phải kèm maSku, giaNhap, giaBan — thiếu là ma_sku/gia_nhap/gia_ban
  * nhận NULL và cả giao dịch bị rollback.
  * Các phiên bản còn lại đi bằng POST /api/bien-the-san-pham với sanPhamId.
+ * LƯU Ý: barcode nay là cột của bien_the_san_pham → gửi kèm theo từng phiên bản,
+ * không còn trường barcode ở cấp sản phẩm nữa.
  * ══════════════════════════════════════════════════════════ */
 
 /** Thời điểm hoàn tất thao tác, dạng ISO giờ địa phương (không lệch UTC). */
@@ -1498,7 +2016,6 @@ const phanChungBienThe = () => ({
 const payloadSanPham = (row) => ({
   ...(form.sanPhamId ? { sanPhamId: Number(form.sanPhamId) } : {}),
   maSanPham: form.maSanPham || null,
-  barcode: form.barcode || null,
   tenSanPham: form.tenSanPham,
   thuongHieuId: soHoacNull(form.thuongHieuId),
   danhMucId: soHoacNull(form.danhMucId),
@@ -1513,6 +2030,8 @@ const payloadSanPham = (row) => ({
     ? {
         ...(row.bienTheId ? { bienTheId: Number(row.bienTheId) } : {}),
         maSku: row.maSku,
+        // gửi cả hai tên trường để khớp dù DTO backend đặt tên nào
+        barcode: row.barcode || null,
         barcodeBienThe: row.barcode || null,
         giaNhap: Number(row.giaNhap || 0),
         giaBan: Number(row.giaBan || 0),
@@ -1567,12 +2086,12 @@ const timIdVuaTao = async () => {
 const thongBaoLoi = (e) => {
   const res = e?.response
   const d = res?.data
-  const chiTiet =
+  const chiTietLoi =
     (typeof d === 'string' && d) ||
     d?.message || d?.error || d?.detail ||
     (Array.isArray(d?.errors) ? d.errors.map((x) => x.defaultMessage || x.message).join('; ') : '') ||
     e?.message || 'Không rõ nguyên nhân'
-  return (res?.status ? `HTTP ${res.status} — ` : '') + chiTiet
+  return (res?.status ? `HTTP ${res.status} — ` : '') + chiTietLoi
 }
 
 /** Dịch lỗi SQL/JPA hay gặp thành việc cần làm. */
@@ -1581,11 +2100,12 @@ const goiYSua = (msg) => {
   if (m.includes('401') || m.includes('403') || m.includes('unauthorized') || m.includes('denied'))
     return 'API tạo sản phẩm yêu cầu quyền ADMIN / NHAN_VIEN / QUAN_KHO — đăng nhập lại bằng tài khoản nhân viên.'
   if (m.includes('ma_sku')) return 'Mã SKU trống hoặc trùng — mỗi phiên bản phải có SKU riêng.'
+  if (m.includes('barcode')) return 'Mã vạch trùng với phiên bản khác (cột bien_the_san_pham.barcode là duy nhất).'
   if (m.includes('gia_nhap') || m.includes('gia_ban')) return 'Giá nhập/giá bán chưa được gửi lên hoặc âm.'
   if (m.includes('ck_bt_giaban_hop_ly')) return 'Giá bán phải ≥ 50% giá nhập.'
   if (m.includes('ck_sp_loaisanpham')) return 'Loại sản phẩm chỉ nhận LAPTOP, PHU_KIEN, DIEN_THOAI.'
   if (m.includes('trangthai')) return 'Trạng thái biến thể chỉ nhận active hoặc inactive.'
-  if (m.includes('unique') || m.includes('duplicate')) return 'Mã sản phẩm, barcode hoặc SKU bị trùng với bản ghi đã có.'
+  if (m.includes('unique') || m.includes('duplicate')) return 'Mã sản phẩm, mã vạch hoặc SKU bị trùng với bản ghi đã có.'
   if (m.includes('lazy') || m.includes('proxy') || m.includes('bytebuddy'))
     return 'Controller đang trả entity có quan hệ LAZY nên Jackson vỡ khi ghi body — cho create() trả về DTO thay vì entity.'
   return ''
@@ -1612,7 +2132,7 @@ const submitForm = async () => {
   saveError.value = ''
   if (!validate()) {
     saveError.value = 'Vui lòng sửa các ô được đánh dấu.'
-    tab.value = errors.bienThe || errors.maSku ? 'bienthe' : 'info'
+    tab.value = errors.bienThe || errors.maSku || errors.barcode || errors.giaBan || errors.giaNhap ? 'bienthe' : 'info'
     return
   }
 
@@ -1626,6 +2146,7 @@ const submitForm = async () => {
       await apiSuaSanPham(form.sanPhamId, payloadSanPham({
         bienTheId: form.bienTheId,
         maSku: form.maSku,
+        barcode: form.barcode,
         mauSac: form.mauSac,
         cpuId: form.cpuId,
         ramId: form.ramId,
@@ -1636,14 +2157,29 @@ const submitForm = async () => {
         hinhAnhBienThe: form.hinhAnhBienThe
       }))
       await luuPhanLoai(form.sanPhamId)
+
+      const thayDoi = soSanhAnhChup(banGoc, anhChupForm())
+      ghiNhatKy(form.sanPhamId, {
+        loai: 'sua',
+        hanhDong: thayDoi.length ? 'Cập nhật sản phẩm' : 'Lưu lại (không đổi nội dung)',
+        doiTuong: `Phiên bản ${form.maSku}`,
+        thayDoi
+      })
       hienToast('Đã lưu thay đổi')
       closeModal()
     } else if (modalMode.value === 'variant') {
+      const dsSku = []
       for (const row of bienTheRows.value) {
         buoc = `thêm phiên bản ${row.maSku}`
         await apiTaoBienThe(payloadBienThe(form.sanPhamId, row))
+        dsSku.push(row.maSku)
         daTao++
       }
+      ghiNhatKy(form.sanPhamId, {
+        loai: 'them',
+        hanhDong: `Thêm ${daTao} phiên bản`,
+        doiTuong: dsSku.join(', ')
+      })
       hienToast(`Đã thêm ${daTao} phiên bản`)
       closeModal()
     } else {
@@ -1673,17 +2209,34 @@ const submitForm = async () => {
       }
 
       await luuPhanLoai(spId)
+      ghiNhatKy(spId, {
+        loai: 'tao',
+        hanhDong: 'Tạo sản phẩm mới',
+        doiTuong: `${form.maSanPham} · ${daTao} phiên bản`,
+        thayDoi: [{ truong: 'Tên sản phẩm', cu: '', moi: form.tenSanPham }]
+      })
+      moLaiChiTiet.value = spId || null
       hienToast(`Đã lưu sản phẩm cùng ${daTao} phiên bản`)
       closeModal()
     }
 
     await fetchData()
+
+    // Mở lại cửa sổ chi tiết để xem ngay kết quả vừa lưu
+    if (moLaiChiTiet.value) {
+      const g = groups.value.find((x) => String(x.sanPhamId) === String(moLaiChiTiet.value))
+      if (g) {
+        moChiTiet(g)
+        tabCT.value = 'lichsu'
+      }
+      moLaiChiTiet.value = null
+    }
   } catch (e) {
     console.error(`[Hàng hóa] lỗi ở bước "${buoc}":`, e?.response?.data ?? e)
-    const chiTiet = thongBaoLoi(e)
-    const goiY = goiYSua(chiTiet)
+    const chiTietLoi = thongBaoLoi(e)
+    const goiY = goiYSua(chiTietLoi)
     saveError.value =
-      `Lưu thất bại ở bước ${buoc}: ${chiTiet}` +
+      `Lưu thất bại ở bước ${buoc}: ${chiTietLoi}` +
       (goiY ? ` → ${goiY}` : '') +
       (daTao ? ` (đã lưu được ${daTao} bản ghi trước đó)` : '')
     if (buoc.includes('phiên bản')) tab.value = 'bienthe'
@@ -1692,7 +2245,6 @@ const submitForm = async () => {
     isSaving.value = false
   }
 }
-
 </script>
 
 <style scoped>
@@ -1707,18 +2259,24 @@ const submitForm = async () => {
   --pink-700: #a81b5d;
 
   --ink:     #1f2937;
+  --ink-2:   #374151;
   --muted:   #6b7280;
   --line:    #f1dbe6;
+  --line-2:  #ead0dd;
   --field:   #d9b3c6;
   --danger:  #dc2626;
   --ok-bg:   #ecfdf5;
   --ok-text: #047857;
+
+  --sh-1: 0 1px 2px rgba(168, 27, 93, .06);
+  --sh-2: 0 4px 14px rgba(168, 27, 93, .10);
+  --sh-3: 0 22px 55px rgba(168, 27, 93, .25);
 }
 .hh { font-size: 14px; color: var(--ink); }
 
 .ta-r { text-align: right; }
+.ta-c { text-align: center; }
 .hh-muted { color: var(--muted); }
-.hh-danger { color: var(--danger); font-weight: 600; }
 .hh-hidden { display: none; }
 .hh-mt6 { margin-top: 6px; }
 .hh-mb8 { margin-bottom: 8px; }
@@ -1728,24 +2286,25 @@ const submitForm = async () => {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 13px; font-weight: 500; font-family: inherit;
+  font-size: 13px; font-weight: 600; font-family: inherit;
   cursor: pointer; white-space: nowrap;
-  transition: background-color .15s, border-color .15s, color .15s;
+  transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s;
 }
 .hh-btn--sm { padding: 5px 11px; font-size: 12.5px; }
-.hh-btn--primary { background: var(--pink-600); color: #fff; }
-.hh-btn--primary:hover:not(:disabled) { background: var(--pink-700); }
+.hh-btn--primary { background: var(--pink-600); color: #fff; box-shadow: var(--sh-1); }
+.hh-btn--primary:hover:not(:disabled) { background: var(--pink-700); box-shadow: var(--sh-2); }
 .hh-btn--soft { background: var(--pink-100); color: var(--pink-700); border-color: var(--pink-200); }
 .hh-btn--soft:hover:not(:disabled) { background: var(--pink-200); }
 .hh-btn--ghost { background: #fff; color: var(--pink-700); border-color: var(--pink-200); }
 .hh-btn--ghost:hover:not(:disabled) { background: var(--pink-50); border-color: var(--pink-300); }
 .hh-btn--ghost.is-on { background: var(--pink-100); border-color: var(--pink-300); }
-.hh-btn:disabled { opacity: .5; cursor: not-allowed; }
+.hh-btn:disabled { opacity: .45; cursor: not-allowed; }
 .hh-btn:focus-visible, .hh-icon-btn:focus-visible { outline: 2px solid var(--pink-500); outline-offset: 2px; }
 
 .hh-icon-btn {
   background: transparent; border: none; color: var(--muted);
   width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+  display: inline-grid; place-items: center;
 }
 .hh-icon-btn:hover:not(:disabled) { background: var(--pink-50); color: var(--pink-600); }
 .hh-icon-btn:disabled { opacity: .35; cursor: not-allowed; }
@@ -1759,23 +2318,29 @@ const submitForm = async () => {
 .hh-caret { font-size: 10px; transition: transform .2s; }
 .hh-caret.is-open { transform: rotate(180deg); }
 
-/* ═══════════ THANH CÔNG CỤ ═══════════ */
+/* ═══════════ THANH CÔNG CỤ (dinh sticky, tu an khi cuon xuong) ═══════════ */
+.hh-sticky-head {
+  position: sticky; top: 0; z-index: 5;
+  transition: transform .25s ease;
+}
+.hh-sticky-head.is-hidden { transform: translateY(-100%); }
+
 .hh-bar {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  background: #fff; border: 1px solid var(--line); border-radius: 12px;
-  padding: 12px 16px; margin-bottom: 12px;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--sh-1);
 }
-.hh-bar__left { display: flex; align-items: center; gap: 14px; }
+.hh-bar__left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .hh-bar__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
-.hh-title { margin: 0; font-size: 20px; font-weight: 700; color: var(--pink-700); white-space: nowrap; }
+.hh-title { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.2px; color: var(--pink-700); white-space: nowrap; }
 
-.hh-search { position: relative; width: 300px; max-width: 100%; }
+.hh-search { position: relative; width: 320px; max-width: 100%; }
 .hh-search input {
   width: 100%; padding: 8px 32px 8px 34px;
   border: 1px solid var(--pink-200); border-radius: 999px;
-  font-size: 13px; background: var(--pink-50); font-family: inherit;
+  font-size: 13px; background: var(--pink-50); font-family: inherit; color: var(--ink);
 }
-.hh-search input:focus { outline: none; border-color: var(--pink-500); background: #fff; }
+.hh-search input:focus { outline: none; border-color: var(--pink-500); background: #fff; box-shadow: 0 0 0 3px var(--pink-100); }
 .hh-search__icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--pink-500); }
 .hh-search__clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; }
 
@@ -1784,12 +2349,12 @@ const submitForm = async () => {
 .hh-filter.is-open { grid-template-rows: 1fr; margin-bottom: 12px; }
 .hh-filter__panel {
   overflow: hidden; background: #fff; border: 1px solid var(--line);
-  border-radius: 12px; padding: 0 16px; transition: padding .25s ease;
+  border-radius: 14px; padding: 0 16px; transition: padding .25s ease; box-shadow: var(--sh-1);
 }
 .hh-filter.is-open .hh-filter__panel { padding: 16px; }
 .hh-filter__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
 .hh-filter__foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line);
 }
 .hh-filter__count { font-size: 12.5px; color: var(--muted); }
@@ -1797,14 +2362,14 @@ const submitForm = async () => {
 
 /* ═══════════ Ô NHẬP ═══════════ */
 .hh-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.hh-field > span { font-size: 12px; font-weight: 600; color: var(--pink-700); }
+.hh-field > span { font-size: 12px; font-weight: 700; color: var(--pink-700); letter-spacing: .1px; }
 .hh-field > span b { color: var(--danger); }
 .hh-field input,
 .hh-field select,
 .hh-field textarea,
 .hh-cell {
   width: 100%; padding: 9px 11px;
-  border: 1px solid var(--field); border-radius: 8px;
+  border: 1px solid var(--field); border-radius: 9px;
   font-size: 13px; color: var(--ink); background: #fff; font-family: inherit;
   transition: border-color .15s, box-shadow .15s;
 }
@@ -1814,54 +2379,70 @@ const submitForm = async () => {
   outline: none; border-color: var(--pink-500); box-shadow: 0 0 0 3px var(--pink-100);
 }
 .hh-field input:disabled, .hh-field select:disabled { background: #f8f6f7; color: var(--muted); }
+.hh-combo { background: var(--pink-50); }
 .hh-inline { display: flex; gap: 6px; align-items: center; }
 .hh-inline > select, .hh-inline > input { flex: 1; min-width: 0; }
 .hh-err { font-size: 11.5px; color: var(--danger); font-style: normal; }
-.hh-hint { font-size: 11.5px; color: var(--muted); font-style: normal; }
+.hh-hint { font-size: 11.5px; color: var(--muted); font-style: normal; line-height: 1.45; }
 
 /* thẻ tag có nút xóa */
-.hh-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.hh-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .hh-tag-pill {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
   background: var(--pink-100); color: var(--pink-700);
   border: 1px solid var(--pink-200); border-radius: 999px;
-  padding: 3px 6px 3px 11px; font-size: 12.5px; font-weight: 500;
+  padding: 3px 6px 3px 11px; font-size: 12.5px; font-weight: 600;
+  word-break: break-word;
 }
 .hh-tag-pill button {
   background: var(--pink-200); border: none; color: var(--pink-700);
-  width: 17px; height: 17px; border-radius: 50%; line-height: 1;
+  width: 17px; height: 17px; border-radius: 50%; line-height: 1; flex-shrink: 0;
   font-size: 13px; cursor: pointer; display: grid; place-items: center;
 }
 .hh-tag-pill button:hover { background: var(--pink-600); color: #fff; }
 
 /* ═══════════ BẢNG DANH SÁCH ═══════════ */
-.hh-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.hh-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--sh-1); }
 .hh-table-wrap { position: relative; overflow-x: auto; min-height: 140px; }
-.hh-table { width: 100%; border-collapse: collapse; }
+.hh-table { width: 100%; border-collapse: collapse; table-layout: auto; }
 .hh-table th {
   background: var(--pink-50); color: var(--pink-700);
-  font-size: 12px; font-weight: 700; text-align: left;
+  font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
   padding: 11px 12px; white-space: nowrap; border-bottom: 1px solid var(--line);
 }
-.hh-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
-.hh-col-check { width: 36px; }
-.hh-table input[type="checkbox"] { accent-color: var(--pink-600); cursor: pointer; }
+.hh-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+.hh-table tbody tr:last-child td { border-bottom: none; }
 
-.hh-row-group td { font-weight: 600; }
+.hh-row { cursor: pointer; transition: background-color .12s; }
+.hh-row:hover { background: var(--pink-50); }
+.hh-row:focus-visible { outline: 2px solid var(--pink-500); outline-offset: -2px; }
+.hh-row:hover .hh-col-go { color: var(--pink-600); }
 
-.hh-code { display: flex; flex-direction: column; gap: 2px; }
+.hh-col-ma { width: 130px; }
+.hh-col-ten { min-width: 260px; }
+.hh-col-go { width: 34px; text-align: center; color: var(--pink-200); }
+.hh-td-ma { font-weight: 700; }
+.hh-td-gia { font-variant-numeric: tabular-nums; font-weight: 600; }
+.hh-td-ngay { font-size: 12.5px; }
+
+/* tên dài thì xuống dòng, không phá khung */
+.hh-td-ten { white-space: normal; max-width: 420px; }
 .hh-code__main { color: var(--pink-700); font-weight: 700; letter-spacing: .3px; }
-.hh-code__sub { font-size: 11px; color: var(--muted); font-weight: 400; }
 
-.hh-name { display: flex; align-items: center; gap: 10px; }
-.hh-name__main { font-weight: 600; }
-.hh-name__sub { font-size: 11.5px; color: var(--muted); font-weight: 400; }
-.hh-thumb { width: 34px; height: 34px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: #fff; flex-shrink: 0; }
+.hh-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.hh-name__text { min-width: 0; }
+.hh-name__main { font-weight: 600; line-height: 1.35; word-break: break-word; }
+.hh-name__sub { font-size: 11.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+.hh-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 9px; border: 1px solid var(--line); background: #fff; flex-shrink: 0; }
 
-.hh-tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+.hh-tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
 .hh-tag--ok { background: var(--ok-bg); color: var(--ok-text); }
 .hh-tag--off { background: #f3f4f6; color: var(--muted); }
-.hh-tag--soft { background: var(--pink-100); color: var(--pink-700); font-weight: 500; }
+.hh-tag--soft { background: var(--pink-100); color: var(--pink-700); font-weight: 600; }
+.hh-tag--outline { background: #fff; color: var(--pink-700); border: 1px solid var(--pink-200); font-weight: 600; }
+
+.hh-ton { font-weight: 700; font-variant-numeric: tabular-nums; }
+.hh-ton.is-het { color: var(--danger); }
 
 /* ═══════════ RỖNG / LOADING / PHÂN TRANG ═══════════ */
 .hh-overlay { position: absolute; inset: 0; background: rgba(255,255,255,.65); display: flex; align-items: center; justify-content: center; }
@@ -1872,34 +2453,150 @@ const submitForm = async () => {
 .hh-empty i { font-size: 32px; color: var(--pink-300); }
 .hh-empty p { margin: 12px 0; font-size: 13.5px; }
 
-.hh-alert { margin: 0 0 12px; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 13px; border-radius: 8px; }
+.hh-alert { margin: 0 0 12px; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 13px; border-radius: 9px; }
 
-.hh-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--pink-50); flex-wrap: wrap; }
+.hh-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--pink-50); flex-wrap: wrap; border-top: 1px solid var(--line); }
 .hh-pager__info { font-size: 12.5px; color: var(--muted); }
 .hh-pager__nav { display: flex; align-items: center; gap: 8px; }
-.hh-pager__page { font-size: 13px; font-weight: 600; min-width: 56px; text-align: center; }
+.hh-pager__page { font-size: 13px; font-weight: 700; min-width: 56px; text-align: center; }
 .hh-pager__size { padding: 5px 8px; border: 1px solid var(--field); border-radius: 8px; font-size: 12.5px; background: #fff; color: var(--ink); }
 
 /* ═══════════ MODAL ═══════════ */
+/* align-items: flex-start (thay vi center) — mep tren cua modal dung im o 1 khoang
+   co dinh cach dinh trang, doi tab (Thong tin/Phien ban/Mo ta) chi lam DAI/NGAN xuong
+   duoi, khong bi tut/nhoi ca hop vao giua moi lan noi dung doi chieu cao.
+   Khong overflow-y o day — de mask tu cuon se giu lai vi tri cuon cu khi chuyen sang
+   tab NGAN hon (vd Mo ta), lam modal nhu bi "cuon mat"/lech khoi khung nhin. Noi dung
+   dai da co .hh-modal__body tu cuon rieng, va .hh-modal da khoa max-height: 94vh. */
 .hh-modal-mask {
   position: fixed; inset: 0; z-index: 1050;
-  background: rgba(31,41,55,.5); display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(31,41,55,.5); display: flex; align-items: flex-start; justify-content: center;
+  padding: 5vh 20px 20px;
   font-size: 14px; color: var(--ink);
 }
 .hh-modal {
   background: #fff; width: 1020px; max-width: 100%; max-height: 94vh;
-  border-radius: 14px; display: flex; flex-direction: column; overflow: hidden;
-  box-shadow: 0 22px 55px rgba(168,27,93,.25);
+  border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: var(--sh-3);
 }
+.hh-modal--rong { width: 1100px; }
+.hh-modal--hep { width: 620px; }
 .hh-modal__head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
   padding: 16px 20px 12px; background: var(--pink-50); border-bottom: 1px solid var(--line);
 }
-.hh-modal__head h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--pink-700); }
-.hh-modal__head p { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-.hh-modal--hep { width: 620px; }
+.hh-head-main { min-width: 0; }
+.hh-modal__head h2 { margin: 0; font-size: 17px; font-weight: 800; color: var(--pink-700); line-height: 1.35; word-break: break-word; }
+.hh-modal__head p { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hh-head-path { word-break: break-word; }
 
-/* Modal xuat file */
+.hh-tabs { display: flex; gap: 4px; padding: 0 20px; background: var(--pink-50); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.hh-tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  padding: 9px 14px; font-size: 13px; font-weight: 700; font-family: inherit;
+  color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.hh-tab:hover { color: var(--pink-600); }
+.hh-tab.is-on { color: var(--pink-700); border-bottom-color: var(--pink-600); }
+
+.hh-modal__body { padding: 20px; overflow-y: auto; background: #fffafc; }
+.hh-pane { display: flex; flex-direction: column; gap: 16px; }
+
+.hh-modal__foot {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px 20px; border-top: 1px solid var(--line); background: var(--pink-50);
+}
+.hh-modal__foot-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.hh-modal__foot-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.hh-foot-hint { font-size: 12.5px; color: var(--muted); margin-right: 4px; }
+.hh-foot-hint b { color: var(--pink-700); }
+
+/* ═══════════ MODAL CHI TIẾT ═══════════ */
+.hh-ct-top { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start; }
+.hh-ct-media { display: flex; flex-direction: column; gap: 10px; }
+.hh-ct-media__main {
+  width: 100%; aspect-ratio: 1 / 1; object-fit: cover;
+  border: 1px solid var(--line); border-radius: 14px; background: #fff;
+}
+.hh-ct-media__strip { display: flex; gap: 8px; flex-wrap: wrap; }
+.hh-ct-media__thumb {
+  width: 52px; height: 52px; padding: 0; overflow: hidden; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff;
+}
+.hh-ct-media__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hh-ct-media__thumb.is-on { border-color: var(--pink-500); box-shadow: 0 0 0 2px var(--pink-100); }
+
+.hh-ct-main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.hh-ct-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.hh-ct-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px 20px; margin: 0; }
+.hh-ct-item { min-width: 0; }
+.hh-ct-item dt { font-size: 11.5px; font-weight: 700; color: var(--pink-700); margin-bottom: 3px; }
+.hh-ct-item dd {
+  margin: 0; padding-bottom: 5px; font-size: 13.5px; color: var(--ink-2);
+  border-bottom: 1px solid var(--line); word-break: break-word;
+}
+.hh-ct-item__manh { color: var(--pink-600); font-weight: 700; }
+
+.hh-ct-block { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+.hh-ct-block h3 {
+  margin: 0 0 12px; font-size: 12.5px; font-weight: 800; color: var(--pink-700);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.hh-ct-mota { font-size: 13.5px; line-height: 1.65; color: var(--ink-2); word-break: break-word; }
+.hh-ct-mota :deep(img) { max-width: 100%; height: auto; border-radius: 8px; }
+
+/* bảng biến thể trong chi tiết */
+.hh-vt-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: auto; background: #fff; }
+.hh-vt { width: 100%; border-collapse: collapse; }
+.hh-vt th {
+  position: sticky; top: 0; background: var(--pink-50); color: var(--pink-700);
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
+  text-align: left; padding: 10px 12px; white-space: nowrap; border-bottom: 1px solid var(--line-2);
+}
+.hh-vt td { padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
+.hh-vt tbody tr:last-child td { border-bottom: none; }
+.hh-vt__row { cursor: pointer; transition: background-color .12s; }
+.hh-vt__row:hover { background: var(--pink-50); }
+.hh-vt__row.is-on { background: var(--pink-100); }
+.hh-vt__row.is-on td:first-child { box-shadow: inset 3px 0 0 var(--pink-600); }
+.hh-vt__sku { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-weight: 700; white-space: nowrap; }
+.hh-vt__barcode { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.hh-vt__cfg { color: var(--muted); min-width: 200px; }
+.hh-vt__gia { font-weight: 700; color: var(--pink-600); font-variant-numeric: tabular-nums; }
+
+/* nhật ký thay đổi */
+.hh-ls { list-style: none; margin: 0; padding: 0 0 0 6px; display: flex; flex-direction: column; }
+.hh-ls__item { position: relative; display: flex; gap: 14px; padding: 0 0 18px 0; }
+.hh-ls__item::before {
+  content: ''; position: absolute; left: 5px; top: 16px; bottom: 0; width: 2px; background: var(--line-2);
+}
+.hh-ls__item:last-child::before { display: none; }
+.hh-ls__dot {
+  width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
+  background: var(--pink-500); box-shadow: 0 0 0 3px var(--pink-100);
+}
+.hh-ls__dot.is-tao { background: #10b981; box-shadow: 0 0 0 3px #d1fae5; }
+.hh-ls__dot.is-them { background: #3b82f6; box-shadow: 0 0 0 3px #dbeafe; }
+.hh-ls__body {
+  flex: 1; min-width: 0; background: #fff; border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px 14px;
+}
+.hh-ls__head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13.5px; }
+.hh-ls__head strong { color: var(--pink-700); }
+.hh-ls__target { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; word-break: break-word; }
+.hh-ls__changes { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.hh-ls__changes li {
+  display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
+  font-size: 12.5px; background: var(--pink-50); border-radius: 8px; padding: 5px 9px;
+}
+.hh-ls__field { font-weight: 700; color: var(--pink-700); }
+.hh-ls__changes em { font-style: normal; color: var(--muted); text-decoration: line-through; word-break: break-word; }
+.hh-ls__changes b { color: var(--ink); word-break: break-word; }
+.hh-ls__changes i { color: var(--pink-300); }
+.hh-ls__by { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+
+/* ═══════════ MODAL XUẤT FILE ═══════════ */
 .hh-export-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .hh-export-checkall { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink); }
 .hh-export-count { font-weight: 500; color: var(--muted); }
@@ -1908,7 +2605,7 @@ const submitForm = async () => {
 
 .hh-export-list {
   margin-top: 12px; max-height: 50vh; overflow-y: auto;
-  border: 1px solid var(--line); border-radius: 10px;
+  border: 1px solid var(--line); border-radius: 12px; background: #fff;
 }
 .hh-export-group { border-bottom: 1px solid var(--line); }
 .hh-export-group:last-child { border-bottom: none; }
@@ -1935,28 +2632,17 @@ const submitForm = async () => {
 .hh-export-variant__price { white-space: nowrap; color: var(--pink-600); font-weight: 600; }
 
 .hh-export-group__head input,
-.hh-export-variant input { flex-shrink: 0; accent-color: var(--pink-600); cursor: pointer; }
-.hh-export-checkall input { accent-color: var(--pink-600); cursor: pointer; }
+.hh-export-variant input,
+.hh-export-checkall input { flex-shrink: 0; accent-color: var(--pink-600); cursor: pointer; }
 
-.hh-tabs { display: flex; gap: 4px; padding: 0 20px; background: var(--pink-50); border-bottom: 1px solid var(--line); }
-.hh-tab {
-  background: none; border: none; border-bottom: 2px solid transparent;
-  padding: 9px 14px; font-size: 13px; font-weight: 600; font-family: inherit;
-  color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-}
-.hh-tab:hover { color: var(--pink-600); }
-.hh-tab.is-on { color: var(--pink-700); border-bottom-color: var(--pink-600); }
-
-.hh-modal__body { padding: 20px; overflow-y: auto; background: #fffafc; }
-.hh-pane { display: flex; flex-direction: column; gap: 16px; }
-
+/* ═══════════ FORM TRONG MODAL ═══════════ */
 .hh-block {
-  border: 1px solid var(--line); border-radius: 12px;
-  padding: 16px; margin: 0; background: #fff;
+  border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px; margin: 0; background: #fff; min-width: 0;
 }
 .hh-block:disabled { opacity: .75; }
 .hh-block legend {
-  font-size: 12.5px; font-weight: 700; color: var(--pink-700);
+  font-size: 12.5px; font-weight: 800; color: var(--pink-700);
   background: var(--pink-100); border-radius: 999px; padding: 4px 12px;
   display: inline-flex; align-items: center; gap: 8px; width: auto;
 }
@@ -1964,16 +2650,17 @@ const submitForm = async () => {
 .hh-field--wide { grid-column: 1 / -1; }
 
 .hh-note {
-  display: flex; align-items: center; gap: 8px; margin: 14px 0 0;
+  display: flex; align-items: flex-start; gap: 8px; margin: 14px 0 0;
   padding: 9px 12px; background: var(--pink-50); border: 1px dashed var(--pink-200);
-  border-radius: 8px; font-size: 12.5px; color: var(--muted);
+  border-radius: 9px; font-size: 12.5px; color: var(--muted); line-height: 1.55;
 }
 .hh-note--plain { margin: 0 0 14px; }
+.hh-note b { color: var(--pink-700); }
 
 /* chip bật/tắt — phân loại sử dụng (chọn nhiều) */
 .hh-chip-select { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
 .hh-chip-toggle {
-  padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: 12.5px; font-weight: 500;
+  padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: 12.5px; font-weight: 600;
   background: #fff; border: 1px solid var(--pink-200); color: var(--muted); font-family: inherit;
   transition: background-color .15s, border-color .15s, color .15s;
 }
@@ -1984,12 +2671,12 @@ const submitForm = async () => {
 .hh-gallery { display: flex; flex-wrap: wrap; gap: 10px; }
 .hh-gallery__item {
   position: relative; width: 92px; height: 92px; flex-shrink: 0;
-  border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff;
+  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff;
 }
 .hh-gallery__item img { width: 100%; height: 100%; object-fit: cover; }
 .hh-gallery__badge {
   position: absolute; left: 4px; bottom: 4px; background: var(--pink-600); color: #fff;
-  font-size: 9.5px; font-weight: 600; padding: 2px 6px; border-radius: 999px; line-height: 1.4;
+  font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 999px; line-height: 1.4;
 }
 .hh-gallery__actions {
   position: absolute; top: 0; right: 0; display: flex; gap: 2px; padding: 3px;
@@ -1997,36 +2684,36 @@ const submitForm = async () => {
   opacity: 0; transition: opacity .15s;
 }
 .hh-gallery__item:hover .hh-gallery__actions { opacity: 1; }
-.hh-icon-btn--sm {
-  width: 22px; height: 22px; background: rgba(255,255,255,.9); color: var(--pink-700);
-}
+.hh-icon-btn--sm { width: 22px; height: 22px; background: rgba(255,255,255,.9); color: var(--pink-700); }
 .hh-gallery__add {
   width: 92px; height: 92px; flex-shrink: 0; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  border: 1px dashed var(--pink-300); border-radius: 10px; background: var(--pink-50);
-  color: var(--pink-600); font-size: 11px; font-weight: 500; text-align: center;
+  border: 1px dashed var(--pink-300); border-radius: 12px; background: var(--pink-50);
+  color: var(--pink-600); font-size: 11px; font-weight: 600; text-align: center;
 }
 .hh-gallery__add:hover { background: var(--pink-100); }
 .hh-gallery__add i { font-size: 18px; }
 
 /* ma trận phiên bản */
-.hh-matrix-wrap { border: 1px solid var(--line); border-radius: 10px; overflow: auto; max-height: 320px; }
+.hh-matrix-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: 340px; }
 .hh-matrix { width: 100%; border-collapse: collapse; }
 .hh-matrix th {
-  position: sticky; top: 0; background: var(--pink-50); color: var(--pink-700);
-  font-size: 11.5px; font-weight: 700; text-align: left; padding: 9px 10px; white-space: nowrap;
-  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; background: var(--pink-50); color: var(--pink-700); z-index: 1;
+  font-size: 11px; font-weight: 800; text-align: left; padding: 9px 10px; white-space: nowrap;
+  text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--line-2);
 }
 .hh-matrix td { padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
 .hh-matrix tr:last-child td { border-bottom: none; }
-.hh-matrix__cfg { color: var(--muted); font-size: 12.5px; }
+.hh-matrix__stt { width: 38px; }
+.hh-matrix__cfg { color: var(--muted); font-size: 12.5px; min-width: 180px; white-space: normal; word-break: break-word; }
 .hh-matrix__empty { text-align: center; color: var(--muted); padding: 20px; }
 .hh-cell { padding: 6px 9px; font-size: 12.5px; }
 .hh-cell--sku { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; min-width: 190px; }
+.hh-cell--ma { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; min-width: 140px; }
 
 /* trình soạn mô tả */
-.hh-editor { border: 1px solid var(--field); border-radius: 10px; overflow: hidden; }
-.hh-editor__bar { display: flex; align-items: center; gap: 2px; padding: 6px 8px; background: var(--pink-50); border-bottom: 1px solid var(--line); }
+.hh-editor { border: 1px solid var(--field); border-radius: 12px; overflow: hidden; }
+.hh-editor__bar { display: flex; align-items: center; gap: 2px; padding: 6px 8px; background: var(--pink-50); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .hh-editor__bar button {
   background: none; border: none; width: 30px; height: 28px; border-radius: 6px;
   color: var(--pink-700); cursor: pointer; font-size: 13px;
@@ -2037,29 +2724,30 @@ const submitForm = async () => {
 .hh-editor__area:empty::before { content: attr(data-placeholder); color: #b9a3ae; }
 .hh-editor__area:focus { box-shadow: inset 0 0 0 2px var(--pink-100); }
 
-.hh-modal__foot {
-  display: flex; justify-content: space-between; align-items: center; gap: 10px;
-  padding: 14px 20px; border-top: 1px solid var(--line); background: var(--pink-50);
-}
-.hh-modal__foot-right { display: flex; gap: 10px; }
-
 /* ═══════════ TOAST ═══════════ */
 .hh-toast {
   position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 1100;
   background: var(--pink-700); color: #fff; padding: 10px 20px; border-radius: 999px;
-  font-size: 13px; box-shadow: 0 8px 22px rgba(168,27,93,.35);
+  font-size: 13px; box-shadow: 0 8px 22px rgba(168,27,93,.35); max-width: calc(100% - 40px); text-align: center;
 }
 
 /* ═══════════ MÀN HÌNH NHỎ ═══════════ */
+@media (max-width: 900px) {
+  .hh-ct-top { grid-template-columns: 1fr; }
+  .hh-ct-media__main { max-width: 260px; }
+}
 @media (max-width: 768px) {
   .hh-bar__actions { width: 100%; margin-left: 0; }
   .hh-search { width: 100%; }
+  .hh-modal-mask { padding: 0; }
+  .hh-modal { max-height: 100vh; border-radius: 0; }
   .hh-modal__foot { flex-direction: column-reverse; align-items: stretch; }
-  .hh-modal__foot-right { justify-content: flex-end; }
+  .hh-modal__foot-left, .hh-modal__foot-right { justify-content: flex-end; }
+  .hh-foot-hint { width: 100%; text-align: right; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hh-btn, .hh-caret, .hh-filter, .hh-filter__panel { transition: none; }
+  .hh-btn, .hh-caret, .hh-filter, .hh-filter__panel, .hh-row, .hh-vt__row { transition: none; }
   .hh-spinner { animation-duration: 2s; }
 }
 </style>

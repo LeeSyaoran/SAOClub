@@ -14,8 +14,7 @@ import java.time.LocalDateTime;
 @Setter
 public class SanPhamResponse {
     private Integer sanPhamId;
-    private String maSanPham;      // Thêm mới
-    private String barcode;        // Thêm mới
+    private String maSanPham;
     private Integer bienTheId;
     private String tenSanPham;
     private Integer danhMucId;
@@ -26,7 +25,7 @@ public class SanPhamResponse {
     private Integer nhaCungCapId;
     private String loaiSanPham;
     private String maSku;
-    private String barcodeBienThe;  // mã vạch cấp biến thể — khac barcode (cap san pham) o tren
+    private String barcode;        // Barcode chính thức của biến thể (thay thế cho barcode sản phẩm cha cũ)
     private String cpu;
     private String ram;
     private String oCung;

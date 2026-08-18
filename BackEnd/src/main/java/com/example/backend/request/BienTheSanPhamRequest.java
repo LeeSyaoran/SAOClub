@@ -3,6 +3,7 @@ package com.example.backend.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,12 +26,15 @@ public class BienTheSanPhamRequest {
     private String barcode;
 
     @NotNull(message = "Giá nhập không được để trống")
+    @PositiveOrZero(message = "Giá nhập phải lớn hơn hoặc bằng 0")
     private BigDecimal giaNhap;
 
     @NotNull(message = "Giá bán không được để trống")
+    @PositiveOrZero(message = "Giá bán phải lớn hơn hoặc bằng 0")
     private BigDecimal giaBan;
 
     @NotNull(message = "Bảo hành không được để trống")
+    @PositiveOrZero(message = "Bảo hành tháng phải lớn hơn hoặc bằng 0")
     private Integer baoHanhThang;
 
     private String hinhAnhBienThe;
@@ -43,5 +47,7 @@ public class BienTheSanPhamRequest {
     private String kichThuocManHinh;
     private String heDieuHanh;
     private String pin;
+
+    @PositiveOrZero(message = "Trọng lượng phải lớn hơn hoặc bằng 0")
     private BigDecimal trongLuongKg;
 }
