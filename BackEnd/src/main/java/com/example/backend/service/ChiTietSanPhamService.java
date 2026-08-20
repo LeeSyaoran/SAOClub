@@ -3,6 +3,7 @@ package com.example.backend.service;
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.repository.BienTheSanPhamRepository;
 import com.example.backend.repository.ChiTietSanPhamRepository;
+import com.example.backend.repository.PhieuNhapKhoRepository;
 import com.example.backend.request.ChiTietSanPhamRequest;
 import com.example.backend.response.ChiTietSanPhamResponse;
 import com.example.backend.response.WarrantyStatusResponse;
@@ -22,6 +23,8 @@ public class ChiTietSanPhamService {
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
     @Autowired
     private BienTheSanPhamRepository bienTheSanPhamRepository;
+    @Autowired
+    private PhieuNhapKhoRepository phieuNhapKhoRepository;
 
     public List<ChiTietSanPhamResponse> hienThiChiTietSanPham() {
         return chiTietSanPhamRepository.hienThiChiTietSanPham();
@@ -31,6 +34,10 @@ public class ChiTietSanPhamService {
         return chiTietSanPhamRepository.findByBienTheId(bienTheId);
     }
 
+    public List<ChiTietSanPhamResponse> getByPhieuNhapId(Integer phieuNhapId) {
+        return chiTietSanPhamRepository.findByPhieuNhapId(phieuNhapId);
+    }
+
     public ChiTietSanPham getById(Integer id) {
         return chiTietSanPhamRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Chi tiết sản phẩm không tồn tại với id: " + id));
@@ -38,8 +45,11 @@ public class ChiTietSanPhamService {
 
     public ChiTietSanPham create(ChiTietSanPhamRequest request) {
         ChiTietSanPham entity = new ChiTietSanPham();
-        BeanUtils.copyProperties(request, entity, "bienTheId");
+        BeanUtils.copyProperties(request, entity, "bienTheId", "phieuNhapId");
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
+        if (request.getPhieuNhapId() != null) {
+            entity.setPhieuNhap(phieuNhapKhoRepository.getReferenceById(request.getPhieuNhapId()));
+        }
         return chiTietSanPhamRepository.save(entity);
     }
 
@@ -54,8 +64,11 @@ public class ChiTietSanPhamService {
         } else {
             entity = getById(id);
         }
-        BeanUtils.copyProperties(request, entity, "chiTietId", "bienTheId");
+        BeanUtils.copyProperties(request, entity, "chiTietId", "bienTheId", "phieuNhapId");
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
+        if (request.getPhieuNhapId() != null) {
+            entity.setPhieuNhap(phieuNhapKhoRepository.getReferenceById(request.getPhieuNhapId()));
+        }
         return chiTietSanPhamRepository.save(entity);
     }
 

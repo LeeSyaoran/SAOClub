@@ -21,22 +21,36 @@ function findScrollParent(el) {
 export function useAutoHideOnScroll(targetRef, { threshold = 8 } = {}) {
   const hidden = ref(false);
   let scrollEl = null;
-  let lastY = 0;
+  // anchorY chi doi khi THUC SU doi trang thai (an/hien) — KHONG doi o moi tick.
+  // Cuon muot/inertia ban ra rat nhieu event voi delta tung tick chi vai px; neu lay
+  // lastY theo tung tick (nhu ban truoc) thi delta gan nhu khong bao gio vuot threshold,
+  // menu chi tro lung lung nua vien roi dung lai giua chung thay vi troi han di. Dùng
+  // mot moc co dinh (anchorY) tinh tong khoang da cuon ke tu lan doi trang thai gan nhat
+  // thi menu luon troi/tro het mot mach.
+  let anchorY = 0;
 
   const getY = () => (scrollEl === window ? window.scrollY : scrollEl.scrollTop);
 
   const onScroll = () => {
     const y = getY();
-    const delta = y - lastY;
-    if (y <= 4) hidden.value = false;
-    else if (delta > threshold) hidden.value = true;
-    else if (delta < -threshold) hidden.value = false;
-    lastY = y;
+    if (y <= 4) {
+      hidden.value = false;
+      anchorY = y;
+      return;
+    }
+    const delta = y - anchorY;
+    if (delta > threshold) {
+      hidden.value = true;
+      anchorY = y;
+    } else if (delta < -threshold) {
+      hidden.value = false;
+      anchorY = y;
+    }
   };
 
   onMounted(() => {
     scrollEl = findScrollParent(targetRef.value);
-    lastY = getY();
+    anchorY = getY();
     scrollEl.addEventListener("scroll", onScroll, { passive: true });
   });
   onBeforeUnmount(() => {

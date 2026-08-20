@@ -1722,7 +1722,7 @@ export default {
     statusLabel: {
       active: "Active",
       inactive: "Discontinued",
-      ngung_kin_doanh: "Out of business",
+      ngung_kinh_doanh: "Out of business",
       trong_kho: "In stock",
       giu_hang: "On hold",
       da_ban: "Sold",

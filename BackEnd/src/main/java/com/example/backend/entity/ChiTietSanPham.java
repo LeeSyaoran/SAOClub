@@ -23,6 +23,10 @@ public class ChiTietSanPham {
     @JoinColumn(name = "bien_the_id", nullable = false)
     private BienTheSanPham bienThe;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "phieu_nhap_id")
+    private PhieuNhapKho phieuNhap;
+
     @Column(name = "so_serial", length = 100, unique = true)
     private String soSerial;
 

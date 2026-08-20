@@ -14,11 +14,14 @@ import java.util.List;
 
 @Repository
 public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, Integer> {
-    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c")
+    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c LEFT JOIN c.phieuNhap pn")
     List<ChiTietSanPhamResponse> hienThiChiTietSanPham();
 
-    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c WHERE c.bienThe.bienTheId = :bienTheId")
+    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c LEFT JOIN c.phieuNhap pn WHERE c.bienThe.bienTheId = :bienTheId")
     List<ChiTietSanPhamResponse> findByBienTheId(@Param("bienTheId") Integer bienTheId);
+
+    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c LEFT JOIN c.phieuNhap pn WHERE pn.phieuNhapId = :phieuNhapId")
+    List<ChiTietSanPhamResponse> findByPhieuNhapId(@Param("phieuNhapId") Integer phieuNhapId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<ChiTietSanPham> findByBienThe_BienTheIdAndTrangThaiOrderByNgayNhapKhoAsc(Integer bienTheId, String trangThai);

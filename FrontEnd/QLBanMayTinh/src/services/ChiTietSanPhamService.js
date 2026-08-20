@@ -5,6 +5,9 @@ export const getAll = () => get(`/api/chi-tiet-san-pham`);
 // Lấy serial của 1 biến thể — dùng thay getAll() khi chỉ cần 1 biến thể
 export const getByBienThe = (bienTheId) => get(`/api/chi-tiet-san-pham/bien-the/${bienTheId}`);
 
+// Lấy serial đã nhập theo 1 phiếu nhập cụ thể — dùng cho màn chi tiết phiếu nhập
+export const getByPhieuNhap = (phieuNhapId) => get(`/api/chi-tiet-san-pham/phieu-nhap/${phieuNhapId}`);
+
 export const create = (body) => post('/api/chi-tiet-san-pham', body);
 
 export const update = (id, body) => put(`/api/chi-tiet-san-pham/update/${id}`, body);

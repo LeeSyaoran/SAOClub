@@ -567,40 +567,23 @@
                   </label>
                   <label class="hh-field">
                     <span>Màu sắc</span>
-                    <input v-model.trim="form.mauSac" list="dl-mau-sua" placeholder="VD: Đen" />
-                    <datalist id="dl-mau-sua">
-                      <option v-for="m in optMauSac" :key="m" :value="m"></option>
-                    </datalist>
+                    <SearchSelect v-model="form.mauSac" :options="optMauSacSelect" placeholder="VD: Đen" />
                   </label>
                   <label class="hh-field">
                     <span>CPU</span>
-                    <select v-model="form.cpuId">
-                      <option value="">-- Không chọn --</option>
-                      <option v-for="cpu in danhSachCpu" :key="idOf(cpu, 'cpuId')" :value="idOf(cpu, 'cpuId')">{{ cpu.tenCpu }}</option>
-                    </select>
+                    <SearchSelect v-model="form.cpuId" :options="cpuOptionsSel" placeholder="-- Không chọn --" />
                   </label>
                   <label class="hh-field">
                     <span>RAM</span>
-                    <select v-model="form.ramId">
-                      <option value="">-- Không chọn --</option>
-                      <option v-for="ram in danhSachRam" :key="idOf(ram, 'ramId')" :value="idOf(ram, 'ramId')">
-                        {{ ram.dungLuong || ram.tenRam }}
-                      </option>
-                    </select>
+                    <SearchSelect v-model="form.ramId" :options="ramOptionsSel" placeholder="-- Không chọn --" />
                   </label>
                   <label class="hh-field">
                     <span>Ổ cứng</span>
-                    <select v-model="form.oCungId">
-                      <option value="">-- Không chọn --</option>
-                      <option v-for="oc in danhSachOCung" :key="idOf(oc, 'oCungId')" :value="idOf(oc, 'oCungId')">{{ tenOCung(oc) }}</option>
-                    </select>
+                    <SearchSelect v-model="form.oCungId" :options="oCungOptionsSel" placeholder="-- Không chọn --" />
                   </label>
                   <label class="hh-field">
                     <span>GPU</span>
-                    <select v-model="form.gpuId">
-                      <option value="">-- Không chọn --</option>
-                      <option v-for="gpu in danhSachGpu" :key="idOf(gpu, 'gpuId')" :value="idOf(gpu, 'gpuId')">{{ gpu.tenGpu }}</option>
-                    </select>
+                    <SearchSelect v-model="form.gpuId" :options="gpuOptionsSel" placeholder="-- Không chọn --" />
                   </label>
                   <label class="hh-field">
                     <span>Giá nhập (₫) <b>*</b></span>
@@ -627,14 +610,11 @@
                   <div class="hh-grid">
                     <div class="hh-field">
                       <span>Màu sắc</span>
-                      <input
-                        v-model="chon.mauSac" class="hh-combo" list="dl-mau"
+                      <TagComboInput
+                        v-model="chon.mauSac" :options="optMauSacSelect"
                         placeholder="Gõ màu rồi nhấn Enter"
-                        @keydown.enter.prevent="themMau()" @change="themMau(true)"
+                        @enter="themMau()" @pick="(v) => { chon.mauSac = v; themMau(true) }"
                       />
-                      <datalist id="dl-mau">
-                        <option v-for="m in optMauSac" :key="m" :value="m"></option>
-                      </datalist>
                       <div v-if="form.mauSacList.length" class="hh-tags">
                         <span v-for="m in form.mauSacList" :key="m" class="hh-tag-pill">
                           {{ m }}
@@ -645,14 +625,12 @@
 
                     <div v-for="attr in thuocTinhTron" :key="attr.field" class="hh-field">
                       <span>{{ attr.label }}</span>
-                      <input
-                        v-model="chon[attr.field]" class="hh-combo" :list="'dl-' + attr.field"
+                      <TagComboInput
+                        v-model="chon[attr.field]" :options="attr.options().map((o) => ({ value: o.ten, label: o.ten }))"
+                        :allow-custom="false"
                         :placeholder="'Gõ ' + attr.label.toLowerCase() + ' rồi nhấn Enter'"
-                        @keydown.enter.prevent="themThuocTinh(attr.field)" @change="themThuocTinh(attr.field, true)"
+                        @enter="themThuocTinh(attr.field)" @pick="(v) => { chon[attr.field] = v; themThuocTinh(attr.field, true) }"
                       />
-                      <datalist :id="'dl-' + attr.field">
-                        <option v-for="o in attr.options()" :key="o.id" :value="o.ten"></option>
-                      </datalist>
                       <div v-if="form[attr.field].length" class="hh-tags">
                         <span v-for="id in form[attr.field]" :key="id" class="hh-tag-pill">
                           {{ attr.ten(id) }}
@@ -668,32 +646,23 @@
                   <div class="hh-grid">
                     <label class="hh-field">
                       <span>Màn hình</span>
-                      <select v-model="form.kichThuocManHinh">
-                        <option value="">-- Không chọn --</option>
-                        <option v-for="v in optManHinh" :key="v" :value="v">{{ v }}</option>
-                      </select>
+                      <SearchSelect v-model="form.kichThuocManHinh" :options="optManHinhSelect" placeholder="-- Không chọn --" />
                     </label>
                     <label class="hh-field">
                       <span>Pin</span>
-                      <select v-model="form.pin">
-                        <option value="">-- Không chọn --</option>
-                        <option v-for="v in optPin" :key="v" :value="v">{{ v }}</option>
-                      </select>
+                      <SearchSelect v-model="form.pin" :options="optPinSelect" placeholder="-- Không chọn --" />
                     </label>
                     <label class="hh-field">
                       <span>Hệ điều hành</span>
-                      <select v-model="form.heDieuHanh">
-                        <option value="">-- Không chọn --</option>
-                        <option v-for="v in optHeDieuHanh" :key="v" :value="v">{{ v }}</option>
-                      </select>
+                      <SearchSelect v-model="form.heDieuHanh" :options="optHeDieuHanhSelect" placeholder="-- Không chọn --" />
                     </label>
                     <label class="hh-field">
                       <span>Trọng lượng (kg)</span>
-                      <input v-model="form.trongLuongKg" type="number" step="0.01" min="0" placeholder="VD: 1.70" />
+                      <SearchSelect v-model="form.trongLuongKg" :options="optTrongLuongSelect" placeholder="-- Không chọn --" />
                     </label>
                     <label class="hh-field">
                       <span>Bảo hành (tháng) <b>*</b></span>
-                      <input v-model="form.baoHanhThang" type="number" min="0" step="1" />
+                      <SearchSelect v-model="form.baoHanhThang" :options="optBaoHanhSelect" placeholder="-- Chọn --" />
                       <em v-if="errors.baoHanhThang" class="hh-err">{{ errors.baoHanhThang }}</em>
                     </label>
                     <label class="hh-field">
@@ -872,7 +841,11 @@
 import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 import { useAutoHideOnScroll } from '@/composables/useAutoHideOnScroll.js'
+import SearchSelect from '@/components/common/SearchSelect.vue'
+import TagComboInput from '@/components/common/TagComboInput.vue'
 import { get, put } from '@/services/api.js'
+import { refreshProducts as lamMoiKhoDuLieuChung } from '@/stores/products.js'
+import { refreshInventory as lamMoiTonKhoDuLieuChung } from '@/stores/inventory.js'
 import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '@/services/DmService.js'
 import * as bienTheApi from '@/services/bienTheSanPhamService.js'
 import * as sanPhamApi from '@/services/sanPhamService.js'
@@ -938,6 +911,8 @@ const MAN_HINH_GOI_Y = ['15.6" FHD 60Hz', '15.6" FHD 144Hz', '15.6" QHD 240Hz', 
 const PIN_GOI_Y = ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh', '86Wh', '90Wh']
 const HDH_GOI_Y = ['Windows 11 Home', 'Windows 11 Pro', 'macOS', 'Không kèm HĐH']
 const MAU_SAC_GOI_Y = ['Đen', 'Trắng', 'Bạc', 'Xám', 'Xanh Dương', 'Xanh Lá', 'Đỏ', 'Vàng', 'Hồng', 'Tím', 'Cam', 'Nâu']
+const BAO_HANH_GOI_Y = [6, 12, 18, 24, 36]
+const TRONG_LUONG_GOI_Y = [1.2, 1.3, 1.5, 1.7, 1.8, 2.0, 2.3, 2.5]
 
 const ANH_MAC_DINH = 'https://cdn-icons-png.flaticon.com/512/664/664457.png'
 const TOI_DA_BIEN_THE = 60
@@ -1507,6 +1482,31 @@ const optManHinh = computed(() => gopGoiY('kichThuocManHinh', MAN_HINH_GOI_Y))
 const optPin = computed(() => gopGoiY('pin', PIN_GOI_Y))
 const optHeDieuHanh = computed(() => gopGoiY('heDieuHanh', HDH_GOI_Y))
 const optMauSac = computed(() => gopGoiY('mauSac', MAU_SAC_GOI_Y))
+// Bảo hành/trọng lượng là số — gopGoiY() sắp theo kiểu chuỗi sẽ sai thứ tự (vd 12 đứng
+// trước 6), nên gộp + sắp số rieng cho 2 truong nay.
+const gopGoiYSo = (key, goiY) =>
+  [...new Set([...goiY, ...bienTheChuan.value.map((v) => Number(v[key])).filter((x) => Number.isFinite(x) && x > 0)])]
+    .sort((a, b) => a - b)
+const optBaoHanh = computed(() => gopGoiYSo('baoHanhThang', BAO_HANH_GOI_Y))
+const optTrongLuong = computed(() => gopGoiYSo('trongLuongKg', TRONG_LUONG_GOI_Y))
+
+/* ─── Bản {value,label} cho SearchSelect (combobox tự vẽ, không dùng datalist trình
+   duyệt — popup datalist không style được, mỗi máy/trình duyệt hiện 1 kiểu xấu khác
+   nhau). Giữ nguyên các opt* gốc ở trên vì nơi khác (chuẩn hóa màu, ô gõ-Enter-thêm-thẻ
+   ở Bước 1) đang cần mảng giá trị thô, không phải mảng {value,label}. ─── */
+const asOptions = (arr) => arr.map((v) => ({ value: v, label: String(v) }))
+const optMauSacSelect = computed(() => asOptions(optMauSac.value))
+const optManHinhSelect = computed(() => asOptions(optManHinh.value))
+const optPinSelect = computed(() => asOptions(optPin.value))
+const optHeDieuHanhSelect = computed(() => asOptions(optHeDieuHanh.value))
+const optBaoHanhSelect = computed(() => optBaoHanh.value.map((v) => ({ value: v, label: `${v} tháng` })))
+const optTrongLuongSelect = computed(() => optTrongLuong.value.map((v) => ({ value: v, label: `${v} kg` })))
+
+const KHONG_CHON = { value: '', label: '-- Không chọn --' }
+const cpuOptionsSel = computed(() => [KHONG_CHON, ...danhSachCpu.value.map((c) => ({ value: idOf(c, 'cpuId'), label: c.tenCpu }))])
+const ramOptionsSel = computed(() => [KHONG_CHON, ...danhSachRam.value.map((r) => ({ value: idOf(r, 'ramId'), label: r.dungLuong || r.tenRam }))])
+const oCungOptionsSel = computed(() => [KHONG_CHON, ...danhSachOCung.value.map((o) => ({ value: idOf(o, 'oCungId'), label: tenOCung(o) }))])
+const gpuOptionsSel = computed(() => [KHONG_CHON, ...danhSachGpu.value.map((g) => ({ value: idOf(g, 'gpuId'), label: g.tenGpu }))])
 
 /* ─── Thuộc tính dùng để trộn — gõ rồi Enter là ra thẻ ─── */
 const thuocTinhTron = [
@@ -1674,10 +1674,13 @@ const khoaDong = (c) => [c.mauSac, c.cpuId, c.ramId, c.oCungId, c.gpuId].join('|
 
 const sinhSku = (c, index) => {
   const prefix = (form.skuPrefix || form.maSanPham || vietTat(form.tenSanPham, 6) || 'SP').toUpperCase()
+  // Thiếu GPU trong chuỗi này là lý do 2 phiên bản khác GPU (vd cùng CPU/RAM/ổ cứng/màu,
+  // chỉ khác card đồ họa) sinh ra CÙNG một mã SKU — thêm GPU vào để phân biệt đúng.
   const phan = [
     vietTat(tra(mapCpu.value, c.cpuId).split(' ').pop(), 6),
     vietTat(tra(mapRam.value, c.ramId), 5),
     vietTat(tra(mapOCung.value, c.oCungId), 5),
+    vietTat(tra(mapGpu.value, c.gpuId), 5),
     vietTat(c.mauSac, 3)
   ].filter(Boolean)
   return [prefix, ...phan].join('-') || `${prefix}-${index + 1}`
@@ -1713,6 +1716,15 @@ const dungLaiMaTran = () => {
 
   const cu = new Map(bienTheRows.value.map((r) => [r.key, r]))
   const skuDaDung = new Set(bienTheChuan.value.map((v) => v.maSku).filter((s) => s && s !== '—'))
+  // Nạp trước SKU của những dòng được GIỮ LẠI (khớp key với lần dựng ma trận trước, có thể
+  // đã bị người dùng sửa tay) vào skuDaDung trước khi sinh SKU cho dòng mới — nếu không, một
+  // dòng mới (vd thêm GPU thứ 2) có thể sinh trùng y hệt SKU của dòng giữ lại mà không bị
+  // phát hiện, vì skuDaDung trước đây chỉ biết SKU đã có thật trong CSDL, không biết các
+  // dòng đang giữ lại ngay trong chính lần dựng này.
+  tohop.forEach((c) => {
+    const sku = cu.get(khoaDong(c))?.maSku
+    if (sku) skuDaDung.add(sku)
+  })
   const barcodeDangDung = new Set(barcodeDaDung.value)
 
   bienTheRows.value = tohop.map((c, i) => {
@@ -2215,12 +2227,24 @@ const submitForm = async () => {
         doiTuong: `${form.maSanPham} · ${daTao} phiên bản`,
         thayDoi: [{ truong: 'Tên sản phẩm', cu: '', moi: form.tenSanPham }]
       })
-      moLaiChiTiet.value = spId || null
+      // Không set moLaiChiTiet ở đây — tạo MỚI xong thì đóng về danh sách bình thường,
+      // không tự mở lại cửa sổ chi tiết. openCreate()/saoChepSanPham() đã đặt sẵn giá trị
+      // null cho đúng 2 luồng "tạo sản phẩm mới" này; dòng cũ ở đây từng ghi đè lại bằng
+      // spId khiến sản phẩm vừa tạo luôn tự bật chi tiết, đúng thứ người dùng không muốn.
       hienToast(`Đã lưu sản phẩm cùng ${daTao} phiên bản`)
       closeModal()
     }
 
     await fetchData()
+    // HangHoa.vue tự tải dữ liệu riêng (fetchData ở trên), KHÔNG đọc từ ProductsStore dùng
+    // chung — nhưng tab "Biến thể" (BienTheTable.vue) và các nơi khác lại đọc từ đó. Không
+    // làm mới ProductsStore ở đây thì các màn kia vẫn thấy dữ liệu cũ cho tới khi F5 (module
+    // JS reset lại từ đầu). Làm mới song song, lỗi ở đây không nên chặn luồng lưu chính.
+    lamMoiKhoDuLieuChung().catch(() => {})
+
+    // Biến thể mới tạo phải hiện ngay ở "Hàng sắp về" bên Kho hàng — InventoryStore cũng là
+    // dữ liệu dùng chung riêng biệt, tách rời fetchData()/ProductsStore ở trên.
+    lamMoiTonKhoDuLieuChung().catch(() => {})
 
     // Mở lại cửa sổ chi tiết để xem ngay kết quả vừa lưu
     if (moLaiChiTiet.value) {
@@ -2241,6 +2265,7 @@ const submitForm = async () => {
       (daTao ? ` (đã lưu được ${daTao} bản ghi trước đó)` : '')
     if (buoc.includes('phiên bản')) tab.value = 'bienthe'
     await fetchData()
+    if (daTao) { lamMoiKhoDuLieuChung().catch(() => {}); lamMoiTonKhoDuLieuChung().catch(() => {}) }
   } finally {
     isSaving.value = false
   }
@@ -2408,8 +2433,13 @@ const submitForm = async () => {
 .hh-table th {
   background: var(--pink-50); color: var(--pink-700);
   font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
-  padding: 11px 12px; white-space: nowrap; border-bottom: 1px solid var(--line);
+  padding: 11px 12px; white-space: nowrap; border-bottom: none;
 }
+/* border-collapse:collapse tren <table> khong duoc overflow:hidden cua .hh-card bo
+   goc dung cach — nen o dau tien vuot goc tron, trong nhu 1 net ke de len vien card.
+   Bo goc thang vao chinh o th dau/cuoi de nen hong di dung theo duong bo tron. */
+.hh-table thead th:first-child { border-top-left-radius: 13px; }
+.hh-table thead th:last-child { border-top-right-radius: 13px; }
 .hh-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
 .hh-table tbody tr:last-child td { border-bottom: none; }
 
@@ -2552,8 +2582,10 @@ const submitForm = async () => {
 .hh-vt th {
   position: sticky; top: 0; background: var(--pink-50); color: var(--pink-700);
   font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
-  text-align: left; padding: 10px 12px; white-space: nowrap; border-bottom: 1px solid var(--line-2);
+  text-align: left; padding: 10px 12px; white-space: nowrap; border-bottom: none;
 }
+.hh-vt thead th:first-child { border-top-left-radius: 11px; }
+.hh-vt thead th:last-child { border-top-right-radius: 11px; }
 .hh-vt td { padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
 .hh-vt tbody tr:last-child td { border-bottom: none; }
 .hh-vt__row { cursor: pointer; transition: background-color .12s; }
@@ -2700,8 +2732,10 @@ const submitForm = async () => {
 .hh-matrix th {
   position: sticky; top: 0; background: var(--pink-50); color: var(--pink-700); z-index: 1;
   font-size: 11px; font-weight: 800; text-align: left; padding: 9px 10px; white-space: nowrap;
-  text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--line-2);
+  text-transform: uppercase; letter-spacing: .4px; border-bottom: none;
 }
+.hh-matrix thead th:first-child { border-top-left-radius: 11px; }
+.hh-matrix thead th:last-child { border-top-right-radius: 11px; }
 .hh-matrix td { padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
 .hh-matrix tr:last-child td { border-bottom: none; }
 .hh-matrix__stt { width: 38px; }

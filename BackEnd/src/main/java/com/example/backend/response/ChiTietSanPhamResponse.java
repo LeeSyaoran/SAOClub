@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class ChiTietSanPhamResponse {
     private Integer chiTietId;
     private Integer bienTheId;
+    private Integer phieuNhapId;
     private String maSku;
     private String soSerial;
     private String trangThai;

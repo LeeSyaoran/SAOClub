@@ -1,10 +1,10 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from "vue";
+import { ref, computed, reactive, watch, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
 import {
   CheckCircle2, XCircle, Clock, Package, ClipboardList, BarChart3, AlertTriangle,
-  Ban, Laptop, Search, Pencil, Printer, Download, Plus, Check, X, Trash2,
-  Building2, User, Calendar, FileText, FolderOpen,
+  Ban, Search, Pencil, Printer, Download, Plus, Check, X, Trash2, Truck,
+  Building2, User, Calendar, FileText, FolderOpen, Filter, ChevronDown,
 } from '@lucide/vue';
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatPrice, formatDate, statusLabel, toLocalDT } from "../../utils/adminFormat.js";
@@ -16,7 +16,8 @@ import * as TonKhoService from "../../services/TonKhoService.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import * as PhieuNhapKhoService from "../../services/PhieuNhapKhoService.js";
 import * as ChiTietPhieuNhapService from "../../services/ChiTietPhieuNhapService.js";
-import { InventoryStore, ensureInventory } from "../../stores/inventory.js";
+import * as BienTheSanPhamService from "../../services/BienTheSanPhamService.js";
+import { InventoryStore, ensureInventory, refreshInventory } from "../../stores/inventory.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import { StaffStore, ensureStaff } from "../../stores/staff.js";
@@ -31,6 +32,13 @@ onMounted(() => {
   ensureProducts();
 });
 
+// t() trả nguyên chuỗi key (vd "admin.common.filter") nếu chưa có bản dịch, KHÔNG nhận
+// tham số fallback như tt() bên dưới — dùng cho vài nhãn UI mới thêm chưa kịp có key i18n.
+const tt = (key, fallback) => {
+  const s = t(key);
+  return !s || s === key ? fallback : s;
+};
+
 const inventory = computed(() => InventoryStore.items ?? []);
 const products = computed(() => ProductsStore.items ?? []);
 const suppliers = computed(() => SuppliersStore.items ?? []);
@@ -39,80 +47,185 @@ const staff = computed(() => StaffStore.items ?? []);
 // ── Tab noi bo: Ton kho | Phieu nhap kho ──────────────────────────────────────
 const khoTab = ref('ton-kho'); // 'ton-kho' | 'phieu-nhap'
 
-const lowStockItems = computed(() =>
-  inventory.value.filter(
-    (t) => t.soLuongTon != null && t.tonKhoToiThieu != null && t.soLuongTon <= t.tonKhoToiThieu,
-  ),
-);
+const getVariantInfo = (item) => products.value.find(p => p.bienTheId === item.bienThe?.bienTheId);
+const maSanPhamCuaItem = (item) => {
+  const sp = item.bienThe?.sanPham;
+  if (sp?.maSanPham) return sp.maSanPham;
+  return sp?.sanPhamId != null ? 'SP' + String(sp.sanPhamId).padStart(4, '0') : '—';
+};
+
+// BienTheSanPhamService.update() dùng BeanUtils.copyProperties nên cần body ĐẦY ĐỦ (thiếu
+// field nào sẽ bị null hết field đó) — dựng lại từ entity lồng nhau trả về trong
+// TonKho.bienThe (đọc thẳng, không cần gọi thêm API CPU/RAM/GPU/Ổ cứng).
+const buildBienTheUpdateBody = (bienThe, overrides = {}) => ({
+  sanPhamId: bienThe?.sanPham?.sanPhamId,
+  maSku: bienThe?.maSku ?? '',
+  barcode: bienThe?.barcode ?? '',
+  giaNhap: Number(bienThe?.giaNhap ?? 0),
+  giaBan: Number(bienThe?.giaBan ?? 0),
+  baoHanhThang: Number(bienThe?.baoHanhThang ?? 0),
+  hinhAnhBienThe: bienThe?.hinhAnhBienThe ?? '',
+  trangThai: bienThe?.trangThai ?? '',
+  mauSac: bienThe?.mauSac ?? '',
+  cpuId: bienThe?.cpu?.cpuId ?? null,
+  ramId: bienThe?.ram?.ramId ?? null,
+  oCungId: bienThe?.oCung?.oCungId ?? null,
+  gpuId: bienThe?.gpu?.gpuId ?? null,
+  kichThuocManHinh: bienThe?.kichThuocManHinh ?? '',
+  heDieuHanh: bienThe?.heDieuHanh ?? '',
+  pin: bienThe?.pin ?? '',
+  trongLuongKg: bienThe?.trongLuongKg != null ? Number(bienThe.trongLuongKg) : 0,
+  ...overrides,
+});
+
+// Đồng bộ giá nhập của biến thể theo đơn giá của phiếu nhập mới nhất — theo đúng yêu cầu:
+// biến thể mới tạo giaNhap=0, sau khi nhập hàng thì lấy giá nhập từ phiếu.
+const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
+  const item = inventory.value.find((i) => i.bienThe?.bienTheId === bienTheId);
+  if (!item?.bienThe) return;
+  const body = buildBienTheUpdateBody(item.bienThe, { giaNhap: Number(donGia) || 0 });
+  await BienTheSanPhamService.update(bienTheId, body).catch(() => {});
+};
+
+// ── Phân loại 1 dòng tồn kho — 4 nhóm ─────────────────────────────────────────────────
+// "pending" (Hàng sắp về): biến thể vừa tạo, CHƯA đủ giá nhập/giá bán (mặc định = 0 lúc
+// tạo mới) — coi như chưa sẵn sàng bán, KHÔNG hiện ở danh sách chính, chỉ xem được qua
+// ô thống kê "Hàng sắp về". Biến thể chỉ thật sự "vào kho" sau khi 1 phiếu nhập gán giá
+// nhập + serial cho nó (xem savePhieuNhap()).
+// "out" (Hết hàng): đã đủ giá nhưng tồn = 0 (bán hết) — cũng ẩn khỏi ds chính, chỉ xem qua
+// ô "Hết hàng" để không làm rối danh sách "đang có thể bán".
+// "low"/"ok": đủ giá + còn hàng — hiện bình thường ở danh sách chính.
+const isPendingItem = (v) => !(Number(v?.giaNhap) > 0) || !(Number(v?.giaBan) > 0);
+const stockStatusOf = (item, v) => {
+  if (isPendingItem(v)) return 'pending';
+  if ((item.soLuongTon ?? 0) === 0) return 'out';
+  if (item.soLuongTon != null && item.tonKhoToiThieu != null && item.soLuongTon <= item.tonKhoToiThieu) return 'low';
+  return 'ok';
+};
+const stockStatusLabel = (s) => ({
+  pending: tt('admin.inventory.filterPending', 'Hàng sắp về'),
+  out: t('admin.inventory.filterOut'),
+  low: t('admin.inventory.filterLow'),
+  ok: t('admin.inventory.filterOk'),
+}[s] || '—');
+const pendingItems = computed(() => inventory.value.filter((item) => isPendingItem(getVariantInfo(item))));
 const outOfStockItems = computed(() =>
-  inventory.value.filter(t => (t.soLuongTon ?? 0) === 0),
+  inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === 'out'),
 );
 // "Sắp hết" (khác Hết hàng): còn hàng nhưng <= tối thiểu
 const lowStockOnlyItems = computed(() =>
-  inventory.value.filter(t => (t.soLuongTon ?? 0) > 0 && t.tonKhoToiThieu != null && t.soLuongTon <= t.tonKhoToiThieu),
+  inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === 'low'),
 );
 const totalStockQty = computed(() => inventory.value.reduce((s, i) => s + (i.soLuongTon || 0), 0));
 
-// ── Inventory grouped by product ──────────────────────────────────────────────
+// ── Tồn kho: bảng PHẲNG theo từng biến thể (không gộp theo sản phẩm nữa) — biến thể
+// mới tạo gần nhất hiện đầu trang, có bộ lọc riêng (trạng thái tồn/thương hiệu/danh mục). ──
 const inventorySearch = ref('');
-const inventoryStatusFilter = ref('all'); // all | out | low | ok
-const expandedGroups = ref({});
-const toggleGroup = (name) => { expandedGroups.value[name] = !expandedGroups.value[name]; };
-const allGroupsExpanded = computed(() =>
-  inventoryGrouped.value.length > 0 && inventoryGrouped.value.every(g => expandedGroups.value[g.name]),
+const isInvFilterOpen = ref(false);
+const invFilterStatus = ref(''); // '' | 'pending' | 'out' | 'low' | 'ok'
+const invFilterThuongHieu = ref('');
+const invFilterDanhMuc = ref('');
+// Bấm vào 1 trong 3 ô thống kê "Hàng sắp về/Sắp hết/Hết hàng" — bấm lại lần nữa thì tắt,
+// quay về danh sách mặc định.
+const toggleInvQuickFilter = (status) => { invFilterStatus.value = invFilterStatus.value === status ? '' : status; };
+
+// Thương hiệu/danh mục lấy thẳng từ dữ liệu đang có trong ProductsStore — không gọi thêm
+// API danh mục riêng, bộ lọc luôn khớp 100% với những gì có trong bảng tồn kho.
+const invBrandOptions = computed(() => {
+  const map = new Map();
+  products.value.forEach((p) => { if (p.thuongHieuId != null && !map.has(p.thuongHieuId)) map.set(p.thuongHieuId, p.tenThuongHieu ?? '—'); });
+  return [...map].map(([value, label]) => ({ value, label })).sort((a, b) => String(a.label).localeCompare(String(b.label), 'vi'));
+});
+const invCategoryOptions = computed(() => {
+  const map = new Map();
+  products.value.forEach((p) => { if (p.danhMucId != null && !map.has(p.danhMucId)) map.set(p.danhMucId, p.tenDanhMuc ?? '—'); });
+  return [...map].map(([value, label]) => ({ value, label })).sort((a, b) => String(a.label).localeCompare(String(b.label), 'vi'));
+});
+const invActiveFilterCount = computed(() =>
+  [invFilterStatus.value, invFilterThuongHieu.value, invFilterDanhMuc.value].filter((v) => v !== '').length,
 );
-const toggleAllGroups = () => {
-  const next = !allGroupsExpanded.value;
-  inventoryGrouped.value.forEach(g => { expandedGroups.value[g.name] = next; });
+const clearInvFilters = () => {
+  inventorySearch.value = '';
+  invFilterStatus.value = '';
+  invFilterThuongHieu.value = '';
+  invFilterDanhMuc.value = '';
 };
 
-const inventoryGrouped = computed(() => {
-  const groups = {};
-  for (const item of inventory.value) {
-    const name = item.bienThe?.sanPham?.tenSanPham || '—';
-    if (!groups[name]) groups[name] = [];
-    groups[name].push(item);
-  }
-  return Object.entries(groups)
-    .filter(([name]) => !inventorySearch.value || name.toLowerCase().includes(inventorySearch.value.toLowerCase()))
-    .map(([name, items]) => {
-      const p = products.value.find(p => p.tenSanPham === name);
-      const totalTon = items.reduce((s, i) => s + (i.soLuongTon || 0), 0);
-      const outCount = items.filter(i => (i.soLuongTon ?? 0) === 0).length;
-      const lowCount = items.filter(i => i.soLuongTon != null && i.tonKhoToiThieu != null && i.soLuongTon > 0 && i.soLuongTon <= i.tonKhoToiThieu).length;
-      return { name, items, hinhAnh: p?.hinhAnhChinh, thuongHieu: p?.thuongHieu, totalTon, outCount, lowCount };
+const flatInventory = computed(() => {
+  const q = inventorySearch.value.trim().toLowerCase();
+  return inventory.value
+    .map((item) => {
+      const v = getVariantInfo(item);
+      return { item, v, status: stockStatusOf(item, v) };
     })
-    .filter(g => {
-      if (inventoryStatusFilter.value === 'out') return g.outCount > 0;
-      if (inventoryStatusFilter.value === 'low') return g.lowCount > 0;
-      if (inventoryStatusFilter.value === 'ok') return g.outCount === 0 && g.lowCount === 0;
-      return true;
+    .filter(({ item, v, status }) => {
+      if (q) {
+        const hay = [item.bienThe?.maSku, item.bienThe?.sanPham?.tenSanPham, v?.tenSanPham, maSanPhamCuaItem(item)]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (invFilterThuongHieu.value && String(v?.thuongHieuId ?? '') !== String(invFilterThuongHieu.value)) return false;
+      if (invFilterDanhMuc.value && String(v?.danhMucId ?? '') !== String(invFilterDanhMuc.value)) return false;
+      // Có chọn lọc rõ ràng (kể cả từ bấm ô thống kê) -> hiện ĐÚNG nhóm đó.
+      if (invFilterStatus.value) return status === invFilterStatus.value;
+      // Mặc định: ẩn "Hàng sắp về" (chưa đủ giá) và "Hết hàng" (đã bán hết) khỏi ds chính,
+      // chỉ xem được qua các ô thống kê tương ứng — theo đúng yêu cầu nghiệp vụ.
+      return status !== 'pending' && status !== 'out';
+    })
+    // Mới tạo gần nhất lên đầu — ưu tiên ngày tạo của biến thể, nếu thiếu thì lùi về
+    // bienTheId (tự tăng, càng lớn càng mới) để vẫn có thứ tự hợp lý.
+    .sort((a, b) => {
+      const da = a.v?.ngayTao ? new Date(a.v.ngayTao).getTime() : (a.item.bienThe?.bienTheId ?? 0);
+      const db = b.v?.ngayTao ? new Date(b.v.ngayTao).getTime() : (b.item.bienThe?.bienTheId ?? 0);
+      return db - da;
     });
 });
-const { currentPage: invCurrentPage, totalPages: invTotalPages, pagedItems: pagedInventoryGrouped } = usePagination(inventoryGrouped);
+const { currentPage: invCurrentPage, totalPages: invTotalPages, pagedItems: pagedFlatInventory } = usePagination(flatInventory);
+watch([inventorySearch, invFilterStatus, invFilterThuongHieu, invFilterDanhMuc], () => { invCurrentPage.value = 0; });
 
-const getVariantInfo = (item) => products.value.find(p => p.bienTheId === item.bienThe?.bienTheId);
-const stockClass = (item) => {
-  if ((item.soLuongTon ?? 0) === 0) return 'text-danger';
-  if (item.soLuongTon != null && item.tonKhoToiThieu != null && item.soLuongTon <= item.tonKhoToiThieu) return 'text-warning';
-  return 'text-success';
+// ── Ô chi tiết 1 dòng tồn kho — GỘP 2 modal cũ (xem serial / sửa+thêm hàng) thành 1
+// modal có 2 tab, mở bằng cách bấm vào dòng (bỏ hẳn nút cây bút riêng). ──────────────────
+const showDetailModal = ref(false);
+const detailItem = ref(null); // tonKho item đang xem
+const detailTab = ref('serials'); // 'serials' | 'add'
+
+// Tab "Danh sách serial" — chỉ xem, có tìm kiếm + lọc trạng thái (không còn ô thêm dòng
+// nhanh ở đây nữa, thêm serial dồn hết sang tab "Thêm hàng").
+const detailSerials = ref([]);
+const detailSerialsLoading = ref(false);
+const detailSerialSearch = ref('');
+const detailSerialStatusFilter = ref('');
+const SERIAL_STATUS_OPTIONS = ['trong_kho', 'giu_hang', 'da_ban', 'loi_bao_hanh', 'da_tra_hang'];
+const filteredDetailSerials = computed(() => {
+  const q = detailSerialSearch.value.trim().toLowerCase();
+  return detailSerials.value.filter((s) => {
+    if (q && !String(s.soSerial ?? '').toLowerCase().includes(q)) return false;
+    if (detailSerialStatusFilter.value && s.trangThai !== detailSerialStatusFilter.value) return false;
+    return true;
+  });
+});
+
+// Xóa serial thêm nhầm — chỉ cho phép khi đang "trong_kho" (server chặn nếu đã bán/đã dùng).
+const removeStockSerial = async (chiTietId) => {
+  if (!(await askConfirm(t('admin.confirm.deleteSerial')))) return;
+  const bienTheId = detailItem.value?.bienThe?.bienTheId;
+  try {
+    const res = await ChiTietSanPhamService.remove(chiTietId);
+    if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteSerialError'))); return; }
+    detailSerials.value = detailSerials.value.filter((s) => s.chiTietId !== chiTietId);
+    const updatedStock = await TonKhoService.getByBienThe(bienTheId).catch(() => null);
+    if (updatedStock) {
+      const idx = inventory.value.findIndex((i) => i.tonKhoId === updatedStock.tonKhoId);
+      if (idx !== -1) inventory.value[idx] = updatedStock;
+    }
+  } catch (e) { showToast(e.message); }
 };
 
-// ── Stock Modal (them serial / sua giu hang, ton kho toi thieu) ──────────────
-const showStockModal = ref(false);
-const editingStock = ref(null);
+// Tab "Thêm hàng" — y hệt logic cũ của nút cây bút: sửa số đang giữ/tồn tối thiểu, thêm
+// serial mới (gõ tay từng dòng hoặc nhập file). soLuongTon KHÔNG sửa tay được — chỉ tăng
+// khi thêm serial mới, khớp đúng thực tế: mỗi máy nhập kho có 1 serial.
 const stockSaving = ref(false);
-// soLuongTon KHÔNG sửa tay được nữa — chỉ tăng khi nhập serial mới (xem newSerials),
-// khớp đúng thực tế: mỗi máy nhập kho phải có 1 serial, số lượng = số serial đang "trong_kho".
 const stockForm = reactive({ soLuongGiu: 0, tonKhoToiThieu: 0, newSerials: [''] });
-
-const openEditStock = (item) => {
-  editingStock.value = item;
-  stockForm.soLuongGiu = item.soLuongGiu ?? 0;
-  stockForm.tonKhoToiThieu = item.tonKhoToiThieu ?? 0;
-  stockForm.newSerials = [''];
-  showStockModal.value = true;
-};
 const addStockSerialRow = () => stockForm.newSerials.push('');
 const removeStockSerialRow = (idx) => {
   if (stockForm.newSerials.length > 1) stockForm.newSerials.splice(idx, 1);
@@ -139,10 +252,29 @@ const importSerialsFromFile = async (e) => {
   stockForm.newSerials = [...existing, ...parsed].length ? [...existing, ...parsed] : [''];
   e.target.value = '';
 };
+
+const loadDetailSerials = async (bienTheId) => {
+  detailSerialsLoading.value = true;
+  detailSerials.value = bienTheId ? await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []) : [];
+  detailSerialsLoading.value = false;
+};
+
+const openStockDetail = async (item) => {
+  detailItem.value = item;
+  detailTab.value = 'serials';
+  detailSerialSearch.value = '';
+  detailSerialStatusFilter.value = '';
+  stockForm.soLuongGiu = item.soLuongGiu ?? 0;
+  stockForm.tonKhoToiThieu = item.tonKhoToiThieu ?? 0;
+  stockForm.newSerials = [''];
+  showDetailModal.value = true;
+  await loadDetailSerials(item.bienThe?.bienTheId);
+};
+
 const saveStock = async () => {
   if (stockSaving.value) return;
   stockSaving.value = true;
-  const item = editingStock.value;
+  const item = detailItem.value;
   const bienTheId = item.bienThe?.bienTheId;
   try {
     // 1) Thêm từng serial mới — mỗi cái tự tăng soLuongTon ở server (trigger DB tính lại
@@ -161,11 +293,15 @@ const saveStock = async () => {
       tonKhoToiThieu: Number(stockForm.tonKhoToiThieu),
     });
     if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
-    showStockModal.value = false;
-    // Lấy lại đúng dòng vừa đổi để có soLuongTon mới nhất do server tính.
+    // Lấy lại đúng dòng vừa đổi để có soLuongTon mới nhất do server tính, rồi quay về tab
+    // danh sách serial để thấy ngay kết quả — không đóng hẳn modal.
     const updated = await TonKhoService.getByBienThe(bienTheId).catch(() => null);
     const idx = inventory.value.findIndex((i) => i.tonKhoId === item.tonKhoId);
     if (idx !== -1 && updated) inventory.value[idx] = updated;
+    stockForm.newSerials = [''];
+    await loadDetailSerials(bienTheId);
+    detailTab.value = 'serials';
+    showToast(tt('admin.stockModal.savedToast', 'Đã cập nhật tồn kho'));
   } catch (e) {
     showToast(e.message);
   } finally {
@@ -173,78 +309,7 @@ const saveStock = async () => {
   }
 };
 
-// ── Stock Detail Modal (serial numbers) ──────────────────────────────────────
-const showStockDetailModal = ref(false);
-const stockDetailItem      = ref(null);   // tonKho item
-const stockDetailSerials   = ref([]);
-const stockDetailLoading   = ref(false);
-const stockDetailNewSerial = ref('');
-const stockDetailSaving    = ref(false);
-
-const openStockDetail = async (item) => {
-  stockDetailItem.value    = item;
-  stockDetailSerials.value = [];
-  stockDetailNewSerial.value = '';
-  showStockDetailModal.value = true;
-  stockDetailLoading.value   = true;
-  const bienTheId = item.bienThe?.bienTheId;
-  if (bienTheId) {
-    stockDetailSerials.value = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
-  }
-  stockDetailLoading.value = false;
-};
-
-const addStockSerial = async () => {
-  if (!stockDetailNewSerial.value.trim()) return;
-  const bienTheId = stockDetailItem.value?.bienThe?.bienTheId;
-  if (!bienTheId) return;
-  stockDetailSaving.value = true;
-  try {
-    const res = await ChiTietSanPhamService.create({
-      bienTheId,
-      soSerial: stockDetailNewSerial.value.trim(),
-      trangThai: 'trong_kho',
-      ngayNhapKho: nowLocalIso(),
-    });
-    if (!res.ok) throw new Error(t('admin.errors.addSerialError'));
-    stockDetailSerials.value = await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []);
-    // Chỉ lấy lại đúng 1 dòng tồn kho vừa đổi (server tự tính lại soLuongTon
-    // từ số serial), khỏi phải tải cả bảng tồn kho.
-    const updatedStock = await TonKhoService.getByBienThe(bienTheId).catch(() => null);
-    if (updatedStock) {
-      const idx = inventory.value.findIndex((i) => i.tonKhoId === updatedStock.tonKhoId);
-      if (idx !== -1) inventory.value[idx] = updatedStock;
-    }
-    stockDetailNewSerial.value = '';
-  } catch(e) { showToast(e.message); }
-  finally { stockDetailSaving.value = false; }
-};
-
-// Xóa serial thêm nhầm — chỉ cho phép khi đang "trong_kho" (server chặn nếu đã bán/đã dùng).
-const removeStockSerial = async (chiTietId) => {
-  if (!(await askConfirm(t('admin.confirm.deleteSerial')))) return;
-  const bienTheId = stockDetailItem.value?.bienThe?.bienTheId;
-  try {
-    const res = await ChiTietSanPhamService.remove(chiTietId);
-    if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteSerialError'))); return; }
-    stockDetailSerials.value = stockDetailSerials.value.filter((s) => s.chiTietId !== chiTietId);
-    const updatedStock = await TonKhoService.getByBienThe(bienTheId).catch(() => null);
-    if (updatedStock) {
-      const idx = inventory.value.findIndex((i) => i.tonKhoId === updatedStock.tonKhoId);
-      if (idx !== -1) inventory.value[idx] = updatedStock;
-    }
-  } catch (e) { showToast(e.message); }
-};
-
 const stockDetailStatusLabel = (s) => t(`admin.statusLabel.${s}`);
-const stockDetailStatusColor = (s) => {
-  if (s === 'trong_kho')    return '#22c55e';
-  if (s === 'giu_hang')     return '#facc15';
-  if (s === 'da_ban')       return '#94a3b8';
-  if (s === 'loi_bao_hanh') return '#fb923c';
-  if (s === 'da_tra_hang')  return '#38bdf8';
-  return '#6b7280';
-};
 
 // ── Phieu nhap kho ───────────────────────────────────────────────────────────
 const phieuNhapList = ref([]);
@@ -328,6 +393,7 @@ const staffOptions = computed(() => staff.value.map(s => ({ value: s.nhanVienId,
 const showPhieuNhapModal = ref(false);
 const phieuNhapFormError = ref('');
 const phieuNhapSaving = ref(false);
+const emptyPhieuNhapItem = () => ({ sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0, serials: [''], lockedCount: 0 });
 const emptyPhieuNhapForm = () => {
   const now = new Date();
   const local = nowLocalIso(now).slice(0, 16);
@@ -336,25 +402,46 @@ const emptyPhieuNhapForm = () => {
     nhanVienId: '',
     ngayNhap: local,
     ghiChu: '',
-    items: [{ sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0 }],
+    items: [emptyPhieuNhapItem()],
   };
 };
 const phieuNhapForm = reactive(emptyPhieuNhapForm());
 const phieuNhapItemsTotal = computed(() =>
   phieuNhapForm.items.reduce((s, i) => s + (Number(i.soLuong) || 0) * (Number(i.donGia) || 0), 0),
 );
-const addPhieuNhapItemRow = () => phieuNhapForm.items.push({ sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0 });
+const addPhieuNhapItemRow = () => phieuNhapForm.items.push(emptyPhieuNhapItem());
+// Giữ mảng serials luôn đúng độ dài soLuong — thêm ô trống ở cuối khi tăng số lượng, bớt ô
+// trống ở cuối khi giảm (không bao giờ đụng tới các serial đã có sẵn ở đầu mảng — lockedCount
+// serial đầu là serial đã ghi nhận thật vào kho từ trước, không cho sửa/xóa qua form này nữa).
+const syncPhieuNhapItemSerials = (row) => {
+  const target = Math.max(Number(row.soLuong) || 0, row.lockedCount ?? 0);
+  if (row.serials.length < target) {
+    row.serials.push(...Array(target - row.serials.length).fill(''));
+  } else if (row.serials.length > target) {
+    row.serials.splice(target);
+  }
+};
 // HTML min="1" chỉ chặn nút spinner, gõ tay vẫn nhập được số âm/0 — kẹp lại ngay lúc nhập
 // (backend cũng đã chặn ở ChiTietPhieuNhapRequest, kẹp ở đây để báo sai ngay thay vì đợi lưu).
-const clampPhieuNhapSoLuong = (row) => { row.soLuong = Math.max(1, Math.trunc(Number(row.soLuong)) || 1); };
+// Không cho giảm dưới lockedCount — bấy nhiêu serial đã nhập kho thật rồi, sửa phiếu không
+// được phép "rút" máy đã có serial ra khỏi phiếu.
+const clampPhieuNhapSoLuong = (row) => {
+  row.soLuong = Math.max(1, row.lockedCount ?? 0, Math.trunc(Number(row.soLuong)) || 1);
+  syncPhieuNhapItemSerials(row);
+};
 const removePhieuNhapItemRow = (idx) => {
   if (phieuNhapForm.items.length > 1) {
     phieuNhapForm.items.splice(idx, 1);
   } else {
     // Chỉ còn 1 dòng — không xóa hẳn (form sẽ trống hoàn toàn), reset về giá trị rỗng.
-    phieuNhapForm.items[idx] = { sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0 };
+    phieuNhapForm.items[idx] = emptyPhieuNhapItem();
   }
 };
+// Mỗi dòng phải nhập đủ serial khớp số lượng (không tính các serial đã khóa/có sẵn) trước
+// khi được lưu — theo đúng yêu cầu "phải nhập tay serial cho đủ số lượng".
+const phieuNhapSerialsIncomplete = computed(() =>
+  phieuNhapForm.items.some((i) => i.bienTheId && i.serials.some((s) => !s.trim())),
+);
 const editingPhieuNhapId = ref(null);
 const openAddPhieuNhap = () => {
   editingPhieuNhapId.value = null;
@@ -364,25 +451,40 @@ const openAddPhieuNhap = () => {
 };
 // Chỉ sửa được khi còn "cho_duyet" — đã duyệt/hủy thì coi như chốt sổ, sửa lại sẽ sai đối
 // chiếu với NCC. Nạp lại đúng dữ liệu đang có: header + từng dòng chi tiết (kèm id để
-// savePhieuNhap() biết dòng nào update, dòng nào tạo mới/xóa khi lưu).
-const openEditPhieuNhap = (p) => {
+// savePhieuNhap() biết dòng nào update, dòng nào tạo mới/xóa khi lưu) + serial đã nhập thật
+// của riêng phiếu này (khóa lại, chỉ cho thêm serial mới nếu tăng số lượng).
+const openEditPhieuNhap = async (p) => {
   editingPhieuNhapId.value = p.phieuNhapId;
   const bienTheToSanPham = new Map(products.value.map(pp => [pp.bienTheId, pp.sanPhamId]));
+  const existingSerials = await ChiTietSanPhamService.getByPhieuNhap(p.phieuNhapId).catch(() => []);
+  const serialsByBienThe = new Map();
+  for (const s of existingSerials) {
+    if (!serialsByBienThe.has(s.bienTheId)) serialsByBienThe.set(s.bienTheId, []);
+    serialsByBienThe.get(s.bienTheId).push(s.soSerial);
+  }
   const items = chiTietPhieuNhapList.value
     .filter(c => c.phieuNhapId === p.phieuNhapId)
-    .map(c => ({
-      id: c.id,
-      sanPhamId: bienTheToSanPham.get(c.bienTheId) ?? '',
-      bienTheId: c.bienTheId,
-      soLuong: c.soLuong,
-      donGia: c.donGiaNhap,
-    }));
+    .map(c => {
+      const locked = serialsByBienThe.get(c.bienTheId) ?? [];
+      const soLuong = c.soLuong;
+      const serials = [...locked];
+      while (serials.length < soLuong) serials.push('');
+      return {
+        id: c.id,
+        sanPhamId: bienTheToSanPham.get(c.bienTheId) ?? '',
+        bienTheId: c.bienTheId,
+        soLuong,
+        donGia: c.donGiaNhap,
+        serials,
+        lockedCount: locked.length,
+      };
+    });
   Object.assign(phieuNhapForm, {
     nhaCungCapId: p.nhaCungCapId,
     nhanVienId: p.nhanVienId,
     ngayNhap: (p.ngayNhap || '').slice(0, 16),
     ghiChu: p.ghiChu === '—' ? '' : (p.ghiChu || ''),
-    items: items.length ? items : [{ sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0 }],
+    items: items.length ? items : [emptyPhieuNhapItem()],
   });
   phieuNhapFormError.value = '';
   showPhieuNhapModal.value = true;
@@ -396,6 +498,10 @@ const savePhieuNhap = async () => {
   const items = phieuNhapForm.items.filter(i => i.bienTheId);
   if (items.length === 0) {
     phieuNhapFormError.value = t('admin.phieuNhapModal.missingItems');
+    return;
+  }
+  if (phieuNhapSerialsIncomplete.value) {
+    phieuNhapFormError.value = tt('admin.phieuNhapModal.missingSerials', 'Vui lòng nhập đủ số serial cho từng dòng hàng');
     return;
   }
   if (phieuNhapSaving.value) return;
@@ -414,10 +520,10 @@ const savePhieuNhap = async () => {
       phieuNhapFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
       return;
     }
+    let phieuNhapId = editingPhieuNhapId.value;
     if (editingPhieuNhapId.value) {
       // Đối chiếu dòng cũ/mới: id có sẵn -> update, không có id -> tạo mới,
       // dòng cũ không còn trong form -> xóa.
-      const phieuNhapId = editingPhieuNhapId.value;
       const originalIds = chiTietPhieuNhapList.value
         .filter(c => c.phieuNhapId === phieuNhapId).map(c => c.id);
       const keptIds = items.filter(i => i.id).map(i => i.id);
@@ -434,14 +540,28 @@ const savePhieuNhap = async () => {
       }
     } else {
       const created = await res.json();
+      phieuNhapId = created.phieuNhapId;
       for (const i of items) {
         await ChiTietPhieuNhapService.create({
-          phieuNhapId: created.phieuNhapId,
+          phieuNhapId,
           bienTheId: Number(i.bienTheId),
           soLuong: Number(i.soLuong) || 0,
           donGiaNhap: Number(i.donGia) || 0,
         });
       }
+    }
+    // Tạo serial vật lý cho phần MỚI của mỗi dòng (bỏ qua lockedCount serial đầu — đã ghi
+    // nhận thật từ trước), rồi đồng bộ giá nhập của biến thể theo đơn giá phiếu này.
+    for (const i of items) {
+      const newSerials = i.serials.slice(i.lockedCount ?? 0).map(s => s.trim()).filter(Boolean);
+      const bienTheId = Number(i.bienTheId);
+      for (const soSerial of newSerials) {
+        await ChiTietSanPhamService.create({
+          bienTheId, phieuNhapId, soSerial, trangThai: 'trong_kho',
+          ngayNhapKho: toLocalDT(phieuNhapForm.ngayNhap),
+        }).catch(() => {});
+      }
+      await syncGiaNhapFromReceipt(bienTheId, i.donGia);
     }
     // API tạo trả về entity lồng nhau (nhaCungCap/nhanVien object) khác format phẳng của
     // getAll() (PhieuNhapKhoResponse) — tải lại danh sách thay vì tự ráp để tránh lệch dữ liệu.
@@ -449,6 +569,7 @@ const savePhieuNhap = async () => {
       PhieuNhapKhoService.getAll().catch(() => phieuNhapList.value),
       ChiTietPhieuNhapService.getAll().catch(() => chiTietPhieuNhapList.value),
     ]);
+    await refreshInventory().catch(() => {});
     showPhieuNhapModal.value = false;
   } catch (e) {
     phieuNhapFormError.value = e.message;
@@ -483,9 +604,14 @@ const phieuNhapDetailData = ref(null);
 const phieuNhapDetailItems = computed(() =>
   chiTietPhieuNhapList.value.filter(c => c.phieuNhapId === phieuNhapDetailData.value?.phieuNhapId),
 );
-const openPhieuNhapDetail = (p) => {
+// Serial thật đã nhập kho của riêng phiếu này — gộp theo bienTheId để hiện dưới từng dòng hàng.
+const phieuNhapDetailSerials = ref([]);
+const phieuNhapDetailSerialsFor = (bienTheId) =>
+  phieuNhapDetailSerials.value.filter((s) => s.bienTheId === bienTheId);
+const openPhieuNhapDetail = async (p) => {
   phieuNhapDetailData.value = p;
   showPhieuNhapDetailModal.value = true;
+  phieuNhapDetailSerials.value = await ChiTietSanPhamService.getByPhieuNhap(p.phieuNhapId).catch(() => []);
 };
 
 // Phiếu nhập kho chỉ là chứng từ đối soát nhà cung cấp — hoàn toàn tách rời việc nhập serial
@@ -606,298 +732,217 @@ const exportPhieuNhapExcel = () => {
 </script>
 
 <template>
-  <div>
-    <div class="d-flex gap-2 mb-3">
-      <button
-        class="btn btn-sm fw-bold" :class="khoTab==='ton-kho' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-        @click="khoTab='ton-kho'"
-      >
-        <Package :size="15" style="vertical-align:-2px;" /> {{ t('admin.inventory.tabStock') }}
+  <div class="inv">
+    <div class="inv-tabs">
+      <button class="inv-btn inv-btn--ghost" :class="{ 'is-on': khoTab==='ton-kho' }" @click="khoTab='ton-kho'">
+        <Package :size="15" /> {{ t('admin.inventory.tabStock') }}
       </button>
-      <button
-        class="btn btn-sm fw-bold" :class="khoTab==='phieu-nhap' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-        @click="khoTab='phieu-nhap'; ensurePhieuNhapData()"
-      >
-        <ClipboardList :size="15" style="vertical-align:-2px;" /> {{ t('admin.inventory.tabReceipts') }}
+      <button class="inv-btn inv-btn--ghost" :class="{ 'is-on': khoTab==='phieu-nhap' }" @click="khoTab='phieu-nhap'; ensurePhieuNhapData()">
+        <ClipboardList :size="15" /> {{ t('admin.inventory.tabReceipts') }}
       </button>
     </div>
 
     <template v-if="khoTab==='ton-kho'">
-      <div class="row g-3 mb-3">
-        <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #60a5fa;">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div
-                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:44px;height:44px;background:rgba(96,165,250,0.15);"
-              >
-                <Package :size="20" color="#60a5fa" />
-              </div>
-              <div>
-                <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalSku') }}</div>
-                <div class="fw-bold" style="font-size:1.55rem;">{{ inventory.length }}</div>
-              </div>
-            </div>
+      <div class="inv-stats">
+        <div class="inv-stat inv-stat--blue" :class="{ 'is-on': !invFilterStatus }" @click="invFilterStatus = ''">
+          <div class="inv-stat__icon"><Package :size="22" /></div>
+          <div>
+            <div class="inv-stat__label">{{ t('admin.inventory.statTotalSku') }}</div>
+            <div class="inv-stat__value">{{ inventory.length }}</div>
           </div>
         </div>
-        <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #34d399;">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div
-                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:44px;height:44px;background:rgba(52,211,153,0.15);"
-              >
-                <BarChart3 :size="20" color="#34d399" />
-              </div>
-              <div>
-                <div class="text-secondary small mb-1">{{ t('admin.inventory.statTotalStock') }}</div>
-                <div class="fw-bold" style="font-size:1.55rem;">{{ totalStockQty }}</div>
-              </div>
-            </div>
+        <div class="inv-stat inv-stat--green">
+          <div class="inv-stat__icon"><BarChart3 :size="22" /></div>
+          <div>
+            <div class="inv-stat__label">{{ t('admin.inventory.statTotalStock') }}</div>
+            <div class="inv-stat__value">{{ totalStockQty }}</div>
           </div>
         </div>
-        <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #facc15;">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div
-                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:44px;height:44px;background:rgba(250,204,21,0.15);"
-              >
-                <AlertTriangle :size="20" color="#facc15" />
-              </div>
-              <div>
-                <div class="text-secondary small mb-1">{{ t('admin.inventory.statLowStock') }}</div>
-                <div class="fw-bold" :style="lowStockOnlyItems.length?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ lowStockOnlyItems.length }}</div>
-              </div>
-            </div>
+        <div class="inv-stat inv-stat--cyan" :class="{ 'is-on': invFilterStatus === 'pending' }" @click="toggleInvQuickFilter('pending')">
+          <div class="inv-stat__icon"><Truck :size="22" /></div>
+          <div>
+            <div class="inv-stat__label">{{ tt('admin.inventory.statPending', 'Hàng sắp về') }}</div>
+            <div class="inv-stat__value">{{ pendingItems.length }}</div>
           </div>
         </div>
-        <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid var(--accent-fg);">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div
-                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:44px;height:44px;background:rgba(244,63,94,0.15);"
-              >
-                <Ban :size="20" color="var(--accent-fg)" />
-              </div>
-              <div>
-                <div class="text-secondary small mb-1">{{ t('admin.inventory.statOutOfStock') }}</div>
-                <div class="fw-bold" :style="outOfStockItems.length?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ outOfStockItems.length }}</div>
-              </div>
-            </div>
+        <div class="inv-stat inv-stat--amber" :class="{ 'is-on': invFilterStatus === 'low' }" @click="toggleInvQuickFilter('low')">
+          <div class="inv-stat__icon"><AlertTriangle :size="22" /></div>
+          <div>
+            <div class="inv-stat__label">{{ t('admin.inventory.statLowStock') }}</div>
+            <div class="inv-stat__value">{{ lowStockOnlyItems.length }}</div>
+          </div>
+        </div>
+        <div class="inv-stat inv-stat--red" :class="{ 'is-on': invFilterStatus === 'out' }" @click="toggleInvQuickFilter('out')">
+          <div class="inv-stat__icon"><Ban :size="22" /></div>
+          <div>
+            <div class="inv-stat__label">{{ t('admin.inventory.statOutOfStock') }}</div>
+            <div class="inv-stat__value">{{ outOfStockItems.length }}</div>
           </div>
         </div>
       </div>
+      <p v-if="invFilterStatus" class="inv-quickview-note">
+        {{ tt('admin.inventory.quickViewNote', 'Đang xem') }}: <b>{{ stockStatusLabel(invFilterStatus) }}</b>
+        <button type="button" class="inv-quickview-note__clear" @click="invFilterStatus = ''">{{ tt('admin.inventory.quickViewClear', 'Xem danh sách bình thường') }}</button>
+      </p>
 
-      <div class="alt-toolbar" style="border-radius:14px;margin-bottom:14px;">
-        <div class="alt-toolbar__left">
-          <span class="alt-toolbar__count">{{ t('admin.inventory.summary', { groups: inventoryGrouped.length, skus: inventory.length }) }}</span>
-          <span v-if="outOfStockItems.length" class="alt-tag" style="background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="12" /> {{ outOfStockItems.length }} {{ t('admin.inventory.outOfStock') }}</span>
-          <span v-if="lowStockItems.length" class="alt-tag" style="background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="12" /> {{ lowStockItems.length }} {{ t('admin.inventory.lowStock') }}</span>
-          <button class="alt-btn alt-btn--ghost" @click="toggleAllGroups">
-            {{ allGroupsExpanded ? '▲ ' + t('admin.inventory.collapseAll') : '▼ ' + t('admin.inventory.expandAll') }}
-          </button>
-          <select v-model="inventoryStatusFilter" class="alt-select">
-            <option value="all">{{ t('admin.inventory.filterAll') }}</option>
-            <option value="out">{{ t('admin.inventory.filterOut') }}</option>
-            <option value="low">{{ t('admin.inventory.filterLow') }}</option>
-            <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
-          </select>
+      <div class="inv-bar">
+        <div class="inv-search">
+          <Search :size="14" class="inv-search__icon" />
+          <input v-model="inventorySearch" :placeholder="t('admin.inventory.searchPlaceholder')" />
         </div>
-        <div class="alt-toolbar__actions">
-          <div class="alt-search">
-            <i class="fa fa-search alt-search__icon"></i>
-            <input v-model="inventorySearch" :placeholder="t('admin.inventory.searchPlaceholder')" />
-          </div>
-        </div>
+        <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': isInvFilterOpen }" @click="isInvFilterOpen = !isInvFilterOpen">
+          <Filter :size="14" /> {{ tt('admin.common.filter', 'Bộ lọc') }}
+          <span v-if="invActiveFilterCount" class="inv-chip">{{ invActiveFilterCount }}</span>
+          <ChevronDown :size="13" class="inv-caret" :class="{ 'is-open': isInvFilterOpen }" />
+        </button>
       </div>
 
-      <div v-if="InventoryStore.loading" class="text-secondary small py-4 text-center">{{ t('admin.inventory.loading') }}</div>
-      <div v-else class="d-flex flex-column gap-2">
-        <div
-          v-for="group in pagedInventoryGrouped" :key="group.name"
-          class="rounded-3 overflow-hidden"
-          style="background:var(--bg-card);border:1px solid var(--border-color);"
-        >
-          <div
-            class="d-flex align-items-center px-3 py-2 gap-3"
-            style="cursor:pointer;transition:background 0.15s;"
-            @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
-            @mouseleave="$event.currentTarget.style.background=''"
-            @click="toggleGroup(group.name)"
-          >
-            <img
-              v-if="group.hinhAnh" :src="group.hinhAnh"
-              style="width:44px;height:36px;object-fit:contain;border-radius:4px;background:var(--bg-card-inset);flex-shrink:0;"
-            />
-            <div v-else style="width:44px;height:36px;background:var(--bg-input);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><Laptop :size="16" color="var(--text-muted)" /></div>
-            <div class="flex-grow-1 min-width-0">
-              <div class="fw-semibold" style="font-size:0.88rem;color:var(--text-heading);">{{ group.name }}</div>
-              <div class="text-secondary" style="font-size:0.72rem;">
-                {{ group.thuongHieu ? group.thuongHieu + ' · ' : '' }}{{ group.items.length }} {{ t('admin.inventory.totalStockLabel') }} <strong :class="group.totalTon===0?'text-danger':group.totalTon<5?'text-warning':'text-success'">{{ group.totalTon }}</strong>
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <span v-if="group.outCount" class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(244,63,94,0.15);color:#f87171;"><Ban :size="11" /> {{ group.outCount }} {{ t('admin.inventory.outOfStock') }}</span>
-              <span v-else-if="group.lowCount" class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(250,204,21,0.15);color:#facc15;"><AlertTriangle :size="11" /> {{ group.lowCount }} {{ t('admin.inventory.lowStock') }}</span>
-              <span v-else class="badge d-inline-flex align-items-center gap-1" style="font-size:0.7rem;background:rgba(34,197,94,0.15);color:#22c55e;"><CheckCircle2 :size="11" /> {{ t('admin.inventory.ok') }}</span>
-              <span class="text-secondary" style="font-size:0.75rem;width:12px;text-align:center;">{{ expandedGroups[group.name] ? '▲' : '▼' }}</span>
+      <section class="inv-filter" :class="{ 'is-open': isInvFilterOpen }">
+        <div class="inv-filter__panel">
+          <div class="inv-filter__grid">
+            <label class="inv-field">
+              <span>{{ t('admin.inventory.colStock') }}</span>
+              <select v-model="invFilterStatus">
+                <option value="">{{ t('admin.inventory.filterAll') }}</option>
+                <option value="pending">{{ tt('admin.inventory.statPending', 'Hàng sắp về') }}</option>
+                <option value="out">{{ t('admin.inventory.filterOut') }}</option>
+                <option value="low">{{ t('admin.inventory.filterLow') }}</option>
+                <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
+              </select>
+            </label>
+            <label class="inv-field">
+              <span>{{ t('admin.productModal.brandLabel') }}</span>
+              <select v-model="invFilterThuongHieu">
+                <option value="">{{ t('admin.inventory.filterAll') }}</option>
+                <option v-for="o in invBrandOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+              </select>
+            </label>
+            <label class="inv-field">
+              <span>{{ t('admin.productModal.categoryLabel') }}</span>
+              <select v-model="invFilterDanhMuc">
+                <option value="">{{ t('admin.inventory.filterAll') }}</option>
+                <option v-for="o in invCategoryOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+              </select>
+            </label>
+          </div>
+          <div class="inv-filter__foot">
+            <span class="inv-filter__count">{{ flatInventory.length }}/{{ inventory.length }} {{ t('admin.inventory.colSku') }}</span>
+            <div class="inv-filter__btns">
+              <button type="button" class="inv-btn inv-btn--ghost" @click="clearInvFilters">{{ tt('admin.variants.clearFilters', 'Xóa lọc') }}</button>
+              <button type="button" class="inv-btn inv-btn--primary" @click="isInvFilterOpen = false">{{ tt('admin.variants.filterDone', 'Xong') }}</button>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div v-if="expandedGroups[group.name]" style="border-top:1px solid var(--border-color-soft);">
-            <table class="w-100" style="border-collapse:collapse;font-size:0.8rem;">
-              <thead>
-                <tr style="background:var(--bg-input);">
-                  <th class="px-3 py-2 text-secondary" style="font-weight:500;width:22%;">{{ t('admin.inventory.colSku') }}</th>
-                  <th class="px-3 py-2 text-secondary" style="font-weight:500;">{{ t('admin.inventory.colConfig') }}</th>
-                  <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">{{ t('admin.inventory.colStock') }}</th>
-                  <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:70px;">{{ t('admin.inventory.colHeld') }}</th>
-                  <th class="px-3 py-2 text-secondary text-center" style="font-weight:500;width:80px;">{{ t('admin.inventory.colMinStock') }}</th>
-                  <th class="px-3 py-2 text-secondary" style="font-weight:500;width:90px;"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="item in group.items" :key="item.tonKhoId"
-                  style="border-top:1px solid var(--border-color-soft);"
-                >
-                  <td class="px-3 py-2 text-secondary" style="font-family:monospace;font-size:0.73rem;">{{ item.bienThe?.maSku || '—' }}</td>
-                  <td class="px-3 py-2">
-                    <div class="d-flex gap-1 flex-wrap">
-                      <span v-if="getVariantInfo(item)?.cpu" class="badge" style="background:#2a2a3a;color:#aab;font-size:0.68rem;">{{ getVariantInfo(item).cpu }}</span>
-                      <span v-if="getVariantInfo(item)?.ram" class="badge" style="background:#2a3a2a;color:#aba;font-size:0.68rem;">{{ getVariantInfo(item).ram }}</span>
-                      <span v-if="getVariantInfo(item)?.oCung" class="badge" style="background:#3a2a2a;color:#baa;font-size:0.68rem;">{{ getVariantInfo(item).oCung }}</span>
-                      <span v-if="getVariantInfo(item)?.mauSac" class="badge" style="background:#2a2a2a;color:#999;font-size:0.68rem;">{{ getVariantInfo(item).mauSac }}</span>
+      <section class="inv-card">
+        <div v-if="InventoryStore.loading" class="inv-empty">{{ t('admin.inventory.loading') }}</div>
+        <div v-else class="inv-table-wrap">
+          <table class="inv-table">
+            <thead>
+              <tr>
+                <th>{{ tt('admin.inventory.colProductCode', 'Mã sản phẩm') }}</th>
+                <th>{{ t('admin.variants.colProduct') }}</th>
+                <th>{{ t('admin.variants.colConfig') }}</th>
+                <th class="ta-r">{{ t('admin.variants.colPriceSell') }}</th>
+                <th class="ta-r">{{ tt('admin.inventory.colPriceBuy', 'Giá vốn') }}</th>
+                <th class="ta-c">{{ t('admin.inventory.colStock') }}</th>
+                <th>{{ t('admin.variants.colStatus') }}</th>
+                <th>{{ tt('admin.inventory.colUpdatedAt', 'Ngày cập nhật') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="({ item, v, status }) in pagedFlatInventory" :key="item.tonKhoId" class="inv-row" @click="openStockDetail(item)">
+                <td class="inv-code">{{ maSanPhamCuaItem(item) }}</td>
+                <td class="inv-td-name">
+                  <div class="inv-name">
+                    <img :src="v?.hinhAnhChinh" class="inv-thumb" alt="" @error="$event.target.style.visibility='hidden'" />
+                    <div class="inv-name__text">
+                      <div class="inv-name__main">{{ v?.tenSanPham || item.bienThe?.sanPham?.tenSanPham || '—' }}</div>
+                      <div class="inv-name__sub">{{ item.bienThe?.maSku || '—' }}</div>
                     </div>
-                  </td>
-                  <td class="px-3 py-2 text-center">
-                    <span :class="stockClass(item)" class="fw-bold" style="font-size:0.88rem;">{{ item.soLuongTon ?? '—' }}</span>
-                  </td>
-                  <td class="px-3 py-2 text-center text-secondary">{{ item.soLuongGiu ?? 0 }}</td>
-                  <td class="px-3 py-2 text-center text-secondary">{{ item.tonKhoToiThieu ?? '—' }}</td>
-                  <td class="px-3 py-2">
-                    <div class="d-flex gap-1">
-                      <button
-                        class="btn btn-sm btn-outline-info"
-                        style="font-size:0.72rem;padding:2px 8px;"
-                        @click.stop="openStockDetail(item)"
-                      >
-                        <Search :size="13" style="vertical-align:-2px;" /> {{ t('admin.inventory.detail') }}
-                      </button>
-                      <button
-                        class="btn btn-sm btn-outline-warning"
-                        style="font-size:0.72rem;padding:2px 8px;"
-                        @click.stop="openEditStock(item)"
-                      >
-                        <Pencil :size="13" style="vertical-align:-2px;" /> {{ t('admin.inventory.update') }}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  </div>
+                </td>
+                <td class="inv-muted">
+                  <div v-if="v?.cpu || v?.ram || v?.mauSac" class="inv-config">
+                    <span v-if="v?.cpu">{{ v.cpu }}</span>
+                    <span v-if="v?.ram">{{ v.ram }}</span>
+                    <span v-if="v?.mauSac">{{ v.mauSac }}</span>
+                  </div>
+                  <span v-else>—</span>
+                </td>
+                <td class="ta-r inv-price">{{ formatPrice(v?.giaBan) }}</td>
+                <td class="ta-r inv-muted">{{ formatPrice(v?.giaNhap) }}</td>
+                <td class="ta-c"><span class="inv-ton" :class="{ 'text-danger': status==='out', 'text-warning': status==='low', 'text-success': status==='ok', 'text-info': status==='pending' }">{{ item.soLuongTon ?? '—' }}</span></td>
+                <td>
+                  <span class="inv-tag" :class="'inv-tag--' + status">{{ stockStatusLabel(status) }}</span>
+                </td>
+                <td class="inv-muted">{{ formatDate(v?.ngayCapNhat) }}</td>
+              </tr>
+              <tr v-if="flatInventory.length === 0"><td colspan="8" class="inv-empty">{{ t('admin.inventory.empty') }}</td></tr>
+            </tbody>
+          </table>
         </div>
-
-        <div v-if="inventoryGrouped.length === 0" class="text-secondary small text-center py-5">{{ t('admin.inventory.empty') }}</div>
-        <Pagination :current-page="invCurrentPage" :total-pages="invTotalPages" @page-change="invCurrentPage = $event" />
-      </div>
+        <footer v-if="invTotalPages > 1" class="inv-pager">
+          <Pagination :current-page="invCurrentPage" :total-pages="invTotalPages" @page-change="invCurrentPage = $event" />
+        </footer>
+      </section>
     </template>
 
     <!-- ══ TAB: PHIEU NHAP ══ -->
     <template v-else-if="khoTab==='phieu-nhap'">
-      <div class="row g-3 mb-3">
-        <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #a78bfa;">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div
-                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:44px;height:44px;background:rgba(167,139,250,0.15);"
-              >
-                <ClipboardList :size="20" color="#a78bfa" />
-              </div>
-              <div>
-                <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statTotal') }}</div>
-                <div class="fw-bold" style="font-size:1.55rem;">{{ phieuNhapCounts.total }}</div>
-              </div>
-            </div>
+      <div class="inv-stats">
+        <div class="inv-stat inv-stat--purple">
+          <div class="inv-stat__icon"><ClipboardList :size="22" /></div>
+          <div>
+            <div class="inv-stat__label">{{ t('admin.phieuNhap.statTotal') }}</div>
+            <div class="inv-stat__value">{{ phieuNhapCounts.total }}</div>
           </div>
         </div>
-        <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #facc15;">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div
-                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:44px;height:44px;background:rgba(250,204,21,0.15);"
-              >
-                <Clock :size="20" color="#facc15" />
-              </div>
-              <div>
-                <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statPending') }}</div>
-                <div class="fw-bold" :style="phieuNhapCounts.choDuyet?{color:'#facc15'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.choDuyet }}</div>
-              </div>
-            </div>
+        <div class="inv-stat inv-stat--amber">
+          <div class="inv-stat__icon"><Clock :size="22" /></div>
+          <div>
+            <div class="inv-stat__label">{{ t('admin.phieuNhap.statPending') }}</div>
+            <div class="inv-stat__value">{{ phieuNhapCounts.choDuyet }}</div>
           </div>
         </div>
-        <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid #22c55e;">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div
-                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:44px;height:44px;background:rgba(34,197,94,0.15);"
-              >
-                <CheckCircle2 :size="20" color="#22c55e" />
-              </div>
-              <div>
-                <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statDone') }}</div>
-                <div class="fw-bold" style="font-size:1.55rem;color:#22c55e;">{{ phieuNhapCounts.hoanThanh }}</div>
-              </div>
-            </div>
+        <div class="inv-stat inv-stat--green">
+          <div class="inv-stat__icon"><CheckCircle2 :size="22" /></div>
+          <div>
+            <div class="inv-stat__label">{{ t('admin.phieuNhap.statDone') }}</div>
+            <div class="inv-stat__value">{{ phieuNhapCounts.hoanThanh }}</div>
           </div>
         </div>
-        <div class="col-6 col-xl-3">
-          <div class="card border-secondary h-100" style="background:var(--bg-hover);border-left:3px solid var(--accent-fg);">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div
-                class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:44px;height:44px;background:rgba(244,63,94,0.15);"
-              >
-                <XCircle :size="20" color="var(--accent-fg)" />
-              </div>
-              <div>
-                <div class="text-secondary small mb-1">{{ t('admin.phieuNhap.statCancelled') }}</div>
-                <div class="fw-bold" :style="phieuNhapCounts.huy?{color:'#f87171'}:{}" style="font-size:1.55rem;">{{ phieuNhapCounts.huy }}</div>
-              </div>
-            </div>
+        <div class="inv-stat inv-stat--red">
+          <div class="inv-stat__icon"><XCircle :size="22" /></div>
+          <div>
+            <div class="inv-stat__label">{{ t('admin.phieuNhap.statCancelled') }}</div>
+            <div class="inv-stat__value">{{ phieuNhapCounts.huy }}</div>
           </div>
         </div>
       </div>
 
-      <div class="alt-card">
-        <div class="alt-toolbar">
-          <div class="alt-toolbar__left">
-            <div class="alt-search">
-              <i class="fa fa-search alt-search__icon"></i>
-              <input v-model="phieuNhapSearch" :placeholder="t('admin.phieuNhap.searchPlaceholder')" />
-            </div>
-            <select v-model="phieuNhapStatusFilter" class="alt-select">
-              <option value="">{{ t('admin.inventory.filterAll') }}</option>
-              <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
-              <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
-              <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
-            </select>
-          </div>
-          <div class="alt-toolbar__actions">
-            <button class="alt-btn alt-btn--ghost" @click="printPhieuNhapList"><Printer :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.printPdf') }}</button>
-            <button class="alt-btn alt-btn--ghost" @click="exportPhieuNhapExcel"><Download :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.exportExcel') }}</button>
-            <button class="alt-btn alt-btn--primary" @click="openAddPhieuNhap"><Plus :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.add') }}</button>
-          </div>
+      <div class="inv-bar">
+        <div class="inv-search">
+          <Search :size="14" class="inv-search__icon" />
+          <input v-model="phieuNhapSearch" :placeholder="t('admin.phieuNhap.searchPlaceholder')" />
         </div>
+        <select v-model="phieuNhapStatusFilter" class="inv-select">
+          <option value="">{{ t('admin.inventory.filterAll') }}</option>
+          <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
+          <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
+          <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
+        </select>
+        <div class="inv-bar__actions">
+          <button class="inv-btn inv-btn--ghost" @click="printPhieuNhapList"><Printer :size="14" /> {{ t('admin.phieuNhap.printPdf') }}</button>
+          <button class="inv-btn inv-btn--ghost" @click="exportPhieuNhapExcel"><Download :size="14" /> {{ t('admin.phieuNhap.exportExcel') }}</button>
+          <button class="inv-btn inv-btn--primary" @click="openAddPhieuNhap"><Plus :size="14" /> {{ t('admin.phieuNhap.add') }}</button>
+        </div>
+      </div>
 
-        <div class="alt-table-wrap">
-          <table class="alt-table">
+      <section class="inv-card">
+        <div class="inv-table-wrap">
+          <table class="inv-table">
             <thead>
               <tr>
                 <th style="width:40px;">{{ t('admin.common.stt') }}</th>
@@ -905,347 +950,574 @@ const exportPhieuNhapExcel = () => {
                 <th>{{ t('admin.phieuNhap.colDate') }}</th>
                 <th>{{ t('admin.phieuNhap.colSupplier') }}</th>
                 <th>{{ t('admin.phieuNhap.colStaff') }}</th>
-                <th>{{ t('admin.phieuNhap.colTotal') }}</th>
+                <th class="ta-r">{{ t('admin.phieuNhap.colTotal') }}</th>
                 <th>{{ t('admin.phieuNhap.colStatus') }}</th>
-                <th>{{ t('admin.phieuNhap.colAction') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(p, idx) in pagedPhieuNhap" :key="p.phieuNhapId">
-                <td class="text-secondary">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
-                <td class="text-secondary" style="font-family:monospace;">{{ p.maPhieuNhap }}</td>
+              <tr v-for="(p, idx) in pagedPhieuNhap" :key="p.phieuNhapId" class="inv-row" @click="openPhieuNhapDetail(p)">
+                <td class="inv-muted">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
+                <td class="inv-code">{{ p.maPhieuNhap }}</td>
                 <td>{{ formatDate(p.ngayNhap) }}</td>
                 <td>{{ supplierName(p.nhaCungCapId) }}</td>
                 <td>{{ staffName(p.nhanVienId) }}</td>
-                <td>{{ formatPrice(p.tongTien) }}</td>
+                <td class="ta-r inv-price">{{ formatPrice(p.tongTien) }}</td>
                 <td>
-                  <span class="alt-tag" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
+                  <span class="inv-tag" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
                     <component :is="phieuNhapStatusIcon(p.trangThai)" :size="13" /> {{ statusLabel(p.trangThai) }}
                   </span>
                 </td>
-                <td>
-                  <div class="d-flex gap-1">
-                    <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;" @click="openPhieuNhapDetail(p)"><Search :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.viewDetail') }}</button>
-                    <template v-if="p.trangThai==='cho_duyet'">
-                      <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;color:var(--state-success);border-color:var(--state-success);" @click="updatePhieuNhapStatus(p,'hoan_thanh')"><Check :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.approve') }}</button>
-                      <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;color:var(--state-danger);border-color:var(--state-danger);" @click="updatePhieuNhapStatus(p,'huy')"><X :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.cancel') }}</button>
-                      <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;" @click="openEditPhieuNhap(p)"><Pencil :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.editAction') }}</button>
-                      <button class="alt-btn alt-btn--ghost" style="padding:3px 10px;font-size:0.72rem;color:var(--state-danger);border-color:var(--state-danger);" @click="deletePhieuNhap(p.phieuNhapId)"><Trash2 :size="12" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.deleteAction') }}</button>
-                    </template>
-                  </div>
-                </td>
               </tr>
-              <tr v-if="filteredPhieuNhap.length===0"><td colspan="8" class="alt-empty">{{ t('admin.phieuNhap.empty') }}</td></tr>
+              <tr v-if="filteredPhieuNhap.length===0"><td colspan="7" class="inv-empty">{{ t('admin.phieuNhap.empty') }}</td></tr>
             </tbody>
           </table>
-          <div v-if="pnTotalPages > 1" class="alt-pager"><Pagination :current-page="pnCurrentPage" :total-pages="pnTotalPages" @page-change="pnCurrentPage = $event" /></div>
         </div>
-      </div>
+        <footer v-if="pnTotalPages > 1" class="inv-pager">
+          <Pagination :current-page="pnCurrentPage" :total-pages="pnTotalPages" @page-change="pnCurrentPage = $event" />
+        </footer>
+      </section>
     </template>
   </div>
 
   <!-- ══ MODAL TAO PHIEU NHAP ══ -->
-  <div v-if="showPhieuNhapModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showPhieuNhapModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:860px;max-width:96vw;max-height:90vh;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+  <div v-if="showPhieuNhapModal" class="inv-modal-mask" @click.self="showPhieuNhapModal=false">
+    <div class="inv-modal">
+      <header class="inv-modal__head">
         <span>{{ editingPhieuNhapId ? t('admin.phieuNhapModal.titleEdit') : t('admin.phieuNhapModal.title') }}</span>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showPhieuNhapModal=false"></button>
-      </div>
-      <div class="overflow-y-auto p-4">
-        <div v-if="phieuNhapFormError" class="alert alert-danger small py-2 mb-3">{{ phieuNhapFormError }}</div>
-        <div class="row g-3 mb-3">
-          <div class="col-6">
-            <label class="form-label small text-secondary">{{ t('admin.phieuNhapModal.supplierLabel') }}</label>
+        <button class="inv-icon-btn" :aria-label="t('common.close')" @click="showPhieuNhapModal=false"><X :size="16" /></button>
+      </header>
+      <div class="inv-modal__body">
+        <p v-if="phieuNhapFormError" class="inv-alert">{{ phieuNhapFormError }}</p>
+        <div class="inv-grid mb-3">
+          <label class="inv-field">
+            <span>{{ t('admin.phieuNhapModal.supplierLabel') }}</span>
             <SearchSelect v-model="phieuNhapForm.nhaCungCapId" :options="supplierOptions" :placeholder="t('admin.phieuNhapModal.selectPlaceholder')" />
-          </div>
-          <div class="col-6">
-            <label class="form-label small text-secondary">{{ t('admin.phieuNhapModal.staffLabel') }}</label>
+          </label>
+          <label class="inv-field">
+            <span>{{ t('admin.phieuNhapModal.staffLabel') }}</span>
             <SearchSelect v-model="phieuNhapForm.nhanVienId" :options="staffOptions" :placeholder="t('admin.phieuNhapModal.selectPlaceholder')" />
-          </div>
-          <div class="col-6">
-            <label class="form-label small text-secondary">{{ t('admin.phieuNhapModal.dateLabel') }}</label>
-            <input v-model="phieuNhapForm.ngayNhap" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
-          </div>
-          <div class="col-6">
-            <label class="form-label small text-secondary">{{ t('admin.phieuNhapModal.noteLabel') }}</label>
-            <input v-model="phieuNhapForm.ghiChu" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
-          </div>
+          </label>
+          <label class="inv-field">
+            <span>{{ t('admin.phieuNhapModal.dateLabel') }}</span>
+            <input v-model="phieuNhapForm.ngayNhap" type="datetime-local" />
+          </label>
+          <label class="inv-field">
+            <span>{{ t('admin.phieuNhapModal.noteLabel') }}</span>
+            <input v-model="phieuNhapForm.ghiChu" />
+          </label>
         </div>
 
-        <div class="fw-semibold small text-secondary mb-2 d-flex align-items-center gap-1"><Package :size="14" /> {{ t('admin.phieuNhapModal.itemsLabel') }}</div>
-        <div class="d-flex gap-2 mb-1">
-          <label class="form-label small text-secondary mb-0" style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colProduct') }}</label>
-          <label class="form-label small text-secondary mb-0" style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colVariant') }}</label>
-          <label class="form-label small text-secondary mb-0" style="flex:0 0 80px;">{{ t('admin.phieuNhapModal.colQty') }}</label>
-          <label class="form-label small text-secondary mb-0" style="flex:0 0 110px;">{{ t('admin.phieuNhapModal.colPrice') }}</label>
+        <div class="inv-section-title"><Package :size="14" /> {{ t('admin.phieuNhapModal.itemsLabel') }}</div>
+        <div class="inv-item-head">
+          <span style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colProduct') }}</span>
+          <span style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colVariant') }}</span>
+          <span style="flex:0 0 80px;">{{ t('admin.phieuNhapModal.colQty') }}</span>
+          <span style="flex:0 0 110px;">{{ t('admin.phieuNhapModal.colPrice') }}</span>
           <span style="flex:0 0 34px;"></span>
         </div>
         <div class="d-flex flex-column gap-2 mb-2">
-          <div v-for="(row, idx) in phieuNhapForm.items" :key="idx" class="d-flex gap-2 align-items-center">
-            <div style="flex:2 1 0;min-width:0;">
-              <SearchSelect
-                v-model="row.sanPhamId" :options="productOptionsForPhieuNhap"
-                :placeholder="t('admin.phieuNhapModal.selectProductPlaceholder')"
-                @update:model-value="row.bienTheId=''"
+          <div v-for="(row, idx) in phieuNhapForm.items" :key="idx" class="inv-item-block">
+            <div class="inv-item-row">
+              <div style="flex:2 1 0;min-width:0;">
+                <SearchSelect
+                  v-model="row.sanPhamId" :options="productOptionsForPhieuNhap"
+                  :placeholder="t('admin.phieuNhapModal.selectProductPlaceholder')"
+                  @update:model-value="row.bienTheId=''; row.lockedCount=0; row.serials=['']"
+                />
+              </div>
+              <div style="flex:2 1 0;min-width:0;">
+                <SearchSelect
+                  v-model="row.bienTheId" :disabled="!row.sanPhamId"
+                  :options="variantsForProduct(row.sanPhamId)"
+                  :placeholder="t('admin.phieuNhapModal.selectVariantPlaceholder')"
+                  @update:model-value="row.lockedCount=0; syncPhieuNhapItemSerials(row)"
+                />
+              </div>
+              <input v-model="row.soLuong" type="number" min="1" style="flex:0 0 80px;" :placeholder="t('admin.phieuNhapModal.qtyPlaceholder')" @change="clampPhieuNhapSoLuong(row)" />
+              <input v-model="row.donGia" type="number" min="0" style="flex:0 0 110px;" :placeholder="t('admin.phieuNhapModal.unitPricePlaceholder')" />
+              <button class="inv-icon-btn inv-icon-btn--danger" style="flex:0 0 34px;" :aria-label="t('common.remove')" @click="removePhieuNhapItemRow(idx)"><X :size="14" /></button>
+            </div>
+            <div v-if="row.bienTheId" class="inv-serial-grid">
+              <span class="inv-hint" style="grid-column:1/-1;">{{ tt('admin.phieuNhapModal.serialsLabel', 'Serial cho dòng này (đủ số lượng)') }}</span>
+              <input
+                v-for="(s, sIdx) in row.serials" :key="sIdx"
+                v-model="row.serials[sIdx]" :disabled="sIdx < (row.lockedCount ?? 0)"
+                class="inv-mono" :placeholder="`Serial #${sIdx + 1}`"
               />
             </div>
-            <div style="flex:2 1 0;min-width:0;">
-              <SearchSelect
-                v-model="row.bienTheId" :disabled="!row.sanPhamId"
-                :options="variantsForProduct(row.sanPhamId)"
-                :placeholder="t('admin.phieuNhapModal.selectVariantPlaceholder')"
-              />
-            </div>
-            <input v-model="row.soLuong" type="number" min="1" class="form-control form-control-sm" style="flex:0 0 80px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.qtyPlaceholder')" @change="clampPhieuNhapSoLuong(row)" />
-            <input v-model="row.donGia" type="number" min="0" class="form-control form-control-sm" style="flex:0 0 110px;background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.phieuNhapModal.unitPricePlaceholder')" />
-            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;flex:0 0 34px;" :aria-label="t('common.remove')" @click="removePhieuNhapItemRow(idx)"><X :size="14" /></button>
           </div>
         </div>
-        <button class="btn btn-sm btn-outline-warning mb-3" @click="addPhieuNhapItemRow">{{ t('admin.phieuNhapModal.addRow') }}</button>
+        <button class="inv-btn inv-btn--ghost mb-3" @click="addPhieuNhapItemRow">{{ t('admin.phieuNhapModal.addRow') }}</button>
 
-        <div class="d-flex justify-content-end fw-bold" style="font-size:1.05rem;">
-          {{ t('admin.phieuNhapModal.totalLabel') }} {{ formatPrice(phieuNhapItemsTotal) }}
-        </div>
+        <div class="inv-total">{{ t('admin.phieuNhapModal.totalLabel') }} {{ formatPrice(phieuNhapItemsTotal) }}</div>
       </div>
-      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showPhieuNhapModal=false">{{ t('admin.phieuNhapModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="phieuNhapSaving" @click="savePhieuNhap">{{ editingPhieuNhapId ? t('admin.phieuNhapModal.saveEdit') : t('admin.phieuNhapModal.save') }}</button>
-      </div>
+      <footer class="inv-modal__foot inv-modal__foot--end">
+        <button class="inv-btn inv-btn--ghost" @click="showPhieuNhapModal=false">{{ t('admin.phieuNhapModal.cancel') }}</button>
+        <button class="inv-btn inv-btn--primary" :disabled="phieuNhapSaving" @click="savePhieuNhap">{{ editingPhieuNhapId ? t('admin.phieuNhapModal.saveEdit') : t('admin.phieuNhapModal.save') }}</button>
+      </footer>
     </div>
   </div>
 
   <!-- ══ MODAL CHI TIET PHIEU NHAP ══ -->
-  <div v-if="showPhieuNhapDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showPhieuNhapDetailModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:680px;max-width:96vw;max-height:90vh;">
-      <!-- Header -->
-      <div v-if="phieuNhapDetailData" class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
+  <div v-if="showPhieuNhapDetailModal" class="inv-modal-mask" @click.self="showPhieuNhapDetailModal=false">
+    <div class="inv-modal inv-modal--hep">
+      <header v-if="phieuNhapDetailData" class="inv-modal__head">
         <div class="d-flex align-items-center gap-3">
-          <div
-            class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-            style="width:40px;height:40px;background:rgba(167,139,250,0.15);"
-          >
-            <ClipboardList :size="18" color="#a78bfa" />
-          </div>
+          <div class="inv-modal__icon"><ClipboardList :size="18" /></div>
           <div>
-            <div class="fw-bold" style="font-size:0.95rem;color:var(--text-heading);">
+            <div style="font-weight:700;font-size:0.95rem;">
               {{ t('admin.phieuNhapDetailModal.title') }}
-              <span class="text-secondary ms-1" style="font-size:0.8rem;font-family:monospace;">{{ phieuNhapDetailData.maPhieuNhap }}</span>
+              <span class="inv-mono inv-muted" style="margin-left:4px;font-size:0.8rem;">{{ phieuNhapDetailData.maPhieuNhap }}</span>
             </div>
-            <div class="text-secondary" style="font-size:0.78rem;">{{ supplierName(phieuNhapDetailData.nhaCungCapId) }} · {{ formatDate(phieuNhapDetailData.ngayNhap) }}</div>
+            <div class="inv-muted" style="font-size:0.78rem;">{{ supplierName(phieuNhapDetailData.nhaCungCapId) }} · {{ formatDate(phieuNhapDetailData.ngayNhap) }}</div>
           </div>
         </div>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showPhieuNhapDetailModal=false"></button>
-      </div>
+        <button class="inv-icon-btn" :aria-label="t('common.close')" @click="showPhieuNhapDetailModal=false"><X :size="16" /></button>
+      </header>
 
-      <div v-if="phieuNhapDetailData" class="overflow-y-auto flex-grow-1">
-        <!-- Info chips -->
-        <div class="d-flex flex-wrap gap-2 p-3" style="border-bottom:1px solid var(--border-color-soft);">
-          <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
-            <Building2 :size="13" style="vertical-align:-2px;" /> <span class="text-secondary">{{ t('admin.phieuNhap.colSupplier') }}:</span> <span class="text-light fw-semibold">{{ supplierName(phieuNhapDetailData.nhaCungCapId) }}</span>
-          </span>
-          <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
-            <User :size="13" style="vertical-align:-2px;" /> <span class="text-secondary">{{ t('admin.phieuNhap.colStaff') }}:</span> <span class="text-light fw-semibold">{{ staffName(phieuNhapDetailData.nhanVienId) }}</span>
-          </span>
-          <span class="d-flex align-items-center gap-1 rounded-pill px-3 py-1 small" style="background:var(--bg-card-alt);">
-            <Calendar :size="13" style="vertical-align:-2px;" /> <span class="text-secondary">{{ t('admin.phieuNhap.colDate') }}:</span> <span class="text-light fw-semibold">{{ formatDate(phieuNhapDetailData.ngayNhap) }}</span>
-          </span>
-          <span class="badge d-flex align-items-center" :style="{ background: phieuNhapStatusColor(phieuNhapDetailData.trangThai).bg, color: phieuNhapStatusColor(phieuNhapDetailData.trangThai).text }">
+      <div v-if="phieuNhapDetailData" class="inv-modal__body" style="padding:0;">
+        <div class="inv-chips">
+          <span class="inv-chip-info"><Building2 :size="13" /> {{ t('admin.phieuNhap.colSupplier') }}: <b>{{ supplierName(phieuNhapDetailData.nhaCungCapId) }}</b></span>
+          <span class="inv-chip-info"><User :size="13" /> {{ t('admin.phieuNhap.colStaff') }}: <b>{{ staffName(phieuNhapDetailData.nhanVienId) }}</b></span>
+          <span class="inv-chip-info"><Calendar :size="13" /> {{ t('admin.phieuNhap.colDate') }}: <b>{{ formatDate(phieuNhapDetailData.ngayNhap) }}</b></span>
+          <span class="inv-tag" :style="{ background: phieuNhapStatusColor(phieuNhapDetailData.trangThai).bg, color: phieuNhapStatusColor(phieuNhapDetailData.trangThai).text }">
             <component :is="phieuNhapStatusIcon(phieuNhapDetailData.trangThai)" :size="13" /> {{ statusLabel(phieuNhapDetailData.trangThai) }}
           </span>
-          <div v-if="phieuNhapDetailData.ghiChu" class="w-100 text-secondary small fst-italic d-flex align-items-center gap-1" style="padding-left:2px;"><FileText :size="12" /> {{ phieuNhapDetailData.ghiChu }}</div>
+          <div v-if="phieuNhapDetailData.ghiChu" class="inv-muted" style="width:100%;font-size:0.8rem;font-style:italic;display:flex;align-items:center;gap:4px;"><FileText :size="12" /> {{ phieuNhapDetailData.ghiChu }}</div>
         </div>
 
-        <!-- Danh sach hang -->
-        <div class="p-3">
-          <table class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
+        <div class="inv-table-wrap" style="padding:16px;">
+          <table class="inv-table">
             <thead>
-              <tr style="background:var(--bg-input);">
-                <th class="px-3 py-2 text-secondary" style="font-weight:600;">{{ t('admin.inventory.colSku') }}</th>
-                <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:80px;">{{ t('admin.phieuNhapModal.qtyPlaceholder') }}</th>
-                <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:110px;">{{ t('admin.phieuNhapModal.actualStockLabel') }}</th>
-                <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:130px;">{{ t('admin.phieuNhapModal.unitPricePlaceholder') }}</th>
-                <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:140px;">{{ t('admin.phieuNhapModal.totalLabel') }}</th>
+              <tr>
+                <th>{{ t('admin.inventory.colSku') }}</th>
+                <th class="ta-c">{{ t('admin.phieuNhapModal.qtyPlaceholder') }}</th>
+                <th class="ta-c">{{ t('admin.phieuNhapModal.actualStockLabel') }}</th>
+                <th class="ta-r">{{ t('admin.phieuNhapModal.unitPricePlaceholder') }}</th>
+                <th class="ta-r">{{ t('admin.phieuNhapModal.totalLabel') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="c in phieuNhapDetailItems" :key="c.id" style="border-top:1px solid var(--border-color-soft);">
-                <td class="px-3 py-2 text-secondary" style="font-family:monospace;">{{ c.maSku }}</td>
-                <td class="px-3 py-2 text-center fw-bold" style="color:var(--text-heading);">{{ c.soLuong }}</td>
-                <td class="px-3 py-2 text-center">
-                  <span :class="tonThucTeCuaBienThe(c.bienTheId) < c.soLuong ? 'text-warning' : 'text-success'" :title="t('admin.phieuNhapModal.actualStockHint')">
-                    {{ tonThucTeCuaBienThe(c.bienTheId) }}
-                  </span>
-                </td>
-                <td class="px-3 py-2 text-end text-secondary">{{ formatPrice(c.donGiaNhap) }}</td>
-                <td class="px-3 py-2 text-end fw-semibold" style="color:var(--accent-fg);">{{ formatPrice(c.thanhTien) }}</td>
-              </tr>
-              <tr v-if="phieuNhapDetailItems.length===0"><td colspan="5" class="text-center text-secondary py-4">{{ t('admin.phieuNhap.empty') }}</td></tr>
+              <template v-for="c in phieuNhapDetailItems" :key="c.id">
+                <tr class="inv-row">
+                  <td class="inv-code">{{ c.maSku }}</td>
+                  <td class="ta-c" style="font-weight:700;">{{ c.soLuong }}</td>
+                  <td class="ta-c">
+                    <span :class="tonThucTeCuaBienThe(c.bienTheId) < c.soLuong ? 'text-warning' : 'text-success'" :title="t('admin.phieuNhapModal.actualStockHint')">
+                      {{ tonThucTeCuaBienThe(c.bienTheId) }}
+                    </span>
+                  </td>
+                  <td class="ta-r inv-muted">{{ formatPrice(c.donGiaNhap) }}</td>
+                  <td class="ta-r inv-price">{{ formatPrice(c.thanhTien) }}</td>
+                </tr>
+                <tr v-if="phieuNhapDetailSerialsFor(c.bienTheId).length" class="inv-row" style="cursor:default;">
+                  <td colspan="5" style="padding-top:0;">
+                    <div class="inv-serial-chip-row">
+                      <span v-for="s in phieuNhapDetailSerialsFor(c.bienTheId)" :key="s.chiTietId" class="inv-tag inv-tag--soft inv-mono">{{ s.soSerial }}</span>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+              <tr v-if="phieuNhapDetailItems.length===0"><td colspan="5" class="inv-empty">{{ t('admin.phieuNhap.empty') }}</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Footer: tong ket -->
-      <div v-if="phieuNhapDetailData" class="px-4 py-3 d-flex justify-content-between align-items-center" style="border-top:1px solid var(--border-color-soft);background:var(--bg-card-alt);">
-        <span class="text-secondary small">{{ phieuNhapDetailItems.length }} {{ t('admin.inventory.colSku') }}</span>
+      <footer v-if="phieuNhapDetailData" class="inv-modal__foot">
+        <span class="inv-muted" style="font-size:0.85rem;">{{ phieuNhapDetailItems.length }} {{ t('admin.inventory.colSku') }}</span>
         <div class="d-flex align-items-center gap-2">
-          <span class="text-secondary small">{{ t('admin.phieuNhapModal.totalLabel') }}</span>
-          <span class="fw-bold" style="font-size:1.15rem;color:var(--accent-fg);">{{ formatPrice(phieuNhapDetailData.tongTien) }}</span>
+          <span class="inv-muted" style="font-size:0.85rem;">{{ t('admin.phieuNhapModal.totalLabel') }}</span>
+          <span class="inv-price" style="font-size:1.15rem;">{{ formatPrice(phieuNhapDetailData.tongTien) }}</span>
         </div>
-      </div>
-      <div v-if="phieuNhapDetailData" class="d-flex justify-content-end gap-2 p-3 pt-0">
-        <button class="btn btn-sm btn-outline-danger" @click="printPhieuNhapDetail(phieuNhapDetailData)"><Printer :size="14" style="vertical-align:-2px;" /> {{ t('admin.phieuNhap.printPdf') }}</button>
-        <button class="btn btn-sm btn-outline-secondary" @click="showPhieuNhapDetailModal=false">{{ t('admin.promoModal.cancel') }}</button>
-      </div>
+      </footer>
+      <footer v-if="phieuNhapDetailData" class="inv-modal__foot inv-modal__foot--end" style="border-top:none;padding-top:0;flex-wrap:wrap;">
+        <template v-if="phieuNhapDetailData.trangThai==='cho_duyet'">
+          <button class="inv-btn inv-btn--ghost inv-btn--ok" @click="updatePhieuNhapStatus(phieuNhapDetailData,'hoan_thanh')"><Check :size="14" /> {{ t('admin.phieuNhap.approve') }}</button>
+          <button class="inv-btn inv-btn--ghost inv-btn--danger" @click="updatePhieuNhapStatus(phieuNhapDetailData,'huy')"><X :size="14" /> {{ t('admin.phieuNhap.cancel') }}</button>
+          <button class="inv-btn inv-btn--ghost" @click="showPhieuNhapDetailModal=false; openEditPhieuNhap(phieuNhapDetailData)"><Pencil :size="14" /> {{ t('admin.phieuNhap.editAction') }}</button>
+          <button class="inv-btn inv-btn--ghost inv-btn--danger" @click="showPhieuNhapDetailModal=false; deletePhieuNhap(phieuNhapDetailData.phieuNhapId)"><Trash2 :size="14" /> {{ t('admin.phieuNhap.deleteAction') }}</button>
+        </template>
+        <button class="inv-btn inv-btn--ghost" @click="printPhieuNhapDetail(phieuNhapDetailData)"><Printer :size="14" /> {{ t('admin.phieuNhap.printPdf') }}</button>
+        <button class="inv-btn inv-btn--ghost" style="margin-left:auto;" @click="showPhieuNhapDetailModal=false">{{ t('admin.promoModal.cancel') }}</button>
+      </footer>
     </div>
   </div>
 
-  <!-- ══ MODAL TON KHO ══ -->
-  <div v-if="showStockModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showStockModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:480px;max-width:95vw;max-height:90vh;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ t('admin.stockModal.title') }}</span>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showStockModal=false"></button>
-      </div>
-      <div class="overflow-y-auto p-4">
-        <div v-if="editingStock" class="small p-2 rounded-2 mb-3 text-secondary" style="background:var(--bg-hover);">
-          {{ editingStock.bienThe?.sanPham?.tenSanPham??'—' }} — {{ t('admin.stockModal.skuLabel') }} <strong>{{ editingStock.bienThe?.maSku??'—' }}</strong>
-        </div>
-        <div class="row g-3">
-          <div class="col-6">
-            <label class="form-label small text-secondary">{{ t('admin.stockModal.stockLabel') }}</label>
-            <div class="form-control form-control-sm d-flex align-items-center" style="background:var(--bg-hover); color:var(--text-secondary); border-color:var(--border-color-strong)">{{ editingStock?.soLuongTon ?? 0 }}</div>
-            <div class="text-secondary" style="font-size:0.72rem;">{{ t('admin.stockModal.stockHint') }}</div>
-          </div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.stockModal.heldLabel') }}</label><input v-model="stockForm.soLuongGiu" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-12"><label class="form-label small text-secondary">{{ t('admin.stockModal.minStockLabel') }}</label><input v-model="stockForm.tonKhoToiThieu" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <label class="form-label small text-secondary mb-0">{{ t('admin.stockModal.newSerialsLabel') }}</label>
-              <label class="btn btn-sm btn-outline-info" style="padding:2px 10px;font-size:0.72rem;cursor:pointer;">
-                <FolderOpen :size="14" style="vertical-align:-2px;" /> {{ t('admin.stockModal.importFromFile') }}
-                <input type="file" accept=".csv,.txt,.xlsx,.xls" class="d-none" @change="importSerialsFromFile" />
-              </label>
-            </div>
-            <div class="d-flex flex-column gap-2">
-              <div v-for="(s, idx) in stockForm.newSerials" :key="idx" class="d-flex gap-2 align-items-center">
-                <input v-model="stockForm.newSerials[idx]" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" :placeholder="t('admin.stockModal.serialPlaceholder')" />
-                <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" :aria-label="t('common.remove')" @click="removeStockSerialRow(idx)"><X :size="14" /></button>
-              </div>
-            </div>
-            <button class="btn btn-sm btn-outline-warning mt-2" @click="addStockSerialRow">{{ t('admin.stockModal.addSerialRow') }}</button>
-            <div class="text-secondary mt-1" style="font-size:0.72rem;">{{ t('admin.stockModal.importHint') }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showStockModal=false">{{ t('admin.stockModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="stockSaving" @click="saveStock">{{ t('admin.stockModal.save') }}</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ MODAL CHI TIET SERIAL ══ -->
-  <div
-    v-if="showStockDetailModal"
-    class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-    style="background:var(--bg-overlay);z-index:1060;"
-    @click.self="showStockDetailModal=false"
-  >
-    <div
-      class="rounded-4 d-flex flex-column"
-      style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:760px;max-width:96vw;max-height:88vh;"
-    >
-      <!-- Header -->
-      <div class="d-flex align-items-start justify-content-between px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
+  <!-- ══ MODAL CHI TIET BIEN THE (gop 2 tab: Danh sach serial / Them hang) ══ -->
+  <div v-if="showDetailModal" class="inv-modal-mask" @click.self="showDetailModal=false">
+    <div class="inv-modal" style="width:760px;">
+      <header class="inv-modal__head" style="align-items:flex-start;">
         <div>
-          <div class="fw-bold" style="font-size:0.95rem;color:var(--text-heading);">
-            {{ t('admin.stockDetailModal.titlePrefix') }} {{ stockDetailItem?.bienThe?.maSku || '—' }}
+          <div style="font-weight:700;font-size:0.95rem;">
+            {{ t('admin.stockDetailModal.titlePrefix') }} {{ detailItem?.bienThe?.maSku || '—' }}
           </div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">{{ detailItem?.bienThe?.sanPham?.tenSanPham || '—' }}</div>
           <div class="d-flex gap-1 mt-1 flex-wrap">
-            <span v-if="getVariantInfo(stockDetailItem)?.cpu" class="badge" style="background:#2a2a3a;color:#aab;font-size:0.7rem;">{{ getVariantInfo(stockDetailItem).cpu }}</span>
-            <span v-if="getVariantInfo(stockDetailItem)?.ram" class="badge" style="background:#2a3a2a;color:#aba;font-size:0.7rem;">{{ getVariantInfo(stockDetailItem).ram }}</span>
-            <span v-if="getVariantInfo(stockDetailItem)?.oCung" class="badge" style="background:#3a2a2a;color:#baa;font-size:0.7rem;">{{ getVariantInfo(stockDetailItem).oCung }}</span>
-            <span v-if="getVariantInfo(stockDetailItem)?.mauSac" class="badge" style="background:#2a2a2a;color:#999;font-size:0.7rem;">{{ getVariantInfo(stockDetailItem).mauSac }}</span>
+            <span v-if="getVariantInfo(detailItem)?.cpu" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).cpu }}</span>
+            <span v-if="getVariantInfo(detailItem)?.ram" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).ram }}</span>
+            <span v-if="getVariantInfo(detailItem)?.oCung" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).oCung }}</span>
+            <span v-if="getVariantInfo(detailItem)?.mauSac" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).mauSac }}</span>
           </div>
         </div>
-        <div class="d-flex align-items-center gap-3">
-          <div class="text-center">
-            <div class="d-flex align-items-center justify-content-center gap-1">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
-              <span class="fw-bold" style="font-size:1.2rem;color:var(--text-heading);">{{ stockDetailSerials.filter(s=>s.trangThai==='trong_kho').length }}</span>
-            </div>
-            <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.stockDetailModal.inStock') }}</div>
-          </div>
-          <div class="text-center">
-            <div class="d-flex align-items-center justify-content-center gap-1">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0;"></span>
-              <span class="fw-bold" style="font-size:1.2rem;color:var(--text-heading);">{{ stockDetailSerials.filter(s=>s.trangThai==='da_ban').length }}</span>
-            </div>
-            <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.stockDetailModal.sold') }}</div>
-          </div>
-          <div class="text-center">
-            <div class="d-flex align-items-center justify-content-center gap-1">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fb923c;flex-shrink:0;"></span>
-              <span class="fw-bold" style="font-size:1.2rem;color:var(--text-heading);">{{ stockDetailSerials.filter(s=>s.trangThai==='loi_bao_hanh').length }}</span>
-            </div>
-            <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.stockDetailModal.warranty') }}</div>
-          </div>
-          <button class="btn-close btn-sm ms-2" :aria-label="t('common.close')" @click="showStockDetailModal=false"></button>
-        </div>
+        <button class="inv-icon-btn" :aria-label="t('common.close')" @click="showDetailModal=false"><X :size="16" /></button>
+      </header>
+
+      <div class="inv-tabs" style="padding:12px 20px 0;">
+        <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': detailTab==='serials' }" @click="detailTab='serials'">{{ tt('admin.stockDetailModal.tabSerials', 'Danh sách serial') }}</button>
+        <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': detailTab==='add' }" @click="detailTab='add'">{{ tt('admin.stockDetailModal.tabAdd', 'Thêm hàng') }}</button>
       </div>
 
-      <!-- Serial list -->
-      <div class="overflow-y-auto flex-grow-1">
-        <div v-if="stockDetailLoading" class="text-secondary small text-center py-5">{{ t('admin.stockDetailModal.loading') }}</div>
-        <div v-else-if="stockDetailSerials.length === 0" class="text-secondary small text-center py-5">{{ t('admin.stockDetailModal.empty') }}</div>
-        <table v-else class="w-100" style="border-collapse:collapse;font-size:0.82rem;">
-          <thead>
-            <tr style="background:var(--bg-input);position:sticky;top:0;">
-              <th class="px-4 py-2 text-secondary" style="font-weight:500;width:40px;">{{ t('admin.stockDetailModal.colIndex') }}</th>
-              <th class="px-4 py-2 text-secondary" style="font-weight:500;">{{ t('admin.stockDetailModal.colSerial') }}</th>
-              <th class="px-4 py-2 text-secondary" style="font-weight:500;">{{ t('admin.stockDetailModal.colImportDate') }}</th>
-              <th class="px-4 py-2 text-secondary" style="font-weight:500;">{{ t('admin.stockDetailModal.colStatus') }}</th>
-              <th class="px-4 py-2 text-secondary" style="font-weight:500;width:60px;"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(s, idx) in stockDetailSerials" :key="s.chiTietId"
-              style="border-top:1px solid var(--bg-input);"
-            >
-              <td class="px-4 py-2 text-secondary">{{ idx + 1 }}</td>
-              <td class="px-4 py-2 fw-semibold" style="font-family:monospace;color:var(--text-heading);">{{ s.soSerial }}</td>
-              <td class="px-4 py-2 text-secondary">{{ formatDate(s.ngayNhapKho) }}</td>
-              <td class="px-4 py-2">
-                <span
-                  style="display:inline-block;width:10px;height:10px;border-radius:50%;"
-                  :style="{ background: stockDetailStatusColor(s.trangThai) }"
-                  :title="stockDetailStatusLabel(s.trangThai)"
-                ></span>
-              </td>
-              <td class="px-4 py-2">
-                <button v-if="s.trangThai==='trong_kho'" class="btn btn-sm btn-outline-danger" style="padding:1px 7px;font-size:0.72rem;" :title="t('admin.stockDetailModal.deleteSerial')" :aria-label="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)"><X :size="11" /></button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <!-- Tab: Danh sach serial -->
+      <template v-if="detailTab==='serials'">
+        <div class="inv-modal__body" style="padding-bottom:0;">
+          <div class="d-flex gap-2">
+            <div class="inv-search" style="flex:1;">
+              <Search :size="14" class="inv-search__icon" />
+              <input v-model="detailSerialSearch" :placeholder="tt('admin.stockDetailModal.searchPlaceholder', 'Tìm serial...')" />
+            </div>
+            <select v-model="detailSerialStatusFilter" class="inv-select" style="width:170px;">
+              <option value="">{{ tt('admin.stockDetailModal.allStatus', 'Tất cả trạng thái') }}</option>
+              <option v-for="s in SERIAL_STATUS_OPTIONS" :key="s" :value="s">{{ stockDetailStatusLabel(s) }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="inv-modal__body" style="padding-top:10px;overflow-y:auto;max-height:420px;">
+          <div v-if="detailSerialsLoading" class="inv-empty">{{ t('admin.stockDetailModal.loading') }}</div>
+          <div v-else-if="filteredDetailSerials.length === 0" class="inv-empty">{{ t('admin.stockDetailModal.empty') }}</div>
+          <table v-else class="inv-table">
+            <thead>
+              <tr>
+                <th style="width:40px;">{{ t('admin.stockDetailModal.colIndex') }}</th>
+                <th>{{ t('admin.stockDetailModal.colSerial') }}</th>
+                <th>{{ t('admin.stockDetailModal.colImportDate') }}</th>
+                <th>{{ t('admin.stockDetailModal.colStatus') }}</th>
+                <th style="width:60px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(s, idx) in filteredDetailSerials" :key="s.chiTietId" class="inv-row">
+                <td class="inv-muted">{{ idx + 1 }}</td>
+                <td class="inv-mono" style="font-weight:600;">{{ s.soSerial }}</td>
+                <td class="inv-muted">{{ formatDate(s.ngayNhapKho) }}</td>
+                <td>{{ stockDetailStatusLabel(s.trangThai) }}</td>
+                <td>
+                  <button v-if="s.trangThai==='trong_kho'" class="inv-icon-btn inv-icon-btn--danger" :title="t('admin.stockDetailModal.deleteSerial')" :aria-label="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)"><X :size="12" /></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <footer class="inv-modal__foot inv-modal__foot--end">
+          <button class="inv-btn inv-btn--ghost" @click="showDetailModal=false">{{ t('admin.stockModal.cancel') }}</button>
+        </footer>
+      </template>
+
+      <!-- Tab: Them hang -->
+      <template v-else>
+        <div class="inv-modal__body">
+          <div class="inv-grid">
+            <label class="inv-field">
+              <span>{{ t('admin.stockModal.stockLabel') }}</span>
+              <div class="inv-readonly">{{ detailItem?.soLuongTon ?? 0 }}</div>
+              <em class="inv-hint">{{ t('admin.stockModal.stockHint') }}</em>
+            </label>
+            <label class="inv-field">
+              <span>{{ t('admin.stockModal.heldLabel') }}</span>
+              <input v-model="stockForm.soLuongGiu" type="number" min="0" />
+            </label>
+            <label class="inv-field" style="grid-column:1/-1;">
+              <span>{{ t('admin.stockModal.minStockLabel') }}</span>
+              <input v-model="stockForm.tonKhoToiThieu" type="number" min="0" />
+            </label>
+            <div class="inv-field" style="grid-column:1/-1;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span>{{ t('admin.stockModal.newSerialsLabel') }}</span>
+                <label class="inv-btn inv-btn--ghost inv-btn--sm" style="cursor:pointer;">
+                  <FolderOpen :size="14" /> {{ t('admin.stockModal.importFromFile') }}
+                  <input type="file" accept=".csv,.txt,.xlsx,.xls" class="d-none" @change="importSerialsFromFile" />
+                </label>
+              </div>
+              <div class="d-flex flex-column gap-2">
+                <div v-for="(s, idx) in stockForm.newSerials" :key="idx" class="d-flex gap-2 align-items-center">
+                  <input v-model="stockForm.newSerials[idx]" :placeholder="t('admin.stockModal.serialPlaceholder')" />
+                  <button class="inv-icon-btn inv-icon-btn--danger" :aria-label="t('common.remove')" @click="removeStockSerialRow(idx)"><X :size="14" /></button>
+                </div>
+              </div>
+              <button class="inv-btn inv-btn--ghost mt-2" @click="addStockSerialRow">{{ t('admin.stockModal.addSerialRow') }}</button>
+              <em class="inv-hint">{{ t('admin.stockModal.importHint') }}</em>
+            </div>
+          </div>
+        </div>
+        <footer class="inv-modal__foot inv-modal__foot--end">
+          <button class="inv-btn inv-btn--ghost" @click="showDetailModal=false">{{ t('admin.stockModal.cancel') }}</button>
+          <button class="inv-btn inv-btn--primary" :disabled="stockSaving" @click="saveStock">{{ t('admin.stockModal.save') }}</button>
+        </footer>
+      </template>
     </div>
   </div>
+
 </template>
 
 <style scoped>
-.text-light {
-  color: var(--text-primary) !important;
-}
+/* Nhại đúng bảng màu + tỉ lệ của HangHoa.vue để đồng bộ phong cách toàn bộ khối quản trị —
+   cố tình dùng cùng giá trị hex/hồng cứng như HangHoa.vue thay vì biến theme sáng/tối dùng
+   chung, cho khớp pixel với các màn hình khác. */
+.inv, .inv-modal-mask {
+  --pink-50:  #fff5f9;
+  --pink-100: #ffe6f0;
+  --pink-200: #ffcfe1;
+  --pink-300: #f7a8c8;
+  --pink-500: #ec4899;
+  --pink-600: #db2777;
+  --pink-700: #a81b5d;
 
-/* Nut/badge bo tron pill — giu tinh than form cua KhoHang.vue nhung dung bien mau cua
-   theme hien tai (van doi mau theo dark/light mode). */
-.btn {
-  border-radius: 999px;
+  --ink:   #1f2937;
+  --muted: #6b7280;
+  --line:  #f1dbe6;
+  --field: #d9b3c6;
+  --danger: #dc2626;
+  --ok-bg:   #ecfdf5;
+  --ok-text: #047857;
+
+  --sh-1: 0 1px 2px rgba(168, 27, 93, .06);
+  --sh-2: 0 4px 14px rgba(168, 27, 93, .10);
 }
-.badge {
-  border-radius: 999px;
+.inv { font-size: 14px; color: var(--ink); }
+.ta-r { text-align: right; }
+.ta-c { text-align: center; }
+.inv-muted { color: var(--muted); }
+.inv-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* ══════════ TAB TON KHO / PHIEU NHAP ══════════ */
+.inv-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+
+/* ══════════ NÚT ══════════ */
+.inv-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 999px; border: 1px solid transparent;
+  font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s;
 }
+.inv-btn--sm { padding: 5px 11px; font-size: 12.5px; }
+.inv-btn--primary { background: var(--pink-600); color: #fff; box-shadow: var(--sh-1); }
+.inv-btn--primary:hover:not(:disabled) { background: var(--pink-700); box-shadow: var(--sh-2); }
+.inv-btn--ghost { background: #fff; color: var(--pink-700); border-color: var(--pink-200); }
+.inv-btn--ghost:hover:not(:disabled) { background: var(--pink-50); border-color: var(--pink-300); }
+.inv-btn--ghost.is-on { background: var(--pink-100); border-color: var(--pink-300); }
+.inv-btn--ok { color: var(--ok-text); border-color: #bbf7d0; }
+.inv-btn--ok:hover:not(:disabled) { background: var(--ok-bg); }
+.inv-btn--danger { color: var(--danger); border-color: #fecaca; }
+.inv-btn--danger:hover:not(:disabled) { background: #fef2f2; }
+.inv-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.inv-icon-btn {
+  background: #fff; border: 1px solid var(--pink-200); color: var(--pink-700);
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+  display: inline-grid; place-items: center; flex-shrink: 0;
+}
+.inv-icon-btn:hover { background: var(--pink-50); }
+.inv-icon-btn--danger { color: var(--danger); border-color: #fecaca; }
+.inv-icon-btn--danger:hover { background: #fef2f2; }
+
+/* ══════════ STAT CARD — khối màu đậm giống ảnh mẫu, icon/số trắng ══════════ */
+.inv-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.inv-stat {
+  display: flex; align-items: center; gap: 14px;
+  border-radius: 14px; padding: 16px 18px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
+  color: #fff; cursor: pointer; user-select: none;
+  border: 2px solid transparent; transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+.inv-stat:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
+.inv-stat.is-on { border-color: rgba(255, 255, 255, .85); }
+.inv-stat--blue   { background: linear-gradient(135deg, #60a5fa, #2563eb); }
+.inv-stat--green  { background: linear-gradient(135deg, #34d399, #059669); cursor: default; }
+.inv-stat--green:hover { transform: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .12); }
+.inv-stat--amber  { background: linear-gradient(135deg, #fbbf24, #d97706); }
+.inv-stat--red    { background: linear-gradient(135deg, #f87171, #dc2626); }
+.inv-stat--purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+.inv-stat--cyan   { background: linear-gradient(135deg, #22d3ee, #0891b2); }
+.inv-stat__icon {
+  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+  background: rgba(255, 255, 255, .22);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+}
+.inv-stat__label { font-size: 12.5px; color: rgba(255, 255, 255, .85); margin-bottom: 2px; font-weight: 600; }
+.inv-stat__value { font-size: 1.6rem; font-weight: 800; color: #fff; }
+
+.inv-quickview-note {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--pink-50); border: 1px solid var(--pink-200); border-radius: 10px;
+  padding: 8px 14px; margin: -2px 0 14px; font-size: 13px; color: var(--ink);
+}
+.inv-quickview-note__clear {
+  margin-left: auto; background: none; border: none; color: var(--pink-600);
+  font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: underline;
+  font-family: inherit; padding: 0;
+}
+.inv-quickview-note__clear:hover { color: var(--pink-700); }
+
+/* ══════════ THANH CÔNG CỤ ══════════ */
+.inv-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--sh-1);
+}
+.inv-bar__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+
+.inv-search { position: relative; flex: 1 1 240px; min-width: 200px; max-width: 340px; }
+.inv-search input {
+  width: 100%; padding: 8px 14px 8px 34px;
+  border: 1px solid var(--pink-200); border-radius: 999px;
+  font-size: 13px; background: var(--pink-50); font-family: inherit; color: var(--ink);
+}
+.inv-search input:focus { outline: none; border-color: var(--pink-500); background: #fff; box-shadow: 0 0 0 3px var(--pink-100); }
+.inv-search__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--pink-500); pointer-events: none; }
+
+.inv-select {
+  height: 34px; padding: 0 30px 0 12px; border-radius: 999px;
+  border: 1px solid var(--pink-200); background: var(--pink-50); color: var(--ink);
+  font-size: 13px; font-family: inherit; cursor: pointer; appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+                    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 14px, calc(100% - 10px) 14px;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+}
+.inv-select:focus { outline: none; border-color: var(--pink-500); }
+
+.inv-chip {
+  background: var(--pink-600); color: #fff; border-radius: 999px;
+  padding: 0 6px; font-size: 11px; line-height: 17px; min-width: 17px; text-align: center;
+}
+.inv-caret { transition: transform .2s; }
+.inv-caret.is-open { transform: rotate(180deg); }
+
+/* ══════════ BỘ LỌC ══════════ */
+.inv-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease, margin-bottom .22s ease; margin-bottom: 0; }
+.inv-filter.is-open { grid-template-rows: 1fr; margin-bottom: 12px; }
+.inv-filter__panel {
+  overflow: hidden; background: #fff; border: 1px solid var(--line);
+  border-radius: 14px; padding: 0 16px; transition: padding .22s ease; box-shadow: var(--sh-1);
+}
+.inv-filter.is-open .inv-filter__panel { padding: 16px; }
+.inv-filter__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.inv-filter__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line);
+}
+.inv-filter__count { font-size: 12.5px; color: var(--muted); }
+.inv-filter__btns { display: flex; gap: 8px; }
+
+/* ══════════ Ô NHẬP DÙNG CHUNG ══════════ */
+.inv-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.inv-field > span { font-size: 12px; font-weight: 700; color: var(--pink-700); }
+.inv-field input, .inv-field select, .inv-item-row input, .inv-solo-input, .inv-serial-grid input {
+  width: 100%; padding: 9px 11px;
+  border: 1px solid var(--field); border-radius: 9px;
+  font-size: 13px; color: var(--ink); background: #fff; font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
+}
+.inv-field input:focus, .inv-field select:focus, .inv-item-row input:focus, .inv-solo-input:focus, .inv-serial-grid input:focus {
+  outline: none; border-color: var(--pink-500); box-shadow: 0 0 0 3px var(--pink-100);
+}
+.inv-readonly {
+  padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px;
+  font-size: 13px; color: var(--muted); background: var(--pink-50);
+}
+.inv-hint { font-size: 11.5px; color: var(--muted); font-style: normal; margin-top: 2px; }
+.inv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.inv-picked { font-size: 13px; color: var(--muted); background: var(--pink-50); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
+.inv-alert { background: #fef2f2; color: var(--danger); border-radius: 10px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+.inv-section-title {
+  display: flex; align-items: center; gap: 6px;
+  text-transform: uppercase; font-weight: 700; font-size: 11.5px; letter-spacing: .06em;
+  color: var(--pink-700); margin-bottom: 8px;
+}
+.inv-item-head { display: flex; gap: 8px; margin-bottom: 4px; font-size: 12px; font-weight: 700; color: var(--pink-700); }
+.inv-item-row { display: flex; gap: 8px; align-items: center; }
+.inv-item-block { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: var(--pink-50); }
+.inv-serial-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px;
+  margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--pink-200);
+}
+.inv-serial-grid input { font-size: 12.5px; padding: 6px 8px; }
+.inv-serial-grid input:disabled { background: var(--pink-100); color: var(--muted); cursor: not-allowed; }
+.inv-serial-chip-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.inv-total { text-align: right; font-weight: 800; font-size: 1.05rem; color: var(--ink); }
+
+/* ══════════ THẺ + BẢNG ══════════ */
+.inv-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--sh-1); }
+.inv-table-wrap { overflow-x: auto; }
+.inv-table { width: 100%; border-collapse: collapse; }
+.inv-table th {
+  background: var(--pink-50); color: var(--pink-700);
+  font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
+  padding: 11px 12px; white-space: nowrap; border-bottom: none;
+}
+.inv-table thead th:first-child { border-top-left-radius: 13px; }
+.inv-table thead th:last-child { border-top-right-radius: 13px; }
+.inv-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.inv-table tbody tr:last-child td { border-bottom: none; }
+.inv-row { cursor: pointer; transition: background-color .12s; }
+.inv-row:hover { background: var(--pink-50); }
+
+.inv-code { color: var(--pink-700); font-weight: 700; }
+.inv-price { font-weight: 700; font-variant-numeric: tabular-nums; }
+.inv-ton { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.inv-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 9px; border: 1px solid var(--line); background: #fff; flex-shrink: 0; }
+.inv-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.inv-name__text { min-width: 0; }
+.inv-name__main { font-weight: 600; line-height: 1.35; word-break: break-word; }
+.inv-name__sub { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 2px; }
+.inv-config { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+
+.inv-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.inv-tag--ok { background: var(--ok-bg); color: var(--ok-text); }
+.inv-tag--low { background: #fff7ed; color: #c2650a; }
+.inv-tag--out { background: #fef2f2; color: var(--danger); }
+.inv-tag--soft { background: var(--pink-100); color: var(--pink-700); }
+
+.inv-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.inv-empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13.5px; }
+
+.inv-pager { display: flex; justify-content: flex-end; padding: 10px 16px; background: var(--pink-50); border-top: 1px solid var(--line); }
+
+.inv-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.inv-chip-info {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--pink-50); border-radius: 999px; padding: 4px 12px;
+  font-size: 12.5px; color: var(--muted);
+}
+.inv-chip-info b { color: var(--ink); font-weight: 700; }
+
+/* ══════════ MODAL ══════════ */
+.inv-modal-mask {
+  position: fixed; inset: 0; z-index: 1050;
+  background: rgba(31,41,55,.5); display: flex; align-items: flex-start; justify-content: center;
+  padding: 5vh 20px 20px; font-size: 14px; color: var(--ink);
+}
+.inv-modal {
+  background: #fff; width: 640px; max-width: 100%; max-height: 90vh;
+  border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 22px 55px rgba(168,27,93,.25);
+}
+.inv-modal--hep { width: 520px; }
+.inv-modal__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px 12px; background: var(--pink-50); border-bottom: 1px solid var(--line);
+}
+.inv-modal__icon {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--pink-100); color: var(--pink-700);
+}
+.inv-modal__body { padding: 20px; overflow-y: auto; background: #fffafc; }
+.inv-modal__foot {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px 20px; border-top: 1px solid var(--line); background: var(--pink-50);
+}
+.inv-modal__foot--end { justify-content: flex-end; }
 </style>

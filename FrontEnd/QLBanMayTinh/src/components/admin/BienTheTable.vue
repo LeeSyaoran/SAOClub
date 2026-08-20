@@ -12,9 +12,11 @@ import { authHeaders } from "../../services/api.js";
 import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
+import { refreshInventory } from "../../stores/inventory.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import { Camera, Image, Cpu, MemoryStick, HardDrive, Monitor, Barcode } from '@lucide/vue';
 import Pagination from "../common/Pagination.vue";
+import SearchSelect from "../common/SearchSelect.vue";
 import { usePagination } from "../../composables/usePagination.js";
 import { useAutoHideOnScroll } from "../../composables/useAutoHideOnScroll.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
@@ -269,6 +271,49 @@ const toggleTag = (value) => {
 };
 const isTagSelected = (value) => form.phanLoaiTags.split(',').map(s => s.trim()).includes(value);
 
+// ── Combobox thật (SearchSelect, không dùng datalist trình duyệt — popup datalist
+// không style được, mỗi máy/trình duyệt hiện một kiểu xấu khác nhau) + tag hiện giá trị
+// đang chọn bên dưới kèm nút xóa. Combobox vẫn luôn còn đó để chọn lại. ─────────────────
+const NONE_LABEL = () => tt('admin.productModal.noneOption', 'Không chọn');
+const cpuOptions = computed(() => [
+  { value: null, label: NONE_LABEL() },
+  ...cpuList.value.map((c) => ({ value: c.cpuId, label: c.tenCpu })),
+]);
+const gpuOptions = computed(() => [
+  { value: null, label: NONE_LABEL() },
+  ...gpuList.value.map((g) => ({ value: g.gpuId, label: g.tenGpu })),
+]);
+const ramOptions = computed(() => [
+  { value: null, label: NONE_LABEL() },
+  ...ramList.value.map((r) => ({ value: r.ramId, label: r.dungLuong })),
+]);
+const oCungOptions = computed(() => [
+  { value: null, label: NONE_LABEL() },
+  ...oCungList.value.map((o) => ({ value: o.oCungId, label: o.loaiOcung })),
+]);
+// Tên hiển thị cho tag của các trường chọn theo ID
+const cpuName = (id) => cpuList.value.find((c) => c.cpuId === id)?.tenCpu ?? '';
+const gpuName = (id) => gpuList.value.find((g) => g.gpuId === id)?.tenGpu ?? '';
+const ramName = (id) => ramList.value.find((r) => r.ramId === id)?.dungLuong ?? '';
+const oCungName = (id) => oCungList.value.find((o) => o.oCungId === id)?.loaiOcung ?? '';
+
+// Trường chuỗi/số không có bảng riêng (màu, màn hình, HĐH, pin, bảo hành, trọng lượng) —
+// gợi ý gộp: danh sách cố định + mọi giá trị thực tế đang có trong dữ liệu + giá trị hiện
+// tại của form (không mất khi sửa 1 biến thể có giá trị lạ, hiếm, không nằm trong gợi ý).
+const stringOptionsFor = (field, base) => {
+  const real = allVariants.value.map((p) => p[field]).filter((v) => v !== null && v !== undefined && v !== '');
+  const cur = form[field];
+  const all = new Set([...base, ...real]);
+  if (cur !== null && cur !== undefined && cur !== '') all.add(cur);
+  return [...all].map((v) => ({ value: v, label: String(v) }));
+};
+const mauSacOptions = computed(() => stringOptionsFor('mauSac', ['Đen', 'Trắng', 'Bạc', 'Xám', 'Xanh Dương', 'Xanh Lá', 'Đỏ', 'Vàng', 'Hồng', 'Tím', 'Cam', 'Nâu']));
+const manHinhOptions = computed(() => stringOptionsFor('kichThuocManHinh', ['15.6" FHD 60Hz', '15.6" FHD 144Hz', '15.6" QHD 240Hz', '16" 2.5K 120Hz', '16" FHD 165Hz', '16" WQXGA 165Hz', '16" 2.8K OLED 120Hz']));
+const heDieuHanhOptions = computed(() => stringOptionsFor('heDieuHanh', ['Windows 11 Home', 'Windows 11 Pro', 'macOS', 'Không kèm HĐH']));
+const pinOptions = computed(() => stringOptionsFor('pin', ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh', '86Wh', '90Wh']));
+const baoHanhOptions = computed(() => stringOptionsFor('baoHanhThang', [6, 12, 18, 24, 36]).sort((a, b) => Number(a.value) - Number(b.value)));
+const trongLuongOptions = computed(() => stringOptionsFor('trongLuongKg', [1.2, 1.3, 1.5, 1.7, 1.8, 2.0, 2.3, 2.5]).sort((a, b) => Number(a.value) - Number(b.value)));
+
 const emptyForm = () => ({
   bienTheId: null,
   tenSanPham: "",
@@ -494,6 +539,9 @@ const saveVariant = async () => {
       resetImageState();
       showToast(tt('admin.variants.addedToast', 'Đã thêm phiên bản mới'));
       await refreshProducts();
+      // Biến thể mới phải hiện ngay ở "Hàng sắp về" bên Kho hàng — InventoryStore tách rời
+      // ProductsStore, không tự làm mới theo.
+      refreshInventory().catch(() => {});
     } catch (e) {
       formError.value = e.message;
     }
@@ -536,9 +584,9 @@ const saveVariant = async () => {
 </script>
 
 <template>
-  <div class="vt-card">
-    <!-- ══════════ THANH CÔNG CỤ + BỘ LỌC — khóa trên đầu, tự ẩn khi cuộn xuống ══════════ -->
-    <div ref="stickyHeadEl" class="vt-sticky-head" :class="{ 'is-hidden': barHidden }">
+  <!-- ══════════ THANH CÔNG CỤ + BỘ LỌC — thẻ riêng, khóa trên đầu, tự ẩn khi cuộn xuống ══════════ -->
+  <div ref="stickyHeadEl" class="vt-sticky-head" :class="{ 'is-hidden': barHidden }">
+    <div class="vt-toolbar-card">
       <div class="vt-toolbar">
         <div class="vt-toolbar__left">
           <div class="vt-search">
@@ -563,116 +611,115 @@ const saveVariant = async () => {
           </button>
         </div>
       </div>
+    </div>
 
-      <!-- ══════════ BỘ LỌC (thu gọn) ══════════ -->
-      <div class="vt-filter" :class="{ 'is-open': isFilterOpen }">
-        <div class="vt-filter__panel">
-          <div class="vt-filter__grid">
-            <label class="vt-field">
-              <span>{{ tt('admin.variants.filterBrand', 'Thương hiệu') }}</span>
-              <select v-model="filterThuongHieu">
-                <option value="">{{ tt('admin.variants.filterBrandAll', 'Tất cả thương hiệu') }}</option>
-                <option v-for="o in brandOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </label>
+    <!-- ══════════ BỘ LỌC (thu gọn) — thẻ riêng, chỉ hiện khi mở ══════════ -->
+    <div class="vt-filter" :class="{ 'is-open': isFilterOpen }">
+      <div class="vt-filter__panel">
+        <div class="vt-filter__grid">
+          <label class="vt-field">
+            <span>{{ tt('admin.variants.filterBrand', 'Thương hiệu') }}</span>
+            <select v-model="filterThuongHieu">
+              <option value="">{{ tt('admin.variants.filterBrandAll', 'Tất cả thương hiệu') }}</option>
+              <option v-for="o in brandOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+          </label>
 
-            <label class="vt-field">
-              <span>{{ tt('admin.variants.filterCategory', 'Danh mục') }}</span>
-              <select v-model="filterDanhMuc">
-                <option value="">{{ tt('admin.variants.filterCategoryAll', 'Tất cả danh mục') }}</option>
-                <option v-for="o in categoryOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </label>
+          <label class="vt-field">
+            <span>{{ tt('admin.variants.filterCategory', 'Danh mục') }}</span>
+            <select v-model="filterDanhMuc">
+              <option value="">{{ tt('admin.variants.filterCategoryAll', 'Tất cả danh mục') }}</option>
+              <option v-for="o in categoryOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+          </label>
 
-            <label class="vt-field">
-              <span>{{ tt('admin.variants.filterStatus', 'Trạng thái') }}</span>
-              <select v-model="filterTrangThai">
-                <option value="">{{ tt('admin.variants.filterStatusAll', 'Tất cả trạng thái') }}</option>
-                <option v-for="o in statusOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </label>
-          </div>
+          <label class="vt-field">
+            <span>{{ tt('admin.variants.filterStatus', 'Trạng thái') }}</span>
+            <select v-model="filterTrangThai">
+              <option value="">{{ tt('admin.variants.filterStatusAll', 'Tất cả trạng thái') }}</option>
+              <option v-for="o in statusOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+          </label>
+        </div>
 
-          <div class="vt-filter__foot">
-            <span class="vt-filter__count">
-              {{ filteredVariants.length }}/{{ allVariants.length }} {{ t('admin.variants.countSuffix') }}
-            </span>
-            <div class="vt-filter__btns">
-              <button type="button" class="vt-btn vt-btn--ghost" @click="clearFilters">
-                {{ tt('admin.variants.clearFilters', 'Xóa lọc') }}
-              </button>
-              <button type="button" class="vt-btn vt-btn--primary" @click="isFilterOpen = false">
-                {{ tt('admin.variants.filterDone', 'Xong') }}
-              </button>
-            </div>
+        <div class="vt-filter__foot">
+          <span class="vt-filter__count">
+            {{ filteredVariants.length }}/{{ allVariants.length }} {{ t('admin.variants.countSuffix') }}
+          </span>
+          <div class="vt-filter__btns">
+            <button type="button" class="vt-btn vt-btn--ghost" @click="clearFilters">
+              {{ tt('admin.variants.clearFilters', 'Xóa lọc') }}
+            </button>
+            <button type="button" class="vt-btn vt-btn--primary" @click="isFilterOpen = false">
+              {{ tt('admin.variants.filterDone', 'Xong') }}
+            </button>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- ══════════ BẢNG — bấm vào dòng để xem chi tiết ══════════ -->
-    <div class="vt-body">
-      <div v-if="ProductsStore.loading" class="vt-empty">{{ t('admin.variants.loading') }}</div>
-      <div v-else class="vt-table-wrap">
-        <table class="vt-table">
-          <thead>
-            <tr>
-              <th class="vt-col-stt">{{ t('admin.common.stt') }}</th>
-              <th class="vt-col-img">{{ t('admin.variants.colImage') }}</th>
-              <th class="vt-col-sku">{{ t('admin.variants.colSku') }}</th>
-              <th class="vt-col-name">{{ t('admin.variants.colProduct') }}</th>
-              <th class="vt-col-config">{{ t('admin.variants.colConfig') }}</th>
-              <th class="vt-col-color">{{ t('admin.variants.colColor') }}</th>
-              <th class="vt-col-num">{{ tt('admin.variants.colStock', 'Tồn kho') }}</th>
-              <th v-if="canViewCost" class="vt-col-price">{{ tt('admin.variants.colPriceBuy', 'Giá nhập') }}</th>
-              <th class="vt-col-price">{{ t('admin.variants.colPriceSell') }}</th>
-              <th class="vt-col-status">{{ t('admin.variants.colStatus') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(p, idx) in pagedVariants" :key="p.bienTheId"
-              class="vt-row" tabindex="0"
-              :title="tt('admin.variants.rowHint', 'Bấm để xem chi tiết')"
-              @click="openRowDetail(p)" @keydown.enter.prevent="openRowDetail(p)"
-            >
-              <td class="vt-muted">{{ currentPage * pageSize + idx + 1 }}</td>
-              <td>
-                <div class="vt-thumb">
-                  <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham" />
-                  <Image v-else :size="14" color="var(--muted)" />
-                </div>
-              </td>
-              <td class="vt-sku" :title="p.maSku">{{ p.maSku }}</td>
-              <td class="vt-name" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
-              <td class="vt-config" :title="configLabel(p)">
-                <div v-if="p.cpu || p.ram || p.oCung" class="vt-config__list">
-                  <span v-if="p.cpu"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
-                  <span v-if="p.ram"><MemoryStick :size="12" />{{ p.ram }}</span>
-                  <span v-if="p.oCung"><HardDrive :size="12" />{{ p.oCung }}</span>
-                </div>
-                <span v-else>—</span>
-              </td>
-              <td class="vt-color">{{ p.mauSac || '—' }}</td>
-              <td class="vt-col-num">
-                <span class="vt-stock" :class="stockClass(p)">{{ stockOf(p) }}</span>
-              </td>
-              <td v-if="canViewCost" class="vt-col-price vt-muted">{{ formatPrice(p.giaNhap) }}</td>
-              <td class="vt-col-price vt-price">{{ formatPrice(p.giaBan) }}</td>
-              <td>
-                <span class="vt-tag" :class="p.trangThai === 'active' ? 'vt-tag--on' : 'vt-tag--off'">
-                  {{ statusLabel(p.trangThai) }}
-                </span>
-              </td>
-            </tr>
-            <tr v-if="filteredVariants.length === 0">
-              <td :colspan="colCount" class="vt-empty">{{ t('admin.variants.empty') }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div v-if="totalPages > 1" class="vt-pager">
-          <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
-        </div>
+  </div>
+  <!-- ══════════ BẢNG — thẻ riêng, bấm vào dòng để xem chi tiết ══════════ -->
+  <div class="vt-card">
+    <div v-if="ProductsStore.loading" class="vt-empty">{{ t('admin.variants.loading') }}</div>
+    <div v-else class="vt-table-wrap">
+      <table class="vt-table">
+        <thead>
+          <tr>
+            <th class="vt-col-stt">{{ t('admin.common.stt') }}</th>
+            <th class="vt-col-img">{{ t('admin.variants.colImage') }}</th>
+            <th class="vt-col-sku">{{ t('admin.variants.colSku') }}</th>
+            <th class="vt-col-name">{{ t('admin.variants.colProduct') }}</th>
+            <th class="vt-col-config">{{ t('admin.variants.colConfig') }}</th>
+            <th class="vt-col-color">{{ t('admin.variants.colColor') }}</th>
+            <th class="vt-col-num">{{ tt('admin.variants.colStock', 'Tồn kho') }}</th>
+            <th v-if="canViewCost" class="vt-col-price">{{ tt('admin.variants.colPriceBuy', 'Giá nhập') }}</th>
+            <th class="vt-col-price">{{ t('admin.variants.colPriceSell') }}</th>
+            <th class="vt-col-status">{{ t('admin.variants.colStatus') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(p, idx) in pagedVariants" :key="p.bienTheId"
+            class="vt-row" tabindex="0"
+            :title="tt('admin.variants.rowHint', 'Bấm để xem chi tiết')"
+            @click="openRowDetail(p)" @keydown.enter.prevent="openRowDetail(p)"
+          >
+            <td class="vt-muted">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td>
+              <div class="vt-thumb">
+                <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham" />
+                <Image v-else :size="14" color="var(--muted)" />
+              </div>
+            </td>
+            <td class="vt-sku" :title="p.maSku">{{ p.maSku }}</td>
+            <td class="vt-name" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
+            <td class="vt-config" :title="configLabel(p)">
+              <div v-if="p.cpu || p.ram || p.oCung" class="vt-config__list">
+                <span v-if="p.cpu"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
+                <span v-if="p.ram"><MemoryStick :size="12" />{{ p.ram }}</span>
+                <span v-if="p.oCung"><HardDrive :size="12" />{{ p.oCung }}</span>
+              </div>
+              <span v-else>—</span>
+            </td>
+            <td class="vt-color">{{ p.mauSac || '—' }}</td>
+            <td class="vt-col-num">
+              <span class="vt-stock" :class="stockClass(p)">{{ stockOf(p) }}</span>
+            </td>
+            <td v-if="canViewCost" class="vt-col-price vt-muted">{{ formatPrice(p.giaNhap) }}</td>
+            <td class="vt-col-price vt-price">{{ formatPrice(p.giaBan) }}</td>
+            <td>
+              <span class="vt-tag" :class="p.trangThai === 'active' ? 'vt-tag--on' : 'vt-tag--off'">
+                {{ statusLabel(p.trangThai) }}
+              </span>
+            </td>
+          </tr>
+          <tr v-if="filteredVariants.length === 0">
+            <td :colspan="colCount" class="vt-empty">{{ t('admin.variants.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="totalPages > 1" class="vt-pager">
+        <Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" />
       </div>
     </div>
   </div>
@@ -782,7 +829,7 @@ const saveVariant = async () => {
         <input v-model="variantProductSearch" class="form-control form-control-sm vt-input" :placeholder="t('admin.variantModal.pickProductPlaceholder')" />
         <div class="vt-pick-list">
           <div v-for="p in searchedProducts" :key="p.sanPhamId" class="vt-pick-item" @click="pickProductForVariant(p)">
-            {{ p.tenSanPham }} <span class="text-secondary">— {{ p.tenThuongHieu }}</span>
+            {{ p.tenSanPham }} <span class="vt-muted">— {{ p.tenThuongHieu }}</span>
           </div>
           <div v-if="searchedProducts.length === 0" class="vt-pick-empty">{{ t('admin.variantModal.pickProductEmpty') }}</div>
         </div>
@@ -837,11 +884,17 @@ const saveVariant = async () => {
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.colorLabel') }}</label>
-              <input v-model="form.mauSac" class="form-control form-control-sm vt-input" :placeholder="t('admin.productModal.colorPlaceholder')" />
+              <SearchSelect v-model="form.mauSac" :options="mauSacOptions" :placeholder="t('admin.productModal.colorPlaceholder')" />
+              <div v-if="form.mauSac" class="vt-picked-tags">
+                <span class="vt-tag-pill">
+                  {{ form.mauSac }}
+                  <button type="button" aria-label="Bỏ chọn" @click="form.mauSac = ''">&times;</button>
+                </span>
+              </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.warrantyLabel') }}</label>
-              <input v-model="form.baoHanhThang" type="number" min="0" class="form-control form-control-sm vt-input" />
+              <SearchSelect v-model="form.baoHanhThang" :options="baoHanhOptions" placeholder="Số tháng" />
             </div>
             <template v-if="!addVariantMode">
               <div class="col-4">
@@ -875,47 +928,77 @@ const saveVariant = async () => {
           <div class="row g-3">
             <div class="col-6">
               <label class="vt-label">{{ t('admin.productModal.cpuLabel') }}</label>
-              <select v-model="form.cpuId" class="form-select form-select-sm vt-input">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="c in cpuList" :key="c.cpuId" :value="c.cpuId">{{ c.tenCpu }}</option>
-              </select>
+              <SearchSelect v-model="form.cpuId" :options="cpuOptions" :placeholder="t('admin.productModal.noneOption')" />
+              <div v-if="form.cpuId" class="vt-picked-tags">
+                <span class="vt-tag-pill">
+                  {{ cpuName(form.cpuId) }}
+                  <button type="button" aria-label="Bỏ chọn" @click="form.cpuId = null">&times;</button>
+                </span>
+              </div>
             </div>
             <div class="col-6">
               <label class="vt-label">{{ t('admin.productModal.gpuLabel') }}</label>
-              <select v-model="form.gpuId" class="form-select form-select-sm vt-input">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="g in gpuList" :key="g.gpuId" :value="g.gpuId">{{ g.tenGpu }}</option>
-              </select>
+              <SearchSelect v-model="form.gpuId" :options="gpuOptions" :placeholder="t('admin.productModal.noneOption')" />
+              <div v-if="form.gpuId" class="vt-picked-tags">
+                <span class="vt-tag-pill">
+                  {{ gpuName(form.gpuId) }}
+                  <button type="button" aria-label="Bỏ chọn" @click="form.gpuId = null">&times;</button>
+                </span>
+              </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.ramLabel') }}</label>
-              <select v-model="form.ramId" class="form-select form-select-sm vt-input">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="r in ramList" :key="r.ramId" :value="r.ramId">{{ r.dungLuong }}</option>
-              </select>
+              <SearchSelect v-model="form.ramId" :options="ramOptions" :placeholder="t('admin.productModal.noneOption')" />
+              <div v-if="form.ramId" class="vt-picked-tags">
+                <span class="vt-tag-pill">
+                  {{ ramName(form.ramId) }}
+                  <button type="button" aria-label="Bỏ chọn" @click="form.ramId = null">&times;</button>
+                </span>
+              </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.storageLabel') }}</label>
-              <select v-model="form.oCungId" class="form-select form-select-sm vt-input">
-                <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
-                <option v-for="o in oCungList" :key="o.oCungId" :value="o.oCungId">{{ o.loaiOcung }}</option>
-              </select>
+              <SearchSelect v-model="form.oCungId" :options="oCungOptions" :placeholder="t('admin.productModal.noneOption')" />
+              <div v-if="form.oCungId" class="vt-picked-tags">
+                <span class="vt-tag-pill">
+                  {{ oCungName(form.oCungId) }}
+                  <button type="button" aria-label="Bỏ chọn" @click="form.oCungId = null">&times;</button>
+                </span>
+              </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.screenLabel') }}</label>
-              <input v-model="form.kichThuocManHinh" class="form-control form-control-sm vt-input" :placeholder="t('admin.productModal.screenPlaceholder')" />
+              <SearchSelect v-model="form.kichThuocManHinh" :options="manHinhOptions" :placeholder="t('admin.productModal.screenPlaceholder')" />
+              <div v-if="form.kichThuocManHinh" class="vt-picked-tags">
+                <span class="vt-tag-pill">
+                  {{ form.kichThuocManHinh }}
+                  <button type="button" aria-label="Bỏ chọn" @click="form.kichThuocManHinh = ''">&times;</button>
+                </span>
+              </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.osLabel') }}</label>
-              <input v-model="form.heDieuHanh" class="form-control form-control-sm vt-input" :placeholder="t('admin.productModal.osPlaceholder')" />
+              <SearchSelect v-model="form.heDieuHanh" :options="heDieuHanhOptions" :placeholder="t('admin.productModal.osPlaceholder')" />
+              <div v-if="form.heDieuHanh" class="vt-picked-tags">
+                <span class="vt-tag-pill">
+                  {{ form.heDieuHanh }}
+                  <button type="button" aria-label="Bỏ chọn" @click="form.heDieuHanh = ''">&times;</button>
+                </span>
+              </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.batteryLabel') }}</label>
-              <input v-model="form.pin" class="form-control form-control-sm vt-input" :placeholder="t('admin.productModal.batteryPlaceholder')" />
+              <SearchSelect v-model="form.pin" :options="pinOptions" :placeholder="t('admin.productModal.batteryPlaceholder')" />
+              <div v-if="form.pin" class="vt-picked-tags">
+                <span class="vt-tag-pill">
+                  {{ form.pin }}
+                  <button type="button" aria-label="Bỏ chọn" @click="form.pin = ''">&times;</button>
+                </span>
+              </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.weightLabel') }}</label>
-              <input v-model="form.trongLuongKg" type="number" step="0.1" min="0" class="form-control form-control-sm vt-input" />
+              <SearchSelect v-model="form.trongLuongKg" :options="trongLuongOptions" placeholder="Trọng lượng (kg)" />
             </div>
           </div>
         </div>
@@ -950,8 +1033,8 @@ const saveVariant = async () => {
                   </template>
                   <input type="file" accept="image/*" class="d-none" @change="handleImageFile" />
                 </label>
-                <div v-if="imageFilePending" class="text-warning small">{{ imageFilePending.name }}</div>
-                <div v-else class="text-secondary small">{{ t('admin.productModal.imageFormats') }}</div>
+                <div v-if="imageFilePending" class="vt-hl small">{{ imageFilePending.name }}</div>
+                <div v-else class="vt-muted small">{{ t('admin.productModal.imageFormats') }}</div>
               </div>
             </div>
             <template v-if="!addVariantMode">
@@ -961,7 +1044,7 @@ const saveVariant = async () => {
               </div>
               <div class="col-6">
                 <label class="vt-label">
-                  {{ t('admin.productModal.tagsLabel') }} <span class="text-warning">{{ t('admin.productModal.tagsHint') }}</span>
+                  {{ t('admin.productModal.tagsLabel') }} <span class="vt-hl">{{ t('admin.productModal.tagsHint') }}</span>
                 </label>
                 <div class="vt-tag-list">
                   <button
@@ -975,7 +1058,7 @@ const saveVariant = async () => {
               </div>
               <div class="col-6">
                 <label class="vt-label">
-                  {{ t('admin.productModal.tagNameLabel') }} <span class="text-muted">{{ t('admin.productModal.tagNameHint') }}</span>
+                  {{ t('admin.productModal.tagNameLabel') }} <span class="vt-muted">{{ t('admin.productModal.tagNameHint') }}</span>
                 </label>
                 <input v-model="form.phanLoaiTen" class="form-control form-control-sm vt-input" :placeholder="t('admin.productModal.tagNamePlaceholder')" />
               </div>
@@ -1015,7 +1098,7 @@ const saveVariant = async () => {
 /* Nhại đúng bảng màu + tỉ lệ của HangHoa.vue (tab "Hàng hóa") để 2 màn hình đồng bộ
    phong cách — cố tình dùng cùng giá trị hex/hồng cứng như HangHoa.vue thay vì biến
    theme sáng/tối dùng chung, cho khớp pixel với màn hình đó. */
-.vt-card, .vt-mask {
+.vt-card, .vt-sticky-head, .vt-mask {
   --pink-50:  #fff5f9;
   --pink-100: #ffe6f0;
   --pink-200: #ffcfe1;
@@ -1035,30 +1118,36 @@ const saveVariant = async () => {
   --sh-1: 0 1px 2px rgba(168, 27, 93, .06);
   --sh-2: 0 4px 14px rgba(168, 27, 93, .10);
 }
-.vt-card { font-size: 14px; color: var(--ink); }
+.vt-card, .vt-sticky-head { font-size: 14px; color: var(--ink); }
 
 /* ══════════ THẺ BAO NGOÀI ══════════ */
-/* Không overflow:hidden ở đây — position:sticky của .vt-sticky-head cần không có
-   ancestor nào (giữa nó và vùng cuộn thật sự) bị cắt overflow, nếu không sticky sẽ
-   hỏng. Bo góc được đảm nhiệm riêng bởi .vt-sticky-head (2 góc trên) và .vt-body
-   (2 góc dưới), mỗi khối tự overflow:hidden trên chính nó (an toàn, không phải ancestor). */
+/* .vt-card (bảng) là thẻ đứng riêng, KHÔNG chứa .vt-sticky-head bên trong nữa — tách
+   thanh công cụ/bộ lọc và bảng thành 2 thẻ độc lập có khoảng cách, giống hh-bar/
+   hh-filter/hh-card bên HangHoa.vue, thay vì gộp chung 1 khối lớn như trước. */
 .vt-card {
   background: #fff; border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: var(--sh-1);
+  overflow: hidden; box-shadow: var(--sh-1);
 }
+/* Sticky-head chỉ là khung định vị (dính đầu + tự ẩn khi cuộn) — KHÔNG mang nền/viền
+   riêng, để .vt-toolbar-card và .vt-filter__panel bên trong tách hẳn thành 2 thẻ
+   bo tròn độc lập có khoảng cách, giống bố cục hh-bar/hh-filter/hh-card bên HangHoa.vue. */
 .vt-sticky-head {
   position: sticky; top: 0; z-index: 5;
-  background: #fff; border-radius: 14px 14px 0 0; overflow: hidden;
-  transition: transform .25s ease, box-shadow .2s ease;
+  transition: transform .25s ease;
 }
-.vt-sticky-head.is-hidden { transform: translateY(-100%); box-shadow: var(--sh-2); }
-.vt-body { border-radius: 0 0 14px 14px; overflow: hidden; }
+.vt-sticky-head.is-hidden { transform: translateY(-100%); }
 .vt-muted { color: var(--muted); }
+.vt-hl { color: var(--pink-600); font-weight: 600; }
+
+.vt-toolbar-card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  margin-bottom: 12px; box-shadow: var(--sh-1); overflow: hidden;
+}
 
 /* ══════════ NÚT ══════════ */
 .vt-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 16px; border-radius: 999px; border: 1px solid transparent;
+  padding: 7px 14px; border-radius: 999px; border: 1px solid transparent;
   font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
   transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s;
 }
@@ -1073,8 +1162,8 @@ const saveVariant = async () => {
 
 /* ══════════ THANH CÔNG CỤ ══════════ */
 .vt-toolbar {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  padding: 14px 18px; background: #fff; border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 12px 16px; background: #fff;
 }
 .vt-toolbar__left { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; }
 .vt-toolbar__right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
@@ -1093,12 +1182,15 @@ const saveVariant = async () => {
 }
 .vt-search__clear:hover { color: var(--pink-600); }
 
-/* ══════════ BỘ LỌC (thu gọn) ══════════ */
-.vt-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease; }
-.vt-filter.is-open { grid-template-rows: 1fr; }
-.vt-filter__panel { overflow: hidden; background: var(--pink-50); border-bottom: 1px solid var(--line); }
-.vt-filter.is-open .vt-filter__panel { padding: 14px 18px; }
-.vt-filter__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+/* ══════════ BỘ LỌC (thu gọn) — thẻ riêng, bo tròn, tách khỏi thanh công cụ ══════════ */
+.vt-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease, margin-bottom .22s ease; margin-bottom: 0; }
+.vt-filter.is-open { grid-template-rows: 1fr; margin-bottom: 12px; }
+.vt-filter__panel {
+  overflow: hidden; background: #fff; border: 1px solid var(--line);
+  border-radius: 14px; padding: 0 16px; transition: padding .22s ease; box-shadow: var(--sh-1);
+}
+.vt-filter.is-open .vt-filter__panel { padding: 16px; }
+.vt-filter__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
 .vt-filter__foot {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line);
@@ -1131,16 +1223,25 @@ const saveVariant = async () => {
 /* ══════════ BẢNG ══════════ */
 /* table-layout: fixed + moi cot deu co width — trinh khong-gian-thua-do-mot-cot-choan-het
    (truoc day cot "Cau hinh" khong co width nen an het toan bo khoang trong con lai). */
+/* width:100% ep table luon vua khung, cot hep di la chu bi cat + "..." (vd "Trang th...").
+   Doi sang min-width:100% + khong ep width — man rong thi cac cot van gian ti le lap day
+   nhu cu, man/khung hep hon tong do rong cot thi table tu no rong ra, .vt-table-wrap
+   overflow-x:auto se hien thanh cuon ngang thay vi bop chu. */
 .vt-table-wrap { overflow-x: auto; }
-.vt-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.82rem; }
+.vt-table { min-width: 100%; table-layout: fixed; border-collapse: collapse; }
 .vt-table th {
-  background: var(--pink-50); color: var(--muted);
-  font-size: 12px; font-weight: 700; text-align: left; letter-spacing: .02em;
-  padding: 11px 14px; white-space: nowrap; border-bottom: 1px solid var(--line);
+  background: var(--pink-50); color: var(--pink-700);
+  font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
+  padding: 11px 12px; white-space: nowrap; border-bottom: none;
   overflow: hidden; text-overflow: ellipsis;
 }
+/* border-collapse:collapse tren <table> khong duoc overflow:hidden cua .vt-card bo
+   goc dung cach — o dau hang tieu de vuot goc tron, trong nhu net ke de len vien
+   card. Bo goc thang vao chinh o th dau/cuoi de nen hong di dung theo duong bo tron. */
+.vt-table thead th:first-child { border-top-left-radius: 13px; }
+.vt-table thead th:last-child { border-top-right-radius: 13px; }
 .vt-table td {
-  padding: 10px 14px; border-bottom: 1px solid var(--line);
+  padding: 11px 12px; border-bottom: 1px solid var(--line);
   vertical-align: middle; color: var(--ink);
 }
 .vt-table tbody tr:last-child td { border-bottom: none; }
@@ -1148,7 +1249,7 @@ const saveVariant = async () => {
 .vt-row:hover { background: var(--pink-50); }
 .vt-row:focus-visible { outline: 2px solid var(--pink-500); outline-offset: -2px; }
 
-.vt-col-stt { width: 40px; }
+.vt-col-stt { width: 54px; }
 .vt-col-img { width: 56px; }
 .vt-col-sku { width: 150px; }
 .vt-col-name { width: 200px; }
@@ -1176,10 +1277,10 @@ const saveVariant = async () => {
 .vt-config__list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.74rem; }
 .vt-config__list span { display: inline-flex; align-items: center; gap: 4px; }
 
-.vt-price { font-weight: 700; }
+.vt-price { font-weight: 600; font-variant-numeric: tabular-nums; }
 .vt-stock {
   display: inline-block; min-width: 34px; padding: 1px 8px; border-radius: 999px;
-  font-weight: 700; font-size: 0.76rem; font-variant-numeric: tabular-nums;
+  font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums;
   background: var(--pink-50); color: var(--ink);
 }
 .vt-stock--low { background: #fff7ed; color: #c2650a; }
@@ -1189,7 +1290,7 @@ const saveVariant = async () => {
 
 .vt-tag {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+  padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
 }
 .vt-tag--on  { background: var(--ok-bg); color: var(--ok-text); }
 .vt-tag--off { background: #f3f4f6; color: var(--muted); }
@@ -1325,6 +1426,24 @@ const saveVariant = async () => {
 .vt-upload__box img { width: 110px; height: 88px; object-fit: contain; }
 
 .vt-tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Tag hiển thị giá trị vừa chọn trong combobox (CPU/RAM/GPU/Ổ cứng/Màu sắc/Màn hình/
+   HĐH/Pin) — bấm dấu x để bỏ chọn, y hệt kiểu hh-tag-pill bên HangHoa.vue. */
+.vt-picked-tags { margin-top: 6px; }
+.vt-tag-pill {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  background: var(--pink-100); color: var(--pink-700);
+  border: 1px solid var(--pink-200); border-radius: 999px;
+  padding: 3px 6px 3px 11px; font-size: 12.5px; font-weight: 600;
+  word-break: break-word;
+}
+.vt-tag-pill button {
+  background: var(--pink-200); border: none; color: var(--pink-700);
+  width: 17px; height: 17px; border-radius: 50%; line-height: 1; flex-shrink: 0;
+  font-size: 13px; cursor: pointer; display: grid; place-items: center;
+}
+.vt-tag-pill button:hover { background: var(--pink-600); color: #fff; }
+
 .vt-tag-btn {
   padding: 3px 12px; border-radius: 999px; cursor: pointer; font-size: 0.75rem;
   background: #fff; color: var(--pink-700);

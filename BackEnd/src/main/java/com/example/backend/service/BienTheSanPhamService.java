@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.NhanVien;
+import com.example.backend.entity.TonKho;
 import com.example.backend.repository.*;
 import com.example.backend.request.BienTheSanPhamRequest;
 import com.example.backend.response.BienTheSanPhamPublicResponse;
@@ -82,7 +83,20 @@ public class BienTheSanPhamService {
         entity.setOCung(request.getOCungId() != null ? dmOcungRepository.getReferenceById(request.getOCungId()) : null);
         entity.setGpu(request.getGpuId() != null ? dmGpuRepository.getReferenceById(request.getGpuId()) : null);
 
-        return bienTheSanPhamRepository.save(entity);
+        BienTheSanPham saved = bienTheSanPhamRepository.save(entity);
+
+        // Tạo sẵn dòng tồn kho (0 tồn) cho biến thể mới — trigger trg_CapNhatTonKhoThucTe
+        // chỉ UPDATE (không INSERT), nên phải có sẵn dòng ton_kho từ đây thì sau này nhập
+        // serial/phiếu nhập mới cộng tồn đúng được. Đồng thời đây cũng là cách để biến thể
+        // mới xuất hiện ở "Hàng sắp về" bên Kho hàng thay vì biến mất khỏi mọi danh sách.
+        TonKho tonKho = new TonKho();
+        tonKho.setBienThe(saved);
+        tonKho.setSoLuongTon(0);
+        tonKho.setSoLuongGiu(0);
+        tonKho.setTonKhoToiThieu(5);
+        tonKhoRepository.save(tonKho);
+
+        return saved;
     }
 
     @Transactional

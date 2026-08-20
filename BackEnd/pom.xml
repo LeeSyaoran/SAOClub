@@ -1,12 +1,12 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>4.0.6</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath/>
+        <!--  lookup parent from repository  -->
     </parent>
     <groupId>com.example</groupId>
     <artifactId>BackEnd</artifactId>
@@ -34,7 +34,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -46,42 +45,41 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!--        Lombok 1.18.46 — phiên bản hỗ trợ JDK 17/21/22/23 (1.18.24 lỗi TypeTag::UNKNOWN trên JDK 21+)-->
+        <!--         Lombok 1.18.46 — phiên bản hỗ trợ JDK 17/21/22/23 (1.18.24 lỗi TypeTag::UNKNOWN trên JDK 21+) -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.18.46</version>
             <scope>provided</scope>
         </dependency>
-        <!--        JPA-->
+        <!--         JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
-        <!--        JDBC-->
+        <!--         JDBC -->
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
             <version>13.2.1.jre11</version>
         </dependency>
-        <!--        Spring Validation-->
+        <!--         Spring Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-        <!-- OpenAPI/Swagger -->
+        <!--  OpenAPI/Swagger  -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.6.0</version>
         </dependency>
-
-        <!-- Spring Security (bao gồm BCrypt — không cần thêm crypto riêng) -->
+        <!--  Spring Security (bao gồm BCrypt — không cần thêm crypto riêng)  -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-        <!-- JWT -->
+        <!--  JWT  -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -100,7 +98,6 @@
             <scope>runtime</scope>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
             <plugin>
@@ -109,5 +106,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

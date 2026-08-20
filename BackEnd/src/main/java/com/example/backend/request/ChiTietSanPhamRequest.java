@@ -17,6 +17,8 @@ public class ChiTietSanPhamRequest {
     @NotNull(message = "Phiên bản sản phẩm không được để trống")
     private Integer bienTheId;
 
+    private Integer phieuNhapId;
+
     @NotBlank(message = "Số serial không được để trống")
     private String soSerial;
 

@@ -1720,7 +1720,7 @@ export default {
     statusLabel: {
       active: "Hoạt động",
       inactive: "Ngừng bán",
-      ngung_kin_doanh: "Ngừng kinh doanh",
+      ngung_kinh_doanh: "Ngừng kinh doanh",
       trong_kho: "Trong kho",
       giu_hang: "Đang đặt hàng",
       da_ban: "Đã bán",

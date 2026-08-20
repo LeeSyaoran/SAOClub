@@ -383,7 +383,7 @@ const save = async () => {
                 <option value="inactive">
                   {{ t("admin.productModal.statusInactive") }}
                 </option>
-                <option value="ngung_kin_doanh">
+                <option value="ngung_kinh_doanh">
                   {{ t("admin.productModal.statusDiscontinued") }}
                 </option>
               </select>

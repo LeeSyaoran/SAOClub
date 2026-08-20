@@ -37,6 +37,11 @@ public class ChiTietSanPhamController {
         return chiTietSanPhamService.getByBienTheId(bienTheId);
     }
 
+    @GetMapping("/phieu-nhap/{phieuNhapId}")
+    public List<ChiTietSanPhamResponse> getByPhieuNhap(@PathVariable Integer phieuNhapId) {
+        return chiTietSanPhamService.getByPhieuNhapId(phieuNhapId);
+    }
+
     @PostMapping
     public ResponseEntity<Void> create(@Valid @RequestBody ChiTietSanPhamRequest request) {
         chiTietSanPhamService.create(request);
