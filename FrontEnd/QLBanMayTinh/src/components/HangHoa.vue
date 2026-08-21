@@ -141,7 +141,6 @@
               <th class="hh-col-ten">Tên sản phẩm</th>
               <th class="ta-r">Giá bán</th>
               <th class="ta-r">Giá vốn</th>
-              <th class="ta-c">Tồn kho</th>
               <th>Trạng thái</th>
               <th>Ngày tạo</th>
               <th>Ngày cập nhật</th>
@@ -172,9 +171,6 @@
               </td>
               <td class="ta-r hh-td-gia">{{ group.khoangGia }}</td>
               <td class="ta-r hh-td-gia hh-muted">{{ group.khoangGiaVon }}</td>
-              <td class="ta-c">
-                <span class="hh-ton" :class="{ 'is-het': group.tonKho === 0 }">{{ group.tonKho }}</span>
-              </td>
               <td><span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span></td>
               <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayTao) }}</td>
               <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayCapNhat) }}</td>
@@ -339,7 +335,11 @@
 
             <!-- ─────────── CHI TIẾT · LỊCH SỬ THAY ĐỔI ─────────── -->
             <div v-show="tabCT === 'lichsu'" class="hh-pane">
-              <ol v-if="lichSuHienTai.length" class="hh-ls">
+              <div v-if="nhatKyLoading" class="hh-empty">
+                <i class="fa fa-spinner fa-spin"></i>
+                <p>Đang tải nhật ký…</p>
+              </div>
+              <ol v-else-if="lichSuHienTai.length" class="hh-ls">
                 <li v-for="(m, i) in lichSuHienTai" :key="i" class="hh-ls__item">
                   <span class="hh-ls__dot" :class="'is-' + m.loai"></span>
                   <div class="hh-ls__body">
@@ -849,6 +849,7 @@ import { refreshInventory as lamMoiTonKhoDuLieuChung } from '@/stores/inventory.
 import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '@/services/DmService.js'
 import * as bienTheApi from '@/services/bienTheSanPhamService.js'
 import * as sanPhamApi from '@/services/sanPhamService.js'
+import { getLichSu } from '@/services/SanPhamService.js'
 
 /* ════════════════════════════════════════════════════════════
  * LỚP GỌI API
@@ -1298,10 +1299,49 @@ const exportCsv = () => {
  * riêng, chỉ cần thay 2 hàm docNhatKy/ghiNhatKy bằng lời gọi API là xong.
  * ══════════════════════════════════════════════════════════ */
 const KHOA_NHAT_KY = 'saophone_nhatky_hang_hoa'
-const docNhatKy = () => {
+const docNhatKyCu = () => {
   try { return JSON.parse(localStorage.getItem(KHOA_NHAT_KY) || '{}') } catch { return {} }
 }
-const nhatKy = ref(docNhatKy())
+const nhatKy = ref(docNhatKyCu())
+const nhatKyLoading = ref(false)
+
+// Transform backend response → format template
+const transformLichSu = (backendList) =>
+  (backendList || []).map((m) => ({
+    thoiGian: m.thoiGian,
+    nguoiDung: m.tenNhanVien || 'không rõ',
+    hanhDong: m.doiTuong || 'Thay đổi',
+    doiTuong: m.tenTruong ? `${m.tenTruong} · SKU ${m.maSku || '?'}` : m.maSku || null,
+    loai: 'sua',
+    thayDoi: (m.tenTruong && m.giaTriCu !== m.giaTriMoi)
+      ? [{ truong: m.tenTruong, cu: m.giaTriCu, moi: m.giaTriMoi }]
+      : [],
+  }))
+
+// Gọi API khi user mở tab lichsu
+const taiLichSu = async (sanPhamId) => {
+  if (!sanPhamId) return
+  nhatKyLoading.value = true
+  try {
+    const apiData = await getLichSu(sanPhamId)
+    const apiList = transformLichSu(apiData)
+    // Merge: bản ghi cũ từ localStorage (key là string sanPhamId) + bản ghi mới từ API
+    const kho = { ...nhatKy.value }
+    const local = kho[String(sanPhamId)] || []
+    // API trả theo thứ tự mới → cũ, giống format local — trộn và de-dupe theo thoiGian
+    const seenTimes = new Set(local.map((l) => l.thoiGian))
+    const moiTuApi = apiList.filter((a) => !seenTimes.has(a.thoiGian))
+    kho[String(sanPhamId)] = [...local, ...moiTuApi].sort(
+      (a, b) => new Date(b.thoiGian) - new Date(a.thoiGian),
+    )
+    nhatKy.value = kho
+    try { localStorage.setItem(KHOA_NHAT_KY, JSON.stringify(kho)) } catch { /* bỏ qua */ }
+  } catch {
+    // không ảnh hưởng UX nếu lỗi mạng
+  } finally {
+    nhatKyLoading.value = false
+  }
+}
 
 const nguoiDangDangNhap = () => {
   try {
@@ -1328,6 +1368,8 @@ const chiTietId = ref(null)
 const bienTheChonId = ref(null)
 const anhDangXem = ref('')
 const dangSaoChepBienThe = ref(false)
+
+watch(tabCT, (tab) => { if (tab === 'lichsu' && chiTietId.value) taiLichSu(chiTietId.value) })
 
 /* Lấy thẳng từ groups nên sau mỗi lần lưu + fetchData, cửa sổ chi tiết tự cập nhật */
 const chiTiet = computed(() => groups.value.find((g) => String(g.sanPhamId) === String(chiTietId.value)) || null)

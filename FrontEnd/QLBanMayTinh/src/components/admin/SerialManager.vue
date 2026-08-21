@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import { t } from "../../i18n/index.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../../services/ChiTietLinhKienService.js";
@@ -9,6 +9,7 @@ import { nowLocalIso } from "../../utils/datetime.js";
 import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
+import { serialEvents } from "../../stores/serialEvents.js";
 import SearchSelect from "../common/SearchSelect.vue";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
@@ -55,6 +56,9 @@ onMounted(() => {
   DmService.getGpu().then((l) => { specLists.gpu = l; }).catch(() => {});
   DmService.getOCung().then((l) => { specLists.oCung = l; }).catch(() => {});
 });
+
+// Tu dong reload khi PosPanel da thay doi trang thai serial
+watch(() => serialEvents.count, () => { load(); });
 
 const variantOptions = computed(() =>
   (ProductsStore.items ?? []).map((p) => ({ value: p.bienTheId, label: `${p.tenSanPham} — ${p.maSku}` }))

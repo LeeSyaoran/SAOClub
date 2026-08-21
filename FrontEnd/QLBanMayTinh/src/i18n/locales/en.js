@@ -171,6 +171,12 @@ export default {
       deliveredDesc: "Please confirm you received it",
     },
   },
+  orderChannel: {
+    in_store: "In store",
+    online: "Online",
+    phone: "Phone",
+    social_media: "Social media",
+  },
 
   home: {
     tickerBadge: "GAMING & GRAPHICS LAPTOP WEEK",
@@ -811,6 +817,7 @@ export default {
       colTotal: "Total",
       colOrderStatus: "Order status",
       colPaymentStatus: "Payment status",
+      colChannel: "Channel",
       colOrderDate: "Order date",
       colAction: "Actions",
       countSuffix: "orders",
@@ -826,6 +833,7 @@ export default {
       nextDelivered: "Delivered",
       allStatuses: "All statuses",
       allPayments: "All payments",
+      allChannels: "All channels",
       paid: "Paid",
       unpaid: "Unpaid",
       history: "Order history",

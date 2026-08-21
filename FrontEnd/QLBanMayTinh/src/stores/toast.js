@@ -10,7 +10,7 @@ export const useToastStore = defineStore("toast", {
     type: "success",
   }),
   actions: {
-    showToast(msg, type = "error") {
+    showToast(msg, type = "success") {
       clearTimeout(toastTimer);
       this.msg = msg;
       this.type = type;

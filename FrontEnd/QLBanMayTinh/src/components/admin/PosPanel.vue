@@ -1,11 +1,13 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import * as DonHangService from "../../services/DonHangService.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { formatPrice, formatDate, boDauTiengViet } from "../../utils/adminFormat.js";
-import { ProductsStore, ensureProducts } from "../../stores/products.js";
+import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
+import { refreshInventory } from "../../stores/inventory.js";
+import { bumpSerialEvent } from "../../stores/serialEvents.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { PromotionsStore, ensurePromotions } from "../../stores/promotions.js";
 import { refreshOrders } from "../../stores/orders.js";
@@ -42,6 +44,7 @@ const posPaymentMethod = ref(null); // 1 trong POS_PAYMENT_METHODS — bat buoc 
 // POS luon la ban tai quay — phi van chuyen luon = 0, khong co UI chon hinh thuc nhan hang.
 const posDeliveryMode = ref('pickup');
 const posDeliveryAddress = ref('');
+const posDistanceKm = ref('');
 // Xac nhan thu cong "da quet QR" — chua co webhook ngan hang that nen nhan vien tu bam
 // sau khi (gia lap) thay khach quet xong. Reset ve false moi khi doi phuong thuc thanh toan.
 const posQrScanned = ref(false);
@@ -174,15 +177,69 @@ const posApplyPromo = () => {
 // khach khac — luu o localStorage (tinh nang tien loi cho nhan vien tai quay,
 // khong can bang rieng trong DB vi don chua thuc su ton tai cho toi khi thanh toan).
 const HELD_ORDERS_KEY = 'saophone_pos_held_orders';
+const CART_KEY = 'saophone_pos_cart';
 const heldOrders = ref([]);
-const loadHeldOrders = () => {
-  try { heldOrders.value = JSON.parse(localStorage.getItem(HELD_ORDERS_KEY)) ?? []; }
-  catch { heldOrders.value = []; }
+
+onMounted(() => {
+  try {
+    const raw = localStorage.getItem(HELD_ORDERS_KEY);
+    if (raw) heldOrders.value = JSON.parse(raw);
+  } catch { heldOrders.value = []; }
+
+  // Khoi phuc cart neu co (dang ban bi cat ket noi)
+  try {
+    const cartRaw = localStorage.getItem(CART_KEY);
+    if (cartRaw) {
+      const saved = JSON.parse(cartRaw);
+      if (saved.cart?.length) {
+        posCart.value = saved.cart;
+        posPhone.value = saved.phone || "";
+        posFoundCust.value = saved.foundCust || null;
+        posPromoCode.value = saved.promoCode || "";
+        posAppliedPromo.value = saved.appliedPromo || null;
+        posPaymentMethod.value = saved.paymentMethod || null;
+        posDeliveryMode.value = saved.deliveryMode || 'pickup';
+        posDeliveryAddress.value = saved.deliveryAddress || "";
+        posStage.value = saved.cart.length ? 'selling' : 'start';
+      }
+    }
+  } catch {}
+});
+
+// Tu dong luu cart khi reload/tab bi dong
+const saveCart = () => {
+  try {
+    localStorage.setItem(CART_KEY, JSON.stringify({
+      cart: posCart.value,
+      phone: posPhone.value,
+      foundCust: posFoundCust.value,
+      promoCode: posPromoCode.value,
+      appliedPromo: posAppliedPromo.value,
+      paymentMethod: posPaymentMethod.value,
+      deliveryMode: posDeliveryMode.value,
+      deliveryAddress: posDeliveryAddress.value,
+    }));
+  } catch {}
 };
+onBeforeUnmount(() => { saveCart(); });
+window.addEventListener('beforeunload', saveCart);
+
+// Lang nghe storage event de dong bo khi tab khac thay doi localStorage
+window.addEventListener('storage', (e) => {
+  if (e.key === HELD_ORDERS_KEY) {
+    try {
+      const raw = localStorage.getItem(HELD_ORDERS_KEY);
+      heldOrders.value = raw ? JSON.parse(raw) : [];
+    } catch { heldOrders.value = []; }
+  }
+});
+
+// Dong bo ref -> localStorage sau moi thao tac giu/huy don
 const saveHeldOrders = () => {
-  localStorage.setItem(HELD_ORDERS_KEY, JSON.stringify(heldOrders.value));
+  try {
+    localStorage.setItem(HELD_ORDERS_KEY, JSON.stringify(heldOrders.value));
+  } catch { /* quota exceeded hoac serializable fail */ }
 };
-loadHeldOrders();
 
 const showHeldOrders = ref(false);
 
@@ -389,6 +446,10 @@ const setSerialTrangThai = async (item, trangThai) => {
     trangThai,
     ngayNhapKho: item.ngayNhapKho,
   }).catch(() => {});
+  // Cap nhat cache cua cac bang Kho/Serial ngay sau khi backend ghi xong
+  refreshProducts();
+  refreshInventory();
+  bumpSerialEvent();
 };
 
 const posSelectSerial = async (serial) => {

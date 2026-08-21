@@ -3,6 +3,7 @@ import {
   ref,
   computed,
   reactive,
+  toRef,
   watch,
   onMounted,
   onBeforeUnmount,
@@ -23,6 +24,7 @@ useHead({
 import { AuthStore, setSession, clearSession } from "./stores/index.js";
 import { resetAllStores } from "./stores/resetAll.js";
 import { loadSettings, SettingsStore } from "./stores/settings.js";
+import { ProductsStore, refreshProducts } from "./stores/products.js";
 import { formatPrice as formatPriceRaw } from "./utils/formatPrice.js";
 import { t, applySystemDefaultLocale } from "./i18n/index.js";
 
@@ -259,14 +261,9 @@ const handleOrderPlaced = () => {
 };
 
 // ── Products (shared state for ProductDetail overlay) ─────────────────────────
-const products = ref([]);
-
+// Dùng ProductsStore để các bảng admin đổi serial xong → trang khách tự thấy cập nhật
 const fetchProducts = async () => {
-  try {
-    products.value = await SanPhamService.getAll();
-  } catch {
-    // handled silently
-  }
+  await refreshProducts();
 };
 
 const selectedProduct = ref(null);
@@ -284,7 +281,7 @@ const onPopState = (event) => {
   const state = event.state;
   if (state?.view === "product") {
     selectedProduct.value =
-      products.value.find((p) => p.bienTheId === state.bienTheId) || null;
+      ProductsStore.items.find((p) => p.bienTheId === state.bienTheId) || null;
   } else {
     selectedProduct.value = null;
     showCart.value = false;
@@ -304,7 +301,7 @@ function onLoginSuccess(user) {
 
 // ── Provide shared state & actions to child route components ──────────────────
 provide("appState", {
-  products,
+  products: toRef(ProductsStore, 'items'),
   cart,
   showCart,
   cartCount,
@@ -424,7 +421,7 @@ onBeforeUnmount(() => {
         v-if="selectedProduct"
         :key="selectedProduct.bienTheId"
         :product="selectedProduct"
-        :products="products"
+        :products="ProductsStore.items"
         :wishlist-ids="wishlistIds"
         :auth-user="auth.user"
         @close="closeProduct"

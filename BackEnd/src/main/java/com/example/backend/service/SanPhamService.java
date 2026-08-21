@@ -159,6 +159,8 @@ public class SanPhamService {
                     .orElseThrow(() -> new IllegalArgumentException(
                             "Biến thể không tồn tại với id: " + request.getBienTheId()));
 
+            BigDecimal oldGiaNhapBienThe = bt.getGiaNhap();
+            BigDecimal oldGiaBanBienThe = bt.getGiaBan();
             String oldBarcodeBienThe = bt.getBarcode();
             String barcodeBienThe = chuanHoa(request.getBarcodeBienThe());
             kiemTraTrungBarcodeBienThe(barcodeBienThe, bt.getBienTheId());
@@ -171,6 +173,8 @@ public class SanPhamService {
             ganLinhKien(bt, request);
 
             BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "giaNhap", oldGiaNhapBienThe, savedBt.getGiaNhap(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "giaBan", oldGiaBanBienThe, savedBt.getGiaBan(), nguoiSua);
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "barcode", oldBarcodeBienThe, savedBt.getBarcode(), nguoiSua);
         }
     }

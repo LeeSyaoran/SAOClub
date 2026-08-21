@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { ref, reactive, computed, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
-import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
+import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon, paymentMethodLabel, paymentMethodIcon, channelLabel, channelColor } from "../../utils/orderStatus.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatPrice, formatDate, formatDateTime } from "../../utils/adminFormat.js";
 import { authHeaders } from "../../services/api.js";
@@ -39,6 +39,7 @@ const toDateInputValue = (d) => {
 const orderSearch = ref("");
 const orderStatusFilter = ref("");
 const orderPaymentFilter = ref("");
+const orderChannelFilter = ref("");
 
 // Chế độ xem đơn hàng: 'today' = mặc định chỉ đơn hôm nay, 'history-dates' = danh
 // sách các ngày có đơn (để xem lịch sử), 'history-day' = đơn của 1 ngày cụ thể đã chọn.
@@ -62,6 +63,7 @@ const filteredOrders = computed(() => {
   return ordersBaseList.value.filter((o) => {
     if (orderStatusFilter.value && o.trangThaiDonHang !== orderStatusFilter.value) return false;
     if (orderPaymentFilter.value && o.trangThaiThanhToan !== orderPaymentFilter.value) return false;
+    if (orderChannelFilter.value && o.kenhBan !== orderChannelFilter.value) return false;
     if (!q) return true;
     const name = customerName(o.khachHangId).toLowerCase();
     return String(o.donHangId).includes(q) || (o.maDonHang ?? '').toLowerCase().includes(q) || name.includes(q) || (o.nguoiNhan ?? '').toLowerCase().includes(q) || (o.sdtNguoiNhan ?? '').includes(q);
@@ -633,13 +635,18 @@ const confirmXacNhanSerial = async () => {
             <option value="paid">{{ t('admin.orders.paid') }}</option>
             <option value="unpaid">{{ t('admin.orders.unpaid') }}</option>
           </select>
+          <select v-model="orderChannelFilter" class="alt-select">
+            <option value="">{{ t('admin.orders.allChannels') }}</option>
+            <option value="in_store">{{ channelLabel('in_store') }}</option>
+            <option value="online">{{ channelLabel('online') }}</option>
+          </select>
           <button v-if="orderViewMode==='today'" class="alt-btn alt-btn--ghost" @click="openOrderHistory">{{ t('admin.orders.history') }}</button>
         </div>
       </div>
       <div v-if="OrdersStore.loading" class="alt-empty">{{ t('admin.orders.loading') }}</div>
       <div v-else class="alt-table-wrap">
         <table class="alt-table">
-          <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
+          <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.orders.colOrderCode') }}</th><th>{{ t('admin.orders.colCustomer') }}</th><th>{{ t('admin.orders.colTotal') }}</th><th>{{ t('admin.orders.colOrderStatus') }}</th><th>{{ t('admin.orders.colPaymentStatus') }}</th><th>{{ t('admin.orders.colOrderDate') }}</th><th style="width:80px;">{{ t('admin.orders.colChannel') }}</th><th>{{ t('admin.orders.colAction') }}</th></tr></thead>
           <tbody>
             <tr v-for="(o, idx) in pagedOrders" :key="o.donHangId">
               <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
@@ -664,10 +671,16 @@ const confirmXacNhanSerial = async () => {
                 </div>
               </td>
               <td>
+                <span v-if="o.kenhBan" class="alt-tag" :style="{ background: channelColor(o.kenhBan).bg, color: channelColor(o.kenhBan).text }">
+                  {{ channelLabel(o.kenhBan) }}
+                </span>
+                <span v-else class="text-secondary">—</span>
+              </td>
+              <td>
                 <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
               </td>
             </tr>
-            <tr v-if="filteredOrders.length===0"><td colspan="8" class="alt-empty">{{ t('admin.orders.empty') }}</td></tr>
+            <tr v-if="filteredOrders.length===0"><td colspan="9" class="alt-empty">{{ t('admin.orders.empty') }}</td></tr>
           </tbody>
         </table>
         <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
@@ -828,10 +841,13 @@ const confirmXacNhanSerial = async () => {
           <div class="fw-bold" style="font-size:1.05rem;color:var(--text-heading);">
             <User :size="14" style="vertical-align:-2px;" /> {{ customerName(orderDetailData?.khachHangId) }}
           </div>
-          <div class="text-secondary" style="font-size:0.78rem;">
-            {{ t('admin.orderDetailModal.titlePrefix') }}{{ orderDetailData?.donHangId }}
-            <span v-if="orderDetailData?.maDonHang" class="ms-1" style="font-family:monospace;">{{ orderDetailData.maDonHang }}</span>
-            · {{ formatDate(orderDetailData?.ngayDat) }}
+          <div class="text-secondary d-flex align-items-center gap-2" style="font-size:0.78rem;flex-wrap:wrap;">
+            <span>{{ t('admin.orderDetailModal.titlePrefix') }}{{ orderDetailData?.donHangId }}</span>
+            <span v-if="orderDetailData?.maDonHang" style="font-family:monospace;">{{ orderDetailData.maDonHang }}</span>
+            <span v-if="orderDetailData?.kenhBan" class="alt-tag" style="font-size:0.7rem;" :style="{ background: channelColor(orderDetailData.kenhBan).bg, color: channelColor(orderDetailData.kenhBan).text }">
+              {{ channelLabel(orderDetailData.kenhBan) }}
+            </span>
+            <span>· {{ formatDate(orderDetailData?.ngayDat) }}</span>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -923,7 +939,7 @@ const confirmXacNhanSerial = async () => {
           <div v-if="orderDetailData.giamGia > 0" class="d-flex justify-content-between small text-success">
             <span>{{ t('admin.orderDetailModal.discount') }}</span><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
           </div>
-          <div class="d-flex justify-content-between small text-secondary">
+          <div v-if="orderDetailData.kenhBan !== 'in_store'" class="d-flex justify-content-between small text-secondary">
             <span>{{ t('admin.orderDetailModal.shippingFee') }}</span>
             <span :class="orderDetailData.phiVanChuyen === 0 ? 'text-success' : ''">
               {{ orderDetailData.phiVanChuyen === 0 ? t('admin.orderDetailModal.free') : formatPrice(orderDetailData.phiVanChuyen) }}

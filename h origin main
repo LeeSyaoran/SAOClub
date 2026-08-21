@@ -1,0 +1,37 @@
+[1mdiff --git a/BackEnd/src/main/resources/application.properties b/BackEnd/src/main/resources/application.properties[m
+[1mindex fd04957..d99efce 100644[m
+[1m--- a/BackEnd/src/main/resources/application.properties[m
+[1m+++ b/BackEnd/src/main/resources/application.properties[m
+[36m@@ -2,17 +2,17 @@[m [mspring.application.name=BackEnd[m
+ spring.profiles.active=local[m
+ spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=QLBanMayTinh;encrypt=true;trustServerCertificate=true;[m
+ spring.datasource.username=sa[m
+[31m-spring.datasource.password=${DB_PASSWORD:}[m
+[32m+[m[32mspring.datasource.password=vacx12345[m
+ spring.datasource.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver[m
+ [m
+[31m-# Giữ kết nối DB "ấm" — không phải data lớn làm chậm, mà là request đầu tiên sau[m
+[31m-# một lúc rảnh bị chậm 15-25s do kết nối bị mạng/DB âm thầm đóng rồi phải bắt lại[m
+[31m-# (bắt tay TLS lại từ đầu). Hikari tự ping định kỳ để giữ kết nối sống, tránh treo.[m
+[32m+[m[32m# Giu ket noi DB am ? tranh timeout hoac ngat ket noi am tham gay cham request dau tien[m
+ spring.datasource.hikari.keepalive-time=180000[m
+ spring.jpa.hibernate.naming.physical-strategy=org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl[m
+[31m-spring.jpa.hibernate.ddl-auto=none[m
+ [m
+[31m-# Upload anh — luu thang vao public/images cua frontend de Vite phuc vu ngay[m
+[32m+[m[32m# Doi tu none thanh update de Hibernate tu dong cap nhat cot ma_san_pham va barcode vao SQL Server[m
+[32m+[m[32mspring.jpa.hibernate.ddl-auto=update[m
+[32m+[m
+[32m+[m[32m# Upload anh ? luu thang vao public/images cua frontend de Vite phuc vu ngay[m
+ upload.dir=../FrontEnd/QLBanMayTinh/public/images[m
+ spring.servlet.multipart.max-file-size=10MB[m
+ spring.servlet.multipart.max-request-size=10MB[m
+[36m@@ -21,3 +21,7 @@[m [mspring.servlet.multipart.max-request-size=10MB[m
+ springdoc.api-docs.path=/api-docs[m
+ springdoc.swagger-ui.path=/swagger-ui.html[m
+ springdoc.packages-to-scan=com.example.backend.controller[m
+[32m+[m
+[32m+[m[32m# JWT Configuration[m
+[32m+[m[32mjwt.secret=your-very-secure-and-long-secret-key-that-meets-the-signing-algorithm-requirements[m
+[32m+[m[32mjwt.expiration=86400000[m
+\ No newline at end of file[m

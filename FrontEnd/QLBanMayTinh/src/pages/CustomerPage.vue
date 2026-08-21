@@ -280,7 +280,7 @@ const handleQuickAdd = (product) => {
   }
 };
 
-// ── So sánh sản phẩm — thuần frontend, mọi thông số cần đều đã có sẵn trong products.value
+// ── So sánh sản phẩm — thuần frontend, mọi thông số cần đều đã có sẵn trong products
 // (SanPhamResponse.java), không cần gọi thêm API nào. ─────────────────────────────────────
 const MAX_COMPARE = 4;
 const compareList = ref([]);

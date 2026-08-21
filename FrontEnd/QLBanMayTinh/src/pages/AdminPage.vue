@@ -91,6 +91,7 @@ const selectedSanPhamId = ref(route.params.id ? Number(route.params.id) : null);
 watch(
   () => route.params.id,
   (id) => {
+    _fromRouteWatch = true;
     currentPage.value = id ? "san-pham-detail" : "dashboard";
     selectedSanPhamId.value = id ? Number(id) : null;
   },

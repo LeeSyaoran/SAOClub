@@ -171,6 +171,12 @@ export default {
       deliveredDesc: "Vui lòng xác nhận đã nhận hàng",
     },
   },
+  orderChannel: {
+    in_store: "Tại quầy",
+    online: "Online",
+    phone: "Điện thoại",
+    social_media: "Mạng xã hội",
+  },
 
   home: {
     tickerBadge: "TUẦN LỄ LAPTOP GAMING & ĐỒ HỌA",
@@ -812,6 +818,7 @@ export default {
       colOrderStatus: "TT Đơn hàng",
       colPaymentStatus: "TT Thanh toán",
       colOrderDate: "Ngày đặt",
+      colChannel: "Kênh bán",
       colAction: "Thao tác",
       countSuffix: "đơn hàng",
       loading: "Đang tải...",
@@ -826,6 +833,7 @@ export default {
       nextDelivered: "Đã giao",
       allStatuses: "Tất cả trạng thái",
       allPayments: "Tất cả thanh toán",
+      allChannels: "Tất cả kênh bán",
       paid: "Đã thanh toán",
       unpaid: "Chưa thanh toán",
       history: "Lịch sử đơn hàng",
