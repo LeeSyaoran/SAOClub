@@ -1664,6 +1664,11 @@ export default {
       qrScannedConfirmed: "QR scan confirmed",
       paymentRequired: "Please select a payment method!",
       confirmCheckout: "Confirm checkout for {total}?",
+      openCatalog: "Product catalog",
+      catalogTitle: "Choose products",
+      doneAdding: "Done",
+      orderInfo: "Order info",
+      noOrderInfoYet: "Order info will appear here once a customer is identified",
     },
 
     packModal: {

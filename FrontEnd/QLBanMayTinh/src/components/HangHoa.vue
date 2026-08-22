@@ -388,8 +388,8 @@
                 <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDangChon" @click="inTemMa(bienTheDangChon)">
                   <i class="fa fa-barcode"></i> In tem mã
                 </button>
-                <button class="hh-btn hh-btn--soft" :disabled="!bienTheDangChon" @click="saoChepBienThe(bienTheDangChon)">
-                  <i class="fa fa-clone"></i> Sao chép
+                <button class="hh-btn hh-btn--soft" :disabled="!bienTheDangChon || dangSaoChepBienThe" @click="saoChepBienThe(bienTheDangChon)">
+                  <i class="fa fa-clone"></i> {{ dangSaoChepBienThe ? 'Đang sao chép…' : 'Sao chép' }}
                 </button>
                 <button class="hh-btn hh-btn--primary" :disabled="!bienTheDangChon" @click="suaBienThe(bienTheDangChon)">
                   <i class="fa fa-pencil"></i> Chỉnh sửa
@@ -1327,6 +1327,7 @@ const tabCT = ref('info')
 const chiTietId = ref(null)
 const bienTheChonId = ref(null)
 const anhDangXem = ref('')
+const dangSaoChepBienThe = ref(false)
 
 /* Lấy thẳng từ groups nên sau mỗi lần lưu + fetchData, cửa sổ chi tiết tự cập nhật */
 const chiTiet = computed(() => groups.value.find((g) => String(g.sanPhamId) === String(chiTietId.value)) || null)
@@ -1658,10 +1659,19 @@ watch([showModal, tab], async () => {
 
 /* ─── Sinh mã sản phẩm (ô này chỉ đọc, không cho gõ tay) ─── */
 const sinhMaSanPham = () => {
-  const so = danhSachSanPham.value
+  const soTuMa = danhSachSanPham.value
     .map((p) => Number(String(p.maSanPham || '').replace(/\D/g, '')))
     .filter((n) => !Number.isNaN(n) && n > 0)
-  return 'SP' + String((so.length ? Math.max(...so) : 0) + 1).padStart(4, '0')
+  // Cộng thêm sanPhamId vào phép tính max — sản phẩm CHƯA gán mã (maSanPham NULL) vẫn hiện
+  // tạm "SPxxxx" theo id trên UI (xem maHienThi()), dù không lưu vào cột maSanPham nên
+  // không đụng UNIQUE index thật. Bỏ qua các id này khi sinh mã mới sẽ có lúc trùng NHÌN
+  // GIỐNG hệt một mã tạm đang hiển thị của sản phẩm khác — trông như trùng mã dù CSDL
+  // không báo lỗi gì. Tính cả id vào max để mã thật luôn vượt qua mọi mã tạm hiện có.
+  const soTuId = danhSachSanPham.value
+    .map((p) => Number(idOf(p, 'sanPhamId')))
+    .filter((n) => !Number.isNaN(n) && n > 0)
+  const max = Math.max(0, ...soTuMa, ...soTuId)
+  return 'SP' + String(max + 1).padStart(4, '0')
 }
 
 /* ─── Ma trận phiên bản ─── */
@@ -1875,28 +1885,57 @@ const themPhienBan = (g) => {
   dungLaiMaTran()
 }
 
-/** Sao chép một phiên bản: giữ nguyên cấu hình, chỉ sinh SKU + mã vạch mới */
-const saoChepBienThe = (v) => {
+/** Sao chép NGAY 1 phiên bản — nhân bản toàn bộ dữ liệu (giá, cấu hình, thông số...),
+ *  chỉ tự sinh lại SKU + mã vạch (2 trường bắt buộc duy nhất toàn hệ thống, giữ nguyên
+ *  sẽ trùng bản gốc). Tạo thẳng qua API, không mở form ma trận — khác "Thêm phiên bản"
+ *  (phải chọn cấu hình MỚI nên vẫn cần qua form Bước 2). Xong là thấy ngay trong danh
+ *  sách Biến thể, không cần bấm Lưu ở đâu nữa. */
+const saoChepBienThe = async (v) => {
   const g = chiTiet.value
-  if (!g || !v) return
-  moLaiChiTiet.value = g.sanPhamId
-  resetForm({
-    sanPhamId: g.sanPhamId,
-    maSanPham: g.maSanPham,
-    ...duLieuSanPham(g),
-    ...duLieuThongSo(v),
-    mauSacList: v.mauSac ? [v.mauSac] : [],
-    cpuIds: v.cpuId ? [v.cpuId] : [],
-    ramIds: v.ramId ? [v.ramId] : [],
-    oCungIds: v.oCungId ? [v.oCungId] : [],
-    gpuIds: v.gpuId ? [v.gpuId] : []
-  })
-  modalMode.value = 'variant'
-  tab.value = 'bienthe'
-  showDetail.value = false
-  showModal.value = true
-  dungLaiMaTran()
-  hienToast('Đã nhân bản cấu hình — kiểm tra SKU/mã vạch rồi bấm Lưu')
+  if (!g || !v || dangSaoChepBienThe.value) return
+  dangSaoChepBienThe.value = true
+  try {
+    const skuDaDung = new Set(bienTheChuan.value.map((x) => x.maSku).filter((s) => s && s !== '—'))
+    const maSku = skuKhongTrung(v.maSku, skuDaDung)
+    const barcode = v.barcode ? sinhBarcode(new Set(barcodeDaDung.value)) : null
+    const body = {
+      sanPhamId: g.sanPhamId,
+      maSku,
+      barcode,
+      giaNhap: v.giaVon,
+      giaBan: v.giaBan,
+      baoHanhThang: v.baoHanhThang,
+      hinhAnhBienThe: v.hinhAnh || null,
+      trangThai: v.trangThai,
+      mauSac: v.mauSac || null,
+      cpuId: v.cpuId,
+      ramId: v.ramId,
+      oCungId: v.oCungId,
+      gpuId: v.gpuId,
+      kichThuocManHinh: v.kichThuocManHinh || null,
+      heDieuHanh: v.heDieuHanh || null,
+      pin: v.pin || null,
+      trongLuongKg: v.trongLuongKg
+    }
+    const res = await apiTaoBienThe(body)
+    if (!res.ok) {
+      hienToast(`Sao chép thất bại: ${await res.text().catch(() => res.statusText)}`)
+      return
+    }
+    await fetchData()
+    lamMoiKhoDuLieuChung().catch(() => {})
+    lamMoiTonKhoDuLieuChung().catch(() => {})
+    // chiTiet tự cập nhật theo groups (computed) — chỉ cần trỏ lại dòng đang chọn sang
+    // phiên bản vừa tạo để người dùng thấy ngay kết quả.
+    const updated = groups.value.find((x) => String(x.sanPhamId) === String(g.sanPhamId))
+    const moi = updated?.variants.find((x) => x.maSku === maSku)
+    if (moi) bienTheChonId.value = moi.bienTheId
+    hienToast(`Đã tạo phiên bản mới ${maSku}`)
+  } catch (e) {
+    hienToast(`Sao chép thất bại: ${e.message}`)
+  } finally {
+    dangSaoChepBienThe.value = false
+  }
 }
 
 /** Sao chép cả sản phẩm: tạo sản phẩm mới với đủ thuộc tính của các phiên bản cũ */
@@ -2183,7 +2222,10 @@ const submitForm = async () => {
       const dsSku = []
       for (const row of bienTheRows.value) {
         buoc = `thêm phiên bản ${row.maSku}`
-        await apiTaoBienThe(payloadBienThe(form.sanPhamId, row))
+        const resBt = await apiTaoBienThe(payloadBienThe(form.sanPhamId, row))
+        if (!resBt.ok) {
+          throw new Error(`HTTP ${resBt.status}: ${await resBt.text().catch(() => resBt.statusText)}`)
+        }
         dsSku.push(row.maSku)
         daTao++
       }
@@ -2216,7 +2258,10 @@ const submitForm = async () => {
 
       for (const row of conLai) {
         buoc = `tạo phiên bản ${row.maSku}`
-        await apiTaoBienThe(payloadBienThe(spId, row))
+        const resBt = await apiTaoBienThe(payloadBienThe(spId, row))
+        if (!resBt.ok) {
+          throw new Error(`HTTP ${resBt.status}: ${await resBt.text().catch(() => resBt.statusText)}`)
+        }
         daTao++
       }
 

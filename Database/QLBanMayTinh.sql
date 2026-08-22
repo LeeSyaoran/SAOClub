@@ -252,7 +252,11 @@ BEGIN
         ma_sku              VARCHAR(50)     NOT NULL UNIQUE,
         gia_nhap            DECIMAL(18,0)   NOT NULL CONSTRAINT CK_bt_gianhap CHECK (gia_nhap >= 0),
         gia_ban             DECIMAL(18,0)   NOT NULL CONSTRAINT CK_bt_giaban  CHECK (gia_ban  >= 0),
-        CONSTRAINT CK_bt_giaban_hop_ly CHECK (gia_ban >= gia_nhap * 0.5),
+        -- gia_ban = 0 la trang thai tam "chua gan gia ban" (bien the moi tao / vua nhap
+        -- hang nhung admin chua nhap tay gia ban — xem InventoryPanel.vue isPendingItem) —
+        -- phai cho qua rang buoc nay luc do, khong thi lan dau dong bo gia_nhap tu phieu
+        -- nhap se luon bi CSDL choi vi 0 < gia_nhap*0.5.
+        CONSTRAINT CK_bt_giaban_hop_ly CHECK (gia_ban = 0 OR gia_ban >= gia_nhap * 0.5),
         bao_hanh_thang      INT             NOT NULL DEFAULT 24 CONSTRAINT CK_bt_baohanh CHECK (bao_hanh_thang >= 0),
         hinh_anh_bien_the   NVARCHAR(500)   NULL,
         trang_thai          NVARCHAR(20)    NOT NULL DEFAULT N'active'

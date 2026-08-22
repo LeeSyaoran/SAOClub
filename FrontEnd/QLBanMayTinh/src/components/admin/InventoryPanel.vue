@@ -18,7 +18,7 @@ import * as PhieuNhapKhoService from "../../services/PhieuNhapKhoService.js";
 import * as ChiTietPhieuNhapService from "../../services/ChiTietPhieuNhapService.js";
 import * as BienTheSanPhamService from "../../services/BienTheSanPhamService.js";
 import { InventoryStore, ensureInventory, refreshInventory } from "../../stores/inventory.js";
-import { ProductsStore, ensureProducts } from "../../stores/products.js";
+import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import { StaffStore, ensureStaff } from "../../stores/staff.js";
 import Pagination from "../common/Pagination.vue";
@@ -82,9 +82,20 @@ const buildBienTheUpdateBody = (bienThe, overrides = {}) => ({
 // biến thể mới tạo giaNhap=0, sau khi nhập hàng thì lấy giá nhập từ phiếu.
 const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
   const item = inventory.value.find((i) => i.bienThe?.bienTheId === bienTheId);
+  // item/bienThe không tìm thấy nghĩa là inventory.value đang là snapshot cũ (biến thể này
+  // mới toanh, refreshInventory() ở cuối savePhieuNhap() chưa kịp chạy) — không phải lỗi,
+  // chỉ là chưa đồng bộ được NGAY, im lặng bỏ qua lần này là đúng (không phải bug cần báo).
   if (!item?.bienThe) return;
-  const body = buildBienTheUpdateBody(item.bienThe, { giaNhap: Number(donGia) || 0 });
-  await BienTheSanPhamService.update(bienTheId, body).catch(() => {});
+  try {
+    const body = buildBienTheUpdateBody(item.bienThe, { giaNhap: Number(donGia) || 0 });
+    const res = await BienTheSanPhamService.update(bienTheId, body);
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText);
+      showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho') + ` ${item.bienThe.maSku}: ${text}`);
+    }
+  } catch (e) {
+    showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho') + ` ${item.bienThe.maSku}: ${e.message}`);
+  }
 };
 
 // ── Phân loại 1 dòng tồn kho — 4 nhóm ─────────────────────────────────────────────────
@@ -225,7 +236,7 @@ const removeStockSerial = async (chiTietId) => {
 // serial mới (gõ tay từng dòng hoặc nhập file). soLuongTon KHÔNG sửa tay được — chỉ tăng
 // khi thêm serial mới, khớp đúng thực tế: mỗi máy nhập kho có 1 serial.
 const stockSaving = ref(false);
-const stockForm = reactive({ soLuongGiu: 0, tonKhoToiThieu: 0, newSerials: [''] });
+const stockForm = reactive({ soLuongGiu: 0, tonKhoToiThieu: 0, newSerials: [''], giaBan: 0 });
 const addStockSerialRow = () => stockForm.newSerials.push('');
 const removeStockSerialRow = (idx) => {
   if (stockForm.newSerials.length > 1) stockForm.newSerials.splice(idx, 1);
@@ -267,6 +278,10 @@ const openStockDetail = async (item) => {
   stockForm.soLuongGiu = item.soLuongGiu ?? 0;
   stockForm.tonKhoToiThieu = item.tonKhoToiThieu ?? 0;
   stockForm.newSerials = [''];
+  // Giá bán nhập tay ở đây — đọc từ ProductsStore (nguồn giaBan/giaNhap dùng để phân loại
+  // pending/out, xem isPendingItem) chứ không phải item.bienThe (entity lồng nhau từ TonKho
+  // có thể không đồng bộ tức thời bằng store dùng chung).
+  stockForm.giaBan = Number(getVariantInfo(item)?.giaBan ?? 0);
   showDetailModal.value = true;
   await loadDetailSerials(item.bienThe?.bienTheId);
 };
@@ -293,9 +308,22 @@ const saveStock = async () => {
       tonKhoToiThieu: Number(stockForm.tonKhoToiThieu),
     });
     if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
+    // 3) Giá bán — chỉ gọi update biến thể nếu có đổi, tránh ghi đè vô ích. Đây là bước
+    // "tốt nghiệp" khỏi Hàng sắp về: đủ giaNhap (đã có từ phiếu nhập) + giaBan (nhập ở đây).
+    const currentGiaBan = Number(getVariantInfo(item)?.giaBan ?? 0);
+    if (item.bienThe && Number(stockForm.giaBan) !== currentGiaBan) {
+      const body = buildBienTheUpdateBody(item.bienThe, { giaBan: Number(stockForm.giaBan) || 0 });
+      const priceRes = await BienTheSanPhamService.update(bienTheId, body);
+      if (!priceRes.ok) { showToast(t('admin.errors.updateFailed', { status: priceRes.status })); return; }
+    }
     // Lấy lại đúng dòng vừa đổi để có soLuongTon mới nhất do server tính, rồi quay về tab
-    // danh sách serial để thấy ngay kết quả — không đóng hẳn modal.
-    const updated = await TonKhoService.getByBienThe(bienTheId).catch(() => null);
+    // danh sách serial để thấy ngay kết quả — không đóng hẳn modal. refreshProducts() để
+    // giaBan/giaNhap vừa đổi phản ánh ngay ở bảng chính + phân loại pending/out (đọc từ
+    // ProductsStore, không phải item.bienThe) — không cần F5.
+    const [updated] = await Promise.all([
+      TonKhoService.getByBienThe(bienTheId).catch(() => null),
+      refreshProducts().catch(() => {}),
+    ]);
     const idx = inventory.value.findIndex((i) => i.tonKhoId === item.tonKhoId);
     if (idx !== -1 && updated) inventory.value[idx] = updated;
     stockForm.newSerials = [''];
@@ -569,7 +597,10 @@ const savePhieuNhap = async () => {
       PhieuNhapKhoService.getAll().catch(() => phieuNhapList.value),
       ChiTietPhieuNhapService.getAll().catch(() => chiTietPhieuNhapList.value),
     ]);
-    await refreshInventory().catch(() => {});
+    // refreshProducts() vì syncGiaNhapFromReceipt() ở trên vừa đổi giaNhap của biến thể —
+    // bảng chính/phân loại pending đọc giá từ ProductsStore, không refresh sẽ phải F5 mới
+    // thấy giá mới hoặc thấy hàng "tốt nghiệp" khỏi Hàng sắp về.
+    await Promise.all([refreshInventory(), refreshProducts()]).catch(() => {});
     showPhieuNhapModal.value = false;
   } catch (e) {
     phieuNhapFormError.value = e.message;
@@ -1217,6 +1248,16 @@ const exportPhieuNhapExcel = () => {
       <template v-else>
         <div class="inv-modal__body">
           <div class="inv-grid">
+            <label class="inv-field">
+              <span>{{ tt('admin.stockModal.giaNhapLabel', 'Giá nhập') }}</span>
+              <div class="inv-readonly">{{ formatPrice(getVariantInfo(detailItem)?.giaNhap) }}</div>
+              <em class="inv-hint">{{ tt('admin.stockModal.giaNhapHint', 'Tự lấy từ phiếu nhập gần nhất, không sửa tay ở đây') }}</em>
+            </label>
+            <label class="inv-field">
+              <span>{{ tt('admin.stockModal.giaBanLabel', 'Giá bán') }}</span>
+              <input v-model="stockForm.giaBan" type="number" min="0" />
+              <em class="inv-hint">{{ tt('admin.stockModal.giaBanHint', 'Nhập đủ giá nhập + giá bán + serial thì hàng mới rời khỏi "Hàng sắp về"') }}</em>
+            </label>
             <label class="inv-field">
               <span>{{ t('admin.stockModal.stockLabel') }}</span>
               <div class="inv-readonly">{{ detailItem?.soLuongTon ?? 0 }}</div>

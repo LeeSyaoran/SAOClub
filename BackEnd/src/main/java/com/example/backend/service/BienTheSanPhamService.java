@@ -2,7 +2,6 @@ package com.example.backend.service;
 
 import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.NhanVien;
-import com.example.backend.entity.TonKho;
 import com.example.backend.repository.*;
 import com.example.backend.request.BienTheSanPhamRequest;
 import com.example.backend.response.BienTheSanPhamPublicResponse;
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -74,8 +74,19 @@ public class BienTheSanPhamService {
         kiemTraTrungBarcode(barcode, null);
 
         BienTheSanPham entity = new BienTheSanPham();
-        BeanUtils.copyProperties(request, entity, "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode");
+        // "bienTheId": loai them cho khop update() — client lo gui id len thi save() thanh
+        // UPDATE ban ghi cu chu khong INSERT ban moi.
+        // "ngayTao": cot ngay_tao cua bien_the_san_pham la NOT NULL. Neu request co truong
+        // nay va dang null, copyProperties se ghi null de len va lam ca giao dich do —
+        // dung ly do bien the thu 2 tro di khong luu duoc, trong khi bien the dau tien (di
+        // qua SanPhamService, da va tu truoc) van vao binh thuong.
+        BeanUtils.copyProperties(request, entity,
+                "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode", "ngayTao");
         entity.setBarcode(barcode);
+        // ngayTao nam o BaseEntity (lop cha), khong khai lai o day. Dat theo gia tri hien
+        // co thay vi doc request.getNgayTao() — BienTheSanPhamRequest co the khong co truong
+        // do, doc thang vao se khong bien dich duoc.
+        if (entity.getNgayTao() == null) entity.setNgayTao(LocalDateTime.now());
 
         entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));
         entity.setCpu(request.getCpuId() != null ? dmCpuRepository.getReferenceById(request.getCpuId()) : null);
@@ -85,16 +96,10 @@ public class BienTheSanPhamService {
 
         BienTheSanPham saved = bienTheSanPhamRepository.save(entity);
 
-        // Tạo sẵn dòng tồn kho (0 tồn) cho biến thể mới — trigger trg_CapNhatTonKhoThucTe
-        // chỉ UPDATE (không INSERT), nên phải có sẵn dòng ton_kho từ đây thì sau này nhập
-        // serial/phiếu nhập mới cộng tồn đúng được. Đồng thời đây cũng là cách để biến thể
-        // mới xuất hiện ở "Hàng sắp về" bên Kho hàng thay vì biến mất khỏi mọi danh sách.
-        TonKho tonKho = new TonKho();
-        tonKho.setBienThe(saved);
-        tonKho.setSoLuongTon(0);
-        tonKho.setSoLuongGiu(0);
-        tonKho.setTonKhoToiThieu(5);
-        tonKhoRepository.save(tonKho);
+        // Dong ton_kho tuong ung do trigger TRG_TuDongTaoTonKho cua CSDL tu tao (xem cuoi
+        // file QLBanMayTinh.sql). Truoc day cho nay con insert TonKho bang tay -> hai dong
+        // cho cung mot bien_the_id -> dung rang buoc UNIQUE(bien_the_id) cua bang ton_kho
+        // -> rollback ca bien the. Da bo han; dat o tang CSDL de moi duong ghi deu co ton kho.
 
         return saved;
     }
@@ -124,7 +129,7 @@ public class BienTheSanPhamService {
         String barcode = chuanHoa(request.getBarcode());
         kiemTraTrungBarcode(barcode, id);
 
-        BeanUtils.copyProperties(request, entity, "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode");
+        BeanUtils.copyProperties(request, entity, "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode", "ngayTao");
         entity.setBarcode(barcode);
 
         entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));

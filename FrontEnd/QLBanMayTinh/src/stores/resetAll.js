@@ -24,4 +24,9 @@ export const resetAllStores = () => {
   resetReturns();
   resetBaoHanh();
   resetDoiThuong();
+  // Tab admin đang đứng (AdminPage.vue) nhớ qua sessionStorage để F5 không rớt về
+  // dashboard — xóa luôn khi đăng xuất, tránh tài khoản khác đăng nhập cùng tab bị "kẹt"
+  // ở đúng trang tài khoản trước đang xem.
+  sessionStorage.removeItem("admin.lastPage");
+  sessionStorage.removeItem("admin.lastInventoryTab");
 };

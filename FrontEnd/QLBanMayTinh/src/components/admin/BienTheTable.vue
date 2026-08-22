@@ -151,7 +151,7 @@ const marginOf = (p) => {
   if (!ban || !nhap) return null;
   return (((ban - nhap) / ban) * 100).toFixed(1);
 };
-const colCount = computed(() => (props.canViewCost ? 10 : 9));
+const colCount = computed(() => (props.canViewCost ? 11 : 10));
 
 // ── Ve ma vach ───────────────────────────────────────────────────────────────────────
 // Mã vạch sinh từ CSDL là EAN-13 (13 số, có chữ số kiểm tra) → vẽ đúng chuẩn EAN13 để máy
@@ -668,6 +668,7 @@ const saveVariant = async () => {
             <th class="vt-col-stt">{{ t('admin.common.stt') }}</th>
             <th class="vt-col-img">{{ t('admin.variants.colImage') }}</th>
             <th class="vt-col-sku">{{ t('admin.variants.colSku') }}</th>
+            <th class="vt-col-sku">{{ tt('admin.variants.colBarcode', 'Mã vạch') }}</th>
             <th class="vt-col-name">{{ t('admin.variants.colProduct') }}</th>
             <th class="vt-col-config">{{ t('admin.variants.colConfig') }}</th>
             <th class="vt-col-color">{{ t('admin.variants.colColor') }}</th>
@@ -692,6 +693,7 @@ const saveVariant = async () => {
               </div>
             </td>
             <td class="vt-sku" :title="p.maSku">{{ p.maSku }}</td>
+            <td class="vt-mono vt-muted" :title="p.barcodeBienThe || ''">{{ p.barcodeBienThe || '—' }}</td>
             <td class="vt-name" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
             <td class="vt-config" :title="configLabel(p)">
               <div v-if="p.cpu || p.ram || p.oCung" class="vt-config__list">

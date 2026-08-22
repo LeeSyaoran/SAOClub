@@ -1664,6 +1664,11 @@ export default {
       qrScannedConfirmed: "Đã xác nhận quét QR",
       paymentRequired: "Vui lòng chọn phương thức thanh toán!",
       confirmCheckout: "Xác nhận thanh toán {total}?",
+      openCatalog: "Danh sách hàng hóa",
+      catalogTitle: "Chọn hàng hóa",
+      doneAdding: "Xong",
+      orderInfo: "Thông tin đơn hàng",
+      noOrderInfoYet: "Thông tin đơn hàng sẽ hiện ở đây sau khi xác định khách hàng",
     },
 
     packModal: {

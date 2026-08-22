@@ -62,7 +62,22 @@ defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const route = useRoute();
-const currentPage = ref(route.params.id ? "san-pham-detail" : "dashboard");
+// Nhớ tab admin đang đứng qua sessionStorage — F5 mặc định mất hết state trong ref, luôn
+// bật lại "dashboard" dù đang ở tab khác. sessionStorage (không phải localStorage) để tự
+// hết hạn khi đóng tab/đổi tài khoản, tránh việc mở lại /admin ở phiên khác vẫn bị "kẹt"
+// ở trang cũ. Chỉ khôi phục các trang không cần id kèm theo (loại "customer-detail" và
+// "san-pham-detail" vì 2 trang đó cần selectedCustomerId/route param mới xem đúng được).
+const ADMIN_PAGE_STORAGE_KEY = "admin.lastPage";
+const NON_RESTORABLE_PAGES = new Set(["customer-detail", "san-pham-detail"]);
+const savedPage = sessionStorage.getItem(ADMIN_PAGE_STORAGE_KEY);
+const currentPage = ref(
+  route.params.id
+    ? "san-pham-detail"
+    : (savedPage && !NON_RESTORABLE_PAGES.has(savedPage) ? savedPage : "dashboard"),
+);
+watch(currentPage, (page) => {
+  if (page && !NON_RESTORABLE_PAGES.has(page)) sessionStorage.setItem(ADMIN_PAGE_STORAGE_KEY, page);
+});
 // Sidebar bật/tắt được ở MỌI kích thước màn hình bằng nút hamburger ở topbar — mặc định
 // mở trên desktop (>=768px), đóng trên mobile. Trên mobile sidebar hiện dạng overlay đè lên
 // nội dung; trên desktop nó ẩn/hiện ngay trong layout (xem CSS .adm-sidebar cuối file).
@@ -579,7 +594,9 @@ const outOfStockItems = computed(() =>
 // ── Trang Kho hàng: tab-switcher cấp cao (Kho hàng vs Bảo hành) ──────────────────
 // Thay cho khoTab cũ (giờ đã chuyển hẳn vào InventoryPanel.vue) — trang này chỉ còn
 // đúng 2 lựa chọn: "kho" (InventoryPanel — gồm Tồn kho + Phiếu nhập) và "bao-hanh".
-const inventoryMainTab = ref('kho');
+const INVENTORY_TAB_STORAGE_KEY = "admin.lastInventoryTab";
+const inventoryMainTab = ref(sessionStorage.getItem(INVENTORY_TAB_STORAGE_KEY) || 'kho');
+watch(inventoryMainTab, (tab) => sessionStorage.setItem(INVENTORY_TAB_STORAGE_KEY, tab));
 // Nhóm "Kho hàng" trong sidebar hiển thị dạng nhãn tĩnh (adm-nav-label) + danh sách mục
 // con luôn hiện sẵn bên dưới (không phải nút xổ/thu gọn) — bấm mục con để chuyển tab.
 const selectInventoryTab = (tab) => {
