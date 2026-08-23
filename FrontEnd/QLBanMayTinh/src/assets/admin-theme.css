@@ -1,0 +1,697 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ADMIN THEME - Global styles cho tất cả admin components
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Pink Color Palette ─── */
+:root {
+  --pink-50:  #fff5f9;
+  --pink-100: #ffe6f0;
+  --pink-200: #ffcfe1;
+  --pink-300: #f7a8c8;
+  --pink-400: #ec4899;
+  --pink-500: #db2777;
+  --pink-600: #db2777;
+  --pink-700: #a81b5d;
+
+  --ink:     #1f2937;
+  --muted:   #6b7280;
+  --line:    #f1dbe6;
+  --field:   #d9b3c6;
+  --danger:  #dc2626;
+  --success: #059669;
+  --warning: #d97706;
+  --info:    #2563eb;
+
+  --ok-bg:   #ecfdf5;
+  --ok-text: #047857;
+
+  /* Shadow System - 3D Effect */
+  --sh-1: 0 1px 2px rgba(168, 27, 93, .08), 0 1px 3px rgba(168, 27, 93, .05);
+  --sh-2: 0 4px 6px rgba(168, 27, 93, .1), 0 2px 4px rgba(168, 27, 93, .06);
+  --sh-3: 0 10px 15px rgba(168, 27, 93, .12), 0 4px 6px rgba(168, 27, 93, .08);
+
+  /* 3D Button Shadows */
+  --sh-btn: 0 3px 0 #9b1d5c, 0 4px 8px rgba(168, 27, 93, 0.3);
+  --sh-btn-hover: 0 4px 0 #7a1550, 0 6px 12px rgba(168, 27, 93, 0.35);
+  --sh-btn-active: inset 0 2px 4px rgba(0,0,0,0.2);
+  --sh-inset: inset 0 2px 4px rgba(168, 27, 93, .15);
+
+  /* Config diff highlight */
+  --config-diff-color: #3b82f6;
+  --config-diff-bg: #eff6ff;
+}
+
+/* ─── Global Page Wrapper ─── */
+.inv, .hh, .vt, .admin-root, .alt-root {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.ta-r { text-align: right; }
+.ta-c { text-align: center; }
+.text-muted { color: var(--muted); }
+.text-secondary { color: var(--muted); }
+.text-danger { color: var(--danger); }
+.text-warning { color: var(--warning); }
+.text-success { color: var(--success); }
+.text-info { color: var(--info); }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   CARD - Tất cả card trong admin đều dùng chung
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.hh-card,
+.hh-toolbar-card,
+.vt-card,
+.vt-toolbar-card,
+.inv-card,
+.inv-toolbar-card,
+.admin-card,
+.alt-card {
+  background: #fff !important;
+  border: 1px solid var(--pink-200) !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+  box-shadow: var(--sh-2) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TOOLBAR - Thanh công cụ nằm trong card
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.hh-toolbar,
+.vt-toolbar,
+.inv-bar,
+.admin-toolbar,
+.alt-toolbar {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px !important;
+  background: #fff !important;
+  border-bottom: 1px solid var(--pink-50) !important;
+}
+
+.hh-toolbar__left,
+.vt-toolbar__left,
+.inv-toolbar__left,
+.admin-toolbar__left,
+.alt-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hh-toolbar__right,
+.vt-toolbar__right,
+.inv-toolbar__right,
+.admin-toolbar__right,
+.alt-toolbar__right,
+.alt-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.hh-toolbar__count,
+.vt-toolbar__count,
+.inv-bar__count,
+.admin-toolbar__count,
+.alt-toolbar__count {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   SEARCH INPUT
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.hh-search,
+.vt-search,
+.inv-search,
+.admin-search,
+.alt-search {
+  position: relative;
+  width: 280px;
+  max-width: 100%;
+}
+
+.hh-toolbar .hh-search {
+  width: 260px;
+}
+
+.vt-toolbar .vt-search {
+  width: 260px;
+}
+
+.inv-bar .inv-search {
+  width: 260px;
+}
+
+.hh-search input,
+.vt-search input,
+.inv-search input,
+.admin-search input,
+.alt-search input,
+.hh-toolbar .hh-search input,
+.vt-toolbar .vt-search input {
+  width: 100%;
+  padding: 8px 32px 8px 34px;
+  border: 1px solid var(--pink-200) !important;
+  border-radius: 999px !important;
+  font-size: 13px;
+  background: var(--pink-50) !important;
+  color: var(--ink) !important;
+  font-family: inherit;
+  box-shadow: var(--sh-inset) !important;
+  transition: all 0.2s ease !important;
+}
+
+.hh-search input:focus,
+.vt-search input:focus,
+.inv-search input:focus,
+.admin-search input:focus,
+.alt-search input:focus {
+  outline: none !important;
+  border-color: var(--pink-500) !important;
+  background: #fff !important;
+  box-shadow: var(--sh-inset), 0 0 0 3px var(--pink-100) !important;
+}
+
+.hh-search__icon,
+.vt-search__icon,
+.inv-search__icon,
+.admin-search__icon,
+.alt-search__icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pink-500);
+  pointer-events: none;
+}
+
+.hh-search__clear,
+.vt-search__clear,
+.inv-search__clear,
+.admin-search__clear,
+.alt-search__clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.hh-search__clear:hover,
+.vt-search__clear:hover {
+  color: var(--pink-600);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   FILTER PANEL - Nằm trong card
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.hh-filter,
+.vt-filter,
+.inv-filter,
+.admin-filter,
+.alt-filter {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.22s ease;
+}
+
+.hh-filter.is-open,
+.vt-filter.is-open,
+.inv-filter.is-open,
+.admin-filter.is-open,
+.alt-filter.is-open {
+  grid-template-rows: 1fr;
+}
+
+.hh-filter__panel,
+.vt-filter__panel,
+.inv-filter__panel,
+.admin-filter__panel,
+.alt-filter__panel {
+  overflow: hidden;
+  background: var(--pink-50);
+  padding: 0 16px;
+  transition: padding 0.22s ease;
+}
+
+.hh-filter.is-open .hh-filter__panel,
+.vt-filter.is-open .vt-filter__panel,
+.inv-filter.is-open .inv-filter__panel,
+.admin-filter.is-open .admin-filter__panel,
+.alt-filter.is-open .alt-filter__panel {
+  padding: 14px 16px;
+}
+
+.hh-filter__grid,
+.vt-filter__grid,
+.inv-filter__grid,
+.admin-filter__grid,
+.alt-filter__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.hh-filter__foot,
+.vt-filter__foot,
+.inv-filter__foot,
+.admin-filter__foot,
+.alt-filter__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+
+.hh-filter__count,
+.vt-filter__count,
+.inv-filter__count,
+.admin-filter__count,
+.alt-filter__count {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.hh-filter__btns,
+.vt-filter__btns,
+.inv-filter__btns,
+.admin-filter__btns,
+.alt-filter__btns {
+  display: flex;
+  gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════════════════════════════════════ */
+/* Primary Button - Pink 3D */
+.admin-btn,
+.admin-btn--primary,
+.hh-btn--primary,
+.hh-btn,
+.vt-btn,
+.vt-btn--primary,
+.inv-btn,
+.inv-btn--primary,
+.alt-btn,
+.alt-btn--primary {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px !important;
+  border: none !important;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  background: var(--pink-600) !important;
+  color: #fff !important;
+  box-shadow: var(--sh-btn) !important;
+  border-bottom-width: 3px !important;
+  transition: all 0.15s ease !important;
+}
+
+.admin-btn:hover,
+.admin-btn--primary:hover,
+.hh-btn:hover,
+.hh-btn--primary:hover,
+.vt-btn:hover,
+.vt-btn--primary:hover,
+.inv-btn:hover,
+.inv-btn--primary:hover,
+.alt-btn:hover,
+.alt-btn--primary:hover {
+  background: var(--pink-700) !important;
+  box-shadow: var(--sh-btn-hover) !important;
+  transform: translateY(-1px);
+}
+
+.admin-btn:active,
+.admin-btn--primary:active,
+.hh-btn:active,
+.hh-btn--primary:active,
+.vt-btn:active,
+.vt-btn--primary:active,
+.inv-btn:active,
+.inv-btn--primary:active,
+.alt-btn:active,
+.alt-btn--primary:active {
+  box-shadow: var(--sh-btn-active) !important;
+  transform: translateY(1px);
+}
+
+.admin-btn:disabled,
+.admin-btn--primary:disabled,
+.hh-btn:disabled,
+.hh-btn--primary:disabled,
+.vt-btn:disabled,
+.vt-btn--primary:disabled,
+.inv-btn:disabled,
+.inv-btn--primary:disabled,
+.alt-btn:disabled,
+.alt-btn--primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Ghost Button */
+.admin-btn--ghost,
+.hh-btn--ghost,
+.hh-btn--soft,
+.vt-btn--ghost,
+.inv-btn--ghost,
+.alt-btn--ghost,
+.alt-btn--soft {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px !important;
+  border: 1px solid var(--pink-200) !important;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  background: #fff !important;
+  color: var(--pink-700) !important;
+  transition: all 0.15s ease !important;
+}
+
+.admin-btn--ghost:hover,
+.hh-btn--ghost:hover,
+.hh-btn--soft:hover,
+.vt-btn--ghost:hover,
+.inv-btn--ghost:hover,
+.alt-btn--ghost:hover,
+.alt-btn--soft:hover {
+  background: var(--pink-50) !important;
+  border-color: var(--pink-300) !important;
+  box-shadow: var(--sh-2) !important;
+}
+
+.admin-btn--ghost.is-on,
+.hh-btn--ghost.is-on,
+.hh-btn--soft.is-on,
+.vt-btn--ghost.is-on,
+.inv-btn--ghost.is-on,
+.alt-btn--ghost.is-on,
+.alt-btn--soft.is-on {
+  background: var(--pink-100) !important;
+  border-color: var(--pink-300) !important;
+}
+
+/* Small Button */
+.admin-btn--sm,
+.hh-btn--sm,
+.vt-btn--sm,
+.inv-btn--sm,
+.inv-btn--sm,
+.alt-btn--sm {
+  padding: 5px 11px !important;
+  font-size: 12.5px !important;
+}
+
+/* Icon Button */
+.admin-icon-btn,
+.hh-icon-btn,
+.vt-icon-btn,
+.inv-icon-btn,
+.alt-icon-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50% !important;
+  border: 1px solid var(--pink-200) !important;
+  background: #fff !important;
+  color: var(--pink-700) !important;
+  cursor: pointer;
+  box-shadow: var(--sh-1) !important;
+  transition: all 0.15s ease !important;
+}
+
+.admin-icon-btn:hover,
+.hh-icon-btn:hover,
+.vt-icon-btn:hover,
+.inv-icon-btn:hover,
+.alt-icon-btn:hover {
+  background: var(--pink-50) !important;
+  box-shadow: var(--sh-2) !important;
+  transform: translateY(-1px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TABLES
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.hh-table-wrap,
+.vt-table-wrap,
+.inv-table-wrap,
+.admin-table-wrap,
+.alt-table-wrap {
+  overflow-x: auto;
+}
+
+.hh-table,
+.vt-table,
+.inv-table,
+.admin-table,
+.alt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.hh-table th,
+.vt-table th,
+.inv-table th,
+.admin-table th,
+.alt-table th {
+  background: var(--pink-50) !important;
+  color: var(--pink-700) !important;
+  font-size: 11.5px;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 11px 12px;
+  white-space: nowrap;
+  border-bottom: none;
+}
+
+.hh-table td,
+.vt-table td,
+.inv-table td,
+.admin-table td,
+.alt-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  color: var(--ink);
+}
+
+.hh-table tbody tr:hover td,
+.vt-table tbody tr:hover td,
+.inv-table tbody tr:hover td,
+.admin-table tbody tr:hover td,
+.alt-table tbody tr:hover td {
+  background: var(--pink-50);
+}
+
+.hh-table tbody tr:last-child td,
+.vt-table tbody tr:last-child td,
+.inv-table tbody tr:last-child td,
+.admin-table tbody tr:last-child td,
+.alt-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TAGS & BADGES
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.hh-tag,
+.vt-tag,
+.inv-tag,
+.admin-tag,
+.alt-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.hh-tag--on,
+.vt-tag--on,
+.inv-tag--on,
+.admin-tag--on,
+.alt-tag--on {
+  background: var(--ok-bg) !important;
+  color: var(--ok-text) !important;
+}
+
+.hh-tag--off,
+.vt-tag--off,
+.inv-tag--off,
+.admin-tag--off,
+.alt-tag--off {
+  background: #f3f4f6 !important;
+  color: var(--muted) !important;
+}
+
+.hh-tag--wait,
+.vt-tag--wait,
+.inv-tag--wait {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+/* Filter badge */
+.hh-filter-badge,
+.vt-filter-badge,
+.inv-chip,
+.alt-chip {
+  background: var(--pink-600);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 17px;
+  min-width: 17px;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   CONFIG DIFF HIGHLIGHT
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.vt-config-diff,
+.inv-config-diff {
+  font-weight: 600 !important;
+  color: var(--config-diff-color) !important;
+  background: var(--config-diff-bg) !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   EMPTY STATE & PAGER
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.hh-empty,
+.vt-empty,
+.inv-empty,
+.admin-empty,
+.alt-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.hh-pager,
+.vt-pager,
+.inv-pager,
+.admin-pager,
+.alt-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  background: var(--pink-50);
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   FORM INPUTS
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.hh-field,
+.vt-field,
+.inv-field,
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.hh-field > span,
+.vt-field > span,
+.inv-field > span,
+.admin-field > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pink-700);
+}
+
+.hh-field input,
+.hh-field select,
+.vt-field input,
+.vt-field select,
+.inv-field input,
+.inv-field select,
+.admin-field input,
+.admin-field select,
+.admin-select,
+select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--field) !important;
+  border-radius: 9px !important;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fff !important;
+  font-family: inherit;
+  box-shadow: var(--sh-inset) !important;
+  transition: all 0.2s ease !important;
+}
+
+select {
+  padding: 8px 30px 8px 12px;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+                    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 14px, calc(100% - 10px) 14px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.hh-field input:focus,
+.hh-field select:focus,
+.vt-field input:focus,
+.vt-field select:focus,
+.inv-field input:focus,
+.inv-field select:focus,
+.admin-field input:focus,
+.admin-field select:focus,
+select:focus {
+  outline: none !important;
+  border-color: var(--pink-500) !important;
+  box-shadow: var(--sh-inset), 0 0 0 3px var(--pink-100) !important;
+}

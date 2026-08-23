@@ -32,6 +32,13 @@
 
   --shadow-color: rgba(12,12,21,0.5);
   --gradient-brand: linear-gradient(135deg, var(--accent-2), var(--accent));
+
+  /* 3D Shadow Variables */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.15);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.3), 0 4px 6px rgba(0,0,0,0.2);
+  --shadow-btn: 0 2px 0 rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2);
+  --shadow-inset: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
 [data-theme="light"] {
@@ -61,12 +68,93 @@
 
   --shadow-color: rgba(225,29,72,0.1);
   --gradient-brand: linear-gradient(135deg, var(--accent-2), var(--accent));
+
+  /* 3D Shadow Variables - Light mode */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+  --shadow-btn: 0 2px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.08);
+  --shadow-inset: inset 0 2px 4px rgba(0,0,0,0.08);
 }
 
 body {
   background: var(--bg-page);
   color: var(--text-primary);
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Global 3D Button Styles */
+.btn {
+  box-shadow: var(--shadow-btn);
+  transition: all 0.15s ease;
+  border-bottom-width: 2px;
+}
+.btn:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.btn:active {
+  box-shadow: var(--shadow-inset);
+  transform: translateY(1px);
+}
+
+/* Global Card Styles */
+.card {
+  box-shadow: var(--shadow-md);
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Global Input/Search Styles */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+  box-shadow: var(--shadow-inset);
+  transition: all 0.2s ease;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: var(--shadow-inset), 0 0 0 3px rgba(225,29,72,0.2);
+}
+
+/* Search box specific */
+.search-box,
+.search-input,
+.search-field {
+  box-shadow: var(--shadow-inset), inset 0 1px 2px rgba(0,0,0,0.05);
+  border-radius: 999px;
+  padding: 8px 16px;
+}
+
+/* Global Filter Panel */
+.filter-panel,
+.filter-card,
+.filter-box {
+  box-shadow: var(--shadow-md);
+  border-radius: 12px;
+}
+
+/* Stat Card 3D Effect */
+.stat-card,
+.stat-box,
+.inv-stat {
+  box-shadow: var(--shadow-md);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.stat-card:hover,
+.stat-box:hover,
+.inv-stat:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .btn-warning {

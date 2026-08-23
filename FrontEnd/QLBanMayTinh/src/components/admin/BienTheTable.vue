@@ -18,7 +18,6 @@ import { Camera, Image, Cpu, MemoryStick, HardDrive, Monitor, Barcode } from '@l
 import Pagination from "../common/Pagination.vue";
 import SearchSelect from "../common/SearchSelect.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { useAutoHideOnScroll } from "../../composables/useAutoHideOnScroll.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 
 // Không dựa vào ProductsTable.vue (tab anh em) đã tải sẵn ProductsStore — self-contained,
@@ -85,11 +84,6 @@ const filterDanhMuc = ref("");
 const filterTrangThai = ref("");
 const isFilterOpen = ref(false);
 
-// Thanh cong cu + bo loc dinh sticky tren dau bang, tu an khi cuon xuong / hien lai
-// khi cuon len (giong hieu ung ben HangHoa.vue).
-const stickyHeadEl = ref(null);
-const { hidden: barHidden } = useAutoHideOnScroll(stickyHeadEl);
-
 const allVariants = computed(() => {
   const all = ProductsStore.items ?? [];
   return props.filterSanPhamId != null
@@ -119,7 +113,7 @@ const filteredVariants = computed(() => {
     if (filterDanhMuc.value !== "" && String(p.danhMucId) !== String(filterDanhMuc.value)) return false;
     if (filterTrangThai.value !== "" && p.trangThai !== filterTrangThai.value) return false;
     if (!q) return true;
-    return [p.tenSanPham, p.maSku, p.barcodeBienThe, p.mauSac, p.cpu]
+    return [p.tenSanPham, p.maSku, p.barcode, p.mauSac, p.cpu]
       .some((f) => (f ?? "").toString().toLowerCase().includes(q));
   });
 });
@@ -144,6 +138,15 @@ const shortCpu = (cpu) => cpu?.replace(/^(Intel Core|AMD Ryzen)\s+/i, '') ?? '';
 const configLabel = (p) => [shortCpu(p.cpu), p.ram, p.oCung, p.gpu].filter(Boolean).join(' · ') || '—';
 const stockOf = (p) => Number(p.soLuongTon ?? 0);
 const stockClass = (p) => (stockOf(p) === 0 ? 'vt-stock--out' : stockOf(p) <= 5 ? 'vt-stock--low' : '');
+
+// Hàm so sánh config với variant đầu tiên của cùng sản phẩm (để highlight giá trị khác nhau)
+const getFirstVariantOfProduct = (p) => allVariants.value.find(v => v.sanPhamId === p.sanPhamId && v.bienTheId !== p.bienTheId);
+const hasCpuDiff = (p) => { const first = getFirstVariantOfProduct(p); return !first || p.cpu !== first.cpu; };
+const hasRamDiff = (p) => { const first = getFirstVariantOfProduct(p); return !first || p.ram !== first.ram; };
+const hasOCungDiff = (p) => { const first = getFirstVariantOfProduct(p); return !first || p.oCung !== first.oCung; };
+const hasMauSacDiff = (p) => { const first = getFirstVariantOfProduct(p); return !first || p.mauSac !== first.mauSac; };
+const hasAnyConfigDiff = (p) => hasCpuDiff(p) || hasRamDiff(p) || hasOCungDiff(p) || hasMauSacDiff(p);
+
 // Biên lợi nhuận — chỉ có ý nghĩa khi biết cả giá vốn lẫn giá bán
 const marginOf = (p) => {
   const ban = Number(p.giaBan ?? 0);
@@ -151,7 +154,7 @@ const marginOf = (p) => {
   if (!ban || !nhap) return null;
   return (((ban - nhap) / ban) * 100).toFixed(1);
 };
-const colCount = computed(() => (props.canViewCost ? 11 : 10));
+const colCount = computed(() => (props.canViewCost ? 8 : 7));
 
 // ── Ve ma vach ───────────────────────────────────────────────────────────────────────
 // Mã vạch sinh từ CSDL là EAN-13 (13 số, có chữ số kiểm tra) → vẽ đúng chuẩn EAN13 để máy
@@ -175,12 +178,12 @@ const escapeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '
 
 // In tem 58mm — dựng SVG rời rồi ghi thẳng vào cửa sổ in, không cần thư viện in riêng.
 const printLabel = (p) => {
-  if (!p?.barcodeBienThe) {
+  if (!p?.barcode) {
     showToast(tt('admin.variants.noBarcode', 'Phiên bản này chưa có mã vạch để in'), 'error');
     return;
   }
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  drawBarcode(svg, p.barcodeBienThe, { height: 55, width: 1.8, displayValue: true, fontSize: 13 });
+  drawBarcode(svg, p.barcode, { height: 55, width: 1.8, displayValue: true, fontSize: 13 });
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
   const win = window.open('', '_blank', 'width=430,height=560');
@@ -353,7 +356,7 @@ const checkDigitEan13 = (base12) => {
   return String((10 - (sum % 10)) % 10);
 };
 const generateBarcode = () => {
-  const used = new Set((ProductsStore.items ?? []).map((p) => p.barcodeBienThe).filter(Boolean));
+  const used = new Set((ProductsStore.items ?? []).map((p) => p.barcode).filter(Boolean));
   for (let i = 0; i < 60; i++) {
     const base = '893' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0');
     const code = base + checkDigitEan13(base);
@@ -421,7 +424,7 @@ const openEdit = async (p) => {
     nhaCungCapId: p.nhaCungCapId,
     loaiSanPham: p.loaiSanPham,
     maSku: p.maSku,
-    barcodeBienThe: p.barcodeBienThe ?? "",
+    barcodeBienThe: p.barcode ?? "",
     cpuId: cpuList.value.find((c) => c.tenCpu === p.cpu)?.cpuId ?? null,
     ramId: ramList.value.find((r) => r.dungLuong === p.ram)?.ramId ?? null,
     oCungId: oCungList.value.find((o) => o.loaiOcung === p.oCung)?.oCungId ?? null,
@@ -490,7 +493,7 @@ const saveVariant = async () => {
       return;
     }
     const trung = (ProductsStore.items ?? []).some(
-      (p) => p.barcodeBienThe === barcode && p.bienTheId !== form.bienTheId
+      (p) => p.barcode === barcode && p.bienTheId !== form.bienTheId
     );
     if (trung) {
       formError.value = tt('admin.errors.barcodeDuplicate', 'Mã vạch này đã có phiên bản khác dùng');
@@ -584,36 +587,36 @@ const saveVariant = async () => {
 </script>
 
 <template>
-  <!-- ══════════ THANH CÔNG CỤ + BỘ LỌC — thẻ riêng, khóa trên đầu, tự ẩn khi cuộn xuống ══════════ -->
-  <div ref="stickyHeadEl" class="vt-sticky-head" :class="{ 'is-hidden': barHidden }">
-    <div class="vt-toolbar-card">
-      <div class="vt-toolbar">
-        <div class="vt-toolbar__left">
-          <div class="vt-search">
-            <i class="fa fa-search vt-search__icon"></i>
-            <input v-model="variantSearch" :placeholder="tt('admin.variants.searchPlaceholder2', 'Tìm tên, SKU, màu…')" />
-            <button v-if="variantSearch" class="vt-search__clear" :title="tt('admin.variants.clearSearch', 'Xóa tìm kiếm')" @click="variantSearch = ''">
-              <i class="fa fa-times"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="vt-toolbar__right">
-          <button type="button" class="vt-btn vt-btn--ghost" :class="{ 'is-on': isFilterOpen }" @click="isFilterOpen = !isFilterOpen">
-            <i class="fa fa-filter"></i>
-            {{ tt('admin.variants.filters', 'Bộ lọc') }}
-            <span v-if="activeFilterCount" class="vt-filter-badge">{{ activeFilterCount }}</span>
-            <i class="fa fa-chevron-down vt-caret" :class="{ 'is-open': isFilterOpen }"></i>
-          </button>
-
-          <button v-if="!readonly" class="vt-btn vt-btn--primary" @click="openAddVariantFlow">
-            <i class="fa fa-plus"></i> {{ t('admin.variants.add') }}
+  <!-- ══════════ CARD LỚN: toolbar + filter + bảng ══════════ -->
+  <div class="vt-card">
+    <!-- THANH CÔNG CỤ -->
+    <div class="vt-toolbar">
+      <div class="vt-toolbar__left">
+        <span class="vt-toolbar__count">{{ filteredVariants.length }}/{{ allVariants.length }} {{ t('admin.variants.countSuffix') }}</span>
+        <div class="vt-search">
+          <i class="fa fa-search vt-search__icon"></i>
+          <input v-model="variantSearch" :placeholder="tt('admin.variants.searchPlaceholder2', 'Tìm tên, SKU, màu…')" />
+          <button v-if="variantSearch" class="vt-search__clear" :title="tt('admin.variants.clearSearch', 'Xóa tìm kiếm')" @click="variantSearch = ''">
+            <i class="fa fa-times"></i>
           </button>
         </div>
       </div>
+
+      <div class="vt-toolbar__right">
+        <button type="button" class="vt-btn vt-btn--ghost" :class="{ 'is-on': isFilterOpen }" @click="isFilterOpen = !isFilterOpen">
+          <i class="fa fa-filter"></i>
+          {{ tt('admin.variants.filters', 'Bộ lọc') }}
+          <span v-if="activeFilterCount" class="vt-filter-badge">{{ activeFilterCount }}</span>
+          <i class="fa fa-chevron-down vt-caret" :class="{ 'is-open': isFilterOpen }"></i>
+        </button>
+
+        <button v-if="!readonly" class="vt-btn vt-btn--primary" @click="openAddVariantFlow">
+          <i class="fa fa-plus"></i> {{ t('admin.variants.add') }}
+        </button>
+      </div>
     </div>
 
-    <!-- ══════════ BỘ LỌC (thu gọn) — thẻ riêng, chỉ hiện khi mở ══════════ -->
+    <!-- BỘ LỌC (thu gọn, nằm trong sticky) -->
     <div class="vt-filter" :class="{ 'is-open': isFilterOpen }">
       <div class="vt-filter__panel">
         <div class="vt-filter__grid">
@@ -657,9 +660,8 @@ const saveVariant = async () => {
         </div>
       </div>
     </div>
-  </div>
-  <!-- ══════════ BẢNG — thẻ riêng, bấm vào dòng để xem chi tiết ══════════ -->
-  <div class="vt-card">
+
+    <!-- BẢNG -->
     <div v-if="ProductsStore.loading" class="vt-empty">{{ t('admin.variants.loading') }}</div>
     <div v-else class="vt-table-wrap">
       <table class="vt-table">
@@ -668,11 +670,8 @@ const saveVariant = async () => {
             <th class="vt-col-stt">{{ t('admin.common.stt') }}</th>
             <th class="vt-col-img">{{ t('admin.variants.colImage') }}</th>
             <th class="vt-col-sku">{{ t('admin.variants.colSku') }}</th>
-            <th class="vt-col-sku">{{ tt('admin.variants.colBarcode', 'Mã vạch') }}</th>
             <th class="vt-col-name">{{ t('admin.variants.colProduct') }}</th>
             <th class="vt-col-config">{{ t('admin.variants.colConfig') }}</th>
-            <th class="vt-col-color">{{ t('admin.variants.colColor') }}</th>
-            <th class="vt-col-num">{{ tt('admin.variants.colStock', 'Tồn kho') }}</th>
             <th v-if="canViewCost" class="vt-col-price">{{ tt('admin.variants.colPriceBuy', 'Giá nhập') }}</th>
             <th class="vt-col-price">{{ t('admin.variants.colPriceSell') }}</th>
             <th class="vt-col-status">{{ t('admin.variants.colStatus') }}</th>
@@ -693,25 +692,20 @@ const saveVariant = async () => {
               </div>
             </td>
             <td class="vt-sku" :title="p.maSku">{{ p.maSku }}</td>
-            <td class="vt-mono vt-muted" :title="p.barcodeBienThe || ''">{{ p.barcodeBienThe || '—' }}</td>
             <td class="vt-name" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
-            <td class="vt-config" :title="configLabel(p)">
-              <div v-if="p.cpu || p.ram || p.oCung" class="vt-config__list">
-                <span v-if="p.cpu"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
-                <span v-if="p.ram"><MemoryStick :size="12" />{{ p.ram }}</span>
-                <span v-if="p.oCung"><HardDrive :size="12" />{{ p.oCung }}</span>
+            <td class="vt-config">
+              <div class="vt-config__list">
+                <span v-if="p.cpu" :class="hasCpuDiff(p) ? 'vt-config-diff' : ''"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
+                <span v-if="p.ram" :class="hasRamDiff(p) ? 'vt-config-diff' : ''"><MemoryStick :size="12" />{{ p.ram }}</span>
+                <span v-if="p.oCung" :class="hasOCungDiff(p) ? 'vt-config-diff' : ''"><HardDrive :size="12" />{{ p.oCung }}</span>
+                <span v-if="p.mauSac" :class="hasMauSacDiff(p) ? 'vt-config-diff' : ''">{{ p.mauSac }}</span>
               </div>
-              <span v-else>—</span>
-            </td>
-            <td class="vt-color">{{ p.mauSac || '—' }}</td>
-            <td class="vt-col-num">
-              <span class="vt-stock" :class="stockClass(p)">{{ stockOf(p) }}</span>
             </td>
             <td v-if="canViewCost" class="vt-col-price vt-muted">{{ formatPrice(p.giaNhap) }}</td>
             <td class="vt-col-price vt-price">{{ formatPrice(p.giaBan) }}</td>
             <td>
-              <span class="vt-tag" :class="p.trangThai === 'active' ? 'vt-tag--on' : 'vt-tag--off'">
-                {{ statusLabel(p.trangThai) }}
+              <span class="vt-tag" :class="stockOf(p) === 0 ? 'vt-tag--wait' : (p.trangThai === 'active' ? 'vt-tag--on' : 'vt-tag--off')">
+                {{ stockOf(p) === 0 ? tt('admin.variants.statusWait', 'Chờ nhập hàng') : statusLabel(p.trangThai) }}
               </span>
             </td>
           </tr>
@@ -751,7 +745,7 @@ const saveVariant = async () => {
               <Image v-else :size="28" color="var(--text-muted)" />
             </div>
             <div class="vt-barcode-box">
-              <svg v-if="detailVariant.barcodeBienThe" :ref="(el) => renderBarcodeBig(el, detailVariant.barcodeBienThe)"></svg>
+              <svg v-if="detailVariant.barcode" :ref="(el) => renderBarcodeBig(el, detailVariant.barcode)"></svg>
               <div v-else class="vt-barcode-empty">
                 <Barcode :size="18" /> {{ tt('admin.variants.noBarcodeShort', 'Chưa có mã vạch') }}
               </div>
@@ -779,7 +773,6 @@ const saveVariant = async () => {
             <div><dt>{{ t('admin.productModal.batteryLabel') }}</dt><dd>{{ detailVariant.pin || '—' }}</dd></div>
             <div><dt>{{ t('admin.productModal.weightLabel') }}</dt><dd>{{ detailVariant.trongLuongKg ? detailVariant.trongLuongKg + ' kg' : '—' }}</dd></div>
             <div><dt>{{ t('admin.productModal.supplierLabel') }}</dt><dd>{{ detailVariant.tenNhaCungCap || '—' }}</dd></div>
-            <div><dt>{{ tt('admin.variants.colBarcode', 'Mã vạch') }}</dt><dd class="vt-mono">{{ detailVariant.barcodeBienThe || '—' }}</dd></div>
           </dl>
         </div>
 
@@ -1117,57 +1110,62 @@ const saveVariant = async () => {
   --ok-bg:   #ecfdf5;
   --ok-text: #047857;
 
-  --sh-1: 0 1px 2px rgba(168, 27, 93, .06);
-  --sh-2: 0 4px 14px rgba(168, 27, 93, .10);
+  /* 3D Shadow Variables */
+  --sh-1: 0 1px 2px rgba(168, 27, 93, .08), 0 1px 3px rgba(168, 27, 93, .05);
+  --sh-2: 0 4px 6px rgba(168, 27, 93, .1), 0 2px 4px rgba(168, 27, 93, .06);
+  --sh-3: 0 10px 15px rgba(168, 27, 93, .12), 0 4px 6px rgba(168, 27, 93, .08);
+  --sh-btn: 0 3px 0 #a81b5d, 0 4px 8px rgba(168, 27, 93, .2);
+  --sh-inset: inset 0 2px 4px rgba(168, 27, 93, .15);
 }
 .vt-card, .vt-sticky-head { font-size: 14px; color: var(--ink); }
 
 /* ══════════ THẺ BAO NGOÀI ══════════ */
-/* .vt-card (bảng) là thẻ đứng riêng, KHÔNG chứa .vt-sticky-head bên trong nữa — tách
-   thanh công cụ/bộ lọc và bảng thành 2 thẻ độc lập có khoảng cách, giống hh-bar/
-   hh-filter/hh-card bên HangHoa.vue, thay vì gộp chung 1 khối lớn như trước. */
 .vt-card {
   background: #fff; border: 1px solid var(--line); border-radius: 14px;
-  overflow: hidden; box-shadow: var(--sh-1);
+  overflow: hidden; box-shadow: var(--sh-2);
 }
-/* Sticky-head chỉ là khung định vị (dính đầu + tự ẩn khi cuộn) — KHÔNG mang nền/viền
-   riêng, để .vt-toolbar-card và .vt-filter__panel bên trong tách hẳn thành 2 thẻ
-   bo tròn độc lập có khoảng cách, giống bố cục hh-bar/hh-filter/hh-card bên HangHoa.vue. */
-.vt-sticky-head {
-  position: sticky; top: 0; z-index: 5;
-  transition: transform .25s ease;
-}
-.vt-sticky-head.is-hidden { transform: translateY(-100%); }
 .vt-muted { color: var(--muted); }
 .vt-hl { color: var(--pink-600); font-weight: 600; }
-
-.vt-toolbar-card {
-  background: #fff; border: 1px solid var(--line); border-radius: 14px;
-  margin-bottom: 12px; box-shadow: var(--sh-1); overflow: hidden;
-}
 
 /* ══════════ NÚT ══════════ */
 .vt-btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: 999px; border: 1px solid transparent;
   font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
-  transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s;
+  transition: all 0.15s ease;
 }
-.vt-btn--primary { background: var(--pink-600); color: #fff; box-shadow: var(--sh-1); }
-.vt-btn--primary:hover:not(:disabled) { background: var(--pink-700); box-shadow: var(--sh-2); }
+.vt-btn--primary {
+  background: var(--pink-600); color: #fff;
+  box-shadow: 0 3px 0 #9b1d5c, 0 4px 8px rgba(168, 27, 93, 0.3);
+  border-bottom-width: 3px;
+}
+.vt-btn--primary:hover:not(:disabled) {
+  background: var(--pink-700);
+  box-shadow: 0 4px 0 #7a1550, 0 6px 12px rgba(168, 27, 93, 0.35);
+  transform: translateY(-1px);
+}
+.vt-btn--primary:active:not(:disabled) {
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  transform: translateY(1px);
+}
 .vt-btn--ghost { background: #fff; color: var(--pink-700); border-color: var(--pink-200); }
-.vt-btn--ghost:hover:not(:disabled) { background: var(--pink-50); border-color: var(--pink-300); }
+.vt-btn--ghost:hover:not(:disabled) {
+  background: var(--pink-50); border-color: var(--pink-300);
+  box-shadow: 0 2px 4px rgba(168, 27, 93, 0.15);
+}
 .vt-btn--ghost.is-on { background: var(--pink-100); border-color: var(--pink-300); }
 .vt-btn:disabled { opacity: .45; cursor: not-allowed; }
 .vt-btn:focus-visible { outline: 2px solid var(--pink-500); outline-offset: 2px; }
 .vt-icon-btn { padding: 7px 10px; }
 
-/* ══════════ THANH CÔNG CỤ ══════════ */
+/* ══════════ THANH CÔNG CỤ (nằm trong card, có border-bottom) ══════════ */
 .vt-toolbar {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   padding: 12px 16px; background: #fff;
+  border-bottom: 1px solid var(--pink-50);
 }
-.vt-toolbar__left { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; }
+.vt-toolbar__left { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; }
+.vt-toolbar__count { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .vt-toolbar__right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
 
 .vt-search { position: relative; width: 320px; max-width: 100%; }
@@ -1175,8 +1173,13 @@ const saveVariant = async () => {
   width: 100%; padding: 8px 32px 8px 34px;
   border: 1px solid var(--pink-200); border-radius: 999px;
   font-size: 13px; background: var(--pink-50); color: var(--ink); font-family: inherit;
+  box-shadow: inset 0 2px 4px rgba(168, 27, 93, 0.1);
+  transition: all 0.2s ease;
 }
-.vt-search input:focus { outline: none; border-color: var(--pink-500); background: #fff; box-shadow: 0 0 0 3px var(--pink-100); }
+.vt-search input:focus {
+  outline: none; border-color: var(--pink-500); background: #fff;
+  box-shadow: inset 0 2px 4px rgba(168, 27, 93, 0.1), 0 0 0 3px var(--pink-100);
+}
 .vt-search__icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--pink-500); pointer-events: none; }
 .vt-search__clear {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
@@ -1184,13 +1187,15 @@ const saveVariant = async () => {
 }
 .vt-search__clear:hover { color: var(--pink-600); }
 
-/* ══════════ BỘ LỌC (thu gọn) — thẻ riêng, bo tròn, tách khỏi thanh công cụ ══════════ */
-.vt-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease, margin-bottom .22s ease; margin-bottom: 0; }
-.vt-filter.is-open { grid-template-rows: 1fr; margin-bottom: 12px; }
+/* ══════════ BỘ LỌC (thu gọn) — nằm trong card, không shadow riêng ══════════ */
+.vt-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease; }
+.vt-filter.is-open { grid-template-rows: 1fr; }
 .vt-filter__panel {
-  overflow: hidden; background: #fff; border: 1px solid var(--line);
-  border-radius: 14px; padding: 0 16px; transition: padding .22s ease; box-shadow: var(--sh-1);
+  overflow: hidden; background: var(--pink-50);
+  border-bottom: 1px solid var(--pink-50);
+  padding: 0 16px; transition: padding .22s ease;
 }
+.vt-filter.is-open .vt-filter__panel { padding: 14px 16px; }
 .vt-filter.is-open .vt-filter__panel { padding: 16px; }
 .vt-filter__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
 .vt-filter__foot {
@@ -1230,7 +1235,7 @@ const saveVariant = async () => {
    nhu cu, man/khung hep hon tong do rong cot thi table tu no rong ra, .vt-table-wrap
    overflow-x:auto se hien thanh cuon ngang thay vi bop chu. */
 .vt-table-wrap { overflow-x: auto; }
-.vt-table { min-width: 100%; table-layout: fixed; border-collapse: collapse; }
+.vt-table { min-width: 1050px; width: 100%; table-layout: fixed; border-collapse: collapse; }
 .vt-table th {
   background: var(--pink-50); color: var(--pink-700);
   font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
@@ -1274,10 +1279,10 @@ const saveVariant = async () => {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .vt-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.vt-color { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vt-config { color: var(--muted); overflow: hidden; }
-.vt-config__list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.74rem; }
-.vt-config__list span { display: inline-flex; align-items: center; gap: 4px; }
+.vt-config__list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.74rem; }
+.vt-config__list span { display: inline-flex; align-items: center; gap: 3px; }
+.vt-config-diff { font-weight: 600; color: #3b82f6; }
 
 .vt-price { font-weight: 600; font-variant-numeric: tabular-nums; }
 .vt-stock {
@@ -1296,6 +1301,7 @@ const saveVariant = async () => {
 }
 .vt-tag--on  { background: var(--ok-bg); color: var(--ok-text); }
 .vt-tag--off { background: #f3f4f6; color: var(--muted); }
+.vt-tag--wait { background: #fef3c7; color: #92400e; }
 
 .vt-pager {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

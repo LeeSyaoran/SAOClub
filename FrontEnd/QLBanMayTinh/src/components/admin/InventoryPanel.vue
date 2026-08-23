@@ -99,9 +99,9 @@ const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
 };
 
 // ── Phân loại 1 dòng tồn kho — 4 nhóm ─────────────────────────────────────────────────
-// "pending" (Hàng sắp về): biến thể vừa tạo, CHƯA đủ giá nhập/giá bán (mặc định = 0 lúc
+// "pending" (Chờ nhập hàng): biến thể vừa tạo, CHƯA đủ giá nhập/giá bán (mặc định = 0 lúc
 // tạo mới) — coi như chưa sẵn sàng bán, KHÔNG hiện ở danh sách chính, chỉ xem được qua
-// ô thống kê "Hàng sắp về". Biến thể chỉ thật sự "vào kho" sau khi 1 phiếu nhập gán giá
+// ô thống kê "Chờ nhập hàng". Biến thể chỉ thật sự "vào kho" sau khi 1 phiếu nhập gán giá
 // nhập + serial cho nó (xem savePhieuNhap()).
 // "out" (Hết hàng): đã đủ giá nhưng tồn = 0 (bán hết) — cũng ẩn khỏi ds chính, chỉ xem qua
 // ô "Hết hàng" để không làm rối danh sách "đang có thể bán".
@@ -114,7 +114,7 @@ const stockStatusOf = (item, v) => {
   return 'ok';
 };
 const stockStatusLabel = (s) => ({
-  pending: tt('admin.inventory.filterPending', 'Hàng sắp về'),
+  pending: tt('admin.inventory.filterPending', 'Chờ nhập hàng'),
   out: t('admin.inventory.filterOut'),
   low: t('admin.inventory.filterLow'),
   ok: t('admin.inventory.filterOk'),
@@ -129,6 +129,13 @@ const lowStockOnlyItems = computed(() =>
 );
 const totalStockQty = computed(() => inventory.value.reduce((s, i) => s + (i.soLuongTon || 0), 0));
 
+// ── So sánh config với variant đầu tiên của cùng sản phẩm (để highlight giá trị khác nhau) ──
+const getFirstVariantOfProduct = (v) => products.value.find(p => p.sanPhamId === v?.sanPhamId && p.bienTheId !== v?.bienTheId);
+const hasCpuDiff = (v) => { const first = getFirstVariantOfProduct(v); return !first || v?.cpu !== first.cpu; };
+const hasRamDiff = (v) => { const first = getFirstVariantOfProduct(v); return !first || v?.ram !== first.ram; };
+const hasOCungDiff = (v) => { const first = getFirstVariantOfProduct(v); return !first || v?.oCung !== first.oCung; };
+const hasMauSacDiff = (v) => { const first = getFirstVariantOfProduct(v); return !first || v?.mauSac !== first.mauSac; };
+
 // ── Tồn kho: bảng PHẲNG theo từng biến thể (không gộp theo sản phẩm nữa) — biến thể
 // mới tạo gần nhất hiện đầu trang, có bộ lọc riêng (trạng thái tồn/thương hiệu/danh mục). ──
 const inventorySearch = ref('');
@@ -136,7 +143,7 @@ const isInvFilterOpen = ref(false);
 const invFilterStatus = ref(''); // '' | 'pending' | 'out' | 'low' | 'ok'
 const invFilterThuongHieu = ref('');
 const invFilterDanhMuc = ref('');
-// Bấm vào 1 trong 3 ô thống kê "Hàng sắp về/Sắp hết/Hết hàng" — bấm lại lần nữa thì tắt,
+// Bấm vào 1 trong 3 ô thống kê "Chờ nhập hàng/Sắp hết/Hết hàng" — bấm lại lần nữa thì tắt,
 // quay về danh sách mặc định.
 const toggleInvQuickFilter = (status) => { invFilterStatus.value = invFilterStatus.value === status ? '' : status; };
 
@@ -179,7 +186,7 @@ const flatInventory = computed(() => {
       if (invFilterDanhMuc.value && String(v?.danhMucId ?? '') !== String(invFilterDanhMuc.value)) return false;
       // Có chọn lọc rõ ràng (kể cả từ bấm ô thống kê) -> hiện ĐÚNG nhóm đó.
       if (invFilterStatus.value) return status === invFilterStatus.value;
-      // Mặc định: ẩn "Hàng sắp về" (chưa đủ giá) và "Hết hàng" (đã bán hết) khỏi ds chính,
+      // Mặc định: ẩn "Chờ nhập hàng" (chưa đủ giá) và "Hết hàng" (đã bán hết) khỏi ds chính,
       // chỉ xem được qua các ô thống kê tương ứng — theo đúng yêu cầu nghiệp vụ.
       return status !== 'pending' && status !== 'out';
     })
@@ -309,7 +316,7 @@ const saveStock = async () => {
     });
     if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
     // 3) Giá bán — chỉ gọi update biến thể nếu có đổi, tránh ghi đè vô ích. Đây là bước
-    // "tốt nghiệp" khỏi Hàng sắp về: đủ giaNhap (đã có từ phiếu nhập) + giaBan (nhập ở đây).
+    // "tốt nghiệp" khỏi Chờ nhập hàng: đủ giaNhap (đã có từ phiếu nhập) + giaBan (nhập ở đây).
     const currentGiaBan = Number(getVariantInfo(item)?.giaBan ?? 0);
     if (item.bienThe && Number(stockForm.giaBan) !== currentGiaBan) {
       const body = buildBienTheUpdateBody(item.bienThe, { giaBan: Number(stockForm.giaBan) || 0 });
@@ -599,7 +606,7 @@ const savePhieuNhap = async () => {
     ]);
     // refreshProducts() vì syncGiaNhapFromReceipt() ở trên vừa đổi giaNhap của biến thể —
     // bảng chính/phân loại pending đọc giá từ ProductsStore, không refresh sẽ phải F5 mới
-    // thấy giá mới hoặc thấy hàng "tốt nghiệp" khỏi Hàng sắp về.
+    // thấy giá mới hoặc thấy hàng "tốt nghiệp" khỏi Chờ nhập hàng.
     await Promise.all([refreshInventory(), refreshProducts()]).catch(() => {});
     showPhieuNhapModal.value = false;
   } catch (e) {
@@ -792,7 +799,7 @@ const exportPhieuNhapExcel = () => {
         <div class="inv-stat inv-stat--cyan" :class="{ 'is-on': invFilterStatus === 'pending' }" @click="toggleInvQuickFilter('pending')">
           <div class="inv-stat__icon"><Truck :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ tt('admin.inventory.statPending', 'Hàng sắp về') }}</div>
+            <div class="inv-stat__label">{{ tt('admin.inventory.statPending', 'Chờ nhập hàng') }}</div>
             <div class="inv-stat__value">{{ pendingItems.length }}</div>
           </div>
         </div>
@@ -811,62 +818,67 @@ const exportPhieuNhapExcel = () => {
           </div>
         </div>
       </div>
-      <p v-if="invFilterStatus" class="inv-quickview-note">
-        {{ tt('admin.inventory.quickViewNote', 'Đang xem') }}: <b>{{ stockStatusLabel(invFilterStatus) }}</b>
-        <button type="button" class="inv-quickview-note__clear" @click="invFilterStatus = ''">{{ tt('admin.inventory.quickViewClear', 'Xem danh sách bình thường') }}</button>
-      </p>
 
-      <div class="inv-bar">
-        <div class="inv-search">
-          <Search :size="14" class="inv-search__icon" />
-          <input v-model="inventorySearch" :placeholder="t('admin.inventory.searchPlaceholder')" />
-        </div>
-        <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': isInvFilterOpen }" @click="isInvFilterOpen = !isInvFilterOpen">
-          <Filter :size="14" /> {{ tt('admin.common.filter', 'Bộ lọc') }}
-          <span v-if="invActiveFilterCount" class="inv-chip">{{ invActiveFilterCount }}</span>
-          <ChevronDown :size="13" class="inv-caret" :class="{ 'is-open': isInvFilterOpen }" />
-        </button>
-      </div>
+      <!-- ══════════ CARD LỚN DUY NHẤT: toolbar + filter + bảng nằm chung ══════════ -->
+      <section class="inv-card">
+        <p v-if="invFilterStatus" class="inv-quickview-note">
+          {{ tt('admin.inventory.quickViewNote', 'Đang xem') }}: <b>{{ stockStatusLabel(invFilterStatus) }}</b>
+          <button type="button" class="inv-quickview-note__clear" @click="invFilterStatus = ''">{{ tt('admin.inventory.quickViewClear', 'Xem danh sách bình thường') }}</button>
+        </p>
 
-      <section class="inv-filter" :class="{ 'is-open': isInvFilterOpen }">
-        <div class="inv-filter__panel">
-          <div class="inv-filter__grid">
-            <label class="inv-field">
-              <span>{{ t('admin.inventory.colStock') }}</span>
-              <select v-model="invFilterStatus">
-                <option value="">{{ t('admin.inventory.filterAll') }}</option>
-                <option value="pending">{{ tt('admin.inventory.statPending', 'Hàng sắp về') }}</option>
-                <option value="out">{{ t('admin.inventory.filterOut') }}</option>
-                <option value="low">{{ t('admin.inventory.filterLow') }}</option>
-                <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
-              </select>
-            </label>
-            <label class="inv-field">
-              <span>{{ t('admin.productModal.brandLabel') }}</span>
-              <select v-model="invFilterThuongHieu">
-                <option value="">{{ t('admin.inventory.filterAll') }}</option>
-                <option v-for="o in invBrandOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </label>
-            <label class="inv-field">
-              <span>{{ t('admin.productModal.categoryLabel') }}</span>
-              <select v-model="invFilterDanhMuc">
-                <option value="">{{ t('admin.inventory.filterAll') }}</option>
-                <option v-for="o in invCategoryOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-              </select>
-            </label>
+        <!-- THANH CÔNG CỤ -->
+        <div class="inv-bar">
+          <span class="inv-bar__count">{{ flatInventory.length }}/{{ inventory.length }} {{ t('admin.inventory.colSku') }}</span>
+          <div class="inv-search">
+            <Search :size="14" class="inv-search__icon" />
+            <input v-model="inventorySearch" :placeholder="t('admin.inventory.searchPlaceholder')" />
           </div>
-          <div class="inv-filter__foot">
-            <span class="inv-filter__count">{{ flatInventory.length }}/{{ inventory.length }} {{ t('admin.inventory.colSku') }}</span>
-            <div class="inv-filter__btns">
-              <button type="button" class="inv-btn inv-btn--ghost" @click="clearInvFilters">{{ tt('admin.variants.clearFilters', 'Xóa lọc') }}</button>
-              <button type="button" class="inv-btn inv-btn--primary" @click="isInvFilterOpen = false">{{ tt('admin.variants.filterDone', 'Xong') }}</button>
+          <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': isInvFilterOpen }" @click="isInvFilterOpen = !isInvFilterOpen">
+            <Filter :size="14" /> {{ tt('admin.common.filter', 'Bộ lọc') }}
+            <span v-if="invActiveFilterCount" class="inv-chip">{{ invActiveFilterCount }}</span>
+            <ChevronDown :size="13" class="inv-caret" :class="{ 'is-open': isInvFilterOpen }" />
+          </button>
+        </div>
+
+        <!-- BỘ LỌC (nằm trong card) -->
+        <div class="inv-filter" :class="{ 'is-open': isInvFilterOpen }">
+          <div class="inv-filter__panel">
+            <div class="inv-filter__grid">
+              <label class="inv-field">
+                <span>{{ t('admin.inventory.colStock') }}</span>
+                <select v-model="invFilterStatus">
+                  <option value="">{{ t('admin.inventory.filterAll') }}</option>
+                  <option value="pending">{{ tt('admin.inventory.statPending', 'Chờ nhập hàng') }}</option>
+                  <option value="out">{{ t('admin.inventory.filterOut') }}</option>
+                  <option value="low">{{ t('admin.inventory.filterLow') }}</option>
+                  <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
+                </select>
+              </label>
+              <label class="inv-field">
+                <span>{{ t('admin.productModal.brandLabel') }}</span>
+                <select v-model="invFilterThuongHieu">
+                  <option value="">{{ t('admin.inventory.filterAll') }}</option>
+                  <option v-for="o in invBrandOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </select>
+              </label>
+              <label class="inv-field">
+                <span>{{ t('admin.productModal.categoryLabel') }}</span>
+                <select v-model="invFilterDanhMuc">
+                  <option value="">{{ t('admin.inventory.filterAll') }}</option>
+                  <option v-for="o in invCategoryOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </select>
+              </label>
+            </div>
+            <div class="inv-filter__foot">
+              <div class="inv-filter__btns">
+                <button type="button" class="inv-btn inv-btn--ghost" @click="clearInvFilters">{{ tt('admin.variants.clearFilters', 'Xóa lọc') }}</button>
+                <button type="button" class="inv-btn inv-btn--primary" @click="isInvFilterOpen = false">{{ tt('admin.variants.filterDone', 'Xong') }}</button>
+              </div>
             </div>
           </div>
         </div>
-      </section>
 
-      <section class="inv-card">
+        <!-- BẢNG -->
         <div v-if="InventoryStore.loading" class="inv-empty">{{ t('admin.inventory.loading') }}</div>
         <div v-else class="inv-table-wrap">
           <table class="inv-table">
@@ -878,6 +890,7 @@ const exportPhieuNhapExcel = () => {
                 <th class="ta-r">{{ t('admin.variants.colPriceSell') }}</th>
                 <th class="ta-r">{{ tt('admin.inventory.colPriceBuy', 'Giá vốn') }}</th>
                 <th class="ta-c">{{ t('admin.inventory.colStock') }}</th>
+                <th class="ta-c">{{ tt('admin.inventory.colHeld', 'Giữ') }}</th>
                 <th>{{ t('admin.variants.colStatus') }}</th>
                 <th>{{ tt('admin.inventory.colUpdatedAt', 'Ngày cập nhật') }}</th>
               </tr>
@@ -896,21 +909,22 @@ const exportPhieuNhapExcel = () => {
                 </td>
                 <td class="inv-muted">
                   <div v-if="v?.cpu || v?.ram || v?.mauSac" class="inv-config">
-                    <span v-if="v?.cpu">{{ v.cpu }}</span>
-                    <span v-if="v?.ram">{{ v.ram }}</span>
-                    <span v-if="v?.mauSac">{{ v.mauSac }}</span>
+                    <span :class="{ 'inv-config-diff': hasCpuDiff(v) }">{{ v.cpu }}</span>
+                    <span :class="{ 'inv-config-diff': hasRamDiff(v) }">{{ v.ram }}</span>
+                    <span :class="{ 'inv-config-diff': hasMauSacDiff(v) }">{{ v.mauSac }}</span>
                   </div>
                   <span v-else>—</span>
                 </td>
                 <td class="ta-r inv-price">{{ formatPrice(v?.giaBan) }}</td>
                 <td class="ta-r inv-muted">{{ formatPrice(v?.giaNhap) }}</td>
                 <td class="ta-c"><span class="inv-ton" :class="{ 'text-danger': status==='out', 'text-warning': status==='low', 'text-success': status==='ok', 'text-info': status==='pending' }">{{ item.soLuongTon ?? '—' }}</span></td>
+                <td class="ta-c"><span class="inv-held" :class="{ 'text-warning': item.soLuongGiu > 0 }">{{ item.soLuongGiu ?? 0 }}</span></td>
                 <td>
                   <span class="inv-tag" :class="'inv-tag--' + status">{{ stockStatusLabel(status) }}</span>
                 </td>
                 <td class="inv-muted">{{ formatDate(v?.ngayCapNhat) }}</td>
               </tr>
-              <tr v-if="flatInventory.length === 0"><td colspan="8" class="inv-empty">{{ t('admin.inventory.empty') }}</td></tr>
+              <tr v-if="flatInventory.length === 0"><td colspan="9" class="inv-empty">{{ t('admin.inventory.empty') }}</td></tr>
             </tbody>
           </table>
         </div>
@@ -1256,7 +1270,7 @@ const exportPhieuNhapExcel = () => {
             <label class="inv-field">
               <span>{{ tt('admin.stockModal.giaBanLabel', 'Giá bán') }}</span>
               <input v-model="stockForm.giaBan" type="number" min="0" />
-              <em class="inv-hint">{{ tt('admin.stockModal.giaBanHint', 'Nhập đủ giá nhập + giá bán + serial thì hàng mới rời khỏi "Hàng sắp về"') }}</em>
+              <em class="inv-hint">{{ tt('admin.stockModal.giaBanHint', 'Nhập đủ giá nhập + giá bán + serial thì hàng mới rời khỏi "Chờ nhập hàng"') }}</em>
             </label>
             <label class="inv-field">
               <span>{{ t('admin.stockModal.stockLabel') }}</span>
@@ -1321,8 +1335,10 @@ const exportPhieuNhapExcel = () => {
   --ok-bg:   #ecfdf5;
   --ok-text: #047857;
 
-  --sh-1: 0 1px 2px rgba(168, 27, 93, .06);
-  --sh-2: 0 4px 14px rgba(168, 27, 93, .10);
+  /* 3D Shadow Variables */
+  --sh-1: 0 1px 2px rgba(168, 27, 93, .08), 0 1px 3px rgba(168, 27, 93, .05);
+  --sh-2: 0 4px 6px rgba(168, 27, 93, .1), 0 2px 4px rgba(168, 27, 93, .06);
+  --sh-3: 0 10px 15px rgba(168, 27, 93, .12), 0 4px 6px rgba(168, 27, 93, .08);
 }
 .inv { font-size: 14px; color: var(--ink); }
 .ta-r { text-align: right; }
@@ -1338,28 +1354,49 @@ const exportPhieuNhapExcel = () => {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: 999px; border: 1px solid transparent;
   font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
-  transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s;
+  transition: all 0.15s ease;
 }
 .inv-btn--sm { padding: 5px 11px; font-size: 12.5px; }
-.inv-btn--primary { background: var(--pink-600); color: #fff; box-shadow: var(--sh-1); }
-.inv-btn--primary:hover:not(:disabled) { background: var(--pink-700); box-shadow: var(--sh-2); }
+.inv-btn--primary {
+  background: var(--pink-600); color: #fff;
+  box-shadow: 0 3px 0 #9b1d5c, 0 4px 8px rgba(168, 27, 93, 0.3);
+  border-bottom-width: 3px;
+}
+.inv-btn--primary:hover:not(:disabled) {
+  background: var(--pink-700);
+  box-shadow: 0 4px 0 #7a1550, 0 6px 12px rgba(168, 27, 93, 0.35);
+  transform: translateY(-1px);
+}
+.inv-btn--primary:active:not(:disabled) {
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  transform: translateY(1px);
+}
 .inv-btn--ghost { background: #fff; color: var(--pink-700); border-color: var(--pink-200); }
-.inv-btn--ghost:hover:not(:disabled) { background: var(--pink-50); border-color: var(--pink-300); }
+.inv-btn--ghost:hover:not(:disabled) {
+  background: var(--pink-50); border-color: var(--pink-300);
+  box-shadow: 0 2px 4px rgba(168, 27, 93, 0.15);
+}
 .inv-btn--ghost.is-on { background: var(--pink-100); border-color: var(--pink-300); }
 .inv-btn--ok { color: var(--ok-text); border-color: #bbf7d0; }
-.inv-btn--ok:hover:not(:disabled) { background: var(--ok-bg); }
+.inv-btn--ok:hover:not(:disabled) { background: var(--ok-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 .inv-btn--danger { color: var(--danger); border-color: #fecaca; }
-.inv-btn--danger:hover:not(:disabled) { background: #fef2f2; }
+.inv-btn--danger:hover:not(:disabled) { background: #fef2f2; box-shadow: 0 2px 4px rgba(220,38,38,0.15); }
 .inv-btn:disabled { opacity: .45; cursor: not-allowed; }
 
 .inv-icon-btn {
   background: #fff; border: 1px solid var(--pink-200); color: var(--pink-700);
   width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
   display: inline-grid; place-items: center; flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(168, 27, 93, 0.1);
+  transition: all 0.15s ease;
 }
-.inv-icon-btn:hover { background: var(--pink-50); }
+.inv-icon-btn:hover {
+  background: var(--pink-50);
+  box-shadow: 0 4px 8px rgba(168, 27, 93, 0.15);
+  transform: translateY(-1px);
+}
 .inv-icon-btn--danger { color: var(--danger); border-color: #fecaca; }
-.inv-icon-btn--danger:hover { background: #fef2f2; }
+.inv-icon-btn--danger:hover { background: #fef2f2; box-shadow: 0 4px 8px rgba(220,38,38,0.2); }
 
 /* ══════════ STAT CARD — khối màu đậm giống ảnh mẫu, icon/số trắng ══════════ */
 .inv-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
@@ -1404,7 +1441,7 @@ const exportPhieuNhapExcel = () => {
 .inv-bar {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   background: #fff; border: 1px solid var(--line); border-radius: 14px;
-  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--sh-1);
+  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--sh-2);
 }
 .inv-bar__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
 
@@ -1435,14 +1472,14 @@ const exportPhieuNhapExcel = () => {
 .inv-caret { transition: transform .2s; }
 .inv-caret.is-open { transform: rotate(180deg); }
 
-/* ══════════ BỘ LỌC ══════════ */
-.inv-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease, margin-bottom .22s ease; margin-bottom: 0; }
-.inv-filter.is-open { grid-template-rows: 1fr; margin-bottom: 12px; }
+/* ══════════ BỘ LỌC (nằm trong card) ══════════ */
+.inv-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease; }
+.inv-filter.is-open { grid-template-rows: 1fr; }
 .inv-filter__panel {
-  overflow: hidden; background: #fff; border: 1px solid var(--line);
-  border-radius: 14px; padding: 0 16px; transition: padding .22s ease; box-shadow: var(--sh-1);
+  overflow: hidden; background: var(--pink-50);
+  padding: 0 16px; transition: padding .22s ease;
 }
-.inv-filter.is-open .inv-filter__panel { padding: 16px; }
+.inv-filter.is-open .inv-filter__panel { padding: 14px 16px; }
 .inv-filter__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
 .inv-filter__foot {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
@@ -1489,7 +1526,17 @@ const exportPhieuNhapExcel = () => {
 .inv-total { text-align: right; font-weight: 800; font-size: 1.05rem; color: var(--ink); }
 
 /* ══════════ THẺ + BẢNG ══════════ */
-.inv-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--sh-1); }
+.inv-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--sh-2); }
+
+/* THANH CÔNG CỤ (nằm trong card, có border-bottom) */
+.inv-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px; background: #fff;
+  border-bottom: 1px solid var(--pink-50);
+}
+.inv-bar__count { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.inv-search { position: relative; flex: 1 1 280px; max-width: 320px; }
+
 .inv-table-wrap { overflow-x: auto; }
 .inv-table { width: 100%; border-collapse: collapse; }
 .inv-table th {
@@ -1507,6 +1554,11 @@ const exportPhieuNhapExcel = () => {
 .inv-code { color: var(--pink-700); font-weight: 700; }
 .inv-price { font-weight: 700; font-variant-numeric: tabular-nums; }
 .inv-ton { font-weight: 700; font-variant-numeric: tabular-nums; }
+.inv-held { font-weight: 600; font-variant-numeric: tabular-nums; }
+.text-warning { color: #d97706; }
+.text-danger { color: #dc2626; }
+.text-success { color: #059669; }
+.text-info { color: #2563eb; }
 
 .inv-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 9px; border: 1px solid var(--line); background: #fff; flex-shrink: 0; }
 .inv-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -1514,6 +1566,8 @@ const exportPhieuNhapExcel = () => {
 .inv-name__main { font-weight: 600; line-height: 1.35; word-break: break-word; }
 .inv-name__sub { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 2px; }
 .inv-config { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.inv-config span { padding: 2px 6px; border-radius: 4px; }
+.inv-config-diff { font-weight: 600; color: #3b82f6; background: #eff6ff; }
 
 .inv-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
 .inv-tag--ok { background: var(--ok-bg); color: var(--ok-text); }

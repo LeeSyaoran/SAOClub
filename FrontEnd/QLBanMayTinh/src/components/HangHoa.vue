@@ -1,12 +1,11 @@
 <template>
   <div class="hh">
-    <!-- ══════════ THANH CÔNG CỤ + BỘ LỌC — khóa trên đầu, tự ẩn khi cuộn xuống ══════════ -->
-    <div ref="stickyHeadEl" class="hh-sticky-head" :class="{ 'is-hidden': hhBarHidden }">
-      <!-- ══════════════ THANH CÔNG CỤ ══════════════ -->
-      <header class="hh-bar">
-        <div class="hh-bar__left">
-         
-
+    <!-- ══════════ CARD LỚN: toolbar + filter + bảng ══════════ -->
+    <div class="hh-card">
+      <!-- ══════════════ TOOLBAR ══════════════ -->
+      <div class="hh-toolbar">
+        <div class="hh-toolbar__left">
+          <span class="hh-toolbar__count">{{ groupsDaLoc.length }} sản phẩm · {{ bienTheDaLoc.length }} phiên bản</span>
           <div class="hh-search">
             <i class="fa fa-search hh-search__icon"></i>
             <input v-model="searchKeyword" type="text" placeholder="Tìm theo mã sản phẩm, tên, SKU, mã vạch" />
@@ -16,7 +15,7 @@
           </div>
         </div>
 
-        <div class="hh-bar__actions">
+        <div class="hh-toolbar__right">
           <button class="hh-btn hh-btn--ghost" :class="{ 'is-on': isFilterOpen }" @click="isFilterOpen = !isFilterOpen">
             <i class="fa fa-filter"></i>
             <span>Bộ lọc</span>
@@ -36,10 +35,10 @@
             <i class="fa fa-refresh" :class="{ 'fa-spin': isLoading }"></i>
           </button>
         </div>
-      </header>
+      </div>
 
       <!-- ══════════════ BỘ LỌC ══════════════ -->
-      <section class="hh-filter" :class="{ 'is-open': isFilterOpen }">
+      <div class="hh-filter" :class="{ 'is-open': isFilterOpen }">
         <div class="hh-filter__panel">
           <div class="hh-filter__grid">
             <label class="hh-field">
@@ -116,18 +115,15 @@
           </div>
 
           <div class="hh-filter__foot">
-            <span class="hh-filter__count">{{ groupsDaLoc.length }} sản phẩm · {{ bienTheDaLoc.length }} phiên bản</span>
             <div class="hh-filter__btns">
               <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters"><i class="fa fa-eraser"></i> Xóa lọc</button>
               <button class="hh-btn hh-btn--primary hh-btn--sm" @click="isFilterOpen = false">Xong</button>
             </div>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
 
-    <!-- ══════════════ BẢNG DỮ LIỆU — bấm vào dòng để xem chi tiết ══════════════ -->
-    <section class="hh-card">
+      <!-- ══════════════ BẢNG DỮ LIỆU ══════════════ -->
       <p v-if="loadError" class="hh-alert">
         {{ loadError }}
         <button class="hh-link" @click="fetchData">Thử lại</button>
@@ -171,7 +167,10 @@
               </td>
               <td class="ta-r hh-td-gia">{{ group.khoangGia }}</td>
               <td class="ta-r hh-td-gia hh-muted">{{ group.khoangGiaVon }}</td>
-              <td><span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span></td>
+              <td>
+                <span v-if="group.tonKho === 0" class="hh-tag hh-tag--wait">Chờ nhập hàng</span>
+                <span v-else class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span>
+              </td>
               <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayTao) }}</td>
               <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayCapNhat) }}</td>
               <td class="hh-col-go"><i class="fa fa-angle-right"></i></td>
@@ -205,7 +204,7 @@
           <button class="hh-icon-btn" :disabled="page >= totalPages" @click="page++"><i class="fa fa-chevron-right"></i></button>
         </div>
       </footer>
-    </section>
+    </div>
 
     <!-- ══════════════ MODAL CHI TIẾT SẢN PHẨM ══════════════ -->
     <teleport to="body">
@@ -326,7 +325,10 @@
                       <td class="ta-r hh-muted">{{ formatNumber(v.giaVon) }}</td>
                       <td class="ta-r hh-vt__gia">{{ formatNumber(v.giaBan) }}</td>
                       <td class="ta-c"><span class="hh-ton" :class="{ 'is-het': v.tonKho === 0 }">{{ v.tonKho }}</span></td>
-                      <td><span class="hh-tag" :class="tagClass(v.trangThai)">{{ nhanTrangThai(v.trangThai) }}</span></td>
+                      <td>
+                        <span v-if="v.tonKho === 0" class="hh-tag hh-tag--wait">Chờ nhập hàng</span>
+                        <span v-else class="hh-tag" :class="tagClass(v.trangThai)">{{ nhanTrangThai(v.trangThai) }}</span>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -546,59 +548,83 @@
 
             <!-- ─────────── TAB 2: PHIÊN BẢN ─────────── -->
             <div v-show="tab === 'bienthe'" class="hh-pane">
-              <!-- Sửa một phiên bản -->
-              <fieldset v-if="modalMode === 'edit'" class="hh-block">
-                <legend>Phiên bản đang sửa</legend>
-                <div class="hh-grid">
-                  <label class="hh-field">
-                    <span>Mã SKU <b>*</b></span>
-                    <input v-model.trim="form.maSku" placeholder="VD: DELL-3520-I5-8G" />
-                    <em v-if="errors.maSku" class="hh-err">{{ errors.maSku }}</em>
-                  </label>
-                  <label class="hh-field">
-                    <span>Mã vạch</span>
-                    <div class="hh-inline">
-                      <input v-model.trim="form.barcode" placeholder="8–13 chữ số" />
-                      <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" title="Sinh mã vạch EAN-13" @click="form.barcode = sinhBarcode(barcodeDaDung)">
-                        <i class="fa fa-refresh"></i>
-                      </button>
+              <!-- Sửa một phiên bản (khi modalMode === 'edit') -->
+              <template v-if="modalMode === 'edit'">
+                <!-- Danh sách biến thể để chọn -->
+                <div class="hh-bienthe-list">
+                  <div class="hh-bienthe-list__title">Danh sách phiên bản</div>
+                  <div class="hh-bienthe-list__items">
+                    <div
+                      v-for="v in bienTheRows"
+                      :key="v.bienTheId"
+                      class="hh-bienthe-item"
+                      :class="{ 'is-on': String(form.bienTheId) === String(v.bienTheId) }"
+                      @click="chonBienTheDeSua(v)"
+                    >
+                      <div class="hh-bienthe-item__info">
+                        <span class="hh-bienthe-item__sku">{{ v.maSku }}</span>
+                        <span class="hh-bienthe-item__cfg">{{ moTaBienThe(v) || 'Phiên bản tiêu chuẩn' }}</span>
+                      </div>
+                      <div class="hh-bienthe-item__price">{{ formatNumber(v.giaBan) }} đ</div>
                     </div>
-                    <em v-if="errors.barcode" class="hh-err">{{ errors.barcode }}</em>
-                  </label>
-                  <label class="hh-field">
-                    <span>Màu sắc</span>
-                    <SearchSelect v-model="form.mauSac" :options="optMauSacSelect" placeholder="VD: Đen" />
-                  </label>
-                  <label class="hh-field">
-                    <span>CPU</span>
-                    <SearchSelect v-model="form.cpuId" :options="cpuOptionsSel" placeholder="-- Không chọn --" />
-                  </label>
-                  <label class="hh-field">
-                    <span>RAM</span>
-                    <SearchSelect v-model="form.ramId" :options="ramOptionsSel" placeholder="-- Không chọn --" />
-                  </label>
-                  <label class="hh-field">
-                    <span>Ổ cứng</span>
-                    <SearchSelect v-model="form.oCungId" :options="oCungOptionsSel" placeholder="-- Không chọn --" />
-                  </label>
-                  <label class="hh-field">
-                    <span>GPU</span>
-                    <SearchSelect v-model="form.gpuId" :options="gpuOptionsSel" placeholder="-- Không chọn --" />
-                  </label>
-                  <label class="hh-field">
-                    <span>Giá nhập (₫) <b>*</b></span>
-                    <input v-model="form.giaNhap" type="number" min="0" step="1000" />
-                    <em v-if="errors.giaNhap" class="hh-err">{{ errors.giaNhap }}</em>
-                  </label>
-                  <label class="hh-field">
-                    <span>Giá bán (₫) <b>*</b></span>
-                    <input v-model="form.giaBan" type="number" min="0" step="1000" />
-                    <em v-if="errors.giaBan" class="hh-err">{{ errors.giaBan }}</em>
-                  </label>
+                  </div>
                 </div>
-              </fieldset>
 
-              <!-- Sinh nhiều phiên bản -->
+                <!-- Form sửa biến thể đã chọn -->
+                <fieldset v-if="form.bienTheId" class="hh-block">
+                  <legend>Đang sửa: {{ form.maSku }}</legend>
+                  <div class="hh-grid">
+                    <label class="hh-field">
+                      <span>Mã SKU <b>*</b></span>
+                      <input v-model.trim="form.maSku" placeholder="VD: DELL-3520-I5-8G" />
+                      <em v-if="errors.maSku" class="hh-err">{{ errors.maSku }}</em>
+                    </label>
+                    <label class="hh-field">
+                      <span>Mã vạch</span>
+                      <div class="hh-inline">
+                        <input v-model.trim="form.barcode" placeholder="8–13 chữ số" />
+                        <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" title="Sinh mã vạch EAN-13" @click="form.barcode = sinhBarcode(barcodeDaDung)">
+                          <i class="fa fa-refresh"></i>
+                        </button>
+                      </div>
+                      <em v-if="errors.barcode" class="hh-err">{{ errors.barcode }}</em>
+                    </label>
+                    <label class="hh-field">
+                      <span>Màu sắc</span>
+                      <SearchSelect v-model="form.mauSac" :options="optMauSacSelect" placeholder="VD: Đen" />
+                    </label>
+                    <label class="hh-field">
+                      <span>CPU</span>
+                      <SearchSelect v-model="form.cpuId" :options="cpuOptionsSel" placeholder="-- Không chọn --" />
+                    </label>
+                    <label class="hh-field">
+                      <span>RAM</span>
+                      <SearchSelect v-model="form.ramId" :options="ramOptionsSel" placeholder="-- Không chọn --" />
+                    </label>
+                    <label class="hh-field">
+                      <span>Ổ cứng</span>
+                      <SearchSelect v-model="form.oCungId" :options="oCungOptionsSel" placeholder="-- Không chọn --" />
+                    </label>
+                    <label class="hh-field">
+                      <span>GPU</span>
+                      <SearchSelect v-model="form.gpuId" :options="gpuOptionsSel" placeholder="-- Không chọn --" />
+                    </label>
+                    <label class="hh-field">
+                      <span>Giá nhập (₫) <b>*</b></span>
+                      <input v-model="form.giaNhap" type="number" min="0" step="1000" />
+                      <em v-if="errors.giaNhap" class="hh-err">{{ errors.giaNhap }}</em>
+                    </label>
+                    <label class="hh-field">
+                      <span>Giá bán (₫) <b>*</b></span>
+                      <input v-model="form.giaBan" type="number" min="0" step="1000" />
+                      <em v-if="errors.giaBan" class="hh-err">{{ errors.giaBan }}</em>
+                    </label>
+                  </div>
+                </fieldset>
+                <p v-else class="hh-note"><i class="fa fa-hand-pointer-o"></i> Chọn một phiên bản trong danh sách bên trái để sửa.</p>
+              </template>
+
+              <!-- Sinh nhiều phiên bản (khi modalMode === 'create' hoặc 'variant') -->
               <template v-else>
                 <fieldset class="hh-block">
                   <legend>Bước 1 · Thuộc tính để ghép ra phiên bản</legend>
@@ -978,10 +1004,6 @@ const danhSachPhanLoai = ref([])
 const searchKeyword = ref('')
 const isFilterOpen = ref(false)
 
-// Thanh cong cu + bo loc dinh sticky tren dau trang, tu an khi cuon xuong / hien lai
-// khi cuon len — chi khoa phan tren, phan duoi (bang du lieu) van cuon binh thuong.
-const stickyHeadEl = ref(null)
-const { hidden: hhBarHidden } = useAutoHideOnScroll(stickyHeadEl)
 const filters = reactive({
   trangThai: '', thuongHieuId: '', nhaCungCapId: '', phanLoai: '',
   cpuId: '', ramId: '', mauSac: '', giaTu: '', giaDen: ''
@@ -1883,29 +1905,74 @@ const soSanhAnhChup = (cu, moi) =>
     .map((k) => ({ truong: k, cu: cu?.[k], moi: moi[k] }))
 
 const openEdit = (g, v) => {
-  if (!g || !v) return
+  if (!g) return
   moLaiChiTiet.value = g.sanPhamId
-  resetForm({
-    sanPhamId: g.sanPhamId,
-    bienTheId: v.bienTheId,
-    maSanPham: g.maSanPham,
-    ...duLieuSanPham(g),
-    ...duLieuThongSo(v),
-    maSku: v.maSku === '—' ? '' : v.maSku,
-    barcode: v.barcode || '',
-    mauSac: v.mauSac || '',
-    cpuId: v.cpuId ?? '',
-    ramId: v.ramId ?? '',
-    oCungId: v.oCungId ?? '',
-    gpuId: v.gpuId ?? '',
-    hinhAnhBienThe: v.hinhAnh || '',
-    giaNhap: v.giaVon,
-    giaBan: v.giaBan
-  })
+
+  // Populate bienTheRows với các biến thể của sản phẩm
+  bienTheRows.value = g.variants.map((bv) => ({
+    key: String(bv.bienTheId),
+    bienTheId: bv.bienTheId,
+    maSku: bv.maSku || '',
+    barcode: bv.barcode || '',
+    mauSac: bv.mauSac || '',
+    cpuId: bv.cpuId ?? '',
+    ramId: bv.ramId ?? '',
+    oCungId: bv.oCungId ?? '',
+    gpuId: bv.gpuId ?? '',
+    giaNhap: bv.giaVon,
+    giaBan: bv.giaBan,
+    hinhAnhBienThe: bv.hinhAnh || ''
+  }))
+
+  // Nếu có biến thể được chọn (v), populate form với biến thể đó
+  if (v) {
+    Object.assign(form, {
+      sanPhamId: g.sanPhamId,
+      bienTheId: v.bienTheId,
+      maSanPham: g.maSanPham,
+      ...duLieuSanPham(g),
+      ...duLieuThongSo(v),
+      maSku: v.maSku === '—' ? '' : v.maSku,
+      barcode: v.barcode || '',
+      mauSac: v.mauSac || '',
+      cpuId: v.cpuId ?? '',
+      ramId: v.ramId ?? '',
+      oCungId: v.oCungId ?? '',
+      gpuId: v.gpuId ?? '',
+      hinhAnhBienThe: v.hinhAnh || '',
+      giaNhap: v.giaVon,
+      giaBan: v.giaBan
+    })
+    banGoc = anhChupForm()
+  } else {
+    // Reset form nhưng giữ sanPhamId để biết đang sửa sản phẩm nào
+    resetForm({ sanPhamId: g.sanPhamId, maSanPham: g.maSanPham, ...duLieuSanPham(g) })
+  }
+
   modalMode.value = 'edit'
-  banGoc = anhChupForm()
+  tab.value = 'bienthe' // Mở tab phiên bản để chọn biến thể sửa
   showDetail.value = false
   showModal.value = true
+}
+
+/** Khi chọn một biến thể trong danh sách để sửa */
+const chonBienTheDeSua = (row) => {
+  // Lưu ảnh chụp trước khi sửa (cho lịch sử)
+  banGoc = anhChupForm()
+
+  Object.assign(form, {
+    bienTheId: row.bienTheId,
+    maSku: row.maSku || '',
+    barcode: row.barcode || '',
+    mauSac: row.mauSac || '',
+    cpuId: row.cpuId ?? '',
+    ramId: row.ramId ?? '',
+    oCungId: row.oCungId ?? '',
+    gpuId: row.gpuId ?? '',
+    giaNhap: row.giaNhap,
+    giaBan: row.giaBan,
+    hinhAnhBienThe: row.hinhAnhBienThe || ''
+  })
 }
 
 const suaSanPham = (g) => openEdit(g, g.variants[0])
@@ -2251,6 +2318,24 @@ const submitForm = async () => {
       }))
       await luuPhanLoai(form.sanPhamId)
 
+      // Cập nhật lại bienTheRows sau khi lưu
+      const idx = bienTheRows.value.findIndex(r => String(r.bienTheId) === String(form.bienTheId))
+      if (idx !== -1) {
+        bienTheRows.value[idx] = {
+          ...bienTheRows.value[idx],
+          maSku: form.maSku,
+          barcode: form.barcode,
+          mauSac: form.mauSac,
+          cpuId: form.cpuId,
+          ramId: form.ramId,
+          oCungId: form.oCungId,
+          gpuId: form.gpuId,
+          giaNhap: form.giaNhap,
+          giaBan: form.giaBan,
+          hinhAnhBienThe: form.hinhAnhBienThe
+        }
+      }
+
       const thayDoi = soSanhAnhChup(banGoc, anhChupForm())
       ghiNhatKy(form.sanPhamId, {
         loai: 'sua',
@@ -2380,9 +2465,10 @@ const submitForm = async () => {
   --ok-bg:   #ecfdf5;
   --ok-text: #047857;
 
-  --sh-1: 0 1px 2px rgba(168, 27, 93, .06);
-  --sh-2: 0 4px 14px rgba(168, 27, 93, .10);
-  --sh-3: 0 22px 55px rgba(168, 27, 93, .25);
+  /* 3D Shadow Variables */
+  --sh-1: 0 1px 2px rgba(168, 27, 93, .08), 0 1px 3px rgba(168, 27, 93, .05);
+  --sh-2: 0 4px 6px rgba(168, 27, 93, .1), 0 2px 4px rgba(168, 27, 93, .06);
+  --sh-3: 0 10px 15px rgba(168, 27, 93, .12), 0 4px 6px rgba(168, 27, 93, .08);
 }
 .hh { font-size: 14px; color: var(--ink); }
 
@@ -2400,15 +2486,33 @@ const submitForm = async () => {
   border: 1px solid transparent;
   font-size: 13px; font-weight: 600; font-family: inherit;
   cursor: pointer; white-space: nowrap;
-  transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s;
+  transition: all 0.15s ease;
 }
 .hh-btn--sm { padding: 5px 11px; font-size: 12.5px; }
-.hh-btn--primary { background: var(--pink-600); color: #fff; box-shadow: var(--sh-1); }
-.hh-btn--primary:hover:not(:disabled) { background: var(--pink-700); box-shadow: var(--sh-2); }
+.hh-btn--primary {
+  background: var(--pink-600); color: #fff;
+  box-shadow: 0 3px 0 #9b1d5c, 0 4px 8px rgba(168, 27, 93, 0.3);
+  border-bottom-width: 3px;
+}
+.hh-btn--primary:hover:not(:disabled) {
+  background: var(--pink-700);
+  box-shadow: 0 4px 0 #7a1550, 0 6px 12px rgba(168, 27, 93, 0.35);
+  transform: translateY(-1px);
+}
+.hh-btn--primary:active:not(:disabled) {
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  transform: translateY(1px);
+}
 .hh-btn--soft { background: var(--pink-100); color: var(--pink-700); border-color: var(--pink-200); }
-.hh-btn--soft:hover:not(:disabled) { background: var(--pink-200); }
+.hh-btn--soft:hover:not(:disabled) {
+  background: var(--pink-200);
+  box-shadow: 0 2px 4px rgba(168, 27, 93, 0.15);
+}
 .hh-btn--ghost { background: #fff; color: var(--pink-700); border-color: var(--pink-200); }
-.hh-btn--ghost:hover:not(:disabled) { background: var(--pink-50); border-color: var(--pink-300); }
+.hh-btn--ghost:hover:not(:disabled) {
+  background: var(--pink-50); border-color: var(--pink-300);
+  box-shadow: 0 2px 4px rgba(168, 27, 93, 0.15);
+}
 .hh-btn--ghost.is-on { background: var(--pink-100); border-color: var(--pink-300); }
 .hh-btn:disabled { opacity: .45; cursor: not-allowed; }
 .hh-btn:focus-visible, .hh-icon-btn:focus-visible { outline: 2px solid var(--pink-500); outline-offset: 2px; }
@@ -2440,7 +2544,7 @@ const submitForm = async () => {
 .hh-bar {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   background: #fff; border: 1px solid var(--line); border-radius: 14px;
-  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--sh-1);
+  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--sh-2);
 }
 .hh-bar__left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .hh-bar__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
@@ -2451,17 +2555,61 @@ const submitForm = async () => {
   width: 100%; padding: 8px 32px 8px 34px;
   border: 1px solid var(--pink-200); border-radius: 999px;
   font-size: 13px; background: var(--pink-50); font-family: inherit; color: var(--ink);
+  box-shadow: inset 0 2px 4px rgba(168, 27, 93, 0.1);
+  transition: all 0.2s ease;
 }
-.hh-search input:focus { outline: none; border-color: var(--pink-500); background: #fff; box-shadow: 0 0 0 3px var(--pink-100); }
+.hh-search input:focus {
+  outline: none; border-color: var(--pink-500); background: #fff;
+  box-shadow: inset 0 2px 4px rgba(168, 27, 93, 0.1), 0 0 0 3px var(--pink-100);
+}
 .hh-search__icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--pink-500); }
 .hh-search__clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; }
 
-/* ═══════════ BỘ LỌC ═══════════ */
-.hh-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease, margin-bottom .25s ease; margin-bottom: 0; }
-.hh-filter.is-open { grid-template-rows: 1fr; margin-bottom: 12px; }
+/* ═══════════ BỘ LỌC (nằm trong card) ═══════════ */
+.hh-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
+.hh-filter.is-open { grid-template-rows: 1fr; }
 .hh-filter__panel {
-  overflow: hidden; background: #fff; border: 1px solid var(--line);
-  border-radius: 14px; padding: 0 16px; transition: padding .25s ease; box-shadow: var(--sh-1);
+  overflow: hidden; background: var(--pink-50);
+  padding: 0 16px; transition: padding .25s ease;
+}
+.hh-filter.is-open .hh-filter__panel { padding: 14px 16px; }
+
+/* ═══════════ TOOLBAR (nằm trong card, có border-bottom) ═══════════ */
+.hh-toolbar {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px !important;
+  background: #fff !important;
+  border-bottom: 1px solid var(--pink-50) !important;
+}
+
+.hh-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hh-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.hh-toolbar__count {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hh-toolbar .hh-search {
+  width: 260px;
 }
 .hh-filter.is-open .hh-filter__panel { padding: 16px; }
 .hh-filter__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
@@ -2514,7 +2662,7 @@ const submitForm = async () => {
 .hh-tag-pill button:hover { background: var(--pink-600); color: #fff; }
 
 /* ═══════════ BẢNG DANH SÁCH ═══════════ */
-.hh-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--sh-1); }
+.hh-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--sh-2); }
 .hh-table-wrap { position: relative; overflow-x: auto; min-height: 140px; }
 .hh-table { width: 100%; border-collapse: collapse; table-layout: auto; }
 .hh-table th {
@@ -2557,6 +2705,7 @@ const submitForm = async () => {
 .hh-tag--off { background: #f3f4f6; color: var(--muted); }
 .hh-tag--soft { background: var(--pink-100); color: var(--pink-700); font-weight: 600; }
 .hh-tag--outline { background: #fff; color: var(--pink-700); border: 1px solid var(--pink-200); font-weight: 600; }
+.hh-tag--wait { background: #fef3c7; color: #92400e; }
 
 .hh-ton { font-weight: 700; font-variant-numeric: tabular-nums; }
 .hh-ton.is-het { color: var(--danger); }
@@ -2774,6 +2923,34 @@ const submitForm = async () => {
   border-radius: 9px; font-size: 12.5px; color: var(--muted); line-height: 1.55;
 }
 .hh-note--plain { margin: 0 0 14px; }
+
+/* Danh sách biến thể trong form sửa */
+.hh-bienthe-list {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.hh-bienthe-list__title {
+  font-size: 12.5px; font-weight: 700; color: var(--pink-700);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.hh-bienthe-list__items {
+  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff;
+}
+.hh-bienthe-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px; cursor: pointer; transition: background-color .12s;
+  border-bottom: 1px solid var(--line);
+}
+.hh-bienthe-item:last-child { border-bottom: none; }
+.hh-bienthe-item:hover { background: var(--pink-50); }
+.hh-bienthe-item.is-on { background: var(--pink-100); }
+.hh-bienthe-item.is-on .hh-bienthe-item__sku { color: var(--pink-700); }
+.hh-bienthe-item__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hh-bienthe-item__sku {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 12.5px; font-weight: 700; color: var(--ink);
+}
+.hh-bienthe-item__cfg { font-size: 11.5px; color: var(--muted); }
+.hh-bienthe-item__price { font-weight: 600; color: var(--ink); white-space: nowrap; font-size: 13px; }
 .hh-note b { color: var(--pink-700); }
 
 /* chip bật/tắt — phân loại sử dụng (chọn nhiều) */
