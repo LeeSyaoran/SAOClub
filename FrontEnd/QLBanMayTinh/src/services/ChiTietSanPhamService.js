@@ -17,3 +17,7 @@ export const remove = (id) => del(`/api/chi-tiet-san-pham/delete/${id}`);
 
 // Serial đã bán còn trong hạn bảo hành (server tự lọc theo ngày, hết hạn tự rớt khỏi danh sách).
 export const getUnderWarranty = () => get('/api/chi-tiet-san-pham/con-bao-hanh');
+
+// Lưu ý: việc dọn rác serial 'giu_hang' bị kẹt (đơn đã bị xóa/hủy hoặc user đóng tab POS
+// giữa chừng) được backend xử l TỰ ĐỘNG mỗi khi frontend gọi getAll() ở SerialManager.
+// Không cần endpoint riêng — flow tự nhiên: mở tab Kho hàng → load → backend dọn → hiển thị.

@@ -14,7 +14,7 @@ import { showToast } from "../../stores/toast.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { refreshInventory } from "../../stores/inventory.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
-import { Camera, Image, Cpu, MemoryStick, HardDrive, Monitor, Barcode } from '@lucide/vue';
+import { Camera, Image, Cpu, MemoryStick, HardDrive, Monitor, Barcode, Palette } from '@lucide/vue';
 import Pagination from "../common/Pagination.vue";
 import SearchSelect from "../common/SearchSelect.vue";
 import { usePagination } from "../../composables/usePagination.js";
@@ -138,6 +138,44 @@ const shortCpu = (cpu) => cpu?.replace(/^(Intel Core|AMD Ryzen)\s+/i, '') ?? '';
 const configLabel = (p) => [shortCpu(p.cpu), p.ram, p.oCung, p.gpu].filter(Boolean).join(' · ') || '—';
 const stockOf = (p) => Number(p.soLuongTon ?? 0);
 const stockClass = (p) => (stockOf(p) === 0 ? 'vt-stock--out' : stockOf(p) <= 5 ? 'vt-stock--low' : '');
+
+// Map mauSac (text tu do - "Xám", "Đen", "Bạc"...) -> style chip tuong ung. Khi khong
+// nhan dang duoc thi fallback mau hong mac dinh de giu nhat quan voi design system.
+const COLOR_CHIP_MAP = {
+  'xám': { bg: '#9ca3af', fg: '#111' }, 'xam': { bg: '#9ca3af', fg: '#111' },
+  'đen': { bg: '#111827', fg: '#fff' }, 'den': { bg: '#111827', fg: '#fff' },
+  'trắng': { bg: '#f3f4f6', fg: '#111', border: '#d1d5db' },
+  'trang': { bg: '#f3f4f6', fg: '#111', border: '#d1d5db' },
+  'bạc': { bg: '#d1d5db', fg: '#111' }, 'bac': { bg: '#d1d5db', fg: '#111' },
+  'xanh dương': { bg: '#3b82f6', fg: '#fff' },
+  'xanh đương': { bg: '#3b82f6', fg: '#fff' },
+  'xanh duong': { bg: '#3b82f6', fg: '#fff' },
+  'xanh lá': { bg: '#10b981', fg: '#fff' }, 'xanh la': { bg: '#10b981', fg: '#fff' },
+  'xanh lục': { bg: '#10b981', fg: '#fff' }, 'xanh luc': { bg: '#10b981', fg: '#fff' },
+  'hồng': { bg: '#f472b6', fg: '#fff' }, 'hong': { bg: '#f472b6', fg: '#fff' },
+  'đỏ': { bg: '#ef4444', fg: '#fff' }, 'do': { bg: '#ef4444', fg: '#fff' },
+  'đỏ đô': { bg: '#b91c1c', fg: '#fff' }, 'đỏ đậm': { bg: '#991b1b', fg: '#fff' },
+  'vàng': { bg: '#f59e0b', fg: '#111' }, 'vang': { bg: '#f59e0b', fg: '#111' },
+  'vàng gold': { bg: '#d97706', fg: '#fff' }, 'vang gold': { bg: '#d97706', fg: '#fff' },
+  'tự nhiên': { bg: '#a3a380', fg: '#111' }, 'tu nhien': { bg: '#a3a380', fg: '#111' },
+  'titanium': { bg: '#6b7280', fg: '#fff' },
+  'đồng': { bg: '#b45309', fg: '#fff' }, 'dong': { bg: '#b45309', fg: '#fff' },
+  'gold': { bg: '#d97706', fg: '#fff' }, 'rose gold': { bg: '#e11d48', fg: '#fff' },
+  'midnight': { bg: '#1e293b', fg: '#fff' },
+  'nebula': { bg: '#7c3aed', fg: '#fff' },
+};
+// Fallback: màu không nhận diện được vẫn tô màu trung tính (xám) cho đồng bộ.
+const COLOR_CHIP_FALLBACK = { bg: '#e5e7eb', fg: '#374151' };
+const colorChipStyle = (mauSac) => {
+  if (!mauSac) return null;
+  const key = mauSac.trim().toLowerCase();
+  const c = COLOR_CHIP_MAP[key] ?? COLOR_CHIP_FALLBACK;
+  return {
+    background: c.bg,
+    color: c.fg,
+    border: c.border ? `1px solid ${c.border}` : 'none',
+  };
+};
 
 // Hàm so sánh config với variant đầu tiên của cùng sản phẩm (để highlight giá trị khác nhau)
 const getFirstVariantOfProduct = (p) => allVariants.value.find(v => v.sanPhamId === p.sanPhamId && v.bienTheId !== p.bienTheId);
@@ -695,10 +733,10 @@ const saveVariant = async () => {
             <td class="vt-name" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
             <td class="vt-config">
               <div class="vt-config__list">
-                <span v-if="p.cpu" :class="hasCpuDiff(p) ? 'vt-config-diff' : ''"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
-                <span v-if="p.ram" :class="hasRamDiff(p) ? 'vt-config-diff' : ''"><MemoryStick :size="12" />{{ p.ram }}</span>
-                <span v-if="p.oCung" :class="hasOCungDiff(p) ? 'vt-config-diff' : ''"><HardDrive :size="12" />{{ p.oCung }}</span>
-                <span v-if="p.mauSac" :class="hasMauSacDiff(p) ? 'vt-config-diff' : ''">{{ p.mauSac }}</span>
+                <span v-if="p.cpu" class="vt-config-chip"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
+                <span v-if="p.ram" class="vt-config-chip"><MemoryStick :size="12" />{{ p.ram }}</span>
+                <span v-if="p.oCung" class="vt-config-chip"><HardDrive :size="12" />{{ p.oCung }}</span>
+                <span v-if="p.mauSac" class="vt-config-chip vt-config-chip--color"><Palette :size="12" />{{ p.mauSac }}</span>
               </div>
             </td>
             <td v-if="canViewCost" class="vt-col-price vt-muted">{{ formatPrice(p.giaNhap) }}</td>
@@ -753,10 +791,6 @@ const saveVariant = async () => {
           </div>
 
           <dl class="vt-detail-grid">
-            <div>
-              <dt>{{ tt('admin.variants.colStock', 'Tồn kho') }}</dt>
-              <dd><span class="vt-stock" :class="stockClass(detailVariant)">{{ stockOf(detailVariant) }}</span></dd>
-            </div>
             <div><dt>{{ t('admin.variants.colPriceSell') }}</dt><dd class="vt-price">{{ formatPrice(detailVariant.giaBan) }}</dd></div>
             <div v-if="canViewCost"><dt>{{ tt('admin.variants.colPriceBuy', 'Giá nhập') }}</dt><dd>{{ formatPrice(detailVariant.giaNhap) }}</dd></div>
             <div v-if="canViewCost && marginOf(detailVariant)">
@@ -1094,34 +1128,34 @@ const saveVariant = async () => {
    phong cách — cố tình dùng cùng giá trị hex/hồng cứng như HangHoa.vue thay vì biến
    theme sáng/tối dùng chung, cho khớp pixel với màn hình đó. */
 .vt-card, .vt-sticky-head, .vt-mask {
-  --pink-50:  #fff5f9;
-  --pink-100: #ffe6f0;
-  --pink-200: #ffcfe1;
-  --pink-300: #f7a8c8;
-  --pink-500: #ec4899;
-  --pink-600: #db2777;
-  --pink-700: #a81b5d;
+  --pink-50:  var(--bg-card-alt);
+  --pink-100: var(--bg-hover);
+  --pink-200: var(--border-color);
+  --pink-300: var(--border-color-strong);
+  --pink-500: var(--accent);
+  --pink-600: var(--accent);
+  --pink-700: var(--accent-fg);
 
-  --ink:   #1f2937;
-  --muted: #6b7280;
-  --line:  #f1dbe6;
-  --field: #d9b3c6;
-  --danger: #dc2626;
-  --ok-bg:   #ecfdf5;
-  --ok-text: #047857;
+  --ink:   var(--text-primary);
+  --muted: var(--text-muted);
+  --line:  var(--border-color);
+  --field: var(--border-color-strong);
+  --danger: var(--state-danger);
+  --ok-bg:   rgba(22, 163, 74, 0.12);
+  --ok-text: var(--state-success);
 
-  /* 3D Shadow Variables */
-  --sh-1: 0 1px 2px rgba(168, 27, 93, .08), 0 1px 3px rgba(168, 27, 93, .05);
-  --sh-2: 0 4px 6px rgba(168, 27, 93, .1), 0 2px 4px rgba(168, 27, 93, .06);
-  --sh-3: 0 10px 15px rgba(168, 27, 93, .12), 0 4px 6px rgba(168, 27, 93, .08);
-  --sh-btn: 0 3px 0 #a81b5d, 0 4px 8px rgba(168, 27, 93, .2);
-  --sh-inset: inset 0 2px 4px rgba(168, 27, 93, .15);
+  /* 3D Shadow Variables từ theme */
+  --sh-1: var(--shadow-sm);
+  --sh-2: var(--shadow-md);
+  --sh-3: var(--shadow-lg);
+  --sh-btn: var(--shadow-btn);
+  --sh-inset: var(--shadow-inset);
 }
 .vt-card, .vt-sticky-head { font-size: 14px; color: var(--ink); }
 
 /* ══════════ THẺ BAO NGOÀI ══════════ */
 .vt-card {
-  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px;
   overflow: hidden; box-shadow: var(--sh-2);
 }
 .vt-muted { color: var(--muted); }
@@ -1136,19 +1170,18 @@ const saveVariant = async () => {
 }
 .vt-btn--primary {
   background: var(--pink-600); color: #fff;
-  box-shadow: 0 3px 0 #9b1d5c, 0 4px 8px rgba(168, 27, 93, 0.3);
-  border-bottom-width: 3px;
+  box-shadow: var(--sh-btn);
 }
 .vt-btn--primary:hover:not(:disabled) {
-  background: var(--pink-700);
-  box-shadow: 0 4px 0 #7a1550, 0 6px 12px rgba(168, 27, 93, 0.35);
+  background: var(--accent-2);
+  box-shadow: var(--sh-btn);
   transform: translateY(-1px);
 }
 .vt-btn--primary:active:not(:disabled) {
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: var(--sh-inset);
   transform: translateY(1px);
 }
-.vt-btn--ghost { background: #fff; color: var(--pink-700); border-color: var(--pink-200); }
+.vt-btn--ghost { background: var(--bg-card); color: var(--pink-700); border-color: var(--pink-200); }
 .vt-btn--ghost:hover:not(:disabled) {
   background: var(--pink-50); border-color: var(--pink-300);
   box-shadow: 0 2px 4px rgba(168, 27, 93, 0.15);
@@ -1173,12 +1206,12 @@ const saveVariant = async () => {
   width: 100%; padding: 8px 32px 8px 34px;
   border: 1px solid var(--pink-200); border-radius: 999px;
   font-size: 13px; background: var(--pink-50); color: var(--ink); font-family: inherit;
-  box-shadow: inset 0 2px 4px rgba(168, 27, 93, 0.1);
+  box-shadow: var(--sh-inset);
   transition: all 0.2s ease;
 }
 .vt-search input:focus {
-  outline: none; border-color: var(--pink-500); background: #fff;
-  box-shadow: inset 0 2px 4px rgba(168, 27, 93, 0.1), 0 0 0 3px var(--pink-100);
+  outline: none; border-color: var(--pink-500); background: var(--bg-card);
+  box-shadow: var(--sh-inset), 0 0 0 3px rgba(244, 63, 94, 0.15);
 }
 .vt-search__icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--pink-500); pointer-events: none; }
 .vt-search__clear {
@@ -1268,7 +1301,7 @@ const saveVariant = async () => {
 
 .vt-thumb {
   width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; overflow: hidden;
-  background: #fff; border: 1px solid var(--line);
+  background: var(--bg-card); border: 1px solid var(--line);
   display: flex; align-items: center; justify-content: center;
 }
 .vt-thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -1280,9 +1313,21 @@ const saveVariant = async () => {
 }
 .vt-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .vt-config { color: var(--muted); overflow: hidden; }
-.vt-config__list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.74rem; }
-.vt-config__list span { display: inline-flex; align-items: center; gap: 3px; }
-.vt-config-diff { font-weight: 600; color: #3b82f6; }
+.vt-config__list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
+.vt-config__list span { display: inline-flex; align-items: center; gap: 4px; }
+/* Chip cấu hình: đồng bộ style với InventoryPanel (chip hồng viên thuốc). */
+.vt-config-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--pink-100); color: var(--pink-700);
+  font-weight: 600; line-height: 1.4;
+  transition: background .15s, transform .12s;
+}
+.vt-config-chip:hover { background: var(--pink-200); transform: translateY(-1px); }
+.vt-config-chip--color {
+  background: var(--pink-100);
+  color: var(--pink-700);
+}
 
 .vt-price { font-weight: 600; font-variant-numeric: tabular-nums; }
 .vt-stock {
@@ -1290,8 +1335,8 @@ const saveVariant = async () => {
   font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums;
   background: var(--pink-50); color: var(--ink);
 }
-.vt-stock--low { background: #fff7ed; color: #c2650a; }
-.vt-stock--out { background: #fef2f2; color: var(--danger); }
+.vt-stock--low { background: rgba(251, 191, 36, 0.15); color: var(--state-warning); }
+.vt-stock--out { background: rgba(239, 68, 68, 0.12); color: var(--danger); }
 
 .vt-empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13.5px; }
 
@@ -1300,8 +1345,8 @@ const saveVariant = async () => {
   padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
 }
 .vt-tag--on  { background: var(--ok-bg); color: var(--ok-text); }
-.vt-tag--off { background: #f3f4f6; color: var(--muted); }
-.vt-tag--wait { background: #fef3c7; color: #92400e; }
+.vt-tag--off { background: var(--bg-card-alt); color: var(--muted); }
+.vt-tag--wait { background: rgba(251, 191, 36, 0.15); color: var(--state-warning); }
 
 .vt-pager {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -1312,11 +1357,11 @@ const saveVariant = async () => {
 /* ══════════ MODAL DÙNG CHUNG ══════════ */
 .vt-mask {
   position: fixed; inset: 0; z-index: 1000; padding: 20px;
-  background: rgba(26,16,51,0.45);
+  background: var(--bg-overlay);
   display: flex; align-items: center; justify-content: center;
 }
 .vt-modal {
-  background: #fff; border: 1px solid var(--line); color: var(--ink);
+  background: var(--bg-card); border: 1px solid var(--line); color: var(--ink);
   border-radius: 16px; display: flex; flex-direction: column;
   max-width: 96vw; max-height: 92vh; overflow: hidden;
   box-shadow: var(--sh-2);
@@ -1354,7 +1399,7 @@ const saveVariant = async () => {
 .vt-detail-img img { width: 100%; height: 100%; object-fit: contain; }
 
 .vt-barcode-box {
-  background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px;
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: 10px; padding: 8px;
   display: flex; align-items: center; justify-content: center; min-height: 64px;
 }
 .vt-barcode-box svg { max-width: 100%; height: auto; }
@@ -1396,14 +1441,14 @@ const saveVariant = async () => {
   font-size: 0.75rem; font-weight: 700; color: var(--pink-700);
 }
 .vt-input {
-  background: #fff !important; color: var(--ink) !important;
+  background: var(--bg-input) !important; color: var(--text-primary) !important;
   border-color: var(--field) !important;
 }
-.vt-input::placeholder { color: #b9a3ae; }
+.vt-input::placeholder { color: var(--text-muted); }
 .vt-input:hover { border-color: var(--pink-300) !important; }
 .vt-input:focus {
-  background: #fff !important; color: var(--ink) !important;
-  border-color: var(--pink-500) !important; box-shadow: 0 0 0 3px var(--pink-100) !important;
+  background: var(--bg-card) !important; color: var(--text-primary) !important;
+  border-color: var(--accent) !important; box-shadow: var(--sh-inset), 0 0 0 3px rgba(244, 63, 94, 0.15) !important;
 }
 .vt-inline { display: flex; gap: 6px; align-items: center; }
 .vt-inline > input { flex: 1; min-width: 0; }
@@ -1426,7 +1471,7 @@ const saveVariant = async () => {
 .vt-upload__box {
   width: 110px; height: 88px; flex-shrink: 0; cursor: pointer; overflow: hidden;
   border: 1px dashed var(--field); border-radius: 12px;
-  background: #fff; color: var(--muted);
+  background: var(--bg-card); color: var(--muted);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   font-size: 0.68rem; text-align: center;
 }
@@ -1454,7 +1499,7 @@ const saveVariant = async () => {
 
 .vt-tag-btn {
   padding: 3px 12px; border-radius: 999px; cursor: pointer; font-size: 0.75rem;
-  background: #fff; color: var(--pink-700);
+  background: var(--bg-card); color: var(--pink-700);
   border: 1px solid var(--pink-200);
 }
 .vt-tag-btn:hover { background: var(--pink-50); border-color: var(--pink-300); }

@@ -71,7 +71,6 @@
   border: 1px solid var(--pink-200) !important;
   border-radius: 14px !important;
   overflow: hidden;
-  box-shadow: var(--sh-2) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -326,8 +325,6 @@
   white-space: nowrap;
   background: var(--pink-600) !important;
   color: #fff !important;
-  box-shadow: var(--sh-btn) !important;
-  border-bottom-width: 3px !important;
   transition: all 0.15s ease !important;
 }
 
@@ -342,8 +339,6 @@
 .alt-btn:hover,
 .alt-btn--primary:hover {
   background: var(--pink-700) !important;
-  box-shadow: var(--sh-btn-hover) !important;
-  transform: translateY(-1px);
 }
 
 .admin-btn:active,
@@ -356,8 +351,6 @@
 .inv-btn--primary:active,
 .alt-btn:active,
 .alt-btn--primary:active {
-  box-shadow: var(--sh-btn-active) !important;
-  transform: translateY(1px);
 }
 
 .admin-btn:disabled,
@@ -408,7 +401,6 @@
 .alt-btn--soft:hover {
   background: var(--pink-50) !important;
   border-color: var(--pink-300) !important;
-  box-shadow: var(--sh-2) !important;
 }
 
 .admin-btn--ghost.is-on,
@@ -449,19 +441,9 @@
   background: #fff !important;
   color: var(--pink-700) !important;
   cursor: pointer;
-  box-shadow: var(--sh-1) !important;
-  transition: all 0.15s ease !important;
 }
 
-.admin-icon-btn:hover,
-.hh-icon-btn:hover,
-.vt-icon-btn:hover,
-.inv-icon-btn:hover,
-.alt-icon-btn:hover {
-  background: var(--pink-50) !important;
-  box-shadow: var(--sh-2) !important;
-  transform: translateY(-1px);
-}
+/* hover rule removed for flat design */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    TABLES

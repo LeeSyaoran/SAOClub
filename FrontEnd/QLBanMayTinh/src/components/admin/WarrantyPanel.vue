@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { t } from "../../i18n/index.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import * as PhieuBaoHanhService from "../../services/PhieuBaoHanhService.js";
@@ -11,12 +11,19 @@ import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { BaoHanhStore, ensureBaoHanh, refreshBaoHanh } from "../../stores/baoHanh.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { Calendar, Shield } from '@lucide/vue';
+import {
+  Calendar, Shield, ScanLine, Cpu, MemoryStick, HardDrive, Monitor,
+  Tag, User, Phone, Package, ImageOff, X, Camera, AlertTriangle,
+} from '@lucide/vue';
 
 onMounted(() => {
   ensureWarrantyData();
   ensureBaoHanh();
   ensureCustomers();
+});
+
+onUnmounted(() => {
+  closeUsbScanner();
 });
 
 // ── Bảng "Còn hạn bảo hành" — chuyển nguyên xi từ AdminPage.vue ────────────────
@@ -101,6 +108,16 @@ const openCreateFromWarranty = (w) => {
   showModal.value = true;
 };
 
+// Tạo phiếu thủ công (không qua bảng "Còn hạn bảo hành") — khi serial đã hết hạn hoặc cần
+// mở phiếu khi không tìm được serial trong danh sách. Người dùng phải tự nhập các ID.
+const openCreateManual = () => {
+  editingId.value = null;
+  form.value = emptyForm();
+  lockedInfo.value = null;
+  formError.value = "";
+  showModal.value = true;
+};
+
 const openEdit = (p) => {
   editingId.value = p.baoHanhId;
   form.value = {
@@ -154,8 +171,8 @@ const saveClaim = async () => {
       moTaLoi: form.value.moTaLoi,
       ketQuaXuLy: form.value.ketQuaXuLy || null,
       trangThai: form.value.trangThai,
-      chiPhiPhatSinh: form.value.chiPhiPhatSinh || 0,
-      ghiChu: form.value.ghiChu || '—',
+      chiPhiPhatSinh: form.value.chiPhiPhatSinh ?? 0,
+      ghiChu: form.value.ghiChu || null,
     };
     const res = await PhieuBaoHanhService.save(editingId.value, body);
     if (!res.ok) {
@@ -171,9 +188,449 @@ const saveClaim = async () => {
   }
 };
 
+// ── Barcode scan lookup ───────────────────────────────────────────────────────
+const serialInput = ref('');
+const lookupResult = ref(null);
+const lookupLoading = ref(false);
+const lookupError = ref('');
+const lookupErrorCode = ref(''); // 'NOT_FOUND' | 'DELETED' | 'ERROR' | ''
+const showUsbScanner = ref(false);
+const usbScanStatus = ref('connecting'); // 'connecting' | 'ready' | 'error'
+const usbLastScan = ref('');
+const usbHistory = ref([]);
+
+let usbEventSource = null;
+
+// Connect to USB proxy via SSE
+const openUsbScanner = async () => {
+  showUsbScanner.value = true;
+  usbScanStatus.value = 'connecting';
+  usbLastScan.value = '';
+  usbHistory.value = [];
+
+  // Dong ket noi cu
+  closeUsbScanner();
+
+  try {
+    usbEventSource = new EventSource('http://localhost:8484/events');
+
+    usbEventSource.onopen = () => {
+      usbScanStatus.value = 'ready';
+    };
+
+    usbEventSource.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'connected') {
+          usbScanStatus.value = 'ready';
+        }
+        if (data.text) {
+          const now = Date.now();
+          usbLastScan.value = data.text;
+          usbHistory.value.unshift({ text: data.text, time: data.time || now });
+          if (usbHistory.value.length > 10) usbHistory.value.pop();
+          // Auto fill + lookup
+          serialInput.value = data.text.trim();
+          lookupSerial();
+        }
+      } catch { /* ignore */ }
+    };
+
+    usbEventSource.onerror = () => {
+      usbScanStatus.value = 'error';
+      // Thu ket noi lai sau 3s
+      setTimeout(() => {
+        if (showUsbScanner.value && usbEventSource?.readyState === EventSource.CLOSED) {
+          usbEventSource = null;
+          openUsbScanner();
+        }
+      }, 3000);
+    };
+  } catch {
+    usbScanStatus.value = 'error';
+  }
+};
+
+const closeUsbScanner = () => {
+  if (usbEventSource) {
+    usbEventSource.close();
+    usbEventSource = null;
+  }
+  showUsbScanner.value = false;
+};
+
+const lookupSerial = async () => {
+  const serial = serialInput.value.trim();
+  if (!serial) return;
+  lookupLoading.value = true;
+  lookupError.value = '';
+  lookupErrorCode.value = '';
+  try {
+    lookupResult.value = await PhieuBaoHanhService.lookupBySerial(serial);
+  } catch (e) {
+    if (e.status === 404) {
+      lookupErrorCode.value = e.code === 'DELETED' ? 'DELETED' : 'NOT_FOUND';
+      lookupError.value = t(`admin.warrantyScan.${lookupErrorCode.value === 'DELETED' ? 'deleted' : 'notFound'}`, { serial });
+    } else {
+      lookupErrorCode.value = 'ERROR';
+      lookupError.value = t('admin.warrantyScan.error');
+    }
+    lookupResult.value = null;
+  } finally {
+    lookupLoading.value = false;
+  }
+};
+
+const clearLookup = () => {
+  serialInput.value = '';
+  lookupResult.value = null;
+  lookupError.value = '';
+  lookupErrorCode.value = '';
+};
+
+const createClaimFromLookup = () => {
+  if (!lookupResult.value) return;
+  const r = lookupResult.value;
+  // Only allow creation for sold (da_ban) serials
+  if (r.trangThaiSerial !== 'da_ban') return;
+  editingId.value = null;
+  form.value = {
+    ...emptyForm(),
+    donHangId: r.donHangId ?? null,
+    bienTheId: r.bienTheId ?? null,
+    chiTietId: r.chiTietId ?? null,
+    khachHangId: r.khachHangId ?? null,
+    ngayMua: r.ngayGiaoThucTe ? r.ngayGiaoThucTe.slice(0, 16) : '',
+    ngayHetBh: r.ngayHetBaoHanh ? r.ngayHetBaoHanh.slice(0, 16) : '',
+  };
+  lockedInfo.value = {
+    tenSanPham: r.tenSanPham, maSku: r.maSku, soSerial: r.soSerial,
+    tenKhachHang: r.tenKhachHang || '', maDonHang: r.maDonHang || `#${r.donHangId}`,
+  };
+  formError.value = '';
+  showModal.value = true;
+};
+
+const canCreateClaim = computed(() =>
+  lookupResult.value && lookupResult.value.trangThaiSerial === 'da_ban'
+);
+
+const isSerialSold = computed(() =>
+  lookupResult.value && lookupResult.value.trangThaiSerial === 'da_ban'
+);
+
+const isSerialNotSold = computed(() =>
+  lookupResult.value && lookupResult.value.trangThaiSerial !== 'da_ban'
+);
+
+const warrantyBadge = computed(() => {
+  if (!lookupResult.value) return null;
+  const r = lookupResult.value;
+  if (r.trangThaiSerial !== 'da_ban') return { key: 'warrantyScan.notSold', cls: 'bg-secondary' };
+  if (!r.ngayHetBaoHanh) return { key: 'warrantyScan.noWarranty', cls: 'bg-secondary' };
+  const daysLeft = Math.ceil((new Date(r.ngayHetBaoHanh) - new Date()) / 86400000);
+  if (daysLeft < 0) return { key: 'warrantyScan.expired', cls: 'bg-danger', days: Math.abs(daysLeft) };
+  return { key: 'warrantyScan.active', cls: 'bg-success', days: daysLeft };
+});
+
+// Banner trang thai thay the badge cu
+const lookupBanner = computed(() => {
+  if (!lookupResult.value) return null;
+  const r = lookupResult.value;
+  if (r.trangThaiSerial !== 'da_ban') {
+    return {
+      icon: '📦',
+      bg: 'rgba(107,114,128,0.15)',
+      color: '#9ca3af',
+      border: 'rgba(107,114,128,0.3)',
+      label: t('admin.warrantyScan.banner.inStock'),
+    };
+  }
+  if (!r.ngayHetBaoHanh) {
+    return {
+      icon: '⚠️',
+      bg: 'rgba(251,191,36,0.15)',
+      color: '#fbbf24',
+      border: 'rgba(251,191,36,0.3)',
+      label: t('admin.warrantyScan.noWarranty'),
+    };
+  }
+  const daysLeft = Math.ceil((new Date(r.ngayHetBaoHanh) - new Date()) / 86400000);
+  if (daysLeft < 0) {
+    return {
+      icon: '❌',
+      bg: 'rgba(239,68,68,0.15)',
+      color: '#f87171',
+      border: 'rgba(239,68,68,0.3)',
+      label: t('admin.warrantyScan.banner.expired', { count: Math.abs(daysLeft) }),
+    };
+  }
+  return {
+    icon: '✅',
+    bg: 'rgba(34,197,94,0.15)',
+    color: '#22c55e',
+    border: 'rgba(34,197,94,0.3)',
+    label: t('admin.warrantyScan.banner.active', { count: daysLeft }),
+  };
+});
+
 </script>
 
 <template>
+  <!-- ── Khung quet barcode / tra cuu serial ─────────────────────────────── -->
+  <div class="alt-card mb-4" style="border-color:var(--accent);">
+    <!-- Search bar -->
+    <div class="alt-toolbar">
+      <div class="alt-search" style="flex:1; max-width:420px;">
+        <ScanLine :size="14" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--accent-fg);pointer-events:none;" />
+        <input
+          v-model="serialInput"
+          :placeholder="t('admin.warrantyScan.placeholder')"
+          style="padding-left:38px;"
+          @keyup.enter="lookupSerial"
+        />
+      </div>
+      <div class="alt-toolbar__actions">
+        <!-- USB barcode scanner button -->
+        <button
+          class="alt-btn"
+          style="padding:7px 12px;"
+          :title="t('admin.warrantyScan.openCamera')"
+          @click="openUsbScanner"
+        >
+          <Camera :size="13" />
+        </button>
+        <button class="alt-btn alt-btn--primary" style="padding:7px 20px;" :disabled="lookupLoading" @click="lookupSerial">
+          <ScanLine :size="13" /> {{ t('admin.warrantyScan.searchBtn') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- USB Scanner Modal -->
+    <Teleport to="body">
+      <div v-if="showUsbScanner" class="usb-scanner-overlay" @click.self="closeUsbScanner">
+        <div class="usb-scanner-modal">
+          <div class="usb-scanner-header">
+            <span class="usb-scanner-title">📷 USB Barcode Scanner</span>
+            <button class="btn btn-sm btn-link p-0" @click="closeUsbScanner">
+              <X :size="18" />
+            </button>
+          </div>
+
+          <!-- Connection status -->
+          <div class="usb-status-bar">
+            <div v-if="usbScanStatus === 'connecting'" class="d-flex align-items-center gap-2">
+              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              <span>Đang kết nối USB...</span>
+            </div>
+            <div v-else-if="usbScanStatus === 'ready'" class="d-flex align-items-center gap-2" style="color:#10b981;">
+              <span style="font-size:1.1em;">●</span>
+              <span>Đã kết nối — quét trên điện thoại</span>
+            </div>
+            <div v-else class="d-flex align-items-center gap-2" style="color:#f87171;">
+              <span>⚠️</span>
+              <span>Chưa kết nối — đảm bảo đã chạy proxy và kết nối USB</span>
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div class="usb-instructions">
+            <div class="usb-step">
+              <span class="step-num">1</span>
+              <span>Trên <strong>điện thoại</strong>, mở Chrome truy cập:</span>
+            </div>
+            <div class="usb-url-box">
+              <code>http://localhost:8484/phone</code>
+            </div>
+            <div class="usb-step">
+              <span class="step-num">2</span>
+              <span>Cho phép truy cập camera trên điện thoại</span>
+            </div>
+            <div class="usb-step">
+              <span class="step-num">3</span>
+              <span>Đưa camera điện thoại vào <strong>mã vạch</strong> cần quét</span>
+            </div>
+            <div class="usb-step">
+              <span class="step-num">4</span>
+              <span>Serial tự động điền vào ô tra cứu bên dưới</span>
+            </div>
+          </div>
+
+          <!-- Last scanned -->
+          <div v-if="usbLastScan" class="usb-last-scan">
+            <span class="text-secondary small">Mã vừa quét:</span>
+            <span class="fw-bold" style="color:#10b981;word-break:break-all;">{{ usbLastScan }}</span>
+          </div>
+
+          <!-- History -->
+          <div v-if="usbHistory.length > 0" class="usb-history">
+            <div class="small text-secondary mb-1">Lịch sử:</div>
+            <div class="usb-history-list">
+              <div v-for="(item, i) in usbHistory.slice(0, 5)" :key="i" class="usb-history-item">
+                <span>{{ item.text }}</span>
+                <span class="text-secondary" style="font-size:0.75em;">
+                  {{ new Date(item.time).toLocaleTimeString('vi-VN') }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="usb-hint small text-center text-secondary mt-2">
+            Máy tính nhận barcode từ điện thoại qua cáp USB
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Empty state -->
+    <div v-if="!lookupResult && !lookupError && !lookupLoading" class="p-4 text-center">
+      <ScanLine :size="32" style="color:var(--text-muted);margin:0 auto 10px;" />
+      <div class="small text-secondary" style="max-width:380px;margin:0 auto;line-height:1.6;">
+        {{ t('admin.warrantyScan.emptyHint') }}
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div v-else-if="lookupLoading" class="p-4 text-center">
+      <div class="spinner-border text-warning" style="width:1.8rem;height:1.8rem;" role="status"></div>
+      <div class="small text-secondary mt-2">{{ t('admin.warrantyScan.loading') }}</div>
+    </div>
+
+    <!-- Not found / Deleted -->
+    <div v-else-if="lookupError" class="p-4">
+      <div class="p-3 rounded-2 text-center" :style="lookupErrorCode === 'DELETED' ? 'background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);' : 'background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);'">
+        <component :is="lookupErrorCode === 'DELETED' ? 'AlertTriangle' : X" :size="20" :style="'margin:0 auto 6px;color:' + (lookupErrorCode === 'DELETED' ? '#fbbf24' : '#f87171')" />
+        <div class="small" :style="'color:' + (lookupErrorCode === 'DELETED' ? '#fbbf24' : '#f87171')">{{ lookupError }}</div>
+      </div>
+    </div>
+
+    <!-- Result found -->
+    <div v-else-if="lookupResult" class="p-3">
+      <!-- Status banner -->
+      <div
+        v-if="lookupBanner"
+        class="mb-3 p-2 rounded-2 text-center fw-semibold"
+        :style="'font-size:0.82rem;background:' + lookupBanner.bg + ';color:' + lookupBanner.color + ';border:1px solid ' + lookupBanner.border"
+      >
+        {{ lookupBanner.icon }}
+        {{ lookupBanner.label }}
+      </div>
+
+      <!-- Image + name row -->
+      <div class="d-flex align-items-start gap-3 mb-3 flex-wrap">
+        <!-- Product image — large -->
+        <div v-if="lookupResult.hinhAnhBienThe" style="width:120px;height:120px;border-radius:10px;overflow:hidden;flex-shrink:0;border:1px solid var(--border-color-soft);">
+          <img :src="lookupResult.hinhAnhBienThe" style="width:100%;height:100%;object-fit:cover;" />
+        </div>
+        <div v-else style="width:120px;height:120px;border-radius:10px;flex-shrink:0;background:var(--bg-input);display:flex;align-items:center;justify-content:center;border:1px solid var(--border-color-soft);">
+          <ImageOff :size="28" style="color:var(--text-muted);" />
+        </div>
+
+        <!-- Info -->
+        <div style="flex:1;min-width:0;">
+          <div class="fw-bold" style="color:var(--text-heading);font-size:0.95rem;">{{ lookupResult.tenSanPham }}</div>
+          <div class="text-secondary small font-monospace">#{{ lookupResult.soSerial }}</div>
+          <div v-if="lookupResult.maSku" class="text-secondary small font-monospace">{{ lookupResult.maSku }}</div>
+        </div>
+      </div>
+
+      <!-- 2-column detail -->
+      <div class="row g-2 mb-3">
+        <!-- Left: machine info -->
+        <div class="col-12 col-md-6">
+          <div class="p-2 rounded-2" style="background:var(--bg-input);">
+            <div class="small text-secondary mb-2 fw-semibold" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.5px;">{{ t('admin.warrantyScan.machineInfo') }}</div>
+            <div class="row g-1 small">
+              <div class="col-5 text-secondary">{{ t('admin.warrantyScan.sku') }}</div>
+              <div class="col-7 font-monospace">{{ lookupResult.maSku || '—' }}</div>
+              <div class="col-5 text-secondary">{{ t('admin.warrantyScan.price') }}</div>
+              <div class="col-7 fw-semibold" style="color:var(--accent-fg);">{{ lookupResult.giaBan ? formatPrice(lookupResult.giaBan) : '—' }}</div>
+              <div class="col-5 text-secondary">{{ t('admin.warrantyScan.purchaseDate') }}</div>
+              <div class="col-7">{{ lookupResult.ngayGiaoThucTe ? formatDate(lookupResult.ngayGiaoThucTe) : '—' }}</div>
+              <div class="col-5 text-secondary">{{ t('admin.warrantyScan.warrantyExpiry') }}</div>
+              <div class="col-7">{{ lookupResult.ngayHetBaoHanh ? formatDate(lookupResult.ngayHetBaoHanh) : '—' }}</div>
+              <div class="col-5 text-secondary">{{ t('admin.warrantyScan.warrantyMonths') }}</div>
+              <div class="col-7">{{ lookupResult.baoHanhThang ? lookupResult.baoHanhThang + ' tháng' : '—' }}</div>
+              <div class="col-5 text-secondary"><User :size="11" style="vertical-align:-1px;" /> {{ t('admin.warrantyScan.customer') }}</div>
+              <div class="col-7">{{ lookupResult.tenKhachHang || '—' }}</div>
+              <div class="col-5 text-secondary"><Phone :size="11" style="vertical-align:-1px;" /> {{ t('admin.warrantyScan.phone') }}</div>
+              <div class="col-7">{{ lookupResult.soDienThoai || '—' }}</div>
+              <div class="col-5 text-secondary"><Package :size="11" style="vertical-align:-1px;" /> {{ t('admin.warrantyScan.order') }}</div>
+              <div class="col-7 font-monospace">{{ lookupResult.maDonHang || '—' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: variant specs -->
+        <div class="col-12 col-md-6">
+          <div class="p-2 rounded-2" style="background:var(--bg-input);">
+            <div class="small text-secondary mb-2 fw-semibold" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.5px;">{{ t('admin.warrantyScan.variantSpecs') }}</div>
+            <div class="row g-1 small">
+              <div v-if="lookupResult.cpuTen" class="col-5 text-secondary"><Cpu :size="11" style="vertical-align:-1px;" /> CPU</div>
+              <div v-if="lookupResult.cpuTen" class="col-7">{{ lookupResult.cpuTen }}</div>
+              <div v-if="lookupResult.ramTen" class="col-5 text-secondary"><MemoryStick :size="11" style="vertical-align:-1px;" /> RAM</div>
+              <div v-if="lookupResult.ramTen" class="col-7">{{ lookupResult.ramTen }}</div>
+              <div v-if="lookupResult.oCungTen" class="col-5 text-secondary"><HardDrive :size="11" style="vertical-align:-1px;" /> Ổ cứng</div>
+              <div v-if="lookupResult.oCungTen" class="col-7">{{ lookupResult.oCungTen }}</div>
+              <div v-if="lookupResult.gpuTen" class="col-5 text-secondary"><Tag :size="11" style="vertical-align:-1px;" /> GPU</div>
+              <div v-if="lookupResult.gpuTen" class="col-7">{{ lookupResult.gpuTen }}</div>
+              <div v-if="lookupResult.kichThuocManHinh" class="col-5 text-secondary"><Monitor :size="11" style="vertical-align:-1px;" /> Màn</div>
+              <div v-if="lookupResult.kichThuocManHinh" class="col-7">{{ lookupResult.kichThuocManHinh }}</div>
+              <div v-if="lookupResult.heDieuHanh" class="col-5 text-secondary">HĐH</div>
+              <div v-if="lookupResult.heDieuHanh" class="col-7">{{ lookupResult.heDieuHanh }}</div>
+              <div v-if="lookupResult.mauSac" class="col-5 text-secondary">Màu</div>
+              <div v-if="lookupResult.mauSac" class="col-7">{{ lookupResult.mauSac }}</div>
+              <div v-if="lookupResult.pin" class="col-5 text-secondary">Pin</div>
+              <div v-if="lookupResult.pin" class="col-7">{{ lookupResult.pin }}</div>
+              <div v-if="lookupResult.trongLuongKg" class="col-5 text-secondary">Trọng lượng</div>
+              <div v-if="lookupResult.trongLuongKg" class="col-7">{{ lookupResult.trongLuongKg }} kg</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Warranty history -->
+      <div v-if="lookupResult.lichSuPhieuBaoHanh && lookupResult.lichSuPhieuBaoHanh.length > 0" class="mb-3">
+        <div class="small text-secondary mb-1 fw-semibold" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.5px;">{{ t('admin.warrantyScan.historyTitle') }}</div>
+        <div class="row g-2">
+          <div v-for="p in lookupResult.lichSuPhieuBaoHanh" :key="p.baoHanhId" class="col-12 col-sm-6 col-md-4">
+            <div class="p-2 rounded-2 small" style="background:var(--bg-input);">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="font-monospace text-secondary">#{{ p.baoHanhId }}</span>
+                <span class="badge" :style="{ background: statusColor(p.trangThai).bg, color: statusColor(p.trangThai).text }">{{ t(`admin.warrantyClaimStatus.${p.trangThai}`) }}</span>
+              </div>
+              <div class="text-secondary" style="font-size:0.78rem;">{{ p.ngayTiepNhan ? formatDate(p.ngayTiepNhan) : '—' }}</div>
+              <div class="text-secondary" style="font-size:0.78rem;" :title="p.moTaLoi">{{ p.moTaLoi ? (p.moTaLoi.length > 40 ? p.moTaLoi.slice(0,40)+'…' : p.moTaLoi) : '—' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="d-flex gap-2 flex-wrap justify-content-end border-top pt-3" style="border-color:var(--border-color) !important;">
+        <router-link
+          v-if="isSerialNotSold && lookupResult.sanPhamId"
+          :to="{ name: 'admin-san-pham-detail', params: { id: lookupResult.sanPhamId } }"
+          class="alt-btn alt-btn--ghost"
+          style="text-decoration:none;"
+        >
+          <Package :size="13" /> {{ t('admin.warrantyScan.viewVariant') }}
+        </router-link>
+        <button
+          class="alt-btn alt-btn--primary"
+          :disabled="!canCreateClaim"
+          :title="!canCreateClaim ? t('admin.warrantyScan.notSoldTooltip') : ''"
+          @click="createClaimFromLookup"
+        >
+          <Shield :size="13" /> {{ t('admin.warrantyScan.createClaim') }}
+        </button>
+        <button class="alt-btn alt-btn--ghost" @click="clearLookup">
+          <X :size="13" /> {{ t('admin.warrantyScan.clear') }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="alt-card mb-4">
     <div class="alt-toolbar">
       <span class="alt-toolbar__count">{{ filteredWarranty.length }} {{ t('admin.warranty.countSuffix') }}</span>
@@ -242,6 +699,9 @@ const saveClaim = async () => {
           <i class="fa fa-search alt-search__icon"></i>
           <input v-model="claimSearch" :placeholder="t('admin.warrantyClaims.searchPlaceholder')" />
         </div>
+        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openCreateManual">
+          <Shield :size="12" style="vertical-align:-2px;" /> {{ t('admin.warrantyClaims.createManual') }}
+        </button>
       </div>
     </div>
     <div v-if="BaoHanhStore.loading" class="alt-empty">{{ t('admin.warrantyClaims.loading') }}</div>
@@ -286,12 +746,33 @@ const saveClaim = async () => {
       </div>
       <div v-if="formError" class="alert alert-danger small py-2 mb-2">{{ formError }}</div>
 
-      <div class="p-2 mb-3 rounded-2" style="background:var(--bg-input);">
+      <div v-if="lockedInfo" class="p-2 mb-3 rounded-2" style="background:var(--bg-input);">
         <div v-if="lockedInfo?.tenSanPham" class="small">{{ t('admin.warrantyClaimModal.productLabel') }}: <strong>{{ lockedInfo.tenSanPham }}</strong> ({{ lockedInfo.maSku }})</div>
         <div v-else class="small">{{ t('admin.warrantyClaimModal.productLabel') }}: <strong>{{ lockedInfo?.maSku }}</strong></div>
         <div class="small">{{ t('admin.warrantyClaimModal.serialLabel') }}: <strong>{{ lockedInfo?.soSerial || '—' }}</strong></div>
         <div class="small">{{ t('admin.warrantyClaimModal.customerLabel') }}: <strong>{{ lockedInfo?.tenKhachHang }}</strong></div>
         <div class="small">{{ t('admin.warrantyClaimModal.orderLabel') }}: <strong>{{ lockedInfo?.maDonHang }}</strong></div>
+      </div>
+      <div v-else class="p-2 mb-3 rounded-2" style="background:var(--bg-input);">
+        <div class="text-secondary small mb-2">{{ t('admin.warrantyClaimModal.manualHint') }}</div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label small text-secondary mb-1">{{ t('admin.warrantyClaimModal.orderLabel') }}</label>
+            <input v-model.number="form.donHangId" type="number" min="1" class="form-control form-control-sm" style="background:var(--bg-page);color:var(--text-primary);border-color:var(--border-color-strong);" />
+          </div>
+          <div class="col-6">
+            <label class="form-label small text-secondary mb-1">{{ t('admin.warrantyClaimModal.variantLabel') }}</label>
+            <input v-model.number="form.bienTheId" type="number" min="1" class="form-control form-control-sm" style="background:var(--bg-page);color:var(--text-primary);border-color:var(--border-color-strong);" />
+          </div>
+          <div class="col-6">
+            <label class="form-label small text-secondary mb-1">{{ t('admin.warrantyClaimModal.customerLabel') }}</label>
+            <input v-model.number="form.khachHangId" type="number" min="1" class="form-control form-control-sm" style="background:var(--bg-page);color:var(--text-primary);border-color:var(--border-color-strong);" />
+          </div>
+          <div class="col-6">
+            <label class="form-label small text-secondary mb-1">{{ t('admin.warrantyClaimModal.chiTietLabel') }}</label>
+            <input v-model.number="form.chiTietId" type="number" min="1" class="form-control form-control-sm" style="background:var(--bg-page);color:var(--text-primary);border-color:var(--border-color-strong);" />
+          </div>
+        </div>
       </div>
 
       <div class="row g-2 mb-2">
@@ -354,3 +835,117 @@ const saveClaim = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.usb-scanner-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.usb-scanner-modal {
+  background: var(--bg-card, #1a1d27);
+  border: 1px solid var(--border-color, #2d3142);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.usb-scanner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.usb-scanner-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary, #e5e7eb);
+}
+.usb-status-bar {
+  background: var(--bg-card-alt, #0f1117);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  margin-bottom: 16px;
+}
+.usb-instructions {
+  background: var(--bg-card-alt, #0f1117);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.usb-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #9ca3af);
+}
+.usb-step:last-child { margin-bottom: 0; }
+.step-num {
+  background: #374151;
+  color: #fff;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.usb-url-box {
+  background: #1f2937;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 4px 0 4px 30px;
+}
+.usb-url-box code {
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: #10b981;
+}
+.usb-last-scan {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.usb-history {
+  background: var(--bg-card-alt, #0f1117);
+  border-radius: 8px;
+  padding: 10px;
+}
+.usb-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.usb-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--bg-card, #1a1d27);
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: #10b981;
+}
+</style>

@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,4 +23,8 @@ public interface PhieuBaoHanhRepository extends JpaRepository<PhieuBaoHanh, Inte
     List<PhieuBaoHanh> findByDonHang_Id(Integer donHangId);
 
     boolean existsByBienThe_BienTheId(Integer bienTheId);
+
+    // Lich su phieu bao hanh cua 1 serial, moi nhat truoc
+    @Query("SELECT new com.example.backend.response.PhieuBaoHanhResponse(p.baoHanhId, p.donHang.id, p.bienThe.bienTheId, p.bienThe.maSku, p.khachHang.khachHangId, ctsp.chiTietId, ctsp.soSerial, p.ngayMua, p.ngayHetBh, p.ngayTiepNhan, p.ngayTraKhach, p.moTaLoi, p.ketQuaXuLy, p.trangThai, p.chiPhiPhatSinh, p.ghiChu) FROM PhieuBaoHanh p LEFT JOIN p.chiTietSanPham ctsp WHERE ctsp.chiTietId = :chiTietId ORDER BY p.ngayTiepNhan DESC NULLS LAST")
+    List<PhieuBaoHanhResponse> findByChiTietId(@Param("chiTietId") Integer chiTietId);
 }

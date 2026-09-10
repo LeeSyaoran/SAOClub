@@ -43,6 +43,10 @@ const kiemTraHetPhien = (r) => {
 
 export const get = async (url) => {
   const r = kiemTraHetPhien(await fetch(url, { headers: authHeaders() }));
+  // 403 = đã login nhưng không có quyền — không throw (admin-only API gọi khi là khách)
+  if (r.status === 403) {
+    return null;
+  }
   if (!r.ok) {
     const msg = await r.text().catch(() => '');
     throw new Error(`HTTP ${r.status}${msg ? ': ' + msg : ''}`);

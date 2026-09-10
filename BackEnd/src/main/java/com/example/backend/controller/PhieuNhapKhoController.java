@@ -12,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 @RestController
@@ -47,5 +48,24 @@ public class PhieuNhapKhoController {
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         phieuNhapKhoService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Kiểm tra serial trùng với DB hiện tại — trả về map bienTheId → serial[] */
+    @GetMapping("/{id}/kiem-tra-serial")
+    public ResponseEntity<Map<Integer, List<String>>> kiemTraSerial(@PathVariable Integer id) {
+        return ResponseEntity.ok(phieuNhapKhoService.kiemTraSerialTrung(id));
+    }
+
+    /** Kiểm tra serial trùng với DB — body là List<String> serials */
+    @PostMapping("/kiem-tra-serial")
+    public ResponseEntity<List<String>> kiemTraSerialVoiDb(@RequestBody List<String> serials) {
+        return ResponseEntity.ok(phieuNhapKhoService.kiemTraSerialVoiDb(serials));
+    }
+
+    /** Duyệt phiếu nhập: tạo serial vào kho */
+    @PostMapping("/{id}/duyet")
+    public ResponseEntity<Void> duyet(@PathVariable Integer id) {
+        phieuNhapKhoService.approve(id);
+        return ResponseEntity.ok().build();
     }
 }

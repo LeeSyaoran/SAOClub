@@ -18,7 +18,7 @@ import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { CheckCircle2, Package, Truck, Bike, Inbox, Laptop, User, Printer } from '@lucide/vue';
+import { CheckCircle2, Check, Package, Truck, Bike, Inbox, Laptop, User, Printer } from '@lucide/vue';
 import InvoiceModal from "./InvoiceModal.vue";
 
 onMounted(() => { ensureOrders(); ensureCustomers(); ensureProducts(); });
@@ -350,6 +350,10 @@ const openVariantDetail = (bienTheId) => {
 // ── Order status helpers (dùng chung — xem src/utils/orderStatus.js) ──────────
 
 // ── Orders status update ──────────────────────────────────────────────────────
+// Modal "Cập nhật trạng thái" cũ đã được thay thế bằng timeline-click ở sidebar phải.
+// State còn lại (showOrderModal/editingOrder/saveOrderStatus...) chỉ phục vụ luồng nhập
+// mã vận đơn khi chuyển sang "shipping" — bấm step "shipping" trên timeline sẽ mở modal
+// này để admin nhập mã, vì lý do đó nên giữ lại cấu trúc modal (z-index/showOrderModal).
 const showOrderModal = ref(false);
 const editingOrder = ref(null);
 const orderStatusError = ref("");
@@ -372,8 +376,8 @@ const openOrderStatus = (o) => {
   orderStatusError.value = "";
   showOrderModal.value = true;
 };
-// Dựng body PUT /don-hang/update — dùng chung cho modal "Cập nhật trạng thái" (sửa tay,
-// nhiều trường) và nút "next step" nhanh trên bảng (chỉ đổi trangThaiDonHang).
+// Dựng body PUT /don-hang/update — dùng chung cho nút "next step" nhanh trên bảng, nút
+// "bước tiếp theo" trong modal, và modal "Nhập mã vận đơn" khi chuyển sang shipping.
 const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGiaoDuKien, ngayGiaoThucTe, maVanDon }) => ({
   khachHangId: o.khachHangId,
   nhanVienId: o.nhanVienId ?? null,
@@ -404,20 +408,15 @@ const saveOrderStatus = async () => {
   if (orderStatusSaving.value) return;
   orderStatusSaving.value = true;
   try {
-  const o = editingOrder.value;
-  if (orderStatusForm.trangThaiDonHang === 'confirmed' && o.trangThaiDonHang !== 'confirmed' && o.kenhBan === 'online') {
-    showOrderModal.value = false;
-    await openXacNhanSerialModal(o);
-    return;
-  }
-  const body = buildOrderUpdateBody(o, {
-    trangThaiDonHang: orderStatusForm.trangThaiDonHang,
-    trangThaiThanhToan: orderStatusForm.trangThaiThanhToan,
-    ngayGiaoDuKien: orderStatusForm.ngayGiaoDuKien,
-    ngayGiaoThucTe: orderStatusForm.ngayGiaoThucTe,
-    maVanDon: orderStatusForm.maVanDon,
-  });
-  const res = await DonHangService.update(o.donHangId, body);
+    const o = editingOrder.value;
+    const body = buildOrderUpdateBody(o, {
+      trangThaiDonHang: orderStatusForm.trangThaiDonHang,
+      trangThaiThanhToan: orderStatusForm.trangThaiThanhToan,
+      ngayGiaoDuKien: orderStatusForm.ngayGiaoDuKien,
+      ngayGiaoThucTe: orderStatusForm.ngayGiaoThucTe,
+      maVanDon: orderStatusForm.maVanDon,
+    });
+    const res = await DonHangService.update(o.donHangId, body);
     if (!res.ok) {
       orderStatusError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
       return;
@@ -447,6 +446,90 @@ const NEXT_ORDER_STATUS_LABEL = {
   processing:       { icon: Truck, key: 'admin.orders.nextShip' },
   shipping:         { icon: Bike, key: 'admin.orders.nextOutForDelivery' },
   out_for_delivery: { icon: Inbox, key: 'admin.orders.nextDelivered' },
+};
+
+// Thứ tự trạng thái tuyến tính dùng cho sidebar timeline-click (không phụ thuộc phase
+// pre/post-ship như component OrderStatusTimeline ở AccountPage). Mỗi đơn khi đã xác nhận
+// thì đi đúng 1 đường: pending -> confirmed -> processing -> shipping -> out_for_delivery
+// -> awaiting_confirmation -> delivered. cancelled/returned là nhánh rẽ riêng, không vẽ
+// trên timeline chính (vẽ thì phức tạp và admin không cần - nếu đơn bị hủy/trả thì hiện
+// dòng "Đơn đã ở trạng thái cuối" là đủ).
+const LINEAR_STATUS_ORDER = [
+  'pending', 'confirmed', 'processing', 'shipping',
+  'out_for_delivery', 'awaiting_confirmation', 'delivered',
+];
+
+// Timeline sidebar: đầy đủ 7 step tuyến tính, mỗi step là 1 nút bấm được. Bấm = chuyển thẳng
+// sang trạng thái đó (có thể bỏ qua step - vd đang 'pending' bấm thẳng 'shipping' cũng được,
+// tiện khi muốn gộp nhiều bước).
+const orderTimelineSteps = computed(() => [
+  { id: 'pending',                title: orderStatusLabel('pending'),                desc: t('orderStatus.timeline.placedDesc'),    icon: CheckCircle2 },
+  { id: 'confirmed',              title: orderStatusLabel('confirmed'),              desc: t('orderStatus.timeline.confirmedDesc'), icon: CheckCircle2 },
+  { id: 'processing',             title: orderStatusLabel('processing'),             desc: t('orderStatus.timeline.packingDesc'),   icon: Package },
+  { id: 'shipping',               title: orderStatusLabel('shipping'),               desc: t('orderStatus.timeline.shippingDesc'),  icon: Truck },
+  { id: 'out_for_delivery',       title: orderStatusLabel('out_for_delivery'),       desc: t('orderStatus.timeline.outForDeliveryDesc'), icon: Bike },
+  { id: 'awaiting_confirmation',  title: orderStatusLabel('awaiting_confirmation'),  desc: t('orderStatus.timeline.deliveredDesc'),  icon: Inbox },
+  { id: 'delivered',              title: orderStatusLabel('delivered'),              desc: t('orderStatus.timeline.deliveredDesc'),  icon: CheckCircle2 },
+]);
+
+// "Đã qua" = vị trí trong timeline <= trạng thái hiện tại (vd đang 'shipping' thì
+// pending/confirmed/processing/shipping đều tính là đã qua).
+const isStepReached = (order, stepId) => {
+  const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
+  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
+  return cur !== -1 && idx !== -1 && idx <= cur;
+};
+
+// Step đã tick xanh = đã qua VÀ không phải bước hiện tại (bước hiện tại sáng cam chứ không tick).
+const isStepDoneById = (order, stepId) => {
+  const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
+  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
+  return cur !== -1 && idx !== -1 && idx < cur;
+};
+
+// Bấm được khi step đó nằm sau trạng thái hiện tại (chuyển tiến), HOẶC chính là bước hiện tại
+// (cho phép "bấm lại" - sẽ bị noop ở jumpToStatus). Lùi về bước trước KHÔNG cho phép qua
+// timeline-click (chỉ qua modal cập nhật đầy đủ hoặc nhờ thủ tục hủy đơn).
+const canJumpToStep = (order, stepId) => {
+  if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
+  const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
+  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
+  return idx !== -1 && cur !== -1 && idx >= cur;
+};
+
+// Bấm vào step để chuyển trạng thái. Nếu trùng trạng thái hiện tại thì noop.
+// Nếu step là 'shipping' (bắt buộc nhập mã vận đơn) thì mở modal cũ để nhập - không
+// nhảy thẳng được. Nếu đơn online + step là 'confirmed' thì mở modal chọn serial.
+// Ngược lại: gọi thẳng DonHangService.update với logic giống advanceOrderStatus.
+const jumpToStatus = async (order, stepId) => {
+  if (order.trangThaiDonHang === stepId) return;
+  if (!canJumpToStep(order, stepId)) return;
+  // Bước cần nhập thêm thông tin: mở modal cập nhật đầy đủ
+  if (stepId === 'shipping') {
+    openOrderStatus(order);
+    orderStatusForm.trangThaiDonHang = 'shipping';
+    return;
+  }
+  // Đơn online pending -> confirmed: mở modal chọn serial (giống advanceOrderStatus)
+  if (stepId === 'confirmed' && order.kenhBan === 'online') {
+    await openXacNhanSerialModal(order);
+    return;
+  }
+  // Tự động cập nhật payment + ngày giao giống advanceOrderStatus để tránh 2 nơi logic lệch
+  const body = buildOrderUpdateBody(order, {
+    trangThaiDonHang: stepId,
+    trangThaiThanhToan: stepId === 'awaiting_confirmation' && order.trangThaiThanhToan === 'unpaid'
+      ? 'paid'
+      : order.trangThaiThanhToan,
+    ngayGiaoDuKien: order.ngayGiaoDuKien,
+    ngayGiaoThucTe: stepId === 'awaiting_confirmation' && !order.ngayGiaoThucTe
+      ? nowLocalIso()
+      : order.ngayGiaoThucTe,
+    maVanDon: order.maVanDon,
+  });
+  const res = await DonHangService.update(order.donHangId, body);
+  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.updateFailed', { status: res.status }))); return; }
+  await refreshOrders();
 };
 const advanceOrderStatus = async (o) => {
   const next = NEXT_ORDER_STATUS[o.trangThaiDonHang];
@@ -640,8 +723,12 @@ const confirmXacNhanSerial = async () => {
             <option value="in_store">{{ channelLabel('in_store') }}</option>
             <option value="online">{{ channelLabel('online') }}</option>
           </select>
-          <button v-if="orderViewMode==='today'" class="alt-btn alt-btn--ghost" @click="openOrderHistory">{{ t('admin.orders.history') }}</button>
         </div>
+      </div>
+      <!-- Hàng riêng cho nút "Lịch sử đơn hàng" — tách khỏi toolbar để search + 3 select luôn
+           nằm cùng 1 hàng ngang, không bị flex-wrap xô xuống khi viewport hẹp. -->
+      <div v-if="orderViewMode==='today'" class="alt-history-row">
+        <button class="alt-btn alt-btn--ghost" @click="openOrderHistory">{{ t('admin.orders.history') }}</button>
       </div>
       <div v-if="OrdersStore.loading" class="alt-empty">{{ t('admin.orders.loading') }}</div>
       <div v-else class="alt-table-wrap">
@@ -834,14 +921,14 @@ const confirmXacNhanSerial = async () => {
 
   <!-- ══ MODAL CHI TIET DON HANG ══ -->
   <div v-if="showOrderDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1050;" @click.self="showOrderDetailModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:720px;max-width:96vw;max-height:90vh;">
-      <!-- Header -->
-      <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-bottom:1px solid var(--border-color-soft);">
+    <div class="alt-card d-flex flex-column" style="width:880px;max-width:96vw;max-height:92vh;border-radius:14px;">
+      <!-- Header gọn: chỉ tên khách + mã đơn + nút đóng. Tất cả action nằm bên sidebar phải. -->
+      <div class="alt-toolbar">
         <div>
           <div class="fw-bold" style="font-size:1.05rem;color:var(--text-heading);">
             <User :size="14" style="vertical-align:-2px;" /> {{ customerName(orderDetailData?.khachHangId) }}
           </div>
-          <div class="text-secondary d-flex align-items-center gap-2" style="font-size:0.78rem;flex-wrap:wrap;">
+          <div class="d-flex align-items-center gap-2" style="font-size:0.78rem;flex-wrap:wrap;color:var(--text-muted);">
             <span>{{ t('admin.orderDetailModal.titlePrefix') }}{{ orderDetailData?.donHangId }}</span>
             <span v-if="orderDetailData?.maDonHang" style="font-family:monospace;">{{ orderDetailData.maDonHang }}</span>
             <span v-if="orderDetailData?.kenhBan" class="alt-tag" style="font-size:0.7rem;" :style="{ background: channelColor(orderDetailData.kenhBan).bg, color: channelColor(orderDetailData.kenhBan).text }">
@@ -850,184 +937,258 @@ const confirmXacNhanSerial = async () => {
             <span>· {{ formatDate(orderDetailData?.ngayDat) }}</span>
           </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
-          <button
-            class="btn btn-sm btn-warning text-dark fw-bold d-flex align-items-center gap-1"
-            @click="invoiceOrder = orderDetailData; showInvoice = true"
-          ><Printer :size="13" /> In hóa đơn</button>
+        <div class="alt-toolbar__actions">
+          <button class="alt-btn alt-btn--primary d-flex align-items-center gap-1" @click="invoiceOrder = orderDetailData; showInvoice = true">
+            <Printer :size="13" /> In hóa đơn
+          </button>
           <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showOrderDetailModal=false"></button>
         </div>
       </div>
 
-      <!-- Toan bo body scroll cung nhau -->
-      <div class="overflow-y-auto flex-grow-1">
-        <!-- Danh sach san pham trong don -->
-        <div class="p-3">
-          <div v-if="orderDetailLoading" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.loading') }}</div>
-          <div v-else-if="orderDetailItems.length === 0" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.empty') }}</div>
-          <table v-else class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
-            <thead>
-              <tr style="background:var(--bg-input);">
-                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:55%;">{{ t('admin.orderDetailModal.colProduct') }}</th>
-                <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:8%;">{{ t('admin.orderDetailModal.colQty') }}</th>
-                <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colUnitPrice') }}</th>
-                <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colTotal') }}</th>
-                <th class="px-3 py-2 text-secondary" style="font-weight:600;width:9%;"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in orderDetailItems" :key="item.id" style="border-top:1px solid var(--border-color-soft);">
-                <!-- San pham: anh + ten + SKU + serial -->
-                <td class="px-3 py-3" colspan="1">
-                  <div class="d-flex align-items-start gap-3">
-                    <!-- Anh -->
-                    <div style="flex-shrink:0;width:52px;height:44px;background:var(--bg-card-inset);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-                      <img
-                        v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
-                        :src="productByBienThe(item.bienTheId).hinhAnhChinh"
-                        style="max-width:48px;max-height:40px;object-fit:contain;"
-                      />
-                      <Laptop v-else :size="22" color="var(--text-muted)" />
-                    </div>
-                    <!-- Info -->
-                    <div style="min-width:0;">
-                      <div class="fw-semibold" style="color:var(--text-heading);font-size:0.88rem;line-height:1.3;">
-                        {{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}
+      <!-- Body 2 cột: trái = sản phẩm + tổng tiền, phải = sidebar trạng thái -->
+      <div class="d-flex flex-grow-1 overflow-hidden">
+        <!-- Cột trái: scroll độc lập -->
+        <div class="overflow-y-auto flex-grow-1" style="border-right:1px solid var(--border-color-soft);">
+          <!-- Danh sach san pham trong don -->
+          <div class="p-3">
+            <div v-if="orderDetailLoading" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.loading') }}</div>
+            <div v-else-if="orderDetailItems.length === 0" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.empty') }}</div>
+            <table v-else class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
+              <thead>
+                <tr style="background:var(--bg-input);">
+                  <th class="px-3 py-2 text-secondary" style="font-weight:600;width:55%;">{{ t('admin.orderDetailModal.colProduct') }}</th>
+                  <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:8%;">{{ t('admin.orderDetailModal.colQty') }}</th>
+                  <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colUnitPrice') }}</th>
+                  <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colTotal') }}</th>
+                  <th class="px-3 py-2 text-secondary" style="font-weight:600;width:9%;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in orderDetailItems" :key="item.id" style="border-top:1px solid var(--border-color-soft);">
+                  <!-- San pham: anh + ten + SKU + serial -->
+                  <td class="px-3 py-3" colspan="1">
+                    <div class="d-flex align-items-start gap-3">
+                      <div style="flex-shrink:0;width:52px;height:44px;background:var(--bg-card-inset);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                        <img
+                          v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
+                          :src="productByBienThe(item.bienTheId).hinhAnhChinh"
+                          style="max-width:48px;max-height:40px;object-fit:contain;"
+                        />
+                        <Laptop v-else :size="22" color="var(--text-muted)" />
                       </div>
-                      <!-- Bien the: CPU / RAM / O cung / Mau -->
-                      <div
-                        v-if="[productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).length"
-                        class="mt-1"
-                        style="font-size:0.74rem;color:var(--text-secondary);"
+                      <div style="min-width:0;">
+                        <div class="fw-semibold" style="color:var(--text-heading);font-size:0.88rem;line-height:1.3;">
+                          {{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}
+                        </div>
+                        <div
+                          v-if="[productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).length"
+                          class="mt-1"
+                          style="font-size:0.74rem;color:var(--text-secondary);"
+                        >
+                          {{ [productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).join(' · ') }}
+                        </div>
+                        <div v-if="item.maSku" class="mt-1" style="font-size:0.72rem;color:var(--text-muted);">
+                          Mã hàng: <span style="font-family:monospace;color:var(--text-secondary);">{{ item.maSku }}</span>
+                        </div>
+                        <div v-if="item.soSerial" class="mt-1" style="font-size:0.75rem;color:var(--text-secondary);">
+                          Số serial: <strong style="font-family:monospace;color:var(--text-primary);letter-spacing:0.03em;">{{ item.soSerial }}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-3 py-3 text-center fw-bold" style="color:var(--text-heading);vertical-align:middle;">{{ item.soLuong }}</td>
+                  <td class="px-3 py-3 text-end text-secondary" style="vertical-align:middle;">{{ formatPrice(item.donGia) }}</td>
+                  <td class="px-3 py-3 text-end fw-semibold" style="color:var(--accent-fg);vertical-align:middle;">{{ formatPrice(item.thanhTien) }}</td>
+                  <td class="px-3 py-3" style="vertical-align:middle;">
+                    <div class="d-flex gap-1 justify-content-center">
+                      <button
+                        v-if="productByBienThe(item.bienTheId)"
+                        class="btn btn-sm btn-outline-secondary"
+                        style="font-size:0.72rem;padding:2px 8px;"
+                        @click="openVariantDetail(item.bienTheId)"
                       >
-                        {{ [productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).join(' · ') }}
-                      </div>
-                      <div v-if="item.maSku" class="mt-1" style="font-size:0.72rem;color:var(--text-muted);">
-                        Mã hàng: <span style="font-family:monospace;color:var(--text-secondary);">{{ item.maSku }}</span>
-                      </div>
-                      <div v-if="item.soSerial" class="mt-1" style="font-size:0.75rem;color:var(--text-secondary);">
-                        Số serial: <strong style="font-family:monospace;color:var(--text-primary);letter-spacing:0.03em;">{{ item.soSerial }}</strong>
-                      </div>
+                        {{ t('admin.orderDetailModal.detail') }}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Footer: tong ket -->
+          <div v-if="orderDetailData" class="px-4 py-3 d-flex flex-column gap-1" style="border-top:1px solid var(--border-color-soft);background:var(--bg-card-alt);">
+            <div class="d-flex justify-content-between small text-secondary">
+              <span>{{ t('admin.orderDetailModal.subtotal') }}</span><span>{{ formatPrice(orderDetailData.tongTien) }}</span>
+            </div>
+            <div v-if="orderDetailData.giamGia > 0" class="d-flex justify-content-between small text-success">
+              <span>{{ t('admin.orderDetailModal.discount') }}</span><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
+            </div>
+            <div v-if="orderDetailData.kenhBan !== 'in_store'" class="d-flex justify-content-between small text-secondary">
+              <span>{{ t('admin.orderDetailModal.shippingFee') }}</span>
+              <span :class="orderDetailData.phiVanChuyen === 0 ? 'text-success' : ''">
+                {{ orderDetailData.phiVanChuyen === 0 ? t('admin.orderDetailModal.free') : formatPrice(orderDetailData.phiVanChuyen) }}
+              </span>
+            </div>
+            <div class="d-flex justify-content-between fw-bold pt-2 mt-1" style="border-top:1px solid var(--border-color);">
+              <span style="color:var(--text-heading);">{{ t('admin.orderDetailModal.total') }}</span>
+              <span class="text-warning" style="font-size:1rem;">{{ formatPrice(orderDetailData.thanhTien) }}</span>
+            </div>
+
+            <!-- Canh bao gop don: chi 1 nut, tu dong gop tat ca don cung ngay -->
+            <div
+              v-if="mergeCandidates.length > 0" class="mt-2 pt-2 d-flex align-items-center justify-content-between gap-2"
+              style="border-top:1px solid var(--bg-input);background:#1a1500;border-radius:6px;padding:8px 12px;"
+            >
+              <span style="font-size:0.78rem;color:#fbbf24;">
+                {{ t('admin.orderDetailModal.mergeBannerText', { count: mergeCandidates.length }) }}
+                <span class="text-secondary ms-1">(#{{ mergeCandidates.map(o => o.donHangId).join(', #') }})</span>
+              </span>
+              <button
+                class="btn btn-sm btn-warning flex-shrink-0" style="font-size:0.78rem;padding:3px 10px;"
+                :disabled="mergeLoading"
+                @click="autoMergeOrders"
+              >
+                {{ mergeLoading ? t('admin.orderDetailModal.merging') : t('admin.orderDetailModal.mergeAll') }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar phải: trạng thái đơn + thanh toán + timeline các-step-có-thể-bấm + nút chuyển step + cập nhật -->
+        <div v-if="orderDetailData" class="d-flex flex-column" style="width:300px; flex-shrink:0; background:var(--bg-card-alt);">
+          <div class="overflow-y-auto p-3 d-flex flex-column gap-3">
+            <!-- Nhóm trạng thái: badge trạng thái hiện tại -->
+            <div>
+              <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
+                {{ t('admin.orderDetailModal.orderStatus') }}
+              </div>
+              <span class="alt-tag d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
+                <component :is="orderStatusIcon(orderDetailData.trangThaiDonHang)" :size="13" />
+                {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
+              </span>
+            </div>
+
+            <!-- Timeline dọc: mỗi step là 1 nút bấm được - bấm vào step tương lai = chuyển thẳng trạng thái đó
+                 (bước nào đã qua thì bấm không tác dụng, chỉ tham khảo). Step cuối chưa đạt của phase
+                 hiện tại là "next step" nhanh nhất - không cần qua modal chọn trạng thái nữa. -->
+            <div>
+              <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
+                {{ t('orderStatus.timeline.title') }}
+              </div>
+              <div class="d-flex flex-column gap-0" style="position:relative;">
+                <div
+                  v-for="(step, index) in orderTimelineSteps" :key="step.id"
+                  class="d-flex align-items-start gap-3" style="position:relative;"
+                >
+                  <div class="d-flex flex-column align-items-center" style="width:32px; flex-shrink:0; position:relative;">
+                    <button
+                      type="button"
+                      class="rounded-circle d-flex align-items-center justify-content-center position-relative p-0"
+                      style="width:32px; height:32px; border:none;"
+                      :disabled="!canJumpToStep(orderDetailData, step.id)"
+                      :title="canJumpToStep(orderDetailData, step.id) ? `Chuyển sang &quot;${step.title}&quot;` : ''"
+                      :style="isStepReached(orderDetailData, step.id)
+                        ? isStepDoneById(orderDetailData, step.id)
+                          ? 'background:var(--accent); border:2px solid var(--accent); cursor:default;'
+                          : 'background:var(--bg-hover); border:2px solid var(--accent); box-shadow:0 0 0 4px rgba(244,63,94,0.18); cursor:pointer;'
+                        : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong); cursor:pointer;'"
+                      @click="jumpToStatus(orderDetailData, step.id)"
+                    >
+                      <Check v-if="isStepDoneById(orderDetailData, step.id)" :size="14" color="white" />
+                      <component v-else :is="step.icon" :size="14" :style="{ opacity: canJumpToStep(orderDetailData, step.id) ? 1 : 0.35 }" />
+                    </button>
+                    <div
+                      v-if="index < orderTimelineSteps.length - 1" style="width:2px; flex-grow:1; min-height:18px; margin-top:4px;"
+                      :style="isStepReached(orderDetailData, orderTimelineSteps[index+1].id) ? 'background:var(--accent);' : 'background:var(--border-color-strong); opacity:0.4;'"
+                    ></div>
+                  </div>
+                  <div class="flex-grow-1 pb-3" style="padding-top:4px;">
+                    <div
+                      class="fw-semibold" style="font-size:0.85rem; line-height:1.3;"
+                      :style="orderDetailData.trangThaiDonHang === step.id
+                        ? 'color:var(--accent-fg);'
+                        : isStepReached(orderDetailData, step.id) ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'"
+                    >
+                      {{ step.title }}
+                    </div>
+                    <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.35; margin-top:2px;">
+                      {{ step.desc }}
                     </div>
                   </div>
-                </td>
-                <td class="px-3 py-3 text-center fw-bold" style="color:var(--text-heading);vertical-align:middle;">{{ item.soLuong }}</td>
-                <td class="px-3 py-3 text-end text-secondary" style="vertical-align:middle;">{{ formatPrice(item.donGia) }}</td>
-                <td class="px-3 py-3 text-end fw-semibold" style="color:var(--accent-fg);vertical-align:middle;">{{ formatPrice(item.thanhTien) }}</td>
-                <td class="px-3 py-3" style="vertical-align:middle;">
-                  <div class="d-flex gap-1 justify-content-center">
-                    <button
-                      v-if="productByBienThe(item.bienTheId)"
-                      class="btn btn-sm btn-outline-secondary"
-                      style="font-size:0.72rem;padding:2px 8px;"
-                      @click="openVariantDetail(item.bienTheId)"
-                    >
-                      {{ t('admin.orderDetailModal.detail') }}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                </div>
+              </div>
 
-        <!-- Footer: tong ket -->
-        <div v-if="orderDetailData" class="px-4 py-3 d-flex flex-column gap-1" style="border-top:1px solid var(--border-color-soft);background:var(--bg-card-alt);">
-          <div class="d-flex justify-content-between small text-secondary">
-            <span>{{ t('admin.orderDetailModal.subtotal') }}</span><span>{{ formatPrice(orderDetailData.tongTien) }}</span>
-          </div>
-          <div v-if="orderDetailData.giamGia > 0" class="d-flex justify-content-between small text-success">
-            <span>{{ t('admin.orderDetailModal.discount') }}</span><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
-          </div>
-          <div v-if="orderDetailData.kenhBan !== 'in_store'" class="d-flex justify-content-between small text-secondary">
-            <span>{{ t('admin.orderDetailModal.shippingFee') }}</span>
-            <span :class="orderDetailData.phiVanChuyen === 0 ? 'text-success' : ''">
-              {{ orderDetailData.phiVanChuyen === 0 ? t('admin.orderDetailModal.free') : formatPrice(orderDetailData.phiVanChuyen) }}
-            </span>
-          </div>
-          <div class="d-flex justify-content-between fw-bold pt-2 mt-1" style="border-top:1px solid var(--border-color);">
-            <span style="color:var(--text-heading);">{{ t('admin.orderDetailModal.total') }}</span>
-            <span class="text-warning" style="font-size:1rem;">{{ formatPrice(orderDetailData.thanhTien) }}</span>
-          </div>
-          <div class="d-flex justify-content-between small mt-2 pt-2" style="border-top:1px solid var(--bg-input);">
-            <span class="text-secondary">{{ t('admin.orderDetailModal.orderStatus') }}</span>
-            <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
-              <component :is="orderStatusIcon(orderDetailData.trangThaiDonHang)" :size="13" /> {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
-            </span>
-          </div>
-          <div class="d-flex justify-content-between small">
-            <span class="text-secondary">{{ t('admin.orderDetailModal.paymentStatus') }}</span>
-            <span class="badge d-inline-flex align-items-center gap-1" :style="{ background: paymentStatusColor(orderDetailData.trangThaiThanhToan).bg, color: paymentStatusColor(orderDetailData.trangThaiThanhToan).text }">
-              <component :is="paymentStatusIcon(orderDetailData.trangThaiThanhToan)" :size="13" /> {{ orderDetailData.trangThaiThanhToan ? paymentStatusLabel(orderDetailData.trangThaiThanhToan) : '—' }}
-            </span>
-          </div>
-          <div v-if="orderDetailPayments.length" class="d-flex justify-content-between small">
-            <span class="text-secondary">{{ t('admin.orderDetailModal.paymentMethod') }}</span>
-            <span style="color:var(--text-primary);">
-              <template v-for="(g, idx) in orderDetailPaymentsSummary" :key="g.method">
-                <component :is="paymentMethodIcon(g.method)" :size="14" style="vertical-align:-2px;" /> {{ paymentMethodLabel(g.method) }}<template v-if="g.count > 1"> ×{{ g.count }} ({{ formatPrice(g.total) }})</template><span v-if="idx < orderDetailPaymentsSummary.length - 1">, </span>
-              </template>
-            </span>
-          </div>
-          <div v-if="orderDetailData.ngayGiaoDuKien" class="d-flex justify-content-between small">
-            <span class="text-secondary">{{ t('admin.orderStatusModal.expectedDeliveryLabel') }}</span>
-            <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoDuKien) }}</span>
-          </div>
-          <div v-if="orderDetailData.ngayGiaoThucTe" class="d-flex justify-content-between small">
-            <span class="text-secondary">{{ t('admin.orderStatusModal.actualDeliveryLabel') }}</span>
-            <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoThucTe) }}</span>
-          </div>
+              <!-- Trường hợp đơn ở trạng thái cuối (cancelled/returned/delivered) - không có step nào để bấm. -->
+              <div
+                v-if="!NEXT_ORDER_STATUS[orderDetailData.trangThaiDonHang] && !['cancelled','returned','delivered'].includes(orderDetailData.trangThaiDonHang)"
+                class="small text-secondary mt-3 text-center py-2 rounded-2" style="background:var(--bg-input);"
+              >
+                {{ t('admin.orderDetailModal.noNextStep') }}
+              </div>
+            </div>
 
+            <!-- Thanh toán -->
+            <div style="border-top:1px solid var(--border-color-soft); padding-top:12px;">
+              <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
+                {{ t('admin.orderDetailModal.paymentStatus') }}
+              </div>
+              <div class="alt-tag d-inline-flex align-items-center gap-1" :style="{ background: paymentStatusColor(orderDetailData.trangThaiThanhToan).bg, color: paymentStatusColor(orderDetailData.trangThaiThanhToan).text }">
+                <component :is="paymentStatusIcon(orderDetailData.trangThaiThanhToan)" :size="13" />
+                {{ orderDetailData.trangThaiThanhToan ? paymentStatusLabel(orderDetailData.trangThaiThanhToan) : '—' }}
+              </div>
+              <div v-if="orderDetailPayments.length" class="mt-2 small text-secondary">
+                <span class="d-block mb-1">{{ t('admin.orderDetailModal.paymentMethod') }}:</span>
+                <span style="color:var(--text-primary);">
+                  <template v-for="(g, idx) in orderDetailPaymentsSummary" :key="g.method">
+                    <component :is="paymentMethodIcon(g.method)" :size="13" style="vertical-align:-2px;" /> {{ paymentMethodLabel(g.method) }}<template v-if="g.count > 1"> ×{{ g.count }} ({{ formatPrice(g.total) }})</template><span v-if="idx < orderDetailPaymentsSummary.length - 1">, </span>
+                  </template>
+                </span>
+              </div>
+            </div>
 
-          <!-- Canh bao gop don: chi 1 nut, tu dong gop tat ca don cung ngay -->
-          <div
-            v-if="mergeCandidates.length > 0" class="mt-2 pt-2 d-flex align-items-center justify-content-between gap-2"
-            style="border-top:1px solid var(--bg-input);background:#1a1500;border-radius:6px;padding:8px 12px;"
-          >
-            <span style="font-size:0.78rem;color:#fbbf24;">
-              {{ t('admin.orderDetailModal.mergeBannerText', { count: mergeCandidates.length }) }}
-              <span class="text-secondary ms-1">(#{{ mergeCandidates.map(o => o.donHangId).join(', #') }})</span>
-            </span>
-            <button
-              class="btn btn-sm btn-warning flex-shrink-0" style="font-size:0.78rem;padding:3px 10px;"
-              :disabled="mergeLoading"
-              @click="autoMergeOrders"
-            >
-              {{ mergeLoading ? t('admin.orderDetailModal.merging') : t('admin.orderDetailModal.mergeAll') }}
-            </button>
+            <!-- Ngày giao -->
+            <div v-if="orderDetailData.ngayGiaoDuKien || orderDetailData.ngayGiaoThucTe" style="border-top:1px solid var(--border-color-soft); padding-top:12px;">
+              <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
+                {{ t('orderStatus.deliveryTitle') }}
+              </div>
+              <div v-if="orderDetailData.ngayGiaoDuKien" class="d-flex justify-content-between small">
+                <span class="text-secondary">{{ t('admin.orderStatusModal.expectedDeliveryLabel') }}</span>
+                <span style="color:var(--text-primary);">{{ formatDateTime(orderDetailData.ngayGiaoDuKien) }}</span>
+              </div>
+              <div v-if="orderDetailData.ngayGiaoThucTe" class="d-flex justify-content-between small mt-1">
+                <span class="text-secondary">{{ t('admin.orderStatusModal.actualDeliveryLabel') }}</span>
+                <span class="text-success fw-semibold">{{ formatDateTime(orderDetailData.ngayGiaoThucTe) }}</span>
+              </div>
+            </div>
+
+            <!-- Mã vận đơn -->
+            <div v-if="orderDetailData.maVanDon" style="border-top:1px solid var(--border-color-soft); padding-top:12px;">
+              <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
+                {{ t('admin.orderStatusModal.trackingCodeLabel') }}
+              </div>
+              <div class="fw-semibold" style="font-family:monospace; color:var(--text-primary);">{{ orderDetailData.maVanDon }}</div>
+            </div>
           </div>
         </div>
-      </div><!-- end outer scroll wrapper -->
+      </div>
     </div>
   </div>
 
-  <!-- ══ MODAL TRANG THAI DON HANG ══ -->
+  <!-- ══ MODAL NHẬP MÃ VẬN ĐƠN (chỉ dùng khi chuyển sang 'shipping' từ timeline-click) ══ -->
   <div v-if="showOrderModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showOrderModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:460px;max-width:95vw;max-height:90vh;">
+    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:460px;max-width:95vw;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ t('admin.orderStatusModal.title') }}</span>
+        <span>{{ t('admin.orderStatusModal.trackingCodeTitle') }}</span>
         <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showOrderModal=false"></button>
       </div>
-      <div class="overflow-y-auto p-4">
+      <div class="p-4">
         <div v-if="orderStatusError" class="alert alert-danger small py-2 mb-3">{{ orderStatusError }}</div>
         <div v-if="editingOrder" class="small p-2 rounded-2 mb-3 text-secondary" style="background:var(--bg-hover);">
           {{ t('admin.orderStatusModal.orderPrefix') }}{{ editingOrder.donHangId }} — {{ t('admin.orderStatusModal.customerLabel') }} <strong>{{ customerName(editingOrder.khachHangId) }}</strong>
         </div>
-        <div class="d-flex flex-column gap-3">
-          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.statusLabel') }}</label><select v-model="orderStatusForm.trangThaiDonHang" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="pending">{{ t('admin.orderStatusModal.status.pending') }}</option><option value="confirmed">{{ t('admin.orderStatusModal.status.confirmed') }}</option><option value="processing">{{ t('admin.orderStatusModal.status.processing') }}</option><option value="shipping">{{ t('admin.orderStatusModal.status.shipping') }}</option><option value="out_for_delivery">{{ t('admin.orderStatusModal.status.out_for_delivery') }}</option><option value="awaiting_confirmation">{{ t('admin.orderStatusModal.status.awaiting_confirmation') }}</option><option value="delivered">{{ t('admin.orderStatusModal.status.delivered') }}</option><option value="cancelled">{{ t('admin.orderStatusModal.status.cancelled') }}</option><option value="returned">{{ t('admin.orderStatusModal.status.returned') }}</option></select></div>
-          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.trackingCodeLabel') }}</label><input v-model="orderStatusForm.maVanDon" type="text" class="form-control form-control-sm" :placeholder="t('admin.orderStatusModal.trackingCodePlaceholder')" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div><label class="form-label small text-secondary">{{ t('admin.orderStatusModal.paymentLabel') }}</label><select v-model="orderStatusForm.trangThaiThanhToan" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="unpaid">{{ t('admin.paymentStatus.unpaid') }}</option><option value="partial">{{ t('admin.paymentStatus.partial') }}</option><option value="paid">{{ t('admin.paymentStatus.paid') }}</option><option value="refunded">{{ t('admin.paymentStatus.refunded') }}</option></select></div>
-          <div class="row g-2">
-            <div class="col-6">
-              <label class="form-label small text-secondary">{{ t('admin.orderStatusModal.expectedDeliveryLabel') }}</label>
-              <input v-model="orderStatusForm.ngayGiaoDuKien" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-secondary">{{ t('admin.orderStatusModal.actualDeliveryLabel') }}</label>
-              <input v-model="orderStatusForm.ngayGiaoThucTe" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
-            </div>
-          </div>
-        </div>
+        <label class="form-label small text-secondary">{{ t('admin.orderStatusModal.trackingCodeLabel') }}</label>
+        <input v-model="orderStatusForm.maVanDon" type="text" class="form-control form-control-sm" :placeholder="t('admin.orderStatusModal.trackingCodePlaceholder')" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
       </div>
       <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
         <button class="btn btn-sm btn-outline-secondary" @click="showOrderModal=false">{{ t('admin.orderStatusModal.cancel') }}</button>
@@ -1100,5 +1261,28 @@ const confirmXacNhanSerial = async () => {
    gioi component. */
 .text-light {
   color: var(--text-primary) !important;
+}
+
+/* Hàng riêng cho nút "Lịch sử đơn hàng" — tách khỏi toolbar chính để search + 3 select
+   luôn nằm 1 hàng ngang phía trên, không bị flex-wrap xô xuống. Đẩy nút sang phải bằng
+   margin-left:auto cho cân đối với cụm filter phía trên. */
+.alt-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 16px 12px;
+  background: var(--bg-card-alt);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Ghi đè flex-wrap của alt-toolbar__actions từ admin-list-theme.css để search + 3 select
+   luôn nằm cùng hàng ngang — nếu trình duyệt quá hẹp thì scroll ngang trong toolbar
+   thay vì xuống hàng, việc xuống hàng làm rối layout bảng. */
+.alt-toolbar__actions {
+  flex-wrap: nowrap !important;
+}
+.alt-toolbar__actions .alt-search {
+  flex-shrink: 1;
+  min-width: 180px;
 }
 </style>

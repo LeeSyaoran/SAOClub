@@ -12,4 +12,6 @@ import java.util.List;
 public interface ChiTietOcungRepository extends JpaRepository<ChiTietOcung, Integer> {
     @Query("SELECT new com.example.backend.response.ChiTietOcungResponse(c.chiTietOCungId, c.oCung.oCungId, c.oCung.loaiOcung, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietOcung c")
     List<ChiTietOcungResponse> hienThiChiTietOcung();
+
+    boolean existsBySoSerialIgnoreCase(String soSerial);
 }

@@ -1,5 +1,5 @@
 <script setup>
-defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
+defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome', 'toast']);
 import {
   ref,
   computed,
@@ -26,10 +26,13 @@ import CartSummary from "../components/cart/CartSummary.vue";
 const router = useRouter();
 
 const {
-  products, cart, showCart, cartCount, cartTotal, auth, ratingSummaries,
+  products, productsLoading, cart, showCart, cartCount, cartTotal,
+  cartSelected, cartSelectedTotal, cartSelectedCount,
+  auth, ratingSummaries,
 } = inject("appState");
 const {
   addToCart, removeFromCart, updateQty, toggleCart,
+  toggleCartItem, selectAllCartItems, deselectAllCartItems,
   openCheckout, openProduct, showToast, openLogin, onLogout,
   fetchProducts, formatPrice, isWishlisted, toggleWishlist,
 } = inject("appActions");
@@ -734,6 +737,7 @@ onMounted(() => {
             :rams="allRams"
             :gpus="allGpus"
             :storages="allStorages"
+            :loading="productsLoading"
             @change="onAdvFilterChange"
           />
         </div>
@@ -814,6 +818,26 @@ onMounted(() => {
             </button>
           </div>
 
+          <!-- Select all row -->
+          <div
+            v-if="cartCount > 0"
+            class="d-flex align-items-center justify-content-between px-4 py-2"
+            style="border-bottom: 1px solid var(--border-color-soft); font-size: 11px; color: var(--text-secondary);"
+          >
+            <label class="d-flex align-items-center gap-2" style="cursor:pointer;">
+              <input
+                type="checkbox"
+                :checked="cartSelected.size === cart.length && cart.length > 0"
+                :indeterminate="cartSelected.size > 0 && cartSelected.size < cart.length"
+                @change="cartSelected.size === cart.length ? deselectAllCartItems() : selectAllCartItems()"
+              />
+              <span>{{ t('cart.selectAll') }}</span>
+            </label>
+            <span v-if="cartSelectedCount > 0" class="text-warning fw-semibold">
+              {{ cartSelectedCount }} {{ t('cart.selected') }}
+            </span>
+          </div>
+
           <div
             v-if="cartCount === 0"
             class="flex-grow-1 d-flex flex-column align-items-center justify-content-center gap-3 text-center px-4"
@@ -838,15 +862,18 @@ onMounted(() => {
               v-for="item in cart"
               :key="item.bienTheId"
               :item="item"
+              :selected="cartSelected.has(item.bienTheId)"
               @decrease="updateQty(item.bienTheId, -1)"
               @increase="updateQty(item.bienTheId, 1)"
+              @remove="removeFromCart(item.bienTheId)"
+              @toggle="toggleCartItem(item.bienTheId)"
             />
           </div>
 
           <CartSummary
             v-if="cartCount > 0"
-            :cart-count="cartCount"
-            :cart-total="cartTotal"
+            :cart-count="cartSelectedCount"
+            :cart-total="cartSelectedTotal"
             @checkout="openCheckout"
           />
         </div>

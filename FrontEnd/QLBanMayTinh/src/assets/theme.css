@@ -2,6 +2,7 @@
 :root {
   --state-success: #16a34a;
   --state-danger:  #dc2626;
+  --state-warning: #d97706;
 }
 
 :root,

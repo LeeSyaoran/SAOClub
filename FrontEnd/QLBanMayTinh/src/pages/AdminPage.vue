@@ -58,7 +58,7 @@ import {
   Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive, Layers,
 } from '@lucide/vue';
 
-defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
+defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome', 'toast']);
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const route = useRoute();
@@ -353,6 +353,7 @@ const reportsTopSelling = ref([]); // [{ tenSanPham, soLuongDaBan }]
 const loadReportsTopSelling = async () => {
   reportsTopSelling.value = await DashboardService
     .getTopSelling(5, reportsDateFrom.value, reportsDateTo.value)
+    .then((r) => r ?? [])
     .catch(() => []);
 };
 watch([reportsDateFrom, reportsDateTo], loadReportsTopSelling, { immediate: true });
@@ -365,6 +366,7 @@ const reportsRevenueByDay = ref([]); // [{ ngay, doanhThu }], liên tục từng
 const loadReportsRevenueByDay = async () => {
   const raw = await DashboardService
     .getRevenueByDay(reportsDateFrom.value, reportsDateTo.value)
+    .then((r) => r ?? [])
     .catch(() => []);
   const byDay = Object.fromEntries(raw.map((r) => [r.ngay, Number(r.doanhThu) || 0]));
   const days = [];
@@ -417,6 +419,7 @@ const reportsCustomerReport = ref({ topKhach: [], tyLeMuaLai: 0, tongSoKhach: 0 
 const loadReportsCustomerReport = async () => {
   reportsCustomerReport.value = await DashboardService
     .getCustomerReport(reportsDateFrom.value, reportsDateTo.value, 5)
+    .then((r) => r ?? { topKhach: [], tyLeMuaLai: 0, tongSoKhach: 0 })
     .catch(() => ({ topKhach: [], tyLeMuaLai: 0, tongSoKhach: 0 }));
 };
 watch([reportsDateFrom, reportsDateTo], loadReportsCustomerReport, { immediate: true });
@@ -453,8 +456,8 @@ const topSellingRaw = ref([]); // [{ tenSanPham, soLuongDaBan }]
 const slowSellingRaw = ref([]);
 const fetchProductSales = async () => {
   [topSellingRaw.value, slowSellingRaw.value] = await Promise.all([
-    DashboardService.getTopSelling(5).catch(() => []),
-    DashboardService.getSlowSelling(5).catch(() => []),
+    DashboardService.getTopSelling(5).then((r) => r ?? []).catch(() => []),
+    DashboardService.getSlowSelling(5).then((r) => r ?? []).catch(() => []),
   ]);
 };
 
@@ -1348,21 +1351,21 @@ onUnmounted(() => {
         <!-- ── Khuyen mai ── -->
         <section v-show="currentPage === 'promotions'">
           <div
-            class="d-flex align-items-center flex-wrap gap-3 p-3 mb-3 rounded-3"
-            style="background:var(--bg-card-inset); border:1px solid var(--border-color);"
+            class="alt-toolbar mb-3"
+            style="border-radius:14px; border:1px solid var(--border-color);"
           >
             <span class="fw-bold small">{{ t('admin.wheelConfig.title') }}</span>
-            <label class="small text-secondary mb-0">{{ t('admin.wheelConfig.pointsPerSpin') }}</label>
+            <label class="small mb-0" style="color:var(--text-muted);">{{ t('admin.wheelConfig.pointsPerSpin') }}</label>
             <input
               v-model.number="wheelConfig.diemMoiLuot" type="number" min="1"
-              class="form-control form-control-sm" style="width:90px;"
+              class="form-control form-control-sm admin-input" style="width:90px;"
             />
-            <label class="small text-secondary mb-0">{{ t('admin.wheelConfig.missRate') }}</label>
+            <label class="small mb-0" style="color:var(--text-muted);">{{ t('admin.wheelConfig.missRate') }}</label>
             <input
               v-model.number="wheelConfig.tyLeTruot" type="number" min="0" max="100"
-              class="form-control form-control-sm" style="width:70px;"
+              class="form-control form-control-sm admin-input" style="width:70px;"
             />
-            <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="wheelConfigSaving" @click="saveWheelConfig">
+            <button class="alt-btn alt-btn--primary" :disabled="wheelConfigSaving" @click="saveWheelConfig">
               {{ t('admin.wheelConfig.save') }}
             </button>
             <span v-if="wheelConfigError" class="text-danger small">{{ wheelConfigError }}</span>
@@ -1538,82 +1541,82 @@ onUnmounted(() => {
 
   <!-- ══ MODAL NHAN VIEN ══ -->
   <div v-if="showStaffModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showStaffModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:560px;max-width:95vw;max-height:90vh;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+    <div class="alt-card d-flex flex-column" style="width:560px;max-width:95vw;max-height:90vh;border-radius:14px;">
+      <div class="alt-toolbar">
         <span>{{ editingStaffId?t('admin.staffModal.titleEdit'):t('admin.staffModal.titleAdd') }}</span>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showStaffModal=false"></button>
+        <button class="btn-close btn-sm ms-auto" :aria-label="t('common.close')" @click="showStaffModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="staffFormError" class="alert alert-danger small py-2 mb-3">{{ staffFormError }}</div>
         <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.fullNameLabel') }}</label><input v-model="staffForm.hoTen" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.phoneLabel') }}</label><input v-model="staffForm.soDienThoai" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.emailLabel') }}</label><input v-model="staffForm.email" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.positionLabel') }}</label><select v-model="staffForm.chucVuId" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option :value="null" disabled>{{ t('admin.staffModal.positionSelectPlaceholder') }}</option><option v-for="cv in chucVuList" :key="cv.id" :value="cv.id">{{ cv.tenChucVu }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.usernameLabel') }}</label><input v-model="staffForm.username" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.passwordLabel') }} {{ editingStaffId?t('admin.staffModal.passwordKeepHint'):t('admin.staffModal.passwordRequired') }}</label><input v-model="staffForm.matKhauHash" type="password" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.baseSalaryLabel') }}</label><input v-model="staffForm.luongCoBan" type="number" min="0" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.staffModal.statusLabel') }}</label><select v-model="staffForm.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="active">{{ t('admin.staffModal.statusActive') }}</option><option value="inactive">{{ t('admin.staffModal.statusResigned') }}</option></select></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.fullNameLabel') }}</label><input v-model="staffForm.hoTen" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.phoneLabel') }}</label><input v-model="staffForm.soDienThoai" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.emailLabel') }}</label><input v-model="staffForm.email" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.positionLabel') }}</label><select v-model="staffForm.chucVuId" class="form-select form-select-sm admin-input"><option :value="null" disabled>{{ t('admin.staffModal.positionSelectPlaceholder') }}</option><option v-for="cv in chucVuList" :key="cv.id" :value="cv.id">{{ cv.tenChucVu }}</option></select></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.usernameLabel') }}</label><input v-model="staffForm.username" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.passwordLabel') }} {{ editingStaffId?t('admin.staffModal.passwordKeepHint'):t('admin.staffModal.passwordRequired') }}</label><input v-model="staffForm.matKhauHash" type="password" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.baseSalaryLabel') }}</label><input v-model="staffForm.luongCoBan" type="number" min="0" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.statusLabel') }}</label><select v-model="staffForm.trangThai" class="form-select form-select-sm admin-input"><option value="active">{{ t('admin.staffModal.statusActive') }}</option><option value="inactive">{{ t('admin.staffModal.statusResigned') }}</option></select></div>
         </div>
       </div>
-      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showStaffModal=false">{{ t('admin.staffModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveStaff">{{ editingStaffId?t('admin.staffModal.update'):t('admin.staffModal.addNew') }}</button>
+      <div class="alt-toolbar" style="border-top:1px solid var(--border-color);border-bottom:none;justify-content:flex-end;gap:8px;">
+        <button class="alt-btn alt-btn--ghost" @click="showStaffModal=false">{{ t('admin.staffModal.cancel') }}</button>
+        <button class="alt-btn alt-btn--primary" @click="saveStaff">{{ editingStaffId?t('admin.staffModal.update'):t('admin.staffModal.addNew') }}</button>
       </div>
     </div>
   </div>
 
   <!-- ══ MODAL KHUYEN MAI ══ -->
   <div v-if="showPromoModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showPromoModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:620px;max-width:95vw;max-height:90vh;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+    <div class="alt-card d-flex flex-column" style="width:620px;max-width:95vw;max-height:90vh;border-radius:14px;">
+      <div class="alt-toolbar">
         <span>{{ editingPromoId?t('admin.promoModal.titleEdit'):t('admin.promoModal.titleAdd') }}</span>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showPromoModal=false"></button>
+        <button class="btn-close btn-sm ms-auto" :aria-label="t('common.close')" @click="showPromoModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="promoFormError" class="alert alert-danger small py-2 mb-3">{{ promoFormError }}</div>
         <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.codeLabel') }}</label><input v-model="promoForm.maKhuyenMai" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.nameLabel') }}</label><input v-model="promoForm.tenKhuyenMai" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.typeLabel') }}</label><select v-model="promoForm.loai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="percent">{{ t('admin.promoModal.typePercent') }}</option><option value="fixed">{{ t('admin.promoModal.typeFixed') }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ promoForm.loai==='percent'?t('admin.promoModal.valueLabelPercent'):t('admin.promoModal.valueLabelFixed') }}</label><input v-model="promoForm.giaTri" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.maxDiscountLabel') }}</label><input v-model="promoForm.giaTriToiDa" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.minOrderLabel') }}</label><input v-model="promoForm.donHangToiThieu" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.startDateLabel') }}</label><input v-model="promoForm.ngayBatDau" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.endDateLabel') }}</label><input v-model="promoForm.ngayKetThuc" type="datetime-local" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.maxUsageLabel') }}</label><input v-model="promoForm.soLuongToiDa" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.promoModal.statusLabel') }}</label><select v-model="promoForm.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="active">{{ t('admin.promoModal.statusActive') }}</option><option value="inactive">{{ t('admin.promoModal.statusStopped') }}</option></select></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.codeLabel') }}</label><input v-model="promoForm.maKhuyenMai" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.nameLabel') }}</label><input v-model="promoForm.tenKhuyenMai" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.typeLabel') }}</label><select v-model="promoForm.loai" class="form-select form-select-sm admin-input"><option value="percent">{{ t('admin.promoModal.typePercent') }}</option><option value="fixed">{{ t('admin.promoModal.typeFixed') }}</option></select></div>
+          <div class="col-6"><label class="form-label small">{{ promoForm.loai==='percent'?t('admin.promoModal.valueLabelPercent'):t('admin.promoModal.valueLabelFixed') }}</label><input v-model="promoForm.giaTri" type="number" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.maxDiscountLabel') }}</label><input v-model="promoForm.giaTriToiDa" type="number" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.minOrderLabel') }}</label><input v-model="promoForm.donHangToiThieu" type="number" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.startDateLabel') }}</label><input v-model="promoForm.ngayBatDau" type="datetime-local" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.endDateLabel') }}</label><input v-model="promoForm.ngayKetThuc" type="datetime-local" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.maxUsageLabel') }}</label><input v-model="promoForm.soLuongToiDa" type="number" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.statusLabel') }}</label><select v-model="promoForm.trangThai" class="form-select form-select-sm admin-input"><option value="active">{{ t('admin.promoModal.statusActive') }}</option><option value="inactive">{{ t('admin.promoModal.statusStopped') }}</option></select></div>
         </div>
       </div>
-      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showPromoModal=false">{{ t('admin.promoModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="savePromo">{{ editingPromoId?t('admin.promoModal.update'):t('admin.promoModal.addNew') }}</button>
+      <div class="alt-toolbar" style="border-top:1px solid var(--border-color);border-bottom:none;justify-content:flex-end;gap:8px;">
+        <button class="alt-btn alt-btn--ghost" @click="showPromoModal=false">{{ t('admin.promoModal.cancel') }}</button>
+        <button class="alt-btn alt-btn--primary" @click="savePromo">{{ editingPromoId?t('admin.promoModal.update'):t('admin.promoModal.addNew') }}</button>
       </div>
     </div>
   </div>
 
   <!-- ══ MODAL DOI THUONG ══ -->
   <div v-if="showRewardModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showRewardModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:620px;max-width:95vw;max-height:90vh;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
+    <div class="alt-card d-flex flex-column" style="width:620px;max-width:95vw;max-height:90vh;border-radius:14px;">
+      <div class="alt-toolbar">
         <span>{{ editingRewardId?t('admin.rewardModal.titleEdit'):t('admin.rewardModal.titleAdd') }}</span>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showRewardModal=false"></button>
+        <button class="btn-close btn-sm ms-auto" :aria-label="t('common.close')" @click="showRewardModal=false"></button>
       </div>
       <div class="overflow-y-auto p-4">
         <div v-if="rewardFormError" class="alert alert-danger small py-2 mb-3">{{ rewardFormError }}</div>
         <div class="row g-3">
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.nameLabel') }}</label><input v-model="rewardForm.ten" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.pointsLabel') }}</label><input v-model="rewardForm.diemCan" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-12"><label class="form-label small text-secondary">{{ t('admin.rewardModal.descLabel') }}</label><textarea v-model="rewardForm.moTa" rows="2" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"></textarea></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.typeLabel') }}</label><select v-model="rewardForm.loai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="percent">{{ t('admin.rewardModal.typePercent') }}</option><option value="fixed">{{ t('admin.rewardModal.typeFixed') }}</option></select></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ rewardForm.loai==='percent'?t('admin.rewardModal.valueLabelPercent'):t('admin.rewardModal.valueLabelFixed') }}</label><input v-model="rewardForm.giaTri" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.maxDiscountLabel') }}</label><input v-model="rewardForm.giaTriToiDa" type="number" class="form-control form-control-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" /></div>
-          <div class="col-6"><label class="form-label small text-secondary">{{ t('admin.rewardModal.statusLabel') }}</label><select v-model="rewardForm.trangThai" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)"><option value="active">{{ t('admin.rewardModal.statusActive') }}</option><option value="inactive">{{ t('admin.rewardModal.statusStopped') }}</option></select></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.nameLabel') }}</label><input v-model="rewardForm.ten" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.pointsLabel') }}</label><input v-model="rewardForm.diemCan" type="number" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-12"><label class="form-label small">{{ t('admin.rewardModal.descLabel') }}</label><textarea v-model="rewardForm.moTa" rows="2" class="form-control form-control-sm admin-input"></textarea></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.typeLabel') }}</label><select v-model="rewardForm.loai" class="form-select form-select-sm admin-input"><option value="percent">{{ t('admin.rewardModal.typePercent') }}</option><option value="fixed">{{ t('admin.rewardModal.typeFixed') }}</option></select></div>
+          <div class="col-6"><label class="form-label small">{{ rewardForm.loai==='percent'?t('admin.rewardModal.valueLabelPercent'):t('admin.rewardModal.valueLabelFixed') }}</label><input v-model="rewardForm.giaTri" type="number" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.maxDiscountLabel') }}</label><input v-model="rewardForm.giaTriToiDa" type="number" class="form-control form-control-sm admin-input" /></div>
+          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.statusLabel') }}</label><select v-model="rewardForm.trangThai" class="form-select form-select-sm admin-input"><option value="active">{{ t('admin.rewardModal.statusActive') }}</option><option value="inactive">{{ t('admin.rewardModal.statusStopped') }}</option></select></div>
         </div>
       </div>
-      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showRewardModal=false">{{ t('admin.rewardModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" @click="saveReward">{{ editingRewardId?t('admin.rewardModal.update'):t('admin.rewardModal.addNew') }}</button>
+      <div class="alt-toolbar" style="border-top:1px solid var(--border-color);border-bottom:none;justify-content:flex-end;gap:8px;">
+        <button class="alt-btn alt-btn--ghost" @click="showRewardModal=false">{{ t('admin.rewardModal.cancel') }}</button>
+        <button class="alt-btn alt-btn--primary" @click="saveReward">{{ editingRewardId?t('admin.rewardModal.update'):t('admin.rewardModal.addNew') }}</button>
       </div>
     </div>
   </div>

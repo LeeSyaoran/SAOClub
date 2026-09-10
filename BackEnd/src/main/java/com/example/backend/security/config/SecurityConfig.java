@@ -83,6 +83,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/san-pham/**", "/api/danh-muc/**", "/api/thuong-hieu/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/dm-cpu/**", "/api/dm-ram/**", "/api/dm-gpu/**", "/api/dm-o-cung/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/danh-gia/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/phieu-bao-hanh/**").permitAll()
+                .requestMatchers("/api/yeu-thich/**").authenticated()
 
                 .anyRequest().authenticated()
             )

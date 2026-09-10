@@ -9,17 +9,17 @@
 
 .alt-card {
   background: var(--bg-card);
-  border: 1px solid var(--pink-200);
+  border: 1px solid var(--border-color-strong);
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 1px 2px var(--shadow-color);
+  box-shadow: var(--shadow-md);
 }
 
 .alt-toolbar {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 12px 16px;
-  background: #fff;
-  border-bottom: 1px solid var(--pink-50);
+  background: var(--bg-card-alt);
+  border-bottom: 1px solid var(--border-color);
 }
 .alt-toolbar__left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .alt-toolbar__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
@@ -47,30 +47,47 @@
 .alt-btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 16px; border-radius: 999px; border: 1px solid transparent;
-  font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; white-space: nowrap;
-  transition: background-color .15s, border-color .15s, color .15s;
+  font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: all .15s ease;
 }
-.alt-btn--primary { background: var(--gradient-brand); color: var(--accent-text); }
-.alt-btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
-.alt-btn--ghost { background: transparent; color: var(--accent-fg); border-color: var(--border-color-strong); }
-.alt-btn--ghost:hover:not(:disabled) { background: var(--bg-hover); }
-.alt-btn--ghost.is-on { background: var(--bg-hover); border-color: var(--accent-fg); }
+.alt-btn--primary {
+  background: var(--accent) !important;
+  color: var(--accent-text) !important;
+  box-shadow: var(--shadow-btn) !important;
+}
+.alt-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.alt-btn--ghost {
+  background: transparent;
+  color: var(--accent-fg);
+  border-color: var(--border-color-strong) !important;
+}
+.alt-btn--ghost:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--accent) !important;
+}
+.alt-btn--ghost.is-on {
+  background: var(--bg-hover);
+  border-color: var(--accent) !important;
+}
 .alt-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ───────── bang ───────── */
 .alt-table-wrap { overflow-x: auto; }
 .alt-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .alt-table th {
-  background: var(--pink-50);
-  color: var(--pink-700);
+  background: var(--bg-card-alt);
+  color: var(--accent-fg);
   font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
   padding: 11px 12px; white-space: nowrap; border-bottom: none;
 }
 .alt-table td {
-  padding: 11px 12px; border-bottom: 1px solid var(--line);
-  vertical-align: middle; color: var(--ink);
+  padding: 11px 12px; border-bottom: 1px solid var(--border-color);
+  vertical-align: middle; color: var(--text-primary);
 }
-.alt-table tbody tr:hover td { background: var(--pink-50); }
+.alt-table tbody tr:hover td { background: var(--bg-hover); }
 .alt-table tbody tr:last-child td { border-bottom: none; }
 
 .alt-tag {
@@ -78,10 +95,10 @@
   padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
 }
 
-.alt-empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13.5px; }
+.alt-empty { padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 13.5px; }
 
 .alt-pager {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 10px 18px; background: var(--pink-50); border-top: 1px solid var(--line);
-  flex-wrap: wrap; font-size: 12.5px; color: var(--muted);
+  padding: 10px 18px; background: var(--bg-card-alt); border-top: 1px solid var(--border-color);
+  flex-wrap: wrap; font-size: 12.5px; color: var(--text-muted);
 }

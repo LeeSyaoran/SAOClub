@@ -162,6 +162,31 @@ const { value: password } = useField('password');
 const { value: confirmPassword } = useField('confirmPassword');
 const { value: agree } = useField('agree');
 
+const parseRegisterError = async (res) => {
+  const text = await res.text();
+  try {
+    const obj = JSON.parse(text);
+    // BE trả dạng { "field": "message" } hoặc { "error": "message" }
+    const msg = obj.error || obj.message || Object.values(obj).find(v => typeof v === 'string');
+    if (msg) return msg;
+  } catch {}
+  // Fallback: parse raw text for known Vietnamese error patterns
+  const lower = text.toLowerCase();
+  if (lower.includes('email') && (lower.includes('exist') || lower.includes('trùng') || lower.includes('đã tồn')))
+    return t('register.errors.emailExists');
+  if (lower.includes('số điện thoại') && (lower.includes('exist') || lower.includes('trùng') || lower.includes('đã tồn')))
+    return t('register.errors.phoneExists');
+  if (lower.includes('username') && (lower.includes('exist') || lower.includes('trùng') || lower.includes('đã tồn')))
+    return t('register.errors.usernameExists');
+  if (lower.includes('password') && lower.includes('yếu'))
+    return t('register.errors.weakPassword');
+  if (lower.includes('mật khẩu') && lower.includes('yếu'))
+    return t('register.errors.weakPassword');
+  if (res.status === 409) return t('register.errors.conflict');
+  if (res.status >= 500) return t('register.errors.serverError');
+  return text || t('register.errors.registerFailed');
+};
+
 const onSubmit = handleSubmit(async (values) => {
   if (!values.agree) {
     error.value = t('register.errors.mustAgree');
@@ -175,7 +200,7 @@ const onSubmit = handleSubmit(async (values) => {
     const { confirmPassword: _, agree: __, ...body } = values;
     const res = await KhachHangService.register(body);
     if (!res.ok) {
-      error.value = await res.text() || t('register.errors.registerFailed');
+      error.value = await parseRegisterError(res);
       return;
     }
     const newAccount = await res.json();

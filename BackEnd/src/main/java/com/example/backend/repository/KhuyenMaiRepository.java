@@ -7,10 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface KhuyenMaiRepository extends JpaRepository<KhuyenMai, Integer> {
-    @Query("SELECT new com.example.backend.response.KhuyenMaiResponse(k.khuyenMaiId, k.maKhuyenMai, k.tenKhuyenMai, k.loai, k.giaTri, k.giaTriToiDa, k.donHangToiThieu, k.ngayBatDau, k.ngayKetThuc, k.soLuongToiDa, k.soLanDaDung, k.trangThai, k.ngayTao) FROM KhuyenMai k")
+    Optional<KhuyenMai> findByMaKhuyenMaiIgnoreCase(String maKhuyenMai);
+    @Query("SELECT new com.example.backend.response.KhuyenMaiResponse(k.khuyenMaiId, k.maKhuyenMai, k.tenKhuyenMai, k.loai, k.giaTri, k.giaTriToiDa, k.donHangToiThieu, k.ngayBatDau, k.ngayKetThuc, k.soLuongToiDa, k.soLanDaDung, CASE WHEN k.soLuongToiDa IS NULL THEN NULL ELSE k.soLuongToiDa - k.soLanDaDung END, k.trangThai, k.ngayTao) FROM KhuyenMai k")
     List<KhuyenMaiResponse> hienThiKhuyenMai();
 
     @Query("SELECT k FROM KhuyenMai k WHERE k.trangThai = 'active' " +

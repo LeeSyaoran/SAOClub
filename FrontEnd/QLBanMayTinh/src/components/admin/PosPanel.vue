@@ -9,7 +9,7 @@ import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/pro
 import { refreshInventory } from "../../stores/inventory.js";
 import { bumpSerialEvent } from "../../stores/serialEvents.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
-import { PromotionsStore, ensurePromotions } from "../../stores/promotions.js";
+import { PromotionsStore, refreshPromotions } from "../../stores/promotions.js";
 import { refreshOrders } from "../../stores/orders.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
 import ProductDetailModal from "./ProductDetailModal.vue";
@@ -17,10 +17,29 @@ import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot
 import { POS_PAYMENT_METHODS, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
 import * as ThanhToanService from "../../services/ThanhToanService.js";
 import { askConfirm } from "../../stores/confirm.js";
-import { Laptop, ShoppingCart, Receipt, Info, RefreshCw, X, Check, ExternalLink, ImageOff, Printer, Package, Search } from '@lucide/vue';
+import { Laptop, ShoppingCart, Receipt, Info, Hash, X, Check, ImageOff, Printer, Package, Search } from '@lucide/vue';
 import InvoiceModal from "./InvoiceModal.vue";
 
-onMounted(() => { ensureProducts(); ensureCustomers(); ensurePromotions(); });
+onMounted(async () => {
+  ensureProducts();
+  ensureCustomers();
+  // Fetch luôn danh sách khuyến mãi khi vào POS — dropdown "Chọn mã giảm giá" cần có sẵn
+  // dữ liệu trước khi nhân viên tick, không phụ thuộc AdminPage.fetchAll() đã chạy xong chưa
+  // (nếu user vào thẳng POS hoặc AdminPage fetchAll bị lỗi nuốt thì dropdown sẽ trống).
+  await refreshPromotions();
+});
+
+// ── Phí vận chuyển (POS) ──────────────────────────────────────────────────────
+// Tính theo khoảng cách + miễn phí khi đơn đủ lớn. Tier đơn giản theo km — khớp với
+// CheckoutModal.vue (cùng bảng, copy-paste trực tiếp để nhân viên tại quầy nhập km tay
+// thay vì chọn địa chỉ như khách online).
+const POS_FREE_SHIP_THRESHOLD = 300000;
+const POS_SHIP_TIERS = [
+  { maxKm: 2,  fee: 10000 },
+  { maxKm: 5,  fee: 20000 },
+  { maxKm: 10, fee: 30000 },
+  { maxKm: 999, fee: 50000 },
+];
 
 // ── POS / Ban hang ───────────────────────────────────────────────────────────
 // Luong bat buoc: phai xac dinh khach hang (co san hoac tao moi) TRUOC khi duoc
@@ -34,6 +53,18 @@ const posPhone = ref("");
 const posFoundCust = ref(null);
 const posError = ref("");
 const posPlacing = ref(false);
+// Modal toan man hinh de nhan vien de nhin serial khi gio co nhieu may — modal rieng de
+// khong bi gioi han chieu cao cua cart list.
+const serialModalGroup = ref(null);
+const showSerialModal = ref(false);
+const openSerialModal = (g) => {
+  serialModalGroup.value = g;
+  showSerialModal.value = true;
+};
+const closeSerialModal = () => {
+  showSerialModal.value = false;
+  serialModalGroup.value = null;
+};
 const posSuccess = ref(false);
 const posLastOrder = ref(null);   // don hang vua tao thanh cong — de mo modal in hoa don
 const showInvoiceModal = ref(false);
@@ -99,7 +130,18 @@ const posCartGroups = computed(() => {
   });
   return [...map.values()];
 });
-const posGroupTotal = (g) => g.items.reduce((s, i) => s + i.giaBan, 0);
+// Gia ban 1 may (khong nhan so luong) — cart the hien cac serial trong cung 1 group,
+// gia hien thi luon la gia cua 1 don vi de nhan vien khong bi nham voi tong tien (tong
+// tien cua ca group hien o Subtotal phia duoi).
+const formatPriceShort = (v) => {
+  if (v == null) return '—';
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(v % 1_000_000 === 0 ? 0 : 2)}tr`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(0)}k`;
+  return String(v);
+};
+const posGroupPriceShort = (g) => formatPriceShort(g.items[0]?.giaBan);
+// Ghép cpu + ram + oCung + mauSac thành 1 dòng spec rút gọn hiển thị trên card giỏ hàng.
+const specLine = (item) => [item.cpu, item.ram, item.oCung, item.mauSac].filter(Boolean).join(' · ');
 const posFee = computed(() => {
   if (posDeliveryMode.value !== 'delivery') return 0;
   if (posCartTotal.value >= POS_FREE_SHIP_THRESHOLD) return 0;
@@ -128,36 +170,24 @@ const posQrImageUrl = computed(() => {
   return `https://img.vietqr.io/image/${bank}-${account}-compact2.png?amount=${posGrandTotal.value}&addInfo=${info}&accountName=${name}`;
 });
 
-// Ap tu dong khi go xong (debounce), khong can bam nut "Ap dung" — giong luong online.
-let posPromoDebounce = null;
-const onPosPromoInput = () => {
-  showPosPromoSuggestions.value = true;
-  clearTimeout(posPromoDebounce);
-  if (!posPromoCode.value.trim()) { posAppliedPromo.value = null; posPromoMsg.value = ''; return; }
-  posPromoDebounce = setTimeout(posApplyPromo, 500);
+// Danh sach khuyen mai ap dung duoc cho don hien tai (dang active + dat don toi thieu).
+// Dong thoi tra ve text hien thi ben option dropdown.
+const promoConditionLabel = (p) => {
+  if (!p.donHangToiThieu || Number(p.donHangToiThieu) === 0) return null;
+  return `Áp dụng cho đơn từ ${formatPrice(Number(p.donHangToiThieu))}`;
 };
-
-// Goi y ma khuyen mai con hieu luc (du dieu kien don toi thieu) de bam chon thay vi phai
-// nho/go dung ma — giong list voucher ca nhan tu dong hien o checkout online.
-const showPosPromoSuggestions = ref(false);
-const posPromoSuggestions = computed(() => {
-  const q = posPromoCode.value.trim().toUpperCase();
-  return (PromotionsStore.items ?? [])
+const promoOptionLabel = (p) => {
+  const val = p.loai === 'percent' ? `${p.giaTri}%` : formatPrice(p.giaTri);
+  const cond = promoConditionLabel(p);
+  return cond ? `${p.maKhuyenMai} — ${p.tenKhuyenMai} (${val}) · ${cond}` : `${p.maKhuyenMai} — ${p.tenKhuyenMai} (${val})`;
+};
+const posApplicablePromos = computed(() =>
+  (PromotionsStore.items ?? [])
     .filter((p) => p.trangThai === 'active'
-      && (!p.donHangToiThieu || posCartTotal.value >= Number(p.donHangToiThieu))
-      && (!q || p.maKhuyenMai?.toUpperCase().includes(q)))
-    .slice(0, 8);
-});
-const onPosPromoFocus = () => { if (posPromoSuggestions.value.length) showPosPromoSuggestions.value = true; };
-const selectPosPromoSuggestion = (p) => {
-  posPromoCode.value = p.maKhuyenMai;
-  posAppliedPromo.value = p;
-  posPromoMsg.value = t('checkout.promoSuccess', { name: p.tenKhuyenMai });
-  showPosPromoSuggestions.value = false;
-};
+      && (!p.donHangToiThieu || posCartTotal.value >= Number(p.donHangToiThieu)))
+);
 
 const posApplyPromo = () => {
-  clearTimeout(posPromoDebounce);
   const code = posPromoCode.value.trim().toUpperCase();
   if (!code) { posAppliedPromo.value = null; posPromoMsg.value = ''; return; }
   const p = PromotionsStore.items.find(
@@ -461,6 +491,10 @@ const posSelectSerial = async (serial) => {
     maSku: p.maSku,
     giaBan: p.giaBan,
     hinhAnhChinh: p.hinhAnhChinh,
+    cpu: p.cpu ?? null,
+    ram: p.ram ?? null,
+    oCung: p.oCung ?? null,
+    mauSac: p.mauSac ?? null,
     chiTietId: serial.chiTietId,
     soSerial: serial.soSerial,
     ngayNhapKho: serial.ngayNhapKho,
@@ -492,6 +526,10 @@ const posAddChosenSerials = async () => {
     maSku: p.maSku,
     giaBan: p.giaBan,
     hinhAnhChinh: p.hinhAnhChinh,
+    cpu: p.cpu ?? null,
+    ram: p.ram ?? null,
+    oCung: p.oCung ?? null,
+    mauSac: p.mauSac ?? null,
     chiTietId: serial.chiTietId,
     soSerial: serial.soSerial,
     ngayNhapKho: serial.ngayNhapKho,
@@ -502,12 +540,11 @@ const posAddChosenSerials = async () => {
   await Promise.all(items.map((item) => setSerialTrangThai(item, 'giu_hang')));
 };
 
-const posRemove = async (chiTietId) => {
-  const item = posCart.value.find((i) => i.chiTietId === chiTietId);
-  if (!item) return;
-  if (!(await askConfirm(t('admin.pos.confirmRemove', { name: item.tenSanPham, serial: item.soSerial })))) return;
-  posCart.value = posCart.value.filter((i) => i.chiTietId !== chiTietId);
-  await setSerialTrangThai(item, 'trong_kho');
+const posDecrementGroup = async (g) => {
+  if (g.items.length === 0) return;
+  const lastItem = g.items[g.items.length - 1];
+  posCart.value = posCart.value.filter((i) => i.chiTietId !== lastItem.chiTietId);
+  await setSerialTrangThai(lastItem, 'trong_kho');
 };
 
 // Xoa toan bo 1 group (cung bienTheId) trong 1 lan xac nhan — dung khi mua nhieu may cung
@@ -791,59 +828,61 @@ const posPlaceOrder = async () => {
             class="d-flex flex-column gap-1 p-2 rounded-3" style="background:var(--bg-card-alt);border:1px solid var(--border-color-soft);"
           >
             <div class="d-flex align-items-center gap-2">
+              <!-- Ảnh sản phẩm -->
               <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2" style="width:40px;height:40px;background:var(--bg-card-inset);">
                 <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh" :alt="g.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:2px;" />
                 <span v-else><Laptop :size="18" color="var(--text-muted)" /></span>
               </div>
+
+              <!-- Tên + spec -->
               <div class="flex-grow-1" style="min-width:0;">
-                <div class="fw-semibold small text-light text-truncate">{{ g.tenSanPham }}<span v-if="g.items.length>1" class="text-secondary fw-normal"> × {{ g.items.length }}</span></div>
-                <template v-if="g.items.length===1">
-                  <div class="text-secondary" style="font-size:0.73rem;">{{ g.items[0].maSku }}</div>
-                  <div style="font-size:0.7rem;color:var(--accent-fg);">S/N: {{ g.items[0].soSerial }}</div>
-                </template>
+                <div class="fw-semibold small text-light text-truncate">{{ g.tenSanPham }}</div>
+                <div v-if="specLine(g.items[0])" class="text-secondary" style="font-size:0.7rem;line-height:1.3;">{{ specLine(g.items[0]) }}</div>
               </div>
+
+              <!-- Nút - số + serial-info product-detail -->
+              <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                <button
+                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                  style="width:26px;height:26px;padding:0;border-radius:6px;"
+                  :disabled="g.items.length <= 1"
+                  @click="posDecrementGroup(g)"
+                >−</button>
+                <span class="fw-bold text-center" style="min-width:28px;font-size:0.88rem;color:var(--accent-fg);">{{ g.items.length }}</span>
+                <button
+                  class="btn btn-sm d-flex align-items-center justify-content-center"
+                  style="width:26px;height:26px;padding:0;border-radius:6px;background:rgba(244,63,94,0.12);color:var(--accent-fg);"
+                  @click="posOpenSerialPicker(g.items[0], null)"
+                >+</button>
+                <button
+                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                  style="width:26px;height:26px;padding:0;border-radius:6px;"
+                  :title="t('admin.pos.showSerials')"
+                  @click="openSerialModal(g)"
+                >
+                  <Hash :size="13" />
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                  style="width:26px;height:26px;padding:0;border-radius:6px;"
+                  :title="t('admin.products.detail')"
+                  @click="openPosDetail(g)"
+                >
+                  <Info :size="13" />
+                </button>
+              </div>
+
+              <!-- Giá 1 máy (cố định, không nhân số lượng) -->
+              <div class="fw-bold flex-shrink-0 text-end" style="font-size:0.85rem;min-width:80px;color:var(--accent-fg);">{{ posGroupPriceShort(g) }}</div>
+
+              <!-- Xóa toàn bộ group -->
               <button
-                class="btn btn-sm btn-outline-secondary flex-shrink-0" style="width:22px;height:22px;padding:0;font-size:0.62rem;"
-                :aria-label="t('admin.products.detail')" @click="openPosDetail(g)"
+                class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:26px;height:26px;padding:0;border-radius:6px;"
+                @click="posRemoveGroup(g)"
               >
-                <Info :size="14" />
+                <X :size="14" />
               </button>
-              <div v-if="g.items.length===1" class="d-flex align-items-center gap-1 flex-shrink-0">
-                <button
-                  class="btn btn-sm btn-outline-secondary" style="width:22px;height:22px;padding:0;font-size:0.68rem;"
-                  :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(g.items[0], g.items[0].chiTietId)"
-                >
-                  <RefreshCw :size="14" />
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-danger" style="width:22px;height:22px;padding:0;font-size:0.72rem;"
-                  :aria-label="t('common.remove')" @click="posRemove(g.items[0].chiTietId)"
-                >
-                  <X :size="14" />
-                </button>
-              </div>
-              <button v-else class="btn btn-sm btn-outline-danger flex-shrink-0" style="font-size:0.66rem;padding:2px 6px;" @click="posRemoveGroup(g)">{{ t('admin.pos.removeAll') }} ({{ g.items.length }})</button>
-              <div class="fw-bold flex-shrink-0 text-end" style="font-size:0.85rem;min-width:80px;color:var(--accent-fg);">{{ formatPrice(posGroupTotal(g)) }}</div>
-            </div>
-            <div v-if="g.items.length>1" class="d-flex flex-column gap-1 ps-5">
-              <div v-for="item in g.items" :key="item.chiTietId" class="d-flex align-items-center gap-2">
-                <div class="flex-grow-1" style="min-width:0;">
-                  <div class="text-secondary text-truncate" style="font-size:0.68rem;">{{ item.maSku }}</div>
-                  <div style="font-size:0.7rem;color:var(--accent-fg);">S/N: {{ item.soSerial }}</div>
-                </div>
-                <button
-                  class="btn btn-sm btn-outline-secondary" style="width:22px;height:22px;padding:0;font-size:0.68rem;"
-                  :aria-label="t('admin.pos.swapSerial')" @click="posOpenSerialPicker(item, item.chiTietId)"
-                >
-                  <RefreshCw :size="14" />
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-danger" style="width:22px;height:22px;padding:0;font-size:0.72rem;"
-                  :aria-label="t('common.remove')" @click="posRemove(item.chiTietId)"
-                >
-                  <X :size="14" />
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -863,24 +902,10 @@ const posPlaceOrder = async () => {
           <!-- Ma khuyen mai -->
           <div class="pos-side-section">
             <div class="d-flex gap-2 position-relative">
-              <input v-model="posPromoCode" class="form-control form-control-sm" style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" :placeholder="t('checkout.promoPlaceholder')" @input="onPosPromoInput" @focus="onPosPromoFocus" @blur="showPosPromoSuggestions = false" @keyup.enter="posApplyPromo" />
-              <button class="alt-btn alt-btn--ghost flex-shrink-0" style="padding:6px 12px;" @click="posApplyPromo">{{ t('checkout.apply') }}</button>
-              <button
-                class="btn btn-sm btn-outline-secondary flex-shrink-0" style="padding:2px 8px;"
-                :aria-label="t('admin.pos.viewPromotionsTab')" :title="t('admin.pos.viewPromotionsTab')"
-                @click="() => window.open('/#/admin', '_blank')"
-              ><ExternalLink :size="14" /></button>
-              <div v-if="showPosPromoSuggestions && posPromoSuggestions.length" class="position-absolute w-100 rounded-3 shadow-lg" style="top:100%; left:0; z-index:20; background:var(--bg-card); border:1px solid var(--border-color-strong); max-height:220px; overflow-y:auto;">
-                <div
-                  v-for="p in posPromoSuggestions" :key="p.khuyenMaiId" class="px-3 py-2 small d-flex justify-content-between gap-2"
-                  style="cursor:pointer;" @mousedown.prevent="selectPosPromoSuggestion(p)"
-                  @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
-                  @mouseleave="$event.currentTarget.style.background=''"
-                >
-                  <span class="text-light">{{ p.maKhuyenMai }} <span class="text-secondary">· {{ p.tenKhuyenMai }}</span></span>
-                  <span class="fw-bold flex-shrink-0" style="color:var(--accent-fg);">{{ p.loai === 'percent' ? `${p.giaTri}%` : formatPrice(p.giaTri) }}</span>
-                </div>
-              </div>
+              <select v-model="posPromoCode" class="form-select form-select-sm" style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" @change="posApplyPromo">
+                <option value="">{{ t('admin.pos.choosePromo') }}</option>
+                <option v-for="p in posApplicablePromos" :key="p.khuyenMaiId" :value="p.maKhuyenMai">{{ promoOptionLabel(p) }}</option>
+              </select>
             </div>
             <div v-if="posPromoMsg" class="small mt-1" :class="posAppliedPromo ? 'text-success' : 'text-danger'">{{ posPromoMsg }}</div>
           </div>
@@ -890,6 +915,22 @@ const posPlaceOrder = async () => {
             <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.subtotalLabel') }}</span><span>{{ formatPrice(posCartTotal) }}</span></div>
             <div v-if="posGiamGia > 0" class="d-flex justify-content-between text-success small"><span>{{ t('checkout.discount') }}</span><span>-{{ formatPrice(posGiamGia) }}</span></div>
             <div class="d-flex justify-content-between fw-bold pt-1" style="font-size:1.02rem;border-top:1px dashed var(--border-color-soft);"><span>{{ t('admin.pos.totalLabel') }}</span><span style="color:var(--accent-fg);">{{ formatPrice(posGrandTotal) }}</span></div>
+          </div>
+
+          <!-- Phi van chuyen (chi khi chon giao tan noi) -->
+          <div v-if="posDeliveryMode === 'delivery'" class="pos-side-section d-flex flex-column gap-2">
+            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.72rem;letter-spacing:0.04em;">{{ t('admin.pos.shippingFeeLabel') }}</div>
+            <div class="d-flex gap-2 align-items-center">
+              <input
+                v-model="posDistanceKm" type="number" min="0" step="0.1"
+                class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);max-width:120px;"
+                :placeholder="t('admin.pos.distanceKmPlaceholder')"
+              />
+              <span class="text-secondary small">km</span>
+              <span v-if="posFee > 0" class="fw-bold ms-auto" style="color:var(--accent-fg);">{{ formatPrice(posFee) }}</span>
+              <span v-else class="fw-bold ms-auto text-success">{{ t('admin.pos.free') }}</span>
+            </div>
+            <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.pos.shippingFreeNote') }}</div>
           </div>
 
           <!-- Phuong thuc thanh toan -->
@@ -1127,6 +1168,38 @@ const posPlaceOrder = async () => {
     :san-pham-name="posDetailSanPhamName"
     :only-bien-the-ids="posDetailOnlyBienTheIds"
   />
+
+  <!-- ══ MODAL DANH SÁCH SERIAL (BARCODE) — mở từ nút # trên cart item, hiện mỗi serial
+       dạng mã vạch text lớn để nhân viên dễ nhìn/đối chiếu khi giao hàng ══ -->
+  <div
+    v-if="showSerialModal"
+    class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+    style="background:var(--bg-overlay);z-index:1070;"
+    @click.self="closeSerialModal"
+  >
+    <div class="alt-card" style="max-width:680px;width:90%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div class="alt-toolbar">
+        <div class="d-flex align-items-center gap-2">
+          <Hash :size="16" color="var(--accent-fg)" />
+          <span class="fw-bold">{{ serialModalGroup?.tenSanPham }}</span>
+          <span class="text-secondary small">({{ serialModalGroup?.items.length }} {{ t('admin.pos.serialCountSuffix') }})</span>
+        </div>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="closeSerialModal"></button>
+      </div>
+      <div class="overflow-y-auto p-3 d-flex flex-column gap-2">
+        <div
+          v-for="(item, idx) in serialModalGroup?.items ?? []" :key="item.chiTietId"
+          class="d-flex align-items-center gap-3 px-3 py-2 rounded-3"
+          style="background:var(--bg-card-inset);border:1px solid var(--border-color-soft);"
+        >
+          <span class="text-secondary" style="min-width:24px;text-align:right;font-size:0.8rem;">{{ idx + 1 }}</span>
+          <span
+            style="font-family:'Courier New',monospace;font-size:0.92rem;letter-spacing:0.08em;color:var(--accent-fg);flex-grow:1;"
+          >{{ item.soSerial }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal in hoa don POS -->
   <InvoiceModal

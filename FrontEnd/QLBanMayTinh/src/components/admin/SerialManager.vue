@@ -213,11 +213,17 @@ const deleteSerial = async (item) => {
   const service = item.loai === 'sanPham' ? ChiTietSanPhamService : LINH_KIEN_META[item.loai].service;
   const res = await service.remove(item.rowId);
   if (!res.ok) {
-    showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status })));
+    showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status })), 'error');
     return;
   }
+  showToast(t('admin.toast.serialDeleted', { serial: item.soSerial }), 'success');
   await load();
 };
+
+// Lưu ý: việc dọn rác serial 'giu_hang' bị kẹt (đơn đã bị xóa/hủy hoặc user đóng tab POS
+// giữa chừng) được backend xử lý TỰ ĐỘNG mỗi khi load() chạy — xem
+// ChiTietSanPhamService.hienThiChiTietSanPham() gọi releaseOrphanSerials() ở đầu. Staff
+// không cần bấm nút, chỉ cần mở tab Kho hàng là bảng sẽ hiển thị serial đã được giải phóng.
 </script>
 
 <template>

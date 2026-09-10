@@ -70,8 +70,9 @@ public class VongQuayService {
         return new KhuyenMaiResponse(k.getKhuyenMaiId(), k.getMaKhuyenMai(), k.getTenKhuyenMai(),
                 k.getLoai(), k.getGiaTri(), k.getGiaTriToiDa(), k.getDonHangToiThieu(),
                 k.getNgayBatDau(), k.getNgayKetThuc(), k.getSoLuongToiDa(), k.getSoLanDaDung(),
-                k.getTrangThai(), k.getNgayTao());
+                null, k.getTrangThai(), k.getNgayTao());
     }
+
 
     @Transactional
     public CauHinhVongQuay capNhatCauHinh(CauHinhVongQuayRequest req) {
