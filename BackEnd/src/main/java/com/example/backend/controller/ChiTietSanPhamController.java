@@ -2,7 +2,10 @@ package com.example.backend.controller;
 
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.request.ChiTietSanPhamRequest;
+import com.example.backend.request.SerialLockRequest;
+import com.example.backend.request.SerialUnlockRequest;
 import com.example.backend.response.ChiTietSanPhamResponse;
+import com.example.backend.response.SerialLockResponse;
 import com.example.backend.response.WarrantyStatusResponse;
 import com.example.backend.service.ChiTietSanPhamService;
 import jakarta.validation.Valid;
@@ -13,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chi-tiet-san-pham")
@@ -65,6 +69,24 @@ public class ChiTietSanPhamController {
     public List<WarrantyStatusResponse> getStillUnderWarranty() {
         return chiTietSanPhamService.getStillUnderWarranty();
     }
+
+    // ========== SERIAL LOCKING ==========
+
+    @PostMapping("/lock")
+    public ResponseEntity<SerialLockResponse> lockSerials(@Valid @RequestBody SerialLockRequest request) {
+        SerialLockResponse response = chiTietSanPhamService.lockSerials(request);
+        if (!response.isSuccess() && response.getLockedCount() == 0) {
+            return ResponseEntity.badRequest().body(response);
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/unlock")
+    public ResponseEntity<?> unlockSerials(@Valid @RequestBody SerialUnlockRequest request) {
+        int unlocked = chiTietSanPhamService.unlockSerials(request);
+        return ResponseEntity.ok(Map.of("unlocked", unlocked));
+    }
+
     // Dọn rác serial 'giu_hang' bị kẹt được gọi TỰ ĐỘNG từ hienThiChiTietSanPham() mỗi lần
     // frontend load bảng serial — không cần endpoint riêng vì flow là: nhân viên mở tab
     // Kho hàng → load → backend dọn orphan → hiển thị danh sách đã sạch. An toàn vì query
