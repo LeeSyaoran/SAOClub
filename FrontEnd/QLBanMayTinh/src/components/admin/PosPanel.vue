@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import * as DonHangService from "../../services/DonHangService.js";
@@ -8,6 +8,7 @@ import { formatPrice, formatDate, boDauTiengViet } from "../../utils/adminFormat
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { refreshInventory } from "../../stores/inventory.js";
 import { bumpSerialEvent } from "../../stores/serialEvents.js";
+import { syncPosCart } from "../../stores/posCart.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { PromotionsStore, refreshPromotions } from "../../stores/promotions.js";
 import { refreshOrders } from "../../stores/orders.js";
@@ -16,8 +17,22 @@ import ProductDetailModal from "./ProductDetailModal.vue";
 import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot } from "../../utils/productGrouping.js";
 import { POS_PAYMENT_METHODS, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
 import * as ThanhToanService from "../../services/ThanhToanService.js";
-import { askConfirm } from "../../stores/confirm.js";
-import { Laptop, ShoppingCart, Receipt, Info, Hash, X, Check, ImageOff, Printer, Package, Search } from '@lucide/vue';
+import { SerialLockService } from "../../services/SerialLockService.js";
+import { AuthStore } from "../../stores/index.js";
+import { useToastStore } from "../../stores/toast.js";
+const { showToast } = useToastStore();
+
+// POS session ID — tao moi neu chua co, giu khi reload
+const posSessionId = ref(
+  localStorage.getItem('pos_session_id') || crypto.randomUUID()
+);
+if (!localStorage.getItem('pos_session_id')) {
+  localStorage.setItem('pos_session_id', posSessionId.value);
+}
+
+// Theo doi serial dang lock boi session nay
+const trackedSerialIds = ref(new Set());
+import { Laptop, ShoppingCart, Receipt, Info, Hash, X, Check, ImageOff, Printer, Package, Search, Eye, Plus, Star, Shield, Cpu, HardDrive, MemoryStick, Flame } from '@lucide/vue';
 import InvoiceModal from "./InvoiceModal.vue";
 
 onMounted(async () => {
@@ -49,6 +64,10 @@ const posStage = ref('start');
 const posPhoneNotFound = ref(false); // da tim nhung khong thay khach ung voi SDT vua nhap
 const posSearch = ref("");
 const posCart = ref([]);
+// Đồng bộ posCartStore liên tục khi giỏ hàng thay đổi — InventoryPanel và SerialManager
+// đọc store này để hiển thị trạng thái "đang lên đơn" tức thì (không cần API round-trip).
+watch(posCart, (v) => syncPosCart(v), { deep: true });
+
 const posPhone = ref("");
 const posFoundCust = ref(null);
 const posError = ref("");
@@ -108,10 +127,16 @@ const showPosDetailModal = ref(false);
 const posDetailSanPhamId = ref(null);
 const posDetailSanPhamName = ref('');
 const posDetailOnlyBienTheIds = ref(null);
-const openPosDetail = (g) => {
+const openPosDetail = async (g) => {
+  // Đảm bảo products đã loaded trước khi modal đọc ProductsStore.items
+  await ensureProducts();
   posDetailSanPhamId.value = g.sanPhamId;
   posDetailSanPhamName.value = g.tenSanPham;
-  posDetailOnlyBienTheIds.value = [...new Set(g.items.map((i) => i.bienTheId))];
+  // Từ catalog: g là biến thể phẳng (không có .items) → hiện tất cả biến thể cùng sanPhamId.
+  // Từ cart: g.items chứa các serial khác biến thể → chỉ hiện các biến thể đang trong giỏ.
+  posDetailOnlyBienTheIds.value = g.items
+    ? [...new Set(g.items.map((i) => i.bienTheId))]
+    : null;
   showPosDetailModal.value = true;
 };
 
@@ -231,6 +256,9 @@ onMounted(() => {
         posDeliveryMode.value = saved.deliveryMode || 'pickup';
         posDeliveryAddress.value = saved.deliveryAddress || "";
         posStage.value = saved.cart.length ? 'selling' : 'start';
+        // Đồng bộ posCartStore để tab Kho/Serial phản ánh ngay serial đang lên đơn
+        syncPosCart(saved.cart);
+        bumpSerialEvent();
       }
     }
   } catch {}
@@ -451,19 +479,62 @@ const posOpenSerialPicker = async (p, swapChiTietId = null) => {
   serialPickerList.value = [];
   showSerialPicker.value = true;
   serialPickerLoading.value = true;
+  // Load ALL serials (including locked) — locked serials shown as disabled with lock badge.
+  // Only 'trong_kho' serials can be picked (filter in template).
   const all = await ChiTietSanPhamService.getByBienThe(p.bienTheId).catch(() => []);
-  // "trong_kho" la nguon duy nhat cho serial con ban duoc — 1 serial da bi danh dau
-  // "giu_hang" (do dang nam trong gio cua BAT KY phien POS nao, ke ca giu don) se
-  // tu dong bi loai o day, khong can biet gio do thuoc phien nao.
-  serialPickerList.value = all.filter((s) => s.trangThai === 'trong_kho');
+  serialPickerList.value = all;
   serialPickerLoading.value = false;
 };
 
-const posToggleSerial = (serial) => {
-  const next = new Set(serialPickerChosenIds.value);
-  if (next.has(serial.chiTietId)) next.delete(serial.chiTietId);
-  else next.add(serial.chiTietId);
-  serialPickerChosenIds.value = next;
+// Toggle serial trong picker — goi lock/unlock API de phien POS khac thay duoc lock status.
+// Khi lock: chi goi khi serial trang thai = trong_kho va chua bi nguoi khac lock.
+// Khi unlock: tra serial ve trong_kho ngay lap tuc de nguoi khac co the chon.
+// Dong modal chon serial — unlock tat ca serial da tick (neu chua them vao gio).
+// Vi serial da add vao gio se co trangThai=giu_hang roi, khong can unlock.
+const posCloseSerialPicker = async () => {
+  const chosen = [...serialPickerChosenIds.value];
+  if (chosen.length > 0) {
+    // Chi unlock nhung serial chua duoc them vao gio (van con trang thai trong_kho)
+    const toUnlock = serialPickerList.value
+      .filter(s => chosen.includes(s.chiTietId) && s.trangThai === 'trong_kho')
+      .map(s => s.chiTietId);
+    if (toUnlock.length > 0) {
+      await SerialLockService.unlock(toUnlock, posSessionId.value);
+    }
+  }
+  serialPickerChosenIds.value = new Set();
+  showSerialPicker.value = false;
+  serialPickerSwapChiTietId.value = null;
+};
+
+const posToggleSerial = async (serial) => {
+  // Serial dang o trong_kho -> tick chon -> lock
+  if (!serialPickerChosenIds.value.has(serial.chiTietId)) {
+    // Kiem tra serial co bi lock boi nguoi khac chua (lockedByTen se co gia tri)
+    if (serial.lockedBy && serial.lockedByTen) {
+      showToast(`Serial đang được ${serial.lockedByTen} giữ`);
+      return;
+    }
+    // Lock serial
+    const result = await SerialLockService.lock(
+      [serial.chiTietId],
+      posSessionId.value,
+      AuthStore.user?.id
+    );
+    if (!result.success) {
+      showToast(`Không thể chọn serial này — đang được ai đó giữ`);
+      return;
+    }
+    const next = new Set(serialPickerChosenIds.value);
+    next.add(serial.chiTietId);
+    serialPickerChosenIds.value = next;
+  } else {
+    // Bo tick -> unlock
+    const next = new Set(serialPickerChosenIds.value);
+    next.delete(serial.chiTietId);
+    serialPickerChosenIds.value = next;
+    await SerialLockService.unlock([serial.chiTietId], posSessionId.value);
+  }
 };
 
 // Doi trang thai 1 serial — dung khi chon vao gio (giu_hang) hoac tra lai kho (trong_kho).
@@ -819,52 +890,49 @@ const posPlaceOrder = async () => {
 
         <!-- Danh sach san pham trong gio: chi hien khi da xac dinh khach hang -->
         <div v-else class="flex-grow-1 overflow-y-auto p-3 d-flex flex-column gap-2">
-          <div v-if="posCart.length===0" class="text-secondary small text-center py-5">
-            <Package :size="34" color="var(--text-muted)" style="margin-bottom:8px;" /><br/>
-            {{ t('admin.pos.cartEmptyList') }}
+          <div v-if="posCart.length===0" class="pos-cart-empty">
+            <div class="pos-cart-empty__icon"><Package :size="48" /></div>
+            <div class="pos-cart-empty__title">Giỏ hàng trống</div>
+            <div class="pos-cart-empty__hint">Bấm <strong>+ Sản phẩm</strong> để bắt đầu</div>
           </div>
           <div
             v-for="g in posCartGroups" :key="g.sanPhamId"
-            class="d-flex flex-column gap-1 p-2 rounded-3" style="background:var(--bg-card-alt);border:1px solid var(--border-color-soft);"
+            class="pos-cart-item"
           >
             <div class="d-flex align-items-center gap-2">
               <!-- Ảnh sản phẩm -->
-              <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2" style="width:40px;height:40px;background:var(--bg-card-inset);">
-                <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh" :alt="g.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:2px;" />
+              <div class="pos-cart-img">
+                <img v-if="g.hinhAnhChinh" :src="g.hinhAnhChinh" :alt="g.tenSanPham" />
                 <span v-else><Laptop :size="18" color="var(--text-muted)" /></span>
               </div>
 
               <!-- Tên + spec -->
               <div class="flex-grow-1" style="min-width:0;">
                 <div class="fw-semibold small text-light text-truncate">{{ g.tenSanPham }}</div>
-                <div v-if="specLine(g.items[0])" class="text-secondary" style="font-size:0.7rem;line-height:1.3;">{{ specLine(g.items[0]) }}</div>
+                <div v-if="specLine(g.items[0])" class="pos-cart-spec">{{ specLine(g.items[0]) }}</div>
               </div>
 
               <!-- Nút - số + serial-info product-detail -->
               <div class="d-flex align-items-center gap-1 flex-shrink-0">
                 <button
-                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-                  style="width:26px;height:26px;padding:0;border-radius:6px;"
+                  class="pos-cart-qty-btn"
                   :disabled="g.items.length <= 1"
                   @click="posDecrementGroup(g)"
                 >−</button>
                 <span class="fw-bold text-center" style="min-width:28px;font-size:0.88rem;color:var(--accent-fg);">{{ g.items.length }}</span>
                 <button
-                  class="btn btn-sm d-flex align-items-center justify-content-center"
-                  style="width:26px;height:26px;padding:0;border-radius:6px;background:rgba(244,63,94,0.12);color:var(--accent-fg);"
+                  class="pos-cart-qty-btn pos-cart-qty-btn--add"
                   @click="posOpenSerialPicker(g.items[0], null)"
                 >+</button>
                 <button
-                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-                  style="width:26px;height:26px;padding:0;border-radius:6px;"
+                  class="pos-cart-icon-btn"
                   :title="t('admin.pos.showSerials')"
                   @click="openSerialModal(g)"
                 >
                   <Hash :size="13" />
                 </button>
                 <button
-                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-                  style="width:26px;height:26px;padding:0;border-radius:6px;"
+                  class="pos-cart-icon-btn"
                   :title="t('admin.products.detail')"
                   @click="openPosDetail(g)"
                 >
@@ -872,17 +940,17 @@ const posPlaceOrder = async () => {
                 </button>
               </div>
 
-              <!-- Giá 1 máy (cố định, không nhân số lượng) -->
-              <div class="fw-bold flex-shrink-0 text-end" style="font-size:0.85rem;min-width:80px;color:var(--accent-fg);">{{ posGroupPriceShort(g) }}</div>
+              <!-- Giá 1 máy -->
+              <div class="fw-bold flex-shrink-0 text-end" style="font-size:0.85rem;min-width:100px;color:var(--accent-fg);">{{ formatPrice(g.items[0]?.giaBan) }}</div>
 
               <!-- Xóa toàn bộ group -->
-              <button
-                class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:26px;height:26px;padding:0;border-radius:6px;"
-                @click="posRemoveGroup(g)"
-              >
+              <button class="pos-cart-remove-btn" @click="posRemoveGroup(g)">
                 <X :size="14" />
               </button>
+            </div>
+            <!-- Serial chip row ẩn — user bấm # để xem serial -->
+            <div class="pos-cart-chips">
+              <span class="pos-chip-warranty"><Shield :size="10" />12 tháng</span>
             </div>
           </div>
         </div>
@@ -890,19 +958,23 @@ const posPlaceOrder = async () => {
 
       <!-- PHAI (1/3): nut + thong tin don hang -->
       <div class="alt-card pos-side-card">
-        <div class="alt-toolbar">
+        <div class="pos-side-toolbar">
+          <div class="pos-side-toolbar__icon"><Receipt :size="16" /></div>
           <span class="fw-bold">{{ t('admin.pos.orderInfo') }}</span>
+          <span v-if="posFoundCust" class="pos-customer-avatar">{{ posFoundCust.hoTen.charAt(0).toUpperCase() }}</span>
         </div>
 
-        <div v-if="posStage !== 'selling'" class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-center p-4 text-secondary small">
-          {{ t('admin.pos.noOrderInfoYet') }}
+        <div v-if="posStage !== 'selling'" class="pos-side-empty">
+          <div class="pos-side-empty__icon"><Receipt :size="36" /></div>
+          <div>{{ t('admin.pos.noOrderInfoYet') }}</div>
         </div>
 
         <div v-else class="pos-side-body">
           <!-- Ma khuyen mai -->
           <div class="pos-side-section">
+            <div class="pos-section-label"><Package :size="13" />Mã giảm giá</div>
             <div class="d-flex gap-2 position-relative">
-              <select v-model="posPromoCode" class="form-select form-select-sm" style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);" @change="posApplyPromo">
+              <select v-model="posPromoCode" class="form-select form-select-sm pos-select" @change="posApplyPromo">
                 <option value="">{{ t('admin.pos.choosePromo') }}</option>
                 <option v-for="p in posApplicablePromos" :key="p.khuyenMaiId" :value="p.maKhuyenMai">{{ promoOptionLabel(p) }}</option>
               </select>
@@ -911,78 +983,55 @@ const posPlaceOrder = async () => {
           </div>
 
           <!-- Tong tien -->
-          <div class="pos-side-section d-flex flex-column gap-1">
-            <div class="d-flex justify-content-between text-secondary small"><span>{{ t('admin.pos.subtotalLabel') }}</span><span>{{ formatPrice(posCartTotal) }}</span></div>
-            <div v-if="posGiamGia > 0" class="d-flex justify-content-between text-success small"><span>{{ t('checkout.discount') }}</span><span>-{{ formatPrice(posGiamGia) }}</span></div>
-            <div class="d-flex justify-content-between fw-bold pt-1" style="font-size:1.02rem;border-top:1px dashed var(--border-color-soft);"><span>{{ t('admin.pos.totalLabel') }}</span><span style="color:var(--accent-fg);">{{ formatPrice(posGrandTotal) }}</span></div>
-          </div>
-
-          <!-- Phi van chuyen (chi khi chon giao tan noi) -->
-          <div v-if="posDeliveryMode === 'delivery'" class="pos-side-section d-flex flex-column gap-2">
-            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.72rem;letter-spacing:0.04em;">{{ t('admin.pos.shippingFeeLabel') }}</div>
-            <div class="d-flex gap-2 align-items-center">
-              <input
-                v-model="posDistanceKm" type="number" min="0" step="0.1"
-                class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);max-width:120px;"
-                :placeholder="t('admin.pos.distanceKmPlaceholder')"
-              />
-              <span class="text-secondary small">km</span>
-              <span v-if="posFee > 0" class="fw-bold ms-auto" style="color:var(--accent-fg);">{{ formatPrice(posFee) }}</span>
-              <span v-else class="fw-bold ms-auto text-success">{{ t('admin.pos.free') }}</span>
-            </div>
-            <div class="text-secondary" style="font-size:0.7rem;">{{ t('admin.pos.shippingFreeNote') }}</div>
+          <div class="pos-side-section pos-price-block">
+            <div class="pos-price-row"><span>{{ t('admin.pos.subtotalLabel') }}</span><span>{{ formatPrice(posCartTotal) }}</span></div>
+            <div v-if="posGiamGia > 0" class="pos-price-row pos-price-discount"><span>{{ t('checkout.discount') }}</span><span>-{{ formatPrice(posGiamGia) }}</span></div>
+            <div class="pos-price-divider"></div>
+            <div class="pos-price-row pos-price-total"><span>{{ t('admin.pos.totalLabel') }}</span><span>{{ formatPrice(posGrandTotal) }}</span></div>
           </div>
 
           <!-- Phuong thuc thanh toan -->
-          <div class="pos-side-section d-flex flex-column gap-2">
-            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.72rem;letter-spacing:0.04em;">{{ t('admin.pos.paymentMethodLabel') }}</div>
+          <div class="pos-side-section">
+            <div class="pos-section-label"><Receipt :size="13" />Phương thức thanh toán</div>
             <div class="d-flex gap-1">
               <button
                 v-for="m in POS_PAYMENT_METHODS" :key="m"
-                class="btn btn-sm flex-fill d-flex flex-column align-items-center py-2"
-                style="border-radius:8px;font-size:0.65rem;"
-                :style="posPaymentMethod === m
-                  ? 'background:rgba(225,29,72,0.1);border:1.5px solid var(--accent);color:var(--accent-fg);'
-                  : 'background:var(--bg-input);border:1.5px solid var(--border-color-strong);color:var(--text-secondary);'"
+                class="pos-pay-btn"
+                :class="{ active: posPaymentMethod === m }"
                 @click="posPaymentMethod = m; posQrScanned = false"
               >
-                <component :is="paymentMethodIcon(m)" :size="18" />
+                <component :is="paymentMethodIcon(m)" :size="16" />
                 <span>{{ paymentMethodLabel(m) }}</span>
               </button>
             </div>
-            <div v-if="posPaymentMethod === 'chuyen_khoan'" class="d-flex flex-column align-items-center gap-2 p-3 rounded-3" style="background:var(--bg-card-inset);">
+            <div v-if="posPaymentMethod === 'chuyen_khoan'" class="pos-qr-block">
               <img
-                v-if="!posQrImageFailed" :src="posQrImageUrl" alt="VietQR" style="width:150px;height:150px;border-radius:10px;background:#fff;padding:4px;"
+                v-if="!posQrImageFailed" :src="posQrImageUrl" alt="VietQR" class="pos-qr-img"
                 @error="posQrImageFailed = true"
               />
-              <div
-                v-else class="d-flex flex-column align-items-center justify-content-center text-center small"
-                style="width:150px;height:150px;border-radius:10px;background:var(--bg-card-alt);color:var(--text-secondary);gap:6px;"
-              >
-                <ImageOff :size="24" />{{ t('checkout.qrImageFailed') }}
-              </div>
-              <button
-                class="btn btn-sm w-100" :class="posQrScanned ? 'btn-success' : 'btn-outline-warning'"
-                @click="posQrScanned = !posQrScanned"
-              >
-                <Check v-if="posQrScanned" :size="14" style="vertical-align:-2px;" />
+              <div v-else class="pos-qr-fallback"><ImageOff :size="24" /><span>{{ t('checkout.qrImageFailed') }}</span></div>
+              <button class="pos-qr-confirm-btn" :class="{ confirmed: posQrScanned }" @click="posQrScanned = !posQrScanned">
+                <Check v-if="posQrScanned" :size="13" />
                 {{ posQrScanned ? t('admin.pos.qrScannedConfirmed') : t('admin.pos.simulateQrScan') }}
               </button>
             </div>
           </div>
 
           <!-- Khach hang -->
-          <div class="pos-side-section d-flex flex-column gap-2">
-            <div class="text-uppercase text-secondary fw-bold" style="font-size:0.72rem;letter-spacing:0.04em;">{{ t('admin.pos.customerInfo') }}</div>
-            <div v-if="posFoundCust" class="d-flex justify-content-between align-items-center gap-2 small p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#2f9e6e;">
-              <span class="d-inline-flex align-items-center gap-1"><Check :size="13" /> {{ posFoundCust.hoTen }} · {{ posFoundCust.soDienThoai }}</span>
-              <button class="btn btn-sm btn-link text-secondary p-0" style="font-size:0.7rem;text-decoration:underline;" @click="posReset">{{ t('admin.pos.changeCustomer') }}</button>
+          <div class="pos-side-section">
+            <div class="pos-section-label"><Laptop :size="13" />Khách hàng</div>
+            <div v-if="posFoundCust" class="pos-customer-card">
+              <div class="pos-customer-info">
+                <div class="pos-customer-name"><Check :size="13" /> {{ posFoundCust.hoTen }}</div>
+                <div class="pos-customer-phone">{{ posFoundCust.soDienThoai }}</div>
+              </div>
+              <button class="pos-change-btn" @click="posReset">{{ t('admin.pos.changeCustomer') }}</button>
             </div>
             <div v-else class="small text-secondary">{{ t('admin.pos.noCustomerYet') }}</div>
-            <div v-if="posError" class="small p-2 rounded-2" style="background:rgba(220,53,69,0.1);color:#e05252;">{{ posError }}</div>
-            <div v-if="posSuccess" class="d-flex flex-column align-items-center gap-2 w-100 p-2 rounded-2" style="background:rgba(72,199,142,0.1);color:#2f9e6e;">
-              <div>{{ t('admin.pos.orderCreated') }}</div>
-              <button class="alt-btn alt-btn--primary" @click="showInvoiceModal = true">
+            <div v-if="posError" class="pos-error-msg">{{ posError }}</div>
+            <div v-if="posSuccess" class="pos-success-msg">
+              <div><Check :size="15" /> {{ t('admin.pos.orderCreated') }}</div>
+              <button class="pos-invoice-btn" @click="showInvoiceModal = true">
                 <Printer :size="13" /> In hóa đơn
               </button>
             </div>
@@ -991,10 +1040,16 @@ const posPlaceOrder = async () => {
           <!-- Nut hanh dong -->
           <div class="pos-side-section pos-side-actions">
             <div class="d-flex gap-2">
-              <button class="alt-btn alt-btn--ghost flex-fill" @click="posReset">{{ t('admin.pos.reset') }}</button>
-              <button class="alt-btn alt-btn--ghost flex-fill" :disabled="!posCart.length" @click="posHoldOrder">{{ t('admin.pos.holdOrder') }}</button>
+              <button class="pos-action-secondary" @click="posReset">{{ t('admin.pos.reset') }}</button>
+              <button class="pos-action-secondary" :disabled="!posCart.length" @click="posHoldOrder">{{ t('admin.pos.holdOrder') }}</button>
             </div>
-            <button class="alt-btn alt-btn--primary w-100 justify-content-center" style="padding:10px;font-size:14px;" :disabled="posStage !== 'selling' || !posCart.length || !posPaymentMethod || posPlacing || (posPaymentMethod === 'chuyen_khoan' && !posQrScanned)" @click="posPlaceOrder">{{ t('admin.pos.createOrder') }}</button>
+            <button
+              class="pos-pay-submit"
+              :disabled="posStage !== 'selling' || !posCart.length || !posPaymentMethod || posPlacing || (posPaymentMethod === 'chuyen_khoan' && !posQrScanned)"
+              @click="posPlaceOrder"
+            >
+              <Star :size="15" /> {{ t('admin.pos.createOrder') }}
+            </button>
           </div>
         </div>
       </div>
@@ -1002,37 +1057,60 @@ const posPlaceOrder = async () => {
 
     <!-- ══ TOAN MAN HINH: Danh sach hang hoa ══ -->
     <div v-if="showCatalog" class="pos-catalog-overlay">
+      <!-- Header -->
       <div class="pos-catalog-header">
-        <div class="alt-search" style="width:320px;">
-          <span class="alt-search__icon"><Search :size="15" /></span>
+        <div class="pos-catalog-search">
+          <Search :size="16" class="pos-catalog-search__icon" />
           <input v-model="posSearch" :placeholder="t('admin.pos.searchPlaceholder')" />
         </div>
         <div class="d-flex align-items-center gap-2">
-          <span class="text-secondary small">{{ t('admin.pos.cart') }}: {{ posCart.length }}</span>
+          <span class="pos-cart-badge"><ShoppingCart :size="14" />{{ posCart.length }}</span>
           <button class="alt-btn alt-btn--primary" @click="showCatalog = false">{{ t('admin.pos.doneAdding') }}</button>
           <button class="btn-close" :aria-label="t('common.close')" @click="showCatalog = false"></button>
         </div>
       </div>
+
       <div class="pos-catalog-body">
         <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.pos.loading') }}</div>
-        <div v-else class="row g-3">
-          <div v-for="p in posProductGroups" :key="p.sanPhamId" class="col-6 col-md-4 col-xl-3 col-xxl-2">
-            <div class="card h-100 pos-catalog-card">
-              <div class="d-flex align-items-center justify-content-center" style="height:110px;background:var(--bg-card-inset);">
-                <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham" style="width:100%;height:100%;object-fit:contain;padding:8px;" />
-                <span v-else><Laptop :size="32" color="var(--text-muted)" /></span>
+
+        <template v-else>
+          <!-- Product grid -->
+          <div class="pos-product-grid">
+            <div v-for="p in posProductGroups" :key="p.sanPhamId" class="pos-product-card">
+              <div class="pos-product-img-wrap">
+                <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham" class="pos-product-img" />
+                <span v-else class="pos-product-placeholder"><Laptop :size="32" /></span>
+                <!-- Hot badge -->
+                <span v-if="p.banChay" class="pos-hot-badge"><Flame :size="10" /> Bán chạy</span>
               </div>
-              <div class="card-body p-2 d-flex flex-column gap-1">
-                <div class="fw-semibold small text-light">{{ p.tenSanPham }}</div>
-                <div class="fw-bold" style="font-size:0.95rem;color:var(--accent-fg);">
-                  <span v-if="(posVariantCountMap.get(p.sanPhamId) || 0) > 1" class="fw-normal" style="font-size:0.7rem;color:var(--text-secondary);">{{ t('home.fromPrice') }} </span>{{ formatPrice(p.giaBan) }}
+              <div class="pos-product-body">
+                <div class="pos-product-name">{{ p.tenSanPham }}</div>
+                <!-- Spec chips -->
+                <div class="pos-spec-chips">
+                  <span v-if="p.cpu"><Cpu :size="10" />{{ p.cpu }}</span>
+                  <span v-if="p.ram"><MemoryStick :size="10" />{{ p.ram }}</span>
+                  <span v-if="p.oCung"><HardDrive :size="10" />{{ p.oCung }}</span>
                 </div>
-                <button class="alt-btn alt-btn--primary mt-auto justify-content-center" @click="catalogAddToCart(p)">{{ t('admin.pos.addToCart') }}</button>
+                <div class="pos-product-price">
+                  <span class="pos-price-from" v-if="(posVariantCountMap.get(p.sanPhamId) || 0) > 1">Từ </span>{{ formatPrice(p.giaBan) }}
+                </div>
+              </div>
+              <!-- Hover actions -->
+              <div class="pos-product-actions">
+                <button class="pos-action-btn pos-action-btn--view" :title="'Xem chi tiết'" @click.stop="openPosDetail(p)">
+                  <Eye :size="14" />
+                </button>
+                <button class="pos-action-btn pos-action-btn--add" :title="'Thêm vào giỏ'" @click.stop="catalogAddToCart(p)">
+                  <Plus :size="14" /> Thêm
+                </button>
               </div>
             </div>
+            <div v-if="posProductGroups.length===0" class="pos-no-results">
+              <Package :size="40" />
+              <div>{{ t('admin.pos.noProductsFound') }}</div>
+            </div>
           </div>
-          <div v-if="posProductGroups.length===0" class="col-12 text-center text-secondary small py-5">{{ t('admin.pos.noProductsFound') }}</div>
-        </div>
+        </template>
       </div>
     </div>
   </div>
@@ -1099,14 +1177,14 @@ const posPlaceOrder = async () => {
   </div>
 
   <!-- ══ MODAL CHON SERIAL (POS) ══ -->
-  <div v-if="showSerialPicker" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="showSerialPicker=false">
+  <div v-if="showSerialPicker" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="posCloseSerialPicker">
     <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:480px;max-width:95vw;max-height:75vh;">
       <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
         <div>
           <div>{{ t('admin.pos.chooseSerial') }}</div>
           <div class="text-secondary fw-normal" style="font-size:0.75rem;">{{ serialPickerProduct?.tenSanPham }} — {{ serialPickerProduct?.maSku }}</div>
         </div>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showSerialPicker=false"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="posCloseSerialPicker"></button>
       </div>
       <div class="overflow-y-auto p-3 d-flex flex-column gap-2">
         <div v-if="serialPickerLoading" class="text-secondary small text-center py-4">{{ t('admin.pos.loading') }}</div>
@@ -1114,12 +1192,24 @@ const posPlaceOrder = async () => {
         <button
           v-for="s in serialPickerList" v-else :key="s.chiTietId"
           class="btn d-flex justify-content-between align-items-center"
-          :class="serialPickerSwapChiTietId == null && serialPickerChosenIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-warning'"
+          :class="[
+            s.trangThai !== 'trong_kho' || (s.lockedBy && s.lockedByTen) ? 'btn-secondary opacity-50' :
+              (serialPickerSwapChiTietId == null && serialPickerChosenIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-warning'),
+            s.lockedBy && s.lockedByTen ? 'text-decoration-line-through' : ''
+          ]"
+          :disabled="s.trangThai !== 'trong_kho' || (s.lockedBy && s.lockedByTen)"
+          :title="s.lockedByTen ? `Đang được ${s.lockedByTen} giữ` : (s.trangThai !== 'trong_kho' ? `Đã ${s.trangThai === 'giu_hang' ? 'được chọn' : s.trangThai}` : '')"
           style="font-family:monospace;font-size:0.85rem;"
           @click="serialPickerSwapChiTietId != null ? posSelectSerial(s) : posToggleSerial(s)"
         >
-          <span>{{ s.soSerial }}</span>
-          <span class="text-secondary" style="font-size:0.7rem;">{{ formatDate(s.ngayNhapKho) }}</span>
+          <span>
+            <span v-if="s.lockedBy && s.lockedByTen" class="me-1">🔒</span>
+            {{ s.soSerial }}
+          </span>
+          <span class="text-secondary" style="font-size:0.7rem;">
+            <span v-if="s.lockedBy && s.lockedByTen" class="text-warning">{{ s.lockedByTen }}</span>
+            <span v-else>{{ formatDate(s.ngayNhapKho) }}</span>
+          </span>
         </button>
       </div>
       <div v-if="serialPickerSwapChiTietId == null" class="p-3 border-top border-secondary">
@@ -1161,13 +1251,16 @@ const posPlaceOrder = async () => {
   <CustomerFormModal ref="quickCustomerModalRef" v-model="showQuickCustomerModal" @saved="onQuickCustomerSaved" />
 
   <!-- ══ MODAL CHI TIET SAN PHAM (POS) — xem-thuan, mo tu nut "Chi tiet" tren dong gio hang,
-       chi hien dung cac bien the dang co trong nhom do (onlyBienTheIds) ══ -->
-  <ProductDetailModal
-    v-model="showPosDetailModal"
-    :san-pham-id="posDetailSanPhamId"
-    :san-pham-name="posDetailSanPhamName"
-    :only-bien-the-ids="posDetailOnlyBienTheIds"
-  />
+       chi hien dung cac bien the dang co trong nhom do (onlyBienTheIds). z-index 1080 cao hon
+       catalog overlay (1060) de khong bi che. ══ -->
+  <div v-if="showPosDetailModal" style="position:fixed;inset:0;z-index:1080;">
+    <ProductDetailModal
+      v-model="showPosDetailModal"
+      :san-pham-id="posDetailSanPhamId"
+      :san-pham-name="posDetailSanPhamName"
+      :only-bien-the-ids="posDetailOnlyBienTheIds"
+    />
+  </div>
 
   <!-- ══ MODAL DANH SÁCH SERIAL (BARCODE) — mở từ nút # trên cart item, hiện mỗi serial
        dạng mã vạch text lớn để nhân viên dễ nhìn/đối chiếu khi giao hàng ══ -->
@@ -1296,7 +1389,342 @@ const posPlaceOrder = async () => {
   overflow: hidden;
 }
 
+/* ─── Catalog Header ─── */
+.pos-catalog-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg-input); border: 1.5px solid var(--border-color-strong);
+  border-radius: 999px; padding: 6px 14px; width: 280px;
+}
+.pos-catalog-search__icon { color: var(--text-muted); display: flex; }
+.pos-catalog-search input {
+  background: transparent; border: none; outline: none; color: var(--text-primary);
+  font-size: 0.88rem; width: 100%;
+}
+.pos-catalog-search input::placeholder { color: var(--text-muted); }
+.pos-cart-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(244,63,94,0.12); color: var(--accent-fg);
+  border-radius: 999px; padding: 4px 12px; font-size: 0.78rem; font-weight: 700;
+}
+
+/* ─── Category Pills ─── */
+.pos-catalog-categories {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.pos-cat-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 14px; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+  border: 1.5px solid var(--border-color-soft);
+  background: var(--bg-card); color: var(--text-secondary);
+  cursor: pointer; transition: all .15s;
+}
+.pos-cat-pill:hover { border-color: var(--accent); color: var(--accent-fg); }
+.pos-cat-pill.active {
+  background: var(--gradient-brand); color: #fff;
+  border-color: transparent; box-shadow: 0 3px 10px rgba(244,63,94,0.3);
+}
+
+/* ─── Trending ─── */
+.pos-trending-section { margin-bottom: 24px; }
+.pos-trending-header {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.88rem; font-weight: 700; color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.pos-trending-carousel { display: flex; align-items: center; gap: 10px; }
+.pos-carousel-btn {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid var(--border-color-soft); background: var(--bg-card);
+  color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.pos-carousel-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pos-trending-cards { display: flex; gap: 10px; flex: 1; overflow: hidden; }
+.pos-trending-card {
+  flex: 0 0 calc(25% - 8px); background: var(--bg-card);
+  border: 1px solid var(--border-color-soft); border-radius: 12px; padding: 10px;
+  cursor: pointer; transition: all .15s; text-align: center;
+}
+.pos-trending-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); border-color: var(--accent); }
+.pos-trending-img {
+  position: relative; height: 80px; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 6px;
+}
+.pos-trending-img img { width: 100%; height: 100%; object-fit: contain; }
+.pos-trending-placeholder { color: var(--text-muted); }
+.pos-trending-badge {
+  position: absolute; top: 2px; right: 2px;
+  background: rgba(72,199,142,0.15); color: #2f9e6e;
+  border-radius: 999px; padding: 1px 5px; font-size: 0.65rem; font-weight: 700;
+  display: flex; align-items: center; gap: 2px;
+}
+.pos-trending-name {
+  font-size: 0.72rem; font-weight: 600; color: var(--text-primary);
+  line-height: 1.3; margin-bottom: 4px;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.pos-trending-price { font-size: 0.82rem; font-weight: 700; color: var(--accent-fg); }
+
+/* ─── Product Grid ─── */
+.pos-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+}
+.pos-product-card {
+  background: var(--bg-card); border: 1px solid var(--border-color-soft);
+  border-radius: 14px; overflow: hidden; cursor: pointer;
+  transition: all .18s; position: relative;
+  display: flex; flex-direction: column;
+}
+.pos-product-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 8px 22px rgba(244,63,94,0.15);
+  border-color: var(--accent);
+}
+.pos-product-img-wrap {
+  position: relative; height: 130px; background: var(--bg-card-inset);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.pos-product-img { width: 100%; height: 100%; object-fit: contain; padding: 10px; }
+.pos-product-placeholder { color: var(--text-muted); display: flex; }
+.pos-hot-badge {
+  position: absolute; top: 6px; left: 6px;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: #fff;
+  border-radius: 999px; padding: 2px 8px; font-size: 0.68rem; font-weight: 700;
+  display: flex; align-items: center; gap: 3px;
+  box-shadow: 0 2px 8px rgba(249,115,22,0.4);
+}
+.pos-product-body { padding: 10px 10px 8px; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.pos-product-name {
+  font-size: 0.8rem; font-weight: 600; color: var(--text-primary);
+  line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.pos-spec-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.pos-spec-chips span {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--pink-100); color: var(--pink-700);
+  border-radius: 999px; padding: 2px 7px; font-size: 0.68rem; font-weight: 600;
+}
+.pos-product-price {
+  font-size: 0.9rem; font-weight: 700; color: var(--accent-fg);
+  margin-top: auto;
+}
+.pos-price-from { font-size: 0.7rem; color: var(--text-muted); font-weight: 400; }
+.pos-product-actions {
+  display: flex; gap: 6px; padding: 8px 10px;
+  border-top: 1px solid var(--border-color-soft);
+  background: var(--bg-card);
+}
+.pos-action-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+  border-radius: 8px; padding: 6px 8px; font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; border: 1.5px solid; transition: all .15s;
+}
+.pos-action-btn--view {
+  background: var(--bg-card-inset); border-color: var(--border-color-soft); color: var(--text-secondary);
+}
+.pos-action-btn--view:hover { background: var(--pink-100); border-color: var(--accent); color: var(--accent-fg); }
+.pos-action-btn--add {
+  background: rgba(244,63,94,0.08); border-color: var(--accent); color: var(--accent-fg);
+}
+.pos-action-btn--add:hover { background: var(--accent); color: #fff; }
+
+.pos-no-results {
+  grid-column: 1 / -1; text-align: center; color: var(--text-muted);
+  padding: 50px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+
 .text-light {
   color: var(--text-primary) !important;
 }
+
+/* ─── Cart Item ─── */
+.pos-cart-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 50px 20px; text-align: center; flex: 1;
+}
+.pos-cart-empty__icon { color: var(--text-muted); margin-bottom: 4px; }
+.pos-cart-empty__title { font-size: 1rem; font-weight: 700; color: var(--text-secondary); }
+.pos-cart-empty__hint { font-size: 0.8rem; color: var(--text-muted); }
+.pos-cart-empty__hint strong { color: var(--accent-fg); }
+
+.pos-cart-item {
+  background: var(--bg-card-alt); border: 1px solid var(--border-color-soft);
+  border-radius: 12px; padding: 10px 12px;
+  transition: box-shadow .15s, border-color .15s;
+}
+.pos-cart-item:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08); border-color: rgba(244,63,94,0.3);
+}
+.pos-cart-img {
+  width: 42px; height: 42px; background: var(--bg-card-inset);
+  border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pos-cart-img img { width: 100%; height: 100%; object-fit: contain; }
+.pos-cart-spec {
+  font-size: 0.68rem; color: var(--text-secondary); line-height: 1.3;
+  display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px;
+}
+.pos-cart-qty-btn {
+  width: 26px; height: 26px; border-radius: 6px;
+  border: 1.5px solid var(--border-color-strong);
+  background: var(--bg-card-inset); color: var(--text-secondary);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; transition: all .12s;
+}
+.pos-cart-qty-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent-fg); }
+.pos-cart-qty-btn--add {
+  background: rgba(244,63,94,0.1); border-color: rgba(244,63,94,0.4); color: var(--accent-fg);
+}
+.pos-cart-qty-btn--add:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pos-cart-icon-btn {
+  width: 26px; height: 26px; border-radius: 6px;
+  border: 1px solid var(--border-color-soft); background: transparent; color: var(--text-muted);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .12s;
+}
+.pos-cart-icon-btn:hover { background: var(--pink-100); color: var(--accent-fg); border-color: var(--accent); }
+.pos-cart-remove-btn {
+  width: 26px; height: 26px; border-radius: 6px;
+  border: none; background: transparent; color: var(--text-muted);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .12s;
+}
+.pos-cart-remove-btn:hover { background: rgba(220,53,69,0.12); color: var(--danger); }
+.pos-cart-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.pos-chip-serial {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--bg-card-inset); border: 1px solid var(--border-color-soft);
+  border-radius: 999px; padding: 2px 8px; font-size: 0.65rem; font-weight: 600;
+  color: var(--text-secondary); font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.pos-chip-serial--more { background: rgba(244,63,94,0.1); color: var(--accent-fg); border-color: rgba(244,63,94,0.3); }
+.pos-chip-warranty {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3);
+  border-radius: 999px; padding: 2px 8px; font-size: 0.65rem; font-weight: 600;
+  color: #6366f1;
+}
+
+/* ─── Order Info Panel (Right) ─── */
+.pos-side-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; background: var(--bg-card-alt);
+  border-bottom: 1px solid var(--border-color-soft);
+}
+.pos-side-toolbar__icon { color: var(--accent-fg); display: flex; }
+.pos-customer-avatar {
+  margin-left: auto;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--gradient-brand); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700;
+}
+.pos-side-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; color: var(--text-muted); font-size: 0.8rem; padding: 40px;
+}
+.pos-side-empty__icon { color: var(--text-muted); margin-bottom: 4px; }
+.pos-section-label {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; font-weight: 700; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;
+}
+.pos-select {
+  background: var(--bg-input); border: 1.5px solid var(--border-color-strong);
+  color: var(--text-primary); font-size: 0.82rem;
+}
+
+/* Price block */
+.pos-price-block {
+  background: var(--bg-card-inset); border-radius: 10px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+  margin: 4px 0;
+}
+.pos-price-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-secondary); }
+.pos-price-discount { color: #2f9e6e; }
+.pos-price-divider { height: 1px; background: var(--border-color-soft); margin: 2px 0; }
+.pos-price-total { font-size: 1rem; font-weight: 800; color: var(--accent-fg); }
+
+/* Payment buttons */
+.pos-pay-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 4px; border-radius: 10px; font-size: 0.65rem; font-weight: 600;
+  border: 1.5px solid var(--border-color-soft); background: var(--bg-card-inset); color: var(--text-secondary);
+  cursor: pointer; transition: all .15s;
+}
+.pos-pay-btn:hover { border-color: var(--accent); color: var(--accent-fg); }
+.pos-pay-btn.active {
+  background: rgba(244,63,94,0.1); border-color: var(--accent);
+  color: var(--accent-fg); box-shadow: 0 2px 8px rgba(244,63,94,0.2);
+}
+.pos-qr-block { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 8px; }
+.pos-qr-img { width: 130px; height: 130px; border-radius: 10px; background: #fff; padding: 4px; }
+.pos-qr-fallback {
+  width: 130px; height: 130px; border-radius: 10px;
+  background: var(--bg-card-alt); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; color: var(--text-muted); font-size: 0.75rem;
+}
+.pos-qr-confirm-btn {
+  display: flex; align-items: center; gap: 5px; padding: 6px 16px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all .15s;
+  border: 1.5px solid; width: 100%; justify-content: center;
+  background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.5); color: #d97706;
+}
+.pos-qr-confirm-btn.confirmed { background: rgba(72,199,142,0.15); border-color: #2f9e6e; color: #2f9e6e; }
+
+/* Customer card */
+.pos-customer-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: rgba(72,199,142,0.08); border: 1px solid rgba(72,199,142,0.3);
+  border-radius: 10px; padding: 10px 12px;
+}
+.pos-customer-info { display: flex; flex-direction: column; gap: 2px; }
+.pos-customer-name { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: 700; color: #2f9e6e; }
+.pos-customer-phone { font-size: 0.72rem; color: var(--text-secondary); }
+.pos-change-btn {
+  font-size: 0.72rem; color: var(--text-muted); text-decoration: underline; cursor: pointer;
+  background: transparent; border: none; transition: color .12s;
+}
+.pos-change-btn:hover { color: var(--accent-fg); }
+.pos-error-msg {
+  font-size: 0.78rem; padding: 8px 10px; border-radius: 8px; margin-top: 6px;
+  background: rgba(220,53,69,0.1); color: #e05252; border: 1px solid rgba(220,53,69,0.3);
+}
+.pos-success-msg {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px;
+  padding: 10px; border-radius: 10px;
+  background: rgba(72,199,142,0.08); border: 1px solid rgba(72,199,142,0.3); color: #2f9e6e;
+  font-size: 0.82rem; font-weight: 700;
+}
+.pos-invoice-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: #2f9e6e; color: #fff; border: none; border-radius: 999px;
+  padding: 6px 16px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  transition: all .15s;
+}
+.pos-invoice-btn:hover { background: #27a862; }
+
+/* Action buttons */
+.pos-action-secondary {
+  flex: 1; padding: 8px 12px; border-radius: 10px;
+  background: var(--bg-card-inset); border: 1.5px solid var(--border-color-soft);
+  color: var(--text-secondary); font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.pos-action-secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-fg); }
+.pos-action-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+.pos-pay-submit {
+  width: 100%; padding: 12px;
+  background: var(--gradient-brand); color: #fff;
+  border: none; border-radius: 12px;
+  font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; transition: all .18s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 14px rgba(244,63,94,0.3);
+}
+.pos-pay-submit:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(244,63,94,0.4); }
+.pos-pay-submit:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.3); transform: none; }
 </style>
