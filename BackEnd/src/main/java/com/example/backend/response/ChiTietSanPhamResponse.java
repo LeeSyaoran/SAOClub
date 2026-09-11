@@ -24,22 +24,4 @@ public class ChiTietSanPhamResponse {
     private LocalDateTime lockedAt;
     private String lockSession;
     private String lockedByTen; // Ho ten nhan vien lock
-
-    // Constructor mới với locking fields
-    public ChiTietSanPhamResponse(Integer chiTietId, Integer bienTheId, Integer phieuNhapId,
-        String maSku, String soSerial, String trangThai, LocalDateTime ngayNhapKho,
-        String ghiChu, Integer lockedBy, LocalDateTime lockedAt, String lockSession, String lockedByTen) {
-        this.chiTietId = chiTietId;
-        this.bienTheId = bienTheId;
-        this.phieuNhapId = phieuNhapId;
-        this.maSku = maSku;
-        this.soSerial = soSerial;
-        this.trangThai = trangThai;
-        this.ngayNhapKho = ngayNhapKho;
-        this.ghiChu = ghiChu;
-        this.lockedBy = lockedBy;
-        this.lockedAt = lockedAt;
-        this.lockSession = lockSession;
-        this.lockedByTen = lockedByTen;
-    }
 }
