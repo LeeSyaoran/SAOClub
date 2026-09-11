@@ -1,23 +1,35 @@
 package com.example.backend.repository;
 
-import com.example.backend.entity.ChiTietSanPham;
-import com.example.backend.entity.ChiTietDonHang;
-import com.example.backend.entity.DonHang;
-import com.example.backend.response.ChiTietSanPhamResponse;
-import com.example.backend.response.WarrantyStatusResponse;
-import jakarta.persistence.LockModeType;
+import java.util.Collection;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Collection;
-import java.util.List;
+import com.example.backend.entity.ChiTietDonHang;
+import com.example.backend.entity.ChiTietSanPham;
+import com.example.backend.response.ChiTietSanPhamResponse;
+import com.example.backend.response.WarrantyStatusResponse;
+
+import jakarta.persistence.LockModeType;
 
 @Repository
 public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, Integer> {
-    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c LEFT JOIN c.phieuNhap pn WHERE c.daXoa = false")
+    @Query("""
+    SELECT new com.example.backend.response.ChiTietSanPhamResponse(
+        c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku,
+        c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu,
+        c.lockedBy, c.lockedAt, c.lockSession,
+        CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END
+    )
+    FROM ChiTietSanPham c
+    LEFT JOIN c.phieuNhap pn
+    LEFT JOIN com.example.backend.entity.NhanVien nv ON nv.id = c.lockedBy
+    WHERE c.daXoa = false
+    """)
     List<ChiTietSanPhamResponse> hienThiChiTietSanPham();
 
     @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c LEFT JOIN c.phieuNhap pn WHERE c.bienThe.bienTheId = :bienTheId AND c.daXoa = false")
@@ -67,6 +79,10 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     // khi service cần ghi lich_su_ton_kho với serial.getBienThe() — đặc biệt vì
     // releaseOrphanSerials() được gọi nội bộ (self-call) nên @Transactional có thể không
     // kích hoạt qua Spring proxy, session đã đóng trước khi lặp.
+    // 
+    // Kiểm tra cả ChiTietDonHangSerial (many-to-many) và ChiTietDonHang.chiTietSanPham
+    // (direct reference) để tránh dọn nhầm serial vừa tạo nhưng ChiTietDonHangSerial chưa
+    // được sync/flush trong transaction.
     @Query("""
         SELECT c FROM ChiTietSanPham c
         JOIN FETCH c.bienThe
@@ -74,6 +90,10 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
           AND NOT EXISTS (
               SELECT 1 FROM ChiTietDonHangSerial s
               WHERE s.chiTietSanPham.chiTietId = c.chiTietId
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM ChiTietDonHang cdh
+              WHERE cdh.chiTietSanPham.chiTietId = c.chiTietId
           )
         """)
     List<ChiTietSanPham> findOrphanGiuHangSerials();

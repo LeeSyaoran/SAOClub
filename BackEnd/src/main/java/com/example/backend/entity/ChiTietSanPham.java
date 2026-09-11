@@ -41,4 +41,13 @@ public class ChiTietSanPham {
 
     @Column(name = "da_xoa")
     private Boolean daXoa = false;
+
+    @Column(name = "locked_by")
+    private Integer lockedBy;
+
+    @Column(name = "locked_at")
+    private LocalDateTime lockedAt;
+
+    @Column(name = "lock_session")
+    private String lockSession;
 }
