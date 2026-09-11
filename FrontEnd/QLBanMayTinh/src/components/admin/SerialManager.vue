@@ -10,6 +10,7 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import { serialEvents } from "../../stores/serialEvents.js";
+import { posCartChiTietIds } from "../../stores/posCart.js";
 import SearchSelect from "../common/SearchSelect.vue";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
@@ -48,6 +49,7 @@ const load = async () => {
     loading.value = false;
   }
 };
+let refreshTimer;
 onMounted(() => {
   load();
   ensureProducts();
@@ -55,7 +57,10 @@ onMounted(() => {
   DmService.getRam().then((l) => { specLists.ram = l; }).catch(() => {});
   DmService.getGpu().then((l) => { specLists.gpu = l; }).catch(() => {});
   DmService.getOCung().then((l) => { specLists.oCung = l; }).catch(() => {});
+  // Auto-refresh every 30s to update lock status
+  refreshTimer = setInterval(load, 30000);
 });
+onBeforeUnmount(() => clearInterval(refreshTimer));
 
 // Tu dong reload khi PosPanel da thay doi trang thai serial
 watch(() => serialEvents.count, () => { load(); });
@@ -102,7 +107,7 @@ const { currentPage, totalPages, pagedItems, pageSize } = usePagination(filtered
 
 const STATUS_COLOR = {
   trong_kho: '#22c55e',
-  giu_hang: '#facc15',
+  giu_hang: '#f59e0b',
   da_ban: '#94a3b8',
   loi_bao_hanh: '#fb923c',
   da_tra_hang: '#38bdf8',
@@ -110,6 +115,9 @@ const STATUS_COLOR = {
 };
 const statusColor = (s) => STATUS_COLOR[s] ?? '#6b7280';
 const statusLabel = (s) => t(`admin.statusLabel.${s}`);
+
+// Kiểm tra serial có đang trong giỏ POS hiện tại không (cùng tab, tức thì)
+const isInPosCart = (item) => item.loai === 'sanPham' && posCartChiTietIds.value.has(item.chiTietId);
 
 const showModal = ref(false);
 const editingId = ref(null);
@@ -255,14 +263,28 @@ const deleteSerial = async (item) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(item, idx) in pagedItems" :key="`${item.loai}-${item.rowId}`">
+          <tr
+            v-for="(item, idx) in pagedItems"
+            :key="`${item.loai}-${item.rowId}`"
+            :class="{ 'sm-row--held': item.trangThai === 'giu_hang' }"
+          >
             <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
             <td>{{ t(`admin.productsTabs.${item.loai}`) }}</td>
             <td>{{ rowSpecLabel(item) }}</td>
             <td style="font-family:monospace;">{{ item.soSerial }}</td>
             <td>
-              <span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;" :style="{ background: statusColor(item.trangThai) }"></span>
-              {{ statusLabel(item.trangThai) }}
+              <span v-if="item.trangThai === 'giu_hang'" class="sm-badge sm-badge--held" :title="isInPosCart(item) ? 'Đang trong giỏ POS hiện tại' : 'Đang giữ (có thể từ phiên POS khác)'">
+                <span class="sm-dot sm-dot--held"></span>
+                {{ statusLabel(item.trangThai) }}
+                <span v-if="isInPosCart(item)" class="sm-pos-indicator" title="Đang trong giỏ POS">⬤ POS</span>
+              </span>
+              <span v-else-if="item.lockedBy && item.lockedByTen" class="sm-badge" style="background:#b45309;color:#fef9c3;" :title="`Đang được ${item.lockedByTen} chọn trong picker`">
+                🔒 {{ item.lockedByTen }}
+              </span>
+              <span v-else>
+                <span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;" :style="{ background: statusColor(item.trangThai) }"></span>
+                {{ statusLabel(item.trangThai) }}
+              </span>
             </td>
             <td class="text-secondary">{{ formatDate(item.ngayNhapKho) }}</td>
             <td class="text-secondary">{{ item.ghiChu }}</td>
@@ -336,3 +358,50 @@ const deleteSerial = async (item) => {
     :only-bien-the-ids="detailOnlyBienTheIds"
   />
 </template>
+
+<style scoped>
+/* Dòng serial đang lên đơn POS — nền vàng nhạt nổi bật để nhân viên nhận biết ngay */
+.sm-row--held {
+  background: #fffbeb;
+}
+.sm-row--held:hover {
+  background: #fef3c7;
+}
+
+/* Badge "Đang lên đơn" — pill amber */
+.sm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+.sm-badge--held {
+  color: #92400e;
+  background: #fde68a;
+  border-radius: 999px;
+  padding: 2px 10px 2px 6px;
+  font-size: 12.5px;
+}
+
+/* Chấm tròn màu amber */
+.sm-dot--held {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  flex-shrink: 0;
+}
+
+/* Badge nhỏ "⬤ POS" — chỉ hiện khi serial đang trong giỏ phiên này */
+.sm-pos-indicator {
+  font-size: 10px;
+  font-weight: 700;
+  color: #b45309;
+  background: #fbbf24;
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 2px;
+  letter-spacing: 0.03em;
+}
+</style>
