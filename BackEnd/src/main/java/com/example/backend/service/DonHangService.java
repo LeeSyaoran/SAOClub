@@ -190,7 +190,7 @@ public class DonHangService {
         DonHang saved = donHangRepository.save(entity);
 
         if ("cancelled".equals(request.getTrangThaiDonHang()) && !"cancelled".equals(oldStatus)) {
-            releaseSerialsToStock(id);
+            releaseSerialsToStock(id, true);
             giaiPhongKhuyenMaiVoucher(saved);
         }
 
@@ -263,15 +263,27 @@ public class DonHangService {
     }
 
     private void releaseSerialsToStock(Integer donHangId) {
+        releaseSerialsToStock(donHangId, false);
+    }
+
+    private void releaseSerialsToStock(Integer donHangId, boolean broadcastUnlock) {
         List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(donHangId);
         for (ChiTietDonHang item : items) {
             if (item.getChiTietSanPham() != null) {
-                item.getChiTietSanPham().setTrangThai("trong_kho");
-                chiTietSanPhamRepository.save(item.getChiTietSanPham());
+                ChiTietSanPham serial = item.getChiTietSanPham();
+                serial.setTrangThai("trong_kho");
+                chiTietSanPhamRepository.save(serial);
+                if (broadcastUnlock) {
+                    sseService.notifySerialUnlocked(serial.getChiTietId(), serial.getSoSerial());
+                }
             }
             for (ChiTietDonHangSerial link : chiTietDonHangSerialRepository.findByChiTietDonHang_Id(item.getId())) {
-                link.getChiTietSanPham().setTrangThai("trong_kho");
-                chiTietSanPhamRepository.save(link.getChiTietSanPham());
+                ChiTietSanPham serial = link.getChiTietSanPham();
+                serial.setTrangThai("trong_kho");
+                chiTietSanPhamRepository.save(serial);
+                if (broadcastUnlock) {
+                    sseService.notifySerialUnlocked(serial.getChiTietId(), serial.getSoSerial());
+                }
             }
         }
     }
@@ -296,7 +308,7 @@ public class DonHangService {
         if (!isStaffOrOwner(donHang.getKhachHang().getKhachHangId()))
             throw new AccessDeniedException("Không có quyền xóa đơn hàng này");
 
-        releaseSerialsToStock(id);
+        releaseSerialsToStock(id, true);
         giaiPhongKhuyenMaiVoucher(donHang);
         List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(id);
         for (ChiTietDonHang item : items) {
@@ -511,8 +523,8 @@ public class DonHangService {
                     lichSu.setThoiGian(LocalDateTime.now());
                     lichSuDonHangRepository.save(lichSu);
 
-                    // Tra serial ve kho
-                    releaseSerialsToStock(order.getId());
+                    // Tra serial ve kho + broadcast unlock
+                    releaseSerialsToStock(order.getId(), true);
 
                     log.info("[AutoCancel] Đã hủy đơn #{} (pending) — quá 30 phút không thanh toán", order.getId());
                     sseService.notifyOrderUpdate(order.getId());
