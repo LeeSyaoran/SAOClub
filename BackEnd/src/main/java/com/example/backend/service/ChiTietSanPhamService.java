@@ -7,6 +7,7 @@ import com.example.backend.exception.DuplicateSerialException;
 import com.example.backend.repository.BienTheSanPhamRepository;
 import com.example.backend.repository.ChiTietSanPhamRepository;
 import com.example.backend.repository.LichSuTonKhoRepository;
+import com.example.backend.repository.NhanVienRepository;
 import com.example.backend.repository.PhieuNhapKhoRepository;
 import com.example.backend.request.ChiTietSanPhamRequest;
 import com.example.backend.request.SerialLockRequest;
@@ -21,6 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.service.SseService;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

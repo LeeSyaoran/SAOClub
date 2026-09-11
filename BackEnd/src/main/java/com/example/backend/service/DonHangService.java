@@ -17,6 +17,8 @@ import com.example.backend.request.DonHangRequest;
 import com.example.backend.request.XacNhanDonHangLineRequest;
 import com.example.backend.request.XacNhanDonHangRequest;
 import com.example.backend.response.DonHangResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -40,6 +42,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class DonHangService {
+
+    private static final Logger log = LoggerFactory.getLogger(DonHangService.class);
 
     @Autowired
     private DonHangRepository donHangRepository;
@@ -507,7 +511,9 @@ public class DonHangService {
     @Scheduled(fixedDelay = 300000)
     public void autoCancelPendingOrders() {
         try {
-            List<DonHang> expired = donHangRepository.findPendingOrdersOlderThan(30);
+            List<DonHang> expired = donHangRepository.findPendingOrdersOlderThan(
+                LocalDateTime.now().minusMinutes(30)
+            );
             for (DonHang order : expired) {
                 try {
                     String oldStatus = order.getTrangThaiDonHang();

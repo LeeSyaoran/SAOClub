@@ -1,7 +1,11 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.ChiTietSanPham;
+import com.example.backend.repository.BienTheSanPhamRepository;
 import com.example.backend.repository.ChiTietSanPhamRepository;
+import com.example.backend.repository.LichSuTonKhoRepository;
+import com.example.backend.repository.NhanVienRepository;
+import com.example.backend.repository.PhieuNhapKhoRepository;
 import com.example.backend.request.SerialLockRequest;
 import com.example.backend.request.SerialUnlockRequest;
 import com.example.backend.response.SerialLockResponse;
@@ -25,6 +29,16 @@ class ChiTietSanPhamServiceLockTest {
 
     @Mock
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
+    @Mock
+    private BienTheSanPhamRepository bienTheSanPhamRepository;
+    @Mock
+    private LichSuTonKhoRepository lichSuTonKhoRepository;
+    @Mock
+    private PhieuNhapKhoRepository phieuNhapKhoRepository;
+    @Mock
+    private NhanVienRepository nhanVienRepository;
+    @Mock
+    private SseService sseService;
 
     @InjectMocks
     private ChiTietSanPhamService service;
