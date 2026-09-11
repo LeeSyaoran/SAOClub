@@ -1,5 +1,6 @@
 package com.example.backend.repository;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -153,4 +154,50 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
         ORDER BY d.ngayDat DESC
         """)
     java.util.Optional<ChiTietDonHang> findLatestOrderBySerialChiTietId(@Param("chiTietId") Integer chiTietId);
+
+    // ========== SERIAL LOCKING ==========
+
+    // Lock nhiều serial cùng lúc — chỉ lock serial đang 'trong_kho' và chưa bị lock (hoặc lock đã hết hạn)
+    // Trả về số serial đã lock được
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("""
+        UPDATE ChiTietSanPham c SET c.lockedBy = :lockedBy, c.lockedAt = :lockedAt,
+        c.lockSession = :lockSession
+        WHERE c.chiTietId IN :ids AND c.trangThai = 'trong_kho'
+        AND (c.lockedBy IS NULL OR c.lockedAt IS NULL
+             OR c.lockedAt < :expiredBefore)
+        """)
+    int lockSerials(@Param("ids") List<Integer> ids,
+                     @Param("lockedBy") Integer lockedBy,
+                     @Param("lockedAt") LocalDateTime lockedAt,
+                     @Param("lockSession") String lockSession,
+                     @Param("expiredBefore") LocalDateTime expiredBefore);
+
+    // Unlock nhiều serial — chỉ unlock serial do session này lock
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("""
+        UPDATE ChiTietSanPham c SET c.lockedBy = NULL, c.lockedAt = NULL, c.lockSession = NULL
+        WHERE c.chiTietId IN :ids AND c.lockSession = :sessionId
+        """)
+    int unlockSerials(@Param("ids") List<Integer> ids, @Param("sessionId") String sessionId);
+
+    // Tìm serial đang bị lock (dùng cho hienThiChiTietSanPham — JOIN FETCH)
+    @Query("""
+        SELECT new com.example.backend.response.ChiTietSanPhamResponse(
+            c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku,
+            c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu,
+            c.lockedBy, c.lockedAt, c.lockSession,
+            CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END
+        )
+        FROM ChiTietSanPham c
+        LEFT JOIN c.phieuNhap pn
+        LEFT JOIN com.example.backend.entity.NhanVien nv ON nv.id = c.lockedBy
+        WHERE c.daXoa = false AND c.lockedBy IS NOT NULL
+        ORDER BY c.lockedAt DESC
+        """)
+    List<ChiTietSanPhamResponse> findLockedSerials();
+
+    // Tìm serial đã hết lock timeout — dùng cho scheduled cleanup
+    @Query("SELECT c FROM ChiTietSanPham c WHERE c.lockedAt IS NOT NULL AND c.lockedAt < :expiredBefore")
+    List<ChiTietSanPham> findExpiredLocks(@Param("expiredBefore") LocalDateTime expiredBefore);
 }
