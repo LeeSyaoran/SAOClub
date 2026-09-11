@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.LichSuTonKho;
+import com.example.backend.entity.NhanVien;
 import com.example.backend.exception.DuplicateSerialException;
 import com.example.backend.repository.BienTheSanPhamRepository;
 import com.example.backend.repository.ChiTietSanPhamRepository;
@@ -25,6 +26,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ChiTietSanPhamService {
@@ -39,6 +42,10 @@ public class ChiTietSanPhamService {
     private PhieuNhapKhoRepository phieuNhapKhoRepository;
     @Autowired
     private LichSuTonKhoRepository lichSuTonKhoRepository;
+    @Autowired
+    private SseService sseService;
+    @Autowired
+    private NhanVienRepository nhanVienRepository;
 
     public List<ChiTietSanPhamResponse> hienThiChiTietSanPham() {
         // KHÔNG gọi releaseOrphanSerials() ở đây — trước đây đã gây bug:
@@ -195,6 +202,7 @@ public class ChiTietSanPhamService {
         );
 
         List<Integer> failedIds = new ArrayList<>();
+        List<ChiTietSanPham> lockedSerials = new ArrayList<>();
         if (locked < request.getChiTietIds().size()) {
             // Tim serial bi loi
             for (Integer id : request.getChiTietIds()) {
@@ -211,6 +219,21 @@ public class ChiTietSanPhamService {
             }
         }
 
+        // Broadcast SSE cho serial vua lock thanh cong
+        if (locked > 0) {
+            // Lay thong tin nhan vien lock
+            NhanVien nv = nhanVienRepository.findById(request.getNhanVienId()).orElse(null);
+            String lockedByTen = nv != null ? nv.getHoTen() : "";
+            for (Integer id : request.getChiTietIds()) {
+                if (!failedIds.contains(id)) {
+                    ChiTietSanPham serial = chiTietSanPhamRepository.findById(id).orElse(null);
+                    if (serial != null) {
+                        sseService.notifySerialLocked(id, serial.getSoSerial(), request.getNhanVienId(), lockedByTen);
+                    }
+                }
+            }
+        }
+
         return new SerialLockResponse(
             failedIds.isEmpty(),
             locked,
@@ -221,10 +244,21 @@ public class ChiTietSanPhamService {
 
     @Transactional
     public int unlockSerials(SerialUnlockRequest request) {
-        return chiTietSanPhamRepository.unlockSerials(
+        int unlocked = chiTietSanPhamRepository.unlockSerials(
             request.getChiTietIds(),
             request.getSessionId()
         );
+
+        // Broadcast SSE cho serial vua unlock
+        if (unlocked > 0) {
+            for (Integer id : request.getChiTietIds()) {
+                ChiTietSanPham serial = chiTietSanPhamRepository.findById(id).orElse(null);
+                if (serial != null) {
+                    sseService.notifySerialUnlocked(id, serial.getSoSerial());
+                }
+            }
+        }
+        return unlocked;
     }
 
     // Scheduled: giai phong lock da het han (chay moi 1 phut)
@@ -237,6 +271,8 @@ public class ChiTietSanPhamService {
             serial.setLockedAt(null);
             serial.setLockSession(null);
             chiTietSanPhamRepository.save(serial);
+            // Broadcast unlock khi auto-release
+            sseService.notifySerialUnlocked(serial.getChiTietId(), serial.getSoSerial());
         }
         if (!expired.isEmpty()) {
             log.info("[Scheduled] Released {} expired serial locks", expired.size());

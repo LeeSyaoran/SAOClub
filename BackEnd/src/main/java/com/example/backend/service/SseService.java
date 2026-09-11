@@ -6,6 +6,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
@@ -37,11 +38,33 @@ public class SseService {
         broadcast("order-updated", orderId);
     }
 
-    private void broadcast(String eventName, Integer orderId) {
+    // Broadcast serial lock event — chi gui data nho (chiTietId + lockedByTen)
+    @Async
+    public void notifySerialLocked(Integer chiTietId, String soSerial, Integer lockedBy, String lockedByTen) {
+        Map<String, Object> payload = Map.of(
+            "chiTietId", chiTietId,
+            "soSerial", soSerial != null ? soSerial : "",
+            "lockedBy", lockedBy != null ? lockedBy : 0,
+            "lockedByTen", lockedByTen != null ? lockedByTen : ""
+        );
+        broadcast("serial-locked", payload);
+    }
+
+    // Broadcast serial unlock event
+    @Async
+    public void notifySerialUnlocked(Integer chiTietId, String soSerial) {
+        Map<String, Object> payload = Map.of(
+            "chiTietId", chiTietId,
+            "soSerial", soSerial != null ? soSerial : ""
+        );
+        broadcast("serial-unlocked", payload);
+    }
+
+    private void broadcast(String eventName, Object data) {
         List<SseEmitter> dead = new ArrayList<>();
         for (SseEmitter emitter : emitters) {
             try {
-                emitter.send(SseEmitter.event().name(eventName).data(orderId));
+                emitter.send(SseEmitter.event().name(eventName).data(data));
             } catch (Exception e) {
                 dead.add(emitter);
             }

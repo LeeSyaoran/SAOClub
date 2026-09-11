@@ -54,4 +54,8 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     ORDER BY CAST(d.ngayDat AS java.time.LocalDate)
     """)
     List<RevenueByDayResponse> doanhThuTheoNgay(@Param("tuNgay") LocalDateTime tuNgay, @Param("denNgay") LocalDateTime denNgay);
+
+    // Tim don pending qua han 30 phut (dung cho auto-cancel)
+    @Query("SELECT d FROM DonHang d WHERE d.trangThaiDonHang = 'pending' AND d.ngayDat < :cutoff")
+    List<DonHang> findPendingOrdersOlderThan(@Param("cutoff") LocalDateTime cutoff);
 }

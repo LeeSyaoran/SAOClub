@@ -21,6 +21,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -487,5 +488,40 @@ public class DonHangService {
             donHangRepository.deleteById(sourceId);
         }
         recalculateTongTien(targetId);
+    }
+
+    // Auto-cancel pending orders after 30 minutes without payment
+    // Chay moi 5 phut — tim don pending + created > 30 phut truoc
+    @Scheduled(fixedDelay = 300000)
+    public void autoCancelPendingOrders() {
+        try {
+            List<DonHang> expired = donHangRepository.findPendingOrdersOlderThan(30);
+            for (DonHang order : expired) {
+                try {
+                    String oldStatus = order.getTrangThaiDonHang();
+                    order.setTrangThaiDonHang("cancelled");
+                    order.setGhiChu((order.getGhiChu() != null ? order.getGhiChu() + "; " : "") + "[Auto] Hủy tự động: quá 30 phút không thanh toán");
+                    donHangRepository.save(order);
+
+                    // Ghi lich su
+                    LichSuDonHang lichSu = new LichSuDonHang();
+                    lichSu.setDonHangId(order.getId());
+                    lichSu.setTrangThaiCu(oldStatus);
+                    lichSu.setTrangThaiMoi("cancelled");
+                    lichSu.setThoiGian(LocalDateTime.now());
+                    lichSuDonHangRepository.save(lichSu);
+
+                    // Tra serial ve kho
+                    releaseSerialsToStock(order.getId());
+
+                    log.info("[AutoCancel] Đã hủy đơn #{} (pending) — quá 30 phút không thanh toán", order.getId());
+                    sseService.notifyOrderUpdate(order.getId());
+                } catch (Exception ex) {
+                    log.warn("[AutoCancel] Lỗi khi hủy đơn #{}: {}", order.getId(), ex.getMessage());
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[AutoCancel] Lỗi khi quet don hang pending: {}", ex.getMessage());
+        }
     }
 }

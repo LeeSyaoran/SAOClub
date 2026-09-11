@@ -45,6 +45,7 @@ import HangHoa from "../components/HangHoa.vue";
 import BienTheTable from "../components/admin/BienTheTable.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
 import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
+import { connectSerialEvents, disconnectSerialEvents } from "../stores/serialEvents.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
 import { InventoryStore, ensureInventory, refreshInventory } from "../stores/inventory.js";
 import { StaffStore, ensureStaff, refreshStaff } from "../stores/staff.js";
@@ -1063,10 +1064,12 @@ onMounted(async () => {
   connectOrderEvents(AuthStore.user?.token, {
     onNewOrder: () => { autoMergeAllDuplicates(); fetchProductSales(); },
   });
+  connectSerialEvents(AuthStore.user?.token);
 });
 
 onUnmounted(() => {
   disconnectOrderEvents();
+  disconnectSerialEvents();
 });
 </script>
 
