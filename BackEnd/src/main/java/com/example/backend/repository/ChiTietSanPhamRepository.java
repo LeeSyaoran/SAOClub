@@ -33,10 +33,32 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     """)
     List<ChiTietSanPhamResponse> hienThiChiTietSanPham();
 
-    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c LEFT JOIN c.phieuNhap pn WHERE c.bienThe.bienTheId = :bienTheId AND c.daXoa = false")
+    @Query("""
+        SELECT new com.example.backend.response.ChiTietSanPhamResponse(
+            c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku,
+            c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu,
+            c.lockedBy, c.lockedAt, c.lockSession,
+            CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END
+        )
+        FROM ChiTietSanPham c
+        LEFT JOIN c.phieuNhap pn
+        LEFT JOIN com.example.backend.entity.NhanVien nv ON nv.id = c.lockedBy
+        WHERE c.bienThe.bienTheId = :bienTheId AND c.daXoa = false
+        """)
     List<ChiTietSanPhamResponse> findByBienTheId(@Param("bienTheId") Integer bienTheId);
 
-    @Query("SELECT new com.example.backend.response.ChiTietSanPhamResponse(c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu) FROM ChiTietSanPham c LEFT JOIN c.phieuNhap pn WHERE pn.phieuNhapId = :phieuNhapId AND c.daXoa = false")
+    @Query("""
+        SELECT new com.example.backend.response.ChiTietSanPhamResponse(
+            c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku,
+            c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu,
+            c.lockedBy, c.lockedAt, c.lockSession,
+            CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END
+        )
+        FROM ChiTietSanPham c
+        LEFT JOIN c.phieuNhap pn
+        LEFT JOIN com.example.backend.entity.NhanVien nv ON nv.id = c.lockedBy
+        WHERE pn.phieuNhapId = :phieuNhapId AND c.daXoa = false
+        """)
     List<ChiTietSanPhamResponse> findByPhieuNhapId(@Param("phieuNhapId") Integer phieuNhapId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
