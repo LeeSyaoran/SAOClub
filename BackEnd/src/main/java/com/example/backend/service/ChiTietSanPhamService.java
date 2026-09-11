@@ -8,16 +8,21 @@ import com.example.backend.repository.ChiTietSanPhamRepository;
 import com.example.backend.repository.LichSuTonKhoRepository;
 import com.example.backend.repository.PhieuNhapKhoRepository;
 import com.example.backend.request.ChiTietSanPhamRequest;
+import com.example.backend.request.SerialLockRequest;
+import com.example.backend.request.SerialUnlockRequest;
 import com.example.backend.response.ChiTietSanPhamResponse;
+import com.example.backend.response.SerialLockResponse;
 import com.example.backend.response.WarrantyStatusResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -36,19 +41,26 @@ public class ChiTietSanPhamService {
     private LichSuTonKhoRepository lichSuTonKhoRepository;
 
     public List<ChiTietSanPhamResponse> hienThiChiTietSanPham() {
-        // Tự động dọn rác serial 'giu_hang' bị kẹt mỗi khi frontend load bảng serial.
-        // An toàn vì query NOT EXISTS đảm bảo không đụng serial đang liên kết đơn thật.
-        // Xảy ra khi đơn đã bị xóa/hủy nhưng serial đã được set 'giu_hang' từ POS trước đó,
-        // hoặc user đóng tab giữa chừng trước khi đơn được tạo chính thức.
-        // Try-catch để nếu lỗi DB (vd constraint, deadlock) thì VẪN trả danh sách serial
-        // cho user xem — không nên để bảng trống vì cleanup phụ trợi lỗi.
+        // KHÔNG gọi releaseOrphanSerials() ở đây — trước đây đã gây bug:
+        // mỗi khi POS chọn serial (giu_hang) rồi bumpSerialEvent() → SerialManager reload
+        // → GET /api/chi-tiet-san-pham → cleanup chạy → serial chưa có chi_tiet_don_hang
+        // (vì đơn chưa được tạo) bị reset về trong_kho ngay lập tức.
+        // Cleanup đã được chuyển sang @Scheduled 30 phút/lần bên dưới — chỉ dọn serial
+        // thực sự bị kẹt lâu (đóng tab, đơn đã hủy), không đụng đến POS cart đang active.
+        return chiTietSanPhamRepository.hienThiChiTietSanPham();
+    }
+
+    // Dọn rác serial 'giu_hang' mồ côi — chạy định kỳ 30 phút thay vì mỗi lần load bảng
+    // để tránh reset nhầm serial đang trong giỏ POS chưa tạo đơn.
+    // fixedDelay = 1800000ms = 30 phút — đủ lớn để một phiên POS bình thường kết thúc.
+    @Scheduled(fixedDelay = 1800000)
+    public void scheduledReleaseOrphanSerials() {
         try {
             int released = releaseOrphanSerials();
-            if (released > 0) log.info("Đã tự động giải phóng {} serial 'giu_hang' mồ côi", released);
+            if (released > 0) log.info("[Scheduled] Đã giải phóng {} serial 'giu_hang' mồ côi", released);
         } catch (Exception ex) {
-            log.warn("Lỗi khi dọn rác serial orphan (không ảnh hưởng đến danh sách hiển thị)", ex);
+            log.warn("[Scheduled] Lỗi khi dọn rác serial orphan", ex);
         }
-        return chiTietSanPhamRepository.hienThiChiTietSanPham();
     }
 
     @Transactional(readOnly = true)
@@ -161,5 +173,73 @@ public class ChiTietSanPhamService {
             lichSuTonKhoRepository.save(lichSu);
         }
         return orphans.size();
+    }
+
+    // ========== SERIAL LOCKING ==========
+
+    // Lock timeout: 5 phut
+    private static final int LOCK_TIMEOUT_SECONDS = 300;
+
+    @Transactional
+    public SerialLockResponse lockSerials(SerialLockRequest request) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiredBefore = now.minusSeconds(LOCK_TIMEOUT_SECONDS);
+
+        // Thu lock — chi serial dang trong_kho va chua bi lock (hoac lock da het han)
+        int locked = chiTietSanPhamRepository.lockSerials(
+            request.getChiTietIds(),
+            request.getNhanVienId(),
+            now,
+            request.getSessionId(),
+            expiredBefore
+        );
+
+        List<Integer> failedIds = new ArrayList<>();
+        if (locked < request.getChiTietIds().size()) {
+            // Tim serial bi loi
+            for (Integer id : request.getChiTietIds()) {
+                ChiTietSanPham serial = chiTietSanPhamRepository.findById(id).orElse(null);
+                if (serial == null) {
+                    failedIds.add(id);
+                } else if (!"trong_kho".equals(serial.getTrangThai())) {
+                    failedIds.add(id); // serial khong o trang thai trong_kho
+                } else if (serial.getLockedAt() != null
+                           && serial.getLockedAt().isAfter(expiredBefore)
+                           && !request.getSessionId().equals(serial.getLockSession())) {
+                    failedIds.add(id); // serial dang bi lock boi nguoi khac
+                }
+            }
+        }
+
+        return new SerialLockResponse(
+            failedIds.isEmpty(),
+            locked,
+            failedIds,
+            failedIds.isEmpty() ? "Lock thanh cong" : "Mot so serial bi loi"
+        );
+    }
+
+    @Transactional
+    public int unlockSerials(SerialUnlockRequest request) {
+        return chiTietSanPhamRepository.unlockSerials(
+            request.getChiTietIds(),
+            request.getSessionId()
+        );
+    }
+
+    // Scheduled: giai phong lock da het han (chay moi 1 phut)
+    @Scheduled(fixedDelay = 60000)
+    public void releaseExpiredLocks() {
+        LocalDateTime expiredBefore = LocalDateTime.now().minusSeconds(LOCK_TIMEOUT_SECONDS);
+        List<ChiTietSanPham> expired = chiTietSanPhamRepository.findExpiredLocks(expiredBefore);
+        for (ChiTietSanPham serial : expired) {
+            serial.setLockedBy(null);
+            serial.setLockedAt(null);
+            serial.setLockSession(null);
+            chiTietSanPhamRepository.save(serial);
+        }
+        if (!expired.isEmpty()) {
+            log.info("[Scheduled] Released {} expired serial locks", expired.size());
+        }
     }
 }
