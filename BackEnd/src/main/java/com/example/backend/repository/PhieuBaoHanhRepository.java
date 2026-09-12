@@ -24,7 +24,11 @@ public interface PhieuBaoHanhRepository extends JpaRepository<PhieuBaoHanh, Inte
 
     boolean existsByBienThe_BienTheId(Integer bienTheId);
 
-    // Lich su phieu bao hanh cua 1 serial, moi nhat truoc
+    // Phiếu BH theo khách hàng
+    @Query("SELECT new com.example.backend.response.PhieuBaoHanhResponse(p.baoHanhId, p.donHang.id, p.bienThe.bienTheId, p.bienThe.maSku, p.khachHang.khachHangId, ctsp.chiTietId, ctsp.soSerial, p.ngayMua, p.ngayHetBh, p.ngayTiepNhan, p.ngayTraKhach, p.moTaLoi, p.ketQuaXuLy, p.trangThai, p.chiPhiPhatSinh, p.ghiChu) FROM PhieuBaoHanh p LEFT JOIN p.chiTietSanPham ctsp WHERE p.khachHang.khachHangId = ?1")
+    List<PhieuBaoHanhResponse> findByKhachHangId(Integer khachHangId);
+
+    // Lịch sử phiếu BH theo serial, mới nhất trước
     @Query("SELECT new com.example.backend.response.PhieuBaoHanhResponse(p.baoHanhId, p.donHang.id, p.bienThe.bienTheId, p.bienThe.maSku, p.khachHang.khachHangId, ctsp.chiTietId, ctsp.soSerial, p.ngayMua, p.ngayHetBh, p.ngayTiepNhan, p.ngayTraKhach, p.moTaLoi, p.ketQuaXuLy, p.trangThai, p.chiPhiPhatSinh, p.ghiChu) FROM PhieuBaoHanh p LEFT JOIN p.chiTietSanPham ctsp WHERE ctsp.chiTietId = :chiTietId ORDER BY p.ngayTiepNhan DESC NULLS LAST")
     List<PhieuBaoHanhResponse> findByChiTietId(@Param("chiTietId") Integer chiTietId);
 }

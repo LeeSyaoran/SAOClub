@@ -21,6 +21,7 @@ import { SerialLockService } from "../../services/SerialLockService.js";
 import { AuthStore } from "../../stores/index.js";
 import { useToastStore } from "../../stores/toast.js";
 const { showToast } = useToastStore();
+import { askConfirm } from "../../stores/confirm.js";
 
 // POS session ID — tao moi neu chua co, giu khi reload
 const posSessionId = ref(

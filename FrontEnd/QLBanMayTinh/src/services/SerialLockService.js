@@ -1,4 +1,4 @@
-import { apiFetch, authHeaders } from './api.js';
+import { authHeaders } from './api.js';
 
 const BASE = '/api/chi-tiet-san-pham';
 
