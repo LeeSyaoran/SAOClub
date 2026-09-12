@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,4 +33,6 @@ public class PhieuNhapKhoRequest {
 
     @NotBlank(message = "Ghi chú không được để trống")
     private String ghiChu;
+
+    private List<PhieuNhapSerialDraft> serials;
 }

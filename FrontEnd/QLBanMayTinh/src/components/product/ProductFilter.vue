@@ -1,53 +1,18 @@
 <template>
   <div class="d-flex flex-column gap-3">
+    <!-- Danh mục — ưu tiên cao nhất -->
     <div>
-      <div
-        class="fw-bold small text-uppercase mb-2"
-        style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);"
-      >
-        {{ t('productFilter.brand') }}
-      </div>
-      <div class="d-flex flex-wrap gap-2">
-        <button
-          v-for="b in brands" :key="b"
-          class="btn btn-sm"
-          :class="selectedBrands.includes(b) ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-          style="font-size:0.78rem; border-radius:20px;"
-          @click="toggleBrand(b)"
-        >
-          {{ b }}
-        </button>
-      </div>
-    </div>
-
-    <div>
-      <div
-        class="fw-bold small text-uppercase mb-2"
-        style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);"
-      >
-        {{ t('productFilter.priceRange') }}
-      </div>
-      <div class="d-flex flex-wrap gap-2">
-        <button
-          v-for="range in priceRanges" :key="range.label"
-          class="btn btn-sm"
-          :class="selectedPrice === range.label ? 'btn-warning text-dark' : 'btn-outline-secondary'"
-          style="font-size:0.78rem; border-radius:20px;"
-          @click="selectPrice(range)"
-        >
-          {{ range.label }}
-        </button>
-      </div>
-    </div>
-
-    <div v-if="categories.length">
       <div
         class="fw-bold small text-uppercase mb-2"
         style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);"
       >
         {{ t('productFilter.category') }}
       </div>
-      <div class="d-flex flex-wrap gap-2">
+      <!-- Skeleton while loading, stable height to prevent jump -->
+      <div v-if="loading" class="d-flex flex-wrap gap-2">
+        <div v-for="i in 4" :key="i" class="rounded-pill skeleton-chip" />
+      </div>
+      <div v-else-if="categories.length" class="d-flex flex-wrap gap-2">
         <button
           v-for="c in categories" :key="c.id"
           class="btn btn-sm"
@@ -60,6 +25,54 @@
       </div>
     </div>
 
+    <!-- Thương hiệu -->
+    <div>
+      <div
+        class="fw-bold small text-uppercase mb-2"
+        style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);"
+      >
+        {{ t('productFilter.brand') }}
+      </div>
+      <div v-if="loading" class="d-flex flex-wrap gap-2">
+        <div v-for="i in 6" :key="i" class="rounded-pill skeleton-chip" />
+      </div>
+      <div v-else class="d-flex flex-wrap gap-2">
+        <button
+          v-for="b in brands" :key="b"
+          class="btn btn-sm"
+          :class="selectedBrands.includes(b) ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+          style="font-size:0.78rem; border-radius:20px;"
+          @click="toggleBrand(b)"
+        >
+          {{ b }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Khoảng giá -->
+    <div>
+      <div
+        class="fw-bold small text-uppercase mb-2"
+        style="letter-spacing:0.05em; font-size:0.72rem; color:var(--text-secondary);"
+      >
+        {{ t('productFilter.priceRange') }}
+      </div>
+      <div v-if="loading" class="d-flex flex-wrap gap-2">
+        <div v-for="i in 4" :key="i" class="rounded-pill skeleton-chip" />
+      </div>
+      <div v-else class="d-flex flex-wrap gap-2">
+        <button
+          v-for="range in priceRanges" :key="range.label"
+          class="btn btn-sm"
+          :class="selectedPrice === range.label ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+          style="font-size:0.78rem; border-radius:20px;"
+          @click="selectPrice(range)"
+        >
+          {{ range.label }}
+        </button>
+      </div>
+    </div>
+
     <div v-if="cpus.length">
       <div
         class="fw-bold small text-uppercase mb-2"
@@ -67,7 +80,10 @@
       >
         {{ t('productFilter.cpu') }}
       </div>
-      <div class="d-flex flex-wrap gap-2">
+      <div v-if="loading" class="d-flex flex-wrap gap-2">
+        <div v-for="i in 5" :key="i" class="rounded-pill skeleton-chip" />
+      </div>
+      <div v-else class="d-flex flex-wrap gap-2">
         <button
           v-for="c in cpus" :key="c"
           class="btn btn-sm"
@@ -87,7 +103,10 @@
       >
         {{ t('productFilter.ram') }}
       </div>
-      <div class="d-flex flex-wrap gap-2">
+      <div v-if="loading" class="d-flex flex-wrap gap-2">
+        <div v-for="i in 4" :key="i" class="rounded-pill skeleton-chip" />
+      </div>
+      <div v-else class="d-flex flex-wrap gap-2">
         <button
           v-for="r in rams" :key="r"
           class="btn btn-sm"
@@ -107,7 +126,10 @@
       >
         {{ t('productFilter.gpu') }}
       </div>
-      <div class="d-flex flex-wrap gap-2">
+      <div v-if="loading" class="d-flex flex-wrap gap-2">
+        <div v-for="i in 4" :key="i" class="rounded-pill skeleton-chip" />
+      </div>
+      <div v-else class="d-flex flex-wrap gap-2">
         <button
           v-for="g in gpus" :key="g"
           class="btn btn-sm"
@@ -127,7 +149,10 @@
       >
         {{ t('productFilter.storage') }}
       </div>
-      <div class="d-flex flex-wrap gap-2">
+      <div v-if="loading" class="d-flex flex-wrap gap-2">
+        <div v-for="i in 4" :key="i" class="rounded-pill skeleton-chip" />
+      </div>
+      <div v-else class="d-flex flex-wrap gap-2">
         <button
           v-for="s in storages" :key="s"
           class="btn btn-sm"
@@ -168,6 +193,8 @@ const props = defineProps({
   rams:     { type: Array, default: () => [] },
   gpus:     { type: Array, default: () => [] },
   storages: { type: Array, default: () => [] },
+  // Loading state — hiện skeleton thay vì placeholder trống
+  loading:   { type: Boolean, default: false },
 });
 
 // Emit 'change' mỗi khi bộ lọc thay đổi — App.vue lắng nghe để filter danh sách sản phẩm
@@ -267,3 +294,17 @@ const emitChange = () => {
   });
 };
 </script>
+
+<style scoped>
+/* Skeleton chip — stable height matches real button to prevent layout shift */
+.skeleton-chip {
+  height: 28px;
+  width: 80px;
+  background: var(--bg-card-alt);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+</style>

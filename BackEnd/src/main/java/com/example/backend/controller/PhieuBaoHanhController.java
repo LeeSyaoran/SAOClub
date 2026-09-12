@@ -3,7 +3,9 @@ package com.example.backend.controller;
 import com.example.backend.entity.PhieuBaoHanh;
 import com.example.backend.request.PhieuBaoHanhRequest;
 import com.example.backend.response.PhieuBaoHanhResponse;
+import com.example.backend.response.WarrantyLookupResponse;
 import com.example.backend.service.PhieuBaoHanhService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -30,12 +32,22 @@ public class PhieuBaoHanhController {
         return phieuBaoHanhService.hienThiPhieuBaoHanh(PageRequest.of(page, size));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public PhieuBaoHanh getById(@PathVariable Integer id) {
         return phieuBaoHanhService.getById(id);
     }
 
+<<<<<<< HEAD
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
+=======
+    @GetMapping("/tra-cuu-serial")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<WarrantyLookupResponse> traCuuSerial(@RequestParam String soSerial) {
+        WarrantyLookupResponse r = phieuBaoHanhService.traCuuSerial(soSerial);
+        return ResponseEntity.ok(r);
+    }
+
+>>>>>>> 263fbf4733d7677b5a1c903b79b60a2fc9633142
     @PostMapping
     public ResponseEntity<PhieuBaoHanh> create(@Valid @RequestBody PhieuBaoHanhRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(phieuBaoHanhService.create(request));

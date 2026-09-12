@@ -321,6 +321,7 @@ BEGIN
             CONSTRAINT CK_ctsp_trangthai CHECK (trang_thai IN (N'trong_kho', N'giu_hang', N'da_ban', N'loi_bao_hanh', N'da_tra_hang')),
         ngay_nhap_kho DATETIME      NOT NULL DEFAULT GETDATE(),
         ghi_chu       NVARCHAR(255) NULL,
+        da_xoa        BIT           NOT NULL DEFAULT 0,
         CONSTRAINT FK_ctsp_bien_the FOREIGN KEY (bien_the_id) REFERENCES bien_the_san_pham(bien_the_id) ON DELETE CASCADE
     );
 END
@@ -633,7 +634,7 @@ BEGIN
         ngay_thanh_toan        DATETIME       NOT NULL DEFAULT GETDATE(),
         phuong_thuc_thanh_toan NVARCHAR(50)   NOT NULL
             CONSTRAINT CK_tt_phuongthuc CHECK (phuong_thuc_thanh_toan IN (N'tien_mat', N'chuyen_khoan', N'the_tin_dung', N'momo', N'vnpay', N'zalopay', N'tra_gop', N'khac')),
-        so_tien    DECIMAL(18,0)  NOT NULL CONSTRAINT CK_tt_sotien CHECK (so_tien > 0),
+        so_tien    DECIMAL(18,2)  NOT NULL CONSTRAINT CK_tt_sotien CHECK (so_tien > 0),
         ma_giao_dich VARCHAR(100) NULL,
         trang_thai NVARCHAR(30)   NOT NULL DEFAULT N'success'
             CONSTRAINT CK_tt_trangthai CHECK (trang_thai IN (N'success', N'failed', N'pending', N'refunded')),
@@ -652,7 +653,7 @@ BEGIN
         ngay_tra      DATETIME       NOT NULL DEFAULT GETDATE(),
         trang_thai    NVARCHAR(20)   NOT NULL DEFAULT N'cho_xu_ly'
             CONSTRAINT CK_pth_trangthai CHECK (trang_thai IN (N'cho_xu_ly', N'da_xu_ly', N'tu_choi')),
-        so_tien_hoan  DECIMAL(18,0)  NOT NULL DEFAULT 0 CONSTRAINT CK_pth_tienhoan CHECK (so_tien_hoan >= 0),
+        so_tien_hoan  DECIMAL(18,2)  NOT NULL DEFAULT 0 CONSTRAINT CK_pth_tienhoan CHECK (so_tien_hoan >= 0),
         ghi_chu       NVARCHAR(500)  NULL,
 
         -- ma_phieu: generated, zero-padded 6 digits (e.g. TR-000123)
@@ -2592,3 +2593,10 @@ GO
 select*from ton_kho
 select*from bien_the_san_pham
 select*from chi_tiet_san_pham
+
+-- Thêm cột serial_draft_json: lưu serial tạm khi tạo phiếu nhập, xóa sau khi duyệt.
+IF COL_LENGTH('phieu_nhap_kho', 'serial_draft_json') IS NULL
+BEGIN
+    ALTER TABLE phieu_nhap_kho ADD serial_draft_json NVARCHAR(MAX) NULL;
+END
+GO

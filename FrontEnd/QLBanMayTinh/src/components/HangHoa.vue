@@ -168,8 +168,7 @@
               <td class="ta-r hh-td-gia">{{ group.khoangGia }}</td>
               <td class="ta-r hh-td-gia hh-muted">{{ group.khoangGiaVon }}</td>
               <td>
-                <span v-if="group.tonKho === 0" class="hh-tag hh-tag--wait">Chờ nhập hàng</span>
-                <span v-else class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span>
+                <span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span>
               </td>
               <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayTao) }}</td>
               <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayCapNhat) }}</td>
@@ -259,7 +258,6 @@
                   <dl class="hh-ct-grid">
                     <div class="hh-ct-item"><dt>Mã sản phẩm</dt><dd>{{ chiTiet.maSanPham }}</dd></div>
                     <div class="hh-ct-item"><dt>Số phiên bản</dt><dd>{{ chiTiet.variants.length }}</dd></div>
-                    <div class="hh-ct-item"><dt>Tồn kho</dt><dd>{{ chiTiet.tonKho }}</dd></div>
                     <div class="hh-ct-item"><dt>Khách đặt</dt><dd>{{ chiTiet.khachDat }}</dd></div>
                     <div class="hh-ct-item"><dt>Giá vốn</dt><dd>{{ chiTiet.khoangGiaVon }} ₫</dd></div>
                     <div class="hh-ct-item"><dt>Giá bán</dt><dd class="hh-ct-item__manh">{{ chiTiet.khoangGia }} ₫</dd></div>
@@ -306,7 +304,6 @@
                       <th>Cấu hình</th>
                       <th class="ta-r">Giá vốn</th>
                       <th class="ta-r">Giá bán</th>
-                      <th class="ta-c">Tồn</th>
                       <th>Trạng thái</th>
                     </tr>
                   </thead>
@@ -324,10 +321,8 @@
                       <td class="hh-vt__cfg">{{ moTaBienThe(v) || 'Phiên bản tiêu chuẩn' }}</td>
                       <td class="ta-r hh-muted">{{ formatNumber(v.giaVon) }}</td>
                       <td class="ta-r hh-vt__gia">{{ formatNumber(v.giaBan) }}</td>
-                      <td class="ta-c"><span class="hh-ton" :class="{ 'is-het': v.tonKho === 0 }">{{ v.tonKho }}</span></td>
                       <td>
-                        <span v-if="v.tonKho === 0" class="hh-tag hh-tag--wait">Chờ nhập hàng</span>
-                        <span v-else class="hh-tag" :class="tagClass(v.trangThai)">{{ nhanTrangThai(v.trangThai) }}</span>
+                        <span class="hh-tag" :class="tagClass(v.trangThai)">{{ nhanTrangThai(v.trangThai) }}</span>
                       </td>
                     </tr>
                   </tbody>
@@ -1020,7 +1015,7 @@ const hienToast = (msg) => {
 
 /* ════════════ TẢI DỮ LIỆU ════════════ */
 const fetchMasterData = async () => {
-  const an = (p) => p.catch(() => [])
+  const an = (p) => p.then((r) => r ?? []).catch(() => [])
   const [th, dm, ncc, cpu, ram, oc, gpu, pl] = await Promise.all([
     an(getThuongHieu()), an(get('/api/danh-muc')), an(getNhaCungCap()),
     an(getCpu()), an(getRam()), an(getOCung()), an(getGpu()), an(get('/api/phan-loai'))

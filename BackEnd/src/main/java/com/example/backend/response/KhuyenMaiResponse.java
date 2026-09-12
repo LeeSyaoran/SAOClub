@@ -24,6 +24,7 @@ public class KhuyenMaiResponse {
     private LocalDateTime ngayKetThuc;
     private Integer soLuongToiDa;
     private Integer soLanDaDung;
+    private Integer soLuotConLai;
     private String trangThai;
     private LocalDateTime ngayTao;
 }

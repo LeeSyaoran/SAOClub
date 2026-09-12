@@ -4,7 +4,7 @@ import { t } from "../../i18n/index.js";
 import {
   CheckCircle2, XCircle, Clock, Package, ClipboardList, BarChart3, AlertTriangle,
   Ban, Search, Pencil, Printer, Download, Plus, Check, X, Trash2, Truck,
-  Building2, User, Calendar, FileText, FolderOpen, Filter, ChevronDown,
+  Building2, User, Calendar, FileText, FolderOpen, Filter, ChevronDown, ChevronUp, RefreshCw, ExternalLink, Cpu, MemoryStick, HardDrive, Palette,
 } from '@lucide/vue';
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatPrice, formatDate, statusLabel, toLocalDT } from "../../utils/adminFormat.js";
@@ -131,10 +131,7 @@ const totalStockQty = computed(() => inventory.value.reduce((s, i) => s + (i.soL
 
 // ── So sánh config với variant đầu tiên của cùng sản phẩm (để highlight giá trị khác nhau) ──
 const getFirstVariantOfProduct = (v) => products.value.find(p => p.sanPhamId === v?.sanPhamId && p.bienTheId !== v?.bienTheId);
-const hasCpuDiff = (v) => { const first = getFirstVariantOfProduct(v); return !first || v?.cpu !== first.cpu; };
-const hasRamDiff = (v) => { const first = getFirstVariantOfProduct(v); return !first || v?.ram !== first.ram; };
-const hasOCungDiff = (v) => { const first = getFirstVariantOfProduct(v); return !first || v?.oCung !== first.oCung; };
-const hasMauSacDiff = (v) => { const first = getFirstVariantOfProduct(v); return !first || v?.mauSac !== first.mauSac; };
+// Diff highlight đã bỏ — mọi chip đều cùng tông hồng nhạt để đồng bộ UI.
 
 // ── Tồn kho: bảng PHẲNG theo từng biến thể (không gộp theo sản phẩm nữa) — biến thể
 // mới tạo gần nhất hiện đầu trang, có bộ lọc riêng (trạng thái tồn/thương hiệu/danh mục). ──
@@ -386,12 +383,75 @@ const phieuNhapCounts = computed(() => ({
 
 const phieuNhapSearch = ref('');
 const phieuNhapStatusFilter = ref('');
-const filteredPhieuNhap = computed(() =>
-  phieuNhapList.value
+const isPnFilterOpen = ref(false);
+const pnFilterDateFrom = ref('');
+const pnFilterDateTo = ref('');
+const pnFilterSupplier = ref('');
+const pnFilterStaff = ref('');
+const pnFilterAmountMin = ref('');
+const pnFilterAmountMax = ref('');
+const pnFilterActiveCount = computed(() => {
+  let c = 0;
+  if (phieuNhapStatusFilter.value) c++;
+  if (pnFilterDateFrom.value) c++;
+  if (pnFilterDateTo.value) c++;
+  if (pnFilterSupplier.value) c++;
+  if (pnFilterStaff.value) c++;
+  if (pnFilterAmountMin.value) c++;
+  if (pnFilterAmountMax.value) c++;
+  return c;
+});
+const pnFilterActiveChips = computed(() => {
+  const chips = [];
+  if (phieuNhapStatusFilter.value) {
+    const map = { cho_duyet: 'Chờ duyệt', hoan_thanh: 'Hoàn thành', huy: 'Hủy' };
+    chips.push({ label: `Trạng thái: ${map[phieuNhapStatusFilter.value] || phieuNhapStatusFilter.value}`, clear: () => phieuNhapStatusFilter.value = '' });
+  }
+  if (pnFilterDateFrom.value) chips.push({ label: `Từ: ${pnFilterDateFrom.value}`, clear: () => pnFilterDateFrom.value = '' });
+  if (pnFilterDateTo.value) chips.push({ label: `Đến: ${pnFilterDateTo.value}`, clear: () => pnFilterDateTo.value = '' });
+  if (pnFilterSupplier.value) {
+    const s = suppliers.value.find(x => String(x.nhaCungCapId) === String(pnFilterSupplier.value));
+    chips.push({ label: `NCC: ${s?.tenNhaCungCap || pnFilterSupplier.value}`, clear: () => pnFilterSupplier.value = '' });
+  }
+  if (pnFilterStaff.value) {
+    const st = staff.value.find(x => String(x.nhanVienId) === String(pnFilterStaff.value));
+    chips.push({ label: `NV: ${st?.hoTen || pnFilterStaff.value}`, clear: () => pnFilterStaff.value = '' });
+  }
+  if (pnFilterAmountMin.value) chips.push({ label: `Giá từ: ${formatPrice(pnFilterAmountMin.value)}`, clear: () => pnFilterAmountMin.value = '' });
+  if (pnFilterAmountMax.value) chips.push({ label: `Giá đến: ${formatPrice(pnFilterAmountMax.value)}`, clear: () => pnFilterAmountMax.value = '' });
+  return chips;
+});
+const clearAllPnFilters = () => {
+  phieuNhapStatusFilter.value = '';
+  pnFilterDateFrom.value = '';
+  pnFilterDateTo.value = '';
+  pnFilterSupplier.value = '';
+  pnFilterStaff.value = '';
+  pnFilterAmountMin.value = '';
+  pnFilterAmountMax.value = '';
+};
+const togglePnQuickFilter = (status) => {
+  // Click thẻ đang active -> clear; click thẻ khác -> switch filter
+  phieuNhapStatusFilter.value = phieuNhapStatusFilter.value === status ? '' : status;
+  // Reset về trang 1 để không bị kẹt ở trang trống
+  pnCurrentPage.value = 1;
+};
+const filteredPhieuNhap = computed(() => {
+  let list = phieuNhapList.value
     .filter(p => !phieuNhapSearch.value || (p.maPhieuNhap ?? '').toLowerCase().includes(phieuNhapSearch.value.toLowerCase()))
-    .filter(p => !phieuNhapStatusFilter.value || p.trangThai === phieuNhapStatusFilter.value)
-    .sort((a, b) => new Date(b.ngayNhap) - new Date(a.ngayNhap)),
-);
+    .filter(p => !phieuNhapStatusFilter.value || p.trangThai === phieuNhapStatusFilter.value);
+  if (pnFilterSupplier.value) list = list.filter(p => String(p.nhaCungCapId) === String(pnFilterSupplier.value));
+  if (pnFilterStaff.value) list = list.filter(p => String(p.nhanVienId) === String(pnFilterStaff.value));
+  if (pnFilterDateFrom.value) list = list.filter(p => new Date(p.ngayNhap) >= new Date(pnFilterDateFrom.value));
+  if (pnFilterDateTo.value) list = list.filter(p => new Date(p.ngayNhap) <= new Date(pnFilterDateTo.value + 'T23:59:59'));
+  if (pnFilterAmountMin.value) list = list.filter(p => Number(p.tongTien || 0) >= Number(pnFilterAmountMin.value));
+  if (pnFilterAmountMax.value) list = list.filter(p => Number(p.tongTien || 0) <= Number(pnFilterAmountMax.value));
+  return list.sort((a, b) => new Date(b.ngayNhap) - new Date(a.ngayNhap));
+});
+// Reset về trang 1 khi đổi filter
+watch([phieuNhapSearch, phieuNhapStatusFilter, pnFilterDateFrom, pnFilterDateTo, pnFilterSupplier, pnFilterStaff, pnFilterAmountMin, pnFilterAmountMax], () => {
+  pnCurrentPage.value = 1;
+});
 const { currentPage: pnCurrentPage, totalPages: pnTotalPages, pagedItems: pagedPhieuNhap, pageSize: pnPageSize } = usePagination(filteredPhieuNhap);
 
 // San pham + bien the de chon khi tao dong phieu nhap — lay tu ton kho (da co san, khoi tai them)
@@ -428,7 +488,8 @@ const staffOptions = computed(() => staff.value.map(s => ({ value: s.nhanVienId,
 const showPhieuNhapModal = ref(false);
 const phieuNhapFormError = ref('');
 const phieuNhapSaving = ref(false);
-const emptyPhieuNhapItem = () => ({ sanPhamId: '', bienTheId: '', soLuong: 1, donGia: 0, serials: [''], lockedCount: 0 });
+const phieuNhapErrorModal = reactive({ show: false, serialTrung: [], serialTrungFile: [], giaKhongKhop: [] }); // (no longer used — chuyển sang toast)
+const emptyPhieuNhapItem = () => ({ sanPhamId: '', bienTheId: '', soLuong: 0, donGia: 0, serials: [], lockedCount: 0 });
 const emptyPhieuNhapForm = () => {
   const now = new Date();
   const local = nowLocalIso(now).slice(0, 16);
@@ -441,47 +502,177 @@ const emptyPhieuNhapForm = () => {
   };
 };
 const phieuNhapForm = reactive(emptyPhieuNhapForm());
+const expandedSerialRows = reactive(new Set());
+const serialViewerRowIdx = ref(-1);
+const serialViewerModal = ref(false);
+const openSerialViewer = (idx) => {
+  serialViewerRowIdx.value = idx;
+  serialViewerModal.value = true;
+};
+const closeSerialViewer = () => {
+  serialViewerModal.value = false;
+  serialViewerRowIdx.value = -1;
+};
+const serialViewerRow = computed(() =>
+  serialViewerRowIdx.value >= 0 ? phieuNhapForm.items[serialViewerRowIdx.value] : null
+);
+const serialViewerSerials = computed(() =>
+  serialViewerRow.value ? serialViewerRow.value.serials.filter(s => s && s.trim()) : []
+);
+const serialViewerSpName = computed(() => {
+  if (!serialViewerRow.value) return '';
+  const bt = products.value.find(p => p.bienTheId === serialViewerRow.value.bienTheId);
+  return bt ? `${bt.tenSanPham} (${bt.maSku})` : '—';
+});
+const serialViewerDuplicateSet = computed(() => {
+  const seen = new Set();
+  const dupes = new Set();
+  for (const s of serialViewerSerials.value) {
+    if (seen.has(s)) dupes.add(s);
+    seen.add(s);
+  }
+  return dupes;
+});
 const phieuNhapItemsTotal = computed(() =>
   phieuNhapForm.items.reduce((s, i) => s + (Number(i.soLuong) || 0) * (Number(i.donGia) || 0), 0),
 );
+const phieuNhapFormValid = computed(() => {
+  if (!phieuNhapForm.nhaCungCapId || !phieuNhapForm.nhanVienId) return false;
+  const validItems = phieuNhapForm.items.filter(i => i.bienTheId);
+  if (validItems.length === 0) return false;
+  return validItems.every(i => i.soLuong > 0);
+});
 const addPhieuNhapItemRow = () => phieuNhapForm.items.push(emptyPhieuNhapItem());
-// Giữ mảng serials luôn đúng độ dài soLuong — thêm ô trống ở cuối khi tăng số lượng, bớt ô
-// trống ở cuối khi giảm (không bao giờ đụng tới các serial đã có sẵn ở đầu mảng — lockedCount
-// serial đầu là serial đã ghi nhận thật vào kho từ trước, không cho sửa/xóa qua form này nữa).
-const syncPhieuNhapItemSerials = (row) => {
-  const target = Math.max(Number(row.soLuong) || 0, row.lockedCount ?? 0);
-  if (row.serials.length < target) {
-    row.serials.push(...Array(target - row.serials.length).fill(''));
-  } else if (row.serials.length > target) {
-    row.serials.splice(target);
-  }
-};
-// HTML min="1" chỉ chặn nút spinner, gõ tay vẫn nhập được số âm/0 — kẹp lại ngay lúc nhập
-// (backend cũng đã chặn ở ChiTietPhieuNhapRequest, kẹp ở đây để báo sai ngay thay vì đợi lưu).
-// Không cho giảm dưới lockedCount — bấy nhiêu serial đã nhập kho thật rồi, sửa phiếu không
-// được phép "rút" máy đã có serial ra khỏi phiếu.
-const clampPhieuNhapSoLuong = (row) => {
-  row.soLuong = Math.max(1, row.lockedCount ?? 0, Math.trunc(Number(row.soLuong)) || 1);
-  syncPhieuNhapItemSerials(row);
-};
 const removePhieuNhapItemRow = (idx) => {
   if (phieuNhapForm.items.length > 1) {
     phieuNhapForm.items.splice(idx, 1);
   } else {
-    // Chỉ còn 1 dòng — không xóa hẳn (form sẽ trống hoàn toàn), reset về giá trị rỗng.
     phieuNhapForm.items[idx] = emptyPhieuNhapItem();
   }
 };
-// Mỗi dòng phải nhập đủ serial khớp số lượng (không tính các serial đã khóa/có sẵn) trước
-// khi được lưu — theo đúng yêu cầu "phải nhập tay serial cho đủ số lượng".
-const phieuNhapSerialsIncomplete = computed(() =>
-  phieuNhapForm.items.some((i) => i.bienTheId && i.serials.some((s) => !s.trim())),
-);
+const resetPhieuNhapItem = (row) => {
+  row.sanPhamId = '';
+  row.bienTheId = '';
+  row.soLuong = 0;
+  row.donGia = 0;
+  row.serials = [];
+  row.lockedCount = 0;
+};
+// Auto-detect một row có phải header (tiêu đề cột) trong file import serial.
+// Trả về true nếu giá trị ở cột A trông giống tên cột thay vì serial thật:
+//  - text thuần (Serial, Serials, Số Serial, Mã, SKU...) không chứa chữ số ở vị trí serial
+//  - HOẶC là một trong các từ khóa header phổ biến (so sánh lowercase, trim).
+const SERIAL_HEADER_KEYWORDS = new Set([
+  'serial', 'serials', 'so serial', 'số serial', 'sn', 's/n',
+  'ma', 'mã', 'ma serial', 'mã serial', 'sku', 'code',
+  'serialnumber', 'serial number', 'serialno', 'serial no',
+  'stt', 'số tt', 'so tt', 'idx', 'index', 'no', 'no.',
+]);
+
+const isLikelyHeaderRow = (serial, hasGiaCell) => {
+  if (!serial) return false;
+  const s = String(serial).trim();
+  if (!s) return false;
+  // Header thường ngắn (≤ 25 ký tự), không có dấu gạch ngang giữa chữ-số (pattern serial)
+  const lower = s.toLowerCase();
+  if (SERIAL_HEADER_KEYWORDS.has(lower)) return true;
+  // Nếu kèm đơn giá ở cùng row → gần như chắc chắn là header (ví dụ "Serial,DonGia").
+  if (hasGiaCell && /^[A-Za-zÀ-ỹ\s]+$/.test(s)) return true;
+  return false;
+};
+
+// Import serial từ file — định dạng: cột serial + cột đơn giá (tùy chọn).
+// File có thể là Excel (xlsx/xls), CSV, hoặc TXT (mỗi serial 1 dòng).
+const importSerialsForRow = async (row, event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  let parsed = [];
+  let giaFromFile = null;
+  if (ext === 'xlsx' || ext === 'xls') {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+    // Đọc 2 cột đầu: A=serial, B=donGia (optional)
+    const giaSet = new Set();
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      const serialCell = sheet[XLSX.utils.encode_cell({ r: R, c: 0 })];
+      const giaCell = sheet[XLSX.utils.encode_cell({ r: R, c: 1 })];
+      const serial = serialCell ? String(serialCell.v ?? '').trim() : '';
+      const gia = giaCell ? Number(giaCell.v) : null;
+      if (!serial) continue;
+      // Bỏ qua row tiêu đề (Serial, Serials, No, STT...) — row đầu của file Excel thường
+      // chứa header. Tránh bị backend đẩy vào list kiểm tra và match với các row có
+      // so_serial literal (do người dùng/patch cũ đã từng insert).
+      if (isLikelyHeaderRow(serial, giaCell != null)) continue;
+      parsed.push(serial);
+      if (gia != null && !isNaN(gia)) {
+        giaSet.add(gia);
+      }
+    }
+    if (giaSet.size > 1) {
+      showToast('File có nhiều đơn giá khác nhau — vui lòng chỉ dùng 1 đơn giá');
+      event.target.value = '';
+      return;
+    }
+    if (giaSet.size === 1) giaFromFile = [...giaSet][0];
+  } else {
+    // csv/txt: mỗi dòng 1 serial, hoặc "serial,gia" hoặc "serial\tgia"
+    const text = await file.text();
+    const giaSet = new Set();
+    const lines = text.split(/[\n\r]+/);
+    for (let i = 0; i < lines.length; i++) {
+      const parts = lines[i].split(/[,\t]/);
+      const serial = parts[0]?.trim() ?? '';
+      if (!serial) continue;
+      // Bỏ qua row tiêu đề (chỉ áp dụng cho dòng đầu có chữ, vì file CSV/TXT ít có
+      // header và dòng sau có thể là text hợp lệ).
+      if (i === 0 && isLikelyHeaderRow(serial, parts.length > 1)) continue;
+      parsed.push(serial);
+      if (parts[1]) {
+        const g = Number(parts[1].trim());
+        if (!isNaN(g)) giaSet.add(g);
+      }
+    }
+    if (giaSet.size > 1) {
+      showToast('File có nhiều đơn giá khác nhau — vui lòng chỉ dùng 1 đơn giá');
+      event.target.value = '';
+      return;
+    }
+    if (giaSet.size === 1) giaFromFile = [...giaSet][0];
+  }
+  if (parsed.length === 0) {
+    showToast('File không có serial nào');
+    event.target.value = '';
+    return;
+  }
+  row.soLuong = parsed.length;
+  if (giaFromFile != null) row.donGia = giaFromFile;
+  // Giữ lockedCount serial cũ, thêm serial mới vào sau
+  row.serials = [...row.serials.slice(0, row.lockedCount ?? 0), ...parsed];
+  event.target.value = '';
+};
+// Kiểm tra trùng serial trong cùng file (cùng dòng).
+const checkSerialTrungTrongFile = (items) => {
+  for (const item of items) {
+    if (!item.bienTheId) continue;
+    const seen = new Set();
+    for (const s of item.serials) {
+      if (!s.trim()) continue;
+      if (seen.has(s.trim())) return s.trim();
+      seen.add(s.trim());
+    }
+  }
+  return null;
+};
 const editingPhieuNhapId = ref(null);
 const openAddPhieuNhap = () => {
   editingPhieuNhapId.value = null;
   Object.assign(phieuNhapForm, emptyPhieuNhapForm());
   phieuNhapFormError.value = '';
+  expandedSerialRows.clear();
+  closeSerialViewer();
   showPhieuNhapModal.value = true;
 };
 // Chỉ sửa được khi còn "cho_duyet" — đã duyệt/hủy thì coi như chốt sổ, sửa lại sẽ sai đối
@@ -535,13 +726,80 @@ const savePhieuNhap = async () => {
     phieuNhapFormError.value = t('admin.phieuNhapModal.missingItems');
     return;
   }
-  if (phieuNhapSerialsIncomplete.value) {
-    phieuNhapFormError.value = tt('admin.phieuNhapModal.missingSerials', 'Vui lòng nhập đủ số serial cho từng dòng hàng');
+  // Validate: mỗi dòng phải import serial (không có dòng trống serial).
+  const chuaImport = items.filter(i => !i.serials.some(s => s.trim()));
+  if (chuaImport.length) {
+    phieuNhapFormError.value = 'Vui lòng import file serial cho tất cả dòng hàng';
     return;
+  }
+  // 1) Check trùng serial trong file (cùng dòng).
+  const trungFile = checkSerialTrungTrongFile(items);
+  if (trungFile) {
+    showToast(`Serial trùng trong file: ${trungFile}`, 'error', 5000);
+    return;
+  }
+  // 1b) Check trùng serial giữa các dòng trong cùng phiếu (cross-row).
+  const seenSerials = new Map(); // serial → tên sản phẩm
+  for (const i of items) {
+    if (!i.bienTheId) continue;
+    const spName = products.value.find(p => p.bienTheId === i.bienTheId)?.tenSanPham || '—';
+    for (const s of i.serials) {
+      const serial = s.trim();
+      if (!serial) continue;
+      if (seenSerials.has(serial)) {
+        const prevName = seenSerials.get(serial);
+        showToast(`Serial "${serial}" xuất hiện ở cả 2 dòng (${prevName} và ${spName}). Vui lòng sửa lại trước khi tạo phiếu.`, 'error', 5000);
+        return;
+      }
+      seenSerials.set(serial, spName);
+    }
+  }
+  // 2) Check trùng giá giữa các dòng cùng bienTheId trong phiếu.
+  const giaByBienThe = new Map();
+  for (const i of items) {
+    const key = i.bienTheId;
+    if (!giaByBienThe.has(key)) giaByBienThe.set(key, new Set());
+    if (i.donGia) giaByBienThe.get(key).add(i.donGia);
+  }
+  const giaKhongKhop = [];
+  for (const [btId, gias] of giaByBienThe) {
+    if (gias.size > 1) {
+      const sku = items.find(i => i.bienTheId === btId)?.sanPhamId;
+      const spName = products.value.find(p => p.bienTheId === btId)?.maSku || btId;
+      giaKhongKhop.push(`${spName} (${[...gias].map(g => formatPrice(g)).join(', ')})`);
+    }
+  }
+  if (giaKhongKhop.length) {
+    showToast(`Đơn giá không khớp giữa các dòng: ${giaKhongKhop.join('; ')}. Vui lòng sửa lại.`, 'error', 6000);
+    return;
+  }
+  // 3) Check trùng serial với DB.
+  const allSerials = items.flatMap(i => i.serials.map(s => s.trim())).filter(Boolean);
+  if (allSerials.length) {
+    try {
+      const checkRes = await PhieuNhapKhoService.kiemTraSerialDb(allSerials);
+      if (!checkRes.ok) throw new Error(await checkRes.text());
+      const result = await checkRes.json();
+      const trungDb = Array.isArray(result) ? result : [];
+      if (trungDb.length) {
+        showToast(`Serial đã tồn tại trong kho: ${trungDb.join(', ')}. Vui lòng kiểm tra lại.`, 'error', 6000);
+        return;
+      }
+    } catch (e) {
+      // Nếu API check lỗi, vẫn cho tạo (không chặn vì có thể BE chưa implement).
+      console.warn('kiemTraSerial API error:', e.message);
+    }
   }
   if (phieuNhapSaving.value) return;
   phieuNhapSaving.value = true;
   try {
+    // Gom serial draft theo bienTheId để gửi BE lưu vào serial_draft_json
+    const serialDrafts = items.map(i => ({
+      bienTheId: Number(i.bienTheId),
+      donGia: Number(i.donGia) || 0,
+      serials: i.serials.slice(i.lockedCount ?? 0).map(s => s.trim()).filter(Boolean),
+    })).filter(s => s.serials.length > 0 || s.donGia > 0);
+
     const headerBody = {
       nhaCungCapId: Number(phieuNhapForm.nhaCungCapId),
       nhanVienId: Number(phieuNhapForm.nhanVienId),
@@ -549,6 +807,7 @@ const savePhieuNhap = async () => {
       tongTien: phieuNhapItemsTotal.value,
       trangThai: 'cho_duyet',
       ghiChu: phieuNhapForm.ghiChu || '—',
+      serials: serialDrafts,
     };
     const res = await PhieuNhapKhoService.save(editingPhieuNhapId.value, headerBody);
     if (!res.ok) {
@@ -585,18 +844,9 @@ const savePhieuNhap = async () => {
         });
       }
     }
-    // Tạo serial vật lý cho phần MỚI của mỗi dòng (bỏ qua lockedCount serial đầu — đã ghi
-    // nhận thật từ trước), rồi đồng bộ giá nhập của biến thể theo đơn giá phiếu này.
+    // Cập nhật giá nhập của biến thể theo đơn giá phiếu này.
     for (const i of items) {
-      const newSerials = i.serials.slice(i.lockedCount ?? 0).map(s => s.trim()).filter(Boolean);
-      const bienTheId = Number(i.bienTheId);
-      for (const soSerial of newSerials) {
-        await ChiTietSanPhamService.create({
-          bienTheId, phieuNhapId, soSerial, trangThai: 'trong_kho',
-          ngayNhapKho: toLocalDT(phieuNhapForm.ngayNhap),
-        }).catch(() => {});
-      }
-      await syncGiaNhapFromReceipt(bienTheId, i.donGia);
+      await syncGiaNhapFromReceipt(Number(i.bienTheId), i.donGia);
     }
     // API tạo trả về entity lồng nhau (nhaCungCap/nhanVien object) khác format phẳng của
     // getAll() (PhieuNhapKhoResponse) — tải lại danh sách thay vì tự ráp để tránh lệch dữ liệu.
@@ -637,19 +887,45 @@ const updatePhieuNhapStatus = async (p, trangThai) => {
   if (idx !== -1) phieuNhapList.value[idx] = { ...phieuNhapList.value[idx], trangThai };
 };
 
+const approvePhieuNhap = async (p) => {
+  if (!(await askConfirm(t('admin.confirm.approvePhieuNhap') || 'Xác nhận duyệt phiếu nhập này?'))) return;
+  try {
+    const res = await PhieuNhapKhoService.duyet(p.phieuNhapId);
+    if (!res.ok) {
+      const msg = await res.text().catch(() => t('admin.errors.approveFailed'));
+      showToast(msg);
+      return;
+    }
+    showToast(t('admin.success.approveSuccess') || 'Duyệt thành công!');
+    showPhieuNhapDetailModal.value = false;
+    await Promise.all([
+      refreshInventory(),
+      PhieuNhapKhoService.getAll().then(data => phieuNhapList.value = data).catch(() => {}),
+    ]);
+  } catch (e) {
+    showToast(e.message || t('admin.errors.approveFailed'));
+  }
+};
+
 const showPhieuNhapDetailModal = ref(false);
 const phieuNhapDetailData = ref(null);
 const phieuNhapDetailItems = computed(() =>
   chiTietPhieuNhapList.value.filter(c => c.phieuNhapId === phieuNhapDetailData.value?.phieuNhapId),
 );
-// Serial thật đã nhập kho của riêng phiếu này — gộp theo bienTheId để hiện dưới từng dòng hàng.
-const phieuNhapDetailSerials = ref([]);
-const phieuNhapDetailSerialsFor = (bienTheId) =>
-  phieuNhapDetailSerials.value.filter((s) => s.bienTheId === bienTheId);
-const openPhieuNhapDetail = async (p) => {
+// Serial đã chuyển sang trang riêng (PhieuNhapSerialPage) — modal chi tiết không cần tải nữa.
+const openPhieuNhapDetail = (p) => {
   phieuNhapDetailData.value = p;
   showPhieuNhapDetailModal.value = true;
-  phieuNhapDetailSerials.value = await ChiTietSanPhamService.getByPhieuNhap(p.phieuNhapId).catch(() => []);
+};
+
+// Mở tab mới với trang chuyên hiển thị serial — gom toàn bộ dòng serial của phiếu ra 1 view
+// riêng, dễ in/Ctrl+P, không phụ thuộc modal cha (đã xoá toggle "Xem serial" inline ở modal
+// chi tiết vì chỗ đó quá chật).
+const openPhieuNhapSerialTab = (p) => {
+  if (!p?.phieuNhapId) return;
+  const base = window.location.href.split('#')[0];
+  const hash = `#/admin/phieu-nhap/${p.phieuNhapId}/serial`;
+  window.open(base + hash, '_blank', 'noopener');
 };
 
 // Phiếu nhập kho chỉ là chứng từ đối soát nhà cung cấp — hoàn toàn tách rời việc nhập serial
@@ -789,7 +1065,7 @@ const exportPhieuNhapExcel = () => {
             <div class="inv-stat__value">{{ inventory.length }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--green">
+        <div class="inv-stat inv-stat--green" style="cursor:default; transition:none;">
           <div class="inv-stat__icon"><BarChart3 :size="22" /></div>
           <div>
             <div class="inv-stat__label">{{ t('admin.inventory.statTotalStock') }}</div>
@@ -829,13 +1105,13 @@ const exportPhieuNhapExcel = () => {
         <!-- THANH CÔNG CỤ -->
         <div class="inv-bar">
           <span class="inv-bar__count">{{ flatInventory.length }}/{{ inventory.length }} {{ t('admin.inventory.colSku') }}</span>
-          <div class="inv-search">
+          <div class="inv-search" style="flex:1; max-width:none;">
             <Search :size="14" class="inv-search__icon" />
             <input v-model="inventorySearch" :placeholder="t('admin.inventory.searchPlaceholder')" />
           </div>
           <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': isInvFilterOpen }" @click="isInvFilterOpen = !isInvFilterOpen">
             <Filter :size="14" /> {{ tt('admin.common.filter', 'Bộ lọc') }}
-            <span v-if="invActiveFilterCount" class="inv-chip">{{ invActiveFilterCount }}</span>
+            <span v-if="invActiveFilterCount" class="inv-chip-badge">{{ invActiveFilterCount }}</span>
             <ChevronDown :size="13" class="inv-caret" :class="{ 'is-open': isInvFilterOpen }" />
           </button>
         </div>
@@ -908,10 +1184,11 @@ const exportPhieuNhapExcel = () => {
                   </div>
                 </td>
                 <td class="inv-muted">
-                  <div v-if="v?.cpu || v?.ram || v?.mauSac" class="inv-config">
-                    <span :class="{ 'inv-config-diff': hasCpuDiff(v) }">{{ v.cpu }}</span>
-                    <span :class="{ 'inv-config-diff': hasRamDiff(v) }">{{ v.ram }}</span>
-                    <span :class="{ 'inv-config-diff': hasMauSacDiff(v) }">{{ v.mauSac }}</span>
+                  <div v-if="v?.cpu || v?.ram || v?.oCung || v?.mauSac" class="inv-config">
+                    <span v-if="v.cpu" class="inv-config-chip"><Cpu :size="12" />{{ v.cpu }}</span>
+                    <span v-if="v.ram" class="inv-config-chip"><MemoryStick :size="12" />{{ v.ram }}</span>
+                    <span v-if="v.oCung" class="inv-config-chip"><HardDrive :size="12" />{{ v.oCung }}</span>
+                    <span v-if="v.mauSac" class="inv-config-chip"><Palette :size="12" />{{ v.mauSac }}</span>
                   </div>
                   <span v-else>—</span>
                 </td>
@@ -937,28 +1214,28 @@ const exportPhieuNhapExcel = () => {
     <!-- ══ TAB: PHIEU NHAP ══ -->
     <template v-else-if="khoTab==='phieu-nhap'">
       <div class="inv-stats">
-        <div class="inv-stat inv-stat--purple">
+        <div class="inv-stat inv-stat--purple" :class="{ 'is-on': !phieuNhapStatusFilter }" @click="togglePnQuickFilter('')">
           <div class="inv-stat__icon"><ClipboardList :size="22" /></div>
           <div>
             <div class="inv-stat__label">{{ t('admin.phieuNhap.statTotal') }}</div>
             <div class="inv-stat__value">{{ phieuNhapCounts.total }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--amber">
+        <div class="inv-stat inv-stat--amber" :class="{ 'is-on': phieuNhapStatusFilter === 'cho_duyet' }" @click="togglePnQuickFilter('cho_duyet')">
           <div class="inv-stat__icon"><Clock :size="22" /></div>
           <div>
             <div class="inv-stat__label">{{ t('admin.phieuNhap.statPending') }}</div>
             <div class="inv-stat__value">{{ phieuNhapCounts.choDuyet }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--green">
+        <div class="inv-stat inv-stat--green" :class="{ 'is-on': phieuNhapStatusFilter === 'hoan_thanh' }" @click="togglePnQuickFilter('hoan_thanh')">
           <div class="inv-stat__icon"><CheckCircle2 :size="22" /></div>
           <div>
             <div class="inv-stat__label">{{ t('admin.phieuNhap.statDone') }}</div>
             <div class="inv-stat__value">{{ phieuNhapCounts.hoanThanh }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--red">
+        <div class="inv-stat inv-stat--red" :class="{ 'is-on': phieuNhapStatusFilter === 'huy' }" @click="togglePnQuickFilter('huy')">
           <div class="inv-stat__icon"><XCircle :size="22" /></div>
           <div>
             <div class="inv-stat__label">{{ t('admin.phieuNhap.statCancelled') }}</div>
@@ -968,20 +1245,79 @@ const exportPhieuNhapExcel = () => {
       </div>
 
       <div class="inv-bar">
-        <div class="inv-search">
+        <div class="inv-search" style="flex:1; max-width:none;">
           <Search :size="14" class="inv-search__icon" />
           <input v-model="phieuNhapSearch" :placeholder="t('admin.phieuNhap.searchPlaceholder')" />
         </div>
-        <select v-model="phieuNhapStatusFilter" class="inv-select">
-          <option value="">{{ t('admin.inventory.filterAll') }}</option>
-          <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
-          <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
-          <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
-        </select>
+        <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': isPnFilterOpen }" @click="isPnFilterOpen = !isPnFilterOpen">
+          <Filter :size="14" /> {{ tt('admin.common.filter', 'Bộ lọc') }}
+          <span v-if="pnFilterActiveCount > 0" class="inv-filter-badge">{{ pnFilterActiveCount }}</span>
+          <ChevronDown :size="13" class="inv-caret" :class="{ 'is-open': isPnFilterOpen }" />
+        </button>
         <div class="inv-bar__actions">
           <button class="inv-btn inv-btn--ghost" @click="printPhieuNhapList"><Printer :size="14" /> {{ t('admin.phieuNhap.printPdf') }}</button>
           <button class="inv-btn inv-btn--ghost" @click="exportPhieuNhapExcel"><Download :size="14" /> {{ t('admin.phieuNhap.exportExcel') }}</button>
           <button class="inv-btn inv-btn--primary" @click="openAddPhieuNhap"><Plus :size="14" /> {{ t('admin.phieuNhap.add') }}</button>
+        </div>
+      </div>
+
+      <!-- Chips filter active -->
+      <div v-if="pnFilterActiveCount > 0" class="inv-filter-chips">
+        <span v-for="chip in pnFilterActiveChips" :key="chip.label" class="inv-chip" @click="chip.clear()">
+          {{ chip.label }} <X :size="11" />
+        </span>
+        <button class="inv-chip inv-chip--clear" @click="clearAllPnFilters">Xóa tất cả</button>
+      </div>
+
+      <div v-if="isPnFilterOpen" class="inv-filter" :class="{ 'is-open': isPnFilterOpen }" @click.self="isPnFilterOpen = false">
+        <div class="inv-filter__panel">
+          <div class="inv-filter__grid" style="grid-template-columns: 1fr 1fr;">
+            <label class="inv-field">
+              <span>{{ tt('admin.common.status', 'Trạng thái') }}</span>
+              <select v-model="phieuNhapStatusFilter">
+                <option value="">{{ t('admin.inventory.filterAll') }}</option>
+                <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
+                <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
+                <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
+              </select>
+            </label>
+            <label class="inv-field">
+              <span>{{ t('admin.phieuNhap.colSupplier') }}</span>
+              <select v-model="pnFilterSupplier">
+                <option value="">Tất cả</option>
+                <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">{{ s.tenNhaCungCap }}</option>
+              </select>
+            </label>
+            <label class="inv-field">
+              <span>{{ t('admin.phieuNhap.colStaff') }}</span>
+              <select v-model="pnFilterStaff">
+                <option value="">Tất cả</option>
+                <option v-for="s in staff" :key="s.nhanVienId" :value="s.nhanVienId">{{ s.hoTen }}</option>
+              </select>
+            </label>
+            <label class="inv-field">
+              <span>Từ ngày</span>
+              <input v-model="pnFilterDateFrom" type="date" />
+            </label>
+            <label class="inv-field">
+              <span>Đến ngày</span>
+              <input v-model="pnFilterDateTo" type="date" />
+            </label>
+            <label class="inv-field">
+              <span>Tổng tiền từ (VNĐ)</span>
+              <input v-model="pnFilterAmountMin" type="number" min="0" placeholder="0" />
+            </label>
+            <label class="inv-field">
+              <span>Tổng tiền đến (VNĐ)</span>
+              <input v-model="pnFilterAmountMax" type="number" min="0" placeholder="∞" />
+            </label>
+          </div>
+          <div class="inv-filter__foot">
+            <div class="inv-filter__btns">
+              <button type="button" class="inv-btn inv-btn--ghost" @click="clearAllPnFilters">Xóa lọc</button>
+              <button type="button" class="inv-btn inv-btn--primary" @click="isPnFilterOpen = false">Xong</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1056,9 +1392,9 @@ const exportPhieuNhapExcel = () => {
         <div class="inv-item-head">
           <span style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colProduct') }}</span>
           <span style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colVariant') }}</span>
-          <span style="flex:0 0 80px;">{{ t('admin.phieuNhapModal.colQty') }}</span>
-          <span style="flex:0 0 110px;">{{ t('admin.phieuNhapModal.colPrice') }}</span>
-          <span style="flex:0 0 34px;"></span>
+          <span style="flex:0 0 70px;text-align:center;">{{ t('admin.phieuNhapModal.colQty') }}</span>
+          <span style="flex:0 0 110px;text-align:right;">{{ t('admin.phieuNhapModal.colPrice') }}</span>
+          <span style="flex:0 0 72px;"></span>
         </div>
         <div class="d-flex flex-column gap-2 mb-2">
           <div v-for="(row, idx) in phieuNhapForm.items" :key="idx" class="inv-item-block">
@@ -1067,7 +1403,7 @@ const exportPhieuNhapExcel = () => {
                 <SearchSelect
                   v-model="row.sanPhamId" :options="productOptionsForPhieuNhap"
                   :placeholder="t('admin.phieuNhapModal.selectProductPlaceholder')"
-                  @update:model-value="row.bienTheId=''; row.lockedCount=0; row.serials=['']"
+                  @update:model-value="row.bienTheId=''; row.lockedCount=0; row.serials=['']; row.soLuong=1; row.donGia=0"
                 />
               </div>
               <div style="flex:2 1 0;min-width:0;">
@@ -1075,20 +1411,37 @@ const exportPhieuNhapExcel = () => {
                   v-model="row.bienTheId" :disabled="!row.sanPhamId"
                   :options="variantsForProduct(row.sanPhamId)"
                   :placeholder="t('admin.phieuNhapModal.selectVariantPlaceholder')"
-                  @update:model-value="row.lockedCount=0; syncPhieuNhapItemSerials(row)"
+                  @update:model-value="row.lockedCount=0; row.serials=['']; row.soLuong=1; row.donGia=0"
                 />
               </div>
-              <input v-model="row.soLuong" type="number" min="1" style="flex:0 0 80px;" :placeholder="t('admin.phieuNhapModal.qtyPlaceholder')" @change="clampPhieuNhapSoLuong(row)" />
-              <input v-model="row.donGia" type="number" min="0" style="flex:0 0 110px;" :placeholder="t('admin.phieuNhapModal.unitPricePlaceholder')" />
-              <button class="inv-icon-btn inv-icon-btn--danger" style="flex:0 0 34px;" :aria-label="t('common.remove')" @click="removePhieuNhapItemRow(idx)"><X :size="14" /></button>
+              <div class="inv-readonly" style="flex:0 0 70px;text-align:center;font-weight:700;">{{ row.soLuong || 0 }}</div>
+              <div class="inv-readonly" style="flex:0 0 110px;text-align:right;">{{ row.donGia ? formatPrice(row.donGia) : '—' }}</div>
+              <div style="flex:0 0 72px;display:flex;gap:4px;justify-content:flex-end;">
+                <label class="inv-icon-btn" style="cursor:pointer;" :class="{ 'inv-icon-btn--disabled': !row.bienTheId }" :title="!row.bienTheId ? 'Chọn biến thể trước' : 'Import file serial'" aria-label="Import file serial">
+                  <FolderOpen :size="14" />
+                  <input type="file" accept=".csv,.txt,.xlsx,.xls" class="d-none" :disabled="!row.bienTheId" @change="importSerialsForRow(row, $event)" />
+                </label>
+                <button class="inv-icon-btn" style="color:var(--muted);" :title="'Làm mới dòng'" @click="resetPhieuNhapItem(row)">
+                  <RefreshCw :size="14" />
+                </button>
+                <button class="inv-icon-btn inv-icon-btn--danger" :title="'Xóa dòng'" @click="removePhieuNhapItemRow(idx)">
+                  <Trash2 :size="14" />
+                </button>
+              </div>
             </div>
-            <div v-if="row.bienTheId" class="inv-serial-grid">
-              <span class="inv-hint" style="grid-column:1/-1;">{{ tt('admin.phieuNhapModal.serialsLabel', 'Serial cho dòng này (đủ số lượng)') }}</span>
-              <input
-                v-for="(s, sIdx) in row.serials" :key="sIdx"
-                v-model="row.serials[sIdx]" :disabled="sIdx < (row.lockedCount ?? 0)"
-                class="inv-mono" :placeholder="`Serial #${sIdx + 1}`"
-              />
+            <div v-if="row.bienTheId" class="inv-serial-info">
+              <button v-if="row.serials.filter(s=>s).length > 0"
+                class="inv-serial-toggle"
+                @click="openSerialViewer(idx)"
+              >
+                <span class="inv-serial-count">
+                  {{ row.serials.filter(s=>s).length }}/{{ row.soLuong || 0 }} serial đã import
+                </span>
+                <ExternalLink :size="12" style="flex-shrink:0;" />
+              </button>
+              <span v-else class="inv-hint">
+                {{ row.serials.filter(s=>s).length }}/{{ row.soLuong || 0 }} serial — chưa import
+              </span>
             </div>
           </div>
         </div>
@@ -1098,7 +1451,34 @@ const exportPhieuNhapExcel = () => {
       </div>
       <footer class="inv-modal__foot inv-modal__foot--end">
         <button class="inv-btn inv-btn--ghost" @click="showPhieuNhapModal=false">{{ t('admin.phieuNhapModal.cancel') }}</button>
-        <button class="inv-btn inv-btn--primary" :disabled="phieuNhapSaving" @click="savePhieuNhap">{{ editingPhieuNhapId ? t('admin.phieuNhapModal.saveEdit') : t('admin.phieuNhapModal.save') }}</button>
+        <button class="inv-btn inv-btn--primary"
+          :disabled="!phieuNhapFormValid || phieuNhapSaving"
+          :title="!phieuNhapFormValid ? 'Vui lòng nhập đầy đủ thông tin' : ''"
+          @click="savePhieuNhap">{{ editingPhieuNhapId ? t('admin.phieuNhapModal.saveEdit') : t('admin.phieuNhapModal.save') }}</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ══ MODAL XEM SERIAL ĐÃ IMPORT ══ -->
+  <div v-if="serialViewerModal" class="inv-modal-mask" @click.self="closeSerialViewer">
+    <div class="inv-modal" style="width:720px; max-height:85vh;">
+      <header class="inv-modal__head">
+        <span>Serial đã import — {{ serialViewerSpName }} ({{ serialViewerSerials.length }} serial)</span>
+        <button class="inv-icon-btn" :aria-label="t('common.close')" @click="closeSerialViewer"><X :size="16" /></button>
+      </header>
+      <div class="inv-modal__body">
+        <div v-if="serialViewerSerials.length === 0" class="inv-hint">Dòng này chưa có serial nào.</div>
+        <div v-else class="inv-serial-viewer-grid">
+          <span v-for="(s, i) in serialViewerSerials" :key="i"
+            class="inv-serial-chip"
+            :class="{ 'inv-serial-chip--dup': serialViewerDuplicateSet.has(s) }">
+            {{ i + 1 }}. {{ s }}
+            <span v-if="serialViewerDuplicateSet.has(s)" class="inv-serial-chip__warn">⚠ trùng</span>
+          </span>
+        </div>
+      </div>
+      <footer class="inv-modal__foot inv-modal__foot--end">
+        <button class="inv-btn inv-btn--ghost" @click="closeSerialViewer">Đóng</button>
       </footer>
     </div>
   </div>
@@ -1155,13 +1535,6 @@ const exportPhieuNhapExcel = () => {
                   <td class="ta-r inv-muted">{{ formatPrice(c.donGiaNhap) }}</td>
                   <td class="ta-r inv-price">{{ formatPrice(c.thanhTien) }}</td>
                 </tr>
-                <tr v-if="phieuNhapDetailSerialsFor(c.bienTheId).length" class="inv-row" style="cursor:default;">
-                  <td colspan="5" style="padding-top:0;">
-                    <div class="inv-serial-chip-row">
-                      <span v-for="s in phieuNhapDetailSerialsFor(c.bienTheId)" :key="s.chiTietId" class="inv-tag inv-tag--soft inv-mono">{{ s.soSerial }}</span>
-                    </div>
-                  </td>
-                </tr>
               </template>
               <tr v-if="phieuNhapDetailItems.length===0"><td colspan="5" class="inv-empty">{{ t('admin.phieuNhap.empty') }}</td></tr>
             </tbody>
@@ -1178,11 +1551,12 @@ const exportPhieuNhapExcel = () => {
       </footer>
       <footer v-if="phieuNhapDetailData" class="inv-modal__foot inv-modal__foot--end" style="border-top:none;padding-top:0;flex-wrap:wrap;">
         <template v-if="phieuNhapDetailData.trangThai==='cho_duyet'">
-          <button class="inv-btn inv-btn--ghost inv-btn--ok" @click="updatePhieuNhapStatus(phieuNhapDetailData,'hoan_thanh')"><Check :size="14" /> {{ t('admin.phieuNhap.approve') }}</button>
+          <button class="inv-btn inv-btn--ghost inv-btn--ok" @click="approvePhieuNhap(phieuNhapDetailData)"><Check :size="14" /> {{ t('admin.phieuNhap.approve') }}</button>
           <button class="inv-btn inv-btn--ghost inv-btn--danger" @click="updatePhieuNhapStatus(phieuNhapDetailData,'huy')"><X :size="14" /> {{ t('admin.phieuNhap.cancel') }}</button>
           <button class="inv-btn inv-btn--ghost" @click="showPhieuNhapDetailModal=false; openEditPhieuNhap(phieuNhapDetailData)"><Pencil :size="14" /> {{ t('admin.phieuNhap.editAction') }}</button>
           <button class="inv-btn inv-btn--ghost inv-btn--danger" @click="showPhieuNhapDetailModal=false; deletePhieuNhap(phieuNhapDetailData.phieuNhapId)"><Trash2 :size="14" /> {{ t('admin.phieuNhap.deleteAction') }}</button>
         </template>
+        <button class="inv-btn inv-btn--ghost" @click="openPhieuNhapSerialTab(phieuNhapDetailData)"><ExternalLink :size="14" /> {{ t('admin.phieuNhap.viewSerials') || 'Xem serial' }}</button>
         <button class="inv-btn inv-btn--ghost" @click="printPhieuNhapDetail(phieuNhapDetailData)"><Printer :size="14" /> {{ t('admin.phieuNhap.printPdf') }}</button>
         <button class="inv-btn inv-btn--ghost" style="margin-left:auto;" @click="showPhieuNhapDetailModal=false">{{ t('admin.promoModal.cancel') }}</button>
       </footer>
@@ -1208,107 +1582,47 @@ const exportPhieuNhapExcel = () => {
         <button class="inv-icon-btn" :aria-label="t('common.close')" @click="showDetailModal=false"><X :size="16" /></button>
       </header>
 
-      <div class="inv-tabs" style="padding:12px 20px 0;">
-        <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': detailTab==='serials' }" @click="detailTab='serials'">{{ tt('admin.stockDetailModal.tabSerials', 'Danh sách serial') }}</button>
-        <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': detailTab==='add' }" @click="detailTab='add'">{{ tt('admin.stockDetailModal.tabAdd', 'Thêm hàng') }}</button>
+      <div class="inv-modal__body" style="padding:16px 20px 8px;">
+        <div class="d-flex gap-2 flex-wrap">
+          <div class="inv-search" style="flex:1 1 200px;min-width:0;max-width:none;">
+            <Search :size="14" class="inv-search__icon" />
+            <input v-model="detailSerialSearch" :placeholder="tt('admin.stockDetailModal.searchPlaceholder', 'Tìm serial...')" />
+          </div>
+          <select v-model="detailSerialStatusFilter" class="inv-select" style="flex:0 0 180px;width:180px;">
+            <option value="">{{ tt('admin.stockDetailModal.allStatus', 'Tất cả trạng thái') }}</option>
+            <option v-for="s in SERIAL_STATUS_OPTIONS" :key="s" :value="s">{{ stockDetailStatusLabel(s) }}</option>
+          </select>
+        </div>
       </div>
-
-      <!-- Tab: Danh sach serial -->
-      <template v-if="detailTab==='serials'">
-        <div class="inv-modal__body" style="padding-bottom:0;">
-          <div class="d-flex gap-2">
-            <div class="inv-search" style="flex:1;">
-              <Search :size="14" class="inv-search__icon" />
-              <input v-model="detailSerialSearch" :placeholder="tt('admin.stockDetailModal.searchPlaceholder', 'Tìm serial...')" />
-            </div>
-            <select v-model="detailSerialStatusFilter" class="inv-select" style="width:170px;">
-              <option value="">{{ tt('admin.stockDetailModal.allStatus', 'Tất cả trạng thái') }}</option>
-              <option v-for="s in SERIAL_STATUS_OPTIONS" :key="s" :value="s">{{ stockDetailStatusLabel(s) }}</option>
-            </select>
-          </div>
-        </div>
-        <div class="inv-modal__body" style="padding-top:10px;overflow-y:auto;max-height:420px;">
-          <div v-if="detailSerialsLoading" class="inv-empty">{{ t('admin.stockDetailModal.loading') }}</div>
-          <div v-else-if="filteredDetailSerials.length === 0" class="inv-empty">{{ t('admin.stockDetailModal.empty') }}</div>
-          <table v-else class="inv-table">
-            <thead>
-              <tr>
-                <th style="width:40px;">{{ t('admin.stockDetailModal.colIndex') }}</th>
-                <th>{{ t('admin.stockDetailModal.colSerial') }}</th>
-                <th>{{ t('admin.stockDetailModal.colImportDate') }}</th>
-                <th>{{ t('admin.stockDetailModal.colStatus') }}</th>
-                <th style="width:60px;"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(s, idx) in filteredDetailSerials" :key="s.chiTietId" class="inv-row">
-                <td class="inv-muted">{{ idx + 1 }}</td>
-                <td class="inv-mono" style="font-weight:600;">{{ s.soSerial }}</td>
-                <td class="inv-muted">{{ formatDate(s.ngayNhapKho) }}</td>
-                <td>{{ stockDetailStatusLabel(s.trangThai) }}</td>
-                <td>
-                  <button v-if="s.trangThai==='trong_kho'" class="inv-icon-btn inv-icon-btn--danger" :title="t('admin.stockDetailModal.deleteSerial')" :aria-label="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)"><X :size="12" /></button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <footer class="inv-modal__foot inv-modal__foot--end">
-          <button class="inv-btn inv-btn--ghost" @click="showDetailModal=false">{{ t('admin.stockModal.cancel') }}</button>
-        </footer>
-      </template>
-
-      <!-- Tab: Them hang -->
-      <template v-else>
-        <div class="inv-modal__body">
-          <div class="inv-grid">
-            <label class="inv-field">
-              <span>{{ tt('admin.stockModal.giaNhapLabel', 'Giá nhập') }}</span>
-              <div class="inv-readonly">{{ formatPrice(getVariantInfo(detailItem)?.giaNhap) }}</div>
-              <em class="inv-hint">{{ tt('admin.stockModal.giaNhapHint', 'Tự lấy từ phiếu nhập gần nhất, không sửa tay ở đây') }}</em>
-            </label>
-            <label class="inv-field">
-              <span>{{ tt('admin.stockModal.giaBanLabel', 'Giá bán') }}</span>
-              <input v-model="stockForm.giaBan" type="number" min="0" />
-              <em class="inv-hint">{{ tt('admin.stockModal.giaBanHint', 'Nhập đủ giá nhập + giá bán + serial thì hàng mới rời khỏi "Chờ nhập hàng"') }}</em>
-            </label>
-            <label class="inv-field">
-              <span>{{ t('admin.stockModal.stockLabel') }}</span>
-              <div class="inv-readonly">{{ detailItem?.soLuongTon ?? 0 }}</div>
-              <em class="inv-hint">{{ t('admin.stockModal.stockHint') }}</em>
-            </label>
-            <label class="inv-field">
-              <span>{{ t('admin.stockModal.heldLabel') }}</span>
-              <input v-model="stockForm.soLuongGiu" type="number" min="0" />
-            </label>
-            <label class="inv-field" style="grid-column:1/-1;">
-              <span>{{ t('admin.stockModal.minStockLabel') }}</span>
-              <input v-model="stockForm.tonKhoToiThieu" type="number" min="0" />
-            </label>
-            <div class="inv-field" style="grid-column:1/-1;">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <span>{{ t('admin.stockModal.newSerialsLabel') }}</span>
-                <label class="inv-btn inv-btn--ghost inv-btn--sm" style="cursor:pointer;">
-                  <FolderOpen :size="14" /> {{ t('admin.stockModal.importFromFile') }}
-                  <input type="file" accept=".csv,.txt,.xlsx,.xls" class="d-none" @change="importSerialsFromFile" />
-                </label>
-              </div>
-              <div class="d-flex flex-column gap-2">
-                <div v-for="(s, idx) in stockForm.newSerials" :key="idx" class="d-flex gap-2 align-items-center">
-                  <input v-model="stockForm.newSerials[idx]" :placeholder="t('admin.stockModal.serialPlaceholder')" />
-                  <button class="inv-icon-btn inv-icon-btn--danger" :aria-label="t('common.remove')" @click="removeStockSerialRow(idx)"><X :size="14" /></button>
-                </div>
-              </div>
-              <button class="inv-btn inv-btn--ghost mt-2" @click="addStockSerialRow">{{ t('admin.stockModal.addSerialRow') }}</button>
-              <em class="inv-hint">{{ t('admin.stockModal.importHint') }}</em>
-            </div>
-          </div>
-        </div>
-        <footer class="inv-modal__foot inv-modal__foot--end">
-          <button class="inv-btn inv-btn--ghost" @click="showDetailModal=false">{{ t('admin.stockModal.cancel') }}</button>
-          <button class="inv-btn inv-btn--primary" :disabled="stockSaving" @click="saveStock">{{ t('admin.stockModal.save') }}</button>
-        </footer>
-      </template>
+      <div style="overflow-y:auto;max-height:420px;padding:0 20px;">
+        <div v-if="detailSerialsLoading" class="inv-empty">{{ t('admin.stockDetailModal.loading') }}</div>
+        <div v-else-if="filteredDetailSerials.length === 0" class="inv-empty">{{ t('admin.stockDetailModal.empty') }}</div>
+        <table v-else class="inv-table">
+          <thead>
+            <tr>
+              <th style="width:40px;">{{ t('admin.stockDetailModal.colIndex') }}</th>
+              <th>{{ t('admin.stockDetailModal.colSerial') }}</th>
+              <th>{{ t('admin.stockDetailModal.colImportDate') }}</th>
+              <th>{{ t('admin.stockDetailModal.colStatus') }}</th>
+              <th style="width:60px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(s, idx) in filteredDetailSerials" :key="s.chiTietId" class="inv-row">
+              <td class="inv-muted">{{ idx + 1 }}</td>
+              <td class="inv-mono" style="font-weight:600;">{{ s.soSerial }}</td>
+              <td class="inv-muted">{{ formatDate(s.ngayNhapKho) }}</td>
+              <td>{{ stockDetailStatusLabel(s.trangThai) }}</td>
+              <td>
+                <button v-if="s.trangThai==='trong_kho'" class="inv-icon-btn inv-icon-btn--danger" :title="t('admin.stockDetailModal.deleteSerial')" :aria-label="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)"><Trash2 :size="14" /></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <footer class="inv-modal__foot inv-modal__foot--end">
+        <button class="inv-btn inv-btn--ghost" @click="showDetailModal=false">{{ t('admin.stockModal.cancel') }}</button>
+      </footer>
     </div>
   </div>
 
@@ -1354,67 +1668,53 @@ const exportPhieuNhapExcel = () => {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: 999px; border: 1px solid transparent;
   font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
-  transition: all 0.15s ease;
 }
 .inv-btn--sm { padding: 5px 11px; font-size: 12.5px; }
 .inv-btn--primary {
   background: var(--pink-600); color: #fff;
-  box-shadow: 0 3px 0 #9b1d5c, 0 4px 8px rgba(168, 27, 93, 0.3);
-  border-bottom-width: 3px;
-}
-.inv-btn--primary:hover:not(:disabled) {
-  background: var(--pink-700);
-  box-shadow: 0 4px 0 #7a1550, 0 6px 12px rgba(168, 27, 93, 0.35);
-  transform: translateY(-1px);
-}
-.inv-btn--primary:active:not(:disabled) {
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-  transform: translateY(1px);
 }
 .inv-btn--ghost { background: #fff; color: var(--pink-700); border-color: var(--pink-200); }
 .inv-btn--ghost:hover:not(:disabled) {
   background: var(--pink-50); border-color: var(--pink-300);
-  box-shadow: 0 2px 4px rgba(168, 27, 93, 0.15);
 }
 .inv-btn--ghost.is-on { background: var(--pink-100); border-color: var(--pink-300); }
 .inv-btn--ok { color: var(--ok-text); border-color: #bbf7d0; }
-.inv-btn--ok:hover:not(:disabled) { background: var(--ok-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.inv-btn--ok:hover:not(:disabled) { background: var(--ok-bg); }
 .inv-btn--danger { color: var(--danger); border-color: #fecaca; }
-.inv-btn--danger:hover:not(:disabled) { background: #fef2f2; box-shadow: 0 2px 4px rgba(220,38,38,0.15); }
+.inv-btn--danger:hover:not(:disabled) { background: #fef2f2; }
 .inv-btn:disabled { opacity: .45; cursor: not-allowed; }
 
 .inv-icon-btn {
   background: #fff; border: 1px solid var(--pink-200); color: var(--pink-700);
   width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
   display: inline-grid; place-items: center; flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(168, 27, 93, 0.1);
-  transition: all 0.15s ease;
 }
-.inv-icon-btn:hover {
-  background: var(--pink-50);
-  box-shadow: 0 4px 8px rgba(168, 27, 93, 0.15);
-  transform: translateY(-1px);
-}
+.inv-icon-btn:hover { background: var(--pink-50); }
 .inv-icon-btn--danger { color: var(--danger); border-color: #fecaca; }
-.inv-icon-btn--danger:hover { background: #fef2f2; box-shadow: 0 4px 8px rgba(220,38,38,0.2); }
+.inv-icon-btn--danger:hover { background: #fef2f2; }
+.inv-icon-btn--disabled { opacity: 0.35; pointer-events: none; cursor: not-allowed; }
 
 /* ══════════ STAT CARD — khối màu đậm giống ảnh mẫu, icon/số trắng ══════════ */
 .inv-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
 .inv-stat {
   display: flex; align-items: center; gap: 14px;
   border-radius: 14px; padding: 16px 18px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
   color: #fff; cursor: pointer; user-select: none;
-  border: 2px solid transparent; transition: transform .12s, box-shadow .12s, border-color .12s;
+  border: 2px solid transparent; transition: border-color .12s;
 }
-.inv-stat:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
 .inv-stat.is-on { border-color: rgba(255, 255, 255, .85); }
 .inv-stat--blue   { background: linear-gradient(135deg, #60a5fa, #2563eb); }
 .inv-stat--green  { background: linear-gradient(135deg, #34d399, #059669); cursor: default; }
-.inv-stat--green:hover { transform: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .12); }
 .inv-stat--amber  { background: linear-gradient(135deg, #fbbf24, #d97706); }
 .inv-stat--red    { background: linear-gradient(135deg, #f87171, #dc2626); }
-.inv-stat--purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+.inv-stat--purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); transition: transform .15s, box-shadow .15s; }
+.inv-stat--purple:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(124, 58, 237, .25); }
+.inv-stat--amber  { transition: transform .15s, box-shadow .15s; }
+.inv-stat--amber:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(217, 119, 6, .25); }
+.inv-stat--green  { transition: transform .15s, box-shadow .15s; }
+.inv-stat--green:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(5, 150, 105, .25); }
+.inv-stat--red    { transition: transform .15s, box-shadow .15s; }
+.inv-stat--red:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(220, 38, 38, .25); }
 .inv-stat--cyan   { background: linear-gradient(135deg, #22d3ee, #0891b2); }
 .inv-stat__icon {
   width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
@@ -1445,7 +1745,7 @@ const exportPhieuNhapExcel = () => {
 }
 .inv-bar__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
 
-.inv-search { position: relative; flex: 1 1 240px; min-width: 200px; max-width: 340px; }
+.inv-search { position: relative; flex: 1 1 240px; min-width: 160px; max-width: none; }
 .inv-search input {
   width: 100%; padding: 8px 14px 8px 34px;
   border: 1px solid var(--pink-200); border-radius: 999px;
@@ -1465,7 +1765,7 @@ const exportPhieuNhapExcel = () => {
 }
 .inv-select:focus { outline: none; border-color: var(--pink-500); }
 
-.inv-chip {
+.inv-chip-badge {
   background: var(--pink-600); color: #fff; border-radius: 999px;
   padding: 0 6px; font-size: 11px; line-height: 17px; min-width: 17px; text-align: center;
 }
@@ -1487,6 +1787,25 @@ const exportPhieuNhapExcel = () => {
 }
 .inv-filter__count { font-size: 12.5px; color: var(--muted); }
 .inv-filter__btns { display: flex; gap: 8px; }
+.inv-filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--pink-600); color: #fff; border-radius: 999px;
+  min-width: 18px; height: 18px; font-size: 10px; font-weight: 700; padding: 0 4px;
+  line-height: 1; margin-left: 4px; vertical-align: middle;
+}
+.inv-filter-chips {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding: 6px 0 2px;
+}
+.inv-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--pink-100); color: var(--pink-700); border: 1px solid var(--pink-300);
+  border-radius: 999px; padding: 2px 8px; font-size: 12px; cursor: pointer;
+  transition: background .15s;
+}
+.inv-chip:hover { background: var(--pink-200); }
+.inv-chip--clear { background: #fef2f2; color: var(--danger); border-color: #fecaca; font-weight: 600; }
+.inv-chip--clear:hover { background: #fee2e2; }
 
 /* ══════════ Ô NHẬP DÙNG CHUNG ══════════ */
 .inv-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -1520,13 +1839,42 @@ const exportPhieuNhapExcel = () => {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px;
   margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--pink-200);
 }
+.inv-serial-info { margin-top: 6px; font-size: 12px; }
 .inv-serial-grid input { font-size: 12.5px; padding: 6px 8px; }
 .inv-serial-grid input:disabled { background: var(--pink-100); color: var(--muted); cursor: not-allowed; }
 .inv-serial-chip-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.inv-serial-toggle {
+  display: flex; align-items: center; gap: 4px; cursor: pointer; background: none; border: none;
+  padding: 2px 4px; border-radius: 4px; font-size: 12px; color: var(--muted);
+}
+.inv-serial-toggle:hover { background: var(--pink-100); color: var(--pink-700); }
+.inv-serial-count { font-weight: 600; color: var(--pink-700); }
+.inv-serial-chips {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; padding-top: 6px;
+  border-top: 1px solid var(--pink-200);
+}
+.inv-serial-chip {
+  padding: 2px 7px; border-radius: 4px; font-size: 11.5px; font-family: var(--font-mono, monospace);
+  background: var(--pink-50); color: var(--pink-700); border: 1px solid var(--pink-200);
+}
+.inv-serial-chip--dup {
+  background: #fef2f2; color: var(--danger); border-color: #fecaca;
+}
+.inv-serial-chip__warn {
+  margin-left: 6px; font-size: 10px; font-weight: 700;
+}
+.inv-serial-viewer-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px; max-height: 60vh; overflow-y: auto; padding: 4px;
+}
+.inv-serial-viewer-grid .inv-serial-chip {
+  display: inline-flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; font-size: 12px; border-radius: 6px;
+}
 .inv-total { text-align: right; font-weight: 800; font-size: 1.05rem; color: var(--ink); }
 
 /* ══════════ THẺ + BẢNG ══════════ */
-.inv-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--sh-2); }
+.inv-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 
 /* THANH CÔNG CỤ (nằm trong card, có border-bottom) */
 .inv-bar {
@@ -1535,7 +1883,7 @@ const exportPhieuNhapExcel = () => {
   border-bottom: 1px solid var(--pink-50);
 }
 .inv-bar__count { font-size: 12.5px; color: var(--muted); font-weight: 600; }
-.inv-search { position: relative; flex: 1 1 280px; max-width: 320px; }
+.inv-search { position: relative; flex: 1 1 280px; min-width: 160px; max-width: none; }
 
 .inv-table-wrap { overflow-x: auto; }
 .inv-table { width: 100%; border-collapse: collapse; }
@@ -1565,9 +1913,15 @@ const exportPhieuNhapExcel = () => {
 .inv-name__text { min-width: 0; }
 .inv-name__main { font-weight: 600; line-height: 1.35; word-break: break-word; }
 .inv-name__sub { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 2px; }
-.inv-config { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
-.inv-config span { padding: 2px 6px; border-radius: 4px; }
-.inv-config-diff { font-weight: 600; color: #3b82f6; background: #eff6ff; }
+.inv-config { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; align-items: center; }
+.inv-config-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--pink-100); color: var(--pink-700);
+  font-weight: 600; line-height: 1.4;
+  transition: background .15s, transform .12s;
+}
+.inv-config-chip:hover { background: var(--pink-200); transform: translateY(-1px); }
 
 .inv-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
 .inv-tag--ok { background: var(--ok-bg); color: var(--ok-text); }
@@ -1592,12 +1946,13 @@ const exportPhieuNhapExcel = () => {
 .inv-modal-mask {
   position: fixed; inset: 0; z-index: 1050;
   background: rgba(31,41,55,.5); display: flex; align-items: flex-start; justify-content: center;
-  padding: 5vh 20px 20px; font-size: 14px; color: var(--ink);
+  padding: 0 20px 20px; overflow-y: auto; font-size: 14px; color: var(--ink);
 }
 .inv-modal {
-  background: #fff; width: 640px; max-width: 100%; max-height: 90vh;
+  background: #fff; width: 640px; max-width: 100%; max-height: calc(100vh - 40px);
   border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;
   box-shadow: 0 22px 55px rgba(168,27,93,.25);
+  margin-top: 24px; flex-shrink: 0;
 }
 .inv-modal--hep { width: 520px; }
 .inv-modal__head {

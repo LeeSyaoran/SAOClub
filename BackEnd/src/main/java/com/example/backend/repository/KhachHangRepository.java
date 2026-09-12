@@ -15,11 +15,19 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	java.util.Optional<KhachHang> findWithLockByKhachHangId(Integer khachHangId);
 
+<<<<<<< HEAD
 	@Query("SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao, k.hinhAnh) FROM KhachHang k")
 	java.util.List<KhachHangResponse> hienThiKhachHang();
 
 	@Query(value = "SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao, k.hinhAnh) FROM KhachHang k",
 			countQuery = "SELECT COUNT(k) FROM KhachHang k")
+=======
+	@Query("SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao) FROM KhachHang k ORDER BY k.ngayTao DESC")
+	java.util.List<KhachHangResponse> hienThiKhachHang();
+
+	@Query(value = "SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao) FROM KhachHang k ORDER BY k.ngayTao DESC",
+		   countQuery = "SELECT COUNT(k) FROM KhachHang k")
+>>>>>>> 263fbf4733d7677b5a1c903b79b60a2fc9633142
 	Page<KhachHangResponse> hienThiKhachHang(Pageable pageable);
 
 	boolean existsBySoDienThoai(String soDienThoai);

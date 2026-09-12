@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>USB Barcode Scanner</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #000;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: #1a1a2e;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .header-icon { font-size: 1.4rem; }
+  .header-info { flex: 1; }
+  .header-title { font-size: 0.9rem; font-weight: 700; color: #00d4ff; }
+  .header-status { font-size: 0.7rem; color: #888; margin-top: 2px; }
+  .header-status.ready { color: #10b981; }
+
+  /* ── Camera preview ── */
+  .camera-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #000;
+  }
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* ── Scan frame overlay ── */
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .scan-frame {
+    width: 72%;
+    max-width: 300px;
+    aspect-ratio: 3/2;
+    border: 2px solid rgba(255,255,255,0.7);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+    position: relative;
+  }
+  .scan-line {
+    position: absolute;
+    left: 8px; right: 8px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #10b981, #00d4ff, #10b981, transparent);
+    animation: scanMove 2s ease-in-out infinite;
+    border-radius: 2px;
+    top: 0;
+  }
+  @keyframes scanMove {
+    0%   { top: 0; }
+    45%  { top: calc(100% - 2px); }
+    55%  { top: calc(100% - 2px); }
+    100% { top: 0; }
+  }
+  .corner { position: absolute; width: 20px; height: 20px; border-color: #10b981; border-style: solid; }
+  .corner.tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+  .corner.tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-radius: 0 6px 0 0; }
+  .corner.bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 6px; }
+  .corner.br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+
+  /* ── Bottom bar ── */
+  .bottom-bar {
+    background: #1a1a2e;
+    padding: 14px 16px;
+    border-top: 1px solid #333;
+    flex-shrink: 0;
+  }
+  .result-box {
+    background: #0f1117;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+  }
+  .result-label {
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .result-text {
+    font-family: monospace;
+    font-size: 1.1rem;
+    color: #10b981;
+    word-break: break-all;
+    min-height: 1.4em;
+  }
+  .result-text.empty { color: #555; font-style: italic; }
+  .result-time {
+    font-size: 0.68rem;
+    color: #555;
+    margin-top: 4px;
+  }
+  .send-status {
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 6px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    display: none;
+  }
+  .send-status.ok { display: block; background: rgba(16,185,129,0.15); color: #10b981; }
+  .send-status.fail { display: block; background: rgba(239,68,68,0.15); color: #f87171; }
+  .send-status.sending { display: block; background: rgba(0,212,255,0.1); color: #00d4ff; }
+
+  /* ── Permission / error ── */
+  .perm-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+  }
+  .perm-icon { font-size: 3rem; }
+  .perm-title { font-size: 1.1rem; font-weight: 700; }
+  .perm-desc { font-size: 0.85rem; color: #888; line-height: 1.6; }
+  .btn-open {
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 32px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .btn-open:active { background: #059669; transform: scale(0.98); }
+  .hint-text { font-size: 0.75rem; color: #555; margin-top: 8px; }
+
+  /* ── History ── */
+  .history-toggle {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+  }
+  .history-toggle:hover { color: #e5e7eb; }
+  .history-list {
+    background: #0f1117;
+    border-radius: 8px;
+    margin-top: 6px;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .history-item {
+    padding: 6px 12px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #10b981;
+    border-bottom: 1px solid #1f2937;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-time { font-size: 0.68rem; color: #555; }
+  .no-history { font-size: 0.8rem; color: #555; text-align: center; padding: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ── Permission screen ── -->
+<div class="perm-screen" id="permScreen">
+  <div class="perm-icon">📷</div>
+  <div class="perm-title">Truy cập Camera</div>
+  <div class="perm-desc">
+    Ứng dụng cần sử dụng camera để quét mã vạch.<br>
+    Hình ảnh không được gửi đi đâu ngoài máy tính qua cáp USB.
+  </div>
+  <button class="btn-open" id="btnOpen" onclick="startScanner()">
+    Cho phép Camera
+  </button>
+  <div class="hint-text">Hoặc mở Chrome, truy cập: <strong id="hintUrl">—</strong></div>
+</div>
+
+<!-- ── Camera + Scanner ── -->
+<div id="scannerScreen" style="display:none;flex-direction:column;height:100vh;">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">📷</div>
+    <div class="header-info">
+      <div class="header-title">USB Barcode Scanner</div>
+      <div class="header-status" id="statusText">Đang kết nối...</div>
+    </div>
+    <div style="font-size:1.2rem;" id="fpsBadge">🎯</div>
+  </div>
+
+  <!-- Camera -->
+  <div class="camera-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="scan-overlay">
+      <div class="scan-frame">
+        <div class="scan-line"></div>
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result bar -->
+  <div class="bottom-bar">
+    <div class="send-status" id="sendStatus"></div>
+    <div class="result-box">
+      <div class="result-label">Mã vừa quét</div>
+      <div class="result-text empty" id="resultText">Đưa camera vào mã vạch...</div>
+      <div class="result-time" id="resultTime"></div>
+    </div>
+    <button class="history-toggle" onclick="toggleHistory()">
+      <span id="historyIcon">▼</span> Lịch sử quét gần đây
+    </button>
+    <div id="historyPanel" style="display:none;">
+      <div class="history-list" id="historyList">
+        <div class="no-history">Chưa có mã nào</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const SERVER_URL = '';  // rong = cung origin, dung adb reverse
+const SCAN_COOLDOWN_MS = 1500; // tranh quet 2 lan lien tiep
+
+// ── State ────────────────────────────────────────────────────────────────────
+let stream = null;
+let lastScanned = '';
+let lastScanTime = 0;
+let history = [];
+let scanCount = 0;
+let lastFpsTime = Date.now();
+let fps = 0;
+let zxingLoaded = false;
+
+// ── BarcodeDetector fallback ────────────────────────────────────────────────
+async function getBarcodeDetector() {
+  if ('BarcodeDetector' in window) {
+    const formats = await BarcodeDetector.getSupportedFormats();
+    return new BarcodeDetector({ formats: formats });
+  }
+  return null;
+}
+
+// ── Load zxing ────────────────────────────────────────────────────────────────
+async function loadZxing() {
+  if (zxingLoaded) return;
+  try {
+    await import('https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js');
+    zxingLoaded = true;
+  } catch (e) {
+    console.warn('[Scanner] zxing load failed, trying BarcodeDetector:', e);
+  }
+}
+
+// ── Send scan to proxy ────────────────────────────────────────────────────────
+async function sendScan(text) {
+  const el = document.getElementById('sendStatus');
+  el.className = 'send-status sending';
+  el.textContent = 'Đang gửi...';
+
+  try {
+    const resp = await fetch(`${SERVER_URL}/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const json = await resp.json();
+    if (json.ok) {
+      el.className = 'send-status ok';
+      el.textContent = '✅ Đã gửi đến máy tính';
+      // Vibrate on success
+      if (navigator.vibrate) navigator.vibrate(100);
+    } else {
+      throw new Error(json.error);
+    }
+  } catch (e) {
+    el.className = 'send-status fail';
+    el.textContent = '❌ Gửi thất bại: ' + (e.message || 'lỗi mạng');
+    setTimeout(() => {
+      el.className = 'send-status';
+      el.style.display = 'none';
+    }, 3000);
+  }
+
+  setTimeout(() => {
+    el.className = 'send-status';
+    el.style.display = 'none';
+  }, 2500);
+}
+
+// ── Show result ───────────────────────────────────────────────────────────────
+function showResult(text) {
+  const textEl = document.getElementById('resultText');
+  const timeEl = document.getElementById('resultTime');
+  const now = new Date();
+
+  textEl.textContent = text;
+  textEl.classList.remove('empty');
+  timeEl.textContent = 'Quét lúc ' + now.toLocaleTimeString('vi-VN');
+
+  // Add to history
+  history.unshift({ text, time: now.toISOString() });
+  if (history.length > 20) history.pop();
+  updateHistoryUI();
+
+  // Flash frame green
+  const frame = document.querySelector('.scan-frame');
+  frame.style.borderColor = '#10b981';
+  setTimeout(() => { frame.style.borderColor = 'rgba(255,255,255,0.7)'; }, 400);
+}
+
+// ── History ──────────────────────────────────────────────────────────────────
+function toggleHistory() {
+  const panel = document.getElementById('historyPanel');
+  const icon = document.getElementById('historyIcon');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  icon.textContent = panel.style.display === 'none' ? '▼' : '▲';
+}
+
+function updateHistoryUI() {
+  const list = document.getElementById('historyList');
+  if (history.length === 0) {
+    list.innerHTML = '<div class="no-history">Chưa có mã nào</div>';
+    return;
+  }
+  list.innerHTML = history.slice(0, 10).map(h => {
+    const t = new Date(h.time).toLocaleTimeString('vi-VN');
+    return `<div class="history-item"><span>${h.text}</span><span class="history-time">${t}</span></div>`;
+  }).join('');
+}
+
+// ── Scan frame ────────────────────────────────────────────────────────────────
+let scanRAF = null;
+let lastProcessedTime = 0;
+
+async function scanFrame(timestamp) {
+  scanRAF = requestAnimationFrame(scanFrame);
+
+  // Throttle: chi quet moi 200ms
+  if (timestamp - lastProcessedTime < 200) return;
+  lastProcessedTime = timestamp;
+
+  const video = document.getElementById('video');
+  if (!stream || video.readyState < 2) return;
+
+  // Create canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // Cooldown
+  const now = Date.now();
+  if (now - lastScanTime < SCAN_COOLDOWN_MS) return;
+
+  // Try BarcodeDetector (native Chrome Android)
+  if ('BarcodeDetector' in window) {
+    try {
+      const detector = new BarcodeDetector({
+        formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar']
+      });
+      const barcodes = await detector.detect(canvas);
+      if (barcodes.length > 0) {
+        const text = barcodes[0].rawValue;
+        if (text && text !== lastScanned) {
+          lastScanned = text;
+          lastScanTime = now;
+          scanCount++;
+          updateFps();
+          onBarcodeDetected(text);
+        }
+      }
+    } catch { /* continue to zxing */ }
+  }
+
+  // Try zxing
+  if (zxingLoaded) {
+    try {
+      const { BrowserMultiFormatReader } = window.ZXingBrowser;
+      const reader = new BrowserMultiFormatReader();
+      // Decode from canvas
+      const result = await reader.decodeFromCanvasElement(canvas);
+      if (result) {
+        const text = result.getText();
+        if (text && text !== lastScanned) {
+          lastScanned = text;
+          lastScanTime = now;
+          scanCount++;
+          updateFps();
+          onBarcodeDetected(text);
+        }
+      }
+    } catch { /* no barcode in this frame */ }
+  }
+}
+
+function updateFps() {
+  const now = Date.now();
+  const delta = (now - lastFpsTime) / 1000;
+  if (delta >= 1) {
+    fps = Math.round(scanCount / delta);
+    scanCount = 0;
+    lastFpsTime = now;
+    const badge = document.getElementById('fpsBadge');
+    badge.textContent = fps > 0 ? fps + ' fps' : '🎯';
+  }
+}
+
+function onBarcodeDetected(text) {
+  showResult(text);
+  sendScan(text);
+}
+
+// ── Start scanner ──────────────────────────────────────────────────────────────
+async function startScanner() {
+  document.getElementById('permScreen').style.display = 'none';
+  document.getElementById('scannerScreen').style.display = 'flex';
+
+  const statusEl = document.getElementById('statusText');
+  statusEl.textContent = 'Đang mở camera...';
+  statusEl.className = 'header-status';
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
+      },
+      audio: false,
+    });
+  } catch (e) {
+    statusEl.textContent = 'Lỗi: ' + (e.message || e.name);
+    statusEl.className = 'header-status';
+    document.getElementById('permScreen').style.display = 'flex';
+    document.getElementById('scannerScreen').style.display = 'none';
+    return;
+  }
+
+  const video = document.getElementById('video');
+  video.srcObject = stream;
+
+  statusEl.textContent = 'Sẵn sàng — đưa camera vào mã vạch';
+  statusEl.className = 'header-status ready';
+
+  // Load zxing
+  await loadZxing();
+
+  // Start scanning
+  scanRAF = requestAnimationFrame(scanFrame);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Neu da co quyen camera (refresh trang), tu dong mo
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    // Thu kiem tra quyen
+    navigator.permissions && navigator.permissions.query({ name: 'camera' }).then(result => {
+      if (result.state === 'granted') {
+        startScanner();
+      } else {
+        // Hien IP de huong dan nguoi dung
+        const hint = document.getElementById('hintUrl');
+        const ip = location.hostname;
+        hint.textContent = `http://${ip}:8484/phone`;
+      }
+    }).catch(() => {
+      // permissions API not supported
+    });
+  }
+});
+</script>
+</body>
+</html>

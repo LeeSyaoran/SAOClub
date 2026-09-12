@@ -1,0 +1,11 @@
+{
+  "name": "usb-camera-proxy",
+  "version": "1.0.0",
+  "description": "USB Barcode Scanner — dien thoai quet barcode, gui qua USB den may tinh",
+  "main": "proxy-adb.js",
+  "scripts": {
+    "start": "node proxy-adb.js",
+    "dev": "node --watch proxy-adb.js"
+  },
+  "dependencies": {}
+}

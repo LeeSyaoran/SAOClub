@@ -1,83 +1,43 @@
 <template>
-  <!-- Trục thời gian theo dõi trạng thái đơn hàng -->
-  <div class="card border-secondary" style="background:var(--bg-hover);">
-    <div class="card-body">
-      <!-- Desktop: mỗi icon có 2 "nửa đường nối" bên trái/phải (flex-grow:1, nằm ngay
-           trong hàng chứa icon đó) thay vì 1 đường full-width tính theo % bề rộng cột (kỹ
-           thuật cũ luôn thiếu hẳn đoạn nối vào icon CUỐI cùng dù cột đã đều nhau/hết gap —
-           vì đường nối "của cột K" luôn nằm lọt trong vùng cột K-1, không bao giờ vươn tới
-           chính icon K). Nửa phải của icon K ghép với nửa trái của icon K+1 tạo thành đúng
-           1 đoạn nối liền mạch — 2 nửa luôn bằng nhau vì 2 cột kề nhau bằng nhau tuyệt đối
-           ("flex:1 1 0"), không phụ thuộc số liệu % nào cả nên không thể lệch. -->
-      <div class="d-none d-md-flex justify-content-between">
+  <!-- Bố cục đứng (vertical), gọn để đặt sidebar trong modal chi tiết đơn — step đang active
+       phát sáng nhẹ để tách bạch với step done (đã tick xanh) và step pending (mờ). -->
+  <div class="d-flex flex-column gap-0" style="position:relative;">
+    <div
+      v-for="(step, index) in steps" :key="index"
+      class="d-flex align-items-start gap-3" style="position:relative;"
+    >
+      <!-- Cột icon + đường nối dọc giữa các step -->
+      <div class="d-flex flex-column align-items-center" style="width:32px; flex-shrink:0; position:relative;">
         <div
-          v-for="(step, index) in steps" :key="index"
-          class="d-flex flex-column align-items-center" style="flex:1 1 0; min-width:0;"
-        >
-          <div class="d-flex align-items-center" style="width:100%;">
-            <div
-              class="flex-grow-1" style="height:1.5px;"
-              :style="index === 0 ? 'background:transparent;'
-                : index <= currentStep ? 'background:var(--accent);' : 'background:var(--border-color-strong); opacity:0.4;'"
-            ></div>
-            <div
-              class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 position-relative"
-              style="width:36px; height:36px; z-index:1;"
-              :style="index <= currentStep
-                ? 'background:var(--bg-hover); border:2px solid var(--accent);'
-                : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'"
-            >
-              <component :is="step.icon" :size="18" :style="{ opacity: index <= currentStep ? 1 : 0.35 }" />
-              <span
-                v-if="isStepDone(index)"
-                class="rounded-circle d-flex align-items-center justify-content-center position-absolute"
-                style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); opacity:0.55; border:1px solid var(--bg-hover); display:flex; align-items:center; justify-content:center;"
-              ><Check :size="9" /></span>
-            </div>
-            <div
-              class="flex-grow-1" style="height:1.5px;"
-              :style="index === steps.length - 1 ? 'background:transparent;'
-                : index < currentStep ? 'background:var(--accent);' : 'background:var(--border-color-strong); opacity:0.4;'"
-            ></div>
-          </div>
-          <div class="text-center mt-2">
-            <div
-              class="fw-bold" style="font-size:0.82rem;"
-              :style="index === currentStep ? 'color:var(--accent-fg);' : index < currentStep ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'"
-            >
-              {{ step.title }}
-            </div>
-            <div style="font-size:0.72rem; color:var(--text-secondary);">{{ step.desc }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mobile: dọc, icon + chữ từng dòng, không cần đường nối -->
-      <div class="d-flex d-md-none flex-column gap-3">
-        <div v-for="(step, index) in steps" :key="index" class="d-flex align-items-center gap-3">
-          <div
-            class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 position-relative"
-            style="width:36px; height:36px;"
-            :style="index <= currentStep
+          class="rounded-circle d-flex align-items-center justify-content-center position-relative"
+          style="width:32px; height:32px;"
+          :style="isStepDone(index)
+            ? 'background:var(--accent); border:2px solid var(--accent);'
+            : index === currentStep
               ? 'background:var(--bg-hover); border:2px solid var(--accent);'
               : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'"
-          >
-            <component :is="step.icon" :size="18" :style="{ opacity: index <= currentStep ? 1 : 0.35 }" />
-            <span
-              v-if="isStepDone(index)"
-              class="rounded-circle d-flex align-items-center justify-content-center position-absolute"
-              style="width:15px; height:15px; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-text); opacity:0.55; border:1px solid var(--bg-hover); display:flex; align-items:center; justify-content:center;"
-            ><Check :size="9" /></span>
-          </div>
-          <div>
-            <div
-              class="fw-bold" style="font-size:0.82rem;"
-              :style="index === currentStep ? 'color:var(--accent-fg);' : index < currentStep ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'"
-            >
-              {{ step.title }}
-            </div>
-            <div style="font-size:0.72rem; color:var(--text-secondary);">{{ step.desc }}</div>
-          </div>
+        >
+          <Check v-if="isStepDone(index)" :size="14" color="white" />
+          <component v-else :is="step.icon" :size="14" :style="{ opacity: index <= currentStep ? 1 : 0.4 }" />
+        </div>
+        <div
+          v-if="index < steps.length - 1" style="width:2px; flex-grow:1; min-height:18px; margin-top:4px;"
+          :style="index < currentStep ? 'background:var(--accent);' : 'background:var(--border-color-strong); opacity:0.4;'"
+        ></div>
+      </div>
+
+      <!-- Label + mô tả -->
+      <div class="flex-grow-1 pb-3" style="padding-top:4px;">
+        <div
+          class="fw-semibold" style="font-size:0.85rem; line-height:1.3;"
+          :style="index === currentStep
+            ? 'color:var(--accent-fg);'
+            : isStepDone(index) ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'"
+        >
+          {{ step.title }}
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.35; margin-top:2px;">
+          {{ step.desc }}
         </div>
       </div>
     </div>
@@ -87,15 +47,12 @@
 <script setup>
 import { computed } from 'vue';
 import { t } from '../../i18n/index.js';
-import { Check, Send, Bike, PartyPopper, FileText, CheckCircle2, Package } from '@lucide/vue';
+import { Check, Send, Bike, PartyPopper, FileText, CheckCircle2, Package, Clock } from '@lucide/vue';
 
-// Nhận thẳng trạng thái đơn (status) thay vì số bước — timeline tự chọn hiển thị bộ 3
-// bước "Đặt/Xác nhận/Đóng gói" (đơn còn ở tab "Chờ xác nhận") hay bộ 3 bước "Gửi hàng/
-// Đang giao/Đã giao" (đơn đã sang tab "Đang giao"), xem TAB_STATUS_GROUPS ở
-// AccountPage.vue. Bước cuối "deliveredTitle/deliveredDesc" thực chất hiển thị lúc đơn ở
-// "awaiting_confirmation" (admin đã giao, chờ khách xác nhận) — đơn "delivered" thật sự
-// không render component này nữa (chuyển sang dạng dòng gọn trong tab "Hoàn tất"), nên
-// POST_SHIP dùng "awaiting_confirmation" làm bước cuối thay vì "delivered".
+// Nhận thẳng trạng thái đơn (status) — timeline tự chọn hiển thị 3 bước pre-ship
+// ("Chờ xác nhận/Đã xác nhận/Đang đóng gói") hay 3 bước post-ship ("Đã gửi hàng/
+// Đang giao/Chờ khách xác nhận"). Bước cuối pre-ship "Đang đóng gói" thực chất ứng với
+// trạng thái "processing" — đơn đang chuẩn bị hàng trong kho trước khi giao cho shipper.
 const props = defineProps({ status: { type: String, default: 'pending' } });
 
 const PRE_SHIP  = ['pending', 'confirmed', 'processing'];
@@ -109,7 +66,7 @@ const steps = computed(() => isPostShip.value ? [
   { title: t('orderStatus.timeline.outForDeliveryTitle'),  desc: t('orderStatus.timeline.outForDeliveryDesc'),  icon: Bike },
   { title: t('orderStatus.timeline.deliveredTitle'),       desc: t('orderStatus.timeline.deliveredDesc'),       icon: PartyPopper },
 ] : [
-  { title: t('orderStatus.timeline.placedTitle'),    desc: t('orderStatus.timeline.placedDesc'),    icon: FileText },
+  { title: t('orderStatus.timeline.placedTitle'),    desc: t('orderStatus.timeline.placedDesc'),    icon: Clock },
   { title: t('orderStatus.timeline.confirmedTitle'), desc: t('orderStatus.timeline.confirmedDesc'), icon: CheckCircle2 },
   { title: t('orderStatus.timeline.packingTitle'),   desc: t('orderStatus.timeline.packingDesc'),   icon: Package },
 ]);
@@ -117,16 +74,11 @@ const steps = computed(() => isPostShip.value ? [
 const currentStep = computed(() => {
   const list = isPostShip.value ? POST_SHIP : PRE_SHIP;
   const idx = list.indexOf(props.status);
-  // Trạng thái không thuộc phase nào (vd "processing" vẫn nằm pre-ship) → idx tìm thấy
-  // bình thường; nếu không tìm thấy (không nên xảy ra trong 2 tab dùng component này)
-  // mặc định về bước cuối của phase hiện tại thay vì bước đầu, an toàn hơn khi có trạng
-  // thái mới phát sinh sau này mà quên cập nhật danh sách trên.
   return idx === -1 ? list.length - 1 : idx;
 });
 
 // Dấu tích cho bước đã hoàn tất. Bước cuối "awaiting_confirmation" (admin đã giao) cũng
 // tính là hoàn tất dù đang là bước active — hành động "giao hàng" xong rồi, phần còn thiếu
-// (khách xác nhận) là 1 hành động khác, có nút riêng bên dưới, không phải lý do để icon
-// này chỉ sáng viền mà thiếu tích như các bước đang-thực-hiện khác (đóng gói/đang giao).
+// (khách xác nhận) là 1 hành động khác, có nút riêng bên dưới.
 const isStepDone = (index) => index < currentStep.value || (index === currentStep.value && isAwaitingConfirmation.value);
 </script>

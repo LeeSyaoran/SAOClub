@@ -65,4 +65,8 @@ public class ChiTietSanPhamController {
     public List<WarrantyStatusResponse> getStillUnderWarranty() {
         return chiTietSanPhamService.getStillUnderWarranty();
     }
+    // Dọn rác serial 'giu_hang' bị kẹt được gọi TỰ ĐỘNG từ hienThiChiTietSanPham() mỗi lần
+    // frontend load bảng serial — không cần endpoint riêng vì flow là: nhân viên mở tab
+    // Kho hàng → load → backend dọn orphan → hiển thị danh sách đã sạch. An toàn vì query
+    // NOT EXISTS đảm bảo không bao giờ đụng serial đang liên kết đơn thật.
 }

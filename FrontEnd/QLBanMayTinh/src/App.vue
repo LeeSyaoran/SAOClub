@@ -46,14 +46,14 @@ const auth = AuthStore;
 // ── Toast notification ────────────────────────────────────────────────────────
 const toast = reactive({ show: false, msg: "", type: "success" });
 let toastTimer = null;
-const showToast = (msg, type = "success") => {
+const showToast = (msg, type = "success", duration = 3500) => {
   clearTimeout(toastTimer);
   toast.msg = msg;
   toast.type = type;
   toast.show = true;
   toastTimer = setTimeout(() => {
     toast.show = false;
-  }, 3500);
+  }, duration);
 };
 
 // ── Login modal ───────────────────────────────────────────────────────────────
@@ -111,14 +111,20 @@ const onLogout = () => {
 const cart = ref([]);
 const showCart = ref(false);
 
+// Track selected items for partial checkout
+const cartSelected = ref(new Set());
+
 const cartStorageKey = () => `saophone_cart_${auth.user?.id ?? "guest"}`;
 
 const loadCart = () => {
   try {
     const raw = localStorage.getItem(cartStorageKey());
     cart.value = raw ? JSON.parse(raw) : [];
+    // Select all by default
+    cartSelected.value = new Set(cart.value.map(i => i.bienTheId));
   } catch {
     cart.value = [];
+    cartSelected.value = new Set();
   }
 };
 
@@ -132,19 +138,48 @@ const cartCount = computed(() =>
   cart.value.reduce((total, item) => total + item.quantity, 0),
 );
 
+// Tổng tiền TẤT CẢ sản phẩm trong giỏ (không lọc theo đã chọn)
 const cartTotal = computed(() =>
-  cart.value.reduce(
-    (total, item) => total + (item.quantity || 0) * (item.giaBan || 0),
-    0,
-  ),
+  cart.value.reduce((total, item) => total + (item.quantity || 0) * (item.giaBan || 0), 0),
 );
+
+// Tổng tiền CHỈ tính các sản phẩm đã chọn (checkout partial)
+const cartSelectedTotal = computed(() =>
+  cart.value
+    .filter(item => cartSelected.value.has(item.bienTheId))
+    .reduce((total, item) => total + (item.quantity || 0) * (item.giaBan || 0), 0),
+);
+
+const cartSelectedCount = computed(() =>
+  cart.value
+    .filter(item => cartSelected.value.has(item.bienTheId))
+    .reduce((total, item) => total + item.quantity, 0),
+);
+
+const toggleCartItem = (bienTheId) => {
+  const s = new Set(cartSelected.value);
+  if (s.has(bienTheId)) s.delete(bienTheId);
+  else s.add(bienTheId);
+  cartSelected.value = s;
+};
+
+const selectAllCartItems = () => {
+  cartSelected.value = new Set(cart.value.map(i => i.bienTheId));
+};
+
+const deselectAllCartItems = () => {
+  cartSelected.value = new Set();
+};
 
 const toggleCart = () => {
   showCart.value = !showCart.value;
 };
 
 const removeFromCart = (bienTheId) => {
+  const item = cart.value.find(i => i.bienTheId === bienTheId);
   cart.value = cart.value.filter((item) => item.bienTheId !== bienTheId);
+  cartSelected.value.delete(bienTheId); // clean up selection
+  if (item) showToast(t('cart.removed'), 'success');
 };
 
 const formatPrice = (value) => (value == null ? t("productDetail.contact") : formatPriceRaw(value));
@@ -199,7 +234,7 @@ const loadWishlist = async () => {
   if (!auth.user) { wishlistIds.value = new Set(); return; }
   try {
     const list = await YeuThichService.getAll();
-    wishlistIds.value = new Set(list.map((i) => i.bienTheId));
+    wishlistIds.value = new Set((list ?? []).map((i) => i.bienTheId));
   } catch {
     wishlistIds.value = new Set();
   }
@@ -236,7 +271,7 @@ const ratingSummaries = ref(new Map());
 const loadRatingSummaries = async () => {
   try {
     const list = await DanhGiaService.getTongHop();
-    ratingSummaries.value = new Map(list.map((s) => [s.sanPhamId, s]));
+    ratingSummaries.value = new Map((list ?? []).map((s) => [s.sanPhamId, s]));
   } catch {
     // giữ nguyên map cũ nếu lỗi mạng
   }
@@ -246,7 +281,10 @@ const loadRatingSummaries = async () => {
 const showCheckout = ref(false);
 
 const openCheckout = () => {
-  if (cart.value.length === 0) return;
+  if (cartSelected.value.size === 0) {
+    showToast(t("cart.selectAtLeastOne"), "error");
+    return;
+  }
   if (!auth.user) {
     showToast(t("toast.loginRequiredForCart"), "error");
     openLogin();
@@ -258,6 +296,7 @@ const openCheckout = () => {
 
 const handleOrderPlaced = () => {
   cart.value = [];
+  cartSelected.value = new Set();
 };
 
 // ── Products (shared state for ProductDetail overlay) ─────────────────────────
@@ -302,7 +341,11 @@ function onLoginSuccess(user) {
 // ── Provide shared state & actions to child route components ──────────────────
 provide("appState", {
   products: toRef(ProductsStore, 'items'),
+  productsLoading: toRef(ProductsStore, 'loading'),
   cart,
+  cartSelected: cartSelected,
+  cartSelectedTotal,
+  cartSelectedCount,
   showCart,
   cartCount,
   cartTotal,
@@ -318,6 +361,9 @@ provide("appActions", {
   removeFromCart,
   updateQty,
   toggleCart,
+  toggleCartItem,
+  selectAllCartItems,
+  deselectAllCartItems,
   openCheckout,
   handleOrderPlaced,
   openProduct,
@@ -411,8 +457,8 @@ onBeforeUnmount(() => {
 
     <CheckoutModal
       v-model="showCheckout"
-      :cart="cart"
-      :cart-total="cartTotal"
+      :cart="cart.filter(i => cartSelected.value.has(i.bienTheId))"
+      :cart-total="cartSelectedTotal"
       @order-placed="handleOrderPlaced"
     />
 

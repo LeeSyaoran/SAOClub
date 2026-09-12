@@ -9,3 +9,4 @@
 Database/backups/*.bak
 Database/backups/*.log
 !Database/backups/.gitkeep
+.aider*

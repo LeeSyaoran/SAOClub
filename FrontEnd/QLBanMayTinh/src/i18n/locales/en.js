@@ -143,6 +143,12 @@ export default {
       mustAgree: "You must agree to the terms.",
       registerFailed: "Registration failed.",
       cannotConnect: "Could not connect to the server.",
+      emailExists: "This email is already registered. Please use a different email.",
+      phoneExists: "This phone number is already registered. Please use a different number.",
+      usernameExists: "This username already exists. Please choose another.",
+      weakPassword: "Password is too weak. Please use a stronger password.",
+      conflict: "Registration information already exists in the system.",
+      serverError: "Server error. Please try again later.",
     },
   },
 
@@ -234,6 +240,11 @@ export default {
     checkout: "Checkout",
     decrease: "Decrease quantity",
     increase: "Increase quantity",
+    remove: "Remove item",
+    removed: "Item removed from cart.",
+    selectAll: "Select all",
+    selected: "selected",
+    selectAtLeastOne: "Please select at least 1 item to checkout.",
   },
 
   checkout: {
@@ -323,6 +334,17 @@ export default {
     loginRequiredForWishlist: "Please log in to add items to your wishlist.",
     addedToWishlist: "Added {name} to your wishlist.",
     removedFromWishlist: "Removed {name} from your wishlist.",
+  },
+
+  qrScanner: {
+    openCamera: "Open camera",
+    closeCamera: "Close camera",
+    scanning: "Scanning...",
+    found: "Scan successful!",
+    permissionDenied: "Camera access denied. Please allow in browser settings.",
+    noCamera: "No camera found on this device.",
+    cameraError: "Cannot open camera. Please try again.",
+    retry: "Retry",
   },
 
   adminAccess: {
@@ -723,6 +745,8 @@ export default {
 
     variants: {
       countSuffix: "variants",
+      clearFilters: "Clear filters",
+      filterDone: "Done",
       add: "+ Add variant",
       loading: "Loading...",
       colImage: "Image",
@@ -1160,6 +1184,45 @@ export default {
       tu_choi: "Rejected",
     },
 
+    warrantyScan: {
+      placeholder: "Scan barcode or type serial number, then press Enter...",
+      searchBtn: "Search",
+      emptyHint: "Scan with a USB barcode scanner, or type the serial number and press Enter to quickly look up machine info and create a warranty claim.",
+      loading: "Looking up serial...",
+      // NOT_FOUND: serial has never existed in the system
+      notFound: 'Code "{serial}" does not exist in the system. Please check again.',
+      // DELETED: serial used to exist but was soft-deleted
+      deleted: 'Code "{serial}" has been removed from the system.',
+      error: "Lookup error. Please try again.",
+      machineInfo: "Machine Info",
+      variantSpecs: "Variant Specs",
+      sku: "SKU",
+      price: "Price",
+      purchaseDate: "Purchase Date",
+      warrantyExpiry: "Warranty Expiry",
+      warrantyMonths: "Warranty Period",
+      customer: "Customer",
+      phone: "Phone",
+      order: "Order",
+      historyTitle: "Warranty History",
+      createClaim: "Create Warranty Claim",
+      clear: "Clear",
+      viewVariant: "View variant details",
+      active: "Under warranty ({count} days)",
+      expired: "Warranty expired ({count} days ago)",
+      notSold: "Not sold",
+      noWarranty: "No warranty info",
+      notSoldTooltip: "Serial not sold — cannot create warranty claim",
+      openCamera: "Open camera",
+      cameraTitle: "Scan barcode from camera",
+      // Status banner
+      banner: {
+        inStock: "In stock — not yet sold",
+        active: "Under warranty — {count} days",
+        expired: "Warranty expired {count} days ago",
+      },
+    },
+
     warrantyClaimModal: {
       titleAdd: "Create warranty claim",
       titleEdit: "Warranty claim details",
@@ -1194,6 +1257,10 @@ export default {
       expandAll: "Expand all",
       collapseAll: "Collapse all",
       filterAll: "All",
+      advancedFilter: "Advanced filter",
+      resetFilter: "Reset",
+      supplierLabel: "Supplier",
+      dateRangeLabel: "Date range",
       filterPending: "Awaiting import",
       filterOut: "Out of stock",
       filterLow: "Low stock",
@@ -1326,7 +1393,9 @@ export default {
       approve: "Approve",
       cancel: "Cancel",
       editAction: "Edit",
+      cancelAction: "Cancel Receipt",
       deleteAction: "Delete",
+      viewSerials: "View serials",
       empty: "No goods receipts yet",
     },
 
@@ -1356,6 +1425,10 @@ export default {
       save: "Create receipt",
       missingRequired: "Please select a supplier and staff member",
       missingItems: "Please add at least one valid item row",
+      errDuplicateSerial: "Serial \"{serial}\" is duplicated in the receipt.",
+      errMixedPrice: "Rows have different unit prices ({prices}). Please set the same unit price or split into separate receipts.",
+      errEmptyFile: "The file contains no serial data.",
+      checkOk: "No errors — data is valid.",
     },
 
     phieuNhapDetailModal: {
@@ -1665,9 +1738,14 @@ export default {
       chooseVariant: "Choose configuration / color",
       continueToSerial: "Continue to serial →",
       swapSerial: "Swap serial",
+      skuLabel: "SKU code",
+      serialLabel: "Serial number",
       confirmRemove: "Remove {name} (S/N: {serial}) from cart?",
       confirmRemoveGroup: "Remove all {count} units of \"{name}\" from cart?",
       removeAll: "Remove all",
+      showSerials: "Show serial list",
+      hideSerials: "Hide serial list",
+      serialCountSuffix: "serials",
       viewPromotionsTab: "View promotions in a new tab",
       paymentMethodLabel: "Payment method",
       simulateQrScan: "Simulate QR scan",
@@ -1679,6 +1757,7 @@ export default {
       doneAdding: "Done",
       orderInfo: "Order info",
       noOrderInfoYet: "Order info will appear here once a customer is identified",
+      choosePromo: "Choose promo code",
     },
 
     packModal: {

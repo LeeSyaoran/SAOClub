@@ -141,8 +141,14 @@ export default {
       passwordTooShort: "Mật khẩu tối thiểu 6 ký tự.",
       passwordMismatch: "Mật khẩu xác nhận không khớp.",
       mustAgree: "Bạn phải đồng ý với điều khoản.",
-      registerFailed: "Đăng ký thất bại.",
+      registerFailed: "Đăng ký thất bại. Vui lòng thử lại.",
       cannotConnect: "Không thể kết nối đến máy chủ.",
+      emailExists: "Email này đã được đăng ký. Vui lòng sử dụng email khác.",
+      phoneExists: "Số điện thoại này đã được đăng ký. Vui lòng sử dụng SĐT khác.",
+      usernameExists: "Tên đăng nhập này đã tồn tại. Vui lòng chọn tên khác.",
+      weakPassword: "Mật khẩu quá yếu. Vui lòng sử dụng mật khẩu mạnh hơn.",
+      conflict: "Thông tin đăng ký đã tồn tại trong hệ thống.",
+      serverError: "Lỗi máy chủ. Vui lòng thử lại sau.",
     },
   },
 
@@ -157,8 +163,9 @@ export default {
     cancelled: "Đã hủy",
     returned: "Đã trả hàng",
     timeline: {
-      placedTitle: "Đơn hàng đã đặt",
-      placedDesc: "Hệ thống đã tiếp nhận",
+      title: "Tiến trình đơn hàng",
+      placedTitle: "Chờ xác nhận",
+      placedDesc: "Đơn đã đặt, chờ admin xác nhận",
       confirmedTitle: "Đã xác nhận",
       confirmedDesc: "Đơn đã được duyệt",
       packingTitle: "Đang đóng gói",
@@ -170,6 +177,7 @@ export default {
       deliveredTitle: "Đã giao hàng",
       deliveredDesc: "Vui lòng xác nhận đã nhận hàng",
     },
+    deliveryTitle: "Thời gian giao hàng",
   },
   orderChannel: {
     in_store: "Tại quầy",
@@ -212,7 +220,7 @@ export default {
     chipGraphics: "Đồ họa kỹ thuật - AI",
     advFilter: "Lọc nâng cao",
     sortLabel: "Sắp xếp",
-    sortDefault: "Mặc định",
+    sortDefault: "Mới nhất",
     sortPriceAsc: "Giá thấp → cao",
     sortPriceDesc: "Giá cao → thấp",
     loadingProducts: "Đang tải dữ liệu sản phẩm...",
@@ -234,6 +242,11 @@ export default {
     checkout: "Thanh toán",
     decrease: "Giảm số lượng",
     increase: "Tăng số lượng",
+    remove: "Xóa sản phẩm",
+    removed: "Đã xóa sản phẩm khỏi giỏ hàng.",
+    selectAll: "Chọn tất cả",
+    selected: "đã chọn",
+    selectAtLeastOne: "Vui lòng chọn ít nhất 1 sản phẩm để thanh toán.",
   },
 
   checkout: {
@@ -269,6 +282,7 @@ export default {
     promoPlaceholder: "Nhập mã giảm giá (nếu có)",
     apply: "Áp dụng",
     promoSuccess: "Áp dụng thành công: {name}",
+    promoChecking: "Đang kiểm tra mã...",
     promoInvalid: "Mã khuyến mãi không hợp lệ hoặc hết hạn",
     subtotal: "Tạm tính",
     shippingFee: "Phí vận chuyển",
@@ -323,6 +337,17 @@ export default {
     loginRequiredForWishlist: "Vui lòng đăng nhập để thêm vào danh sách yêu thích.",
     addedToWishlist: "Đã thêm {name} vào danh sách yêu thích.",
     removedFromWishlist: "Đã bỏ {name} khỏi danh sách yêu thích.",
+  },
+
+  qrScanner: {
+    openCamera: "Mở camera",
+    closeCamera: "Tắt camera",
+    scanning: "Đang quét...",
+    found: "Đã quét thành công!",
+    permissionDenied: "Không có quyền truy cập camera. Vui lòng cho phép trong cài đặt trình duyệt.",
+    noCamera: "Không tìm thấy camera trên thiết bị.",
+    cameraError: "Không thể mở camera. Vui lòng thử lại.",
+    retry: "Thử lại",
   },
 
   adminAccess: {
@@ -809,6 +834,8 @@ export default {
 
     variants: {
       countSuffix: "biến thể",
+      clearFilters: "Xóa lọc",
+      filterDone: "Xong",
       add: "+ Thêm biến thể",
       loading: "Đang tải...",
       colImage: "Ảnh",
@@ -955,6 +982,7 @@ export default {
       merging: "...",
       printInvoice: "In hóa đơn",
       viewInvoice: "Xem hóa đơn",
+      noNextStep: "Đơn đã ở trạng thái cuối, không có bước tiếp theo",
     },
 
     addItemDetailModal: {
@@ -990,9 +1018,11 @@ export default {
       expectedDeliveryLabel: "Ngày dự kiến giao",
       actualDeliveryLabel: "Ngày khách nhận hàng",
       trackingCodeLabel: "Mã vận đơn",
+      trackingCodeTitle: "Nhập mã vận đơn",
       trackingCodePlaceholder: "VD: GHN1234567890",
       cancel: "Hủy",
       save: "Lưu",
+      editStatus: "Sửa",
       status: {
         pending: "Chờ xác nhận",
         confirmed: "Đã xác nhận",
@@ -1236,6 +1266,46 @@ export default {
       edit: "Sửa",
       empty: "Chưa có phiếu bảo hành",
       searchPlaceholder: "Tìm mã phiếu, khách hàng, serial...",
+      createManual: "+ Tạo phiếu thủ công",
+    },
+
+    warrantyScan: {
+      placeholder: "Quét barcode hoặc gõ số serial rồi nhấn Enter...",
+      searchBtn: "Tra cứu",
+      emptyHint: "Quét barcode bằng máy quét USB, hoặc gõ số serial rồi nhấn Enter để tra nhanh thông tin máy và tạo phiếu bảo hành.",
+      loading: "Đang tra cứu serial...",
+      // NOT_FOUND: serial chua tung ton tai trong he thong
+      notFound: 'Mã "{serial}" không tồn tại trong hệ thống. Vui lòng kiểm tra lại.',
+      // DELETED: serial da tung ton tai nhung da bi xoa mem
+      deleted: 'Mã "{serial}" đã bị xóa khỏi hệ thống.',
+      error: "Lỗi tra cứu. Vui lòng thử lại.",
+      machineInfo: "Thông tin máy",
+      variantSpecs: "Cấu hình chi tiết",
+      sku: "SKU",
+      price: "Giá bán",
+      purchaseDate: "Ngày mua",
+      warrantyExpiry: "Hết hạn BH",
+      warrantyMonths: "Thời hạn BH",
+      customer: "Khách",
+      phone: "SĐT",
+      order: "Đơn hàng",
+      historyTitle: "Lịch sử bảo hành",
+      createClaim: "Tạo phiếu bảo hành",
+      clear: "Xóa tra cứu",
+      viewVariant: "Xem chi tiết biến thể",
+      active: "Còn bảo hành ({count} ngày)",
+      expired: "Hết bảo hành ({count} ngày)",
+      notSold: "Chưa bán",
+      noWarranty: "Không có thông tin BH",
+      notSoldTooltip: "Serial chưa được bán — không thể tạo phiếu bảo hành",
+      openCamera: "Mở camera",
+      cameraTitle: "Quét barcode từ camera",
+      // Banner trang thai
+      banner: {
+        inStock: "Máy đang trong kho — chưa bán",
+        active: "Còn bảo hành — {count} ngày",
+        expired: "Hết bảo hành {count} ngày trước",
+      },
     },
 
     warrantyClaimStatus: {
@@ -1265,6 +1335,9 @@ export default {
       faultRequired: "Vui lòng nhập mô tả lỗi",
       missingInfo: "Thiếu thông tin đơn hàng/sản phẩm/khách hàng, vui lòng chọn lại từ danh sách còn hạn bảo hành",
       datesRequired: "Vui lòng nhập đầy đủ ngày mua và ngày hết bảo hành",
+      manualHint: "Tạo phiếu khi không tìm thấy serial trong danh sách còn hạn. Nhập ID thủ công.",
+      variantLabel: "ID biến thể",
+      chiTietLabel: "ID serial (chiTietSanPhamId)",
       cancel: "Hủy",
       save: "Lưu",
     },
@@ -1281,6 +1354,10 @@ export default {
       expandAll: "Mở tất cả",
       collapseAll: "Thu gọn",
       filterAll: "Tất cả",
+      advancedFilter: "Bộ lọc nâng cao",
+      resetFilter: "Đặt lại",
+      supplierLabel: "Nhà cung cấp",
+      dateRangeLabel: "Khoảng ngày",
       filterPending: "Chờ nhập hàng",
       filterOut: "Hết hàng",
       filterLow: "Sắp hết",
@@ -1327,6 +1404,7 @@ export default {
       save: "Lưu",
       nameRequired: "Vui lòng nhập {label}",
       serialRequired: "Vui lòng nhập ít nhất 1 số serial cho {label} mới",
+      serialDeleted: "Đã xóa serial {serial} khỏi kho",
       viewSerials: "Còn {count}",
       serialsModalTitle: "Serial — {name}",
     },
@@ -1412,7 +1490,9 @@ export default {
       approve: "Duyệt",
       cancel: "Hủy",
       editAction: "Sửa",
+      cancelAction: "Hủy phiếu",
       deleteAction: "Xóa",
+      viewSerials: "Xem serial",
       empty: "Chưa có phiếu nhập",
     },
 
@@ -1442,6 +1522,10 @@ export default {
       save: "Tạo phiếu",
       missingRequired: "Vui lòng chọn nhà cung cấp và nhân viên",
       missingItems: "Vui lòng thêm ít nhất một dòng hàng hợp lệ",
+      errDuplicateSerial: "Serial \"{serial}\" bị trùng trong phiếu nhập.",
+      errMixedPrice: "Các dòng có đơn giá khác nhau ({prices}). Vui lòng đưa về cùng 1 đơn giá hoặc chia thành nhiều phiếu nhập riêng.",
+      errEmptyFile: "File không có dữ liệu serial.",
+      checkOk: "Không có lỗi — dữ liệu hợp lệ.",
     },
 
     phieuNhapDetailModal: {
@@ -1721,6 +1805,8 @@ export default {
       deliverToAddress: "Giao tận nơi",
       deliveryAddressPlaceholder: "Nhập địa chỉ giao hàng...",
       shippingFeeLabel: "Phí vận chuyển:",
+      distanceKmPlaceholder: "Khoảng cách (km)",
+      shippingFreeNote: "Miễn phí ship đơn từ 300.000đ",
       free: "Miễn phí",
       totalLabel: "Thanh toán:",
       customerInfo: "Thông tin khách hàng",
@@ -1751,9 +1837,14 @@ export default {
       chooseVariant: "Chọn cấu hình / màu sắc",
       continueToSerial: "Tiếp tục chọn serial →",
       swapSerial: "Đổi serial",
+      skuLabel: "Mã SKU",
+      serialLabel: "Số serial",
       confirmRemove: "Xóa {name} (S/N: {serial}) khỏi giỏ hàng?",
       confirmRemoveGroup: "Xóa toàn bộ {count} máy \"{name}\" khỏi giỏ hàng?",
       removeAll: "Xóa tất cả",
+      showSerials: "Xem danh sách serial",
+      hideSerials: "Ẩn danh sách serial",
+      serialCountSuffix: "serial",
       viewPromotionsTab: "Xem danh sách khuyến mãi ở tab mới",
       paymentMethodLabel: "Phương thức thanh toán",
       simulateQrScan: "Giả lập đã quét",
@@ -1765,6 +1856,7 @@ export default {
       doneAdding: "Xong",
       orderInfo: "Thông tin đơn hàng",
       noOrderInfoYet: "Thông tin đơn hàng sẽ hiện ở đây sau khi xác định khách hàng",
+      choosePromo: "Chọn mã giảm giá",
     },
 
     packModal: {
@@ -1797,6 +1889,7 @@ export default {
       deleteSerial: "Xóa serial này khỏi hệ thống? Chỉ dùng khi thêm nhầm.",
       deletePhieuNhap: "Xóa phiếu nhập này? Toàn bộ dòng chi tiết trong phiếu sẽ mất theo.",
       deleteReview: "Xóa đánh giá này? Hành động không thể hoàn tác.",
+      approvePhieuNhap: "Xác nhận duyệt phiếu nhập này? Serial sẽ được tạo vào kho.",
     },
 
     errors: {
@@ -1816,6 +1909,11 @@ export default {
       createOrderError: "Lỗi tạo đơn hàng: {message}",
       addProductError: "Lỗi thêm sản phẩm: {message}",
       createPaymentError: "Lỗi ghi nhận thanh toán: {message}",
+      approveFailed: "Duyệt phiếu thất bại",
+    },
+
+    success: {
+      approveSuccess: "Duyệt phiếu thành công!",
     },
 
     statusLabel: {

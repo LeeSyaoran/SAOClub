@@ -1,5 +1,8 @@
 import { get, post, put, patch, del, authHeaders } from './api.js';
 
+// Tính phí vận chuyển — body: { items: [{ giaBan, soLuong }], diaChi }
+export const tinhPhiVanChuyen = (body) => post('/api/don-hang/tinh-phi-van-chuyen', body);
+
 // Backend giờ trả Page<DonHangResponse> — xem BackEnd/.../DonHangController.getAll().
 // getPage() trả nguyên object Page cho bảng Đơn hàng có nút Trước/Sau.
 // khachHangId optional: lọc sẵn ở server, dùng cho trang "Đơn hàng của tôi" (AccountPage)

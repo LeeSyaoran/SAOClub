@@ -1,8 +1,28 @@
 <template>
   <div
-    class="d-flex gap-3 p-3 rounded-3"
+    class="d-flex gap-2 p-3 rounded-3 position-relative"
     style="background:var(--bg-page); border:1px solid var(--border-color-soft);"
   >
+    <!-- Nút xóa -->
+    <button
+      class="position-absolute d-flex align-items-center justify-content-center"
+      style="top:6px;right:6px;width:22px;height:22px;padding:0;background:transparent;color:var(--text-muted);border:none;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;"
+      :aria-label="t('cart.remove')"
+      @click="$emit('remove', item)"
+    >
+      ×
+    </button>
+
+    <!-- Checkbox -->
+    <div class="d-flex align-items-center" style="flex-shrink:0;">
+      <input
+        type="checkbox"
+        :checked="selected"
+        @change="$emit('toggle', item)"
+        style="width:16px;height:16px;cursor:pointer;"
+      />
+    </div>
+
     <div class="flex-shrink-0" style="width:64px;height:64px;">
       <img
         v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham"
@@ -17,7 +37,7 @@
     </div>
 
     <div class="flex-grow-1 min-width-0">
-      <div class="fw-semibold" style="font-size:12px; line-height:1.4; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; color:var(--text-primary);">{{ item.tenSanPham }}</div>
+      <div class="fw-semibold pe-4" style="font-size:12px; line-height:1.4; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; color:var(--text-primary);">{{ item.tenSanPham }}</div>
       <div class="mt-1" style="font-size:10px; color:var(--text-secondary);">
         <span v-if="item.mauSac">{{ item.mauSac }}</span>
         <span v-if="item.mauSac && item.cpu"> · </span>
@@ -50,12 +70,14 @@
 </template>
 
 <script setup>
-// Props: item = { tenSanPham, hinhAnhChinh, giaBan, quantity, mauSac?, cpu? }
-// Emits: increase(item), decrease(item) — cha (App.vue) đã có sẵn updateQty(bienTheId, delta)
+// Props: item, selected, emits: increase, decrease, remove, toggle
 import { Laptop } from '@lucide/vue';
 import { t } from '../../i18n/index.js';
 import { formatPrice } from '../../utils/formatPrice.js';
 
-defineProps({ item: { type: Object, required: true } });
-defineEmits(['increase', 'decrease']);
+const props = defineProps({
+  item: { type: Object, required: true },
+  selected: { type: Boolean, default: false },
+});
+defineEmits(['increase', 'decrease', 'remove', 'toggle']);
 </script>

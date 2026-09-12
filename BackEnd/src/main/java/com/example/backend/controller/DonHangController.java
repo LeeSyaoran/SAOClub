@@ -9,6 +9,8 @@ import com.example.backend.service.DonHangService;
 import com.example.backend.service.SseService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -90,8 +92,45 @@ public class DonHangController {
         return ResponseEntity.ok().build();
     }
 
+    // POST /api/don-hang/{id}/giao-hang — giao hàng tại quầy (POS), kích hoạt bảo hành
+    @PostMapping("{id}/giao-hang")
+    public ResponseEntity<DonHang> giaoHang(
+            @PathVariable Integer id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String ngayStr = body != null ? body.get("ngayGiaoThucTe") : null;
+        LocalDateTime ngayGiao = ngayStr != null ? LocalDateTime.parse(ngayStr) : null;
+        DonHang saved = donHangService.giaoHang(id, ngayGiao);
+        return ResponseEntity.ok(saved);
+    }
+
     @GetMapping(value = "events", produces = "text/event-stream")
     public SseEmitter subscribe() {
         return sseService.subscribe();
+    }
+
+    // POST /api/don-hang/tinh-phi-van-chuyen — tính phí vận chuyển theo địa chỉ
+    @PostMapping("tinh-phi-van-chuyen")
+    public ResponseEntity<?> tinhPhiVanChuyen(@RequestBody Map<String, Object> body) {
+        // Body: { diaChi: "Hà Nội, Việt Nam", sanPhamIds: [1,2], soLuong: [1,2] }
+        // Tạm dùng flat rate: 30k nếu dưới 300k, miễn phí nếu >= 300k
+        // Có thể mở rộng theo khu vực/khoảng cách khi có bảng phí riêng
+        try {
+            double tongTienHang = 0;
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
+            if (items != null) {
+                for (Map<String, Object> item : items) {
+                    Object giaBan = item.get("giaBan");
+                    Object soLuong = item.get("soLuong");
+                    double g = giaBan instanceof Number ? ((Number) giaBan).doubleValue() : 0;
+                    double qty = soLuong instanceof Number ? ((Number) soLuong).doubleValue() : 1;
+                    tongTienHang += g * qty;
+                }
+            }
+            double phiVanChuyen = tongTienHang >= 300_000 ? 0 : 30_000;
+            return ResponseEntity.ok(java.util.Map.of("phiVanChuyen", phiVanChuyen, "mienPhiTu", 300_000));
+        } catch (Exception e) {
+            return ResponseEntity.ok(java.util.Map.of("phiVanChuyen", 30_000, "mienPhiTu", 300_000));
+        }
     }
 }

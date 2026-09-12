@@ -5,11 +5,14 @@ const StaffPage = () => import("@/pages/StaffPage.vue");
 const WarehouseManagementPage = () => import("@/pages/WarehouseManagementPage.vue");
 const AccountPage = () => import("@/pages/AccountPage.vue");
 const NotFoundPage = () => import("@/pages/NotFoundPage.vue");
+const PhieuNhapSerialPage = () => import("@/pages/PhieuNhapSerialPage.vue");
 
 const routes = [
   { path: "/", name: "home", component: CustomerPage },
   { path: "/admin", name: "admin", component: AdminPage, meta: { requiresAuth: true, roles: ["admin"] } },
   { path: "/admin/san-pham/:id", name: "admin-san-pham-detail", component: AdminPage, meta: { requiresAuth: true, roles: ["admin"] } },
+  // Trang riêng để mở tab mới từ modal "Chi tiết phiếu nhập" — xem/in danh sách serial.
+  { path: "/admin/phieu-nhap/:id/serial", name: "admin-phieu-nhap-serial", component: PhieuNhapSerialPage, meta: { requiresAuth: true, roles: ["admin"] } },
   { path: "/staff", name: "staff", component: StaffPage, meta: { requiresAuth: true, roles: ["nhan_vien"] } },
   { path: "/kho", name: "warehouse", component: WarehouseManagementPage, meta: { requiresAuth: true, roles: ["quan_kho"] } },
   { path: "/account", name: "account", component: AccountPage, meta: { requiresAuth: true, roles: ["khach_hang"] } },

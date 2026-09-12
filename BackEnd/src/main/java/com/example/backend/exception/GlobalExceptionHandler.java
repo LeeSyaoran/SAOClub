@@ -30,6 +30,19 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorMap, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(DuplicateSerialException.class)
+    public ResponseEntity<?> handlerDuplicateSerial(DuplicateSerialException e) {
+        return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(SerialDeletedException.class)
+    public ResponseEntity<?> handlerSerialDeleted(SerialDeletedException e) {
+        Map<String, String> body = new HashMap<>();
+        body.put("code", "DELETED");
+        body.put("message", e.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, UsernameNotFoundException.class, IllegalStateException.class})
     public ResponseEntity<?> handlerBusinessErrors(RuntimeException e) {
         return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -40,10 +53,29 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>("Bạn không có quyền thực hiện thao tác này", HttpStatus.FORBIDDEN);
     }
 
-    @ExceptionHandler({EntityNotFoundException.class, DataIntegrityViolationException.class})
-    public ResponseEntity<?> handlerEntityNotFound(Exception e) {
-        log.warn("Data integrity error: {}", e.getMessage());
-        return new ResponseEntity<>("Dữ liệu không hợp lệ hoặc liên kết không tồn tại, vui lòng kiểm tra lại", HttpStatus.BAD_REQUEST);
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<?> handlerEntityNotFound(EntityNotFoundException e) {
+        log.warn("Entity not found: {}", e.getMessage());
+        Map<String, String> body = new HashMap<>();
+        body.put("code", "NOT_FOUND");
+        // Neu message tu traCuuSerial("Mã X không tồn tại...") -> tra message that
+        // Nguoc lai tra message mac dinh cu
+        String msg = e.getMessage();
+        if (msg != null && msg.startsWith("Mã ")) {
+            body.put("message", msg);
+        } else {
+            body.put("message", "Dữ liệu không hợp lệ hoặc liên kết không tồn tại, vui lòng kiểm tra lại");
+        }
+        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handlerDataIntegrity(DataIntegrityViolationException e) {
+        log.warn("Data integrity violation: {}", e.getMessage());
+        String msg = e.getMessage() != null && e.getMessage().toLowerCase().contains("serial")
+                ? "Serial này đã tồn tại trong hệ thống, vui lòng kiểm tra lại"
+                : "Dữ liệu vi phạm ràng buộc duy nhất, vui lòng kiểm tra lại";
+        return new ResponseEntity<>(msg, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

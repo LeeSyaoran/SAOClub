@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 // PhieuBaoHanhService.js — Mở rộng cho nghiệp vụ bảo hành khách hàng + admin
 // Giữ nguyên các method cũ (getAll, getById, save) để không phá vỡ code hiện tại.
 import { get, post, put, del, authHeaders } from './api.js';
+=======
+import { get, post, put, authHeaders } from './api.js';
+>>>>>>> 263fbf4733d7677b5a1c903b79b60a2fc9633142
 
 export const fallbackClaims = [
   {
@@ -112,7 +116,27 @@ export const getAll = async () => {
 
 export const getById = (id) => get(`/api/phieu-bao-hanh/${id}`);
 
+<<<<<<< HEAD
 export const create = (body) => post('/api/phieu-bao-hanh', body);
+=======
+// Lookup tra cuu serial. Throw Error voi .code='NOT_FOUND' hoac .code='DELETED'
+// de frontend phan biet 2 truong hop "chua ton tai" vs "da bi xoa".
+export const lookupBySerial = async (soSerial) => {
+  const r = await fetch(
+    `/api/phieu-bao-hanh/tra-cuu-serial?soSerial=${encodeURIComponent(soSerial)}`,
+    { headers: authHeaders() }
+  );
+  if (r.status === 404) {
+    const body = await r.json().catch(() => ({}));
+    const err = new Error(body.message || 'Not found');
+    err.code = body.code || 'NOT_FOUND';
+    err.status = 404;
+    throw err;
+  }
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+};
+>>>>>>> 263fbf4733d7677b5a1c903b79b60a2fc9633142
 
 export const save = (id, body) =>
   id ? put(`/api/phieu-bao-hanh/update/${id}`, body) : post('/api/phieu-bao-hanh', body);

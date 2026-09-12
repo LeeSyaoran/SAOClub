@@ -1,10 +1,16 @@
 package com.example.backend.service;
 
+import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.ChiTietSanPham;
+import com.example.backend.entity.ChiTietDonHang;
+import com.example.backend.entity.DonHang;
 import com.example.backend.entity.PhieuBaoHanh;
+import com.example.backend.entity.SanPham;
+import com.example.backend.exception.SerialDeletedException;
 import com.example.backend.repository.*;
 import com.example.backend.request.PhieuBaoHanhRequest;
 import com.example.backend.response.PhieuBaoHanhResponse;
+import com.example.backend.response.WarrantyLookupResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -99,6 +105,7 @@ public class PhieuBaoHanhService {
         }
     }
 
+<<<<<<< HEAD
 
     /**
      * Lấy tất cả phiếu BH của 1 khách hàng.
@@ -145,3 +152,96 @@ public class PhieuBaoHanhService {
     }
 
 }
+=======
+    /**
+     * Tra cuu serial theo soSerial — tra duoc bat ky trang thai nao.
+     * Lay day du thong tin bien the, san pham, don hang, khach hang + lich su phieu bao hanh cu.
+     */
+    public WarrantyLookupResponse traCuuSerial(String soSerial) {
+        // Bước 1: Tìm serial chưa xóa theo barcode (bien_the) hoac so_serial (chi_tiet_san_pham)
+        List<ChiTietSanPham> results = chiTietSanPhamRepository
+                .findActiveByBarcodeOrSoSerial(soSerial, soSerial);
+
+        if (!results.isEmpty()) {
+            // Tim theo barcode -> lay san pham da_ban neu co, neu khong lay dau tien
+            ChiTietSanPham serial = results.stream()
+                    .filter(c -> "da_ban".equals(c.getTrangThai()))
+                    .findFirst()
+                    .orElse(results.get(0));
+            return buildLookupResponse(serial);
+        }
+
+        // Bước 2: Không tìm thấy -> kiem tra co phai da bi xoa mem
+        boolean existedDeleted = chiTietSanPhamRepository
+                .existsDeletedByBarcodeOrSoSerial(soSerial, soSerial);
+
+        if (existedDeleted) {
+            throw new SerialDeletedException("Mã " + soSerial + " đã bị xóa khỏi hệ thống");
+        }
+
+        throw new jakarta.persistence.EntityNotFoundException("Mã " + soSerial + " không tồn tại trong hệ thống");
+    }
+
+    private WarrantyLookupResponse buildLookupResponse(ChiTietSanPham serial) {
+
+        BienTheSanPham bt = serial.getBienThe();
+        SanPham sp = bt.getSanPham();
+
+        WarrantyLookupResponse r = new WarrantyLookupResponse();
+        // Serial
+        r.setChiTietId(serial.getChiTietId());
+        r.setSoSerial(serial.getSoSerial());
+        r.setTrangThaiSerial(serial.getTrangThai());
+        r.setNgayNhapKho(serial.getNgayNhapKho());
+
+        // BienThe
+        r.setBienTheId(bt.getBienTheId());
+        r.setMaSku(bt.getMaSku());
+        r.setBarcode(bt.getBarcode());
+        r.setGiaBan(bt.getGiaBan());
+        r.setBaoHanhThang(bt.getBaoHanhThang());
+        r.setHinhAnhBienThe(bt.getHinhAnhBienThe());
+        r.setMauSac(bt.getMauSac());
+        r.setKichThuocManHinh(bt.getKichThuocManHinh());
+        r.setHeDieuHanh(bt.getHeDieuHanh());
+        r.setPin(bt.getPin());
+        r.setTrongLuongKg(bt.getTrongLuongKg());
+
+        // CPU/RAM/GPU/OCung
+        r.setCpuTen(bt.getCpu() != null ? bt.getCpu().getTenCpu() : null);
+        r.setRamTen(bt.getRam() != null ? bt.getRam().getDungLuong() : null);
+        r.setGpuTen(bt.getGpu() != null ? bt.getGpu().getTenGpu() : null);
+        r.setOCungTen(bt.getOCung() != null ? bt.getOCung().getLoaiOcung() : null);
+
+        // SanPham
+        r.setSanPhamId(sp.getSanPhamId());
+        r.setTenSanPham(sp.getTenSanPham());
+        r.setMaSanPham(sp.getMaSanPham());
+
+        // DonHang + KhachHang (neu co)
+        chiTietSanPhamRepository.findLatestOrderBySerialChiTietId(serial.getChiTietId())
+                .ifPresent(ctdh -> {
+                    DonHang donHang = ctdh.getDonHang();
+                    r.setDonHangId(donHang.getId());
+                    r.setMaDonHang(donHang.getMaDonHang());
+                    r.setNgayGiaoThucTe(donHang.getNgayGiaoThucTe());
+                    if (donHang.getKhachHang() != null) {
+                        r.setKhachHangId(donHang.getKhachHang().getKhachHangId());
+                        r.setTenKhachHang(donHang.getKhachHang().getHoTen());
+                        r.setSoDienThoai(donHang.getKhachHang().getSoDienThoai());
+                    }
+                    // Tinh ngay het bao hanh
+                    if (donHang.getNgayGiaoThucTe() != null && bt.getBaoHanhThang() != null) {
+                        r.setNgayHetBaoHanh(donHang.getNgayGiaoThucTe().plusMonths(bt.getBaoHanhThang()));
+                    }
+                });
+
+        // Lich su phieu bao hanh cu
+        r.setLichSuPhieuBaoHanh(
+                phieuBaoHanhRepository.findByChiTietId(serial.getChiTietId()));
+
+        return r;
+    }
+
+}
+>>>>>>> 263fbf4733d7677b5a1c903b79b60a2fc9633142

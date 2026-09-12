@@ -43,10 +43,8 @@ public class PhieuBaoHanhRequest {
     @NotBlank(message = "Trạng thái không được để trống")
     private String trangThai;
 
-    @NotNull(message = "Chi phí phát sinh không được để trống")
     @PositiveOrZero(message = "Chi phí phát sinh phải lớn hơn hoặc bằng 0")
     private BigDecimal chiPhiPhatSinh;
 
-    @NotBlank(message = "Ghi chú không được để trống")
     private String ghiChu;
 }

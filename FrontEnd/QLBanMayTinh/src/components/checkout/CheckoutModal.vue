@@ -456,8 +456,31 @@ const checkoutForm = reactive({
 // Khách đã đăng nhập (tài khoản khach_hang) — bỏ ô tìm SĐT, đã biết chắc là ai rồi.
 const isLoggedInCustomer = computed(() => AuthStore.user?.role === 'khach_hang' && !!AuthStore.user?.soDienThoai);
 
-// Phí vận chuyển: miễn phí nếu đơn từ 300k
-const phiVanChuyen = computed(() => props.cartTotal >= 300000 ? 0 : 30000);
+// Phí vận chuyển: gọi BE API khi có địa chỉ, fallback client-side
+const phiVanChuyenRef = ref(0);
+const phiVanChuyen = computed(() => phiVanChuyenRef.value);
+
+// Gọi API tính phí khi địa chỉ hoặc giỏ hàng thay đổi
+const fetchShippingFee = async () => {
+  if (!checkoutForm.diaChiGiaoHangText) {
+    phiVanChuyenRef.value = props.cartTotal >= 300000 ? 0 : 30000;
+    return;
+  }
+  try {
+    const res = await DonHangService.tinhPhiVanChuyen({
+      diaChi: checkoutForm.diaChiGiaoHangText,
+      items: props.cart.map(i => ({ giaBan: i.giaBan, soLuong: i.quantity })),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      phiVanChuyenRef.value = data.phiVanChuyen ?? 0;
+    } else {
+      phiVanChuyenRef.value = props.cartTotal >= 300000 ? 0 : 30000;
+    }
+  } catch {
+    phiVanChuyenRef.value = props.cartTotal >= 300000 ? 0 : 30000;
+  }
+};
 
 // Số tiền 1 mã khuyến mãi/voucher cụ thể giảm được cho đơn hiện tại.
 const calcDiscountFor = (p) => {
@@ -562,12 +585,18 @@ watch(() => props.modelValue, async (open) => {
     myVouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi().catch(() => []);
   }
   await fillFromLoggedInAccount();
+  fetchShippingFee();
 });
 
 // Khách đăng nhập NGAY TRONG LÚC modal đang mở (vd bấm "Đăng nhập" từ 1 modal khác chồng
 // lên mà không đóng modal thanh toán) — điền lại ngay, khỏi phải đóng/mở lại modal.
 watch(() => AuthStore.user, () => {
   if (props.modelValue) fillFromLoggedInAccount();
+});
+
+// Tính lại phí vận chuyển khi địa chỉ hoặc giỏ hàng thay đổi
+watch(() => [checkoutForm.diaChiGiaoHangText, props.cartTotal], () => {
+  if (props.modelValue) fetchShippingFee();
 });
 
 // Tìm khách hàng theo số điện thoại — endpoint công khai riêng cho checkout (khách vãng
@@ -587,28 +616,40 @@ const lookupCustomer = async () => {
   }
 };
 
-// Kiểm tra và áp dụng mã khuyến mãi — không còn danh sách gợi ý để bấm chọn (mã công khai
-// giờ chỉ dùng được khi khách tự biết và gõ tay), nên hàm này phải tự kiểm tra đủ điều kiện
-// (active, còn hạn, chưa hết lượt) y hệt bộ lọc trước đây dùng để hiện danh sách, nếu không
-// gõ đúng 1 mã đã hết hạn/hết lượt vẫn sẽ "áp dụng thành công".
-const applyPromo = () => {
-  const code = checkoutForm.maKhuyenMai.trim().toUpperCase();
+// Kiểm tra và áp dụng mã khuyến mãi — gọi API BE để xác thực thay vì chỉ lọc client-side,
+// đảm bảo trạng thái/thời gian/lượt dùng luôn chính xác từ server.
+const applyPromo = async () => {
+  const code = checkoutForm.maKhuyenMai.trim();
   if (!code) { appliedPromo.value = null; promoMsg.value = ''; return; }
-  const now = new Date();
-  const p = allPromos.value.find((x) => x.maKhuyenMai?.toUpperCase() === code
-    && x.trangThai === 'active'
-    && (!x.ngayBatDau || new Date(x.ngayBatDau) <= now)
-    && (!x.ngayKetThuc || new Date(x.ngayKetThuc) > now)
-    && (!x.soLuongToiDa || (x.soLanDaDung ?? 0) < x.soLuongToiDa));
-  if (p) {
-    // Chặn dùng đồng thời mã khuyến mãi công khai + voucher cá nhân — backend cũng chặn
-    // (DonHangService.create()), gõ tay mã mới không phải ngoại lệ.
+  appliedPromo.value = null;
+  promoMsg.value = t('checkout.promoChecking');
+  try {
+    const res = await KhuyenMaiService.kiemTra(code);
+    if (!res.ok) {
+      let errMsg = t('checkout.promoInvalid');
+      try { const e = await res.json(); errMsg = e.message || errMsg; } catch {}
+      promoMsg.value = errMsg;
+      return;
+    }
+    const data = await res.json();
+    if (!data.valid) {
+      promoMsg.value = data.message || t('checkout.promoInvalid');
+      return;
+    }
+    // Chặn dùng đồng thời mã khuyến mãi công khai + voucher cá nhân — backend cũng chặn.
     appliedVoucher.value = null;
-    appliedPromo.value = p;
-    promoMsg.value     = t('checkout.promoSuccess', { name: p.tenKhuyenMai });
-  } else {
-    appliedPromo.value = null;
-    promoMsg.value     = t('checkout.promoInvalid');
+    appliedPromo.value = {
+      khuyenMaiId: data.khuyenMaiId,
+      tenKhuyenMai: data.tenKhuyenMai,
+      maKhuyenMai: code.toUpperCase(),
+      loai: data.loai,
+      giaTri: data.giaTri,
+      giaTriToiDa: data.giaTriToiDa,
+      donHangToiThieu: data.donHangToiThieu,
+    };
+    promoMsg.value = t('checkout.promoSuccess', { name: data.tenKhuyenMai });
+  } catch {
+    promoMsg.value = t('checkout.promoInvalid');
   }
 };
 

@@ -130,6 +130,16 @@ public class DonHangService {
         DonHang saved = donHangRepository.save(entity);
         entityManager.refresh(saved);
 
+        // Tăng lượt sử dụng mã khuyến mãi ngay khi tạo đơn thành công — đã qua đầy đủ
+        // check (trạng thái active, còn hạn, chưa hết lượt, đạt đơn tối thiểu) ở tinhGiamGiaKhuyenMai
+        // phía trên. Nếu đơn sau đó bị hủy thì giaiPhongKhuyenMaiVoucher() trừ lại để cân bằng.
+        if (saved.getKhuyenMai() != null) {
+            KhuyenMai km = saved.getKhuyenMai();
+            int daDung = km.getSoLanDaDung() != null ? km.getSoLanDaDung() : 0;
+            km.setSoLanDaDung(daDung + 1);
+            khuyenMaiRepository.save(km);
+        }
+
         if (phieuDangDung != null) {
             phieuDangDung.setDaSuDung(true);
             phieuDangDung.setDonHang(saved);
@@ -183,6 +193,11 @@ public class DonHangService {
             giaiPhongKhuyenMaiVoucher(saved);
         }
 
+        // Kích hoạt bảo hành khi giao hàng (POS hoặc online xác nhận đã nhận)
+        if ("delivered".equals(request.getTrangThaiDonHang()) && !"delivered".equals(oldStatus)) {
+            kichHoatBaoHanhTuDong(saved);
+        }
+
         sseService.notifyOrderUpdate(id);
 
         return saved;
@@ -195,8 +210,55 @@ public class DonHangService {
             throw new AccessDeniedException("Không có quyền xác nhận đơn hàng này");
         kiemTraChuyenTrangThai(donHang.getTrangThaiDonHang(), "delivered", donHang.getKenhBan());
         donHang.setTrangThaiDonHang("delivered");
+        if (donHang.getNgayGiaoThucTe() == null)
+            donHang.setNgayGiaoThucTe(LocalDateTime.now());
         donHangRepository.save(donHang);
+        kichHoatBaoHanhTuDong(donHang);
         sseService.notifyOrderUpdate(id);
+    }
+
+    /**
+     * Giao hàng tại quầy (POS). Set trangThai = delivered + ngayGiaoThucTe
+     * rồi kích hoạt bảo hành cho tất cả serial trong đơn.
+     */
+    @Transactional
+    public DonHang giaoHang(Integer id, LocalDateTime ngayGiaoThucTe) {
+        DonHang donHang = getById(id);
+        String trangThaiCu = donHang.getTrangThaiDonHang();
+        kiemTraChuyenTrangThai(trangThaiCu, "delivered", donHang.getKenhBan());
+        donHang.setTrangThaiDonHang("delivered");
+        donHang.setNgayGiaoThucTe(ngayGiaoThucTe != null ? ngayGiaoThucTe : LocalDateTime.now());
+        DonHang saved = donHangRepository.save(donHang);
+        kichHoatBaoHanhTuDong(saved);
+        sseService.notifyOrderUpdate(id);
+        return saved;
+    }
+
+    /**
+     * Kích hoạt bảo hành: duyệt tất cả serial trong đơn, set trangThai = da_ban
+     * để tính ngày hết bảo hành khi tra cứu.
+     */
+    private void kichHoatBaoHanhTuDong(DonHang donHang) {
+        List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(donHang.getId());
+        for (ChiTietDonHang item : items) {
+            if (item.getChiTietSanPham() != null) {
+                ChiTietSanPham serial = item.getChiTietSanPham();
+                if (!"da_ban".equals(serial.getTrangThai())) {
+                    serial.setTrangThai("da_ban");
+                    chiTietSanPhamRepository.save(serial);
+                }
+            }
+            // Duyệt qua ChiTietDonHangSerial nếu có (đơn online chọn serial riêng)
+            List<ChiTietDonHangSerial> links =
+                    chiTietDonHangSerialRepository.findByChiTietDonHang_Id(item.getId());
+            for (ChiTietDonHangSerial link : links) {
+                ChiTietSanPham serial = link.getChiTietSanPham();
+                if (!"da_ban".equals(serial.getTrangThai())) {
+                    serial.setTrangThai("da_ban");
+                    chiTietSanPhamRepository.save(serial);
+                }
+            }
+        }
     }
 
     private void releaseSerialsToStock(Integer donHangId) {
@@ -270,7 +332,7 @@ public class DonHangService {
 
     private BigDecimal tinhGiamGiaKhuyenMai(KhuyenMai khuyenMai, BigDecimal tongTien) {
         if (!"active".equals(khuyenMai.getTrangThai()))
-            throw new IllegalArgumentException("Mã khuyến mãi không còn hiệu lực");
+            throw new IllegalArgumentException("Mã khuyến mãi không còn hiệu lực (đã ngừng hoạt động)");
         LocalDateTime now = LocalDateTime.now();
         if (khuyenMai.getNgayBatDau() != null && now.isBefore(khuyenMai.getNgayBatDau()))
             throw new IllegalArgumentException("Mã khuyến mãi chưa đến thời gian áp dụng");

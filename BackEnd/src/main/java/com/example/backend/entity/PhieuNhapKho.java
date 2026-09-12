@@ -42,4 +42,7 @@ public class PhieuNhapKho {
 
     @Column(name = "ghi_chu", length = 500)
     private String ghiChu;
+
+    @Column(name = "serial_draft_json", columnDefinition = "NVARCHAR(MAX)")
+    private String serialDraftJson;
 }
