@@ -15,11 +15,11 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	java.util.Optional<KhachHang> findWithLockByKhachHangId(Integer khachHangId);
 
-	@Query("SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao) FROM KhachHang k")
+	@Query("SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao, k.hinhAnh) FROM KhachHang k")
 	java.util.List<KhachHangResponse> hienThiKhachHang();
 
-	@Query(value = "SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao) FROM KhachHang k",
-		   countQuery = "SELECT COUNT(k) FROM KhachHang k")
+	@Query(value = "SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao, k.hinhAnh) FROM KhachHang k",
+			countQuery = "SELECT COUNT(k) FROM KhachHang k")
 	Page<KhachHangResponse> hienThiKhachHang(Pageable pageable);
 
 	boolean existsBySoDienThoai(String soDienThoai);
@@ -27,12 +27,12 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
 	java.util.Optional<KhachHang> findBySoDienThoai(String soDienThoai);
 
 	@Query("""
-	SELECT new com.example.backend.response.CustomerSpendingResponse(kh.khachHangId, kh.hoTen, COUNT(d), SUM(d.thanhTien))
-	FROM DonHang d JOIN d.khachHang kh
-	WHERE d.ngayDat >= :tuNgay AND d.ngayDat <= :denNgay AND d.trangThaiDonHang <> 'cancelled'
-	GROUP BY kh.khachHangId, kh.hoTen
-	ORDER BY SUM(d.thanhTien) DESC
-	""")
+    SELECT new com.example.backend.response.CustomerSpendingResponse(kh.khachHangId, kh.hoTen, COUNT(d), SUM(d.thanhTien))
+    FROM DonHang d JOIN d.khachHang kh
+    WHERE d.ngayDat >= :tuNgay AND d.ngayDat <= :denNgay AND d.trangThaiDonHang <> 'cancelled'
+    GROUP BY kh.khachHangId, kh.hoTen
+    ORDER BY SUM(d.thanhTien) DESC
+    """)
 	java.util.List<com.example.backend.response.CustomerSpendingResponse> chiTieuTheoKhachHang(
 			@org.springframework.data.repository.query.Param("tuNgay") java.time.LocalDateTime tuNgay,
 			@org.springframework.data.repository.query.Param("denNgay") java.time.LocalDateTime denNgay,

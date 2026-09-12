@@ -21,7 +21,7 @@ public class KhachHangRequest {
     @Email(message = "Email không hợp lệ")
     private String email;
 
-    @NotBlank(message = "Địa chỉ không được để trống")
+    @NotBlank(message = "�ịa chỉ không được để trống")
     private String diaChi;
 
     @NotBlank(message = "Loại khách không được để trống")
@@ -37,4 +37,6 @@ public class KhachHangRequest {
 
     @NotBlank(message = "Trạng thái không được để trống")
     private String trangThai;
+
+    private String hinhAnh;
 }

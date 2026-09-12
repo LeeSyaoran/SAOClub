@@ -14,6 +14,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 beforeEach(() => {
+  sessionStorage.removeItem('saophone_session');
   mockFetch.mockReset();
   mockClearSession.mockReset();
   mockShowToast.mockReset();
@@ -65,7 +66,21 @@ describe('api service', () => {
     });
   });
 
-  it('should call clearSession on 401 response', async () => {
+  it('should not clear session on 401 response when no token-backed session exists', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: () => Promise.resolve('Unauthorized'),
+    });
+
+    const { get } = await import('../../services/api.js');
+    await expect(get('/api/protected')).rejects.toThrow('HTTP 401: Unauthorized');
+    expect(mockClearSession).not.toHaveBeenCalled();
+    expect(mockResetAllStores).not.toHaveBeenCalled();
+  });
+
+  it('should call clearSession on 401 response when token-backed session exists', async () => {
+    sessionStorage.setItem('saophone_session', JSON.stringify({ token: 'test-token' }));
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
@@ -78,7 +93,8 @@ describe('api service', () => {
     expect(mockResetAllStores).toHaveBeenCalled();
   });
 
-  it('should only call clearSession once for concurrent 401s', async () => {
+  it('should only call clearSession once for concurrent 401s when token-backed session exists', async () => {
+    sessionStorage.setItem('saophone_session', JSON.stringify({ token: 'test-token' }));
     mockFetch.mockResolvedValue({
       ok: false,
       status: 401,
@@ -90,7 +106,8 @@ describe('api service', () => {
     expect(mockClearSession).toHaveBeenCalledTimes(1);
   });
 
-  it('should re-arm session expiry flag after 2 seconds', async () => {
+  it('should re-arm session expiry flag after 2 seconds when token-backed session exists', async () => {
+    sessionStorage.setItem('saophone_session', JSON.stringify({ token: 'test-token' }));
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
@@ -110,6 +127,36 @@ describe('api service', () => {
     });
     await expect(get('/api/protected')).rejects.toThrow();
     expect(mockClearSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('should return fallback demo claims when customer warranty endpoint returns 401', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: () => Promise.resolve('Unauthorized'),
+    });
+
+    const { getByKhachHang } = await import('../../services/PhieuBaoHanhService.js');
+    const list = await getByKhachHang(5);
+
+    expect(Array.isArray(list)).toBe(true);
+    expect(list.length).toBeGreaterThan(0);
+    expect(list[0].baoHanhId).toBe(101);
+  });
+
+  it('should return fallback demo warranty products when customer warranty product endpoint returns 401', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: () => Promise.resolve('Unauthorized'),
+    });
+
+    const { getWarrantyProductsByKhachHang } = await import('../../services/WarrantyService.js');
+    const list = await getWarrantyProductsByKhachHang(5);
+
+    expect(Array.isArray(list)).toBe(true);
+    expect(list.length).toBeGreaterThan(0);
+    expect(list[0].tenSanPham).toContain('Acer');
   });
 
   it('should include auth header when session exists', async () => {

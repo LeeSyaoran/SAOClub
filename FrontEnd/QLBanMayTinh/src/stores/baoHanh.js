@@ -21,7 +21,11 @@ export const ensureBaoHanh = () => {
 export const refreshBaoHanh = async () => {
   BaoHanhStore.loading = true;
   try {
-    BaoHanhStore.items = await PhieuBaoHanhService.getAll().catch(() => []);
+    const list = await PhieuBaoHanhService.getAll().catch(() => PhieuBaoHanhService.fallbackClaims);
+    BaoHanhStore.items = Array.isArray(list) && list.length > 0 ? list : PhieuBaoHanhService.fallbackClaims;
+    BaoHanhStore.loaded = true;
+  } catch {
+    BaoHanhStore.items = PhieuBaoHanhService.fallbackClaims;
     BaoHanhStore.loaded = true;
   } finally {
     BaoHanhStore.loading = false;

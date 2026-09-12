@@ -12,14 +12,18 @@ import java.util.List;
 
 @Repository
 public interface PhieuBaoHanhRepository extends JpaRepository<PhieuBaoHanh, Integer> {
-    @Query("SELECT new com.example.backend.response.PhieuBaoHanhResponse(p.baoHanhId, p.donHang.id, p.bienThe.bienTheId, p.bienThe.maSku, p.khachHang.khachHangId, ctsp.chiTietId, ctsp.soSerial, p.ngayMua, p.ngayHetBh, p.ngayTiepNhan, p.ngayTraKhach, p.moTaLoi, p.ketQuaXuLy, p.trangThai, p.chiPhiPhatSinh, p.ghiChu) FROM PhieuBaoHanh p LEFT JOIN p.chiTietSanPham ctsp")
+    @Query("SELECT new com.example.backend.response.PhieuBaoHanhResponse(p.baoHanhId, p.donHang.id, p.bienThe.bienTheId, p.bienThe.maSku, p.bienThe.sanPham.tenSanPham, p.khachHang.khachHangId, p.khachHang.hoTen, ctsp.chiTietId, ctsp.soSerial, p.ngayMua, p.ngayHetBh, p.ngayTiepNhan, p.ngayBatDauXuLy, p.ngayTraKhach, p.moTaLoi, p.ketQuaXuLy, p.trangThai, p.chiPhiPhatSinh, p.ghiChu, p.phuongThuc, p.diaChiLayHang, p.lyDoTuChoi) FROM PhieuBaoHanh p LEFT JOIN p.chiTietSanPham ctsp")
     List<PhieuBaoHanhResponse> hienThiPhieuBaoHanh();
 
-    @Query(value = "SELECT new com.example.backend.response.PhieuBaoHanhResponse(p.baoHanhId, p.donHang.id, p.bienThe.bienTheId, p.bienThe.maSku, p.khachHang.khachHangId, ctsp.chiTietId, ctsp.soSerial, p.ngayMua, p.ngayHetBh, p.ngayTiepNhan, p.ngayTraKhach, p.moTaLoi, p.ketQuaXuLy, p.trangThai, p.chiPhiPhatSinh, p.ghiChu) FROM PhieuBaoHanh p LEFT JOIN p.chiTietSanPham ctsp",
+    @Query(value = "SELECT new com.example.backend.response.PhieuBaoHanhResponse(p.baoHanhId, p.donHang.id, p.bienThe.bienTheId, p.bienThe.maSku, p.bienThe.sanPham.tenSanPham, p.khachHang.khachHangId, p.khachHang.hoTen, ctsp.chiTietId, ctsp.soSerial, p.ngayMua, p.ngayHetBh, p.ngayTiepNhan, p.ngayBatDauXuLy, p.ngayTraKhach, p.moTaLoi, p.ketQuaXuLy, p.trangThai, p.chiPhiPhatSinh, p.ghiChu, p.phuongThuc, p.diaChiLayHang, p.lyDoTuChoi) FROM PhieuBaoHanh p LEFT JOIN p.chiTietSanPham ctsp",
            countQuery = "SELECT COUNT(p) FROM PhieuBaoHanh p")
     Page<PhieuBaoHanhResponse> hienThiPhieuBaoHanh(Pageable pageable);
 
     List<PhieuBaoHanh> findByDonHang_Id(Integer donHangId);
 
     boolean existsByBienThe_BienTheId(Integer bienTheId);
+
+    @Query("SELECT new com.example.backend.response.PhieuBaoHanhResponse(p.baoHanhId, p.donHang.id, p.bienThe.bienTheId, p.bienThe.maSku, p.bienThe.sanPham.tenSanPham, p.khachHang.khachHangId, p.khachHang.hoTen, ctsp.chiTietId, ctsp.soSerial, p.ngayMua, p.ngayHetBh, p.ngayTiepNhan, p.ngayBatDauXuLy, p.ngayTraKhach, p.moTaLoi, p.ketQuaXuLy, p.trangThai, p.chiPhiPhatSinh, p.ghiChu, p.phuongThuc, p.diaChiLayHang, p.lyDoTuChoi) FROM PhieuBaoHanh p LEFT JOIN p.chiTietSanPham ctsp WHERE p.khachHang.khachHangId = ?1")
+    List<PhieuBaoHanhResponse> findByKhachHangId(Integer khachHangId);
+
 }

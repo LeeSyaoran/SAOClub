@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import { t } from "../../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon, paymentMethodLabel, paymentMethodIcon, channelLabel, channelColor } from "../../utils/orderStatus.js";
 import { nowLocalIso } from "../../utils/datetime.js";
@@ -21,7 +21,20 @@ import { usePagination } from "../../composables/usePagination.js";
 import { CheckCircle2, Package, Truck, Bike, Inbox, Laptop, User, Printer } from '@lucide/vue';
 import InvoiceModal from "./InvoiceModal.vue";
 
+// Nhận order ID để navigate từ ngoài (CustomerDetailModal tab đơn hàng → "Xem chi tiết")
+const props = defineProps({
+  navigateToOrderId: { type: Number, default: null },
+});
+const emit = defineEmits(["order-detail-opened"]);
+
 onMounted(() => { ensureOrders(); ensureCustomers(); ensureProducts(); });
+
+// Khi navigateToOrderId được set từ bên ngoài → mở modal chi tiết đơn đó
+watch(() => props.navigateToOrderId, (id) => {
+  if (!id) return;
+  const order = (OrdersStore.items ?? []).find(o => o.donHangId === id);
+  if (order) openOrderDetail(order);
+}, { immediate: true });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const customerName = (id) =>
@@ -136,6 +149,7 @@ const openOrderDetail = async (o) => {
   orderDetailPayments.value = [];
   showOrderDetailModal.value = true;
   orderDetailLoading.value = true;
+  emit("order-detail-opened", o.donHangId); // thông báo cho AdminPage reset selectedOrderId
   try {
     orderDetailItems.value = await ChiTietDonHangService.getByDonHang(o.donHangId).catch(() => []);
     orderDetailPayments.value = await ThanhToanService.getByDonHang(o.donHangId).catch(() => []);

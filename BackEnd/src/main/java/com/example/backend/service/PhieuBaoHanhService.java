@@ -99,4 +99,49 @@ public class PhieuBaoHanhService {
         }
     }
 
+
+    /**
+     * Lấy tất cả phiếu BH của 1 khách hàng.
+     */
+    public List<PhieuBaoHanhResponse> getByKhachHang(Integer khachHangId) {
+        return phieuBaoHanhRepository.findByKhachHangId(khachHangId);
+    }
+
+
+    /**
+     * Khách hàng tự hủy phiếu BH — chỉ cho phép khi trạng thái là 'cho_xu_ly'.
+     */
+    public void huyPhieu(Integer baoHanhId, String lyDo) {
+        PhieuBaoHanh entity = getById(baoHanhId);
+        if (!"cho_xu_ly".equals(entity.getTrangThai())) {
+            throw new IllegalStateException("Chỉ có thể hủy phiếu đang ở trạng thái chờ xử lý");
+        }
+        entity.setTrangThai("da_huy");
+        if (lyDo != null) entity.setGhiChu(lyDo);
+        phieuBaoHanhRepository.save(entity);
+    }
+
+
+    /**
+     * Lấy các yêu cầu gia hạn BH (phiếu có loaiYeuCau = 'gia_han').
+     */
+    public List<PhieuBaoHanhResponse> getExtensionRequests() {
+        // TODO: implement when extension-request entity is added
+        return List.of();
+    }
+
+    /**
+     * Duyệt gia hạn BH — cập nhật ngày hết BH của serial.
+     */
+    public void approveExtension(Integer baoHanhId, String approvedAt) {
+        // TODO: implement when extension logic is finalized
+    }
+
+    /**
+     * Từ chối gia hạn BH.
+     */
+    public void rejectExtension(Integer baoHanhId, String lyDoTuChoi, String rejectedAt) {
+        // TODO: implement when extension logic is finalized
+    }
+
 }

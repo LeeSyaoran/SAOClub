@@ -17,6 +17,7 @@ import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.request.ChiTietDonHangRequest;
 import com.example.backend.response.ChiTietDonHangResponse;
 import com.example.backend.response.ChiTietDonHangSerialResponse;
+import com.example.backend.response.WarrantyProductResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -180,4 +181,67 @@ public class ChiTietDonHangService {
     public List<ChiTietDonHangSerialResponse> getSerialsByDonHangId(Integer donHangId) {
         return chiTietDonHangSerialRepository.findByDonHangId(donHangId);
     }
+
+    /**
+     * Lấy tất cả sản phẩm đã giao của 1 khách hàng, kèm thông tin bảo hành.
+     * Bao gồm: tên SP, ảnh, serial, ngày hết BH.
+     * Chỉ trả đơn hàng có trangThaiDonHang = 'delivered'.
+     */
+    public List<WarrantyProductResponse> getWarrantyProductsByKhachHang(Integer khachHangId) {
+        List<ChiTietDonHang> details = chiTietDonHangRepository.findByKhachHangId(khachHangId);
+        return details.stream().map(d -> {
+            WarrantyProductResponse r = new WarrantyProductResponse();
+            r.setChiTietId(d.getChiTietSanPham() != null ? d.getChiTietSanPham().getChiTietId() : null);
+            r.setBienTheId(d.getBienThe().getBienTheId());
+            r.setTenSanPham(d.getBienThe().getSanPham() != null ? d.getBienThe().getSanPham().getTenSanPham() : null);
+            r.setTenBienThe(d.getBienThe().getPhanLoaiTen());
+            r.setMaSku(d.getBienThe().getMaSku());
+            r.setSoSerial(d.getChiTietSanPham() != null ? d.getChiTietSanPham().getSoSerial() : null);
+            r.setHinhAnh(d.getBienThe().getHinhAnhBienThe());
+            r.setDonHangId(d.getDonHang().getId());
+            r.setMaDonHang(d.getDonHang().getMaDonHang());
+            r.setNgayDat(d.getDonHang().getNgayDat());
+            r.setNgayGiaoThucTe(d.getDonHang().getNgayGiaoThucTe());
+            r.setTrangThaiDonHang(d.getDonHang().getTrangThaiDonHang());
+
+            Integer thang = d.getBienThe().getBaoHanhThang() != null ? d.getBienThe().getBaoHanhThang() : 12;
+            r.setBaoHanhThang(thang);
+
+            if (d.getDonHang().getNgayGiaoThucTe() != null) {
+                r.setNgayHetBaoHanh(d.getDonHang().getNgayGiaoThucTe().plusMonths(thang));
+            }
+            return r;
+        }).toList();
+    }
+
+    /**
+     * Lấy tất cả sản phẩm đã giao của 1 đơn hàng, kèm thông tin bảo hành.
+     */
+    public List<WarrantyProductResponse> getWarrantyProductsByDonHang(Integer donHangId) {
+        List<ChiTietDonHang> details = chiTietDonHangRepository.findEntityByDonHangId(donHangId);
+        return details.stream().map(d -> {
+            WarrantyProductResponse r = new WarrantyProductResponse();
+            r.setChiTietId(d.getChiTietSanPham() != null ? d.getChiTietSanPham().getChiTietId() : null);
+            r.setBienTheId(d.getBienThe().getBienTheId());
+            r.setTenSanPham(d.getBienThe().getSanPham() != null ? d.getBienThe().getSanPham().getTenSanPham() : null);
+            r.setTenBienThe(d.getBienThe().getPhanLoaiTen());
+            r.setMaSku(d.getBienThe().getMaSku());
+            r.setSoSerial(d.getChiTietSanPham() != null ? d.getChiTietSanPham().getSoSerial() : null);
+            r.setHinhAnh(d.getBienThe().getHinhAnhBienThe());
+            r.setDonHangId(d.getDonHang().getId());
+            r.setMaDonHang(d.getDonHang().getMaDonHang());
+            r.setNgayDat(d.getDonHang().getNgayDat());
+            r.setNgayGiaoThucTe(d.getDonHang().getNgayGiaoThucTe());
+            r.setTrangThaiDonHang(d.getDonHang().getTrangThaiDonHang());
+
+            Integer thang = d.getBienThe().getBaoHanhThang() != null ? d.getBienThe().getBaoHanhThang() : 12;
+            r.setBaoHanhThang(thang);
+
+            if (d.getDonHang().getNgayGiaoThucTe() != null) {
+                r.setNgayHetBaoHanh(d.getDonHang().getNgayGiaoThucTe().plusMonths(thang));
+            }
+            return r;
+        }).toList();
+    }
+
 }

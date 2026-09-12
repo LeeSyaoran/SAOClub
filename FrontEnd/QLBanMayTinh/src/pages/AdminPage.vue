@@ -85,6 +85,7 @@ watch(currentPage, (page) => {
 const sidebarOpen = ref(window.matchMedia("(min-width: 768px)").matches);
 const selectedCustomerId = ref(null);
 const selectedSanPhamId = ref(route.params.id ? Number(route.params.id) : null);
+const selectedOrderId = ref(null); // dùng để navigate từ CustomerDetailModal → OrdersTable
 // AdminPage duoc lazy-import 1 lan (router/index.js) nen /admin va /admin/san-pham/:id dung
 // chung 1 instance component qua <router-view> (App.vue khong co :key) — setup() khong chay
 // lai khi chuyen giua 2 route nay, phai tu watch route.params.id de dong bo lai currentPage.
@@ -99,6 +100,13 @@ watch(
 const openCustomerDetail = (id) => {
   selectedCustomerId.value = id;
   currentPage.value = "customer-detail";
+};
+// Navigate từ CustomerDetailModal tab "Đơn hàng" → "Xem chi tiết" → chuyển sang trang Orders
+// Luồng: CustomerDetailModal(view-order) → CustomersTable(view-order) → AdminPage(handleViewOrder)
+// → switch page to "orders" + set selectedOrderId → OrdersTable receives navigateToOrderId → opens modal
+const handleViewOrder = (order) => {
+  selectedOrderId.value = order.donHangId;
+  currentPage.value = "orders";
 };
 const navigate = (page) => {
   currentPage.value = page;
@@ -589,6 +597,7 @@ const lowStockItems = computed(() =>
 const outOfStockItems = computed(() =>
   inventory.value.filter(t => (t.soLuongTon ?? 0) === 0),
 );
+// Pending warranty claims count for sidebar badge
 // lowStockOnlyItems/totalStockQty (chỉ dùng trong tab Tồn kho) đã chuyển vào
 // components/admin/InventoryPanel.vue (Task 7), cùng khoTab.
 
@@ -1144,6 +1153,7 @@ onUnmounted(() => {
         <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='bao-hanh'}" @click="selectInventoryTab('bao-hanh')">
           <Shield class="adm-icon" :size="15" /> {{ t('admin.inventory.tabWarranty') }}
         </div>
+
         <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='serial'}" @click="selectInventoryTab('serial')">
           <Hash class="adm-icon" :size="15" /> {{ t('admin.inventory.tabSerial') }}
         </div>
@@ -1284,12 +1294,18 @@ onUnmounted(() => {
 
         <!-- ── Don hang ── -->
         <section v-show="currentPage === 'orders'">
-          <OrdersTable />
+          <OrdersTable
+            :navigate-to-order-id="selectedOrderId"
+            @order-detail-opened="selectedOrderId = null"
+          />
         </section>
 
         <!-- ── Khach hang ── -->
         <section v-show="currentPage === 'customers'">
-          <CustomersTable @view-detail="openCustomerDetail" />
+          <CustomersTable
+            @view-detail="openCustomerDetail"
+            @view-order="handleViewOrder"
+          />
         </section>
 
         <!-- ── Chi tiet khach hang ── -->

@@ -17,16 +17,22 @@ public class PhieuBaoHanhResponse {
     private Integer donHangId;
     private Integer bienTheId;
     private String maSku;
+    private String tenSanPham;
     private Integer khachHangId;
+    private String tenKhachHang;  // Thêm tên khách hàng
     private Integer chiTietId;
     private String soSerial;
     private LocalDateTime ngayMua;
     private LocalDateTime ngayHetBh;
     private LocalDateTime ngayTiepNhan;
+    private LocalDateTime ngayBatDauXuLy;
     private LocalDateTime ngayTraKhach;
     private String moTaLoi;
     private String ketQuaXuLy;
     private String trangThai;
     private BigDecimal chiPhiPhatSinh;
     private String ghiChu;
+    private String phuongThuc;
+    private String diaChiLayHang;
+    private String lyDoTuChoi;
 }

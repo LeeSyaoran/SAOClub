@@ -2,6 +2,8 @@ package com.example.backend.repository;
 
 import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.response.ChiTietDonHangResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -20,4 +22,7 @@ public interface ChiTietDonHangRepository extends JpaRepository<ChiTietDonHang, 
     List<ChiTietDonHang> findEntityByDonHangId(Integer donHangId);
 
     boolean existsByBienThe_BienTheId(Integer bienTheId);
+
+    @Query("SELECT c FROM ChiTietDonHang c WHERE c.donHang.khachHang.khachHangId = ?1 AND c.donHang.trangThaiDonHang = 'delivered'")
+    List<ChiTietDonHang> findByKhachHangId(Integer khachHangId);
 }

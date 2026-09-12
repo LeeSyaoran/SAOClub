@@ -13,73 +13,24 @@ import * as PhieuTraHangService from "../services/PhieuTraHangService.js";
 import * as DmDoiThuongService from "../services/DmDoiThuongService.js";
 import * as PhieuGiamGiaCaNhanService from "../services/PhieuGiamGiaCaNhanService.js";
 import * as YeuThichService from "../services/YeuThichService.js";
-import * as PhieuBaoHanhService from "../services/PhieuBaoHanhService.js";
 import OrderStatusTimeline from "../components/order/OrderStatusTimeline.vue";
 import OrderTrackingLog from "../components/order/OrderTrackingLog.vue";
 import ReturnRequestModal from "../components/order/ReturnRequestModal.vue";
 import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
 import LuckyWheelPanel from "../components/account/LuckyWheelPanel.vue";
-import WarrantyTab from "../components/account/WarrantyTab.vue";
-import WarrantyPlanTab from "../components/account/WarrantyPlanTab.vue";
-import ChatWidget from "../components/account/ChatWidget.vue";
-import {Clock,
-  Truck,
-  CheckCircle2,
-  XCircle,
-  Heart,
-  Sparkles,
-  Settings,
-  ArrowLeft,
-  User,
-  Gift,
-  Wallet,
-  Package,
-  ShoppingBag,
-  Receipt,
-  Laptop,
-  History,
-  RefreshCw,
-  Undo2,
-  AlertTriangle,
-  Loader2,
-  Smartphone,
-  Mail,
-  MapPin,
-  Save,
-  ShoppingCart,
-  Home,
-  Award,
-  Tag,
-  MapPin as Location,
-  BookOpen,
-  HelpCircle,
-  FileText,
-  LogOut,
-  ChevronDown,
-  Star,
-  CreditCard,
-  Shield,
-  X,
-  Menu,
-  ShieldPlus,
-  Ticket,
-  BadgeCheck,
-  ShieldCheck,
-  Phone,
-  MessageCircle} from '@lucide/vue';
+import {
+  Clock, Truck, CheckCircle2, XCircle, Heart, Sparkles, Settings, ArrowLeft,
+  User, Gift, Wallet, Package, ShoppingBag, Receipt, Laptop, History, RefreshCw,
+  Undo2, AlertTriangle, Loader2, Smartphone, Mail, MapPin, Save, ShoppingCart,
+  Home, Award, Tag, MapPin as Location, BookOpen, HelpCircle, FileText, LogOut,
+  ChevronDown, Star, CreditCard, Shield, X, Menu,
+} from '@lucide/vue';
 
 const emit = defineEmits(["go-home", "add-to-cart", "buy-again-unavailable", "toast"]);
 
 const auth = AuthStore;
-const activeTab = ref('overview'); // Default to overview (no separate 'account' tab)
-
-const warrantySubTab = ref('claims');
-const warrantySubTabs = computed(() => [
-  { id: 'claims', icon: Shield, label: 'Phiếu bảo hành', badge: warrantyClaimsCount.value },
-  { id: 'plans',  icon: ShieldPlus, label: 'Gói bảo hành mở rộng' },
-]);
-const warrantyClaimsCount = ref(0);
+const activeTab = ref("history");
 const activeHistoryTab = ref("pending");
 const sidebarOpen = ref(false);
 
@@ -118,11 +69,20 @@ const RETURN_STATUS_COLOR = {
 };
 
 const SIDEBAR_MENU = computed(() => [
-  { id: 'overview',  icon: Home,        label: 'Tổng quan',            desc: 'Đơn hàng gần đây & ưu đãi' },
-  { id: 'history',   icon: History,     label: 'Lịch sử mua hàng',     desc: 'Đơn hàng đang xử lý và đã hoàn tất' },
-  { id: 'warranty',  icon: Shield,      label: 'Bảo hành & Phiếu BH',  desc: 'Gửi yêu cầu và tra cứu', subTabs: 2 },
-  { id: 'rewards',   icon: Gift,        label: 'Điểm thưởng & Voucher', desc: 'Đổi quà và theo dõi ưu đãi' },
-  { id: 'settings',  icon: Settings,    label: 'Tài khoản & Hỗ trợ',   desc: 'Thông tin cá nhân, địa chỉ, CSKH' },
+  { id: 'overview', icon: Home, label: t('account.menuOverview') || 'Tổng quan' },
+  { id: 'history', icon: Receipt, label: t('account.tabHistory'), badge: tabOrderCounts.value.history },
+  { id: 'warranty', icon: Shield, label: t('account.menuWarranty') || 'Tra cứu bảo hành' },
+  { id: 'membership', icon: Award, label: t('account.menuMembership') || 'Hạng thành viên' },
+  { id: 'business', icon: ShoppingBag, label: t('account.menuBusiness') || 'S-Business' },
+  { id: 'student', icon: BookOpen, label: t('account.menuStudent') || 'S-Student' },
+  { id: 'oldCard', icon: CreditCard, label: t('account.menuOldCard') || 'Thẻ cũ' },
+  { id: 'info', icon: User, label: t('account.menuInfo') || 'Thông tin tài khoản' },
+  { id: 'address', icon: MapPin, label: t('account.quickAddress') || 'Sổ địa chỉ' },
+  { id: 'stores', icon: Location, label: t('account.menuStores') || 'Cửa hàng' },
+  { id: 'wishlist', icon: Heart, label: t('account.tabWishlist'), badge: wishlistItems.value.length },
+  { id: 'wheel', icon: Sparkles, label: t('account.tabWheel') },
+  { id: 'settings', icon: Settings, label: t('account.tabSettings') },
+  { id: 'support', icon: HelpCircle, label: t('account.menuSupport') || 'Hỗ trợ' },
 ]);
 
 const HISTORY_TABS = computed(() => [
@@ -180,15 +140,7 @@ const selectedProductDetail = ref(null);
 const viewProductDetail = (item) => {
   const product = productByBienThe(item.bienTheId);
   if (product) selectedProductDetail.value = product;
-}
-
-// Mở chi tiết đơn hàng (mặc định chuyển sang tab lịch sử mua hàng)
-const viewOrderDetail = (order) => {
-  activeTab.value = 'history';
-  // có thể mở modal chi tiết ở đây
-  emit('toast', `Đang mở đơn hàng #${order?.maDon || order?.donHangId}`, 'info');
 };
-;
 
 const buyAgainOrder = (o) => {
   const khongMuaLaiDuoc = [];
@@ -327,41 +279,6 @@ const myVouchers     = ref([]);
 const redeemingId    = ref(null);
 const redeemError    = ref("");
 
-// Warranty claim count for sub-tab badge
-const fetchWarrantyClaims = async () => {
-  try {
-    const list = await PhieuBaoHanhService.getByKhachHang(auth.user?.id || 0);
-    warrantyClaimsCount.value = (list || []).filter((c) => c.trangThai === 'cho_xu_ly' || c.trangThai === 'dang_xu_ly').length;
-  } catch (e) {
-    warrantyClaimsCount.value = 0;
-  }
-};
-
-// Vouchers (for overview + rewards)
-const vouchers = ref([]);
-const voucherCount = computed(() => vouchers.value.length);
-const formatVoucher = (v) => {
-  if (!v) return '';
-  if (v.loaiGiam === 'phan_tram') return `Giảm ${v.giaTri}%`;
-  return `Giảm ${formatPriceRaw(v.giaTri)}`;
-};
-const loadVouchers = async () => {
-  try {
-    vouchers.value = await PhieuGiamGiaCaNhanService.getMyVouchers();
-  } catch (e) {
-    vouchers.value = [];
-  }
-};
-
-// BuyBack items (mock - can wire later)
-const buyBackItems = ref([]);
-
-const getOrderProductsName = (o) => {
-  if (o.tenSanPham) return o.tenSanPham;
-  if (o.sanPham && o.sanPham.length > 0) return o.sanPham[0].tenSanPham || '';
-  return 'Đơn hàng';
-};
-
 const fetchProfile = async () => {
   if (!auth.user?.id) return;
   profileLoading.value = true;
@@ -425,11 +342,11 @@ const saveProfile = async () => {
 
 const handleSidebarMenu = (item) => {
   if (item.id === 'overview') {
-    activeTab.value = 'overview';
+    emit('go-home');
     sidebarOpen.value = false;
     return;
   }
-  if (['wishlist', 'wheel', 'settings', 'warranty'].includes(item.id)) {
+  if (['wishlist', 'wheel', 'settings'].includes(item.id)) {
     activeTab.value = item.id;
     sidebarOpen.value = false;
     return;
@@ -445,9 +362,6 @@ const handleSidebarMenu = (item) => {
 
 let orderSse = null;
 onMounted(() => {
-
-  loadVouchers();
-  fetchWarrantyClaims();
   fetchData();
   fetchProfile();
   loadWishlistItems();
@@ -523,7 +437,7 @@ const handleOutsideClick = (e) => {
         <aside class="col-lg-3">
           <nav class="account-sidebar" :class="{ 'sidebar-open': sidebarOpen }">
             <div class="sidebar-header">
-              <div class="sidebar-title"></div>
+              <div class="sidebar-title">Tài khoản của tôi</div>
             </div>
             <div class="sidebar-menu">
               <button
@@ -550,128 +464,7 @@ const handleOutsideClick = (e) => {
           <Transition name="panel-fade" mode="out-in">
             <div :key="activeTab" class="account-panel">
 
-                            <!-- ══════════════ TAB: TỔNG QUAN ══════════════ -->
-              <div v-if="activeTab === 'overview'" class="panel-section">
-                <!-- Recent orders -->
-                <div class="overview-card">
-                  <div class="overview-card-header">
-                    <Receipt :size="18" class="overview-card-icon" />
-                    <h3 class="overview-card-title">Đơn hàng gần đây</h3>
-                    <button class="overview-card-link" @click="activeTab = 'overview'">Xem tất cả →</button>
-                  </div>
-                  <div v-if="ordersLoading" class="overview-loading">
-                    <div v-for="i in 2" :key="i" class="skel-row"></div>
-                  </div>
-                  <div v-else-if="orders.length === 0" class="overview-empty">
-                    <Package :size="32" class="overview-empty-icon" />
-                    <span>Bạn chưa có đơn hàng nào</span>
-                  </div>
-                  <div v-else class="overview-order-list">
-                    <div
-                      v-for="o in orders.slice(0, 3)" :key="o.donHangId"
-                      class="overview-order-row"
-                      @click="viewOrderDetail(o)"
-                    >
-                      <div class="overview-order-info">
-                        <div class="overview-order-line1">
-                          <span class="overview-order-label">Đơn hàng:</span>
-                          <strong class="overview-order-code">#{{ o.maDon || o.donHangId }}</strong>
-                          <span class="overview-order-dot">•</span>
-                          <span class="overview-order-date">Ngày đặt hàng: {{ formatDate(o.ngayDat || o.createdAt) }}</span>
-                        </div>
-                        <div class="overview-order-line2">
-                          <span class="overview-order-product">{{ getOrderProductsName(o) }}</span>
-                        </div>
-                      </div>
-                      <div class="overview-order-right">
-                        <span class="overview-order-status">{{ orderStatusLabel(o.trangThai) }}</span>
-                        <div class="overview-order-total">Tổng thanh toán: <strong>{{ formatPriceRaw(o.tongThanhToan || o.tongTien) }}</strong></div>
-                        <button class="overview-order-detail-btn" @click.stop="viewOrderDetail(o)">
-                          Xem chi tiết
-                          <ChevronRight :size="12" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Vouchers + Loyalty -->
-                <div class="overview-grid">
-                  <!-- Vouchers -->
-                  <div class="overview-card">
-                    <div class="overview-card-header">
-                      <Ticket :size="18" class="overview-card-icon" />
-                      <h3 class="overview-card-title">Ưu đãi của bạn</h3>
-                    </div>
-                    <div v-if="voucherCount > 0" class="overview-voucher-summary">
-                      <div class="overview-voucher-count">
-                        <Sparkles :size="22" />
-                        <span><strong>{{ voucherCount }}</strong> voucher đang có</span>
-                      </div>
-                      <button class="overview-voucher-btn" @click="activeTab = 'rewards'">Dùng ngay</button>
-                    </div>
-                    <div v-else class="overview-empty overview-empty--inline">
-                      <Gift :size="28" class="overview-empty-icon" />
-                      <span>Bạn chưa có ưu đãi nào.</span>
-                      <button class="overview-empty-link" @click="activeTab = 'rewards'">Xem sản phẩm →</button>
-                    </div>
-                  </div>
-
-                  <!-- Price Guarantee -->
-                  <div class="overview-card">
-                    <div class="overview-card-header">
-                      <ShieldCheck :size="18" class="overview-card-icon" />
-                      <h3 class="overview-card-title">Gói cam kết giá thu</h3>
-                      <span class="overview-badge-pill"><BadgeCheck :size="11" /> S-BuyBack</span>
-                    </div>
-                    <div v-if="buyBackItems.length === 0" class="overview-empty overview-empty--inline">
-                      <ShieldCheck :size="28" class="overview-empty-icon" />
-                      <span>Bạn chưa có gói cam kết giá thu nào</span>
-                      <button class="overview-empty-link">Tìm hiểu thêm →</button>
-                    </div>
-                    <div v-else class="overview-buyback">
-                      <div v-for="b in buyBackItems.slice(0, 2)" :key="b.id" class="overview-buyback-row">
-                        <strong>{{ b.tenSp }}</strong>
-                        <span>Giá thu: <strong>{{ formatPriceRaw(b.giaThu) }}</strong></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Wishlist -->
-                <div class="overview-card">
-                  <div class="overview-card-header">
-                    <Heart :size="18" class="overview-card-icon" />
-                    <h3 class="overview-card-title">Sản phẩm yêu thích</h3>
-                    <button class="overview-card-link" @click="activeTab = 'wishlist'">Xem tất cả →</button>
-                  </div>
-                  <div v-if="wishlistLoading" class="overview-loading">
-                    <div v-for="i in 3" :key="i" class="skel-row"></div>
-                  </div>
-                  <div v-else-if="wishlistItems.length === 0" class="overview-empty">
-                    <Heart :size="32" class="overview-empty-icon" />
-                    <span>Bạn chưa thích sản phẩm nào</span>
-                    <button class="overview-empty-link" @click="$emit('go-home')">Khám phá ngay →</button>
-                  </div>
-                  <div v-else class="overview-wishlist-grid">
-                    <div
-                      v-for="w in wishlistItems.slice(0, 4)" :key="w.bienTheId"
-                      class="overview-wishlist-card"
-                      @click="$emit('go-home')"
-                    >
-                      <div class="overview-wishlist-thumb">
-                        <img v-if="w.hinhAnh" :src="w.hinhAnh" />
-                        <Package v-else :size="32" />
-                      </div>
-                      <div class="overview-wishlist-name">{{ w.tenSanPham || w.tenBienThe }}</div>
-                      <div class="overview-wishlist-price">{{ formatPriceRaw(w.giaBan) }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- ══════════════ TAB: LỊCH SỬ MUA HÀNG ══════════════ -->
-              <div v-else-if="activeTab === 'history'" class="panel-section">
+              <div v-if="activeTab === 'history'" class="panel-section">
                 <div class="panel-header">
                   <div class="panel-header-content">
                     <History :size="22" class="panel-header-icon" />
@@ -714,8 +507,8 @@ const handleOutsideClick = (e) => {
                         <div class="order-card-header">
                           <div class="order-info">
                             <div class="order-code">
-                              <span class="order-code-label">Mã đơn</span>
-                              <span class="order-code-value">{{ o.maDon || o.donHangId }}</span>
+                              <span class="order-code-label">Mã đơ</span>
+                              <span class="order-code-value">{{ o.maDonHang || o.donHangId }}</span>
                             </div>
                             <div class="order-date">{{ formatDate(o.ngayDat) }}</div>
                           </div>
@@ -765,8 +558,8 @@ const handleOutsideClick = (e) => {
                         <div class="compact-header" @click="toggleHistoryOrder(o.donHangId)">
                           <div class="compact-info">
                             <div class="order-code">
-                              <span class="order-code-label">Mã đơn</span>
-                              <span class="order-code-value">{{ o.maDon || o.donHangId }}</span>
+                              <span class="order-code-label">Mã đơ</span>
+                              <span class="order-code-value">{{ o.maDonHang || o.donHangId }}</span>
                             </div>
                             <div class="order-date">{{ formatDate(o.ngayDat) }} · {{ (itemsByOrder[o.donHangId] || []).length }} sp</div>
                           </div>
@@ -814,160 +607,93 @@ const handleOutsideClick = (e) => {
                 </div>
               </div>
 
-              <!-- ══════════════ TAB: BẢO HÀNH (Phiếu + Gói mở rộng) ══════════════ -->
-              <div v-else-if="activeTab === 'warranty'" class="panel-section">
+              <div v-else-if="activeTab === 'wishlist'" class="panel-section">
                 <div class="panel-header">
                   <div class="panel-header-content">
-                    <Shield :size="22" class="panel-header-icon" />
+                    <Heart :size="22" class="panel-header-icon" />
                     <div>
-                      <div class="panel-title">Bảo hành & Gói mở rộng</div>
-                      <div class="panel-subtitle">Theo dõi phiếu BH hoặc đăng ký gói gia hạn</div>
+                      <div class="panel-title">Danh sách yêu thích</div>
+                      <div class="panel-subtitle">{{ wishlistItems.length }} sản phẩm</div>
                     </div>
                   </div>
                 </div>
-
-                <!-- Sub-tabs -->
-                <div class="sub-tabs">
-                  <button
-                    v-for="t in warrantySubTabs" :key="t.id"
-                    class="sub-tab"
-                    :class="{ 'is-active': warrantySubTab === t.id }"
-                    @click="warrantySubTab = t.id"
-                  >
-                    <component :is="t.icon" :size="14" />
-                    {{ t.label }}
-                    <span v-if="t.badge" class="sub-tab-badge">{{ t.badge }}</span>
-                  </button>
-                </div>
-
                 <div class="panel-content">
-                  <!-- Sub-tab 1: Phiếu bảo hành (WarrantyTab gốc) -->
-                  <WarrantyTab v-show="warrantySubTab === 'claims'" @toast="(m, ty) => emit('toast', m, ty)" @view-product="viewProductDetail" />
-
-                  <!-- Sub-tab 2: Gói bảo hành mở rộng (mới) -->
-                  <WarrantyPlanTab v-show="warrantySubTab === 'plans'" @toast="(m, ty) => emit('toast', m, ty)" />
-                </div>
-              </div>
-
-              <!-- ══════════════ TAB: ĐIỂM THƯỞNG & VOUCHER ══════════════ -->
-              <div v-else-if="activeTab === 'rewards'" class="panel-section">
-                <div class="panel-header">
-                  <div class="panel-header-content">
-                    <Gift :size="22" class="panel-header-icon" />
-                    <div>
-                      <div class="panel-title">Điểm thưởng & Voucher</div>
-                      <div class="panel-subtitle">{{ profile?.diemTichLuy ?? 0 }} điểm tích lũy</div>
-                    </div>
+                  <div v-if="wishlistLoading" class="loading-state">
+                    <div v-for="i in 4" :key="i"><Skeleton width="100%" height="72px" radius="12px" /></div>
                   </div>
-                </div>
-
-                <div class="panel-content">
-                  <!-- Vouchers -->
-                  <div class="rewards-card">
-                    <div class="rewards-card-title">
-                      <Ticket :size="16" />
-                      Voucher của bạn
-                      <span v-if="voucherCount > 0" class="count-pill">{{ voucherCount }}</span>
-                    </div>
-                    <div v-if="voucherCount === 0" class="rewards-empty">
-                      <Ticket :size="36" class="rewards-empty-icon" />
-                      <p>Bạn chưa đổi voucher nào.</p>
-                      <small>Mỗi lượt quay tốn 50 điểm. Hãy tích lũy điểm để đổi voucher nhé!</small>
-                    </div>
-                    <div v-else class="rewards-voucher-list">
-                      <div v-for="v in vouchers.slice(0, 5)" :key="v.id" class="rewards-voucher-item">
-                        <div class="voucher-discount">{{ formatVoucher(v) }}</div>
-                        <div class="voucher-info">
-                          <div class="voucher-code">{{ v.maCode }}</div>
-                          <div class="voucher-condition" v-if="v.dieuKienDonToiThieu">Đơn tối thiểu: {{ formatPriceRaw(v.dieuKienDonToiThieu) }}</div>
-                          <div class="voucher-expiry">HSD: {{ formatDate(v.ngayHetHan) }}</div>
-                        </div>
+                  <div v-else-if="wishlistItems.length === 0" class="empty-state">
+                    <div class="empty-icon-wrap"><Heart :size="48" /></div>
+                    <div class="empty-title">Chưa có sản phẩm yêu thích</div>
+                    <div class="empty-text">Lưu lại những sản phẩm bạn quan tâm để mua sau nhé!</div>
+                    <button class="btn-primary mt-4" @click="emit('go-home')"><ShoppingBag :size="14" /> Khám phá sản phẩm</button>
+                  </div>
+                  <div v-else class="wishlist-grid">
+                    <div v-for="item in wishlistItems" :key="item.bienTheId" class="wishlist-card" @click="viewProductDetail(item)">
+                      <div class="wishlist-thumb">
+                        <img v-if="item.hinhAnhChinh" :src="item.hinhAnhChinh" :alt="item.tenSanPham" />
+                        <Laptop v-else :size="32" />
+                      </div>
+                      <div class="wishlist-info">
+                        <div class="wishlist-name">{{ item.tenSanPham }}</div>
+                        <div class="wishlist-brand">{{ item.tenThuongHieu }}</div>
+                        <div class="wishlist-price">{{ formatPrice(item.giaBan) }}</div>
+                      </div>
+                      <div class="wishlist-actions" @click.stop>
+                        <button v-if="item.trangThai === 'active' && (item.soLuongTon ?? 0) > 0" class="btn-icon btn-icon--primary" @click="addWishlistItemToCart(item)" title="Thêm vào giỏ"><ShoppingCart :size="16" /></button>
+                        <span v-else class="out-of-stock-badge">Hết hàng</span>
+                        <button class="btn-icon btn-icon--danger" @click="removeWishlistItem(item)" title="Xóa"><X :size="16" /></button>
                       </div>
                     </div>
                   </div>
-
-                  <!-- Lucky Wheel -->
-                  <div class="rewards-card rewards-card--wheel">
-                    <div class="rewards-card-title">
-                      <Sparkles :size="16" />
-                      Vòng quay may mắn
-                    </div>
-                    <LuckyWheelPanel :points="profile?.diemTichLuy ?? 0" @spun="fetchProfile" />
-                  </div>
                 </div>
               </div>
 
-              <!-- ══════════════ TAB: TÀI KHOẢN & HỖ TRỢ ══════════════ -->
+              <div v-else-if="activeTab === 'wheel'" class="panel-section">
+                <div class="panel-header">
+                  <div class="panel-header-content">
+                    <Sparkles :size="22" class="panel-header-icon" />
+                    <div>
+                      <div class="panel-title">Vòng quay may mắn</div>
+                      <div class="panel-subtitle">{{ profile?.diemTichLuy ?? 0 }} điểm có thể quy đổi</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel-content">
+                  <LuckyWheelPanel :points="profile?.diemTichLuy ?? 0" @spun="fetchProfile" />
+                </div>
+              </div>
+
               <div v-else-if="activeTab === 'settings'" class="panel-section">
                 <div class="panel-header">
                   <div class="panel-header-content">
                     <Settings :size="22" class="panel-header-icon" />
                     <div>
-                      <div class="panel-title">Tài khoản & Hỗ trợ</div>
-                      <div class="panel-subtitle">Thông tin cá nhân, sổ địa chỉ, CSKH</div>
+                      <div class="panel-title">Cài đặt tài khoản</div>
+                      <div class="panel-subtitle">Quản lý thông tin và ưu đãi</div>
                     </div>
                   </div>
                 </div>
-
                 <div class="panel-content">
-                  <!-- Settings: profile (giữ code cũ nguyên) -->
-                  <div class="settings-section">
-                    <div class="settings-section-header">
-                      <User :size="16" />
-                      Thông tin cá nhân
+                  <div class="settings-card">
+                    <div class="settings-card-header">
+                      <div class="settings-card-icon"><Gift :size="18" /></div>
+                      <div class="settings-card-title">
+                        <div class="settings-card-name">Đổi thưởng</div>
+                        <div class="settings-card-desc">Tích lũy {{ profile?.diemTichLuy ?? 0 }} điểm</div>
+                      </div>
                     </div>
-                    <!-- (giữ nguyên profile form hiện có - chỉ giữ form, không hiện panel-header) -->
-                    <!-- TODO: dùng lại template settings cũ -->
-                  </div>
-
-                  <!-- Address book -->
-                  <div class="settings-section">
-                    <div class="settings-section-header">
-                      <MapPin :size="16" />
-                      Sổ địa chỉ
-                    </div>
-                    <div class="settings-section-empty">
-                      <MapPin :size="28" class="overview-empty-icon" />
-                      <span>Bạn chưa lưu địa chỉ nào</span>
-                      <button class="overview-empty-link">Thêm địa chỉ →</button>
-                    </div>
-                  </div>
-
-                  <!-- Support -->
-                  <div class="settings-section">
-                    <div class="settings-section-header">
-                      <HelpCircle :size="16" />
-                      Hỗ trợ khách hàng
-                    </div>
-                    <div class="settings-support-grid">
-                      <a href="tel:19001234" class="support-item">
-                        <Phone :size="20" />
-                        <div>
-                          <strong>Hotline</strong>
-                          <span>1900 1234</span>
+                    <div v-if="redeemError" class="alert-banner alert-banner--danger"><AlertTriangle :size="14" /> {{ redeemError }}</div>
+                    <div class="rewards-list">
+                      <div v-for="r in rewards.filter(x => x.trangThai === 'active')" :key="r.doiThuongId" class="reward-item">
+                        <div class="reward-info">
+                          <div class="reward-name">{{ r.ten }}</div>
+                          <div class="reward-cost">{{ r.diemCan }} điểm</div>
                         </div>
-                      </a>
-                      <a href="mailto:cskh@saophone.vn" class="support-item">
-                        <Mail :size="20" />
-                        <div>
-                          <strong>Email</strong>
-                          <span>cskh@saophone.vn</span>
-                        </div>
-                      </a>
-                      <button class="support-item">
-                        <MessageCircle :size="20" />
-                        <div>
-                          <strong>Live chat</strong>
-                          <span>Phản hồi trong 5 phút</span>
-                        </div>
-                      </button>
-                      <button class="support-item">
-                        <HelpCircle :size="20" />
-                        <div>
-                          <strong>FAQ</strong>
-                          <span>Câu hỏi thường gặp</span>
-                        </div>
-                      </button>
+                        <button class="btn-outline-secondary btn-sm" :disabled="(profile?.diemTichLuy ?? 0) < r.diemCan || redeemingId === r.doiThuongId" @click="redeemReward(r)">
+                          <Loader2 v-if="redeemingId === r.doiThuongId" :size="13" class="spin" /><span v-else>Đổi</span>
+                        </button>
+                      </div>
+                      <div v-if="rewards.filter(x => x.trangThai === 'active').length === 0" class="no-items">Không có phần thưởng nào khả dụng</div>
                     </div>
                   </div>
 
@@ -1059,9 +785,6 @@ const handleOutsideClick = (e) => {
       @submitted="returnModalOrder = null; fetchData();"
     />
   </div>
-
-  <!-- Floating chat widget — góc dưới bên phải, dùng chung cho cả khách đã đăng nhập -->
-  <ChatWidget />
 </template>
 
 <style scoped>
@@ -1327,399 +1050,6 @@ const handleOutsideClick = (e) => {
   box-shadow: var(--sh-1);
 }
 .panel-section { min-height: 500px; }
-/* ══════════════ OVERVIEW (đơn giản, giống ảnh mẫu) ══════════════ */
-.overview-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 14px;
-}
-.overview-card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.overview-card-icon { color: var(--pink-500); }
-.overview-card-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  flex: 1;
-}
-.overview-card-link {
-  background: transparent;
-  border: none;
-  color: var(--pink-500);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.overview-card-link:hover { text-decoration: underline; }
-.overview-badge-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  background: var(--success-light, #d1fae5);
-  color: var(--success, #059669);
-  padding: 3px 10px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 700;
-}
-.overview-loading { display: flex; flex-direction: column; gap: 8px; }
-.skel-row { background: var(--gray-100); height: 60px; border-radius: 8px; }
-
-.overview-empty {
-  text-align: center;
-  padding: 24px 16px;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-.overview-empty--inline {
-  padding: 20px 12px;
-}
-.overview-empty-icon { color: var(--text-muted); }
-.overview-empty-link {
-  background: transparent;
-  border: none;
-  color: var(--pink-500);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.overview-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.overview-order-list { display: flex; flex-direction: column; gap: 8px; }
-.overview-order-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-  background: var(--gray-50);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.overview-order-row:hover { background: var(--pink-50); border-color: var(--pink-200); }
-.overview-order-info { flex: 1; min-width: 0; }
-.overview-order-line1 {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  font-size: 12px;
-}
-.overview-order-label { color: var(--text-muted); font-size: 11.5px; }
-.overview-order-code { color: var(--text-primary); font-weight: 700; }
-.overview-order-dot { color: var(--text-muted); }
-.overview-order-date { color: var(--text-secondary); font-size: 11.5px; }
-.overview-order-line2 {
-  font-size: 12.5px;
-  color: var(--text-primary);
-  font-weight: 600;
-  margin-top: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.overview-order-right {
-  text-align: right;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-.overview-order-status {
-  background: var(--pink-100);
-  color: var(--pink-600);
-  padding: 3px 10px;
-  border-radius: 9999px;
-  font-size: 10.5px;
-  font-weight: 700;
-}
-.overview-order-total {
-  font-size: 11.5px;
-  color: var(--text-secondary);
-}
-.overview-order-total strong { color: var(--text-primary); font-size: 13px; }
-.overview-order-detail-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  background: transparent;
-  border: none;
-  color: var(--pink-500);
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.overview-voucher-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, var(--pink-50) 0%, var(--pink-100) 100%);
-  border-radius: 10px;
-  padding: 14px 16px;
-}
-.overview-voucher-count {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--pink-700);
-}
-.overview-voucher-count strong { font-size: 18px; color: var(--pink-600); }
-.overview-voucher-btn {
-  background: var(--pink-500);
-  color: white;
-  border: none;
-  border-radius: 9999px;
-  padding: 7px 16px;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 3px 0 var(--pink-700);
-}
-
-.overview-buyback { display: flex; flex-direction: column; gap: 6px; }
-.overview-buyback-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  padding: 8px 10px;
-  background: var(--gray-50);
-  border-radius: 8px;
-  color: var(--text-secondary);
-}
-.overview-buyback-row strong { color: var(--text-primary); }
-
-.overview-wishlist-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-}
-.overview-wishlist-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.overview-wishlist-card:hover { border-color: var(--pink-300); transform: translateY(-2px); }
-.overview-wishlist-thumb {
-  aspect-ratio: 1;
-  background: var(--gray-50);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  overflow: hidden;
-}
-.overview-wishlist-thumb img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
-.overview-wishlist-thumb svg { color: var(--text-muted); }
-.overview-wishlist-name {
-  font-size: 12px;
-  color: var(--text-primary);
-  font-weight: 600;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.3;
-}
-.overview-wishlist-price {
-  font-size: 12px;
-  color: var(--pink-600);
-  font-weight: 700;
-  margin-top: 4px;
-}
-
-/* Sub-tabs (Bảo hành) */
-.sub-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--gray-100);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  width: fit-content;
-}
-.sub-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 14px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.sub-tab:hover { color: var(--text-primary); }
-.sub-tab.is-active {
-  background: var(--bg-card);
-  color: var(--pink-600);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-.sub-tab-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background: var(--pink-500);
-  color: white;
-  border-radius: 9999px;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-/* Rewards tab */
-.rewards-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 14px;
-}
-.rewards-card--wheel { padding: 14px; }
-.rewards-card-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-}
-.rewards-card-title :first-child { color: var(--pink-500); }
-.rewards-empty {
-  text-align: center;
-  padding: 30px 16px;
-  color: var(--text-secondary);
-}
-.rewards-empty-icon { color: var(--text-muted); margin-bottom: 8px; }
-.rewards-empty p { font-size: 13px; font-weight: 600; margin: 4px 0; }
-.rewards-empty small { font-size: 11.5px; color: var(--text-muted); }
-
-.rewards-voucher-list { display: flex; flex-direction: column; gap: 8px; }
-.rewards-voucher-item {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 10px 12px;
-  background: linear-gradient(135deg, var(--pink-50) 0%, transparent 100%);
-  border: 1px dashed var(--pink-300, #fbcfe8);
-  border-radius: 10px;
-}
-.voucher-discount {
-  background: var(--pink-500);
-  color: white;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.voucher-info { flex: 1; }
-.voucher-code {
-  font-family: 'SF Mono', monospace;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-.voucher-condition, .voucher-expiry {
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-/* Settings sections */
-.settings-section {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 14px;
-}
-.settings-section-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px dashed var(--border);
-}
-.settings-section-header :first-child { color: var(--pink-500); }
-.settings-section-empty {
-  text-align: center;
-  padding: 20px 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-}
-.settings-support-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.support-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  background: var(--gray-50);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-  text-align: left;
-  text-decoration: none;
-  color: inherit;
-  transition: all 0.15s ease;
-}
-.support-item:hover { background: var(--pink-50); border-color: var(--pink-300); transform: translateY(-1px); }
-.support-item :first-child {
-  color: var(--pink-500);
-  flex-shrink: 0;
-}
-.support-item strong { display: block; font-size: 13px; color: var(--text-primary); }
-.support-item span { font-size: 11.5px; color: var(--text-secondary); }
-
-@media (max-width: 767.98px) {
-  .overview-grid { grid-template-columns: 1fr; }
-  .settings-support-grid { grid-template-columns: 1fr; }
-  .overview-order-row { flex-direction: column; align-items: stretch; }
-  .overview-order-right { align-items: flex-start; text-align: left; }
-}
-
 
 .panel-header {
   padding: 16px 22px;
@@ -1894,7 +1224,7 @@ const handleOutsideClick = (e) => {
 .wishlist-name {
   font-weight: 700; font-size: 13.5px; color: var(--text-primary);
   line-height: 1.4;
-  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .wishlist-brand { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 .wishlist-price { font-weight: 800; font-size: 1rem; color: var(--pink-500); margin-top: 6px; }

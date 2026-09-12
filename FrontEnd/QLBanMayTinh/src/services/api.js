@@ -20,8 +20,17 @@ const headers = () => ({ 'Content-Type': 'application/json', ...authHeaders() })
 // request cứ lỗi âm thầm (bảng trống/lỗi thô) đến khi khách tự F5/đăng nhập lại. Chỉ đăng
 // xuất 1 lần dù nhiều request 401 cùng lúc (vd trang có vài fetch song song).
 let dangDangXuatDoHetPhien = false;
+const hasTokenSession = () => {
+  try {
+    const session = JSON.parse(sessionStorage.getItem('saophone_session'));
+    return Boolean(session?.token);
+  } catch {
+    return false;
+  }
+};
+
 const kiemTraHetPhien = (r) => {
-  if (r.status === 401 && !dangDangXuatDoHetPhien) {
+  if (r.status === 401 && hasTokenSession() && !dangDangXuatDoHetPhien) {
     dangDangXuatDoHetPhien = true;
     clearSession();
     resetAllStores();
