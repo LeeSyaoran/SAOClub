@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, reactive, watch, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { t } from "../../i18n/index.js";
 import {
   CheckCircle2, XCircle, Clock, Package, ClipboardList, BarChart3, AlertTriangle,
@@ -24,6 +25,8 @@ import { StaffStore, ensureStaff } from "../../stores/staff.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
 
+const router = useRouter();
+
 // products/inventory: chi doc (khong CRUD o day) — ProductsStore da duoc tai eager tu
 // fetchAll() (AdminPage.vue), goi lai ensureProducts() o day chi de an toan neu component
 // nay lo mount truoc luc do (cached-promise, khong tai trung).
@@ -45,7 +48,9 @@ const suppliers = computed(() => SuppliersStore.items ?? []);
 const staff = computed(() => StaffStore.items ?? []);
 
 // ── Tab noi bo: Ton kho | Phieu nhap kho ──────────────────────────────────────
-const khoTab = ref('ton-kho'); // 'ton-kho' | 'phieu-nhap'
+const KHO_TAB_STORAGE_KEY = "admin.inventory.khoTab";
+const khoTab = ref(sessionStorage.getItem(KHO_TAB_STORAGE_KEY) || 'ton-kho'); // 'ton-kho' | 'phieu-nhap'
+watch(khoTab, (val) => sessionStorage.setItem(KHO_TAB_STORAGE_KEY, val));
 
 const getVariantInfo = (item) => products.value.find(p => p.bienTheId === item.bienThe?.bienTheId);
 const maSanPhamCuaItem = (item) => {
@@ -912,20 +917,17 @@ const phieuNhapDetailData = ref(null);
 const phieuNhapDetailItems = computed(() =>
   chiTietPhieuNhapList.value.filter(c => c.phieuNhapId === phieuNhapDetailData.value?.phieuNhapId),
 );
-// Serial đã chuyển sang trang riêng (PhieuNhapSerialPage) — modal chi tiết không cần tải nữa.
+// Mở thẳng trang chi tiết phiếu nhập mới (PhieuNhapSerialPage) với giao diện đầy đủ,
+// chuẩn chỉnh theo thiết kế (có nút Xem serial mở modal tab con, nút Quay lại, v.v.).
 const openPhieuNhapDetail = (p) => {
-  phieuNhapDetailData.value = p;
-  showPhieuNhapDetailModal.value = true;
+  if (!p?.phieuNhapId) return;
+  router.push(`/admin/phieu-nhap/${p.phieuNhapId}/serial`);
 };
 
-// Mở tab mới với trang chuyên hiển thị serial — gom toàn bộ dòng serial của phiếu ra 1 view
-// riêng, dễ in/Ctrl+P, không phụ thuộc modal cha (đã xoá toggle "Xem serial" inline ở modal
-// chi tiết vì chỗ đó quá chật).
 const openPhieuNhapSerialTab = (p) => {
   if (!p?.phieuNhapId) return;
-  const base = window.location.href.split('#')[0];
-  const hash = `#/admin/phieu-nhap/${p.phieuNhapId}/serial`;
-  window.open(base + hash, '_blank', 'noopener');
+  showPhieuNhapDetailModal.value = false;
+  router.push(`/admin/phieu-nhap/${p.phieuNhapId}/serial`);
 };
 
 // Phiếu nhập kho chỉ là chứng từ đối soát nhà cung cấp — hoàn toàn tách rời việc nhập serial
@@ -1515,28 +1517,26 @@ const exportPhieuNhapExcel = () => {
           <table class="inv-table">
             <thead>
               <tr>
-                <th>{{ t('admin.inventory.colSku') }}</th>
-                <th class="ta-c">{{ t('admin.phieuNhapModal.qtyPlaceholder') }}</th>
-                <th class="ta-c">{{ t('admin.phieuNhapModal.actualStockLabel') }}</th>
-                <th class="ta-r">{{ t('admin.phieuNhapModal.unitPricePlaceholder') }}</th>
-                <th class="ta-r">{{ t('admin.phieuNhapModal.totalLabel') }}</th>
+                <th style="width:36%;">{{ t('admin.inventory.colSku') }}</th>
+                <th class="ta-r" style="width:24%;">{{ t('admin.phieuNhapModal.unitPricePlaceholder') }}</th>
+                <th class="ta-r" style="width:24%;">{{ t('admin.phieuNhapModal.totalLabel') }}</th>
+                <th class="ta-c" style="width:16%;">Thao tác</th>
               </tr>
             </thead>
             <tbody>
               <template v-for="c in phieuNhapDetailItems" :key="c.id">
                 <tr class="inv-row">
                   <td class="inv-code">{{ c.maSku }}</td>
-                  <td class="ta-c" style="font-weight:700;">{{ c.soLuong }}</td>
-                  <td class="ta-c">
-                    <span :class="tonThucTeCuaBienThe(c.bienTheId) < c.soLuong ? 'text-warning' : 'text-success'" :title="t('admin.phieuNhapModal.actualStockHint')">
-                      {{ tonThucTeCuaBienThe(c.bienTheId) }}
-                    </span>
-                  </td>
                   <td class="ta-r inv-muted">{{ formatPrice(c.donGiaNhap) }}</td>
                   <td class="ta-r inv-price">{{ formatPrice(c.thanhTien) }}</td>
+                  <td class="ta-c">
+                    <button class="inv-btn inv-btn--ghost" style="padding:4px 10px;font-size:12px;" @click="openPhieuNhapSerialTab(phieuNhapDetailData)">
+                      # Xem serial
+                    </button>
+                  </td>
                 </tr>
               </template>
-              <tr v-if="phieuNhapDetailItems.length===0"><td colspan="5" class="inv-empty">{{ t('admin.phieuNhap.empty') }}</td></tr>
+              <tr v-if="phieuNhapDetailItems.length===0"><td colspan="4" class="inv-empty">{{ t('admin.phieuNhap.empty') }}</td></tr>
             </tbody>
           </table>
         </div>

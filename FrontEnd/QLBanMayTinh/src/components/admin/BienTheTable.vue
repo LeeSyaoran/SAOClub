@@ -192,7 +192,7 @@ const marginOf = (p) => {
   if (!ban || !nhap) return null;
   return (((ban - nhap) / ban) * 100).toFixed(1);
 };
-const colCount = computed(() => (props.canViewCost ? 8 : 7));
+const colCount = computed(() => (props.canViewCost ? 9 : 8));
 
 // ── Ve ma vach ───────────────────────────────────────────────────────────────────────
 // Mã vạch sinh từ CSDL là EAN-13 (13 số, có chữ số kiểm tra) → vẽ đúng chuẩn EAN13 để máy
@@ -208,9 +208,8 @@ const drawBarcode = (el, value, opts = {}) => {
     try { JsBarcode(el, value, { format: 'CODE128', ...base }); } catch { /* bỏ qua */ }
   }
 };
-// Ve qua ref callback ngay khi <svg> mount — chi render cho dong dang hien (pagedVariants),
-// khong ton cong ve het 41+ bien the cung luc.
 const renderBarcodeBig = (el, value) => drawBarcode(el, value, { height: 60, width: 2, displayValue: true, fontSize: 14 });
+const renderBarcodeTable = (el, value) => drawBarcode(el, value, { height: 28, width: 1.15, displayValue: true, fontSize: 10.5, font: 'monospace', textMargin: 3, margin: 2, background: '#ffffff', lineColor: '#111827' });
 
 const escapeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -708,6 +707,7 @@ const saveVariant = async () => {
             <th class="vt-col-stt">{{ t('admin.common.stt') }}</th>
             <th class="vt-col-img">{{ t('admin.variants.colImage') }}</th>
             <th class="vt-col-sku">{{ t('admin.variants.colSku') }}</th>
+            <th class="vt-col-barcode">{{ tt('admin.variants.colBarcode', 'Mã vạch') }}</th>
             <th class="vt-col-name">{{ t('admin.variants.colProduct') }}</th>
             <th class="vt-col-config">{{ t('admin.variants.colConfig') }}</th>
             <th v-if="canViewCost" class="vt-col-price">{{ tt('admin.variants.colPriceBuy', 'Giá nhập') }}</th>
@@ -730,13 +730,20 @@ const saveVariant = async () => {
               </div>
             </td>
             <td class="vt-sku" :title="p.maSku">{{ p.maSku }}</td>
+            <td class="vt-barcode">
+              <div v-if="p.barcode" class="hh-barcode-card" :title="'Mã vạch: ' + p.barcode">
+                <svg :key="p.barcode" :ref="(el) => renderBarcodeTable(el, p.barcode)"></svg>
+              </div>
+              <span v-else class="vt-muted">—</span>
+            </td>
             <td class="vt-name" :title="p.tenSanPham">{{ p.tenSanPham }}</td>
             <td class="vt-config">
               <div class="vt-config__list">
-                <span v-if="p.cpu" class="vt-config-chip"><Cpu :size="12" />{{ shortCpu(p.cpu) }}</span>
-                <span v-if="p.ram" class="vt-config-chip"><MemoryStick :size="12" />{{ p.ram }}</span>
-                <span v-if="p.oCung" class="vt-config-chip"><HardDrive :size="12" />{{ p.oCung }}</span>
-                <span v-if="p.mauSac" class="vt-config-chip vt-config-chip--color"><Palette :size="12" />{{ p.mauSac }}</span>
+                <span v-if="p.cpu" class="vt-config-chip" :title="'CPU: ' + p.cpu"><Cpu :size="12" />{{ p.cpu }}</span>
+                <span v-if="p.ram" class="vt-config-chip" :title="'RAM: ' + p.ram"><MemoryStick :size="12" />{{ p.ram }}</span>
+                <span v-if="p.oCung" class="vt-config-chip" :title="'Ổ cứng: ' + p.oCung"><HardDrive :size="12" />{{ p.oCung }}</span>
+                <span v-if="p.gpu" class="vt-config-chip" :title="'Card đồ họa: ' + p.gpu"><Monitor :size="12" />{{ p.gpu }}</span>
+                <span v-if="p.mauSac" class="vt-config-chip vt-config-chip--color" :title="'Màu sắc: ' + p.mauSac"><Palette :size="12" />{{ p.mauSac }}</span>
               </div>
             </td>
             <td v-if="canViewCost" class="vt-col-price vt-muted">{{ formatPrice(p.giaNhap) }}</td>
@@ -1291,9 +1298,10 @@ const saveVariant = async () => {
 
 .vt-col-stt { width: 54px; }
 .vt-col-img { width: 56px; }
-.vt-col-sku { width: 150px; }
-.vt-col-name { width: 200px; }
-.vt-col-config { width: 220px; }
+.vt-col-sku { width: 140px; }
+.vt-col-barcode { width: 130px; }
+.vt-col-name { width: 190px; }
+.vt-col-config { width: 230px; }
 .vt-col-color { width: 90px; }
 .vt-col-num { width: 80px; text-align: center; }
 .vt-col-price { width: 110px; text-align: right; white-space: nowrap; }
@@ -1310,6 +1318,30 @@ const saveVariant = async () => {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.76rem;
   color: var(--pink-700); font-weight: 700;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vt-barcode { white-space: nowrap; width: 140px; }
+.hh-barcode-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px 3px;
+  background: #fff;
+  border: 1px solid var(--pink-200);
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(168, 27, 93, 0.04);
+  transition: border-color .15s, box-shadow .15s, transform .12s;
+  user-select: none;
+}
+.hh-barcode-card:hover {
+  border-color: var(--pink-300);
+  box-shadow: 0 2px 6px rgba(168, 27, 93, 0.08);
+  transform: translateY(-1px);
+}
+.hh-barcode-card svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 .vt-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .vt-config { color: var(--muted); overflow: hidden; }

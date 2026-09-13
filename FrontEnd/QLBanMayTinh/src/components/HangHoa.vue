@@ -315,10 +315,36 @@
                     >
                       <td class="hh-vt__sku">{{ v.maSku }}</td>
                       <td class="hh-vt__barcode">
-                        <template v-if="v.barcode"><i class="fa fa-barcode"></i> {{ v.barcode }}</template>
+                        <div v-if="v.barcode" class="hh-barcode-card" :title="'Mã vạch: ' + v.barcode">
+                          <svg :key="v.barcode" :ref="(el) => renderBarcode(el, v.barcode)"></svg>
+                        </div>
                         <span v-else class="hh-muted">Chưa có</span>
                       </td>
-                      <td class="hh-vt__cfg">{{ moTaBienThe(v) || 'Phiên bản tiêu chuẩn' }}</td>
+                      <td class="hh-vt__cfg">
+                        <div v-if="coThongSoBienThe(v)" class="hh-cfg-chips">
+                          <span v-if="layCpu(v)" class="hh-cfg-chip hh-cfg-chip--cpu" :title="'CPU: ' + layCpu(v)">
+                            <Cpu :size="12" />
+                            <span>{{ layCpu(v) }}</span>
+                          </span>
+                          <span v-if="layRam(v)" class="hh-cfg-chip hh-cfg-chip--ram" :title="'RAM: ' + layRam(v)">
+                            <MemoryStick :size="12" />
+                            <span>{{ layRam(v) }}</span>
+                          </span>
+                          <span v-if="layOCung(v)" class="hh-cfg-chip hh-cfg-chip--disk" :title="'Ổ cứng: ' + layOCung(v)">
+                            <HardDrive :size="12" />
+                            <span>{{ layOCung(v) }}</span>
+                          </span>
+                          <span v-if="layGpu(v)" class="hh-cfg-chip hh-cfg-chip--gpu" :title="'Card đồ họa: ' + layGpu(v)">
+                            <Monitor :size="12" />
+                            <span>{{ layGpu(v) }}</span>
+                          </span>
+                          <span v-if="v.mauSac" class="hh-cfg-chip hh-cfg-chip--color" :title="'Màu sắc: ' + v.mauSac">
+                            <Palette :size="12" />
+                            <span>{{ v.mauSac }}</span>
+                          </span>
+                        </div>
+                        <span v-else class="hh-muted">{{ moTaBienThe(v) || 'Phiên bản tiêu chuẩn' }}</span>
+                      </td>
                       <td class="ta-r hh-muted">{{ formatNumber(v.giaVon) }}</td>
                       <td class="ta-r hh-vt__gia">{{ formatNumber(v.giaBan) }}</td>
                       <td>
@@ -871,6 +897,8 @@ import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '
 import * as bienTheApi from '@/services/bienTheSanPhamService.js'
 import * as sanPhamApi from '@/services/sanPhamService.js'
 import { getLichSu } from '@/services/SanPhamService.js'
+import { Cpu, MemoryStick, HardDrive, Palette, Monitor, Barcode } from '@lucide/vue'
+import JsBarcode from 'jsbarcode'
 
 /* ════════════════════════════════════════════════════════════
  * LỚP GỌI API
@@ -1141,6 +1169,54 @@ const bienTheChuan = computed(() =>
 
 const barcodeDaDung = computed(() => new Set(bienTheChuan.value.map((v) => v.barcode).filter(Boolean)))
 const moTaBienThe = (v) => [v.mauSac, v.tenCpu, v.tenRam, v.tenOCung, v.tenGpu].filter(Boolean).join(' · ')
+const layTen = (val) => {
+  if (!val) return ''
+  if (typeof val === 'string') return val
+  return val.tenCpu || val.dungLuong || val.loaiOCung || val.loaiOcung || val.tenGpu || val.ten || ''
+}
+const layCpu = (v) => v?.tenCpu || layTen(v?.cpu) || ''
+const layRam = (v) => v?.tenRam || layTen(v?.ram) || ''
+const layOCung = (v) => v?.tenOCung || layTen(v?.oCung) || layTen(v?.loaiOCung) || ''
+const layGpu = (v) => v?.tenGpu || layTen(v?.gpu) || ''
+const coThongSoBienThe = (v) => !!(layCpu(v) || layRam(v) || layOCung(v) || layGpu(v) || v?.mauSac)
+
+const renderBarcode = (el, value) => {
+  if (!el || !value) return
+  const s = String(value).trim()
+  if (!s) return
+  try {
+    const isEan13 = /^\d{13}$/.test(s)
+    JsBarcode(el, s, {
+      format: isEan13 ? 'EAN13' : 'CODE128',
+      width: 1.15,
+      height: 28,
+      displayValue: true,
+      fontSize: 10.5,
+      font: 'monospace',
+      textMargin: 3,
+      margin: 2,
+      background: '#ffffff',
+      lineColor: '#111827'
+    })
+  } catch (e) {
+    try {
+      JsBarcode(el, s, {
+        format: 'CODE128',
+        width: 1.15,
+        height: 28,
+        displayValue: true,
+        fontSize: 10.5,
+        font: 'monospace',
+        textMargin: 3,
+        margin: 2,
+        background: '#ffffff',
+        lineColor: '#111827'
+      })
+    } catch (err) {
+      console.warn('Barcode render failed:', s, err)
+    }
+  }
+}
 
 const khoangGia = (ds) => {
   if (!ds.length) return '—'
@@ -2824,8 +2900,61 @@ const submitForm = async () => {
 .hh-vt__row.is-on { background: var(--pink-100); }
 .hh-vt__row.is-on td:first-child { box-shadow: inset 3px 0 0 var(--pink-600); }
 .hh-vt__sku { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-weight: 700; white-space: nowrap; }
-.hh-vt__barcode { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
-.hh-vt__cfg { color: var(--muted); min-width: 200px; }
+.hh-vt__barcode { white-space: nowrap; width: 140px; }
+.hh-barcode-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px 3px;
+  background: #fff;
+  border: 1px solid var(--pink-200);
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(168, 27, 93, 0.04);
+  transition: border-color .15s, box-shadow .15s, transform .12s;
+  user-select: none;
+}
+.hh-barcode-card:hover {
+  border-color: var(--pink-300);
+  box-shadow: 0 2px 6px rgba(168, 27, 93, 0.08);
+  transform: translateY(-1px);
+}
+.hh-barcode-card svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.hh-vt__cfg { color: var(--muted); min-width: 260px; }
+.hh-cfg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 520px;
+}
+.hh-cfg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--pink-100);
+  color: var(--pink-700);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: background .15s, transform .12s;
+  user-select: none;
+}
+.hh-cfg-chip:hover {
+  background: var(--pink-200);
+  transform: translateY(-1px);
+}
+.hh-cfg-chip svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
 .hh-vt__gia { font-weight: 700; color: var(--pink-600); font-variant-numeric: tabular-nums; }
 
 /* nhật ký thay đổi */

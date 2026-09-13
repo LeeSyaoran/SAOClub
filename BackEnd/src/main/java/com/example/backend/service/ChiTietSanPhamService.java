@@ -37,18 +37,28 @@ public class ChiTietSanPhamService {
 
     private static final Logger log = LoggerFactory.getLogger(ChiTietSanPhamService.class);
 
+    private final ChiTietSanPhamRepository chiTietSanPhamRepository;
+    private final BienTheSanPhamRepository bienTheSanPhamRepository;
+    private final PhieuNhapKhoRepository phieuNhapKhoRepository;
+    private final LichSuTonKhoRepository lichSuTonKhoRepository;
+    private final SseService sseService;
+    private final NhanVienRepository nhanVienRepository;
+
     @Autowired
-    private ChiTietSanPhamRepository chiTietSanPhamRepository;
-    @Autowired
-    private BienTheSanPhamRepository bienTheSanPhamRepository;
-    @Autowired
-    private PhieuNhapKhoRepository phieuNhapKhoRepository;
-    @Autowired
-    private LichSuTonKhoRepository lichSuTonKhoRepository;
-    @Autowired
-    private SseService sseService;
-    @Autowired
-    private NhanVienRepository nhanVienRepository;
+    public ChiTietSanPhamService(
+            ChiTietSanPhamRepository chiTietSanPhamRepository,
+            BienTheSanPhamRepository bienTheSanPhamRepository,
+            PhieuNhapKhoRepository phieuNhapKhoRepository,
+            LichSuTonKhoRepository lichSuTonKhoRepository,
+            SseService sseService,
+            NhanVienRepository nhanVienRepository) {
+        this.chiTietSanPhamRepository = chiTietSanPhamRepository;
+        this.bienTheSanPhamRepository = bienTheSanPhamRepository;
+        this.phieuNhapKhoRepository = phieuNhapKhoRepository;
+        this.lichSuTonKhoRepository = lichSuTonKhoRepository;
+        this.sseService = sseService;
+        this.nhanVienRepository = nhanVienRepository;
+    }
 
     public List<ChiTietSanPhamResponse> hienThiChiTietSanPham() {
         // KHÔNG gọi releaseOrphanSerials() ở đây — trước đây đã gây bug:

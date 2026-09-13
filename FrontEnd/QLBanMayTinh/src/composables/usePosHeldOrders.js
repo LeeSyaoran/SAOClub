@@ -1,6 +1,7 @@
-import { ref, watch } from 'vue';
+// usePosHeldOrders — hold / resume / delete pending POS orders
+import { ref } from "vue";
 
-const STORAGE_KEY = 'saophone_pos_held_orders';
+const STORAGE_KEY = "saophone_pos_held_orders";
 
 export function usePosHeldOrders() {
   const heldOrders = ref([]);
@@ -8,42 +9,36 @@ export function usePosHeldOrders() {
   // Load from localStorage on init
   const loadFromStorage = () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      heldOrders.value = stored ? JSON.parse(stored) : [];
+      const raw = localStorage.getItem(STORAGE_KEY);
+      heldOrders.value = raw ? JSON.parse(raw) : [];
     } catch {
       heldOrders.value = [];
     }
   };
-
   loadFromStorage();
 
   // Sync when other tabs change localStorage
-  if (typeof window !== 'undefined') {
-    window.addEventListener('storage', (e) => {
-      if (e.key === STORAGE_KEY) {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          heldOrders.value = raw ? JSON.parse(raw) : [];
-        } catch { heldOrders.value = []; }
-      }
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === STORAGE_KEY) loadFromStorage();
     });
   }
 
   const saveToStorage = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(heldOrders.value));
-    } catch { /* quota exceeded or serialization fail */ }
+    } catch { /* quota exceeded */ }
   };
 
-  const saveOrder = (cart, customerId, staffId, extras = {}) => {
-    const now = new Date();
+  // cart + extras object (phone, foundCust, promoCode, appliedPromo, paymentMethod)
+  const saveOrder = (cart, extras = {}) => {
     const order = {
       id: Date.now(),
-      heldAt: now.toISOString(),
+      heldAt: new Date().toISOString(),
       cart: [...cart],
-      phone: extras.phone || '',
+      phone: extras.phone || "",
       foundCust: extras.foundCust || null,
-      promoCode: extras.promoCode || '',
+      promoCode: extras.promoCode || "",
       appliedPromo: extras.appliedPromo || null,
       paymentMethod: extras.paymentMethod || null,
     };
@@ -52,15 +47,14 @@ export function usePosHeldOrders() {
     return order;
   };
 
-  const loadOrder = (orderId) => {
-    return heldOrders.value.find(o => o.id === orderId) || null;
-  };
+  const loadOrder = (orderId) =>
+    heldOrders.value.find((o) => o.id === orderId) || null;
 
   const deleteOrder = (orderId) => {
-    const held = heldOrders.value.find(o => o.id === orderId);
-    heldOrders.value = heldOrders.value.filter(o => o.id !== orderId);
+    const held = heldOrders.value.find((o) => o.id === orderId);
+    heldOrders.value = heldOrders.value.filter((o) => o.id !== orderId);
     saveToStorage();
-    return held; // return for caller to release serials if needed
+    return held; // caller releases serials if needed
   };
 
   const clearAllHeld = () => {
