@@ -8,6 +8,9 @@ export const getByBienThe = (bienTheId) => get(`/api/chi-tiet-san-pham/bien-the/
 // Lấy serial đã nhập theo 1 phiếu nhập cụ thể — dùng cho màn chi tiết phiếu nhập
 export const getByPhieuNhap = (phieuNhapId) => get(`/api/chi-tiet-san-pham/phieu-nhap/${phieuNhapId}`);
 
+// POS barcode scan — tìm theo barcode (bien_the) hoặc so_serial (chi_tiet_san_pham)
+export const scanBarcode = (code) => get(`/api/chi-tiet-san-pham/scan/${encodeURIComponent(code)}`);
+
 export const create = (body) => post('/api/chi-tiet-san-pham', body);
 
 export const update = (id, body) => put(`/api/chi-tiet-san-pham/update/${id}`, body);
@@ -17,7 +20,3 @@ export const remove = (id) => del(`/api/chi-tiet-san-pham/delete/${id}`);
 
 // Serial đã bán còn trong hạn bảo hành (server tự lọc theo ngày, hết hạn tự rớt khỏi danh sách).
 export const getUnderWarranty = () => get('/api/chi-tiet-san-pham/con-bao-hanh');
-
-// Lưu ý: việc dọn rác serial 'giu_hang' bị kẹt (đơn đã bị xóa/hủy hoặc user đóng tab POS
-// giữa chừng) được backend xử l TỰ ĐỘNG mỗi khi frontend gọi getAll() ở SerialManager.
-// Không cần endpoint riêng — flow tự nhiên: mở tab Kho hàng → load → backend dọn → hiển thị.

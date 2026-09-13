@@ -457,7 +457,7 @@ onBeforeUnmount(() => {
 
     <CheckoutModal
       v-model="showCheckout"
-      :cart="cart.filter(i => cartSelected.value.has(i.bienTheId))"
+      :cart="cart.filter(i => cartSelected.has(i.bienTheId))"
       :cart-total="cartSelectedTotal"
       @order-placed="handleOrderPlaced"
     />

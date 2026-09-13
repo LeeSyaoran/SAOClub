@@ -19,7 +19,7 @@ public class SanPhamResponse {
     private String tenSanPham;
     private Integer danhMucId;
     private String tenDanhMuc;
-    private Integer maDanhMuc;
+    private Integer maDanhMuc;  // cùng dm.id với danhMucId
     private Integer thuongHieuId;
     private String tenThuongHieu;
     private String tenNhaCungCap;

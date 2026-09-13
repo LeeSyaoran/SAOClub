@@ -103,12 +103,15 @@ const posQrImageFailed = ref(false);
 
 const posProducts = computed(() => {
   const q = boDauTiengViet(posSearch.value.toLowerCase());
+  const cat = posCatalogCategory.value;
   return ProductsStore.items.filter(
     (p) =>
       p.trangThai === "active" &&
+      (!cat || p.maDanhMuc === cat || p.danhMucId === cat) &&
       (!q ||
         boDauTiengViet(p.tenSanPham).includes(q) ||
-        boDauTiengViet(p.maSku ?? "").includes(q)),
+        boDauTiengViet(p.maSku ?? "").includes(q) ||
+        boDauTiengViet(p.barcode ?? "").includes(q)),
   );
 });
 
@@ -365,7 +368,52 @@ const posDeleteHeld = async (id) => {
 // neu chi co 1 lua chon — xem App.vue handleQuickAdd). Bam "Tiep tuc chon serial" se
 // goi thang posOpenSerialPicker() hien co, khong doi gi ben trong ham do.
 const showVariantPicker = ref(false);
-const variantPickerBase = ref(null); // san pham dai dien vua bam (tu posProductGroups)
+const variantPickerBase = ref(null);
+
+// ── POS Catalog: categories + barcode scan ─────────────────────────────────────
+const posCategories = ref([]);
+const posCatalogCategory = ref(null);
+const posBarcodeInput = ref("");
+const posBarcodeError = ref("");
+
+onMounted(async () => {
+  try {
+    const { getActive } = await import("../../services/DanhMucService.js");
+    posCategories.value = await getActive();
+  } catch {}
+});
+
+const posHandleBarcode = async () => {
+  const code = posBarcodeInput.value.trim();
+  if (!code) return;
+  posBarcodeError.value = "";
+  try {
+    const data = await ChiTietSanPhamService.scanBarcode(code);
+    if (!data || data.error) {
+      posBarcodeError.value = data?.error || "Không tìm thấy mã " + code;
+      return;
+    }
+    // tim bien the trong ProductsStore theo bienTheId
+    const variant = ProductsStore.items.find(v => v.bienTheId === data.bienTheId);
+    if (!variant) {
+      posBarcodeError.value = "Sản phẩm không có trong danh sách hàng hóa";
+      return;
+    }
+    posBarcodeInput.value = "";
+    posBarcodeError.value = "";
+    // Dong catalog overlay (neu dang mo) roi mo variant picker voi bien the chinh xac
+    showCatalog.value = false;
+    posOpenVariantPicker(variant);
+    // Auto-select trong modal picker: chon dung config + mau cua bien the
+    await new Promise(r => setTimeout(r, 50));
+    if (data.sanPhamId) {
+      variantPickerActiveConfigKey.value = configKey(variant);
+      variantPickerActiveColor.value = variant.mauSac ?? '';
+    }
+  } catch {
+    posBarcodeError.value = "Lỗi khi quét mã vạch";
+  }
+};
 const variantPickerActiveConfigKey = ref('');
 const variantPickerActiveColor = ref('');
 
@@ -1064,6 +1112,18 @@ const posPlaceOrder = async () => {
           <Search :size="16" class="pos-catalog-search__icon" />
           <input v-model="posSearch" :placeholder="t('admin.pos.searchPlaceholder')" />
         </div>
+        <!-- Barcode scan: quet ma vach nhanh -->
+        <div class="pos-barcode-scan">
+          <input
+            v-model="posBarcodeInput"
+            :placeholder="t('admin.pos.barcodePlaceholder')"
+            class="pos-barcode-input"
+            @keyup.enter="posHandleBarcode"
+          />
+          <button class="pos-barcode-btn" @click="posHandleBarcode">
+            <Search :size="14" />
+          </button>
+        </div>
         <div class="d-flex align-items-center gap-2">
           <span class="pos-cart-badge"><ShoppingCart :size="14" />{{ posCart.length }}</span>
           <button class="alt-btn alt-btn--primary" @click="showCatalog = false">{{ t('admin.pos.doneAdding') }}</button>
@@ -1071,8 +1131,25 @@ const posPlaceOrder = async () => {
         </div>
       </div>
 
+      <!-- Category tabs -->
+      <div class="pos-catalog-tabs">
+        <button
+          class="pos-tab"
+          :class="{ active: posCatalogCategory === null }"
+          @click="posCatalogCategory = null"
+        >Tất cả</button>
+        <button
+          v-for="cat in posCategories"
+          :key="cat.id"
+          class="pos-tab"
+          :class="{ active: posCatalogCategory === cat.id }"
+          @click="posCatalogCategory = cat.id"
+        >{{ cat.tenDanhMuc }}</button>
+      </div>
+
       <div class="pos-catalog-body">
         <div v-if="ProductsStore.loading" class="text-secondary small">{{ t('admin.pos.loading') }}</div>
+        <div v-if="posBarcodeError" class="pos-barcode-error">{{ posBarcodeError }}</div>
 
         <template v-else>
           <!-- Product grid -->
@@ -1382,6 +1459,38 @@ const posPlaceOrder = async () => {
   flex: 1;
   overflow-y: auto;
   padding: 18px 20px;
+}
+.pos-catalog-tabs {
+  display: flex; gap: 6px; padding: 10px 16px;
+  border-bottom: 1px solid var(--border-color-soft);
+  overflow-x: auto; flex-shrink: 0;
+}
+.pos-tab {
+  padding: 5px 14px; border-radius: 999px; font-size: 0.78rem;
+  border: 1.5px solid var(--border-color-strong); cursor: pointer; white-space: nowrap;
+  background: transparent; color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.pos-tab:hover { border-color: var(--accent-bg); color: var(--accent-fg); }
+.pos-tab.active { background: var(--accent-bg); color: var(--accent-fg); border-color: var(--accent-bg); font-weight: 600; }
+.pos-barcode-scan {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bg-input); border: 1.5px solid var(--border-color-strong);
+  border-radius: 999px; padding: 3px 6px 3px 12px;
+}
+.pos-barcode-input {
+  background: transparent; border: none; outline: none;
+  color: var(--text-primary); font-size: 0.82rem; width: 140px;
+}
+.pos-barcode-input::placeholder { color: var(--text-muted); }
+.pos-barcode-btn {
+  background: var(--accent-bg); color: var(--accent-fg); border: none;
+  border-radius: 999px; padding: 4px 10px; cursor: pointer; display: flex; align-items: center;
+}
+.pos-barcode-btn:hover { opacity: 0.85; }
+.pos-barcode-error {
+  padding: 8px 16px; color: #e05252; font-size: 0.8rem; background: rgba(220,53,69,0.1);
+  border-radius: 8px; margin: 8px 0;
 }
 .pos-catalog-card {
   background: var(--bg-card);

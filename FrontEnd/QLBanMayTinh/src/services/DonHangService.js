@@ -43,3 +43,14 @@ export const xacNhan = (donHangId, body) => patch(`/api/don-hang/${donHangId}/xa
 // Khách tự bấm "Đã nhận được hàng" khi đơn ở "awaiting_confirmation" — chuyển hẳn sang
 // "delivered". Route mở cho khách (không staff-only), backend tự kiểm tra đúng chủ đơn.
 export const xacNhanDaNhanHang = (donHangId) => patch(`/api/don-hang/${donHangId}/xac-nhan-nhan-hang`, {});
+
+// ── POS helpers ────────────────────────────────────────────────────────────────
+
+// Don hang gan nhat trong 30 ngay — cho POS panel don gan day
+export const getRecentForPos = () => get('/api/don-hang/pos/recent');
+
+// Top khach hang theo chi tieu — cho POS quick-select
+export const getTopCustomers = (limit = 5) => get(`/api/don-hang/pos/top-customers?limit=${limit}`);
+
+// Don hang gan nhat cua 1 khach — khi POS chon khach
+export const getRecentByKhachHang = (khachHangId) => get(`/api/don-hang/pos/customer/${khachHangId}/orders`);
