@@ -133,4 +133,24 @@ public class DonHangController {
             return ResponseEntity.ok(java.util.Map.of("phiVanChuyen", 30_000, "mienPhiTu", 300_000));
         }
     }
+
+    // ── POS endpoints ─────────────────────────────────────────────────────────
+
+    /** Don hang gan nhat trong 30 ngay — cho POS recent orders panel */
+    @GetMapping("/pos/recent")
+    public List<DonHangResponse> getRecentForPos() {
+        return donHangService.getRecentForPos();
+    }
+
+    /** Top khach hang theo chi tieu 6 thang — cho POS quick-select */
+    @GetMapping("/pos/top-customers")
+    public List<?> getTopCustomers(@RequestParam(defaultValue = "5") int limit) {
+        return donHangService.getTopCustomers(limit);
+    }
+
+    /** Don hang gan nhat cua 1 khach hang — khi POS chon khach */
+    @GetMapping("/pos/customer/{khachHangId}/orders")
+    public List<DonHangResponse> getRecentByKhachHang(@PathVariable Integer khachHangId) {
+        return donHangService.getRecentByKhachHang(khachHangId);
+    }
 }

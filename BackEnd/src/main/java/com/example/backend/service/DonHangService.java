@@ -542,4 +542,24 @@ public class DonHangService {
             log.warn("[AutoCancel] Lỗi khi quet don hang pending: {}", ex.getMessage());
         }
     }
+
+    // ── POS helpers ──────────────────────────────────────────────────────────────
+
+    /** Don hang gan nhat cua 1 khach hang (cho quick-select) */
+    public List<DonHangResponse> getRecentByKhachHang(Integer khachHangId) {
+        return donHangRepository.findRecentByKhachHang(khachHangId);
+    }
+
+    /** Tat ca don trong 30 ngay qua, moi nhat truoc (cho POS recent orders) */
+    public List<DonHangResponse> getRecentForPos() {
+        return donHangRepository.findRecentForPos(LocalDateTime.now().minusDays(30));
+    }
+
+    /** Top khach hang theo chi tieu (cho POS quick-select) */
+    public List<?> getTopCustomers(int limit) {
+        return khachHangRepository.chiTieuTheoKhachHang(
+                LocalDateTime.now().minusMonths(6),
+                LocalDateTime.now(),
+                PageRequest.of(0, limit));
+    }
 }

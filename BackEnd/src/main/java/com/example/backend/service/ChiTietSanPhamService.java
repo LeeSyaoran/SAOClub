@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -290,5 +291,69 @@ public class ChiTietSanPhamService {
         if (!expired.isEmpty()) {
             log.info("[Scheduled] Released {} expired serial locks", expired.size());
         }
+    }
+
+    /**
+     * POS barcode scan — tim san pham theo barcode (bien_the) hoac so_serial (chi_tiet_san_pham).
+     * Tra du lieu day du de POS hien thi: thong tin san pham + bien the + serial.
+     */
+    public ResponseEntity<?> scanBarcode(String code) {
+        List<ChiTietSanPham> results = chiTietSanPhamRepository
+                .findActiveByBarcodeOrSoSerial(code, code);
+
+        if (results.isEmpty()) {
+            boolean deleted = chiTietSanPhamRepository
+                    .existsDeletedByBarcodeOrSoSerial(code, code);
+            if (deleted) {
+                return ResponseEntity.status(410).body(Map.of("error", "Mã " + code + " đã bị xóa khỏi hệ thống"));
+            }
+            return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy mã " + code));
+        }
+
+        //Uu tien serial da_ban, neu khong co lay dau tien
+        ChiTietSanPham serial = results.stream()
+                .filter(c -> "da_ban".equals(c.getTrangThai()))
+                .findFirst()
+                .orElse(results.get(0));
+
+        // Build response
+        var bt = serial.getBienThe();
+        var sp = bt != null ? bt.getSanPham() : null;
+
+        var result = new java.util.LinkedHashMap<String, Object>();
+        result.put("chiTietId", serial.getChiTietId());
+        result.put("soSerial", serial.getSoSerial());
+        result.put("trangThai", serial.getTrangThai());
+        result.put("ngayNhapKho", serial.getNgayNhapKho());
+        result.put("trangThaiLabel", switch (serial.getTrangThai()) {
+            case "trong_kho" -> "Còn trong kho";
+            case "da_ban" -> "Đã bán";
+            case "dang_xu_ly" -> "Đang xử lý bảo hành";
+            case "loi_bao_hanh" -> "Lỗi bảo hành";
+            case "khong_duoc_ban" -> "Không được bán";
+            case "tra_lai_ncc" -> "Trả lại NCC";
+            default -> serial.getTrangThai();
+        });
+
+        if (bt != null) {
+            result.put("bienTheId", bt.getBienTheId());
+            result.put("maSku", bt.getMaSku());
+            result.put("barcode", bt.getBarcode());
+            result.put("giaBan", bt.getGiaBan());
+            result.put("mauSac", bt.getMauSac());
+            result.put("baoHanhThang", bt.getBaoHanhThang());
+            result.put("hinhAnh", bt.getHinhAnhBienThe());
+            if (sp != null) {
+                result.put("sanPhamId", sp.getSanPhamId());
+                result.put("tenSanPham", sp.getTenSanPham());
+                result.put("cpu", bt.getCpu() != null ? bt.getCpu().getTenCpu() : null);
+                result.put("ram", bt.getRam() != null ? bt.getRam().getDungLuong() : null);
+                result.put("oCung", bt.getOCung() != null ? bt.getOCung().getLoaiOcung() : null);
+                result.put("gpu", bt.getGpu() != null ? bt.getGpu().getTenGpu() : null);
+                result.put("kichThuocManHinh", bt.getKichThuocManHinh());
+                result.put("heDieuHanh", bt.getHeDieuHanh());
+            }
+        }
+        return ResponseEntity.ok(result);
     }
 }

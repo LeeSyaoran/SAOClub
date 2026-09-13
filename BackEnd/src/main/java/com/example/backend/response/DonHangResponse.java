@@ -34,4 +34,8 @@ public class DonHangResponse {
     private String kenhBan;
     private String ghiChu;
     private String maVanDon;
+    // POS: customer quick info
+    private String khachHangHoTen;
+    private String khachHangSdt;
+    private String khachHangDiaChi;
 }

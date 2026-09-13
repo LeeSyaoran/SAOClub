@@ -37,9 +37,6 @@ public class PhieuBaoHanhController {
         return phieuBaoHanhService.getById(id);
     }
 
-<<<<<<< HEAD
-    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
-=======
     @GetMapping("/tra-cuu-serial")
     @PreAuthorize("permitAll()")
     public ResponseEntity<WarrantyLookupResponse> traCuuSerial(@RequestParam String soSerial) {
@@ -47,7 +44,6 @@ public class PhieuBaoHanhController {
         return ResponseEntity.ok(r);
     }
 
->>>>>>> 263fbf4733d7677b5a1c903b79b60a2fc9633142
     @PostMapping
     public ResponseEntity<PhieuBaoHanh> create(@Valid @RequestBody PhieuBaoHanhRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(phieuBaoHanhService.create(request));

@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 // PhieuBaoHanhService.js — Mở rộng cho nghiệp vụ bảo hành khách hàng + admin
-// Giữ nguyên các method cũ (getAll, getById, save) để không phá vỡ code hiện tại.
 import { get, post, put, del, authHeaders } from './api.js';
-=======
-import { get, post, put, authHeaders } from './api.js';
->>>>>>> 263fbf4733d7677b5a1c903b79b60a2fc9633142
 
 export const fallbackClaims = [
   {
@@ -92,7 +87,6 @@ const toQuery = (params = {}) =>
 export const getPage = async ({ page = 0, size = 50 } = {}) => {
   try {
     const pageData = await get(`/api/phieu-bao-hanh?page=${page}&size=${size}`);
-    // Backend trả về Spring Page, có content[]
     return pageData?.content ? pageData : { content: fallbackClaims };
   } catch {
     const start = page * size;
@@ -103,7 +97,6 @@ export const getPage = async ({ page = 0, size = 50 } = {}) => {
 
 export const getAll = async () => {
   try {
-    // Backend endpoint trả về Page, lấy page 0 size lớn để lấy tất cả
     const pageData = await get('/api/phieu-bao-hanh?page=0&size=1000');
     if (pageData?.content) {
       return pageData.content;
@@ -116,11 +109,7 @@ export const getAll = async () => {
 
 export const getById = (id) => get(`/api/phieu-bao-hanh/${id}`);
 
-<<<<<<< HEAD
-export const create = (body) => post('/api/phieu-bao-hanh', body);
-=======
 // Lookup tra cuu serial. Throw Error voi .code='NOT_FOUND' hoac .code='DELETED'
-// de frontend phan biet 2 truong hop "chua ton tai" vs "da bi xoa".
 export const lookupBySerial = async (soSerial) => {
   const r = await fetch(
     `/api/phieu-bao-hanh/tra-cuu-serial?soSerial=${encodeURIComponent(soSerial)}`,
@@ -136,7 +125,8 @@ export const lookupBySerial = async (soSerial) => {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 };
->>>>>>> 263fbf4733d7677b5a1c903b79b60a2fc9633142
+
+export const create = (body) => post('/api/phieu-bao-hanh', body);
 
 export const save = (id, body) =>
   id ? put(`/api/phieu-bao-hanh/update/${id}`, body) : post('/api/phieu-bao-hanh', body);
@@ -153,7 +143,7 @@ export const getByKhachHang = async (khachHangId) => {
   }
 };
 
-// ── Mới: cập nhật trạng thái riêng (PATCH) — chỉ đổi trangThai + ghiChu ─────
+// ── Mới: cập nhật trạng thái riêng (PATCH) ──────────────────────────────────
 export const updateStatus = (baoHanhId, payload) =>
   put(`/api/phieu-bao-hanh/${baoHanhId}/status`, payload);
 
@@ -187,17 +177,15 @@ export const fallbackExtensionRequests = [
   },
 ];
 
-// ── Mới: lấy lịch sử xử lý của 1 phiếu (timeline admin đã làm) ───────────────
+// ── Mới: lấy lịch sử xử lý của 1 phiếu ────────────────────────────────────────
 export const getLichSu = (baoHanhId) =>
   get(`/api/phieu-bao-hanh/${baoHanhId}/lich-su`).catch(() => []);
 
-// ── Mới: khách hàng hủy phiếu của mình khi còn "cho_xu_ly" ───────────────────
+// ── Mới: khách hàng hủy phiếu của mình khi còn "cho_xu_ly" ────────────────────
 export const huyPhieu = (baoHanhId, lyDo) =>
   put(`/api/phieu-bao-hanh/${baoHanhId}/huy`, { lyDo }).catch(() => ({ ok: false }));
 
-// ── Extension requests (từ bên khách hàng) ──────────────────────────────
-// Đây là các phiếu BH mới mà khách gửi yêu cầu đăng ký gói mở rộng.
-// Trạng thái: 'cho_duyet' | 'da_duyet' | 'tu_choi'
+// ── Extension requests ─────────────────────────────────────────────────────────
 export const getExtensionRequests = async () => fallbackExtensionRequests;
 
 export const approveExtensionRequest = async (baoHanhId, payload = {}) => {

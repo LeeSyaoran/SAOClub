@@ -55,7 +55,9 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
         sp.ngayCapNhat,
         bt.phanLoaiTags,
         bt.phanLoaiTen,
-        (SELECT COUNT(c) FROM ChiTietSanPham c WHERE c.bienThe = bt AND c.trangThai = 'trong_kho')
+        (SELECT COUNT(c) FROM ChiTietSanPham c WHERE c.bienThe = bt AND c.trangThai = 'trong_kho'),
+        dm.tenDanhMuc,
+        dm.id
     )
     FROM BienTheSanPham bt
     JOIN bt.sanPham sp

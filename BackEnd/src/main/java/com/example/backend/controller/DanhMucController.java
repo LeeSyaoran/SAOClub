@@ -25,6 +25,11 @@ public class DanhMucController {
         return danhMucService.hienThiDanhMuc();
     }
 
+    @GetMapping("/active")
+    public List<DanhMucResponse> getActive() {
+        return danhMucService.getActiveForPos();
+    }
+
     @GetMapping("/{id}")
     public DanhMuc getById(@PathVariable Integer id) {
         return danhMucService.getById(id);

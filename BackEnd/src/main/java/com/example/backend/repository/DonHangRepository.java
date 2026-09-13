@@ -27,7 +27,8 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
         d.nguoiNhan, d.sdtNguoiNhan,
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
-        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon
+        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon,
+        kh.hoTen, kh.soDienThoai, kh.diaChi
     )
     FROM DonHang d
     JOIN d.khachHang kh
@@ -58,4 +59,52 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     // Tim don pending qua han 30 phut (dung cho auto-cancel)
     @Query("SELECT d FROM DonHang d WHERE d.trangThaiDonHang = 'pending' AND d.ngayDat < :cutoff")
     List<DonHang> findPendingOrdersOlderThan(@Param("cutoff") LocalDateTime cutoff);
+
+    // POS: don hang gan nhat cua 1 khach hang (cho quick-select)
+    @Query("""
+    SELECT new com.example.backend.response.DonHangResponse(
+        d.id, d.maDonHang,
+        kh.khachHangId,
+        nv.nhanVienId,
+        km.khuyenMaiId,
+        dcgh.id, dcgh.diaChi,
+        d.nguoiNhan, d.sdtNguoiNhan,
+        d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
+        d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
+        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon,
+        kh.hoTen, kh.soDienThoai, kh.diaChi
+    )
+    FROM DonHang d
+    JOIN d.khachHang kh
+    LEFT JOIN d.nhanVien nv
+    LEFT JOIN d.khuyenMai km
+    LEFT JOIN d.diaChiGiaoHang dcgh
+    WHERE kh.khachHangId = :khachHangId
+    ORDER BY d.ngayDat DESC
+    """)
+    java.util.List<DonHangResponse> findRecentByKhachHang(@Param("khachHangId") Integer khachHangId);
+
+    // POS: tong hop don gan nhat trong 30 ngay (cho POS recent orders)
+    @Query(value = """
+    SELECT new com.example.backend.response.DonHangResponse(
+        d.id, d.maDonHang,
+        kh.khachHangId,
+        nv.nhanVienId,
+        km.khuyenMaiId,
+        dcgh.id, dcgh.diaChi,
+        d.nguoiNhan, d.sdtNguoiNhan,
+        d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
+        d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
+        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon,
+        kh.hoTen, kh.soDienThoai, kh.diaChi
+    )
+    FROM DonHang d
+    JOIN d.khachHang kh
+    LEFT JOIN d.nhanVien nv
+    LEFT JOIN d.khuyenMai km
+    LEFT JOIN d.diaChiGiaoHang dcgh
+    WHERE d.ngayDat >= :since AND d.trangThaiDonHang <> 'cancelled'
+    ORDER BY d.ngayDat DESC
+    """)
+    java.util.List<DonHangResponse> findRecentForPos(@Param("since") LocalDateTime since);
 }

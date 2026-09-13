@@ -49,4 +49,8 @@ public class DanhMucService {
             throw new IllegalArgumentException("Danh mục không tồn tại với id: " + id);
         danhMucRepository.deleteById(id);
     }
+
+    public List<DanhMucResponse> getActiveForPos() {
+        return danhMucRepository.findActiveForPos();
+    }
 }

@@ -105,8 +105,6 @@ public class PhieuBaoHanhService {
         }
     }
 
-<<<<<<< HEAD
-
     /**
      * Lấy tất cả phiếu BH của 1 khách hàng.
      */
@@ -151,8 +149,6 @@ public class PhieuBaoHanhService {
         // TODO: implement when extension logic is finalized
     }
 
-}
-=======
     /**
      * Tra cuu serial theo soSerial — tra duoc bat ky trang thai nao.
      * Lay day du thong tin bien the, san pham, don hang, khach hang + lich su phieu bao hanh cu.
@@ -244,4 +240,3 @@ public class PhieuBaoHanhService {
     }
 
 }
->>>>>>> 263fbf4733d7677b5a1c903b79b60a2fc9633142
