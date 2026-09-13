@@ -1,0 +1,264 @@
+<mxfile host="app.diagrams.net" modified="2026-09-26T00:00:00.000Z" agent="Claude" version="24.0.0">
+  <diagram name="Hệ thống Kinh doanh Điện Máy" id="main">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="HỆ THỐNG QUẢN LÝ BÁN HÀNG ĐIỆN MÁY" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ============== CLIENT LAYER ============== -->
+        <mxCell id="client_header" value="CLIENT LAYER" style="text;html=1;strokeColor=none;fillColor=#16213e;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="400" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Web App -->
+        <mxCell id="web_app" value="Web App (Vue 3)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e94560;strokeColor=#c73e54;fontColor=#ffffff;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="130" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Mobile -->
+        <mxCell id="mobile" value="Mobile Web" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e94560;strokeColor=#c73e54;fontColor=#ffffff;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="130" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ============== FRONTEND SERVICES ============== -->
+        <mxCell id="fe_services_header" value="FRONTEND SERVICES" style="text;html=1;strokeColor=none;fillColor=#0f3460;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="200" width="360" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Pinia Stores -->
+        <mxCell id="stores" value="Pinia Stores&#xa;(products, orders, customers, inventory, staff...)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#16213e;strokeColor=#0f3460;fontColor=#eaeaea;align=center;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="235" width="170" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Composables -->
+        <mxCell id="composables" value="Composables&#xa;(usePosCart, usePosSerialPicker, useBarcodeScanner...)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#16213e;strokeColor=#0f3460;fontColor=#eaeaea;align=center;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="235" width="170" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ============== API GATEWAY ============== -->
+        <mxCell id="api_gateway" value="API Gateway / Nginx" style="ellipse;whiteSpace=wrap;html=1;fillColor=#533483;strokeColor=#3d2466;fontColor=#ffffff;fontStyle=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="140" y="340" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows: Client to API -->
+        <mxCell id="arr1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4a4a4a;strokeWidth=2;endArrow=classic;endFill=1;endSize=8;" edge="1" parent="1" source="web_app" target="api_gateway">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4a4a4a;strokeWidth=2;endArrow=classic;endFill=1;endSize=8;" edge="1" parent="1" source="mobile" target="api_gateway">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ============== BACKEND LAYER ============== -->
+        <mxCell id="backend_header" value="BACKEND LAYER (Spring Boot)" style="text;html=1;strokeColor=none;fillColor=#1a1a2e;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="480" y="80" width="420" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Controllers -->
+        <mxCell id="controllers" value="REST Controllers&#xa;(ChiTietSanPham, DonHang,&#xa;KhachHang, PhieuBaoHanh...)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0f3460;strokeColor=#16213e;fontColor=#ffffff;align=center;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="130" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Security -->
+        <mxCell id="security" value="Security (JWT)&#xa;@PreAuthorize" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#533483;strokeColor=#3d2466;fontColor=#ffffff;align=center;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="720" y="130" width="150" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Services -->
+        <mxCell id="services" value="Services&#xa;(ChiTietSanPhamService,&#xa;DonHangService, SSE...)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0f3460;strokeColor=#16213e;fontColor=#ffffff;align=center;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="210" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Repositories -->
+        <mxCell id="repositories" value="JPA Repositories&#xa;(ChiTietSanPhamRepository,&#xa;DonHangRepository...)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0f3460;strokeColor=#16213e;fontColor=#ffffff;align=center;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="720" y="210" width="150" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- SSE Service -->
+        <mxCell id="sse_service" value="SSE Service&#xa;(Real-time Events)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e94560;strokeColor=#c73e54;fontColor=#ffffff;align=center;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="290" width="150" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- ============== DATABASE ============== -->
+        <mxCell id="db_header" value="DATABASE" style="text;html=1;strokeColor=none;fillColor=#0d3b66;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="500" y="370" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- MySQL -->
+        <mxCell id="mysql" value="MySQL 8" style="cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#187495;strokeColor=#0d5c75;fontColor=#ffffff;fontStyle=1;size=20;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="540" y="420" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- DB Tables -->
+        <mxCell id="tables" value="san_pham | bien_the_san_pham&#xa;chi_tiet_san_pham | don_hang&#xa;chi_tiet_don_hang | khach_hang&#xa;phieu_bao_hanh | khuyen_mai&#xa;phieu_nhap_kho | nhan_vien..." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#16213e;strokeColor=#187495;fontColor=#eaeaea;fontSize=9;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="520" width="240" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows: Backend to DB -->
+        <mxCell id="arr3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4a4a4a;strokeWidth=2;endArrow=classic;endFill=1;endSize=8;dashed=1;dashPattern=8 4;" edge="1" parent="1" source="repositories" target="mysql">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows: API to Controllers -->
+        <mxCell id="arr4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4a4a4a;strokeWidth=2;endArrow=classic;endFill=1;endSize=8;" edge="1" parent="1" source="api_gateway" target="controllers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows: Controllers to Services -->
+        <mxCell id="arr5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4a4a4a;strokeWidth=2;endArrow=classic;endFill=1;endSize=8;" edge="1" parent="1" source="controllers" target="services">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows: Services to Repos -->
+        <mxCell id="arr6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4a4a4a;strokeWidth=2;endArrow=classic;endFill=1;endSize=8;dashed=1;dashPattern=8 4;" edge="1" parent="1" source="services" target="repositories">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ============== FEATURE BOXES ============== -->
+        <mxCell id="features_header" value="KEY FEATURES" style="text;html=1;strokeColor=none;fillColor=#0d3b66;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="920" y="80" width="180" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- POS -->
+        <mxCell id="pos" value="POS (Point of Sale)&#xa;• Serial Lock/Unlock&#xa;• Cart Management&#xa;• Payment Methods&#xa;• Held Orders" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e94560;strokeColor=#c73e54;fontColor=#ffffff;fontSize=10;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="130" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Serial Management -->
+        <mxCell id="serial" value="Serial Management&#xa;• Lock/Unlock (5min)&#xa;• SSE Real-time&#xa;• Auto-release" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0f3460;strokeColor=#16213e;fontColor=#eaeaea;fontSize=10;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="225" width="160" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Warranty -->
+        <mxCell id="warranty" value="Warranty Claims&#xa;• Claim Form&#xa;• Chat Widget&#xa;• Admin Management" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#533483;strokeColor=#3d2466;fontColor=#ffffff;fontSize=10;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="305" width="160" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Barcode Scanner -->
+        <mxCell id="barcode" value="Barcode/QR Scanner&#xa;• USB Scanner&#xa;• Camera Scan&#xa;• USB Camera Proxy" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0f3460;strokeColor=#16213e;fontColor=#eaeaea;fontSize=10;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="385" width="160" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Admin Dashboard -->
+        <mxCell id="admin_dash" value="Admin Dashboard&#xa;• Revenue Charts&#xa;• KPI Radar&#xa;• Order Heatmap" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#187495;strokeColor=#0d5c75;fontColor=#ffffff;fontSize=10;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="465" width="160" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- ============== ROLES ============== -->
+        <mxCell id="roles_header" value="USER ROLES" style="text;html=1;strokeColor=none;fillColor=#0d3b66;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="920" y="550" width="160" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="roles" value="👑 Admin&#xa;👨‍💼 Nhân viên&#xa;📦 Quản kho&#xa;🛒 Khách hàng" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#16213e;strokeColor=#0f3460;fontColor=#eaeaea;fontSize=11;align=left;spacingLeft=12;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="590" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ============== LEGEND ============== -->
+        <mxCell id="legend_header" value="LEGEND" style="text;html=1;strokeColor=none;fillColor=#16213e;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="550" width="80" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend1" value="" style="ellipse;html=1;fillColor=#e94560;strokeColor=#c73e54;fontColor=#ffffff;size=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="590" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend1_txt" value="Frontend Components" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#4a4a4a;" vertex="1" parent="1">
+          <mxGeometry x="80" y="588" width="120" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend2" value="" style="ellipse;html=1;fillColor=#0f3460;strokeColor=#16213e;fontColor=#ffffff;size=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="620" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend2_txt" value="Backend/Core Services" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#4a4a4a;" vertex="1" parent="1">
+          <mxGeometry x="80" y="618" width="120" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend3" value="" style="ellipse;html=1;fillColor=#533483;strokeColor=#3d2466;fontColor=#ffffff;size=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="650" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend3_txt" value="Security/API Services" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#4a4a4a;" vertex="1" parent="1">
+          <mxGeometry x="80" y="648" width="120" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend4" value="" style="ellipse;html=1;fillColor=#187495;strokeColor=#0d5c75;fontColor=#ffffff;size=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="680" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend4_txt" value="Database" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#4a4a4a;" vertex="1" parent="1">
+          <mxGeometry x="80" y="678" width="120" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend5" value="" style="ellipse;html=1;fillColor=none;strokeColor=#4a4a4a;strokeWidth=2;size=12;" vertex="1" parent="1">
+          <mxGeometry x="52" y="710" width="16" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend5_txt" value="Sync Communication" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#4a4a4a;" vertex="1" parent="1">
+          <mxGeometry x="80" y="708" width="120" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend6" value="" style="ellipse;html=1;fillColor=none;strokeColor=#4a4a4a;strokeWidth=2;dashed=1;dashPattern=8 4;size=12;" vertex="1" parent="1">
+          <mxGeometry x="52" y="740" width="16" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="legend6_txt" value="Data Access" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#4a4a4a;" vertex="1" parent="1">
+          <mxGeometry x="80" y="738" width="120" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- ============== TECH STACK ============== -->
+        <mxCell id="tech_header" value="TECH STACK" style="text;html=1;strokeColor=none;fillColor=#16213e;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="100" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tech1" value="Frontend&#xa;Vue 3 + Vite&#xa;Pinia + Vue Router&#xa;Bootstrap 5&#xa;Chart.js, Lucide Icons" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#16213e;strokeColor=#0f3460;fontColor=#eaeaea;fontSize=9;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="455" width="130" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tech2" value="Backend&#xa;Java Spring Boot&#xa;Spring Security&#xa;JPA/Hibernate&#xa;MySQL Connector" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#16213e;strokeColor=#0f3460;fontColor=#eaeaea;fontSize=9;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="455" width="130" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tech3" value="Database&#xa;MySQL 8&#xa;InnoDB Engine&#xa;UTF-8 Collations" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#16213e;strokeColor=#0f3460;fontColor=#eaeaea;fontSize=9;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="455" width="130" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Flow arrows -->
+        <mxCell id="flow1" value="" style="endArrow=classic;html=1;strokeColor=#4a4a4a;strokeWidth=2;dashed=1;dashPattern=8 4;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="165" as="sourcePoint" />
+            <mxPoint x="480" y="165" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow1_label" value="HTTP/REST" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=9;fontColor=#4a4a4a;" vertex="1" parent="1">
+          <mxGeometry x="320" y="150" width="60" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="flow2" value="" style="endArrow=classic;html=1;strokeColor=#4a4a4a;strokeWidth=2;dashed=1;dashPattern=8 4;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="210" y="260" as="sourcePoint" />
+            <mxPoint x="480" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow2_label" value="REST API" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=9;fontColor=#4a4a4a;" vertex="1" parent="1">
+          <mxGeometry x="320" y="245" width="60" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- SSE arrow -->
+        <mxCell id="sse_arr" value="" style="endArrow=classic;html=1;strokeColor=#e94560;strokeWidth=2;dashed=1;dashPattern=8 4;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="655" y="315" as="sourcePoint" />
+            <mxPoint x="655" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sse_label" value="SSE" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=9;fontColor=#e94560;rotation=-90;" vertex="1" parent="1">
+          <mxGeometry x="660" y="330" width="30" height="15" as="geometry" />
+        </mxCell>
+
+        <!-- Notes -->
+        <mxCell id="notes" value="Ghi chú:&#xa;• SSE: Server-Sent Events cho real-time updates&#xa;• Serial Lock: Pessimistic locking với 5 phút timeout&#xa;• Auto-cancel: Pending orders &gt;30 phút tự động hủy&#xa;• JWT: Stateless authentication với role-based access" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#dee2e6;fontColor=#495057;fontSize=9;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="790" width="400" height="80" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
