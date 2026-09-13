@@ -49,4 +49,7 @@ public class KhachHang extends BaseEntity {
     @Column(name = "trang_thai", length = 20)
     private String trangThai;
 
+    @Column(name = "hinh_anh", length = 500)
+    private String hinhAnh;
+
 }

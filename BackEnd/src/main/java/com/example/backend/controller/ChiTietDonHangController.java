@@ -7,11 +7,14 @@ import com.example.backend.response.ChiTietDonHangSerialResponse;
 import com.example.backend.service.ChiTietDonHangService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.backend.response.WarrantyProductResponse;
 import java.util.List;
 
 @RestController
@@ -63,5 +66,15 @@ public class ChiTietDonHangController {
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         chiTietDonHangService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/warranty/khach-hang/{khachHangId}")
+    public List<WarrantyProductResponse> getWarrantyProductsByKhachHang(@PathVariable Integer khachHangId) {
+        return chiTietDonHangService.getWarrantyProductsByKhachHang(khachHangId);
+    }
+
+    @GetMapping("/warranty/don-hang/{donHangId}")
+    public List<WarrantyProductResponse> getWarrantyProductsByDonHang(@PathVariable Integer donHangId) {
+        return chiTietDonHangService.getWarrantyProductsByDonHang(donHangId);
     }
 }

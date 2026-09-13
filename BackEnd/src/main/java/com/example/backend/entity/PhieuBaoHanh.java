@@ -45,6 +45,9 @@ public class PhieuBaoHanh {
     @Column(name = "ngay_tiep_nhan")
     private LocalDateTime ngayTiepNhan;
 
+    @Column(name = "ngay_bat_dau_xu_ly")
+    private LocalDateTime ngayBatDauXuLy;
+
     @Column(name = "ngay_tra_khach")
     private LocalDateTime ngayTraKhach;
 
@@ -62,4 +65,13 @@ public class PhieuBaoHanh {
 
     @Column(name = "ghi_chu", length = 500)
     private String ghiChu;
+
+    @Column(name = "phuong_thuc", length = 30)
+    private String phuongThuc;
+
+    @Column(name = "dia_chi_lay_hang", length = 500)
+    private String diaChiLayHang;
+
+    @Column(name = "ly_do_tu_choi", length = 500)
+    private String lyDoTuChoi;
 }

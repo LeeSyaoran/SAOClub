@@ -24,4 +24,5 @@ public class KhachHangResponse {
     private java.math.BigDecimal soDuVi;
     private String trangThai;
     private LocalDateTime ngayTao;
+    private String hinhAnh;
 }
