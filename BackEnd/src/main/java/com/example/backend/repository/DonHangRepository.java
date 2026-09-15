@@ -79,7 +79,7 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     LEFT JOIN d.nhanVien nv
     LEFT JOIN d.khuyenMai km
     LEFT JOIN d.diaChiGiaoHang dcgh
-    WHERE kh.khachHangId = :khachHangId
+    WHERE kh.khachHangId = :khachHangId AND d.trangThaiDonHang <> 'cancelled'
     ORDER BY d.ngayDat DESC
     """)
     java.util.List<DonHangResponse> findRecentByKhachHang(@Param("khachHangId") Integer khachHangId);

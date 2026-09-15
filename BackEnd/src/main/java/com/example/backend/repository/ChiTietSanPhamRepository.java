@@ -24,7 +24,8 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
         c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku,
         c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu,
         c.lockedBy, c.lockedAt, c.lockSession,
-        CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END
+        CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END,
+        c.bienThe.sanPham.tenSanPham
     )
     FROM ChiTietSanPham c
     LEFT JOIN c.phieuNhap pn
@@ -38,7 +39,8 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku,
             c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu,
             c.lockedBy, c.lockedAt, c.lockSession,
-            CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END
+            CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END,
+            c.bienThe.sanPham.tenSanPham
         )
         FROM ChiTietSanPham c
         LEFT JOIN c.phieuNhap pn
@@ -52,7 +54,8 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku,
             c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu,
             c.lockedBy, c.lockedAt, c.lockSession,
-            CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END
+            CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END,
+            c.bienThe.sanPham.tenSanPham
         )
         FROM ChiTietSanPham c
         LEFT JOIN c.phieuNhap pn
@@ -209,7 +212,8 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku,
             c.soSerial, c.trangThai, c.ngayNhapKho, c.ghiChu,
             c.lockedBy, c.lockedAt, c.lockSession,
-            CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END
+            CASE WHEN c.lockedBy IS NOT NULL THEN nv.hoTen ELSE NULL END,
+            c.bienThe.sanPham.tenSanPham
         )
         FROM ChiTietSanPham c
         LEFT JOIN c.phieuNhap pn

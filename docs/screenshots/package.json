@@ -1,0 +1,16 @@
+{
+  "name": "screenshots",
+  "version": "1.0.0",
+  "description": "1. Mở trình duyệt Chrome/Edge 2. Truy cập: http://localhost:5173 3. Đăng nhập với tài khoản test 4. Chụp ảnh từng màn hình theo danh sách bên dưới 5. Lưu vào thư mục này với tên tương ứng",
+  "main": "capture.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}

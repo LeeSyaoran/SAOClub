@@ -3,17 +3,22 @@ import { pinia } from "./pinia.js";
 
 const STORAGE_KEY = "saophone_session";
 
-if (import.meta.env.DEV) {
-  const BOOT_ID_KEY = "saophone_dev_boot_id";
-  if (localStorage.getItem(BOOT_ID_KEY) !== __DEV_BOOT_ID__) {
-    sessionStorage.removeItem(STORAGE_KEY);
-    localStorage.setItem(BOOT_ID_KEY, __DEV_BOOT_ID__);
-  }
-}
-
+// Lưu bootId trong session object — so sánh với __DEV_BOOT_ID__ để phát hiện
+// dev server restart (bundle mới) mà không bị ảnh hưởng bởi F5 trong cùng bundle.
+// __DEV_BOOT_ID__ = Date.now() tại thời điểm bundle, thay đổi khi restart dev
+// nhưng giữ nguyên khi chỉ reload trang (cùng bundle đang chạy).
 const saved = (() => {
-  try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY)); }
-  catch { return null; }
+  try {
+    const s = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
+    if (import.meta.env.DEV && s?.bootId && s.bootId !== __DEV_BOOT_ID__) {
+      // Dev server restarted between sessions — invalidate old session.
+      sessionStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return s;
+  } catch {
+    return null;
+  }
 })();
 
 const STAFF_ROLES = ["admin", "nhan_vien", "quan_kho"];
@@ -27,7 +32,9 @@ export const useAuthStore = defineStore("auth", {
     setSession(user) {
       this.user = user;
       this.isAdmin = STAFF_ROLES.includes(user.role);
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      const session = { ...user };
+      if (import.meta.env.DEV) session.bootId = __DEV_BOOT_ID__;
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     },
     clearSession() {
       this.user = null;

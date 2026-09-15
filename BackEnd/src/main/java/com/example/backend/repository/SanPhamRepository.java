@@ -29,6 +29,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
         sp.tenSanPham,
         dm.id,
         dm.tenDanhMuc,
+        cast(null as integer),
         th.thuongHieuId,
         th.tenThuongHieu,
         ncc.tenNhaCungCap,
@@ -55,9 +56,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
         sp.ngayCapNhat,
         bt.phanLoaiTags,
         bt.phanLoaiTen,
-        (SELECT COUNT(c) FROM ChiTietSanPham c WHERE c.bienThe = bt AND c.trangThai = 'trong_kho'),
-        dm.tenDanhMuc,
-        dm.id
+        cast(null as long)
     )
     FROM BienTheSanPham bt
     JOIN bt.sanPham sp
@@ -68,8 +67,8 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
     LEFT JOIN bt.ram ram
     LEFT JOIN bt.oCung oCung
     LEFT JOIN bt.gpu gpu
-    WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
-           OR LOWER(sp.maSanPham) LIKE LOWER(CONCAT('%', :keyword, '%')) 
+    WHERE (:keyword IS NULL OR LOWER(sp.tenSanPham) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(sp.maSanPham) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(bt.maSku) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(bt.barcode) LIKE LOWER(CONCAT('%', :keyword, '%')))
       AND (:danhMucId IS NULL OR dm.id = :danhMucId)

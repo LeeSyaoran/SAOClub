@@ -15,11 +15,27 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	java.util.Optional<KhachHang> findWithLockByKhachHangId(Integer khachHangId);
 
-	@Query("SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao, k.hinhAnh) FROM KhachHang k ORDER BY k.ngayTao DESC")
+	@Query(value = """
+    SELECT new com.example.backend.response.KhachHangResponse(
+        k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach,
+        k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao, k.hinhAnh,
+        COALESCE(CAST((SELECT COUNT(d) FROM DonHang d WHERE d.khachHang.khachHangId = k.khachHangId AND d.trangThaiDonHang <> 'cancelled') AS int), 0),
+        COALESCE((SELECT SUM(d.thanhTien) FROM DonHang d WHERE d.khachHang.khachHangId = k.khachHangId AND d.trangThaiDonHang <> 'cancelled'), 0)
+    )
+    FROM KhachHang k ORDER BY k.ngayTao DESC
+    """)
 	java.util.List<KhachHangResponse> hienThiKhachHang();
 
-	@Query(value = "SELECT new com.example.backend.response.KhachHangResponse(k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach, k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao, k.hinhAnh) FROM KhachHang k ORDER BY k.ngayTao DESC",
-		   countQuery = "SELECT COUNT(k) FROM KhachHang k")
+	@Query(value = """
+    SELECT new com.example.backend.response.KhachHangResponse(
+        k.khachHangId, k.hoTen, k.soDienThoai, k.email, k.diaChi, k.loaiKhach,
+        k.tenCongTy, k.maSoThue, k.diemTichLuy, k.soDuVi, k.trangThai, k.ngayTao, k.hinhAnh,
+        COALESCE(CAST((SELECT COUNT(d) FROM DonHang d WHERE d.khachHang.khachHangId = k.khachHangId AND d.trangThaiDonHang <> 'cancelled') AS int), 0),
+        COALESCE((SELECT SUM(d.thanhTien) FROM DonHang d WHERE d.khachHang.khachHangId = k.khachHangId AND d.trangThaiDonHang <> 'cancelled'), 0)
+    )
+    FROM KhachHang k ORDER BY k.ngayTao DESC
+    """,
+	countQuery = "SELECT COUNT(k) FROM KhachHang k")
 	Page<KhachHangResponse> hienThiKhachHang(Pageable pageable);
 
 	boolean existsBySoDienThoai(String soDienThoai);

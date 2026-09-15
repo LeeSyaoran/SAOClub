@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.TonKho;
+import com.example.backend.response.TonKhoResponse;
 import com.example.backend.service.TonKhoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,7 +20,7 @@ public class TonKhoController {
     private TonKhoService tonKhoService;
 
     @GetMapping
-    public List<TonKho> getAll() {
+    public List<TonKhoResponse> getAll() {
         return tonKhoService.getAll();
     }
 

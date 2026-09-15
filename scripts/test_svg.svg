@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">
+  <rect x="50" y="100" width="140" height="80" fill="#dae8fc" stroke="#6e8efb" stroke-width="1"/>
+  <text x="60" y="120" font-size="12" font-weight="bold">san_pham</text>
+  <rect x="400" y="100" width="140" height="80" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
+  <text x="410" y="120" font-size="12" font-weight="bold">don_hang</text>
+</svg>

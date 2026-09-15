@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
@@ -135,15 +136,8 @@ public class DonHangService {
         DonHang saved = donHangRepository.save(entity);
         entityManager.refresh(saved);
 
-        // Tăng lượt sử dụng mã khuyến mãi ngay khi tạo đơn thành công — đã qua đầy đủ
-        // check (trạng thái active, còn hạn, chưa hết lượt, đạt đơn tối thiểu) ở tinhGiamGiaKhuyenMai
-        // phía trên. Nếu đơn sau đó bị hủy thì giaiPhongKhuyenMaiVoucher() trừ lại để cân bằng.
-        if (saved.getKhuyenMai() != null) {
-            KhuyenMai km = saved.getKhuyenMai();
-            int daDung = km.getSoLanDaDung() != null ? km.getSoLanDaDung() : 0;
-            km.setSoLanDaDung(daDung + 1);
-            khuyenMaiRepository.save(km);
-        }
+        // NOTE: Counter tăng ở trigger trg_KiemTra_KhuyenMai (DB layer).
+        // Không tăng ở đây để tránh double-increment.
 
         if (phieuDangDung != null) {
             phieuDangDung.setDaSuDung(true);

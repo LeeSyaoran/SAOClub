@@ -3,6 +3,7 @@ package com.example.backend.service;
 import com.example.backend.entity.TonKho;
 import com.example.backend.repository.BienTheSanPhamRepository;
 import com.example.backend.repository.TonKhoRepository;
+import com.example.backend.response.TonKhoResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,8 +18,8 @@ public class TonKhoService {
     @Autowired
     private BienTheSanPhamRepository bienTheSanPhamRepository;
 
-    public List<TonKho> getAll() {
-        return tonKhoRepository.findAll();
+    public List<TonKhoResponse> getAll() {
+        return tonKhoRepository.findAllAsResponse();
     }
 
     public TonKho getById(Integer id) {

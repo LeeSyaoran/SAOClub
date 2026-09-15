@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+<diagram name="Test" id="t3">
+<mxGraphModel>
+<root>
+<mxCell id="0"/>
+<mxCell id="1" parent="0"/>
+<mxCell id="2" value="Table1" style="group;" vertex="1" parent="1">
+<mxGeometry x="100" y="100" width="180" height="120" as="geometry"/>
+</mxCell>
+<mxCell id="3" value="" style="shape=rectangle;fillColor=#b8dafa;strokeColor=#bbb;" vertex="1" parent="2">
+<mxGeometry x="0" y="0" width="180" height="22" as="geometry"/>
+</mxCell>
+<mxCell id="4" value="Table1" style="group;" vertex="1" parent="1">
+<mxGeometry x="400" y="100" width="180" height="120" as="geometry"/>
+</mxCell>
+<mxCell id="5" value="" style="shape=rectangle;fillColor=#b8dafa;strokeColor=#bbb;" vertex="1" parent="4">
+<mxGeometry x="0" y="0" width="180" height="22" as="geometry"/>
+</mxCell>
+<mxCell id="6" value="" style="endArrow=ERmany;startArrow=ERone;html=1;rounded=0;strokeColor=#333;strokeWidth=1;edgeStyle=entityRelationEdgeStyle;" edge="1" parent="1" source="3" target="5">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+</root>
+</mxGraphModel>
+</diagram>
+</mxfile>

@@ -1,5 +1,6 @@
 package com.example.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,6 +20,7 @@ public class TonKho extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bien_the_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private BienTheSanPham bienThe;
 
     @Column(name = "so_luong_ton_thuc_te")
@@ -29,6 +31,4 @@ public class TonKho extends BaseEntity {
 
     @Column(name = "ton_kho_toi_thieu")
     private Integer tonKhoToiThieu;
-
-
 }

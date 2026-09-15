@@ -24,4 +24,5 @@ public class ChiTietSanPhamResponse {
     private LocalDateTime lockedAt;
     private String lockSession;
     private String lockedByTen; // Ho ten nhan vien lock
+    private String tenSanPham; // Ten san pham (computed)
 }
