@@ -38,6 +38,7 @@ import DanhGiaPanel from "../components/admin/DanhGiaPanel.vue";
 import SerialManager from "../components/admin/SerialManager.vue";
 import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
+import StaffTable from "../components/admin/StaffTable.vue";
 import AdminDashboard from "../components/admin/AdminDashboard.vue";
 import AdminReports from "../components/admin/AdminReports.vue";
 import AdminSettings from "../components/admin/AdminSettings.vue";
@@ -56,7 +57,7 @@ import * as DmDoiThuongService from "../services/DmDoiThuongService.js";
 import {
   BarChart3, Laptop, Receipt, Users, User, Package, Undo2, Star, Tag, Gift,
   Briefcase, ShoppingCart, TrendingUp, Settings, X, Menu, Moon, Sun, Bell,
-  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Gamepad2, HardDrive, Layers,
+  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Monitor, HardDrive, Layers,
 } from '@lucide/vue';
 
 defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome', 'toast']);
@@ -709,66 +710,7 @@ const groupedProducts = computed(() => {
 // instance CustomerFormModal riêng của PosPanel.
 
 // ── Staff CRUD ────────────────────────────────────────────────────────────────
-const showStaffModal = ref(false);
-const editingStaffId = ref(null);
-const staffFormError = ref("");
-const emptyStaffForm = () => ({
-  hoTen: "",
-  soDienThoai: "",
-  email: "",
-  chucVuId: null,
-  username: "",
-  matKhauHash: "",
-  luongCoBan: 0,
-  trangThai: "active",
-});
-const staffForm = reactive(emptyStaffForm());
-
-const openAddStaff = () => {
-  Object.assign(staffForm, emptyStaffForm());
-  editingStaffId.value = null;
-  staffFormError.value = "";
-  showStaffModal.value = true;
-};
-const openEditStaff = (s) => {
-  Object.assign(staffForm, {
-    hoTen: s.hoTen,
-    soDienThoai: s.soDienThoai,
-    email: s.email ?? "",
-    chucVuId: s.chucVuId,
-    username: s.username ?? "",
-    matKhauHash: "",
-    luongCoBan: s.luongCoBan ?? 0,
-    trangThai: s.trangThai ?? "active",
-  });
-  editingStaffId.value = s.nhanVienId;
-  staffFormError.value = "";
-  showStaffModal.value = true;
-};
-const saveStaff = async () => {
-  staffFormError.value = "";
-  const body = {
-    ...staffForm,
-    chucVuId: Number(staffForm.chucVuId),
-    luongCoBan: Number(staffForm.luongCoBan),
-  };
-  try {
-    const res = await NhanVienService.save(editingStaffId.value, body);
-    if (!res.ok) {
-      staffFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
-      return;
-    }
-    showStaffModal.value = false;
-    if (editingStaffId.value) {
-      const idx = staff.value.findIndex((s) => s.nhanVienId === editingStaffId.value);
-      if (idx !== -1) staff.value[idx] = { ...staff.value[idx], ...body };
-    } else {
-      await refreshStaff();
-    }
-  } catch (e) {
-    staffFormError.value = e.message;
-  }
-};
+// Staff logic has been moved to components/admin/StaffTable.vue
 // ── Promotions CRUD ───────────────────────────────────────────────────────────
 const showPromoModal = ref(false);
 const editingPromoId = ref(null);
@@ -1176,7 +1118,7 @@ onUnmounted(() => {
           <MemoryStick class="adm-icon" :size="15" /> {{ t('admin.productsTabs.ram') }}
         </div>
         <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='gpu'}" @click="selectInventoryTab('gpu')">
-          <Gamepad2 class="adm-icon" :size="15" /> {{ t('admin.productsTabs.gpu') }}
+          <Monitor class="adm-icon" :size="15" /> {{ t('admin.productsTabs.gpu') }}
         </div>
         <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='o-cung'}" @click="selectInventoryTab('o-cung')">
           <HardDrive class="adm-icon" :size="15" /> {{ t('admin.productsTabs.oCung') }}
@@ -1206,7 +1148,6 @@ onUnmounted(() => {
         </div>
       </nav>
 
-      <UserProfileMenu @navigate-settings="navigate('settings')" />
     </aside><!-- /sidebar -->
 
     <!-- ══════════ MAIN CONTENT ══════════ -->
@@ -1246,6 +1187,7 @@ onUnmounted(() => {
           >
             <Bell :size="18" />
           </div>
+          <UserProfileMenu @navigate-settings="navigate('settings')" />
         </div>
       </div>
 
@@ -1349,16 +1291,44 @@ onUnmounted(() => {
             <InventoryHistoryPanel />
           </div>
           <div v-show="inventoryMainTab==='cpu'">
-            <DmCategoryTable :service="DmService.DmCpuService" id-field="cpuId" name-field="tenCpu" :label="t('admin.productsTabs.cpu')" :name-label="t('admin.productsTabs.cpu')" :serial-service="ChiTietCpuService" serial-field-name="cpuId" />
+            <DmCategoryTable
+              :service="DmService.DmCpuService"
+              id-field="cpuId" name-field="tenCpu"
+              :label="t('admin.productsTabs.cpu')" :name-label="t('admin.productsTabs.cpu')"
+              :header-icon="Cpu"
+              :serial-service="ChiTietCpuService" serial-field-name="cpuId"
+              :advanced-filter-config="{ filters: [{ key: 'hang', label: 'Hãng' }, { key: 'dong', label: 'Dòng CPU' }] }"
+            />
           </div>
           <div v-show="inventoryMainTab==='ram'">
-            <DmCategoryTable :service="DmService.DmRamService" id-field="ramId" name-field="dungLuong" :label="t('admin.productsTabs.ram')" :name-label="t('admin.productsTabs.ram')" :serial-service="ChiTietRamService" serial-field-name="ramId" />
+            <DmCategoryTable
+              :service="DmService.DmRamService"
+              id-field="ramId" name-field="dungLuong"
+              :label="t('admin.productsTabs.ram')" :name-label="t('admin.productsTabs.ram')"
+              :header-icon="MemoryStick"
+              :serial-service="ChiTietRamService" serial-field-name="ramId"
+              :advanced-filter-config="{ filters: [{ key: 'loai', label: 'Loại RAM' }, { key: 'dungluong', label: 'Dung lượng' }] }"
+            />
           </div>
           <div v-show="inventoryMainTab==='gpu'">
-            <DmCategoryTable :service="DmService.DmGpuService" id-field="gpuId" name-field="tenGpu" :label="t('admin.productsTabs.gpu')" :name-label="t('admin.productsTabs.gpu')" :serial-service="ChiTietGpuService" serial-field-name="gpuId" />
+            <DmCategoryTable
+              :service="DmService.DmGpuService"
+              id-field="gpuId" name-field="tenGpu"
+              :label="t('admin.productsTabs.gpu')" :name-label="t('admin.productsTabs.gpu')"
+              :header-icon="Monitor"
+              :serial-service="ChiTietGpuService" serial-field-name="gpuId"
+              :advanced-filter-config="{ filters: [{ key: 'hang', label: 'Hãng' }, { key: 'vram', label: 'VRAM' }] }"
+            />
           </div>
           <div v-show="inventoryMainTab==='o-cung'">
-            <DmCategoryTable :service="DmService.DmOCungService" id-field="oCungId" name-field="loaiOcung" :label="t('admin.productsTabs.oCung')" :name-label="t('admin.productsTabs.oCung')" :serial-service="ChiTietOCungService" serial-field-name="oCungId" />
+            <DmCategoryTable
+              :service="DmService.DmOCungService"
+              id-field="oCungId" name-field="loaiOcung"
+              :label="t('admin.productsTabs.oCung')" :name-label="t('admin.productsTabs.oCung')"
+              :header-icon="HardDrive"
+              :serial-service="ChiTietOCungService" serial-field-name="oCungId"
+              :advanced-filter-config="{ filters: [{ key: 'loai', label: 'Loại ổ cứng' }, { key: 'dungluong', label: 'Dung lượng' }] }"
+            />
           </div>
         </section>
 
@@ -1465,40 +1435,7 @@ onUnmounted(() => {
 
         <!-- ── Nhan vien ── -->
         <section v-show="currentPage === 'staff'">
-          <div class="alt-card">
-            <div class="alt-toolbar">
-              <span class="alt-toolbar__count">{{ staff.length }} {{ t('admin.staff.countSuffix') }}</span>
-              <div class="alt-toolbar__actions">
-                <button class="alt-btn alt-btn--primary" @click="openAddStaff">{{ t('admin.staff.add') }}</button>
-              </div>
-            </div>
-            <div v-if="StaffStore.loading" class="alt-empty">{{ t('admin.staff.loading') }}</div>
-            <div v-else class="alt-table-wrap">
-              <table class="alt-table">
-                <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.staff.colFullName') }}</th><th>{{ t('admin.staff.colPhone') }}</th><th>{{ t('admin.staff.colEmail') }}</th><th>{{ t('admin.staff.colPosition') }}</th><th>{{ t('admin.staff.colUsername') }}</th><th>{{ t('admin.staff.colBaseSalary') }}</th><th>{{ t('admin.staff.colStatus') }}</th><th>{{ t('admin.staff.colAction') }}</th></tr></thead>
-                <tbody>
-                  <tr v-for="(s, idx) in staff" :key="s.nhanVienId">
-                    <td class="text-secondary">{{ idx + 1 }}</td>
-                    <td>{{ s.hoTen }}</td>
-                    <td class="text-secondary">{{ s.soDienThoai }}</td>
-                    <td class="text-secondary">{{ s.email }}</td>
-                    <td>{{ chucVuName(s.chucVuId) }}</td>
-                    <td class="text-secondary">{{ s.username }}</td>
-                    <td>{{ formatPrice(s.luongCoBan) }}</td>
-                    <td>
-                      <span class="alt-tag" :style="s.trangThai==='active' ? 'background:rgba(22,163,74,0.14);color:var(--state-success);' : 'background:var(--bg-card-alt);color:var(--text-secondary);'">{{ statusLabel(s.trangThai) }}</span>
-                    </td>
-                    <td>
-                      <div class="d-flex gap-1">
-                        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEditStaff(s)">{{ t('admin.staff.edit') }}</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-if="staff.length===0"><td colspan="8" class="alt-empty">{{ t('admin.staff.empty') }}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <StaffTable />
         </section>
 
         <!-- ── Bao cao ── -->
@@ -1558,32 +1495,7 @@ onUnmounted(() => {
     </main>
   </div><!-- /dashboard-shell -->
 
-  <!-- ══ MODAL NHAN VIEN ══ -->
-  <div v-if="showStaffModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showStaffModal=false">
-    <div class="alt-card d-flex flex-column" style="width:560px;max-width:95vw;max-height:90vh;border-radius:14px;">
-      <div class="alt-toolbar">
-        <span>{{ editingStaffId?t('admin.staffModal.titleEdit'):t('admin.staffModal.titleAdd') }}</span>
-        <button class="btn-close btn-sm ms-auto" :aria-label="t('common.close')" @click="showStaffModal=false"></button>
-      </div>
-      <div class="overflow-y-auto p-4">
-        <div v-if="staffFormError" class="alert alert-danger small py-2 mb-3">{{ staffFormError }}</div>
-        <div class="row g-3">
-          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.fullNameLabel') }}</label><input v-model="staffForm.hoTen" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.phoneLabel') }}</label><input v-model="staffForm.soDienThoai" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.emailLabel') }}</label><input v-model="staffForm.email" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.positionLabel') }}</label><select v-model="staffForm.chucVuId" class="form-select form-select-sm admin-input"><option :value="null" disabled>{{ t('admin.staffModal.positionSelectPlaceholder') }}</option><option v-for="cv in chucVuList" :key="cv.id" :value="cv.id">{{ cv.tenChucVu }}</option></select></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.usernameLabel') }}</label><input v-model="staffForm.username" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.passwordLabel') }} {{ editingStaffId?t('admin.staffModal.passwordKeepHint'):t('admin.staffModal.passwordRequired') }}</label><input v-model="staffForm.matKhauHash" type="password" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.baseSalaryLabel') }}</label><input v-model="staffForm.luongCoBan" type="number" min="0" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.staffModal.statusLabel') }}</label><select v-model="staffForm.trangThai" class="form-select form-select-sm admin-input"><option value="active">{{ t('admin.staffModal.statusActive') }}</option><option value="inactive">{{ t('admin.staffModal.statusResigned') }}</option></select></div>
-        </div>
-      </div>
-      <div class="alt-toolbar" style="border-top:1px solid var(--border-color);border-bottom:none;justify-content:flex-end;gap:8px;">
-        <button class="alt-btn alt-btn--ghost" @click="showStaffModal=false">{{ t('admin.staffModal.cancel') }}</button>
-        <button class="alt-btn alt-btn--primary" @click="saveStaff">{{ editingStaffId?t('admin.staffModal.update'):t('admin.staffModal.addNew') }}</button>
-      </div>
-    </div>
-  </div>
+  <!-- Nhan Vien Modal has been moved to StaffTable.vue -->
 
   <!-- ══ MODAL KHUYEN MAI ══ -->
   <div v-if="showPromoModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showPromoModal=false">
@@ -1684,10 +1596,11 @@ onUnmounted(() => {
 .adm-nav-label {
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  color: var(--text-heading);
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  opacity: 0.85;
   text-transform: uppercase;
-  padding: 10px 8px 3px;
+  padding: 12px 8px 4px;
 }
 
 /* Sidebar an/hien theo sidebarOpen o moi kich thuoc man hinh (bam hamburger de bat/tat).

@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { pinia } from "./pinia.js";
 
-const STORAGE_KEY = "saophone_session";
+const STORAGE_KEY = "saoclub_session";
 
 // Lưu bootId trong session object — so sánh với __DEV_BOOT_ID__ để phát hiện
 // dev server restart (bundle mới) mà không bị ảnh hưởng bởi F5 trong cùng bundle.

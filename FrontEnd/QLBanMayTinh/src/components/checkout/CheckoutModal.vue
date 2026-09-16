@@ -690,7 +690,7 @@ const parseApiError = async (res, fallbackPrefix) => {
   return `${fallbackPrefix}: ${res.status} ${raw}`;
 };
 
-// Gửi đơn hàng lên API
+// Gửi đơn hàng lên API — dùng endpoint checkout-complete để tạo đơn + thêm sản phẩm trong 1 transaction
 const placeOrder = async () => {
   checkoutError.value    = '';
   checkoutLoading.value  = true;
@@ -715,58 +715,37 @@ const placeOrder = async () => {
       khachHangId = newC.khachHangId;
     }
 
-    // Tạo đơn hàng chính
+    // Gọi endpoint checkout-complete: tạo đơn + thêm sản phẩm trong 1 transaction
     checkoutProgress.value = t('checkout.progressOrder');
     const orderBody = {
       khachHangId,
-      nguoiNhan:          checkoutForm.nguoiNhan,
-      sdtNguoiNhan:       checkoutForm.sdtNguoiNhan,
-      diaChiGiaoHangText: checkoutForm.diaChiGiaoHangText,
-      khuyenMaiId:        appliedPromo.value?.khuyenMaiId ?? null,
+      nguoiNhan:            checkoutForm.nguoiNhan,
+      sdtNguoiNhan:         checkoutForm.sdtNguoiNhan,
+      diaChiGiaoHangText:   checkoutForm.diaChiGiaoHangText,
+      khuyenMaiId:          appliedPromo.value?.khuyenMaiId ?? null,
       phieuGiamGiaCaNhanId: appliedVoucher.value?.phieuId ?? null,
-      tongTien:           props.cartTotal,
-      giamGia:            checkoutGiamGia.value,
-      phiVanChuyen:       phiVanChuyen.value,
-      // thanhTien bỏ qua — computed column trong DB (tong_tien - giam_gia + phi_van_chuyen)
-      ngayDat:            nowLocalIso(),
-      trangThaiDonHang:   'pending',
-      trangThaiThanhToan: 'unpaid',
-      kenhBan:            'online',
+      tongTien:             props.cartTotal,
+      giamGia:              checkoutGiamGia.value,
+      phiVanChuyen:         phiVanChuyen.value,
+      ngayDat:              nowLocalIso(),
+      trangThaiDonHang:     'pending',
+      trangThaiThanhToan:   'unpaid',
+      kenhBan:              'online',
+      // Thêm sản phẩm vào cùng request
+      items: props.cart.map(item => ({
+        bienTheId: item.bienTheId,
+        soLuong:    item.quantity,
+      })),
     };
-    const orderRes = await DonHangService.create(orderBody);
+    const orderRes = await DonHangService.checkoutComplete(orderBody);
     if (!orderRes.ok)
       throw new Error(await parseApiError(orderRes, t('checkout.createOrderError')));
     const createdOrder = await orderRes.json();
-    const donHangId    = createdOrder.id;
 
-    // Thêm từng sản phẩm vào chi tiết đơn hàng — nếu 1 dòng lỗi giữa chừng thì huỷ
-    // luôn đơn hàng vừa tạo, tránh để lại đơn "pending" thiếu sản phẩm.
-    try {
-      let itemIndex = 0;
-      for (const item of props.cart) {
-        itemIndex += 1;
-        checkoutProgress.value = t('checkout.progressItems', { current: itemIndex, total: props.cart.length });
-        const itemRes = await DonHangService.addChiTiet({
-          donHangId,
-          bienTheId:   item.bienTheId,
-          soLuong:     item.quantity,
-          donGia:      item.giaBan,
-          giamGiaDong: 0,
-        });
-        if (!itemRes.ok)
-          throw new Error(await parseApiError(itemRes, t('checkout.addItemError', { name: item.tenSanPham })));
-      }
-    } catch (e) {
-      await DonHangService.remove(donHangId).catch(() => {});
-      throw e;
-    }
-
-    // Lưu tổng tiền trước khi cha xóa giỏ (props.cartTotal sẽ về 0 sau khi cart rỗng)
+    // Lưu tổng tiền trước khi cha xóa giỏ
     checkoutFinalTotal.value = checkoutTotal.value;
-    checkoutOrderId.value    = donHangId;
-    // maDonHang là mã hiển thị thống nhất với AccountPage/OrdersTable bên admin — client
-    // không tin được nó luôn có sẵn (vd API cũ chưa refresh kịp), fallback về id số thô.
-    checkoutOrderCode.value  = createdOrder.maDonHang || `#${donHangId}`;
+    checkoutOrderId.value    = createdOrder.id;
+    checkoutOrderCode.value  = createdOrder.maDonHang || `#${createdOrder.id}`;
     checkoutSuccess.value    = true;
     emit('order-placed');
   } catch (e) {

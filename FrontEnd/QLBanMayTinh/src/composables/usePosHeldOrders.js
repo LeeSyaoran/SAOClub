@@ -1,7 +1,7 @@
 // usePosHeldOrders — hold / resume / delete pending POS orders
 import { ref } from "vue";
 
-const STORAGE_KEY = "saophone_pos_held_orders";
+const STORAGE_KEY = "saoclub_pos_held_orders";
 
 export function usePosHeldOrders() {
   const heldOrders = ref([]);

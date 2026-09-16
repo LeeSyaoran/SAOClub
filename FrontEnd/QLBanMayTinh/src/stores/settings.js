@@ -4,7 +4,7 @@ import { pinia } from "./pinia.js";
 
 export const useSettingsStore = defineStore("settings", {
   state: () => ({
-    tenCuaHang: "SAOPhone",
+    tenCuaHang: "SAOClub",
     diaChi: "",
     soDienThoai: "",
     email: "",

@@ -42,4 +42,7 @@ public class NhaCungCap {
 
     @Column(name = "ngay_tao", nullable = false)
     private LocalDateTime ngayTao;
+
+    @Column(name = "hinh_anh")
+    private String hinhAnh;
 }

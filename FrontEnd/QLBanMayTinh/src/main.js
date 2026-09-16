@@ -1,5 +1,6 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "leaflet/dist/leaflet.css";
+import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./assets/main.css";
 import "./assets/theme.css";
 import "./assets/admin-list-theme.css";

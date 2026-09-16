@@ -151,11 +151,23 @@ BEGIN
         trang_thai    NVARCHAR(20)   NOT NULL DEFAULT N'active'
             CONSTRAINT CK_tk_trangthai CHECK (trang_thai IN (N'active', N'inactive', N'blocked')),
         ngay_tao      DATETIME       NOT NULL DEFAULT GETDATE(),
+        provider      VARCHAR(20)    NULL,
+        provider_uid  VARCHAR(255)   NULL,
+        avatar_url    VARCHAR(500)   NULL,
         CONSTRAINT FK_tk_chuc_vu    FOREIGN KEY (chuc_vu_id)    REFERENCES chuc_vu(chuc_vu_id),
         CONSTRAINT FK_tk_nhan_vien  FOREIGN KEY (nhan_vien_id)  REFERENCES nhan_vien(nhan_vien_id),
         CONSTRAINT FK_tk_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id)
     );
 END
+GO
+
+-- Thêm cột Firebase Auth cho bảng đã tồn tại
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tai_khoan') AND name = 'provider')
+    ALTER TABLE tai_khoan ADD provider VARCHAR(20) NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tai_khoan') AND name = 'provider_uid')
+    ALTER TABLE tai_khoan ADD provider_uid VARCHAR(255) NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tai_khoan') AND name = 'avatar_url')
+    ALTER TABLE tai_khoan ADD avatar_url VARCHAR(500) NULL;
 GO
 
 -- ============================================================
@@ -2576,6 +2588,41 @@ GO
 UPDATE bien_the_san_pham
 SET barcode = '893' + RIGHT('0000000000' + CAST(bien_the_id AS VARCHAR(10)), 10)
 WHERE barcode IS NULL;
+GO
+
+-- ============================================================
+--  AUTO-GENERATE ma_san_pham (SP0001, SP0002, ...)
+-- ============================================================
+-- Trigger gán mã SP tự tăng khi INSERT mà ma_san_pham IS NULL.
+-- Không gán trên UPDATE — mã đã có thì giữ nguyên, không đổi.
+IF OBJECT_ID('trg_AutoGen_MaSanPham', 'TR') IS NOT NULL
+    DROP TRIGGER trg_AutoGen_MaSanPham;
+GO
+
+CREATE TRIGGER trg_AutoGen_MaSanPham
+ON san_pham
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Lấy số lớn nhất hiện có (loại bỏ prefix 'SP', chỉ lấy phần số)
+    DECLARE @MaxNum INT;
+    SELECT @MaxNum = MAX(CAST(SUBSTRING(ma_san_pham, 3, 10) AS INT))
+    FROM san_pham
+    WHERE ma_san_pham IS NOT NULL
+      AND ma_san_pham LIKE 'SP%';
+
+    -- @MaxNum NULL (chưa có SP nào) → bắt đầu từ 0
+    IF @MaxNum IS NULL SET @MaxNum = 0;
+
+    -- Gán cho các dòng vừa insert mà chưa có mã
+    UPDATE sp
+    SET sp.ma_san_pham = 'SP' + RIGHT('0000' + CAST(@MaxNum + ROW_NUMBER() OVER (ORDER BY i.san_pham_id), 10), 4)
+    FROM san_pham sp
+    JOIN inserted i ON sp.san_pham_id = i.san_pham_id
+    WHERE sp.ma_san_pham IS NULL;
+END
 GO
 
 -- Backfill gallery: sản phẩm seed sẵn có hinh_anh_chinh nhưng chưa có dòng gallery nào ->

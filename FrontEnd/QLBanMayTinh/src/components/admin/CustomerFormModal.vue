@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from "vue";
+import { X, AlertCircle, IdCard, User, Phone, Mail, MapPin, Building, Tag, Briefcase, FileText, Settings, Star, ToggleRight, ArrowLeft } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as KhachHangService from "../../services/KhachHangService.js";
 import { CustomersStore, refreshCustomers } from "../../stores/customers.js";
@@ -103,49 +104,49 @@ const saveCustomer = async () => {
           <p class="cfm-subtitle">{{ isEditing() ? 'Cập nhật thông tin khách hàng' : 'Thêm khách hàng mới vào hệ thống' }}</p>
         </div>
         <button class="cfm-close" :aria-label="t('common.close')" @click="close">
-          <i class="fa fa-times"></i>
+          <X :size="14" />
         </button>
       </div>
 
       <!-- ── Body ── -->
       <div class="cfm-body">
         <div v-if="customerFormError" class="cfm-error">
-          <i class="fa fa-exclamation-circle"></i>
+          <AlertCircle :size="14" />
           {{ customerFormError }}
         </div>
 
         <!-- Section: Thông tin cá nhân -->
         <div class="cfm-section">
           <div class="cfm-section-title">
-            <i class="fa fa-id-card"></i>
+            <IdCard :size="14" />
             Thông tin cá nhân
           </div>
           <div class="cfm-fields">
             <div class="cfm-field">
               <label class="cfm-label">Họ tên <span class="cfm-required">*</span></label>
               <div class="cfm-input-wrap">
-                <i class="fa fa-user cfm-input-icon"></i>
+                <User class="cfm-input-icon" :size="14" />
                 <input v-model="customerForm.hoTen" class="cfm-input" placeholder="Nhập họ tên khách hàng" />
               </div>
             </div>
             <div class="cfm-field">
               <label class="cfm-label">Số điện thoại <span class="cfm-required">*</span></label>
               <div class="cfm-input-wrap">
-                <i class="fa fa-phone cfm-input-icon"></i>
+                <Phone class="cfm-input-icon" :size="14" />
                 <input v-model="customerForm.soDienThoai" class="cfm-input" placeholder="0xxx xxx xxx" />
               </div>
             </div>
             <div class="cfm-field">
               <label class="cfm-label">Email</label>
               <div class="cfm-input-wrap">
-                <i class="fa fa-envelope cfm-input-icon"></i>
+                <Mail class="cfm-input-icon" :size="14" />
                 <input v-model="customerForm.email" type="email" class="cfm-input" placeholder="email@example.com" />
               </div>
             </div>
             <div class="cfm-field cfm-field--full">
               <label class="cfm-label">Địa chỉ <span class="cfm-required">*</span></label>
               <div class="cfm-input-wrap">
-                <i class="fa fa-map-marker-alt cfm-input-icon"></i>
+                <MapPin class="cfm-input-icon" :size="14" />
                 <input v-model="customerForm.diaChi" class="cfm-input" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" />
               </div>
             </div>
@@ -155,14 +156,14 @@ const saveCustomer = async () => {
         <!-- Section: Thông tin doanh nghiệp -->
         <div class="cfm-section">
           <div class="cfm-section-title">
-            <i class="fa fa-building"></i>
+            <Building :size="14" />
             Thông tin doanh nghiệp (nếu có)
           </div>
           <div class="cfm-fields">
             <div class="cfm-field">
               <label class="cfm-label">Loại khách</label>
               <div class="cfm-input-wrap">
-                <i class="fa fa-tag cfm-input-icon"></i>
+                <Tag class="cfm-input-icon" :size="14" />
                 <select v-model="customerForm.loaiKhach" class="cfm-input cfm-select">
                   <option value="ca_nhan">{{ t('admin.customerModal.typePersonal') }}</option>
                   <option value="doanh_nghiep">{{ t('admin.customerModal.typeBusiness') }}</option>
@@ -172,14 +173,14 @@ const saveCustomer = async () => {
             <div class="cfm-field">
               <label class="cfm-label">Tên công ty</label>
               <div class="cfm-input-wrap">
-                <i class="fa fa-briefcase cfm-input-icon"></i>
+                <Briefcase class="cfm-input-icon" :size="14" />
                 <input v-model="customerForm.tenCongTy" class="cfm-input" placeholder="Tên công ty" />
               </div>
             </div>
             <div class="cfm-field">
               <label class="cfm-label">Mã số thuế</label>
               <div class="cfm-input-wrap">
-                <i class="fa fa-file-alt cfm-input-icon"></i>
+                <FileText class="cfm-input-icon" :size="14" />
                 <input v-model="customerForm.maSoThue" class="cfm-input" placeholder="Mã số thuế công ty" />
               </div>
             </div>
@@ -189,21 +190,21 @@ const saveCustomer = async () => {
         <!-- Section: Cài đặt tài khoản -->
         <div class="cfm-section">
           <div class="cfm-section-title">
-            <i class="fa fa-cog"></i>
+            <Settings :size="14" />
             Cài đặt tài khoản
           </div>
           <div class="cfm-fields">
             <div class="cfm-field">
               <label class="cfm-label">Điểm tích lũy</label>
               <div class="cfm-input-wrap">
-                <i class="fa fa-star cfm-input-icon cfm-input-icon--gold"></i>
+                <Star class="cfm-input-icon cfm-input-icon--gold" :size="14" />
                 <input v-model="customerForm.diemTichLuy" type="number" min="0" class="cfm-input" placeholder="0" />
               </div>
             </div>
             <div class="cfm-field">
               <label class="cfm-label">Trạng thái</label>
               <div class="cfm-input-wrap">
-                <i class="fa fa-toggle-on cfm-input-icon"></i>
+                <ToggleRight class="cfm-input-icon" :size="14" />
                 <select v-model="customerForm.trangThai" class="cfm-input cfm-select">
                   <option value="active">{{ t('admin.customerModal.statusActive') }}</option>
                   <option value="inactive">{{ t('admin.customerModal.statusLocked') }}</option>
@@ -217,7 +218,7 @@ const saveCustomer = async () => {
       <!-- ── Footer ── -->
       <div class="cfm-footer">
         <button class="cfm-btn cfm-btn--ghost" @click="close">
-          <i class="fa fa-arrow-left"></i> Hủy bỏ
+          <ArrowLeft :size="14" /> Hủy bỏ
         </button>
         <button class="cfm-btn cfm-btn--primary" :disabled="saving" @click="saveCustomer">
           <i class="fa" :class="saving ? 'fa-spinner fa-spin' : (isEditing() ? 'fa-save' : 'fa-plus')"></i>

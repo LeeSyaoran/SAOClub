@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, reactive } from "vue";
+import { Filter, X, ChevronDown, ChevronUp } from '@lucide/vue';
 import * as PhieuBaoHanhService from "../../services/PhieuBaoHanhService.js";
 import * as HinhAnhBaoHanhService from "../../services/HinhAnhBaoHanhService.js";
 import * as BinhLuanBaoHanhService from "../../services/BinhLuanBaoHanhService.js";
@@ -22,9 +23,26 @@ import {
   Truck, MapPin, Search,
 } from '@lucide/vue';
 
-// ── Filters ─────────────────────────────────────────────────────────────────
+// ── Filters ───────────────────────────────────────────────────────────
 const statusFilter = ref('all'); // all | pending | processing | done | rejected
 const searchQuery = ref('');
+const isAdvFilterOpen = ref(false);
+const advFilters = reactive({
+  ngayFrom: '',
+  ngayTo: '',
+  onlyOverdue: false,
+});
+
+const advFilterCount = computed(() => [
+  advFilters.ngayFrom, advFilters.ngayTo, advFilters.onlyOverdue ? '1' : ''
+].filter((v) => v !== '').length);
+
+const resetAdvFilters = () => {
+  advFilters.ngayFrom = '';
+  advFilters.ngayTo = '';
+  advFilters.onlyOverdue = false;
+  searchQuery.value = '';
+};
 
 const filteredClaims = computed(() => {
   const list = BaoHanhStore.items || [];
@@ -50,6 +68,11 @@ const filteredClaims = computed(() => {
         || String(c.bienTheId || '').includes(q);
     });
   }
+  // ngày tiếp nhận từ-đến
+  if (advFilters.ngayFrom) filtered = filtered.filter((c) => (c.ngayTiepNhan || '').slice(0, 10) >= advFilters.ngayFrom);
+  if (advFilters.ngayTo)   filtered = filtered.filter((c) => (c.ngayTiepNhan || '').slice(0, 10) <= advFilters.ngayTo);
+  // quick-filter quá hạn
+  if (advFilters.onlyOverdue) filtered = filtered.filter((c) => isOverdue(c));
   return filtered;
 });
 
@@ -312,9 +335,47 @@ const filterCards = [
             placeholder="Tìm mã phiếu, serial, SKU..."
           />
         </div>
+        <button
+          class="cm-filter-btn"
+          :class="{ active: advFilterCount > 0 || isAdvFilterOpen }"
+          @click="isAdvFilterOpen = !isAdvFilterOpen"
+          title="Bộ lọc nâng cao"
+        >
+          <Filter :size="13" /> Bộ lọc
+          <span v-if="advFilterCount > 0" class="cm-filter-badge">{{ advFilterCount }}</span>
+          <ChevronDown v-if="!isAdvFilterOpen" :size="12" />
+          <ChevronUp v-else :size="12" />
+        </button>
+        <button v-if="advFilterCount > 0" class="cm-reset-btn" @click="resetAdvFilters" title="Xóa bộ lọc">
+          <X :size="13" />
+        </button>
         <button class="cm-refresh-btn" @click="refresh" title="Làm mới">
           <RefreshCw :size="14" :class="{ 'spin': BaoHanhStore.loading }" />
         </button>
+      </div>
+
+      <!-- Panel lọc phụ -->
+      <div v-if="isAdvFilterOpen" class="cm-adv-panel">
+        <div class="cm-adv-row">
+          <div class="cm-adv-group cm-adv-group--range">
+            <label class="cm-adv-label">Ngày tiếp nhận</label>
+            <div class="cm-adv-range">
+              <input v-model="advFilters.ngayFrom" type="date" class="cm-adv-input" />
+              <span class="cm-adv-sep">–</span>
+              <input v-model="advFilters.ngayTo" type="date" class="cm-adv-input" />
+            </div>
+          </div>
+          <div class="cm-adv-group">
+            <label class="cm-adv-label">&nbsp;</label>
+            <label class="cm-adv-checkbox">
+              <input type="checkbox" v-model="advFilters.onlyOverdue" />
+              <span>⚠️ Chỉ quá hạn</span>
+            </label>
+          </div>
+          <button v-if="advFilterCount > 0" class="cm-adv-reset" @click="resetAdvFilters">
+            <X :size="12" /> Xóa bộ lọc
+          </button>
+        </div>
       </div>
 
       <!-- Table -->
@@ -1215,4 +1276,55 @@ const filterCards = [
   .cm-action-form-row { grid-template-columns: 1fr; }
   .cm-media-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ─── Advanced Filter Panel (mới thêm) ─── */
+.cm-filter-btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+  background: var(--bg-card, #fff); color: var(--text-primary, #1e293b);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.cm-filter-btn:hover, .cm-filter-btn.active {
+  border-color: var(--pink-400, #f472b6); background: var(--pink-50, #fdf2f8); color: var(--pink-700, #be185d);
+}
+.cm-filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--pink-600, #db2777); color: #fff; font-size: 10px; font-weight: 700;
+}
+.cm-reset-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: 1px solid #dc2626; border-radius: 7px;
+  background: transparent; color: #dc2626; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.cm-reset-btn:hover { background: #dc2626; color: #fff; }
+.cm-adv-panel {
+  border-top: 1px solid var(--border-color, #e2e8f0); background: var(--bg-card-alt, #f8fafc);
+  padding: 12px 16px; animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+.cm-adv-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.cm-adv-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.cm-adv-group--range { min-width: 260px; }
+.cm-adv-label { font-size: 11px; font-weight: 600; color: var(--text-secondary, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
+.cm-adv-input {
+  padding: 6px 10px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 7px;
+  background: #fff; color: var(--text-primary, #1e293b); font-size: 13px; outline: none; transition: border-color 0.15s;
+}
+.cm-adv-input:focus { border-color: var(--pink-500, #ec4899); }
+.cm-adv-range { display: flex; align-items: center; gap: 6px; }
+.cm-adv-sep { color: var(--text-secondary, #94a3b8); font-size: 13px; font-weight: 600; }
+.cm-adv-checkbox {
+  display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary, #1e293b);
+  cursor: pointer; padding: 7px 12px; border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 7px; background: #fff; white-space: nowrap;
+}
+.cm-adv-checkbox input { cursor: pointer; accent-color: var(--pink-500, #ec4899); width: 14px; height: 14px; }
+.cm-adv-reset {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  border: 1px solid #dc2626; border-radius: 7px; background: transparent; color: #dc2626;
+  font-size: 12px; font-weight: 500; cursor: pointer; align-self: flex-end; transition: all 0.15s;
+}
+.cm-adv-reset:hover { background: #dc2626; color: #fff; }
 </style>
+

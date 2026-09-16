@@ -30,7 +30,7 @@ beforeEach(() => {
   currentPinia = createPinia();
   setActivePinia(currentPinia);
   mockLocalStorage.clear();
-  mockLocalStorage.setItem('saophone_dev_boot_id', (globalThis as any).__DEV_BOOT_ID__ || 'test-boot-id');
+  mockLocalStorage.setItem('saoclub_dev_boot_id', (globalThis as any).__DEV_BOOT_ID__ || 'test-boot-id');
   sessionStorage.clear();
 });
 afterEach(() => {
@@ -73,7 +73,7 @@ describe('auth store', () => {
     const { setSession } = await import('../../stores/index.js');
     const user = { id: 1, hoTen: 'Test', username: 'test', role: 'admin', token: 'xyz' };
     setSession(user);
-    const saved = JSON.parse(sessionStorage.getItem('saophone_session')!);
+    const saved = JSON.parse(sessionStorage.getItem('saoclub_session')!);
     expect(saved).toEqual(user);
   });
 
@@ -83,12 +83,12 @@ describe('auth store', () => {
     clearSession();
     expect(AuthStore.user).toBeNull();
     expect(AuthStore.isAdmin).toBe(false);
-    expect(sessionStorage.getItem('saophone_session')).toBeNull();
+    expect(sessionStorage.getItem('saoclub_session')).toBeNull();
   });
 
   it('should restore user from sessionStorage on load', async () => {
     const user = { id: 5, hoTen: 'Loaded', username: 'loaded', role: 'admin', token: 'saved' };
-    sessionStorage.setItem('saophone_session', JSON.stringify(user));
+    sessionStorage.setItem('saoclub_session', JSON.stringify(user));
 
     const { AuthStore } = await import('../../stores/index.js');
     expect(AuthStore.user).toEqual(user);
@@ -96,7 +96,7 @@ describe('auth store', () => {
   });
 
   it('should handle invalid sessionStorage gracefully', async () => {
-    sessionStorage.setItem('saophone_session', 'not-json');
+    sessionStorage.setItem('saoclub_session', 'not-json');
 
     const { AuthStore } = await import('../../stores/index.js');
     expect(AuthStore.user).toBeNull();

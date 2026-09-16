@@ -27,7 +27,7 @@ export default {
   },
 
   nav: {
-    tagline: "SAOPHONE — Hệ thống bán lẻ Laptop chính hãng hàng đầu",
+    tagline: "SAOClub — Hệ thống bán lẻ Laptop chính hãng hàng đầu",
     genuine: "Chính hãng - Xuất VAT đầy đủ",
     freeShip: "Giao nhanh Miễn phí từ 300k",
     tradeIn: "Thu cũ đổi mới trợ giá cao",
@@ -68,7 +68,7 @@ export default {
     phonePlaceholder: "Nhập số điện thoại của bạn",
     subscribe: "ĐĂNG KÝ NGAY",
     policyHeading: "Chính sách & Hỗ trợ",
-    connectHeading: "Kết nối với SAOPHONE",
+    connectHeading: "Kết nối với SAOClub",
     facebookLabel: "Facebook",
     youtubeLabel: "YouTube",
     instagramLabel: "Instagram",
@@ -81,11 +81,11 @@ export default {
     seoAccessoryText: "Tai nghe Bluetooth, Củ cáp sạc nhanh, Sạc dự phòng Anker, Bao da ốp lưng, Cường lực chính hãng.",
     seoSystemHeading: "Hệ thống phân phối",
     seoSystemText: "Hệ thống quản lý kho và phân phối sản phẩm công nghệ ứng dụng mô hình Agile/Scrum.",
-    companyName: "Hệ thống bán lẻ thiết bị công nghệ SAOPHONE",
+    companyName: "Hệ thống bán lẻ thiết bị công nghệ SAOClub",
     address: "Cơ sở vận hành: Trịnh Văn Bô, Nam Từ Liêm, Hà Nội",
     hotlineFooter: "Hotline: 0123.456.789 | Thiết kế và phát triển bởi Đội ngũ Phần mềm FPT Polytechnic.",
     badgeMinistry: "ĐÃ THÔNG BÁO BỘ CÔNG THƯƠNG",
-    copyright: "© {year} SAOPHONE. All rights reserved.",
+    copyright: "© {year} SAOClub. All rights reserved.",
     policies: [
       "Chính sách đổi trả 7 ngày",
       "Chính sách bảo hành sản phẩm",
@@ -98,7 +98,7 @@ export default {
 
   login: {
     welcome: "Chào mừng trở lại!",
-    subtitle: "Đăng nhập tài khoản hệ thống SAOPhone",
+    subtitle: "Đăng nhập tài khoản hệ thống SAOClub",
     usernameLabel: "Tên tài khoản hoặc Email",
     usernamePlaceholder: "Gõ tên đăng nhập hoặc email...",
     passwordLabel: "Mật khẩu",
@@ -195,7 +195,7 @@ export default {
     heroSubtitle: "Ưu đãi mùa tựu trường | Trả góp 0% + Tặng Balo Gaming cao cấp",
     loadingShort: "Đang tải...",
     noProducts: "Chưa có sản phẩm để hiển thị",
-    brandName: "Hệ thống phân phối LAPTOP SAOPHONE",
+    brandName: "Hệ thống phân phối LAPTOP SAOClub",
     brandTagline: "Hệ thống công nghệ Đen & Vàng",
     promoLink1: "Ưu đãi độc quyền học sinh sinh viên",
     promoLink2: "Deal sốc linh kiện máy tính đồ họa",
@@ -550,7 +550,7 @@ export default {
       uploadClickText: "Click để chọn ảnh/video",
       methodTitle: "Phương thức gửi",
       methodStore: "Mang đến cửa hàng",
-      methodStoreDesc: "Bạn tự mang máy đến cửa hàng SAOPhone gần nhất",
+      methodStoreDesc: "Bạn tự mang máy đến cửa hàng SAOClub gần nhất",
       methodPickup: "Nhân viên đến lấy",
       methodPickupDesc: "Nhân viên đến tận nơi lấy máy (phí vận chuyển có thể phát sinh)",
       addressTitle: "Địa chỉ lấy hàng",
@@ -580,7 +580,7 @@ export default {
       detailExpiryDate: "Hết hạn BH",
       issueSection: "Mô tả lỗi & Kết quả",
       yourIssue: "Bạn đã mô tả:",
-      resultFromCompany: "Kết quả xử lý từ SAOPhone:",
+      resultFromCompany: "Kết quả xử lý từ SAOClub:",
       costExtra: "Chi phí phát sinh:",
       note: "Ghi chú:",
       mediaSection: "Ảnh / Video minh chứng",
@@ -743,7 +743,7 @@ export default {
 
     products: {
       countSuffix: "sản phẩm",
-      add: "+ Thêm sản phẩm",
+      add: "Thêm sản phẩm",
       loading: "Đang tải...",
       colSku: "Mã sản phẩm",
       colName: "Tên sản phẩm",
@@ -823,7 +823,7 @@ export default {
     variantModal: {
       titlePrefix: "Biến thể:",
       edit: "Sửa",
-      addVariant: "+ Thêm biến thể",
+      addVariant: "Thêm biến thể",
       pickProductLabel: "Chọn sản phẩm",
       pickProductPlaceholder: "Tìm tên sản phẩm...",
       pickProductEmpty: "Không tìm thấy sản phẩm",
@@ -836,7 +836,7 @@ export default {
       countSuffix: "biến thể",
       clearFilters: "Xóa lọc",
       filterDone: "Xong",
-      add: "+ Thêm biến thể",
+      add: "Thêm biến thể",
       loading: "Đang tải...",
       colImage: "Ảnh",
       colSku: "SKU",
@@ -1056,7 +1056,7 @@ export default {
 
     customers: {
       countSuffix: "khách hàng",
-      add: "+ Thêm khách hàng",
+      add: "Thêm khách hàng",
       loading: "Đang tải...",
       colFullName: "Họ tên",
       colPhone: "Điện thoại",
@@ -1162,18 +1162,24 @@ export default {
     },
 
     suppliers: {
+      title: "Danh mục nhà cung cấp",
+      subtitle: "Quản lý danh sách nhà cung cấp và thông tin liên hệ",
       countSuffix: "nhà cung cấp",
-      add: "+ Thêm nhà cung cấp",
+      add: "Thêm nhà cung cấp",
       loading: "Đang tải...",
       colName: "Tên nhà cung cấp",
       colPhone: "Điện thoại",
       colEmail: "Email",
+      colAddress: "Địa chỉ",
+      colTaxCode: "Mã số thuế",
       colContact: "Người liên hệ",
       colStatus: "Trạng thái",
       colAction: "Thao tác",
       edit: "Sửa",
-      empty: "Chưa có nhà cung cấp",
-      searchPlaceholder: "Tìm tên, SĐT, email...",
+      empty: "Chưa có nhà cung cấp nào",
+      noResult: "Không có kết quả phù hợp",
+      searchPlaceholder: "Tìm tên, SĐT, email, địa chỉ...",
+      filterStatus: "Trạng thái",
     },
 
     supplierModal: {
@@ -1392,12 +1398,15 @@ export default {
 
     dmCategory: {
       countSuffix: "{label}",
+      subtitle: "Quản lý danh mục và serial",
       searchPlaceholder: "Tìm {label}...",
-      add: "+ Thêm {label}",
+      add: "Thêm {label}",
       loading: "Đang tải...",
+      colStock: "Tồn kho",
       colAction: "Thao tác",
       edit: "Sửa",
       empty: "Chưa có {label} nào",
+      noResult: "Không có kết quả phù hợp",
       titleAdd: "Thêm {label}",
       titleEdit: "Sửa {label}",
       cancel: "Hủy",
@@ -1411,7 +1420,7 @@ export default {
 
     serialManager: {
       searchPlaceholder: "Tìm serial, SKU, tên sản phẩm...",
-      add: "+ Thêm serial",
+      add: "Thêm serial",
       loading: "Đang tải...",
       colVariant: "Sản phẩm / SKU",
       colSerial: "Số serial",
@@ -1440,9 +1449,11 @@ export default {
     },
 
     inventoryHistory: {
+      title: "Lịch sử tồn kho",
+      subtitle: "Theo dõi mọi biến động tồn kho theo thời gian",
       countSuffix: "lượt biến động",
       loading: "Đang tải...",
-      searchPlaceholder: "Tìm SKU, ghi chú...",
+      searchPlaceholder: "Tìm SKU, tên sản phẩm, ghi chú...",
       allTypes: "Tất cả loại",
       typeNhap: "Nhập kho",
       typeXuatBan: "Xuất bán",
@@ -1451,11 +1462,14 @@ export default {
       typeHuy: "Hủy",
       typeGiuHang: "Giữ hàng",
       colDate: "Thời gian",
+      colProduct: "Sản phẩm",
       colSku: "SKU",
       colType: "Loại biến động",
       colQty: "Số lượng",
+      colStaff: "Người thực hiện",
       colNote: "Ghi chú",
       empty: "Chưa có lịch sử biến động",
+      noResult: "Không có kết quả phù hợp",
     },
 
     reviews: {
@@ -1516,7 +1530,7 @@ export default {
       actualStockLabel: "Tồn kho thực",
       actualStockHint: "Số serial thực tế đang có trong kho cho biến thể này — có thể lệch với số lượng ghi trên phiếu nếu chưa nhập đủ serial ở tab Tồn kho.",
       unitPricePlaceholder: "Đơn giá",
-      addRow: "+ Thêm dòng",
+      addRow: "Thêm dòng",
       totalLabel: "Tổng tiền:",
       cancel: "Hủy",
       save: "Tạo phiếu",
@@ -1541,7 +1555,7 @@ export default {
       minStockLabel: "Tồn kho tối thiểu (cảnh báo)",
       newSerialsLabel: "Thêm số lượng mới (nhập serial)",
       serialPlaceholder: "Nhập số serial",
-      addSerialRow: "+ Thêm dòng",
+      addSerialRow: "Thêm dòng",
       importFromFile: "Nhập từ file",
       importHint: "Chọn file Excel (.xlsx/.xls) hoặc CSV/TXT, mỗi serial 1 ô/1 dòng",
       cancel: "Hủy",
@@ -1583,7 +1597,7 @@ export default {
 
     promotions: {
       countSuffix: "khuyến mãi",
-      add: "+ Thêm khuyến mãi",
+      add: "Thêm khuyến mãi",
       loading: "Đang tải...",
       colCode: "Mã KM",
       colName: "Tên",
@@ -1634,7 +1648,7 @@ export default {
     },
     rewards: {
       countSuffix: "phần thưởng",
-      add: "+ Thêm phần thưởng",
+      add: "Thêm phần thưởng",
       loading: "Đang tải...",
       colName: "Tên",
       colPoints: "Điểm cần",
@@ -1671,7 +1685,7 @@ export default {
 
     staff: {
       countSuffix: "nhân viên",
-      add: "+ Thêm nhân viên",
+      add: "Thêm nhân viên",
       loading: "Đang tải...",
       colFullName: "Họ tên",
       colPhone: "Điện thoại",
@@ -1794,7 +1808,7 @@ export default {
       chooseSerial: "Chọn serial (IMEI)",
       addChosenSerials: "Thêm {count} máy vào giỏ",
       noSerialAvailable: "Không còn serial nào trong kho cho biến thể này",
-      addToCart: "+ Thêm vào giỏ",
+      addToCart: "Thêm vào giỏ",
       noProductsFound: "Không tìm thấy sản phẩm",
       cart: "Giỏ hàng",
       cartCountSuffix: "sản phẩm",

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from "vue";
+import { Search, X, Filter, ChevronDown, Plus } from "@lucide/vue";
 import JsBarcode from "jsbarcode";
 import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
@@ -82,8 +83,16 @@ const variantSearch = ref("");
 const filterThuongHieu = ref("");
 const filterDanhMuc = ref("");
 const filterTrangThai = ref("");
+const filterCpu = ref("");
+const filterRam = ref("");
+const filterMauSac = ref("");
+const filterGiaMin = ref("");
+const filterGiaMax = ref("");
+const filterTonMin = ref("");
+const filterTonMax = ref("");
 const isFilterOpen = ref(false);
 
+// allVariants: lọc theo filterSanPhamId nếu có (dùng ở cả tab Product lẫn tab độc lập)
 const allVariants = computed(() => {
   const all = ProductsStore.items ?? [];
   return props.filterSanPhamId != null
@@ -106,12 +115,28 @@ const statusOptions = computed(() =>
     .map((value) => ({ value, label: statusLabel(value) }))
 );
 
+// Dynamic options for new filters
+const filterCpuOptions = computed(() => [...new Set(allVariants.value.map(p => p.cpu).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'vi')).map(v => ({ value: v, label: v })));
+const filterRamOptions = computed(() => [...new Set(allVariants.value.map(p => p.ram).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'vi')).map(v => ({ value: v, label: v })));
+const filterMauSacOptions = computed(() => [...new Set(allVariants.value.map(p => p.mauSac).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'vi')).map(v => ({ value: v, label: v })));
+
 const filteredVariants = computed(() => {
   const q = variantSearch.value.trim().toLowerCase();
   return allVariants.value.filter((p) => {
     if (filterThuongHieu.value !== "" && String(p.thuongHieuId) !== String(filterThuongHieu.value)) return false;
     if (filterDanhMuc.value !== "" && String(p.danhMucId) !== String(filterDanhMuc.value)) return false;
     if (filterTrangThai.value !== "" && p.trangThai !== filterTrangThai.value) return false;
+    if (filterCpu.value !== "" && p.cpu !== filterCpu.value) return false;
+    if (filterRam.value !== "" && p.ram !== filterRam.value) return false;
+    if (filterMauSac.value !== "" && p.mauSac !== filterMauSac.value) return false;
+    // khoảng giá bán
+    const gia = Number(p.giaBan ?? 0);
+    if (filterGiaMin.value !== "" && gia < Number(filterGiaMin.value)) return false;
+    if (filterGiaMax.value !== "" && gia > Number(filterGiaMax.value)) return false;
+    // khoảng tồn kho
+    const ton = Number(p.soLuongTon ?? 0);
+    if (filterTonMin.value !== "" && ton < Number(filterTonMin.value)) return false;
+    if (filterTonMax.value !== "" && ton > Number(filterTonMax.value)) return false;
     if (!q) return true;
     return [p.tenSanPham, p.maSku, p.barcode, p.mauSac, p.cpu]
       .some((f) => (f ?? "").toString().toLowerCase().includes(q));
@@ -119,18 +144,28 @@ const filteredVariants = computed(() => {
 });
 
 const activeFilterCount = computed(() =>
-  [filterThuongHieu.value, filterDanhMuc.value, filterTrangThai.value].filter((v) => v !== "").length
+  [filterThuongHieu.value, filterDanhMuc.value, filterTrangThai.value, filterCpu.value, filterRam.value, filterMauSac.value,
+   filterGiaMin.value !== "" ? filterGiaMin.value : "", filterGiaMax.value !== "" ? filterGiaMax.value : "",
+   filterTonMin.value !== "" ? filterTonMin.value : "", filterTonMax.value !== "" ? filterTonMax.value : "",
+  ].filter((v) => v !== "").length
 );
 const clearFilters = () => {
   variantSearch.value = "";
   filterThuongHieu.value = "";
   filterDanhMuc.value = "";
   filterTrangThai.value = "";
+  filterCpu.value = "";
+  filterRam.value = "";
+  filterMauSac.value = "";
+  filterGiaMin.value = "";
+  filterGiaMax.value = "";
+  filterTonMin.value = "";
+  filterTonMax.value = "";
 };
 
 const { currentPage, totalPages, pagedItems: pagedVariants, pageSize } = usePagination(filteredVariants);
 // Đổi bộ lọc mà vẫn đứng ở trang 5 thì bảng trông như rỗng — luôn kéo về trang đầu.
-watch([variantSearch, filterThuongHieu, filterDanhMuc, filterTrangThai], () => { currentPage.value = 0; });
+watch([variantSearch, filterThuongHieu, filterDanhMuc, filterTrangThai, filterCpu, filterRam, filterMauSac, filterGiaMin, filterGiaMax, filterTonMin, filterTonMax], () => { currentPage.value = 0; });
 
 // Bỏ tiền tố hãng CPU (Intel Core/AMD Ryzen) — dư thừa, không cần trong bảng liệt kê gọn,
 // tên đầy đủ vẫn hiện nguyên trong ô chi tiết lúc bấm vào dòng.
@@ -464,7 +499,7 @@ const openEdit = async (p) => {
     barcodeBienThe: p.barcode ?? "",
     cpuId: cpuList.value.find((c) => c.tenCpu === p.cpu)?.cpuId ?? null,
     ramId: ramList.value.find((r) => r.dungLuong === p.ram)?.ramId ?? null,
-    oCungId: oCungList.value.find((o) => o.loaiOcung === p.oCung)?.oCungId ?? null,
+    oCungId: oCungList.value.find((o) => (o.loaiOcung ?? o.LoaiOcung) === p.oCung)?.oCungId ?? null,
     gpuId: gpuList.value.find((g) => g.tenGpu === p.gpu)?.gpuId ?? null,
     kichThuocManHinh: p.kichThuocManHinh,
     heDieuHanh: p.heDieuHanh,
@@ -631,24 +666,24 @@ const saveVariant = async () => {
       <div class="vt-toolbar__left">
         <span class="vt-toolbar__count">{{ filteredVariants.length }}/{{ allVariants.length }} {{ t('admin.variants.countSuffix') }}</span>
         <div class="vt-search">
-          <i class="fa fa-search vt-search__icon"></i>
+          <Search class="vt-search__icon" :size="14" />
           <input v-model="variantSearch" :placeholder="tt('admin.variants.searchPlaceholder2', 'Tìm tên, SKU, màu…')" />
           <button v-if="variantSearch" class="vt-search__clear" :title="tt('admin.variants.clearSearch', 'Xóa tìm kiếm')" @click="variantSearch = ''">
-            <i class="fa fa-times"></i>
+            <X :size="14" />
           </button>
         </div>
       </div>
 
       <div class="vt-toolbar__right">
         <button type="button" class="vt-btn vt-btn--ghost" :class="{ 'is-on': isFilterOpen }" @click="isFilterOpen = !isFilterOpen">
-          <i class="fa fa-filter"></i>
+          <Filter :size="14" />
           {{ tt('admin.variants.filters', 'Bộ lọc') }}
           <span v-if="activeFilterCount" class="vt-filter-badge">{{ activeFilterCount }}</span>
-          <i class="fa fa-chevron-down vt-caret" :class="{ 'is-open': isFilterOpen }"></i>
+          <ChevronDown class="vt-caret" :size="14" />
         </button>
 
         <button v-if="!readonly" class="vt-btn vt-btn--primary" @click="openAddVariantFlow">
-          <i class="fa fa-plus"></i> {{ t('admin.variants.add') }}
+          <Plus :size="14" /> {{ t('admin.variants.add') }}
         </button>
       </div>
     </div>
@@ -679,6 +714,48 @@ const saveVariant = async () => {
               <option value="">{{ tt('admin.variants.filterStatusAll', 'Tất cả trạng thái') }}</option>
               <option v-for="o in statusOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
+          </label>
+
+          <label class="vt-field">
+            <span>CPU</span>
+            <select v-model="filterCpu">
+              <option value="">Tất cả CPU</option>
+              <option v-for="o in filterCpuOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+          </label>
+
+          <label class="vt-field">
+            <span>RAM</span>
+            <select v-model="filterRam">
+              <option value="">Tất cả RAM</option>
+              <option v-for="o in filterRamOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+          </label>
+
+          <label class="vt-field">
+            <span>Màu sắc</span>
+            <select v-model="filterMauSac">
+              <option value="">Tất cả màu</option>
+              <option v-for="o in filterMauSacOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+          </label>
+
+          <label class="vt-field vt-field--range">
+            <span>Giá bán (₫)</span>
+            <div class="vt-range">
+              <input v-model="filterGiaMin" type="number" min="0" placeholder="Từ" class="vt-range-input" />
+              <span class="vt-range-sep">–</span>
+              <input v-model="filterGiaMax" type="number" min="0" placeholder="Đến" class="vt-range-input" />
+            </div>
+          </label>
+
+          <label class="vt-field vt-field--range">
+            <span>Tồn kho</span>
+            <div class="vt-range">
+              <input v-model="filterTonMin" type="number" min="0" placeholder="Từ" class="vt-range-input" />
+              <span class="vt-range-sep">–</span>
+              <input v-model="filterTonMax" type="number" min="0" placeholder="Đến" class="vt-range-input" />
+            </div>
           </label>
         </div>
 
@@ -1266,6 +1343,18 @@ const saveVariant = async () => {
 }
 .vt-caret { font-size: 10px; transition: transform .2s; }
 .vt-caret.is-open { transform: rotate(180deg); }
+
+/* ─── Range filter (Giá bán, Tồn kho) ─── */
+.vt-field--range > span { margin-bottom: 0; }
+.vt-range { display: flex; align-items: center; gap: 5px; }
+.vt-range-input {
+  flex: 1; min-width: 0; padding: 6px 8px;
+  border: 1px solid var(--pink-200, #fbcfe8); border-radius: 7px;
+  background: #fff; color: var(--ink, #1e293b);
+  font-size: 13px; outline: none; transition: border-color 0.15s;
+}
+.vt-range-input:focus { border-color: var(--pink-500, #ec4899); }
+.vt-range-sep { color: var(--pink-400, #f472b6); font-size: 13px; font-weight: 700; flex-shrink: 0; }
 
 /* ══════════ BẢNG ══════════ */
 /* table-layout: fixed + moi cot deu co width — trinh khong-gian-thua-do-mot-cot-choan-het

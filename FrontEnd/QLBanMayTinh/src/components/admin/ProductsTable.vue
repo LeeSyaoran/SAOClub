@@ -177,7 +177,7 @@ const deleteProduct = async (id) => {
       <tbody>
         <tr v-for="(p, idx) in pagedProducts" :key="p.sanPhamId">
           <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-          <td class="text-secondary" style="font-family: monospace; font-size: 0.8rem">{{ p.maSku }}</td>
+          <td class="text-secondary" style="font-family: monospace; font-size: 0.8rem">{{ p.maSanPham }}</td>
           <td>
             <div class="d-flex align-items-center gap-2">
               <div

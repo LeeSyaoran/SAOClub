@@ -2,20 +2,22 @@
   <div
     v-if="modelValue"
     class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-    style="background:rgba(0,0,0,0.75); z-index:1050; backdrop-filter:blur(4px);"
+    style="background:rgba(255, 255, 255, 0.35); z-index:1050; backdrop-filter:blur(3px);"
     @click.self="$emit('update:modelValue', false)"
   >
     <div
       ref="dialogEl" class="rounded-4 p-4 position-relative" tabindex="-1"
-      role="dialog" aria-modal="true" :style="`background:var(--bg-card); border:1px solid var(--border-color); width:${width}; max-width:94vw; box-shadow:0 24px 80px rgba(0,0,0,0.4);`"
+      role="dialog" aria-modal="true" :style="`background:linear-gradient(180deg, #ffffff 0%, #fef7fa 100%); border:1px solid #f3b8d0; width:${width}; max-width:94vw; box-shadow:0 24px 80px rgba(225,29,72,0.12);`"
       @keydown="trapFocus"
     >
       <button
-        class="btn-close position-absolute"
-        style="top:16px; right:16px; font-size:0.75rem;"
+        class="btn-close-x position-absolute d-flex align-items-center justify-content-center rounded-circle"
+        style="top:16px; right:16px; width:32px; height:32px; background:var(--bg-card-alt); border:1px solid var(--border-color); color:var(--text-secondary);"
         :aria-label="t('common.close')"
         @click="$emit('update:modelValue', false)"
-      ></button>
+      >
+        <X :size="16" />
+      </button>
 
       <slot />
     </div>
@@ -25,6 +27,7 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue';
 import { t } from '../../i18n/index.js';
+import { X } from '@lucide/vue';
 
 // Props: modelValue dùng v-model để đóng/mở, width tùy chỉnh độ rộng hộp
 const props = defineProps({

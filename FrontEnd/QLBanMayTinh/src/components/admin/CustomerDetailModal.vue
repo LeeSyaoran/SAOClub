@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { Phone, Mail, Star, X, Pen, Save, ShoppingBag, Clock } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as KhachHangService from "../../services/KhachHangService.js";
 import * as DonHangService from "../../services/DonHangService.js";
@@ -145,9 +146,9 @@ onMounted(() => { loadOrders(); });
           <div>
             <div class="cdm-name">{{ customer.hoTen || 'Khách hàng' }}</div>
             <div class="cdm-contact">
-              <i class="fa fa-phone"></i> {{ customer.soDienThoai || '—' }}
+              <Phone :size="14" /> {{ customer.soDienThoai || '—' }}
               <span class="mx-2">·</span>
-              <i class="fa fa-envelope"></i> {{ customer.email || '—' }}
+              <Mail :size="14" /> {{ customer.email || '—' }}
             </div>
             <div class="cdm-tags">
               <span class="cdm-badge" :class="customer.trangThai === 'active' ? 'is-active' : 'is-locked'">
@@ -155,13 +156,13 @@ onMounted(() => { loadOrders(); });
               </span>
               <span class="cdm-badge is-soft">{{ customer.loaiKhach || 'ca_nhan' }}</span>
               <span v-if="customer.diemTichLuy" class="cdm-badge is-soft">
-                <i class="fa fa-star"></i> {{ customer.diemTichLuy }} điểm
+                <Star :size="14" /> {{ customer.diemTichLuy }} điểm
               </span>
             </div>
           </div>
         </div>
         <button class="cdm-close" :aria-label="t('common.close')" @click="emit('close')">
-          <i class="fa fa-times"></i>
+          <X :size="14" />
         </button>
       </div>
 
@@ -199,7 +200,7 @@ onMounted(() => { loadOrders(); });
             </div>
             <div class="info-actions">
               <button class="cdm-btn cdm-btn--primary" @click="startEditInfo">
-                <i class="fa fa-pen"></i> Chỉnh sửa
+                <Pen :size="14" /> Chỉnh sửa
               </button>
             </div>
           </div>
@@ -231,7 +232,7 @@ onMounted(() => { loadOrders(); });
             <div class="info-actions">
               <button class="cdm-btn cdm-btn--ghost" @click="cancelEditInfo">Hủy</button>
               <button class="cdm-btn cdm-btn--primary" :disabled="savingInfo" @click="saveInfo">
-                <i class="fa fa-save"></i> {{ savingInfo ? 'Đang lưu...' : 'Lưu thay đổi' }}
+                <Save :size="14" /> {{ savingInfo ? 'Đang lưu...' : 'Lưu thay đổi' }}
               </button>
             </div>
           </div>
@@ -241,7 +242,7 @@ onMounted(() => { loadOrders(); });
         <div v-if="activeTab === 'orders'" class="cdm-tab-pane">
           <div v-if="ordersLoading" class="text-secondary small text-center py-4">Đang tải đơn hàng...</div>
           <div v-else-if="orders.length === 0" class="cdm-empty">
-            <i class="fa fa-shopping-bag"></i>
+            <ShoppingBag :size="14" />
             <p>Khách hàng chưa có đơn hàng nào.</p>
           </div>
           <div v-else class="orders-list">
@@ -254,7 +255,7 @@ onMounted(() => { loadOrders(); });
               <div class="order-head">
                 <div class="order-head-left">
                   <span class="order-code">{{ o.maDonHang || o.maDon || '#' + o.donHangId }}</span>
-                  <span class="order-date"><i class="fa fa-clock"></i> {{ formatDate(o.ngayDat) }}</span>
+                  <span class="order-date"><Clock :size="14" /> {{ formatDate(o.ngayDat) }}</span>
                 </div>
                 <div class="order-head-right">
                   <span class="order-total">{{ formatPrice(o.thanhTien) }}</span>
@@ -277,7 +278,7 @@ onMounted(() => { loadOrders(); });
                 </div>
                 <div class="order-detail-actions">
                   <button class="cdm-btn cdm-btn--ghost cdm-btn--sm" @click.stop="expandedOrder = null">
-                    <i class="fa fa-times"></i> Đóng
+                    <X :size="14" /> Đóng
                   </button>
                   <button class="cdm-btn cdm-btn--primary cdm-btn--sm" @click.stop="emit('view-order', o)">
                     <i class="fa fa-external-link-alt"></i> Xem chi tiết

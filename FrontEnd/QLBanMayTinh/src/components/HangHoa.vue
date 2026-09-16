@@ -7,32 +7,32 @@
         <div class="hh-toolbar__left">
           <span class="hh-toolbar__count">{{ groupsDaLoc.length }} sản phẩm · {{ bienTheDaLoc.length }} phiên bản</span>
           <div class="hh-search">
-            <i class="fa fa-search hh-search__icon"></i>
+            <Search :size="14" class="hh-search__icon" />
             <input v-model="searchKeyword" type="text" placeholder="Tìm theo mã sản phẩm, tên, SKU, mã vạch" />
             <button v-if="searchKeyword" class="hh-search__clear" title="Xóa tìm kiếm" @click="searchKeyword = ''">
-              <i class="fa fa-times"></i>
+              <X :size="13" />
             </button>
           </div>
         </div>
 
         <div class="hh-toolbar__right">
           <button class="hh-btn hh-btn--ghost" :class="{ 'is-on': isFilterOpen }" @click="isFilterOpen = !isFilterOpen">
-            <i class="fa fa-filter"></i>
+            <Filter :size="14" />
             <span>Bộ lọc</span>
             <span v-if="soBoLocDangDung" class="hh-chip">{{ soBoLocDangDung }}</span>
-            <i class="fa fa-chevron-down hh-caret" :class="{ 'is-open': isFilterOpen }"></i>
+            <ChevronDown :size="13" class="hh-caret" :class="{ 'is-open': isFilterOpen }" />
           </button>
 
           <button class="hh-btn hh-btn--primary" @click="openCreate">
-            <i class="fa fa-plus"></i> Tạo mới
+            <Plus :size="14" /> Tạo mới
           </button>
 
           <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDaLoc.length" @click="openExportModal">
-            <i class="fa fa-download"></i> Xuất file
+            <Download :size="14" /> Xuất file
           </button>
 
           <button class="hh-icon-btn" title="Tải lại dữ liệu" @click="fetchData">
-            <i class="fa fa-refresh" :class="{ 'fa-spin': isLoading }"></i>
+            <RefreshCw :size="14" :class="{ 'fa-spin': isLoading }" />
           </button>
         </div>
       </div>
@@ -116,7 +116,7 @@
 
           <div class="hh-filter__foot">
             <div class="hh-filter__btns">
-              <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters"><i class="fa fa-eraser"></i> Xóa lọc</button>
+              <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters"><Eraser :size="14" /> Xóa lọc</button>
               <button class="hh-btn hh-btn--primary hh-btn--sm" @click="isFilterOpen = false">Xong</button>
             </div>
           </div>
@@ -172,7 +172,7 @@
               </td>
               <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayTao) }}</td>
               <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayCapNhat) }}</td>
-              <td class="hh-col-go"><i class="fa fa-angle-right"></i></td>
+              <td class="hh-col-go"><ChevronRight :size="14" /></td>
             </tr>
           </tbody>
         </table>
@@ -181,7 +181,7 @@
       </div>
 
       <div v-if="!isLoading && !pagedGroups.length" class="hh-empty">
-        <i class="fa fa-inbox"></i>
+        <Inbox :size="48" />
         <p v-if="coBoLoc">Không có sản phẩm nào khớp với bộ lọc hiện tại.</p>
         <p v-else>Chưa có sản phẩm nào. Bấm “Tạo mới” để thêm sản phẩm đầu tiên.</p>
         <button v-if="coBoLoc" class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters">Xóa lọc</button>
@@ -198,9 +198,9 @@
             <option :value="20">20 / trang</option>
             <option :value="50">50 / trang</option>
           </select>
-          <button class="hh-icon-btn" :disabled="page === 1" @click="page--"><i class="fa fa-chevron-left"></i></button>
+          <button class="hh-icon-btn" :disabled="page === 1" @click="page--"><ChevronLeft :size="14" /></button>
           <span class="hh-pager__page">{{ page }} / {{ totalPages || 1 }}</span>
-          <button class="hh-icon-btn" :disabled="page >= totalPages" @click="page++"><i class="fa fa-chevron-right"></i></button>
+          <button class="hh-icon-btn" :disabled="page >= totalPages" @click="page++"><ChevronRight :size="14" /></button>
         </div>
       </footer>
     </div>
@@ -219,7 +219,7 @@
                 </span>
               </p>
             </div>
-            <button class="hh-icon-btn" aria-label="Đóng" @click="dongChiTiet"><i class="fa fa-times"></i></button>
+            <button class="hh-icon-btn" aria-label="Đóng" @click="dongChiTiet"><X :size="14" /></button>
           </header>
 
           <nav class="hh-tabs">
@@ -291,7 +291,7 @@
             <!-- ─────────── CHI TIẾT · BIẾN THỂ ─────────── -->
             <div v-show="tabCT === 'bienthe'" class="hh-pane">
               <p class="hh-note hh-note--plain">
-                <i class="fa fa-hand-o-up"></i>
+                <Hand :size="14" />
                 Bấm vào một dòng để chọn phiên bản, các nút thao tác nằm ở cuối cửa sổ.
               </p>
 
@@ -359,7 +359,7 @@
             <!-- ─────────── CHI TIẾT · LỊCH SỬ THAY ĐỔI ─────────── -->
             <div v-show="tabCT === 'lichsu'" class="hh-pane">
               <div v-if="nhatKyLoading" class="hh-empty">
-                <i class="fa fa-spinner fa-spin"></i>
+                <Loader2 :size="14" class="fa-spin" />
                 <p>Đang tải nhật ký…</p>
               </div>
               <ol v-else-if="lichSuHienTai.length" class="hh-ls">
@@ -375,7 +375,7 @@
                       <li v-for="(t, j) in m.thayDoi" :key="j">
                         <span class="hh-ls__field">{{ t.truong }}</span>
                         <em>{{ t.cu || '—' }}</em>
-                        <i class="fa fa-long-arrow-right"></i>
+                        <ArrowRight :size="14" />
                         <b>{{ t.moi || '—' }}</b>
                       </li>
                     </ul>
@@ -385,7 +385,7 @@
               </ol>
 
               <div v-else class="hh-empty">
-                <i class="fa fa-history"></i>
+                <History :size="14" />
                 <p>Chưa ghi nhận thay đổi nào cho sản phẩm này.</p>
               </div>
             </div>
@@ -395,34 +395,34 @@
             <div class="hh-modal__foot-left">
               <button class="hh-btn hh-btn--ghost" @click="dongChiTiet">Đóng</button>
               <button v-if="tabCT === 'bienthe'" class="hh-btn hh-btn--ghost" @click="themPhienBan(chiTiet)">
-                <i class="fa fa-plus"></i> Thêm phiên bản
+                <Plus :size="14" /> Thêm phiên bản
               </button>
             </div>
 
             <div class="hh-modal__foot-right">
               <template v-if="tabCT === 'info'">
-                <button class="hh-btn hh-btn--soft" @click="saoChepSanPham(chiTiet)"><i class="fa fa-clone"></i> Sao chép</button>
-                <button class="hh-btn hh-btn--primary" @click="suaSanPham(chiTiet)"><i class="fa fa-pencil"></i> Chỉnh sửa</button>
+                <button class="hh-btn hh-btn--soft" @click="saoChepSanPham(chiTiet)"><Copy :size="14" /> Sao chép</button>
+                <button class="hh-btn hh-btn--primary" @click="suaSanPham(chiTiet)"><Pencil :size="14" /> Chỉnh sửa</button>
               </template>
 
               <template v-else-if="tabCT === 'bienthe'">
                 <span v-if="bienTheDangChon" class="hh-foot-hint">Đang chọn: <b>{{ bienTheDangChon.maSku }}</b></span>
                 <span v-else class="hh-foot-hint">Chọn một phiên bản để thao tác</span>
                 <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDangChon" @click="inTemMa(bienTheDangChon)">
-                  <i class="fa fa-barcode"></i> In tem mã
+                  <Barcode :size="14" /> In tem mã
                 </button>
                 <button class="hh-btn hh-btn--soft" :disabled="!bienTheDangChon || dangSaoChepBienThe" @click="saoChepBienThe(bienTheDangChon)">
-                  <i class="fa fa-clone"></i> {{ dangSaoChepBienThe ? 'Đang sao chép…' : 'Sao chép' }}
+                  <Copy :size="14" /> {{ dangSaoChepBienThe ? 'Đang sao chép…' : 'Sao chép' }}
                 </button>
                 <button class="hh-btn hh-btn--primary" :disabled="!bienTheDangChon" @click="suaBienThe(bienTheDangChon)">
-                  <i class="fa fa-pencil"></i> Chỉnh sửa
+                  <Pencil :size="14" /> Chỉnh sửa
                 </button>
               </template>
 
               <template v-else>
                 <span class="hh-foot-hint">Nhật ký ghi lại mỗi lần lưu thành công trên máy này.</span>
                 <button class="hh-btn hh-btn--ghost" :disabled="!lichSuHienTai.length" @click="xoaLichSu">
-                  <i class="fa fa-eraser"></i> Xóa nhật ký
+                  <Eraser :size="14" /> Xóa nhật ký
                 </button>
               </template>
             </div>
@@ -443,7 +443,7 @@
                 <span v-if="form.tenSanPham" class="hh-head-path">{{ form.tenSanPham }}</span>
               </p>
             </div>
-            <button class="hh-icon-btn" aria-label="Đóng" @click="closeModal"><i class="fa fa-times"></i></button>
+            <button class="hh-icon-btn" aria-label="Đóng" @click="closeModal"><X :size="14" /></button>
           </header>
 
           <nav class="hh-tabs">
@@ -542,10 +542,10 @@
                         <span v-if="i === 0" class="hh-gallery__badge">Ảnh chính</span>
                         <div class="hh-gallery__actions">
                           <button v-if="i !== 0" type="button" class="hh-icon-btn hh-icon-btn--sm" title="Đặt làm ảnh chính" @click="datLamAnhChinh(i)">
-                            <i class="fa fa-star"></i>
+                            <Star :size="14" />
                           </button>
                           <button type="button" class="hh-icon-btn hh-icon-btn--sm" title="Xóa ảnh" @click="xoaAnhTaiViTri(i)">
-                            <i class="fa fa-trash"></i>
+                            <Trash2 :size="14" />
                           </button>
                         </div>
                       </div>
@@ -561,7 +561,7 @@
                 </div>
 
                 <p class="hh-note">
-                  <i class="fa fa-clock-o"></i>
+                  <Clock :size="14" />
                   Ngày tạo và ngày cập nhật do hệ thống tự ghi tại thời điểm bấm Lưu — hiện là {{ dongHo }}.
                 </p>
               </fieldset>
@@ -605,7 +605,7 @@
                       <div class="hh-inline">
                         <input v-model.trim="form.barcode" placeholder="8–13 chữ số" />
                         <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" title="Sinh mã vạch EAN-13" @click="form.barcode = sinhBarcode(barcodeDaDung)">
-                          <i class="fa fa-refresh"></i>
+                          <RefreshCw :size="14" />
                         </button>
                       </div>
                       <em v-if="errors.barcode" class="hh-err">{{ errors.barcode }}</em>
@@ -642,7 +642,7 @@
                     </label>
                   </div>
                 </fieldset>
-                <p v-else class="hh-note"><i class="fa fa-hand-pointer-o"></i> Chọn một phiên bản trong danh sách bên trái để sửa.</p>
+                <p v-else class="hh-note"><MousePointer2 :size="14" /> Chọn một phiên bản trong danh sách bên trái để sửa.</p>
               </template>
 
               <!-- Sinh nhiều phiên bản (khi modalMode === 'create' hoặc 'variant') -->
@@ -718,7 +718,7 @@
                     </label>
                   </div>
                   <p class="hh-note">
-                    <i class="fa fa-info-circle"></i>
+                    <Info :size="14" />
                     Giá vốn và giá bán đặt sau — mở chi tiết sản phẩm, chọn phiên bản rồi bấm “Chỉnh sửa”, hoặc để phiếu nhập kho ghi giá vốn.
                   </p>
                 </fieldset>
@@ -750,7 +750,7 @@
                           <td class="hh-matrix__cfg">{{ moTaCauHinh(row) || 'Phiên bản tiêu chuẩn' }}</td>
                           <td class="ta-c">
                             <button type="button" class="hh-icon-btn" title="Bỏ phiên bản này" @click="xoaDong(row.key)">
-                              <i class="fa fa-times"></i>
+                              <X :size="14" />
                             </button>
                           </td>
                         </tr>
@@ -775,11 +775,11 @@
                     <button type="button" title="In nghiêng" @click="dinhDang('italic')"><i>I</i></button>
                     <button type="button" title="Gạch chân" @click="dinhDang('underline')"><u>U</u></button>
                     <span class="hh-editor__sep"></span>
-                    <button type="button" title="Danh sách chấm" @click="dinhDang('insertUnorderedList')"><i class="fa fa-list-ul"></i></button>
-                    <button type="button" title="Danh sách số" @click="dinhDang('insertOrderedList')"><i class="fa fa-list-ol"></i></button>
+                    <button type="button" title="Danh sách chấm" @click="dinhDang('insertUnorderedList')"><ListIcon :size="14" /></button>
+                    <button type="button" title="Danh sách số" @click="dinhDang('insertOrderedList')"><ListOrdered :size="14" /></button>
                     <span class="hh-editor__sep"></span>
-                    <button type="button" title="Chèn liên kết" @click="chenLink"><i class="fa fa-link"></i></button>
-                    <button type="button" title="Xóa định dạng" @click="dinhDang('removeFormat')"><i class="fa fa-eraser"></i></button>
+                    <button type="button" title="Chèn liên kết" @click="chenLink"><Link :size="14" /></button>
+                    <button type="button" title="Xóa định dạng" @click="dinhDang('removeFormat')"><Eraser :size="14" /></button>
                   </div>
                   <div
                     ref="moTaEl"
@@ -821,7 +821,7 @@
               <h2>Xuất file</h2>
               <p><span class="hh-head-path">Chọn sản phẩm / phiên bản muốn xuất</span></p>
             </div>
-            <button class="hh-icon-btn" aria-label="Đóng" @click="showExportModal = false"><i class="fa fa-times"></i></button>
+            <button class="hh-icon-btn" aria-label="Đóng" @click="showExportModal = false"><X :size="14" /></button>
           </header>
 
           <div class="hh-modal__body">
@@ -832,7 +832,7 @@
                 <span class="hh-export-count">{{ selectedIds.length }}/{{ bienTheDaLoc.length }}</span>
               </label>
               <div class="hh-search hh-export-search">
-                <i class="fa fa-search hh-search__icon"></i>
+                <Search :size="14" class="hh-search__icon" />
                 <input v-model="exportSearch" type="text" placeholder="Tìm sản phẩm, SKU..." />
               </div>
             </div>
@@ -870,7 +870,7 @@
             </div>
             <div class="hh-modal__foot-right">
               <button type="button" class="hh-btn hh-btn--primary" :disabled="!selectedIds.length" @click="exportCsv">
-                <i class="fa fa-download"></i> Xuất file ({{ selectedIds.length }})
+                <Download :size="14" /> Xuất file ({{ selectedIds.length }})
               </button>
             </div>
           </footer>
@@ -897,7 +897,7 @@ import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '
 import * as bienTheApi from '@/services/bienTheSanPhamService.js'
 import * as sanPhamApi from '@/services/sanPhamService.js'
 import { getLichSu } from '@/services/SanPhamService.js'
-import { Cpu, MemoryStick, HardDrive, Palette, Monitor, Barcode } from '@lucide/vue'
+import { Cpu, MemoryStick, HardDrive, Palette, Monitor, Barcode, Search, X, Filter, ChevronDown, Plus, Download, RefreshCw, ChevronLeft, ChevronRight, Inbox, Hand, Edit, Pencil, Trash2, Copy, History, Star, BarChart2, Loader2, Save, ExternalLink, Clock, ArrowRight, Eraser, ShoppingBag, Phone, Mail, MapPin, Building2, Tag, Briefcase, FileText, Settings, ToggleLeft, User, IdCard, Headphones, Send, AlertCircle, Info, Link, ListOrdered, ListIcon, MousePointer2 } from '@lucide/vue'
 import JsBarcode from 'jsbarcode'
 
 /* ════════════════════════════════════════════════════════════
@@ -1391,7 +1391,7 @@ const exportCsv = () => {
  * máy đang dùng: mỗi lần LƯU THÀNH CÔNG mới ghi một dòng. Khi backend có bảng
  * riêng, chỉ cần thay 2 hàm docNhatKy/ghiNhatKy bằng lời gọi API là xong.
  * ══════════════════════════════════════════════════════════ */
-const KHOA_NHAT_KY = 'saophone_nhatky_hang_hoa'
+const KHOA_NHAT_KY = 'saoclub_nhatky_hang_hoa'
 const docNhatKyCu = () => {
   try { return JSON.parse(localStorage.getItem(KHOA_NHAT_KY) || '{}') } catch { return {} }
 }
@@ -1438,7 +1438,7 @@ const taiLichSu = async (sanPhamId) => {
 
 const nguoiDangDangNhap = () => {
   try {
-    const j = JSON.parse(sessionStorage.getItem('saophone_session') || '{}')
+    const j = JSON.parse(sessionStorage.getItem('saoclub_session') || '{}')
     return j?.hoTen || j?.username || j?.user?.username || 'không rõ'
   } catch { return 'không rõ' }
 }
@@ -1720,7 +1720,7 @@ watch(() => form.phanLoaiIds.slice(), (ids) => {
 
 /* ─── Ảnh: chọn từ máy ─── */
 const layToken = () => {
-  const raw = sessionStorage.getItem('saophone_session') || ''
+  const raw = sessionStorage.getItem('saoclub_session') || ''
   try {
     const j = JSON.parse(raw)
     return j?.token || j?.accessToken || ''

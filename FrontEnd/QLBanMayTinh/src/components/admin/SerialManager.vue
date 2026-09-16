@@ -1,5 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { Search } from "@lucide/vue";
+import { Filter, X, ChevronDown, ChevronUp } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../../services/ChiTietLinhKienService.js";
@@ -96,14 +98,46 @@ const rowSpecLabel = (item) => {
   return meta ? item[meta.nameField] : '';
 };
 
+// ── Bộ lọc nâng cao: Serial ────────────────────────────────────────────────────
+const isFilterOpen = ref(false);
+const filterLoai = ref('');       // '' | 'sanPham' | 'cpu' | 'ram' | 'gpu' | 'oCung'
+const filterTrangThai = ref('');  // '' | 'trong_kho' | 'giu_hang' | 'da_ban' | ...
+const filterInPosCart = ref(false);
+const filterNgayFrom = ref('');
+const filterNgayTo = ref('');
+
+const activeFilterCount = computed(() => [
+  filterLoai.value, filterTrangThai.value,
+  filterInPosCart.value ? '1' : '',
+  filterNgayFrom.value, filterNgayTo.value,
+].filter((v) => v !== '').length);
+
+const resetFilters = () => {
+  search.value = '';
+  filterLoai.value = '';
+  filterTrangThai.value = '';
+  filterInPosCart.value = false;
+  filterNgayFrom.value = '';
+  filterNgayTo.value = '';
+};
+
 const filteredItems = computed(() => {
   const q = search.value.trim().toLowerCase();
-  if (!q) return items.value;
-  return items.value.filter((i) =>
-    [i.soSerial, rowSpecLabel(i)].some((v) => (v || '').toLowerCase().includes(q))
-  );
+  return items.value.filter((i) => {
+    if (q && ![i.soSerial, rowSpecLabel(i)].some((v) => (v || '').toLowerCase().includes(q))) return false;
+    if (filterLoai.value && i.loai !== filterLoai.value) return false;
+    if (filterTrangThai.value && i.trangThai !== filterTrangThai.value) return false;
+    if (filterInPosCart.value && !isInPosCart(i)) return false;
+    const ngay = (i.ngayNhapKho || '').slice(0, 10);
+    if (filterNgayFrom.value && ngay < filterNgayFrom.value) return false;
+    if (filterNgayTo.value   && ngay > filterNgayTo.value)   return false;
+    return true;
+  });
 });
 const { currentPage, totalPages, pagedItems, pageSize } = usePagination(filteredItems);
+watch([search, filterLoai, filterTrangThai, filterInPosCart, filterNgayFrom, filterNgayTo], () => {
+  currentPage.value = 0;
+});
 
 const STATUS_COLOR = {
   trong_kho: '#22c55e',
@@ -240,10 +274,70 @@ const deleteSerial = async (item) => {
       <span class="alt-toolbar__count">{{ filteredItems.length }}/{{ items.length }} serial</span>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
-          <i class="fa fa-search alt-search__icon"></i>
+          <Search class="alt-search__icon" :size="14" />
           <input v-model="search" :placeholder="t('admin.serialManager.searchPlaceholder')" />
         </div>
+        <button
+          class="alt-btn alt-btn--filter"
+          :class="{ 'alt-btn--filter-active': activeFilterCount > 0 || isFilterOpen }"
+          @click="isFilterOpen = !isFilterOpen"
+        >
+          <Filter :size="14" /> Bộ lọc
+          <span v-if="activeFilterCount > 0" class="filter-badge">{{ activeFilterCount }}</span>
+          <ChevronDown v-if="!isFilterOpen" :size="13" />
+          <ChevronUp v-else :size="13" />
+        </button>
+        <button v-if="activeFilterCount > 0" class="alt-btn alt-btn--ghost-sm" @click="resetFilters">
+          <X :size="13" /> Xóa lọc
+        </button>
         <button class="alt-btn alt-btn--primary" @click="openAdd">{{ t('admin.serialManager.add') }}</button>
+      </div>
+    </div>
+
+    <!-- Panel lọc nâng cao -->
+    <div v-if="isFilterOpen" class="adv-filter-panel">
+      <div class="adv-filter-row">
+        <div class="adv-filter-group">
+          <label class="adv-filter-label">Loại mặt hàng</label>
+          <select v-model="filterLoai" class="adv-filter-select">
+            <option value="">Tất cả</option>
+            <option value="sanPham">Sản phẩm</option>
+            <option value="cpu">CPU</option>
+            <option value="ram">RAM</option>
+            <option value="gpu">GPU</option>
+            <option value="oCung">Ổ cứng</option>
+          </select>
+        </div>
+        <div class="adv-filter-group">
+          <label class="adv-filter-label">Trạng thái</label>
+          <select v-model="filterTrangThai" class="adv-filter-select">
+            <option value="">Tất cả</option>
+            <option value="trong_kho">Trong kho</option>
+            <option value="giu_hang">Giữ hàng (POS)</option>
+            <option value="da_ban">Đã bán</option>
+            <option value="loi_bao_hanh">Lỗi / Bảo hành</option>
+            <option value="da_tra_hang">Đã trả hàng</option>
+            <option value="da_su_dung">Đã dùng (linh kiện)</option>
+          </select>
+        </div>
+        <div class="adv-filter-group adv-filter-group--range">
+          <label class="adv-filter-label">Ngày nhập kho</label>
+          <div class="adv-filter-range">
+            <input v-model="filterNgayFrom" type="date" class="adv-filter-input" />
+            <span class="adv-filter-sep">–</span>
+            <input v-model="filterNgayTo" type="date" class="adv-filter-input" />
+          </div>
+        </div>
+        <div class="adv-filter-group" style="justify-content: flex-end">
+          <label class="adv-filter-label">&nbsp;</label>
+          <label class="adv-filter-checkbox">
+            <input type="checkbox" v-model="filterInPosCart" />
+            <span>Trong giỏ POS</span>
+          </label>
+        </div>
+        <button v-if="activeFilterCount > 0" class="adv-filter-reset" @click="resetFilters">
+          <X :size="13" /> Xóa bộ lọc
+        </button>
       </div>
     </div>
 
@@ -395,13 +489,59 @@ const deleteSerial = async (item) => {
 
 /* Badge nhỏ "⬤ POS" — chỉ hiện khi serial đang trong giỏ phiên này */
 .sm-pos-indicator {
-  font-size: 10px;
-  font-weight: 700;
-  color: #b45309;
-  background: #fbbf24;
-  border-radius: 999px;
-  padding: 1px 6px;
-  margin-left: 2px;
-  letter-spacing: 0.03em;
+  font-size: 10px; font-weight: 700; color: #b45309; background: #fbbf24;
+  border-radius: 999px; padding: 1px 6px; margin-left: 2px; letter-spacing: 0.03em;
 }
+
+/* ─── Filter ─── */
+.alt-btn--filter {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px; background: var(--surface, #fff);
+  color: var(--ink, #1e293b); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s ease;
+}
+.alt-btn--filter:hover, .alt-btn--filter-active {
+  border-color: var(--pink-400, #f472b6); background: var(--pink-50, #fdf2f8); color: var(--pink-700, #be185d);
+}
+.filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--pink-600, #db2777); color: #fff; font-size: 11px; font-weight: 700;
+}
+.alt-btn--ghost-sm {
+  display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px;
+  border: 1px solid var(--border, #e2e8f0); border-radius: 8px;
+  background: transparent; color: var(--muted, #64748b); font-size: 12px; cursor: pointer; transition: all 0.15s;
+}
+.alt-btn--ghost-sm:hover { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
+.adv-filter-panel {
+  border-top: 1px solid var(--border, #e2e8f0); background: var(--surface-alt, #f8fafc);
+  padding: 12px 16px; animation: slideDown 0.15s ease;
+}
+@keyframes slideDown { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.adv-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.adv-filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.adv-filter-group--range { min-width: 240px; }
+.adv-filter-label { font-size: 11px; font-weight: 600; color: var(--muted, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
+.adv-filter-select, .adv-filter-input {
+  padding: 6px 10px; border: 1px solid var(--border, #e2e8f0); border-radius: 7px;
+  background: #fff; color: var(--ink, #1e293b); font-size: 13px; outline: none; transition: border-color 0.15s; width: 100%;
+}
+.adv-filter-select:focus, .adv-filter-input:focus { border-color: var(--pink-500, #ec4899); }
+.adv-filter-range { display: flex; align-items: center; gap: 6px; }
+.adv-filter-range .adv-filter-input { width: 100px; }
+.adv-filter-sep { color: var(--muted, #94a3b8); font-size: 13px; font-weight: 600; }
+.adv-filter-checkbox {
+  display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink, #1e293b);
+  cursor: pointer; padding: 7px 10px; border: 1px solid var(--border, #e2e8f0);
+  border-radius: 7px; background: #fff; white-space: nowrap;
+}
+.adv-filter-checkbox input { cursor: pointer; accent-color: var(--pink-500, #ec4899); width: 14px; height: 14px; }
+.adv-filter-reset {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  border: 1px solid #dc2626; border-radius: 7px; background: transparent; color: #dc2626;
+  font-size: 12px; font-weight: 500; cursor: pointer; align-self: flex-end; transition: all 0.15s;
+}
+.adv-filter-reset:hover { background: #dc2626; color: #fff; }
 </style>
+

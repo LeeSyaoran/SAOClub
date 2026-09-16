@@ -205,7 +205,7 @@ onMounted(() => {
         <div>
           <h3 class="plan-hero-title">Gia hạn bảo hành cho sản phẩm của bạn</h3>
           <p class="plan-hero-desc">
-            Mở rộng thời gian bảo hành lên tới 36 tháng. Áp dụng cho sản phẩm SAOPhone trong vòng 30 ngày trước khi hết hạn.
+            Mở rộng thời gian bảo hành lên tới 36 tháng. Áp dụng cho sản phẩm SAOClub trong vòng 30 ngày trước khi hết hạn.
           </p>
         </div>
       </div>

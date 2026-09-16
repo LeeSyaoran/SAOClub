@@ -42,4 +42,13 @@ public class TaiKhoan {
 
     @Column(name = "ngay_tao")
     private LocalDateTime ngayTao;
+
+    @Column(name = "provider", length = 20)
+    private String provider;
+
+    @Column(name = "provider_uid", length = 255)
+    private String providerUid;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
 }

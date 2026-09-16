@@ -18,7 +18,7 @@ export const upload = (baoHanhId, file) => {
   form.append('file', file);
   return fetch(`/api/hinh-anh-bao-hanh/bao-hanh/${baoHanhId}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('saophone_session') || '{}').token ?? ''}` },
+    headers: { Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('saoclub_session') || '{}').token ?? ''}` },
     body: form,
   }).then((r) => {
     if (!r.ok) throw new Error(`Upload failed: ${r.status}`);
@@ -34,7 +34,7 @@ export const uploadBase64 = (baoHanhId, dataUrl, tenFile = 'image.png') => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('saophone_session') || '{}').token ?? ''}`,
+      Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('saoclub_session') || '{}').token ?? ''}`,
     },
     body: JSON.stringify({ dataUrl, tenFile }),
   }).then((r) => {

@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -45,6 +47,8 @@ public class SanPhamService {
     private LichSuThayDoiSanPhamService lichSuThayDoiSanPhamService;
     @Autowired
     private SanPhamHinhAnhRepository sanPhamHinhAnhRepository;
+    @Autowired
+    private EntityManager entityManager;
 
     public Page<SanPhamResponse> hienThiSanPham(String keyword, Integer danhMucId,
                                                 Integer thuongHieuId, String trangThai,
@@ -90,11 +94,8 @@ public class SanPhamService {
 
         SanPham saved = sanPhamRepository.save(sanPham);
 
-        // Người dùng bỏ trống mã thì sinh theo id vừa có, để cột ma_san_pham không bao giờ rỗng
-        if (saved.getMaSanPham() == null) {
-            saved.setMaSanPham(String.format("SP%04d", saved.getSanPhamId()));
-            saved = sanPhamRepository.save(saved);
-        }
+        // Trigger trg_AutoGen_MaSanPham tự gán ma_san_pham khi NULL → refresh để lấy giá trị
+        entityManager.refresh(saved);
 
         if (request.getHinhAnhList() != null) luuDanhSachHinhAnh(saved.getSanPhamId(), request.getHinhAnhList());
 

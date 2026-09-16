@@ -75,10 +75,16 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(s -> s
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/khach-hang/register").permitAll()
                 .requestMatchers("/api/khach-hang/tim-theo-sdt").permitAll()
                 .requestMatchers("/api/khach-hang/khach-vang-lai").permitAll()
+                .requestMatchers("/api/dev/**").permitAll() // TODO: Xóa sau khi chạy xong migration
+
+                // Checkout online cho khách vãng lai (chưa đăng nhập)
+                .requestMatchers(HttpMethod.POST, "/api/don-hang").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/don-hang/checkout-complete").permitAll()
+                // SSE events — browser establishes connection before auth completes
+                .requestMatchers("/api/don-hang/events").permitAll()
 
                 .requestMatchers(HttpMethod.GET, "/api/cai-dat").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/san-pham/**", "/api/danh-muc/**", "/api/thuong-hieu/**").permitAll()

@@ -27,7 +27,7 @@ export default {
   },
 
   nav: {
-    tagline: "SAOPHONE — Leading authentic laptop retail system",
+    tagline: "SAOClub — Leading authentic laptop retail system",
     genuine: "Genuine - Full VAT invoice",
     freeShip: "Free fast delivery from 300k",
     tradeIn: "High trade-in value for old devices",
@@ -68,7 +68,7 @@ export default {
     phonePlaceholder: "Enter your phone number",
     subscribe: "SUBSCRIBE NOW",
     policyHeading: "Policies & Support",
-    connectHeading: "Connect with SAOPHONE",
+    connectHeading: "Connect with SAOClub",
     facebookLabel: "Facebook",
     youtubeLabel: "YouTube",
     instagramLabel: "Instagram",
@@ -81,11 +81,11 @@ export default {
     seoAccessoryText: "Bluetooth headphones, fast chargers, Anker power banks, cases, genuine tempered glass.",
     seoSystemHeading: "Distribution system",
     seoSystemText: "Warehouse and product distribution management system built on the Agile/Scrum model.",
-    companyName: "SAOPHONE Technology Retail System",
+    companyName: "SAOClub Technology Retail System",
     address: "Operating base: Trinh Van Bo, Nam Tu Liem, Hanoi",
     hotlineFooter: "Hotline: 0123.456.789 | Designed and developed by the FPT Polytechnic Software Team.",
     badgeMinistry: "REGISTERED WITH MINISTRY OF TRADE",
-    copyright: "© {year} SAOPHONE. All rights reserved.",
+    copyright: "© {year} SAOClub. All rights reserved.",
     policies: [
       "7-day return policy",
       "Product warranty policy",
@@ -98,7 +98,7 @@ export default {
 
   login: {
     welcome: "Welcome back!",
-    subtitle: "Sign in to your SAOPhone account",
+    subtitle: "Sign in to your SAOClub account",
     usernameLabel: "Username or Email",
     usernamePlaceholder: "Enter your username or email...",
     passwordLabel: "Password",
@@ -193,7 +193,7 @@ export default {
     heroSubtitle: "Back-to-school offer | 0% installment + Free premium gaming backpack",
     loadingShort: "Loading...",
     noProducts: "No products to display yet",
-    brandName: "SAOPHONE Laptop Distribution System",
+    brandName: "SAOClub Laptop Distribution System",
     brandTagline: "Black & Gold Technology System",
     promoLink1: "Exclusive offers for students",
     promoLink2: "Hot deals on graphics components",
@@ -1070,18 +1070,24 @@ export default {
     },
 
     suppliers: {
+      title: "Supplier Management",
+      subtitle: "Manage suppliers and contact information",
       countSuffix: "suppliers",
       add: "+ Add supplier",
       loading: "Loading...",
       colName: "Supplier name",
       colPhone: "Phone",
       colEmail: "Email",
+      colAddress: "Address",
+      colTaxCode: "Tax code",
       colContact: "Contact person",
       colStatus: "Status",
       colAction: "Action",
       edit: "Edit",
       empty: "No suppliers yet",
-      searchPlaceholder: "Search name, phone, email...",
+      noResult: "No matching results",
+      searchPlaceholder: "Search name, phone, email, address...",
+      filterStatus: "Status",
     },
 
     supplierModal: {
@@ -1296,19 +1302,22 @@ export default {
 
     dmCategory: {
       countSuffix: "{label}",
+      subtitle: "Manage category and serials",
       searchPlaceholder: "Search {label}...",
       add: "+ Add {label}",
       loading: "Loading...",
+      colStock: "In stock",
       colAction: "Actions",
       edit: "Edit",
       empty: "No {label} yet",
+      noResult: "No matching results",
       titleAdd: "Add {label}",
       titleEdit: "Edit {label}",
       cancel: "Cancel",
       save: "Save",
       nameRequired: "Please enter {label}",
       serialRequired: "Please enter at least 1 serial number for the new {label}",
-      viewSerials: "In stock: {count}",
+      viewSerials: "{count}",
       serialsModalTitle: "Serials — {name}",
     },
 
@@ -1343,9 +1352,11 @@ export default {
     },
 
     inventoryHistory: {
+      title: "Inventory History",
+      subtitle: "Track all stock movements over time",
       countSuffix: "movements",
       loading: "Loading...",
-      searchPlaceholder: "Search SKU, note...",
+      searchPlaceholder: "Search SKU, product name, note...",
       allTypes: "All types",
       typeNhap: "Stock in",
       typeXuatBan: "Sold",
@@ -1354,11 +1365,14 @@ export default {
       typeHuy: "Cancelled",
       typeGiuHang: "Held",
       colDate: "Date",
+      colProduct: "Product",
       colSku: "SKU",
       colType: "Movement type",
       colQty: "Quantity",
+      colStaff: "Performed by",
       colNote: "Note",
       empty: "No inventory movements yet",
+      noResult: "No matching results",
     },
 
     reviews: {

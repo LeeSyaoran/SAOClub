@@ -11,4 +11,5 @@ public class HoSoResponse {
     private String hoTen;
     private String soDienThoai;
     private String email;
+    private String avatarUrl;
 }

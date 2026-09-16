@@ -1,5 +1,7 @@
-﻿<script setup>
+<script setup>
 import { ref, reactive, computed, onMounted, watch } from "vue";
+import { Search } from "@lucide/vue";
+import { Filter, X, ChevronDown, ChevronUp } from '@lucide/vue';
 import { t } from "../../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon, paymentMethodLabel, paymentMethodIcon, channelLabel, channelColor } from "../../utils/orderStatus.js";
 import { nowLocalIso } from "../../utils/datetime.js";
@@ -48,11 +50,37 @@ const toDateInputValue = (d) => {
   return `${y}-${m}-${day}`;
 };
 
-// ── Bo loc man hinh Don hang ──────────────────────────────────────────────────
+// ── Bộ lọc nâng cao: Đơn hàng ────────────────────────────────────────────────────
 const orderSearch = ref("");
-const orderStatusFilter = ref("");
-const orderPaymentFilter = ref("");
-const orderChannelFilter = ref("");
+const isOrderFilterOpen = ref(false);
+const orderFilters = reactive({
+  trangThaiDonHang: "",
+  trangThaiThanhToan: "",
+  kenhBan: "",
+  ngayFrom: "",
+  ngayTo: "",
+  tongTienMin: "",
+  tongTienMax: "",
+});
+
+const activeOrderFilterCount = computed(() =>
+  [orderFilters.trangThaiDonHang, orderFilters.trangThaiThanhToan, orderFilters.kenhBan,
+   orderFilters.ngayFrom, orderFilters.ngayTo,
+   orderFilters.tongTienMin !== "" ? orderFilters.tongTienMin : "",
+   orderFilters.tongTienMax !== "" ? orderFilters.tongTienMax : "",
+  ].filter((v) => v !== "").length
+);
+
+const resetOrderFilters = () => {
+  orderFilters.trangThaiDonHang = "";
+  orderFilters.trangThaiThanhToan = "";
+  orderFilters.kenhBan = "";
+  orderFilters.ngayFrom = "";
+  orderFilters.ngayTo = "";
+  orderFilters.tongTienMin = "";
+  orderFilters.tongTienMax = "";
+  orderSearch.value = "";
+};
 
 // Chế độ xem đơn hàng: 'today' = mặc định chỉ đơn hôm nay, 'history-dates' = danh
 // sách các ngày có đơn (để xem lịch sử), 'history-day' = đơn của 1 ngày cụ thể đã chọn.
@@ -74,15 +102,25 @@ const ordersBaseList = computed(() => {
 const filteredOrders = computed(() => {
   const q = orderSearch.value.trim().toLowerCase();
   return ordersBaseList.value.filter((o) => {
-    if (orderStatusFilter.value && o.trangThaiDonHang !== orderStatusFilter.value) return false;
-    if (orderPaymentFilter.value && o.trangThaiThanhToan !== orderPaymentFilter.value) return false;
-    if (orderChannelFilter.value && o.kenhBan !== orderChannelFilter.value) return false;
+    if (orderFilters.trangThaiDonHang   && o.trangThaiDonHang   !== orderFilters.trangThaiDonHang)   return false;
+    if (orderFilters.trangThaiThanhToan && o.trangThaiThanhToan !== orderFilters.trangThaiThanhToan) return false;
+    if (orderFilters.kenhBan            && o.kenhBan            !== orderFilters.kenhBan)            return false;
+    // ngày đặt từ-đến
+    if (orderFilters.ngayFrom && (o.ngayDat ?? '').slice(0, 10) < orderFilters.ngayFrom) return false;
+    if (orderFilters.ngayTo   && (o.ngayDat ?? '').slice(0, 10) > orderFilters.ngayTo)   return false;
+    // khoảng tổng tiền
+    const tong = Number(o.tongTien ?? 0);
+    if (orderFilters.tongTienMin !== "" && tong < Number(orderFilters.tongTienMin)) return false;
+    if (orderFilters.tongTienMax !== "" && tong > Number(orderFilters.tongTienMax)) return false;
     if (!q) return true;
     const name = customerName(o.khachHangId).toLowerCase();
     return String(o.donHangId).includes(q) || (o.maDonHang ?? '').toLowerCase().includes(q) || name.includes(q) || (o.nguoiNhan ?? '').toLowerCase().includes(q) || (o.sdtNguoiNhan ?? '').includes(q);
   });
 });
 const { currentPage, totalPages, pagedItems: pagedOrders, pageSize } = usePagination(filteredOrders);
+watch([orderSearch, () => orderFilters.trangThaiDonHang, () => orderFilters.trangThaiThanhToan, () => orderFilters.kenhBan, () => orderFilters.ngayFrom, () => orderFilters.ngayTo, () => orderFilters.tongTienMin, () => orderFilters.tongTienMax], () => {
+  currentPage.value = 0;
+});
 
 // Danh sách ngày có đơn hàng (mới nhất trước), dùng cho màn "Lịch sử đơn hàng"
 const VN_WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
@@ -151,8 +189,8 @@ const openOrderDetail = async (o) => {
   orderDetailLoading.value = true;
   emit("order-detail-opened", o.donHangId); // thông báo cho AdminPage reset selectedOrderId
   try {
-    orderDetailItems.value = await ChiTietDonHangService.getByDonHang(o.donHangId).catch(() => []);
-    orderDetailPayments.value = await ThanhToanService.getByDonHang(o.donHangId).catch(() => []);
+    orderDetailItems.value = await ChiTietDonHangService.getByDonHang(o.donHangId).catch(err => { console.error('chi tiet don hang error', err); return []; });
+    orderDetailPayments.value = await ThanhToanService.getByDonHang(o.donHangId).catch(err => { console.error('thanh toan error', err); return []; });
   } finally {
     orderDetailLoading.value = false;
   }
@@ -712,33 +750,81 @@ const confirmXacNhanSerial = async () => {
         </div>
         <div class="alt-toolbar__actions">
           <div class="alt-search">
-            <i class="fa fa-search alt-search__icon"></i>
+            <Search class="alt-search__icon" :size="14" />
             <input v-model="orderSearch" :placeholder="t('admin.orders.searchPlaceholder')" />
           </div>
-          <select v-model="orderStatusFilter" class="alt-select">
-            <option value="">{{ t('admin.orders.allStatuses') }}</option>
-            <option value="pending">{{ orderStatusLabel('pending') }}</option>
-            <option value="confirmed">{{ orderStatusLabel('confirmed') }}</option>
-            <option value="processing">{{ orderStatusLabel('processing') }}</option>
-            <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
-            <option value="out_for_delivery">{{ orderStatusLabel('out_for_delivery') }}</option>
-            <option value="awaiting_confirmation">{{ orderStatusLabel('awaiting_confirmation') }}</option>
-            <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
-            <option value="cancelled">{{ orderStatusLabel('cancelled') }}</option>
-            <option value="returned">{{ orderStatusLabel('returned') }}</option>
-          </select>
-          <select v-model="orderPaymentFilter" class="alt-select">
-            <option value="">{{ t('admin.orders.allPayments') }}</option>
-            <option value="paid">{{ t('admin.orders.paid') }}</option>
-            <option value="unpaid">{{ t('admin.orders.unpaid') }}</option>
-          </select>
-          <select v-model="orderChannelFilter" class="alt-select">
-            <option value="">{{ t('admin.orders.allChannels') }}</option>
-            <option value="in_store">{{ channelLabel('in_store') }}</option>
-            <option value="online">{{ channelLabel('online') }}</option>
-          </select>
+          <button
+            class="alt-btn alt-btn--filter"
+            :class="{ 'alt-btn--filter-active': activeOrderFilterCount > 0 || isOrderFilterOpen }"
+            @click="isOrderFilterOpen = !isOrderFilterOpen"
+          >
+            <Filter :size="14" /> Bộ lọc
+            <span v-if="activeOrderFilterCount > 0" class="filter-badge">{{ activeOrderFilterCount }}</span>
+            <ChevronDown v-if="!isOrderFilterOpen" :size="13" />
+            <ChevronUp v-else :size="13" />
+          </button>
+          <button v-if="activeOrderFilterCount > 0" class="alt-btn alt-btn--ghost-sm" @click="resetOrderFilters">
+            <X :size="13" /> Xóa lọc
+          </button>
         </div>
       </div>
+
+      <!-- Panel lọc nâng cao -->
+      <div v-if="isOrderFilterOpen" class="adv-filter-panel">
+        <div class="adv-filter-row">
+          <div class="adv-filter-group">
+            <label class="adv-filter-label">Trạng thái đơn</label>
+            <select v-model="orderFilters.trangThaiDonHang" class="adv-filter-select">
+              <option value="">Tất cả</option>
+              <option value="pending">{{ orderStatusLabel('pending') }}</option>
+              <option value="confirmed">{{ orderStatusLabel('confirmed') }}</option>
+              <option value="processing">{{ orderStatusLabel('processing') }}</option>
+              <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
+              <option value="out_for_delivery">{{ orderStatusLabel('out_for_delivery') }}</option>
+              <option value="awaiting_confirmation">{{ orderStatusLabel('awaiting_confirmation') }}</option>
+              <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
+              <option value="cancelled">{{ orderStatusLabel('cancelled') }}</option>
+              <option value="returned">{{ orderStatusLabel('returned') }}</option>
+            </select>
+          </div>
+          <div class="adv-filter-group">
+            <label class="adv-filter-label">Thanh toán</label>
+            <select v-model="orderFilters.trangThaiThanhToan" class="adv-filter-select">
+              <option value="">Tất cả</option>
+              <option value="paid">{{ t('admin.orders.paid') }}</option>
+              <option value="unpaid">{{ t('admin.orders.unpaid') }}</option>
+            </select>
+          </div>
+          <div class="adv-filter-group">
+            <label class="adv-filter-label">Kênh bán</label>
+            <select v-model="orderFilters.kenhBan" class="adv-filter-select">
+              <option value="">Tất cả</option>
+              <option value="in_store">{{ channelLabel('in_store') }}</option>
+              <option value="online">{{ channelLabel('online') }}</option>
+            </select>
+          </div>
+          <div class="adv-filter-group adv-filter-group--range">
+            <label class="adv-filter-label">Ngày đặt</label>
+            <div class="adv-filter-range">
+              <input v-model="orderFilters.ngayFrom" type="date" class="adv-filter-input" />
+              <span class="adv-filter-sep">–</span>
+              <input v-model="orderFilters.ngayTo" type="date" class="adv-filter-input" />
+            </div>
+          </div>
+          <div class="adv-filter-group adv-filter-group--range">
+            <label class="adv-filter-label">Tổng tiền (₫)</label>
+            <div class="adv-filter-range">
+              <input v-model="orderFilters.tongTienMin" type="number" min="0" placeholder="Từ" class="adv-filter-input" />
+              <span class="adv-filter-sep">–</span>
+              <input v-model="orderFilters.tongTienMax" type="number" min="0" placeholder="Đến" class="adv-filter-input" />
+            </div>
+          </div>
+          <button v-if="activeOrderFilterCount > 0" class="adv-filter-reset" @click="resetOrderFilters">
+            <X :size="13" /> Xóa bộ lọc
+          </button>
+        </div>
+      </div>
+
       <!-- Hàng riêng cho nút "Lịch sử đơn hàng" — tách khỏi toolbar để search + 3 select luôn
            nằm cùng 1 hàng ngang, không bị flex-wrap xô xuống khi viewport hẹp. -->
       <div v-if="orderViewMode==='today'" class="alt-history-row">
@@ -935,7 +1021,7 @@ const confirmXacNhanSerial = async () => {
 
   <!-- ══ MODAL CHI TIET DON HANG ══ -->
   <div v-if="showOrderDetailModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1050;" @click.self="showOrderDetailModal=false">
-    <div class="alt-card d-flex flex-column" style="width:880px;max-width:96vw;max-height:92vh;border-radius:14px;">
+    <div class="alt-card d-flex flex-column" style="width:840px;max-width:96vw;max-height:92vh;border-radius:14px;">
       <!-- Header gọn: chỉ tên khách + mã đơn + nút đóng. Tất cả action nằm bên sidebar phải. -->
       <div class="alt-toolbar">
         <div>
@@ -1070,7 +1156,7 @@ const confirmXacNhanSerial = async () => {
         </div>
 
         <!-- Sidebar phải: trạng thái đơn + thanh toán + timeline các-step-có-thể-bấm + nút chuyển step + cập nhật -->
-        <div v-if="orderDetailData" class="d-flex flex-column" style="width:300px; flex-shrink:0; background:var(--bg-card-alt);">
+        <div v-if="orderDetailData" class="d-flex flex-column" style="width:280px; min-width:280px; flex-shrink:0; background:var(--bg-card-alt);">
           <div class="overflow-y-auto p-3 d-flex flex-column gap-3">
             <!-- Nhóm trạng thái: badge trạng thái hiện tại -->
             <div>
@@ -1299,4 +1385,51 @@ const confirmXacNhanSerial = async () => {
   flex-shrink: 1;
   min-width: 180px;
 }
+
+/* ─── Advanced Filter Panel ─── */
+.alt-btn--filter {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px; background: var(--bg-card, #fff);
+  color: var(--text-primary, #1e293b); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.alt-btn--filter:hover, .alt-btn--filter-active {
+  border-color: var(--pink-400, #f472b6); background: var(--pink-50, #fdf2f8); color: var(--pink-700, #be185d);
+}
+.filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--pink-600, #db2777); color: #fff; font-size: 11px; font-weight: 700;
+}
+.alt-btn--ghost-sm {
+  display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+  background: transparent; color: var(--text-secondary, #64748b); font-size: 12px; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.alt-btn--ghost-sm:hover { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
+.adv-filter-panel {
+  border-top: 1px solid var(--border-color, #e2e8f0); background: var(--bg-card-alt, #f8fafc);
+  padding: 12px 16px; animation: slideDown 0.15s ease;
+}
+@keyframes slideDown { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.adv-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.adv-filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.adv-filter-group--range { min-width: 240px; }
+.adv-filter-label { font-size: 11px; font-weight: 600; color: var(--text-secondary, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
+.adv-filter-select, .adv-filter-input {
+  padding: 6px 10px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 7px;
+  background: var(--bg-input, #fff); color: var(--text-primary, #1e293b); font-size: 13px; outline: none; transition: border-color 0.15s; width: 100%;
+}
+.adv-filter-select:focus, .adv-filter-input:focus { border-color: var(--pink-500, #ec4899); }
+.adv-filter-range { display: flex; align-items: center; gap: 6px; }
+.adv-filter-range .adv-filter-input { width: 100px; }
+.adv-filter-sep { color: var(--text-secondary, #94a3b8); font-size: 13px; font-weight: 600; }
+.adv-filter-reset {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  border: 1px solid #dc2626; border-radius: 7px; background: transparent; color: #dc2626;
+  font-size: 12px; font-weight: 500; cursor: pointer; align-self: flex-end; transition: all 0.15s;
+}
+.adv-filter-reset:hover { background: #dc2626; color: #fff; }
 </style>
+

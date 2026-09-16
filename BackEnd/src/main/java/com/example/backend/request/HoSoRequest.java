@@ -18,4 +18,6 @@ public class HoSoRequest {
 
     @Email(message = "Email không hợp lệ")
     private String email;
+
+    private String avatarUrl;
 }

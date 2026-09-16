@@ -23,6 +23,9 @@ export const getByKhachHang = (khachHangId) =>
 
 export const create = (body) => post('/api/don-hang', body);
 
+// Checkout hoàn chỉnh: tạo đơn + thêm sản phẩm trong 1 transaction
+export const checkoutComplete = (body) => post('/api/don-hang/checkout-complete', body);
+
 export const update = (id, body) => put(`/api/don-hang/update/${id}`, body);
 
 export const remove = (id) => del(`/api/don-hang/delete/${id}`);

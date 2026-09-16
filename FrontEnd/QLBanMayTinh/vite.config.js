@@ -78,6 +78,18 @@ export default defineConfig({
         secure: false,
       },
     },
+    headers: {
+      "Content-Security-Policy": [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseapp.com",
+        "worker-src 'self' blob:",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "img-src 'self' data: https: blob:",
+        "font-src 'self' data: https://fonts.gstatic.com",
+        "connect-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://www.gstatic.com https://accounts.google.com https://oauth2.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.googleapis.com http://localhost:* ws://localhost:*",
+        "frame-src 'self' https://accounts.google.com https://*.googleapis.com https://*.googleusercontent.com https://*.firebaseapp.com",
+      ].join("; "),
+    },
   },
   test: {
     globals: true,

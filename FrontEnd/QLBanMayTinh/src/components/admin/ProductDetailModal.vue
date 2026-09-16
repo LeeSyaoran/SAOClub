@@ -5,7 +5,7 @@ import { ProductsStore } from "../../stores/products.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
 import { variantsForDetail } from "../../utils/productGrouping.js";
-import { Laptop } from '@lucide/vue';
+import { Laptop, X } from '@lucide/vue';
 
 // ── Modal "Chi tiết sản phẩm" — dùng chung bởi ProductsTable.vue (xem/so sánh toàn bộ
 // biến thể của 1 sản phẩm) và OrdersTable.vue (chỉ xem (các) biến thể khách đã mua trong
@@ -52,7 +52,9 @@ const close = () => emit("update:modelValue", false);
       <div class="alt-toolbar fw-bold">
         <span>{{ t('admin.detailModal.titlePrefix') }} {{ sanPhamName }}</span>
         <div class="d-flex align-items-center gap-2 ms-auto">
-          <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="close"></button>
+          <button class="btn-close-x d-flex align-items-center justify-content-center rounded-circle" :aria-label="t('common.close')" style="width:28px;height:28px;background:var(--bg-card-alt);border:1px solid var(--border-color);color:var(--text-secondary);" @click="close">
+            <X :size="14" />
+          </button>
         </div>
       </div>
       <div class="overflow-y-auto p-3">
@@ -63,7 +65,9 @@ const close = () => emit("update:modelValue", false);
               <span v-else style="width:72px;text-align:center;"><Laptop :size="32" color="var(--text-muted)" /></span>
               <div>
                 <div class="fw-bold" style="font-size:0.95rem;">{{ v.tenSanPham }}</div>
-                <div style="font-size:0.75rem;font-family:monospace;color:var(--text-muted);">{{ v.maSku }}</div>
+                <div style="font-size:0.7rem;font-family:monospace;color:var(--text-muted);">
+                  SP: {{ v.maSanPham }} · SKU: {{ v.maSku }}
+                </div>
               </div>
             </div>
           </div>

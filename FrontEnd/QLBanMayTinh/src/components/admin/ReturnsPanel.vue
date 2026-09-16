@@ -1,5 +1,7 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, reactive, watch } from "vue";
+import { Search } from "@lucide/vue";
+import { Filter, X, ChevronDown, ChevronUp } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as PhieuTraHangService from "../../services/PhieuTraHangService.js";
 import * as ChiTietTraHangService from "../../services/ChiTietTraHangService.js";
@@ -57,24 +59,60 @@ const statusColor = (s) =>
 const statusLabel = (s) => t(`admin.returnStatus.${s}`);
 const hinhThucHoanLabel = (h) => t(`admin.hinhThucHoan.${h}`);
 
-// ── Bo loc + danh sach ──────────────────────────────────────────────────────
+// ── Bộ lọc nâng cao: Trả hàng ───────────────────────────────────────────────
 const search = ref("");
+const isFilterOpen = ref(false);
+const filters = reactive({
+  trangThai: "",      // '' | 'cho_xu_ly' | 'da_xu_ly' | 'tu_choi'
+  hinhThucHoan: "",   // '' | 'vi' | 'tien_mat' | 'chuyen_khoan'
+  ngayFrom: "",       // YYYY-MM-DD
+  ngayTo: "",
+  tienMin: "",
+  tienMax: "",
+});
+
+const activeFilterCount = computed(() => {
+  return [filters.trangThai, filters.hinhThucHoan, filters.ngayFrom, filters.ngayTo,
+    filters.tienMin !== "" ? filters.tienMin : "", filters.tienMax !== "" ? filters.tienMax : ""
+  ].filter((v) => v !== "").length;
+});
+
+const resetFilters = () => {
+  filters.trangThai = "";
+  filters.hinhThucHoan = "";
+  filters.ngayFrom = "";
+  filters.ngayTo = "";
+  filters.tienMin = "";
+  filters.tienMax = "";
+  search.value = "";
+};
+
 const filteredReturns = computed(() => {
   const items = ReturnsStore?.items ?? [];
   const q = search.value.trim().toLowerCase();
-  if (!q) return items;
   return items.filter((p) => {
-    const name = customerName(
-      orderById(p.donHangId)?.khachHangId ?? -1,
-    ).toLowerCase();
-    return (
-      String(p.phieuTraId).includes(q) ||
-      (p.maPhieu ?? "").toLowerCase().includes(q) ||
-      name.includes(q)
-    );
+    // text search
+    if (q) {
+      const name = customerName(orderById(p.donHangId)?.khachHangId ?? -1).toLowerCase();
+      const match = String(p.phieuTraId).includes(q) || (p.maPhieu ?? "").toLowerCase().includes(q) || name.includes(q);
+      if (!match) return false;
+    }
+    if (filters.trangThai && p.trangThai !== filters.trangThai) return false;
+    if (filters.hinhThucHoan && p.hinhThucHoan !== filters.hinhThucHoan) return false;
+    // ngày trả
+    if (filters.ngayFrom && (p.ngayTra ?? '').slice(0, 10) < filters.ngayFrom) return false;
+    if (filters.ngayTo   && (p.ngayTra ?? '').slice(0, 10) > filters.ngayTo)   return false;
+    // tiền hoàn range
+    const tien = Number(p.soTienHoan ?? 0);
+    if (filters.tienMin !== "" && tien < Number(filters.tienMin)) return false;
+    if (filters.tienMax !== "" && tien > Number(filters.tienMax)) return false;
+    return true;
   });
 });
 const { currentPage, totalPages, pagedItems: pagedReturns, pageSize } = usePagination(filteredReturns);
+watch([search, () => filters.trangThai, () => filters.hinhThucHoan, () => filters.ngayFrom, () => filters.ngayTo, () => filters.tienMin, () => filters.tienMax], () => {
+  currentPage.value = 0;
+});
 
 // ── Modal tao/sua/xem ─────────────────────────────────────────────────────────
 const showModal = ref(false);
@@ -285,11 +323,67 @@ const saveReturn = async () => {
         {{ t("admin.returns.countSuffix") }}</span>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
-          <i class="fa fa-search alt-search__icon"></i>
+          <Search class="alt-search__icon" :size="14" />
           <input v-model="search" :placeholder="t('admin.returns.searchPlaceholder')" />
         </div>
+        <button
+          class="alt-btn alt-btn--filter"
+          :class="{ 'alt-btn--filter-active': activeFilterCount > 0 || isFilterOpen }"
+          @click="isFilterOpen = !isFilterOpen"
+        >
+          <Filter :size="14" /> Bộ lọc
+          <span v-if="activeFilterCount > 0" class="filter-badge">{{ activeFilterCount }}</span>
+          <ChevronDown v-if="!isFilterOpen" :size="13" />
+          <ChevronUp v-else :size="13" />
+        </button>
+        <button v-if="activeFilterCount > 0" class="alt-btn alt-btn--ghost-sm" @click="resetFilters">
+          <X :size="13" /> Xóa lọc
+        </button>
         <button v-if="!readonly" class="alt-btn alt-btn--primary" @click="openAdd">
           {{ t("admin.returns.add") }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Panel lọc nâng cao -->
+    <div v-if="isFilterOpen" class="adv-filter-panel">
+      <div class="adv-filter-row">
+        <div class="adv-filter-group">
+          <label class="adv-filter-label">Trạng thái</label>
+          <select v-model="filters.trangThai" class="adv-filter-select">
+            <option value="">Tất cả</option>
+            <option value="cho_xu_ly">Chờ xử lý</option>
+            <option value="da_xu_ly">Đã xử lý</option>
+            <option value="tu_choi">Từ chối</option>
+          </select>
+        </div>
+        <div class="adv-filter-group">
+          <label class="adv-filter-label">Hình thức hoàn</label>
+          <select v-model="filters.hinhThucHoan" class="adv-filter-select">
+            <option value="">Tất cả</option>
+            <option value="vi">Ví điểm</option>
+            <option value="tien_mat">Tiền mặt</option>
+            <option value="chuyen_khoan">Chuyển khoản</option>
+          </select>
+        </div>
+        <div class="adv-filter-group adv-filter-group--range">
+          <label class="adv-filter-label">Ngày trả</label>
+          <div class="adv-filter-range">
+            <input v-model="filters.ngayFrom" type="date" class="adv-filter-input" />
+            <span class="adv-filter-sep">–</span>
+            <input v-model="filters.ngayTo" type="date" class="adv-filter-input" />
+          </div>
+        </div>
+        <div class="adv-filter-group adv-filter-group--range">
+          <label class="adv-filter-label">Tiền hoàn (₫)</label>
+          <div class="adv-filter-range">
+            <input v-model="filters.tienMin" type="number" min="0" placeholder="Từ" class="adv-filter-input" />
+            <span class="adv-filter-sep">–</span>
+            <input v-model="filters.tienMax" type="number" min="0" placeholder="Đến" class="adv-filter-input" />
+          </div>
+        </div>
+        <button v-if="activeFilterCount > 0" class="adv-filter-reset" @click="resetFilters">
+          <X :size="13" /> Xóa bộ lọc
         </button>
       </div>
     </div>
@@ -743,3 +837,62 @@ const saveReturn = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* ─── Filter Button ─── */
+.alt-btn--filter {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px; background: var(--surface, #fff);
+  color: var(--ink, #1e293b); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s ease;
+}
+.alt-btn--filter:hover, .alt-btn--filter-active {
+  border-color: var(--pink-400, #f472b6);
+  background: var(--pink-50, #fdf2f8); color: var(--pink-700, #be185d);
+}
+.filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--pink-600, #db2777); color: #fff; font-size: 11px; font-weight: 700;
+}
+.alt-btn--ghost-sm {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px; background: transparent; color: var(--muted, #64748b);
+  font-size: 12px; cursor: pointer; transition: all 0.15s ease;
+}
+.alt-btn--ghost-sm:hover { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
+
+/* ─── Advanced Filter Panel ─── */
+.adv-filter-panel {
+  border-top: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-alt, #f8fafc);
+  padding: 12px 16px;
+  animation: slideDown 0.15s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.adv-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.adv-filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.adv-filter-group--range { min-width: 240px; }
+.adv-filter-label { font-size: 11px; font-weight: 600; color: var(--muted, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
+.adv-filter-select, .adv-filter-input {
+  padding: 6px 10px; border: 1px solid var(--border, #e2e8f0);
+  border-radius: 7px; background: #fff; color: var(--ink, #1e293b);
+  font-size: 13px; outline: none; transition: border-color 0.15s; width: 100%;
+}
+.adv-filter-select:focus, .adv-filter-input:focus { border-color: var(--pink-500, #ec4899); }
+.adv-filter-range { display: flex; align-items: center; gap: 6px; }
+.adv-filter-range .adv-filter-input { width: 100px; }
+.adv-filter-sep { color: var(--muted, #94a3b8); font-size: 13px; font-weight: 600; }
+.adv-filter-reset {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border: 1px solid #dc2626; border-radius: 7px;
+  background: transparent; color: #dc2626; font-size: 12px; font-weight: 500;
+  cursor: pointer; align-self: flex-end; transition: all 0.15s;
+}
+.adv-filter-reset:hover { background: #dc2626; color: #fff; }
+</style>

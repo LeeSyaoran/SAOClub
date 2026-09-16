@@ -19,4 +19,7 @@ public class DmCpu {
 
     @Column(name = "ten_cpu", length = 100, nullable = false, unique = true)
     private String tenCpu;
+
+    @Column(name = "hinh_anh")
+    private String hinhAnh;
 }

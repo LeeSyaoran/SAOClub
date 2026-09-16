@@ -184,7 +184,7 @@ const submit = async () => {
               <div class="method-icon"><Store :size="20" /></div>
               <div class="method-text">
                 <div class="method-name">Mang đến cửa hàng</div>
-                <div class="method-desc">Bạn tự mang máy đến cửa hàng SAOPhone gần nhất</div>
+                <div class="method-desc">Bạn tự mang máy đến cửa hàng SAOClub gần nhất</div>
               </div>
               <CheckCircle2 v-if="phuongThuc === 'tai_cua_hang'" :size="18" class="method-check" />
             </label>

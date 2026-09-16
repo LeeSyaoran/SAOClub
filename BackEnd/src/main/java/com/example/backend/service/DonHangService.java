@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
+import com.example.backend.request.ChiTietDonHangRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -60,6 +61,8 @@ public class DonHangService {
     private DiaChiGiaoHangRepository diaChiGiaoHangRepository;
     @Autowired
     private ChiTietDonHangRepository chiTietDonHangRepository;
+    @Autowired
+    private BienTheSanPhamRepository bienTheSanPhamRepository;
     @Autowired
     private ThanhToanRepository thanhToanRepository;
     @Autowired
@@ -147,6 +150,65 @@ public class DonHangService {
 
         sseService.notifyNewOrder(saved.getId());
         return saved;
+    }
+
+    /**
+     * Checkout hoàn chỉnh: tạo đơn + thêm chi tiết trong 1 transaction.
+     * Dùng cho khách vãng lai không đăng nhập.
+     */
+    @Transactional
+    public DonHang checkoutComplete(DonHangRequest orderReq, List<ChiTietDonHangRequest> items) {
+        DonHang order = create(orderReq);
+        for (ChiTietDonHangRequest item : items) {
+            item.setDonHangId(order.getId());
+            
+            int soLuong = item.getSoLuong() != null ? item.getSoLuong() : 1;
+            List<ChiTietSanPham> available = chiTietSanPhamRepository
+                    .findByBienThe_BienTheIdAndTrangThaiOrderByNgayNhapKhoAsc(item.getBienTheId(), "trong_kho");
+            if (available.size() < soLuong)
+                throw new IllegalArgumentException(
+                        "Không đủ hàng trong kho: cần " + soLuong + ", còn " + available.size());
+            List<ChiTietSanPham> assignedSerials = available.subList(0, soLuong);
+
+            ChiTietDonHang entity = buildChiTietDonHang(item);
+            entity.setChiTietSanPham(assignedSerials.get(0));
+            ChiTietDonHang saved = chiTietDonHangRepository.save(entity);
+
+            boolean online = "online".equals(order.getKenhBan());
+            String trangThaiMoi = online ? "giu_hang" : "da_ban";
+
+            for (ChiTietSanPham serial : assignedSerials) {
+                serial.setTrangThai(trangThaiMoi);
+                chiTietSanPhamRepository.save(serial);
+                ChiTietDonHangSerial link = new ChiTietDonHangSerial();
+                link.setChiTietDonHang(saved);
+                link.setChiTietSanPham(serial);
+                chiTietDonHangSerialRepository.save(link);
+            }
+
+            LichSuTonKho lichSu = new LichSuTonKho();
+            lichSu.setBienThe(entity.getBienThe());
+            lichSu.setChiTietSanPham(assignedSerials.get(0));
+            lichSu.setLoaiBienDong(online ? "giu_hang" : "xuat_ban");
+            lichSu.setSoLuongThayDoi(-assignedSerials.size());
+            lichSu.setDonHang(order);
+            lichSu.setNgayTao(LocalDateTime.now());
+            lichSu.setGhiChu(online
+                    ? "Giữ chỗ (Online) — đơn #" + order.getId()
+                    : "Bán hàng — đơn #" + order.getId());
+            lichSuTonKhoRepository.save(lichSu);
+        }
+        return order;
+    }
+
+    private ChiTietDonHang buildChiTietDonHang(ChiTietDonHangRequest req) {
+        ChiTietDonHang entity = new ChiTietDonHang();
+        entity.setDonHang(donHangRepository.getReferenceById(req.getDonHangId()));
+        entity.setBienThe(bienTheSanPhamRepository.getReferenceById(req.getBienTheId()));
+        entity.setSoLuong(req.getSoLuong() != null ? req.getSoLuong() : 1);
+        entity.setDonGia(entity.getBienThe().getGiaBan());
+        entity.setGiamGiaDong(BigDecimal.ZERO);
+        return entity;
     }
 
     private static final Map<String, Set<String>> CHUYEN_TRANG_THAI_DON_HANG = Map.of(
@@ -333,12 +395,12 @@ public class DonHangService {
     private Integer resolveKhachHangIdForCreate(Integer requestedKhachHangId) {
         TaiKhoan tk = currentAccount();
         if (tk == null)
-            throw new AccessDeniedException("Không xác định được người dùng");
+            return requestedKhachHangId; // Anonymous checkout — dùng khachHangId từ request
         if (!"khach_hang".equals(tk.getChucVu().getMaChucVu()))
-            return requestedKhachHangId;
+            return requestedKhachHangId; // Staff/admin — dùng khách hàng được chọn
         if (tk.getKhachHang() == null)
             throw new AccessDeniedException("Tài khoản chưa liên kết khách hàng");
-        return tk.getKhachHang().getKhachHangId();
+        return tk.getKhachHang().getKhachHangId(); // Khách đăng nhập — dùng chính mình
     }
 
     private BigDecimal tinhGiamGiaKhuyenMai(KhuyenMai khuyenMai, BigDecimal tongTien) {

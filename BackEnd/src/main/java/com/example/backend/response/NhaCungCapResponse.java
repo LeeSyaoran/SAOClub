@@ -21,4 +21,5 @@ public class NhaCungCapResponse {
     private String nguoiLienHe;
     private String trangThai;
     private LocalDateTime ngayTao;
+    private String hinhAnh;
 }

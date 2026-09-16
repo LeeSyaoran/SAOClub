@@ -4,6 +4,9 @@ target/
 
 ### Secrets — không commit ###
 application-local.properties
+firebase-service-account.json
+**/firebase-service-account.json
+
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

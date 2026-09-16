@@ -319,7 +319,7 @@ const handleBackdropClick = (e) => {
               <div class="issue-text">{{ claim.moTaLoi || '—' }}</div>
             </div>
             <div v-if="claim.ketQuaXuLy" class="issue-block issue-block--success">
-              <div class="issue-label">Kết quả xử lý từ SAOPhone:</div>
+              <div class="issue-label">Kết quả xử lý từ SAOClub:</div>
               <div class="issue-text">{{ claim.ketQuaXuLy }}</div>
             </div>
             <div v-if="claim.chiPhiPhatSinh > 0" class="cost-row">

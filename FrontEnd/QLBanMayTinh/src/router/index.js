@@ -34,7 +34,7 @@ router.beforeEach((to, from, next) => {
     return;
   }
   const saved = (() => {
-    try { return JSON.parse(sessionStorage.getItem("saophone_session")); }
+    try { return JSON.parse(sessionStorage.getItem("saoclub_session")); }
     catch { return null; }
   })();
 

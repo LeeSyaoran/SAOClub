@@ -14,7 +14,7 @@ import { useHead } from "@unhead/vue";
 import { CheckCircle2, XCircle, Info } from '@lucide/vue';
 
 useHead({
-  title: "SAOPhone",
+  title: "SAOClub",
   meta: [
     { name: "description", content: "Cửa hàng laptop & thiết bị công nghệ" },
     { name: "viewport", content: "width=device-width, initial-scale=1" },
@@ -32,6 +32,8 @@ import * as SanPhamService from "./services/SanPhamService.js";
 import * as AuthService from "./services/AuthService.js";
 import * as YeuThichService from "./services/YeuThichService.js";
 import * as DanhGiaService from "./services/DanhGiaService.js";
+import { handleRedirectResult } from "./firebase.js";
+import { firebaseLogin } from "./services/AuthService.js";
 
 import LoginForm from "./components/auth/LoginForm.vue";
 import RegisterForm from "./components/auth/RegisterForm.vue";
@@ -69,7 +71,7 @@ const openLogin = () => {
 
 const onRegisterSuccess = (newAccount) => {
   if (newAccount?.khachHangId != null) {
-    localStorage.removeItem(`saophone_cart_${newAccount.khachHangId}`);
+    localStorage.removeItem(`saoclub_cart_${newAccount.khachHangId}`);
   }
   authTab.value = "login";
   showToast(t("register.success"), "success");
@@ -95,6 +97,35 @@ const handleModalLogin = async ({ username, password }) => {
   }
 };
 
+// Social Login handler (Google/Facebook)
+const handleSocialLogin = (user) => {
+  showLoginModal.value = false;
+  showToast(t("toast.welcomeUser", { name: user.hoTen }), "success");
+  onLoginSuccess(user);
+};
+
+// Xử lý OAuth2 redirect result (chạy sau khi Google/Facebook redirect về)
+const processRedirectAuth = async () => {
+  try {
+    const result = await handleRedirectResult();
+    if (!result) return;
+
+    const res = await firebaseLogin(result.idToken, result.provider);
+    if (!res.ok) {
+      const msg = await res.text();
+      showToast(msg || "Đăng nhập thất bại", "error");
+      return;
+    }
+    const user = await res.json();
+    showLoginModal.value = false;
+    showToast(t("toast.welcomeUser", { name: user.hoTen }), "success");
+    onLoginSuccess(user);
+  } catch (err) {
+    console.error("Redirect auth error:", err);
+    showToast("Đăng nhập thất bại. Vui lòng thử lại.", "error");
+  }
+};
+
 // ── Logout ────────────────────────────────────────────────────────────────────
 const onLogout = () => {
   clearSession();
@@ -114,7 +145,7 @@ const showCart = ref(false);
 // Track selected items for partial checkout
 const cartSelected = ref(new Set());
 
-const cartStorageKey = () => `saophone_cart_${auth.user?.id ?? "guest"}`;
+const cartStorageKey = () => `saoclub_cart_${auth.user?.id ?? "guest"}`;
 
 const loadCart = () => {
   try {
@@ -387,6 +418,8 @@ onMounted(async () => {
   loadRatingSummaries();
   await loadSettings();
   applySystemDefaultLocale(SettingsStore.ngonNguMacDinh);
+  // Xử lý OAuth2 redirect result (Google/Facebook)
+  await processRedirectAuth();
 });
 
 onBeforeUnmount(() => {
@@ -441,6 +474,7 @@ onBeforeUnmount(() => {
         v-if="authTab === 'login'"
         @submit="handleModalLogin"
         @open-register="authTab = 'register'"
+        @social-success="handleSocialLogin"
       />
       <RegisterForm
         v-else

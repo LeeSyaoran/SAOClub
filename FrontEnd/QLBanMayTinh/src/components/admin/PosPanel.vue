@@ -235,8 +235,8 @@ const posApplyPromo = () => {
 // Luu tam gio hang dang ban do khach chua thanh toan xong / nhan vien can phuc vu
 // khach khac — luu o localStorage (tinh nang tien loi cho nhan vien tai quay,
 // khong can bang rieng trong DB vi don chua thuc su ton tai cho toi khi thanh toan).
-const HELD_ORDERS_KEY = 'saophone_pos_held_orders';
-const CART_KEY = 'saophone_pos_cart';
+const HELD_ORDERS_KEY = 'saoclub_pos_held_orders';
+const CART_KEY = 'saoclub_pos_cart';
 const heldOrders = ref([]);
 
 onMounted(() => {

@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface NhaCungCapRepository extends JpaRepository<NhaCungCap, Integer> {
-	@Query("SELECT new com.example.backend.response.NhaCungCapResponse(n.nhaCungCapId, n.tenNhaCungCap, n.soDienThoai, n.email, n.diaChi, n.maSoThue, n.nguoiLienHe, n.trangThai, n.ngayTao) FROM NhaCungCap n")
+	@Query("SELECT new com.example.backend.response.NhaCungCapResponse(n.nhaCungCapId, n.tenNhaCungCap, n.soDienThoai, n.email, n.diaChi, n.maSoThue, n.nguoiLienHe, n.trangThai, n.ngayTao, n.hinhAnh) FROM NhaCungCap n")
 	java.util.List<NhaCungCapResponse> hienThiNhaCungCap();
 }

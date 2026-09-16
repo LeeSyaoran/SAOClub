@@ -68,12 +68,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-        <!--  OpenAPI/Swagger  -->
-        <dependency>
+        <!--  OpenAPI/Swagger  - removed: not needed, only generates 500 errors in production -->
+        <!--  <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.6.0</version>
-        </dependency>
+        </dependency>  -->
         <!--  Spring Security (bao gồm BCrypt — không cần thêm crypto riêng)  -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -96,6 +96,12 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>0.12.6</version>
             <scope>runtime</scope>
+        </dependency>
+        <!-- Firebase Admin SDK -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.4.2</version>
         </dependency>
     </dependencies>
     <build>

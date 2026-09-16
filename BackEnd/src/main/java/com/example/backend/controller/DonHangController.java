@@ -1,17 +1,15 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.DonHang;
+import com.example.backend.request.ChiTietDonHangRequest;
 import com.example.backend.request.DonHangRequest;
-import com.example.backend.request.XacNhanDonHangRequest;
 import com.example.backend.request.MergeOrderRequest;
+import com.example.backend.request.XacNhanDonHangRequest;
 import com.example.backend.response.DonHangResponse;
 import com.example.backend.service.DonHangService;
 import com.example.backend.service.SseService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -19,6 +17,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/don-hang")
@@ -45,6 +48,69 @@ public class DonHangController {
     @PostMapping
     public ResponseEntity<DonHang> create(@Valid @RequestBody DonHangRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(donHangService.create(request));
+    }
+
+    /**
+     * Checkout online: tạo đơn + thêm tất cả sản phẩm trong 1 transaction.
+     * Dùng cho khách vãng lai không đăng nhập — không cần quyền staff.
+     */
+    @PostMapping("/checkout-complete")
+    public ResponseEntity<?> checkoutComplete(@RequestBody Map<String, Object> body) {
+        try {
+            DonHangRequest orderReq = convertToDonHangRequest(body);
+            List<ChiTietDonHangRequest> items = parseChiTietItems(body.get("items"));
+            DonHang order = donHangService.checkoutComplete(orderReq, items);
+            return ResponseEntity.status(HttpStatus.CREATED).body(order);
+        } catch (IllegalArgumentException | org.springframework.security.access.AccessDeniedException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Lỗi khi tạo đơn hàng: " + e.getMessage()));
+        }
+    }
+
+    private DonHangRequest convertToDonHangRequest(Map<String, Object> body) {
+        DonHangRequest req = new DonHangRequest();
+        req.setKhachHangId(getInt(body.get("khachHangId")));
+        req.setNguoiNhan((String) body.get("nguoiNhan"));
+        req.setSdtNguoiNhan((String) body.get("sdtNguoiNhan"));
+        req.setDiaChiGiaoHangText((String) body.get("diaChiGiaoHangText"));
+        req.setKhuyenMaiId(getInt(body.get("khuyenMaiId")));
+        req.setPhieuGiamGiaCaNhanId(getInt(body.get("phieuGiamGiaCaNhanId")));
+        req.setTongTien(getDecimal(body.get("tongTien")));
+        req.setGiamGia(getDecimal(body.get("giamGia")));
+        req.setPhiVanChuyen(getDecimal(body.get("phiVanChuyen")));
+        req.setNgayDat(body.get("ngayDat") != null
+                ? LocalDateTime.parse((String) body.get("ngayDat")) : LocalDateTime.now());
+        req.setTrangThaiDonHang((String) body.getOrDefault("trangThaiDonHang", "pending"));
+        req.setTrangThaiThanhToan((String) body.getOrDefault("trangThaiThanhToan", "unpaid"));
+        req.setKenhBan("online");
+        req.setGhiChu((String) body.get("ghiChu"));
+        return req;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<ChiTietDonHangRequest> parseChiTietItems(Object itemsObj) {
+        if (itemsObj == null) return List.of();
+        List<Map<String, Object>> items = (List<Map<String, Object>>) itemsObj;
+        return items.stream().map(item -> {
+            ChiTietDonHangRequest req = new ChiTietDonHangRequest();
+            req.setBienTheId(getInt(item.get("bienTheId")));
+            req.setSoLuong(getInt(item.get("soLuong"), 1));
+            return req;
+        }).toList();
+    }
+
+    private Integer getInt(Object val) { return getInt(val, null); }
+    private Integer getInt(Object val, Integer def) {
+        if (val == null) return def;
+        return ((Number) val).intValue();
+    }
+
+    private BigDecimal getDecimal(Object val) {
+        if (val == null) return BigDecimal.ZERO;
+        if (val instanceof Number) return BigDecimal.valueOf(((Number) val).doubleValue());
+        return new BigDecimal(val.toString());
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
@@ -112,9 +178,6 @@ public class DonHangController {
     // POST /api/don-hang/tinh-phi-van-chuyen — tính phí vận chuyển theo địa chỉ
     @PostMapping("tinh-phi-van-chuyen")
     public ResponseEntity<?> tinhPhiVanChuyen(@RequestBody Map<String, Object> body) {
-        // Body: { diaChi: "Hà Nội, Việt Nam", sanPhamIds: [1,2], soLuong: [1,2] }
-        // Tạm dùng flat rate: 30k nếu dưới 300k, miễn phí nếu >= 300k
-        // Có thể mở rộng theo khu vực/khoảng cách khi có bảng phí riêng
         try {
             double tongTienHang = 0;
             @SuppressWarnings("unchecked")
@@ -129,9 +192,9 @@ public class DonHangController {
                 }
             }
             double phiVanChuyen = tongTienHang >= 300_000 ? 0 : 30_000;
-            return ResponseEntity.ok(java.util.Map.of("phiVanChuyen", phiVanChuyen, "mienPhiTu", 300_000));
+            return ResponseEntity.ok(Map.of("phiVanChuyen", phiVanChuyen, "mienPhiTu", 300_000));
         } catch (Exception e) {
-            return ResponseEntity.ok(java.util.Map.of("phiVanChuyen", 30_000, "mienPhiTu", 300_000));
+            return ResponseEntity.ok(Map.of("phiVanChuyen", 30_000, "mienPhiTu", 300_000));
         }
     }
 

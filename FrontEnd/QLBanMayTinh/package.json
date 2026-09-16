@@ -13,12 +13,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.3.1",
     "@lucide/vue": "^1.29.0",
     "@unhead/vue": "^1.11.0",
     "@vee-validate/zod": "^4.15.1",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
     "bootstrap": "^5.3.8",
+    "firebase": "^12.19.0",
     "jsbarcode": "^3.12.3",
     "leaflet": "^1.9.4",
     "pinia": "^2.3.0",

@@ -19,4 +19,7 @@ public class DmGpu {
 
     @Column(name = "ten_gpu", length = 100, nullable = false, unique = true)
     private String tenGpu;
+
+    @Column(name = "hinh_anh")
+    private String hinhAnh;
 }

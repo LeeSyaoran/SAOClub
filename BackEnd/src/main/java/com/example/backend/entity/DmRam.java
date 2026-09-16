@@ -19,4 +19,7 @@ public class DmRam {
 
     @Column(name = "dung_luong", length = 50, nullable = false, unique = true)
     private String dungLuong;
+
+    @Column(name = "hinh_anh")
+    private String hinhAnh;
 }

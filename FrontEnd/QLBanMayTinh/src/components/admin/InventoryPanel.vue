@@ -52,30 +52,28 @@ const KHO_TAB_STORAGE_KEY = "admin.inventory.khoTab";
 const khoTab = ref(sessionStorage.getItem(KHO_TAB_STORAGE_KEY) || 'ton-kho'); // 'ton-kho' | 'phieu-nhap'
 watch(khoTab, (val) => sessionStorage.setItem(KHO_TAB_STORAGE_KEY, val));
 
-const getVariantInfo = (item) => products.value.find(p => p.bienTheId === item.bienThe?.bienTheId);
+const getVariantInfo = (item) => products.value.find(p => p.bienTheId === item.bienTheId);
 const maSanPhamCuaItem = (item) => {
-  const sp = item.bienThe?.sanPham;
-  if (sp?.maSanPham) return sp.maSanPham;
-  return sp?.sanPhamId != null ? 'SP' + String(sp.sanPhamId).padStart(4, '0') : '—';
+  if (item.maSku) return item.maSku;
+  return item.bienTheId != null ? 'SP' + String(item.bienTheId).padStart(4, '0') : '—';
 };
 
 // BienTheSanPhamService.update() dùng BeanUtils.copyProperties nên cần body ĐẦY ĐỦ (thiếu
-// field nào sẽ bị null hết field đó) — dựng lại từ entity lồng nhau trả về trong
-// TonKho.bienThe (đọc thẳng, không cần gọi thêm API CPU/RAM/GPU/Ổ cứng).
+// field nào sẽ bị null hết field đó) — lấy từ ProductsStore (biến thể flat) để đủ fields.
 const buildBienTheUpdateBody = (bienThe, overrides = {}) => ({
-  sanPhamId: bienThe?.sanPham?.sanPhamId,
+  sanPhamId: bienThe?.sanPhamId,
   maSku: bienThe?.maSku ?? '',
   barcode: bienThe?.barcode ?? '',
   giaNhap: Number(bienThe?.giaNhap ?? 0),
   giaBan: Number(bienThe?.giaBan ?? 0),
   baoHanhThang: Number(bienThe?.baoHanhThang ?? 0),
-  hinhAnhBienThe: bienThe?.hinhAnhBienThe ?? '',
+  hinhAnhBienThe: bienThe?.hinhAnhChinh ?? '',
   trangThai: bienThe?.trangThai ?? '',
   mauSac: bienThe?.mauSac ?? '',
-  cpuId: bienThe?.cpu?.cpuId ?? null,
-  ramId: bienThe?.ram?.ramId ?? null,
-  oCungId: bienThe?.oCung?.oCungId ?? null,
-  gpuId: bienThe?.gpu?.gpuId ?? null,
+  cpuId: bienThe?.cpuId ?? null,
+  ramId: bienThe?.ramId ?? null,
+  oCungId: bienThe?.oCungId ?? null,
+  gpuId: bienThe?.gpuId ?? null,
   kichThuocManHinh: bienThe?.kichThuocManHinh ?? '',
   heDieuHanh: bienThe?.heDieuHanh ?? '',
   pin: bienThe?.pin ?? '',
@@ -86,20 +84,18 @@ const buildBienTheUpdateBody = (bienThe, overrides = {}) => ({
 // Đồng bộ giá nhập của biến thể theo đơn giá của phiếu nhập mới nhất — theo đúng yêu cầu:
 // biến thể mới tạo giaNhap=0, sau khi nhập hàng thì lấy giá nhập từ phiếu.
 const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
-  const item = inventory.value.find((i) => i.bienThe?.bienTheId === bienTheId);
-  // item/bienThe không tìm thấy nghĩa là inventory.value đang là snapshot cũ (biến thể này
-  // mới toanh, refreshInventory() ở cuối savePhieuNhap() chưa kịp chạy) — không phải lỗi,
-  // chỉ là chưa đồng bộ được NGAY, im lặng bỏ qua lần này là đúng (không phải bug cần báo).
-  if (!item?.bienThe) return;
+  const item = inventory.value.find((i) => i.bienTheId === bienTheId);
+  const bienThe = getVariantInfo(item);
+  if (!bienThe) return;
   try {
-    const body = buildBienTheUpdateBody(item.bienThe, { giaNhap: Number(donGia) || 0 });
+    const body = buildBienTheUpdateBody(bienThe, { giaNhap: Number(donGia) || 0 });
     const res = await BienTheSanPhamService.update(bienTheId, body);
     if (!res.ok) {
       const text = await res.text().catch(() => res.statusText);
-      showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho') + ` ${item.bienThe.maSku}: ${text}`);
+      showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho') + ` ${bienThe.maSku}: ${text}`);
     }
   } catch (e) {
-    showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho') + ` ${item.bienThe.maSku}: ${e.message}`);
+    showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho') + ` ${bienThe.maSku}: ${e.message}`);
   }
 };
 
@@ -145,6 +141,8 @@ const isInvFilterOpen = ref(false);
 const invFilterStatus = ref(''); // '' | 'pending' | 'out' | 'low' | 'ok'
 const invFilterThuongHieu = ref('');
 const invFilterDanhMuc = ref('');
+const invTonMin = ref('');
+const invTonMax = ref('');
 // Bấm vào 1 trong 3 ô thống kê "Chờ nhập hàng/Sắp hết/Hết hàng" — bấm lại lần nữa thì tắt,
 // quay về danh sách mặc định.
 const toggleInvQuickFilter = (status) => { invFilterStatus.value = invFilterStatus.value === status ? '' : status; };
@@ -162,13 +160,17 @@ const invCategoryOptions = computed(() => {
   return [...map].map(([value, label]) => ({ value, label })).sort((a, b) => String(a.label).localeCompare(String(b.label), 'vi'));
 });
 const invActiveFilterCount = computed(() =>
-  [invFilterStatus.value, invFilterThuongHieu.value, invFilterDanhMuc.value].filter((v) => v !== '').length,
+  [invFilterStatus.value, invFilterThuongHieu.value, invFilterDanhMuc.value,
+   invTonMin.value !== '' ? invTonMin.value : '', invTonMax.value !== '' ? invTonMax.value : '',
+  ].filter((v) => v !== '').length,
 );
 const clearInvFilters = () => {
   inventorySearch.value = '';
   invFilterStatus.value = '';
   invFilterThuongHieu.value = '';
   invFilterDanhMuc.value = '';
+  invTonMin.value = '';
+  invTonMax.value = '';
 };
 
 const flatInventory = computed(() => {
@@ -180,7 +182,7 @@ const flatInventory = computed(() => {
     })
     .filter(({ item, v, status }) => {
       if (q) {
-        const hay = [item.bienThe?.maSku, item.bienThe?.sanPham?.tenSanPham, v?.tenSanPham, maSanPhamCuaItem(item)]
+        const hay = [item.maSku, item.tenSanPham, v?.tenSanPham, maSanPhamCuaItem(item)]
           .filter(Boolean).join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
@@ -190,18 +192,22 @@ const flatInventory = computed(() => {
       if (invFilterStatus.value) return status === invFilterStatus.value;
       // Mặc định: ẩn "Chờ nhập hàng" (chưa đủ giá) và "Hết hàng" (đã bán hết) khỏi ds chính,
       // chỉ xem được qua các ô thống kê tương ứng — theo đúng yêu cầu nghiệp vụ.
+      // khoảng số lượng tồn kho
+      const ton = item.soLuongTon ?? 0;
+      if (invTonMin.value !== '' && ton < Number(invTonMin.value)) return false;
+      if (invTonMax.value !== '' && ton > Number(invTonMax.value)) return false;
       return status !== 'pending' && status !== 'out';
     })
     // Mới tạo gần nhất lên đầu — ưu tiên ngày tạo của biến thể, nếu thiếu thì lùi về
     // bienTheId (tự tăng, càng lớn càng mới) để vẫn có thứ tự hợp lý.
     .sort((a, b) => {
-      const da = a.v?.ngayTao ? new Date(a.v.ngayTao).getTime() : (a.item.bienThe?.bienTheId ?? 0);
-      const db = b.v?.ngayTao ? new Date(b.v.ngayTao).getTime() : (b.item.bienThe?.bienTheId ?? 0);
+      const da = a.v?.ngayTao ? new Date(a.v.ngayTao).getTime() : (a.item.bienTheId ?? 0);
+      const db = b.v?.ngayTao ? new Date(b.v.ngayTao).getTime() : (b.item.bienTheId ?? 0);
       return db - da;
     });
 });
 const { currentPage: invCurrentPage, totalPages: invTotalPages, pagedItems: pagedFlatInventory } = usePagination(flatInventory);
-watch([inventorySearch, invFilterStatus, invFilterThuongHieu, invFilterDanhMuc], () => { invCurrentPage.value = 0; });
+watch([inventorySearch, invFilterStatus, invFilterThuongHieu, invFilterDanhMuc, invTonMin, invTonMax], () => { invCurrentPage.value = 0; });
 
 // ── Ô chi tiết 1 dòng tồn kho — GỘP 2 modal cũ (xem serial / sửa+thêm hàng) thành 1
 // modal có 2 tab, mở bằng cách bấm vào dòng (bỏ hẳn nút cây bút riêng). ──────────────────
@@ -228,7 +234,7 @@ const filteredDetailSerials = computed(() => {
 // Xóa serial thêm nhầm — chỉ cho phép khi đang "trong_kho" (server chặn nếu đã bán/đã dùng).
 const removeStockSerial = async (chiTietId) => {
   if (!(await askConfirm(t('admin.confirm.deleteSerial')))) return;
-  const bienTheId = detailItem.value?.bienThe?.bienTheId;
+  const bienTheId = detailItem.value?.bienTheId;
   try {
     const res = await ChiTietSanPhamService.remove(chiTietId);
     if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteSerialError'))); return; }
@@ -287,19 +293,16 @@ const openStockDetail = async (item) => {
   stockForm.soLuongGiu = item.soLuongGiu ?? 0;
   stockForm.tonKhoToiThieu = item.tonKhoToiThieu ?? 0;
   stockForm.newSerials = [''];
-  // Giá bán nhập tay ở đây — đọc từ ProductsStore (nguồn giaBan/giaNhap dùng để phân loại
-  // pending/out, xem isPendingItem) chứ không phải item.bienThe (entity lồng nhau từ TonKho
-  // có thể không đồng bộ tức thời bằng store dùng chung).
   stockForm.giaBan = Number(getVariantInfo(item)?.giaBan ?? 0);
   showDetailModal.value = true;
-  await loadDetailSerials(item.bienThe?.bienTheId);
+  await loadDetailSerials(item.bienTheId);
 };
 
 const saveStock = async () => {
   if (stockSaving.value) return;
   stockSaving.value = true;
   const item = detailItem.value;
-  const bienTheId = item.bienThe?.bienTheId;
+  const bienTheId = item.bienTheId;
   try {
     // 1) Thêm từng serial mới — mỗi cái tự tăng soLuongTon ở server (trigger DB tính lại
     // từ số serial "trong_kho", không phải giá trị FE gửi lên).
@@ -320,15 +323,18 @@ const saveStock = async () => {
     // 3) Giá bán — chỉ gọi update biến thể nếu có đổi, tránh ghi đè vô ích. Đây là bước
     // "tốt nghiệp" khỏi Chờ nhập hàng: đủ giaNhap (đã có từ phiếu nhập) + giaBan (nhập ở đây).
     const currentGiaBan = Number(getVariantInfo(item)?.giaBan ?? 0);
-    if (item.bienThe && Number(stockForm.giaBan) !== currentGiaBan) {
-      const body = buildBienTheUpdateBody(item.bienThe, { giaBan: Number(stockForm.giaBan) || 0 });
-      const priceRes = await BienTheSanPhamService.update(bienTheId, body);
-      if (!priceRes.ok) { showToast(t('admin.errors.updateFailed', { status: priceRes.status })); return; }
+    if (stockForm.giaBan !== currentGiaBan) {
+      const bienThe = getVariantInfo(item);
+      if (bienThe) {
+        const body = buildBienTheUpdateBody(bienThe, { giaBan: Number(stockForm.giaBan) || 0 });
+        const priceRes = await BienTheSanPhamService.update(bienTheId, body);
+        if (!priceRes.ok) { showToast(t('admin.errors.updateFailed', { status: priceRes.status })); return; }
+      }
     }
     // Lấy lại đúng dòng vừa đổi để có soLuongTon mới nhất do server tính, rồi quay về tab
     // danh sách serial để thấy ngay kết quả — không đóng hẳn modal. refreshProducts() để
     // giaBan/giaNhap vừa đổi phản ánh ngay ở bảng chính + phân loại pending/out (đọc từ
-    // ProductsStore, không phải item.bienThe) — không cần F5.
+    // ProductsStore, không phải inventory flat item) — không cần F5.
     const [updated] = await Promise.all([
       TonKhoService.getByBienThe(bienTheId).catch(() => null),
       refreshProducts().catch(() => {}),
@@ -464,7 +470,7 @@ const { currentPage: pnCurrentPage, totalPages: pnTotalPages, pagedItems: pagedP
 const productOptionsForPhieuNhap = computed(() => {
   const map = new Map();
   for (const item of inventory.value) {
-    const sp = item.bienThe?.sanPham;
+    const sp = getVariantInfo(item);
     if (sp?.sanPhamId != null && !map.has(sp.sanPhamId)) {
       map.set(sp.sanPhamId, { value: sp.sanPhamId, label: sp.tenSanPham ?? '' });
     }
@@ -474,13 +480,12 @@ const productOptionsForPhieuNhap = computed(() => {
 const variantOptionsByProduct = computed(() => {
   const map = new Map();
   for (const item of inventory.value) {
-    const bt = item.bienThe;
-    const sanPhamId = bt?.sanPham?.sanPhamId;
-    if (sanPhamId == null || bt?.bienTheId == null) continue;
-    if (!map.has(sanPhamId)) map.set(sanPhamId, new Map());
-    const variants = map.get(sanPhamId);
+    const bt = getVariantInfo(item);
+    if (!bt || bt.sanPhamId == null || bt.bienTheId == null) continue;
+    if (!map.has(bt.sanPhamId)) map.set(bt.sanPhamId, new Map());
+    const variants = map.get(bt.sanPhamId);
     if (!variants.has(bt.bienTheId)) {
-      const specs = [bt.mauSac, bt.cpu?.tenCpu, bt.ram?.dungLuong].filter(Boolean).join(' · ');
+      const specs = [bt.mauSac, bt.cpu, bt.ram].filter(Boolean).join(' · ');
       variants.set(bt.bienTheId, { value: bt.bienTheId, label: specs ? `${bt.maSku} — ${specs}` : bt.maSku });
     }
   }
@@ -936,7 +941,7 @@ const openPhieuNhapSerialTab = (p) => {
 // hiện cảnh báo đối chiếu (không chặn, vì 2 việc có thể lệch thời điểm) để nhân viên tự biết
 // còn thiếu bao nhiêu máy chưa gán serial cho đúng lô hàng này.
 const tonThucTeCuaBienThe = (bienTheId) =>
-  inventory.value.find((i) => i.bienThe?.bienTheId === bienTheId)?.soLuongTon ?? 0;
+  inventory.value.find((i) => i.bienTheId === bienTheId)?.soLuongTon ?? 0;
 
 const printEsc = (v) => String(v ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -1146,6 +1151,14 @@ const exportPhieuNhapExcel = () => {
                   <option v-for="o in invCategoryOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
               </label>
+              <label class="inv-field inv-field--range">
+                <span>Tồn kho</span>
+                <div class="inv-range">
+                  <input v-model="invTonMin" type="number" min="0" placeholder="Từ" class="inv-range-input" />
+                  <span class="inv-range-sep">–</span>
+                  <input v-model="invTonMax" type="number" min="0" placeholder="Đến" class="inv-range-input" />
+                </div>
+              </label>
             </div>
             <div class="inv-filter__foot">
               <div class="inv-filter__btns">
@@ -1180,8 +1193,8 @@ const exportPhieuNhapExcel = () => {
                   <div class="inv-name">
                     <img :src="v?.hinhAnhChinh" class="inv-thumb" alt="" @error="$event.target.style.visibility='hidden'" />
                     <div class="inv-name__text">
-                      <div class="inv-name__main">{{ v?.tenSanPham || item.bienThe?.sanPham?.tenSanPham || '—' }}</div>
-                      <div class="inv-name__sub">{{ item.bienThe?.maSku || '—' }}</div>
+                      <div class="inv-name__main">{{ v?.tenSanPham || item.tenSanPham || '—' }}</div>
+                      <div class="inv-name__sub">{{ item.maSku || '—' }}</div>
                     </div>
                   </div>
                 </td>
@@ -1569,9 +1582,9 @@ const exportPhieuNhapExcel = () => {
       <header class="inv-modal__head" style="align-items:flex-start;">
         <div>
           <div style="font-weight:700;font-size:0.95rem;">
-            {{ t('admin.stockDetailModal.titlePrefix') }} {{ detailItem?.bienThe?.maSku || '—' }}
+            {{ t('admin.stockDetailModal.titlePrefix') }} {{ detailItem?.maSku || '—' }}
           </div>
-          <div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">{{ detailItem?.bienThe?.sanPham?.tenSanPham || '—' }}</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">{{ detailItem?.tenSanPham || '—' }}</div>
           <div class="d-flex gap-1 mt-1 flex-wrap">
             <span v-if="getVariantInfo(detailItem)?.cpu" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).cpu }}</span>
             <span v-if="getVariantInfo(detailItem)?.ram" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).ram }}</span>
@@ -1819,6 +1832,17 @@ const exportPhieuNhapExcel = () => {
 .inv-field input:focus, .inv-field select:focus, .inv-item-row input:focus, .inv-solo-input:focus, .inv-serial-grid input:focus {
   outline: none; border-color: var(--pink-500); box-shadow: 0 0 0 3px var(--pink-100);
 }
+/* range filter tồn kho */
+.inv-field--range > span { margin-bottom: 0; }
+.inv-range { display: flex; align-items: center; gap: 5px; }
+.inv-range-input {
+  flex: 1; min-width: 0; padding: 6px 8px;
+  border: 1px solid var(--pink-200); border-radius: 7px;
+  background: #fff; color: var(--text-primary, #1e293b);
+  font-size: 13px; outline: none; transition: border-color 0.15s;
+}
+.inv-range-input:focus { border-color: var(--pink-500); box-shadow: 0 0 0 3px var(--pink-100); }
+.inv-range-sep { color: var(--pink-400); font-size: 13px; font-weight: 700; flex-shrink: 0; }
 .inv-readonly {
   padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px;
   font-size: 13px; color: var(--muted); background: var(--pink-50);

@@ -1,5 +1,6 @@
 package com.example.backend.controller;
 
+import com.example.backend.request.FirebaseTokenRequest;
 import com.example.backend.request.LoginRequest;
 import com.example.backend.service.AuthService;
 import jakarta.validation.Valid;
@@ -38,6 +39,18 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Tài khoản hoặc mật khẩu không đúng");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/firebase")
+    public ResponseEntity<?> firebaseLogin(@Valid @RequestBody FirebaseTokenRequest request) {
+        try {
+            String provider = request.getProvider() != null ? request.getProvider() : "google";
+            return ResponseEntity.ok(authService.firebaseLogin(request.getIdToken(), provider));
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Xác thực Firebase thất bại: " + e.getMessage());
         }
     }
 }

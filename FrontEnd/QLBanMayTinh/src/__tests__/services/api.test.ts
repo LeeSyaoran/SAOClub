@@ -14,7 +14,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 beforeEach(() => {
-  sessionStorage.removeItem('saophone_session');
+  sessionStorage.removeItem('saoclub_session');
   mockFetch.mockReset();
   mockClearSession.mockReset();
   mockShowToast.mockReset();
@@ -80,7 +80,7 @@ describe('api service', () => {
   });
 
   it('should call clearSession on 401 response when token-backed session exists', async () => {
-    sessionStorage.setItem('saophone_session', JSON.stringify({ token: 'test-token' }));
+    sessionStorage.setItem('saoclub_session', JSON.stringify({ token: 'test-token' }));
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
@@ -94,7 +94,7 @@ describe('api service', () => {
   });
 
   it('should only call clearSession once for concurrent 401s when token-backed session exists', async () => {
-    sessionStorage.setItem('saophone_session', JSON.stringify({ token: 'test-token' }));
+    sessionStorage.setItem('saoclub_session', JSON.stringify({ token: 'test-token' }));
     mockFetch.mockResolvedValue({
       ok: false,
       status: 401,
@@ -107,7 +107,7 @@ describe('api service', () => {
   });
 
   it('should re-arm session expiry flag after 2 seconds when token-backed session exists', async () => {
-    sessionStorage.setItem('saophone_session', JSON.stringify({ token: 'test-token' }));
+    sessionStorage.setItem('saoclub_session', JSON.stringify({ token: 'test-token' }));
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
@@ -161,7 +161,7 @@ describe('api service', () => {
 
   it('should include auth header when session exists', async () => {
     const token = 'test-token-123';
-    sessionStorage.setItem('saophone_session', JSON.stringify({ token }));
+    sessionStorage.setItem('saoclub_session', JSON.stringify({ token }));
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -177,7 +177,7 @@ describe('api service', () => {
   });
 
   it('should not include auth header when session is missing', async () => {
-    sessionStorage.removeItem('saophone_session');
+    sessionStorage.removeItem('saoclub_session');
 
     mockFetch.mockResolvedValueOnce({
       ok: true,

@@ -57,6 +57,7 @@ import {Clock,
   FileText,
   LogOut,
   ChevronDown,
+  ChevronRight,
   Star,
   CreditCard,
   Shield,
@@ -139,6 +140,7 @@ const historyByOrder = ref({});
 const returnsByOrder = ref({});
 const returnModalOrder = ref(null);
 const loading      = ref(false);
+const ordersLoading = ref(false);
 
 const tabOrderCounts = computed(() => {
   const counts = { history: 0, pending: 0, shipping: 0, completed: 0, cancelled: 0 };
@@ -347,8 +349,8 @@ const formatVoucher = (v) => {
 };
 const loadVouchers = async () => {
   try {
-    vouchers.value = await PhieuGiamGiaCaNhanService.getMyVouchers();
-  } catch (e) {
+    vouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi();
+  } catch (err) {
     vouchers.value = [];
   }
 };
@@ -483,7 +485,7 @@ const handleOutsideClick = (e) => {
             <button class="btn-back" @click="emit('go-home')" title="Về trang chủ">
               <ArrowLeft :size="16" />
             </button>
-            <div class="brand-text">SAOPhone</div>
+            <div class="brand-text">SAOClub</div>
 
             <div class="header-stats-compact d-none d-md-flex">
               <div class="stat-chip">
@@ -947,11 +949,11 @@ const handleOutsideClick = (e) => {
                           <span>1900 1234</span>
                         </div>
                       </a>
-                      <a href="mailto:cskh@saophone.vn" class="support-item">
+                      <a href="mailto:cskh@saoclub.vn" class="support-item">
                         <Mail :size="20" />
                         <div>
                           <strong>Email</strong>
-                          <span>cskh@saophone.vn</span>
+                          <span>cskh@saoclub.vn</span>
                         </div>
                       </a>
                       <button class="support-item">

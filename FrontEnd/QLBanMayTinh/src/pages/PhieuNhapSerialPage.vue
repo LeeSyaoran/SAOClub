@@ -205,7 +205,7 @@ const backToList = () => {
     window.history.back();
   } else {
     const saved = (() => {
-      try { return JSON.parse(sessionStorage.getItem("saophone_session")); } catch { return null; }
+      try { return JSON.parse(sessionStorage.getItem("saoclub_session")); } catch { return null; }
     })();
     const target = saved?.role === "quan_kho" ? "/kho" : (saved?.role === "nhan_vien" ? "/staff" : "/admin");
     router.push(target);

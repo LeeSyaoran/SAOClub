@@ -5,11 +5,13 @@ import { CustomersStore, refreshCustomers } from "../../stores/customers.js";
 import { OrdersStore } from "../../stores/orders.js";
 import * as PhieuGiamGiaCaNhanService from "../../services/PhieuGiamGiaCaNhanService.js";
 import * as KhachHangService from "../../services/KhachHangService.js";
+import * as YeuThichService from "../../services/YeuThichService.js";
 import { formatPrice, formatDate, formatDateTime, statusLabel } from "../../utils/adminFormat.js";
 import { orderStatusLabel, orderStatusColor } from "../../utils/orderStatus.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
 import TangDiemModal from "./TangDiemModal.vue";
 import TangVoucherModal from "./TangVoucherModal.vue";
+import { Heart } from '@lucide/vue';
 
 const props = defineProps({
   customerId: { type: Number, required: true },
@@ -36,6 +38,8 @@ const vouchers = ref([]);
 const vouchersLoading = ref(true);
 const pointHistory = ref([]);
 const pointHistoryLoading = ref(true);
+const wishlist = ref([]);
+const wishlistLoading = ref(true);
 
 const loadVouchers = async () => {
   vouchersLoading.value = true;
@@ -61,9 +65,22 @@ const loadPointHistory = async () => {
   }
 };
 
+const loadWishlist = async () => {
+  wishlistLoading.value = true;
+  try {
+    wishlist.value = await YeuThichService.getByCustomer(props.customerId);
+  } catch (e) {
+    console.error('Không tải được wishlist:', e);
+    wishlist.value = [];
+  } finally {
+    wishlistLoading.value = false;
+  }
+};
+
 onMounted(() => {
   loadVouchers();
   loadPointHistory();
+  loadWishlist();
 });
 
 const voucherStatus = (v) => {
@@ -119,6 +136,10 @@ const showGiftVoucherModal = ref(false);
 
     <div class="customer-detail-tabs">
       <button class="customer-detail-tab" :class="{ 'is-active': activeDetailTab === 'info' }" @click="activeDetailTab = 'info'">Thông tin</button>
+      <button class="customer-detail-tab" :class="{ 'is-active': activeDetailTab === 'wishlist' }" @click="activeDetailTab = 'wishlist'">
+        <Heart :size="14" style="vertical-align:-2px;margin-right:4px;" />Yêu thích
+        <span v-if="wishlist.length" class="badge bg-danger ms-1" style="font-size:0.65rem;">{{ wishlist.length }}</span>
+      </button>
       <button class="customer-detail-tab" :class="{ 'is-active': activeDetailTab === 'chat' }" @click="activeDetailTab = 'chat'">Chat</button>
     </div>
 
@@ -198,6 +219,28 @@ const showGiftVoucherModal = ref(false);
             </div>
           </div>
         </section>
+      </div>
+    </div>
+
+    <div v-else-if="activeDetailTab === 'wishlist'" class="customer-wishlist-panel">
+      <div v-if="wishlistLoading" class="text-secondary small">{{ t('admin.customers.loading') }}</div>
+      <div v-else-if="wishlist.length === 0" class="text-secondary small">{{ t('admin.customerDetail.wishlistEmpty') || 'Khách hàng chưa có sản phẩm yêu thích nào.' }}</div>
+      <div v-else class="wishlist-grid">
+        <div v-for="item in wishlist" :key="item.yeuThichId" class="wishlist-card">
+          <div class="wishlist-card__img-wrap">
+            <img :src="item.hinhAnhChinh || '/images/placeholder.png'" class="wishlist-card__img" alt="" @error="$event.target.style.display='none'" />
+            <span v-if="item.trangThai === 'inactive'" class="wishlist-card__badge badge bg-secondary">Ngừng bán</span>
+          </div>
+          <div class="wishlist-card__body">
+            <div class="wishlist-card__name">{{ item.tenSanPham }}</div>
+            <div class="wishlist-card__sku text-secondary small">{{ item.maSku }}</div>
+            <div class="wishlist-card__price">{{ formatPrice(item.giaBan) }}</div>
+            <div class="wishlist-card__stock">
+              <span v-if="(item.soLuongTon ?? 0) > 0" class="text-success small">Còn {{ item.soLuongTon }} trong kho</span>
+              <span v-else class="text-danger small">Hết hàng</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -284,4 +327,15 @@ const showGiftVoucherModal = ref(false);
 .chat-composer { display: flex; gap: 10px; padding: 12px; border-top: 1px solid var(--border-color-soft); }
 .chat-composer textarea { flex: 1; border-radius: 12px; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color-soft); }
 @media (max-width: 900px) { .customer-detail-kpis, .customer-detail-content-grid, .customer-proof-grid { grid-template-columns: 1fr; } .customer-detail-head { align-items: flex-start; flex-wrap: wrap; } }
+
+.wishlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.wishlist-card { background: var(--bg-card-soft); border: 1px solid var(--border-color-soft); border-radius: 14px; overflow: hidden; }
+.wishlist-card__img-wrap { position: relative; aspect-ratio: 4/3; background: var(--bg-card); }
+.wishlist-card__img { width: 100%; height: 100%; object-fit: contain; }
+.wishlist-card__badge { position: absolute; top: 6px; right: 6px; }
+.wishlist-card__body { padding: 10px 12px; }
+.wishlist-card__name { font-size: 0.84rem; font-weight: 700; color: var(--text-heading); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wishlist-card__sku { margin-top: 3px; }
+.wishlist-card__price { font-weight: 800; font-size: 0.95rem; color: var(--text-heading); margin-top: 6px; }
+.wishlist-card__stock { margin-top: 4px; }
 </style>

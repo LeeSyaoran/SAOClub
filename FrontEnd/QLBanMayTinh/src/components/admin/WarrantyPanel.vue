@@ -1,5 +1,7 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from "vue";
+import { Search } from "@lucide/vue";
+import { Filter, ChevronDown, ChevronUp } from '@lucide/vue';
 import { t } from "../../i18n/index.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import * as PhieuBaoHanhService from "../../services/PhieuBaoHanhService.js";
@@ -30,6 +32,21 @@ onUnmounted(() => {
 const warrantyList = ref([]);
 const warrantyLoading = ref(false);
 const warrantySearch = ref('');
+const isWarrantyFilterOpen = ref(false);
+const warrantyFilters = reactive({
+  expireDays: '',   // '' | '30' | '60' | '90' — còn hạn trong X ngày
+  ngayFrom: '',
+  ngayTo: '',
+});
+const activeWarrantyFilterCount = computed(() =>
+  [warrantyFilters.expireDays, warrantyFilters.ngayFrom, warrantyFilters.ngayTo].filter((v) => v !== '').length
+);
+const resetWarrantyFilters = () => {
+  warrantySearch.value = '';
+  warrantyFilters.expireDays = '';
+  warrantyFilters.ngayFrom = '';
+  warrantyFilters.ngayTo = '';
+};
 let warrantyPromise = null;
 const ensureWarrantyData = (force = false) => {
   if (warrantyPromise && !force) return warrantyPromise;
@@ -42,12 +59,19 @@ const ensureWarrantyData = (force = false) => {
 };
 const filteredWarranty = computed(() => {
   const q = warrantySearch.value.trim().toLowerCase();
-  if (!q) return warrantyList.value;
-  return warrantyList.value.filter((w) =>
-    [w.soSerial, w.maSku, w.tenSanPham, w.maDonHang, w.tenKhachHang, w.soDienThoaiKhachHang]
-      .some((v) => (v || '').toLowerCase().includes(q)));
+  return warrantyList.value.filter((w) => {
+    if (q && ![w.soSerial, w.maSku, w.tenSanPham, w.maDonHang, w.tenKhachHang, w.soDienThoaiKhachHang]
+      .some((v) => (v || '').toLowerCase().includes(q))) return false;
+    const days = daysUntilExpiry(w.ngayHetBaoHanh);
+    if (warrantyFilters.expireDays !== '' && days > Number(warrantyFilters.expireDays)) return false;
+    const ngayStr = (w.ngayHetBaoHanh || '').slice(0, 10);
+    if (warrantyFilters.ngayFrom && ngayStr < warrantyFilters.ngayFrom) return false;
+    if (warrantyFilters.ngayTo   && ngayStr > warrantyFilters.ngayTo)   return false;
+    return true;
+  });
 });
 const { currentPage: wCurrentPage, totalPages: wTotalPages, pagedItems: pagedWarranty, pageSize: wPageSize } = usePagination(filteredWarranty);
+watch([warrantySearch, () => warrantyFilters.expireDays, () => warrantyFilters.ngayFrom, () => warrantyFilters.ngayTo], () => { wCurrentPage.value = 0; });
 const daysUntilExpiry = (isoDate) => Math.ceil((new Date(isoDate) - new Date()) / 86400000);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -64,15 +88,18 @@ const statusColor = (s) => STATUS_COLOR[s] ?? { bg: '#e5e7eb', text: '#374151' }
 
 // ── Bảng "Phiếu bảo hành" (CRUD) ────────────────────────────────────────────────
 const claimSearch = ref("");
+const claimStatusFilter = ref('');  // '' | trạng thái cụ thể
 const filteredClaims = computed(() => {
   const q = claimSearch.value.trim().toLowerCase();
-  if (!q) return BaoHanhStore.items ?? [];
   return (BaoHanhStore.items ?? []).filter((p) => {
+    if (claimStatusFilter.value && p.trangThai !== claimStatusFilter.value) return false;
+    if (!q) return true;
     const name = customerName(p.khachHangId).toLowerCase();
     return String(p.baoHanhId).includes(q) || name.includes(q) || (p.soSerial ?? '').toLowerCase().includes(q);
   });
 });
 const { currentPage: cCurrentPage, totalPages: cTotalPages, pagedItems: pagedClaims, pageSize: cPageSize } = usePagination(filteredClaims);
+watch([claimSearch, claimStatusFilter], () => { cCurrentPage.value = 0; });
 
 const showModal = ref(false);
 const editingId = ref(null);
@@ -637,9 +664,48 @@ const lookupBanner = computed(() => {
       <span class="alt-tag" style="background:var(--bg-card-alt);color:var(--text-secondary);"><Calendar :size="11" /> {{ t('admin.warranty.today') }}: {{ formatDate(new Date()) }}</span>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
-          <i class="fa fa-search alt-search__icon"></i>
+          <Search class="alt-search__icon" :size="14" />
           <input v-model="warrantySearch" :placeholder="t('admin.warranty.searchPlaceholder')" />
         </div>
+        <button
+          class="alt-btn alt-btn--filter"
+          :class="{ 'alt-btn--filter-active': activeWarrantyFilterCount > 0 || isWarrantyFilterOpen }"
+          @click="isWarrantyFilterOpen = !isWarrantyFilterOpen"
+        >
+          <Filter :size="13" /> Bộ lọc
+          <span v-if="activeWarrantyFilterCount > 0" class="filter-badge">{{ activeWarrantyFilterCount }}</span>
+          <ChevronDown v-if="!isWarrantyFilterOpen" :size="12" />
+          <ChevronUp v-else :size="12" />
+        </button>
+        <button v-if="activeWarrantyFilterCount > 0" class="alt-btn alt-btn--ghost-sm" @click="resetWarrantyFilters">
+          <X :size="12" /> Xóa lọc
+        </button>
+      </div>
+    </div>
+
+    <!-- Panel lọc bảo hành -->
+    <div v-if="isWarrantyFilterOpen" class="adv-filter-panel">
+      <div class="adv-filter-row">
+        <div class="adv-filter-group">
+          <label class="adv-filter-label">Sắp hết hạn</label>
+          <select v-model="warrantyFilters.expireDays" class="adv-filter-select">
+            <option value="">Tất cả</option>
+            <option value="30">Trong 30 ngày</option>
+            <option value="60">Trong 60 ngày</option>
+            <option value="90">Trong 90 ngày</option>
+          </select>
+        </div>
+        <div class="adv-filter-group adv-filter-group--range">
+          <label class="adv-filter-label">Ngày hết hạn</label>
+          <div class="adv-filter-range">
+            <input v-model="warrantyFilters.ngayFrom" type="date" class="adv-filter-input" />
+            <span class="adv-filter-sep">–</span>
+            <input v-model="warrantyFilters.ngayTo" type="date" class="adv-filter-input" />
+          </div>
+        </div>
+        <button v-if="activeWarrantyFilterCount > 0" class="adv-filter-reset" @click="resetWarrantyFilters">
+          <X :size="12" /> Xóa bộ lọc
+        </button>
       </div>
     </div>
     <div v-if="warrantyLoading" class="alt-empty">{{ t('admin.warranty.loading') }}</div>
@@ -696,9 +762,20 @@ const lookupBanner = computed(() => {
       <span class="alt-toolbar__count">{{ filteredClaims.length }}/{{ (BaoHanhStore.items ?? []).length }} {{ t('admin.warrantyClaims.countSuffix') }}</span>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
-          <i class="fa fa-search alt-search__icon"></i>
+          <Search class="alt-search__icon" :size="14" />
           <input v-model="claimSearch" :placeholder="t('admin.warrantyClaims.searchPlaceholder')" />
         </div>
+        <select v-model="claimStatusFilter" class="alt-select" style="font-size:13px;">
+          <option value="">Tất cả trạng thái</option>
+          <option value="con_bao_hanh">Còn bảo hành</option>
+          <option value="dang_xu_ly">Đang xử lý</option>
+          <option value="da_xu_ly">Đã xử lý</option>
+          <option value="het_bao_hanh">Hết bảo hành</option>
+          <option value="tu_choi">Từ chối</option>
+        </select>
+        <button v-if="claimStatusFilter" class="alt-btn alt-btn--ghost-sm" @click="claimStatusFilter = ''">
+          <X :size="12" /> Xóa lọc
+        </button>
         <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openCreateManual">
           <Shield :size="12" style="vertical-align:-2px;" /> {{ t('admin.warrantyClaims.createManual') }}
         </button>
@@ -948,4 +1025,49 @@ const lookupBanner = computed(() => {
   font-size: 0.78rem;
   color: #10b981;
 }
+
+/* ─── Advanced Filter Panel ─── */
+.alt-btn--filter {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+  background: var(--bg-card, #fff); color: var(--text-primary, #1e293b);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.alt-btn--filter:hover, .alt-btn--filter-active {
+  border-color: var(--pink-400, #f472b6); background: var(--pink-50, #fdf2f8); color: var(--pink-700, #be185d);
+}
+.filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--pink-600, #db2777); color: #fff; font-size: 10px; font-weight: 700;
+}
+.alt-btn--ghost-sm {
+  display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+  background: transparent; color: var(--text-secondary, #64748b); font-size: 12px; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.alt-btn--ghost-sm:hover { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
+.adv-filter-panel {
+  border-top: 1px solid var(--border-color, #e2e8f0); background: var(--bg-card-alt, #f8fafc);
+  padding: 12px 16px; animation: slideDown 0.15s ease;
+}
+@keyframes slideDown { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.adv-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.adv-filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.adv-filter-group--range { min-width: 240px; }
+.adv-filter-label { font-size: 11px; font-weight: 600; color: var(--text-secondary, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
+.adv-filter-select, .adv-filter-input {
+  padding: 6px 10px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 7px;
+  background: var(--bg-input, #fff); color: var(--text-primary, #1e293b); font-size: 13px; outline: none; transition: border-color 0.15s; width: 100%;
+}
+.adv-filter-select:focus, .adv-filter-input:focus { border-color: var(--pink-500, #ec4899); }
+.adv-filter-range { display: flex; align-items: center; gap: 6px; }
+.adv-filter-range .adv-filter-input { width: 100px; }
+.adv-filter-sep { color: var(--text-secondary, #94a3b8); font-size: 13px; font-weight: 600; }
+.adv-filter-reset {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  border: 1px solid #dc2626; border-radius: 7px; background: transparent; color: #dc2626;
+  font-size: 12px; font-weight: 500; cursor: pointer; align-self: flex-end; transition: all 0.15s;
+}
+.adv-filter-reset:hover { background: #dc2626; color: #fff; }
 </style>

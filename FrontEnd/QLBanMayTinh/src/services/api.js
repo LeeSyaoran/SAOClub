@@ -7,7 +7,7 @@ import { resetAllStores } from '../stores/resetAll.js';
 // bởi stores/index.js sau khi login (xem setSession).
 export const authHeaders = () => {
   try {
-    const session = JSON.parse(sessionStorage.getItem('saophone_session'));
+    const session = JSON.parse(sessionStorage.getItem('saoclub_session'));
     return session?.token ? { Authorization: `Bearer ${session.token}` } : {};
   } catch {
     return {};
@@ -22,7 +22,7 @@ const headers = () => ({ 'Content-Type': 'application/json', ...authHeaders() })
 let dangDangXuatDoHetPhien = false;
 const hasTokenSession = () => {
   try {
-    const session = JSON.parse(sessionStorage.getItem('saophone_session'));
+    const session = JSON.parse(sessionStorage.getItem('saoclub_session'));
     return Boolean(session?.token);
   } catch {
     return false;

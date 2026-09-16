@@ -1,19 +1,30 @@
 package com.example.backend.service;
 
+import com.example.backend.entity.ChucVu;
 import com.example.backend.entity.KhachHang;
 import com.example.backend.entity.NhanVien;
 import com.example.backend.entity.TaiKhoan;
+import com.example.backend.repository.ChucVuRepository;
+import com.example.backend.repository.KhachHangRepository;
 import com.example.backend.repository.NhanVienRepository;
 import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.response.HoSoResponse;
 import com.example.backend.response.LoginResponse;
 import com.example.backend.request.HoSoRequest;
 import com.example.backend.security.jwt.JwtUtil;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -23,6 +34,12 @@ public class AuthService {
 
     @Autowired
     private NhanVienRepository nhanVienRepository;
+
+    @Autowired
+    private KhachHangRepository khachHangRepository;
+
+    @Autowired
+    private ChucVuRepository chucVuRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -73,6 +90,64 @@ public class AuthService {
         nv.setSoDienThoai(req.getSoDienThoai());
         nv.setEmail(req.getEmail());
         nhanVienRepository.save(nv);
-        return new HoSoResponse(nv.getHoTen(), nv.getSoDienThoai(), nv.getEmail());
+        
+        if (req.getAvatarUrl() != null && !req.getAvatarUrl().isEmpty()) {
+            tk.setAvatarUrl(req.getAvatarUrl());
+            taiKhoanRepository.save(tk);
+        }
+
+        return new HoSoResponse(nv.getHoTen(), nv.getSoDienThoai(), nv.getEmail(), tk.getAvatarUrl());
+    }
+
+    @Transactional
+    public LoginResponse firebaseLogin(String idToken, String provider) {
+        try {
+            // Verify Firebase token
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            String uid = decodedToken.getUid();
+            String email = decodedToken.getEmail();
+            String name = decodedToken.getName();
+            String picture = decodedToken.getPicture();
+
+            // Find existing account by provider + uid
+            var existingAccount = taiKhoanRepository.findByProviderAndProviderUid(provider, uid);
+
+            if (existingAccount.isPresent()) {
+                // Existing user - login
+                TaiKhoan tk = existingAccount.get();
+                return buildLoginResponse(tk.getUsername());
+            }
+
+            // New user - create account
+            ChucVu khachHangRole = chucVuRepository.findByMaChucVu("khach_hang")
+                    .orElseThrow(() -> new RuntimeException("Role khach_hang not found"));
+
+            // Create KhachHang profile
+            KhachHang kh = new KhachHang();
+            kh.setHoTen(name != null ? name : email);
+            kh.setEmail(email);
+            kh.setSoDienThoai("");
+            kh.setTrangThai("active");
+            kh.setNgayTao(LocalDateTime.now());
+            kh = khachHangRepository.save(kh);
+
+            // Create TaiKhoan with Firebase link
+            TaiKhoan tk = new TaiKhoan();
+            tk.setUsername(provider + "_" + uid.substring(0, Math.min(20, uid.length())));
+            tk.setMatKhauHash(passwordEncoder.encode(UUID.randomUUID().toString())); // Random password
+            tk.setChucVu(khachHangRole);
+            tk.setKhachHang(kh);
+            tk.setTrangThai("active");
+            tk.setNgayTao(LocalDateTime.now());
+            tk.setProvider(provider);
+            tk.setProviderUid(uid);
+            tk.setAvatarUrl(picture);
+            tk = taiKhoanRepository.save(tk);
+
+            return buildLoginResponse(tk.getUsername());
+
+        } catch (FirebaseAuthException e) {
+            throw new BadCredentialsException("Firebase token không hợp lệ: " + e.getMessage());
+        }
     }
 }

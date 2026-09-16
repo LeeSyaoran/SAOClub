@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
+import { Search } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as KhuyenMaiService from "../../services/KhuyenMaiService.js";
 import * as VongQuayService from "../../services/VongQuayService.js";
@@ -222,7 +223,7 @@ const savePromo = async () => {
         <span class="alt-toolbar__count">{{ filteredPromotions.length }}/{{ promotions.length }} {{ t('admin.promotions.countSuffix') }}</span>
         <div class="alt-toolbar__actions">
           <div class="alt-search">
-            <i class="fa fa-search alt-search__icon"></i>
+            <Search class="alt-search__icon" :size="14" />
             <input v-model="search" placeholder="Tìm theo mã, tên khuyến mại..." />
           </div>
           <button

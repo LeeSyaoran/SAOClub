@@ -398,7 +398,7 @@ const handleOutsideClick = (e) => {
             <button class="btn-back" @click="emit('go-home')" title="Về trang chủ">
               <ArrowLeft :size="16" />
             </button>
-            <div class="brand-text">SAOPhone</div>
+            <div class="brand-text">SAOClub</div>
 
             <div class="header-stats-compact d-none d-md-flex">
               <div class="stat-chip">

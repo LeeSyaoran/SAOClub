@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { Search } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as DanhGiaService from "../../services/DanhGiaService.js";
 import { formatDateTime } from "../../utils/adminFormat.js";
@@ -45,7 +46,7 @@ const deleteReview = async (d) => {
       <span class="alt-toolbar__count">{{ filteredItems.length }}/{{ items.length }} {{ t('admin.reviews.countSuffix') }}</span>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
-          <i class="fa fa-search alt-search__icon"></i>
+          <Search class="alt-search__icon" :size="14" />
           <input v-model="search" :placeholder="t('admin.reviews.searchPlaceholder')" />
         </div>
       </div>

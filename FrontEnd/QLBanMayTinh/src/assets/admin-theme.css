@@ -67,8 +67,8 @@
 .inv-toolbar-card,
 .admin-card,
 .alt-card {
-  background: #fff !important;
-  border: 1px solid var(--pink-200) !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
   border-radius: 14px !important;
   overflow: hidden;
 }
@@ -86,8 +86,8 @@
   gap: 12px;
   flex-wrap: wrap;
   padding: 12px 16px !important;
-  background: #fff !important;
-  border-bottom: 1px solid var(--pink-50) !important;
+  background: var(--bg-card-inset) !important;
+  border-bottom: 1px solid var(--border-color) !important;
 }
 
 .hh-toolbar__left,
@@ -160,11 +160,11 @@
 .vt-toolbar .vt-search input {
   width: 100%;
   padding: 8px 32px 8px 34px;
-  border: 1px solid var(--pink-200) !important;
+  border: 1px solid var(--border-color) !important;
   border-radius: 999px !important;
   font-size: 13px;
-  background: var(--pink-50) !important;
-  color: var(--ink) !important;
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
   font-family: inherit;
   box-shadow: var(--sh-inset) !important;
   transition: all 0.2s ease !important;
@@ -177,7 +177,7 @@
 .alt-search input:focus {
   outline: none !important;
   border-color: var(--pink-500) !important;
-  background: #fff !important;
+  background: var(--bg-card) !important;
   box-shadow: var(--sh-inset), 0 0 0 3px var(--pink-100) !important;
 }
 
@@ -242,7 +242,7 @@
 .admin-filter__panel,
 .alt-filter__panel {
   overflow: hidden;
-  background: var(--pink-50);
+  background: var(--bg-card-alt);
   padding: 0 16px;
   transition: padding 0.22s ease;
 }
@@ -277,7 +277,7 @@
   flex-wrap: wrap;
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px dashed var(--line);
+  border-top: 1px dashed var(--border-color-soft);
 }
 
 .hh-filter__count,
@@ -381,14 +381,14 @@
   gap: 6px;
   padding: 8px 14px;
   border-radius: 999px !important;
-  border: 1px solid var(--pink-200) !important;
+  border: 1px solid var(--border-color) !important;
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  background: #fff !important;
-  color: var(--pink-700) !important;
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
   transition: all 0.15s ease !important;
 }
 
@@ -471,8 +471,8 @@
 .inv-table th,
 .admin-table th,
 .alt-table th {
-  background: var(--pink-50) !important;
-  color: var(--pink-700) !important;
+  background: var(--bg-card-inset) !important;
+  color: var(--text-primary) !important;
   font-size: 11.5px;
   font-weight: 800;
   text-align: left;
@@ -489,9 +489,9 @@
 .admin-table td,
 .alt-table td {
   padding: 11px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
-  color: var(--ink);
+  color: var(--text-primary);
 }
 
 .hh-table tbody tr:hover td,
@@ -499,7 +499,7 @@
 .inv-table tbody tr:hover td,
 .admin-table tbody tr:hover td,
 .alt-table tbody tr:hover td {
-  background: var(--pink-50);
+  background: var(--bg-hover);
 }
 
 .hh-table tbody tr:last-child td,
@@ -603,11 +603,11 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 18px;
-  background: var(--pink-50);
-  border-top: 1px solid var(--line);
+  background: var(--bg-card-inset);
+  border-top: 1px solid var(--border-color);
   flex-wrap: wrap;
   font-size: 12.5px;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -644,11 +644,11 @@
 select {
   width: 100%;
   padding: 9px 11px;
-  border: 1px solid var(--field) !important;
+  border: 1px solid var(--border-color) !important;
   border-radius: 9px !important;
   font-size: 13px;
-  color: var(--ink);
-  background: #fff !important;
+  color: var(--text-primary);
+  background: var(--bg-input) !important;
   font-family: inherit;
   box-shadow: var(--sh-inset) !important;
   transition: all 0.2s ease !important;

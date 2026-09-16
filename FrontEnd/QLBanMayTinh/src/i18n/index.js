@@ -9,7 +9,7 @@ export const LOCALES = [
   { code: "en", label: "English",    flag: "🇬🇧" },
 ];
 
-const STORAGE_KEY = "saophone_locale";
+const STORAGE_KEY = "saoclub_locale";
 const saved = localStorage.getItem(STORAGE_KEY);
 
 export const I18nStore = reactive({

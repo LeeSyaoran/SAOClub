@@ -18,7 +18,7 @@ import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungSe
 import { refreshReturns } from "../stores/returns.js";
 import {
   Package, Truck, ScrollText, Undo2, Shield, Hash, Cpu, MemoryStick,
-  Gamepad2, HardDrive, X, Menu, Moon, Sun,
+  Monitor, HardDrive, X, Menu, Moon, Sun,
 } from '@lucide/vue';
 
 // ── Navigation — mac dinh vao thang Kho hang (viec chinh hang ngay cua quan ly kho) ──
@@ -43,7 +43,7 @@ const PAGE_META = {
   serial: { titleKey: "admin.pageMeta.serial.title", subKey: "admin.pageMeta.serial.sub", icon: Hash },
   cpu: { titleKey: "admin.pageMeta.cpu.title", subKey: "admin.pageMeta.cpu.sub", icon: Cpu },
   ram: { titleKey: "admin.pageMeta.ram.title", subKey: "admin.pageMeta.ram.sub", icon: MemoryStick },
-  gpu: { titleKey: "admin.pageMeta.gpu.title", subKey: "admin.pageMeta.gpu.sub", icon: Gamepad2 },
+  gpu: { titleKey: "admin.pageMeta.gpu.title", subKey: "admin.pageMeta.gpu.sub", icon: Monitor },
   oCung: { titleKey: "admin.pageMeta.oCung.title", subKey: "admin.pageMeta.oCung.sub", icon: HardDrive },
 };
 const topbarTitle = computed(() => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.inventory.title"));
@@ -165,16 +165,76 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? Package)
         <section v-show="currentPage === 'warrantyClaims'"><WarrantyPanel /></section>
         <section v-show="currentPage === 'serial'"><SerialManager /></section>
         <section v-show="currentPage === 'cpu'">
-          <DmCategoryTable :service="DmService.DmCpuService" id-field="cpuId" name-field="tenCpu" :label="t('admin.productsTabs.cpu')" :name-label="t('admin.productsTabs.cpu')" :serial-service="ChiTietCpuService" serial-field-name="cpuId" />
+          <DmCategoryTable
+            :service="DmService.DmCpuService"
+            id-field="cpuId"
+            name-field="tenCpu"
+            :label="t('admin.productsTabs.cpu')"
+            :name-label="t('admin.productsTabs.cpu')"
+            :header-icon="Cpu"
+            :serial-service="ChiTietCpuService"
+            serial-field-name="cpuId"
+            :advanced-filter-config="{
+              filters: [
+                { key: 'hang', label: 'Hãng' },
+                { key: 'dong', label: 'Dòng CPU' },
+              ]
+            }"
+          />
         </section>
         <section v-show="currentPage === 'ram'">
-          <DmCategoryTable :service="DmService.DmRamService" id-field="ramId" name-field="dungLuong" :label="t('admin.productsTabs.ram')" :name-label="t('admin.productsTabs.ram')" :serial-service="ChiTietRamService" serial-field-name="ramId" />
+          <DmCategoryTable
+            :service="DmService.DmRamService"
+            id-field="ramId"
+            name-field="dungLuong"
+            :label="t('admin.productsTabs.ram')"
+            :name-label="t('admin.productsTabs.ram')"
+            :header-icon="MemoryStick"
+            :serial-service="ChiTietRamService"
+            serial-field-name="ramId"
+            :advanced-filter-config="{
+              filters: [
+                { key: 'loai', label: 'Loại RAM' },
+                { key: 'dungluong', label: 'Dung lượng' },
+              ]
+            }"
+          />
         </section>
         <section v-show="currentPage === 'gpu'">
-          <DmCategoryTable :service="DmService.DmGpuService" id-field="gpuId" name-field="tenGpu" :label="t('admin.productsTabs.gpu')" :name-label="t('admin.productsTabs.gpu')" :serial-service="ChiTietGpuService" serial-field-name="gpuId" />
+          <DmCategoryTable
+            :service="DmService.DmGpuService"
+            id-field="gpuId"
+            name-field="tenGpu"
+            :label="t('admin.productsTabs.gpu')"
+            :name-label="t('admin.productsTabs.gpu')"
+            :header-icon="Monitor"
+            :serial-service="ChiTietGpuService"
+            serial-field-name="gpuId"
+            :advanced-filter-config="{
+              filters: [
+                { key: 'hang', label: 'Hãng' },
+                { key: 'vram', label: 'VRAM' },
+              ]
+            }"
+          />
         </section>
         <section v-show="currentPage === 'oCung'">
-          <DmCategoryTable :service="DmService.DmOCungService" id-field="oCungId" name-field="loaiOcung" :label="t('admin.productsTabs.oCung')" :name-label="t('admin.productsTabs.oCung')" :serial-service="ChiTietOCungService" serial-field-name="oCungId" />
+          <DmCategoryTable
+            :service="DmService.DmOCungService"
+            id-field="oCungId"
+            name-field="loaiOcung"
+            :label="t('admin.productsTabs.oCung')"
+            :name-label="t('admin.productsTabs.oCung')"
+            :header-icon="HardDrive"
+            :serial-service="ChiTietOCungService"
+            serial-field-name="oCungId"
+            :advanced-filter-config="{
+              filters: [
+                { key: 'loai', label: 'Loại ổ cứng' },
+                { key: 'dungluong', label: 'Dung lượng' },
+              ]
+            }"
+          />
         </section>
       </div>
     </main>

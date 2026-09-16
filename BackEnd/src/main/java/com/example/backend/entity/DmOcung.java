@@ -19,4 +19,7 @@ public class DmOcung {
 
     @Column(name = "loai_o_cung", length = 100, nullable = false, unique = true)
     private String loaiOcung;
+
+    @Column(name = "hinh_anh")
+    private String hinhAnh;
 }
