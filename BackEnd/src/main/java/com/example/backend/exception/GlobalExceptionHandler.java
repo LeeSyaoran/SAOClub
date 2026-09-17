@@ -89,6 +89,11 @@ public class GlobalExceptionHandler {
         log.debug("Client disconnected before response could be written: {}", e.getMessage());
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<?> handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handlerUnexpected(Exception e) {
         log.error("Unhandled exception", e);

@@ -39,6 +39,8 @@ import SerialManager from "../components/admin/SerialManager.vue";
 import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
 import StaffTable from "../components/admin/StaffTable.vue";
+import PromotionsPanel from "../components/admin/PromotionsPanel.vue";
+import RewardsPanel from "../components/admin/RewardsPanel.vue";
 import AdminDashboard from "../components/admin/AdminDashboard.vue";
 import AdminReports from "../components/admin/AdminReports.vue";
 import AdminSettings from "../components/admin/AdminSettings.vue";
@@ -712,145 +714,10 @@ const groupedProducts = computed(() => {
 // ── Staff CRUD ────────────────────────────────────────────────────────────────
 // Staff logic has been moved to components/admin/StaffTable.vue
 // ── Promotions CRUD ───────────────────────────────────────────────────────────
-const showPromoModal = ref(false);
-const editingPromoId = ref(null);
-const promoFormError = ref("");
-const emptyPromoForm = () => ({
-  maKhuyenMai: "",
-  tenKhuyenMai: "",
-  loai: "percent",
-  giaTri: "",
-  giaTriToiDa: "",
-  donHangToiThieu: "",
-  ngayBatDau: "",
-  ngayKetThuc: "",
-  soLuongToiDa: "",
-  trangThai: "active",
-});
-const promoForm = reactive(emptyPromoForm());
+// Promotions logic has been moved to components/admin/PromotionsPanel.vue
 
-const openAddPromo = () => {
-  Object.assign(promoForm, emptyPromoForm());
-  editingPromoId.value = null;
-  promoFormError.value = "";
-  showPromoModal.value = true;
-};
-const openEditPromo = (p) => {
-  const dt = (d) => (d ? d.slice(0, 16) : "");
-  Object.assign(promoForm, {
-    maKhuyenMai: p.maKhuyenMai,
-    tenKhuyenMai: p.tenKhuyenMai,
-    loai: p.loai ?? "percent",
-    giaTri: p.giaTri ?? "",
-    giaTriToiDa: p.giaTriToiDa ?? "",
-    donHangToiThieu: p.donHangToiThieu ?? "",
-    ngayBatDau: dt(p.ngayBatDau),
-    ngayKetThuc: dt(p.ngayKetThuc),
-    soLuongToiDa: p.soLuongToiDa ?? "",
-    trangThai: p.trangThai ?? "active",
-  });
-  editingPromoId.value = p.khuyenMaiId;
-  promoFormError.value = "";
-  showPromoModal.value = true;
-};
-const savePromo = async () => {
-  promoFormError.value = "";
-  const body = {
-    ...promoForm,
-    giaTri: promoForm.giaTri ? Number(promoForm.giaTri) : null,
-    giaTriToiDa: promoForm.giaTriToiDa ? Number(promoForm.giaTriToiDa) : null,
-    donHangToiThieu: promoForm.donHangToiThieu
-      ? Number(promoForm.donHangToiThieu)
-      : null,
-    soLuongToiDa: promoForm.soLuongToiDa
-      ? Number(promoForm.soLuongToiDa)
-      : null,
-    ngayBatDau: toLocalDT(promoForm.ngayBatDau),
-    ngayKetThuc: toLocalDT(promoForm.ngayKetThuc),
-  };
-  try {
-    const res = await KhuyenMaiService.save(editingPromoId.value, body);
-    if (!res.ok) {
-      promoFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
-      return;
-    }
-    showPromoModal.value = false;
-    if (editingPromoId.value) {
-      const idx = promotions.value.findIndex((p) => p.khuyenMaiId === editingPromoId.value);
-      if (idx !== -1) promotions.value[idx] = { ...promotions.value[idx], ...body };
-    } else {
-      await refreshPromotions();
-    }
-  } catch (e) {
-    promoFormError.value = e.message;
-  }
-};
 // ── Rewards (Đổi thưởng) CRUD ─────────────────────────────────────────────────
-const showRewardModal = ref(false);
-const editingRewardId = ref(null);
-const rewardFormError = ref("");
-const emptyRewardForm = () => ({
-  ten: "",
-  moTa: "",
-  diemCan: "",
-  loai: "percent",
-  giaTri: "",
-  giaTriToiDa: "",
-  trangThai: "active",
-});
-const rewardForm = reactive(emptyRewardForm());
-
-const openAddReward = () => {
-  Object.assign(rewardForm, emptyRewardForm());
-  editingRewardId.value = null;
-  rewardFormError.value = "";
-  showRewardModal.value = true;
-};
-const openEditReward = (r) => {
-  Object.assign(rewardForm, {
-    ten: r.ten,
-    moTa: r.moTa ?? "",
-    diemCan: r.diemCan ?? "",
-    loai: r.loai ?? "percent",
-    giaTri: r.giaTri ?? "",
-    giaTriToiDa: r.giaTriToiDa ?? "",
-    trangThai: r.trangThai ?? "active",
-  });
-  editingRewardId.value = r.doiThuongId;
-  rewardFormError.value = "";
-  showRewardModal.value = true;
-};
-const saveReward = async () => {
-  rewardFormError.value = "";
-  const body = {
-    ...rewardForm,
-    diemCan: rewardForm.diemCan ? Number(rewardForm.diemCan) : null,
-    giaTri: rewardForm.giaTri ? Number(rewardForm.giaTri) : null,
-    giaTriToiDa: rewardForm.giaTriToiDa ? Number(rewardForm.giaTriToiDa) : null,
-  };
-  try {
-    const res = await DmDoiThuongService.save(editingRewardId.value, body);
-    if (!res.ok) {
-      rewardFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
-      return;
-    }
-    showRewardModal.value = false;
-    if (editingRewardId.value) {
-      const idx = rewards.value.findIndex((r) => r.doiThuongId === editingRewardId.value);
-      if (idx !== -1) rewards.value[idx] = { ...rewards.value[idx], ...body };
-    } else {
-      await refreshDoiThuong();
-    }
-  } catch (e) {
-    rewardFormError.value = e.message;
-  }
-};
-const deleteReward = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deleteReward')))) return;
-  const res = await DmDoiThuongService.remove(id);
-  if (!res.ok) { showToast(t('admin.errors.deleteFailed', { status: res.status })); return; }
-  await refreshDoiThuong();
-};
+// Rewards logic has been moved to components/admin/RewardsPanel.vue
 
 // ── Orders CRUD/detail/status/serial-confirm — đã chuyển vào
 // components/admin/OrdersTable.vue (Task 5), gồm openVariantDetail() (đã sửa xong lỗi
@@ -1339,98 +1206,12 @@ onUnmounted(() => {
 
         <!-- ── Khuyen mai ── -->
         <section v-show="currentPage === 'promotions'">
-          <div
-            class="alt-toolbar mb-3"
-            style="border-radius:14px; border:1px solid var(--border-color);"
-          >
-            <span class="fw-bold small">{{ t('admin.wheelConfig.title') }}</span>
-            <label class="small mb-0" style="color:var(--text-muted);">{{ t('admin.wheelConfig.pointsPerSpin') }}</label>
-            <input
-              v-model.number="wheelConfig.diemMoiLuot" type="number" min="1"
-              class="form-control form-control-sm admin-input" style="width:90px;"
-            />
-            <label class="small mb-0" style="color:var(--text-muted);">{{ t('admin.wheelConfig.missRate') }}</label>
-            <input
-              v-model.number="wheelConfig.tyLeTruot" type="number" min="0" max="100"
-              class="form-control form-control-sm admin-input" style="width:70px;"
-            />
-            <button class="alt-btn alt-btn--primary" :disabled="wheelConfigSaving" @click="saveWheelConfig">
-              {{ t('admin.wheelConfig.save') }}
-            </button>
-            <span v-if="wheelConfigError" class="text-danger small">{{ wheelConfigError }}</span>
-          </div>
-          <div class="alt-card">
-            <div class="alt-toolbar">
-              <span class="alt-toolbar__count">{{ promotions.length }} {{ t('admin.promotions.countSuffix') }}</span>
-              <div class="alt-toolbar__actions">
-                <button class="alt-btn alt-btn--primary" @click="openAddPromo">{{ t('admin.promotions.add') }}</button>
-              </div>
-            </div>
-            <div v-if="PromotionsStore.loading" class="alt-empty">{{ t('admin.promotions.loading') }}</div>
-            <div v-else class="alt-table-wrap">
-              <table class="alt-table">
-                <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.promotions.colCode') }}</th><th>{{ t('admin.promotions.colName') }}</th><th>{{ t('admin.promotions.colType') }}</th><th>{{ t('admin.promotions.colValue') }}</th><th>{{ t('admin.promotions.colStart') }}</th><th>{{ t('admin.promotions.colEnd') }}</th><th>{{ t('admin.promotions.colUsed') }}</th><th>{{ t('admin.promotions.colStatus') }}</th><th>{{ t('admin.promotions.colAction') }}</th></tr></thead>
-                <tbody>
-                  <tr v-for="(p, idx) in promotions" :key="p.khuyenMaiId">
-                    <td class="text-secondary">{{ idx + 1 }}</td>
-                    <td class="text-secondary">{{ p.maKhuyenMai }}</td>
-                    <td>{{ p.tenKhuyenMai }}</td>
-                    <td>{{ p.loai==='percent'?t('admin.promotions.typePercent'):t('admin.promotions.typeFixed') }}</td>
-                    <td>{{ p.loai==='percent'?`${p.giaTri}%`:formatPrice(p.giaTri) }}</td>
-                    <td>{{ formatDate(p.ngayBatDau) }}</td>
-                    <td>{{ formatDate(p.ngayKetThuc) }}</td>
-                    <td>{{ p.soLanDaDung??0 }}/{{ p.soLuongToiDa??'∞' }}</td>
-                    <td>
-                      <span class="alt-tag" :style="p.trangThai==='active' ? 'background:rgba(22,163,74,0.14);color:var(--state-success);' : 'background:var(--bg-card-alt);color:var(--text-secondary);'">{{ statusLabel(p.trangThai) }}</span>
-                    </td>
-                    <td>
-                      <div class="d-flex gap-1">
-                        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEditPromo(p)">{{ t('admin.promotions.edit') }}</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-if="promotions.length===0"><td colspan="9" class="alt-empty">{{ t('admin.promotions.empty') }}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <PromotionsPanel />
         </section>
 
         <!-- ── Doi thuong ── -->
         <section v-show="currentPage === 'doi-thuong'">
-          <div class="alt-card">
-            <div class="alt-toolbar">
-              <span class="alt-toolbar__count">{{ rewards.length }} {{ t('admin.rewards.countSuffix') }}</span>
-              <div class="alt-toolbar__actions">
-                <button class="alt-btn alt-btn--primary" @click="openAddReward">{{ t('admin.rewards.add') }}</button>
-              </div>
-            </div>
-            <div v-if="DoiThuongStore.loading" class="alt-empty">{{ t('admin.rewards.loading') }}</div>
-            <div v-else class="alt-table-wrap">
-              <table class="alt-table">
-                <thead><tr><th style="width:40px;">{{ t('admin.common.stt') }}</th><th>{{ t('admin.rewards.colName') }}</th><th>{{ t('admin.rewards.colPoints') }}</th><th>{{ t('admin.rewards.colType') }}</th><th>{{ t('admin.rewards.colValue') }}</th><th>{{ t('admin.rewards.colStatus') }}</th><th>{{ t('admin.rewards.colAction') }}</th></tr></thead>
-                <tbody>
-                  <tr v-for="(r, idx) in rewards" :key="r.doiThuongId">
-                    <td class="text-secondary">{{ idx + 1 }}</td>
-                    <td>{{ r.ten }}</td>
-                    <td>{{ r.diemCan }}</td>
-                    <td>{{ r.loai==='percent'?t('admin.rewards.typePercent'):t('admin.rewards.typeFixed') }}</td>
-                    <td>{{ r.loai==='percent'?`${r.giaTri}%`:formatPrice(r.giaTri) }}</td>
-                    <td>
-                      <span class="alt-tag" :style="r.trangThai==='active' ? 'background:rgba(22,163,74,0.14);color:var(--state-success);' : 'background:var(--bg-card-alt);color:var(--text-secondary);'">{{ statusLabel(r.trangThai) }}</span>
-                    </td>
-                    <td>
-                      <div class="d-flex gap-1">
-                        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEditReward(r)">{{ t('admin.rewards.edit') }}</button>
-                        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;color:var(--state-danger);border-color:var(--state-danger);" @click="deleteReward(r.doiThuongId)">{{ t('admin.rewards.delete') }}</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-if="rewards.length===0"><td colspan="7" class="alt-empty">{{ t('admin.rewards.empty') }}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <RewardsPanel />
         </section>
 
         <!-- ── Nhan vien ── -->
@@ -1497,60 +1278,8 @@ onUnmounted(() => {
 
   <!-- Nhan Vien Modal has been moved to StaffTable.vue -->
 
-  <!-- ══ MODAL KHUYEN MAI ══ -->
-  <div v-if="showPromoModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showPromoModal=false">
-    <div class="alt-card d-flex flex-column" style="width:620px;max-width:95vw;max-height:90vh;border-radius:14px;">
-      <div class="alt-toolbar">
-        <span>{{ editingPromoId?t('admin.promoModal.titleEdit'):t('admin.promoModal.titleAdd') }}</span>
-        <button class="btn-close btn-sm ms-auto" :aria-label="t('common.close')" @click="showPromoModal=false"></button>
-      </div>
-      <div class="overflow-y-auto p-4">
-        <div v-if="promoFormError" class="alert alert-danger small py-2 mb-3">{{ promoFormError }}</div>
-        <div class="row g-3">
-          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.codeLabel') }}</label><input v-model="promoForm.maKhuyenMai" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.nameLabel') }}</label><input v-model="promoForm.tenKhuyenMai" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.typeLabel') }}</label><select v-model="promoForm.loai" class="form-select form-select-sm admin-input"><option value="percent">{{ t('admin.promoModal.typePercent') }}</option><option value="fixed">{{ t('admin.promoModal.typeFixed') }}</option></select></div>
-          <div class="col-6"><label class="form-label small">{{ promoForm.loai==='percent'?t('admin.promoModal.valueLabelPercent'):t('admin.promoModal.valueLabelFixed') }}</label><input v-model="promoForm.giaTri" type="number" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.maxDiscountLabel') }}</label><input v-model="promoForm.giaTriToiDa" type="number" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.minOrderLabel') }}</label><input v-model="promoForm.donHangToiThieu" type="number" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.startDateLabel') }}</label><input v-model="promoForm.ngayBatDau" type="datetime-local" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.endDateLabel') }}</label><input v-model="promoForm.ngayKetThuc" type="datetime-local" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.maxUsageLabel') }}</label><input v-model="promoForm.soLuongToiDa" type="number" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.statusLabel') }}</label><select v-model="promoForm.trangThai" class="form-select form-select-sm admin-input"><option value="active">{{ t('admin.promoModal.statusActive') }}</option><option value="inactive">{{ t('admin.promoModal.statusStopped') }}</option></select></div>
-        </div>
-      </div>
-      <div class="alt-toolbar" style="border-top:1px solid var(--border-color);border-bottom:none;justify-content:flex-end;gap:8px;">
-        <button class="alt-btn alt-btn--ghost" @click="showPromoModal=false">{{ t('admin.promoModal.cancel') }}</button>
-        <button class="alt-btn alt-btn--primary" @click="savePromo">{{ editingPromoId?t('admin.promoModal.update'):t('admin.promoModal.addNew') }}</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ MODAL DOI THUONG ══ -->
-  <div v-if="showRewardModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showRewardModal=false">
-    <div class="alt-card d-flex flex-column" style="width:620px;max-width:95vw;max-height:90vh;border-radius:14px;">
-      <div class="alt-toolbar">
-        <span>{{ editingRewardId?t('admin.rewardModal.titleEdit'):t('admin.rewardModal.titleAdd') }}</span>
-        <button class="btn-close btn-sm ms-auto" :aria-label="t('common.close')" @click="showRewardModal=false"></button>
-      </div>
-      <div class="overflow-y-auto p-4">
-        <div v-if="rewardFormError" class="alert alert-danger small py-2 mb-3">{{ rewardFormError }}</div>
-        <div class="row g-3">
-          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.nameLabel') }}</label><input v-model="rewardForm.ten" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.pointsLabel') }}</label><input v-model="rewardForm.diemCan" type="number" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-12"><label class="form-label small">{{ t('admin.rewardModal.descLabel') }}</label><textarea v-model="rewardForm.moTa" rows="2" class="form-control form-control-sm admin-input"></textarea></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.typeLabel') }}</label><select v-model="rewardForm.loai" class="form-select form-select-sm admin-input"><option value="percent">{{ t('admin.rewardModal.typePercent') }}</option><option value="fixed">{{ t('admin.rewardModal.typeFixed') }}</option></select></div>
-          <div class="col-6"><label class="form-label small">{{ rewardForm.loai==='percent'?t('admin.rewardModal.valueLabelPercent'):t('admin.rewardModal.valueLabelFixed') }}</label><input v-model="rewardForm.giaTri" type="number" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.maxDiscountLabel') }}</label><input v-model="rewardForm.giaTriToiDa" type="number" class="form-control form-control-sm admin-input" /></div>
-          <div class="col-6"><label class="form-label small">{{ t('admin.rewardModal.statusLabel') }}</label><select v-model="rewardForm.trangThai" class="form-select form-select-sm admin-input"><option value="active">{{ t('admin.rewardModal.statusActive') }}</option><option value="inactive">{{ t('admin.rewardModal.statusStopped') }}</option></select></div>
-        </div>
-      </div>
-      <div class="alt-toolbar" style="border-top:1px solid var(--border-color);border-bottom:none;justify-content:flex-end;gap:8px;">
-        <button class="alt-btn alt-btn--ghost" @click="showRewardModal=false">{{ t('admin.rewardModal.cancel') }}</button>
-        <button class="alt-btn alt-btn--primary" @click="saveReward">{{ editingRewardId?t('admin.rewardModal.update'):t('admin.rewardModal.addNew') }}</button>
-      </div>
-    </div>
-  </div>
+  <!-- Khuyen Mai Modal has been moved to PromotionsPanel.vue -->
+  <!-- Doi Thuong Modal has been moved to RewardsPanel.vue -->
 
   <!-- Dialog xác nhận + toast dùng chung toàn trang — PHẢI nằm ngoài mọi v-if của modal cụ
        thể, nếu không component sẽ không tồn tại trong DOM khi modal đó đang đóng, khiến

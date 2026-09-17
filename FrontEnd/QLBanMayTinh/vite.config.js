@@ -77,6 +77,14 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Ảnh upload nằm trong volume backend (Docker) hoặc ../public/images (host).
+      // Browser request /images/<uuid> — không proxy thì Vite serve từ public/images
+      // của FE container (rỗng khi chạy Docker) → 404. Proxy về backend như /api.
+      "/images": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://localhost:8080",
+        changeOrigin: true,
+        secure: false,
+      },
     },
     headers: {
       "Content-Security-Policy": [

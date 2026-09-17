@@ -24,8 +24,20 @@ onMounted(() => {
   ensureProducts();
 });
 
+// ── Sắp xếp nâng cao ──────────────────────────────────────────────────────────
+// sortKey: 'stt_desc' | 'stt_asc' | 'name_asc' | 'name_desc'
+const sortKey = ref("stt_desc");
+const sortOptions = [
+  { value: "stt_desc",  label: "STT: Lớn → Nhỏ" },
+  { value: "stt_asc",   label: "STT: Nhỏ → Lớn" },
+  { value: "name_asc",  label: "Tên: A → Z" },
+  { value: "name_desc", label: "Tên: Z → A" },
+];
+
 // ── Bo loc + gop bien the theo sanPhamId cho bang ─────────────────────────────
 const productSearch = ref("");
+
+/** Nhóm theo sanPhamId, chưa sort */
 const groupedProducts = computed(() => {
   const map = new Map();
   (ProductsStore.items ?? []).forEach((p) => {
@@ -45,10 +57,32 @@ const groupedProducts = computed(() => {
   });
   return [...map.values()];
 });
+
+/** Danh sách đã sắp xếp theo sortKey */
+const sortedGroupedProducts = computed(() => {
+  const list = [...groupedProducts.value];
+  switch (sortKey.value) {
+    case "stt_asc":
+      return list.sort((a, b) => a.sanPhamId - b.sanPhamId);
+    case "name_asc":
+      return list.sort((a, b) =>
+        (a.tenSanPham ?? "").localeCompare(b.tenSanPham ?? "", "vi")
+      );
+    case "name_desc":
+      return list.sort((a, b) =>
+        (b.tenSanPham ?? "").localeCompare(a.tenSanPham ?? "", "vi")
+      );
+    case "stt_desc":
+    default:
+      return list.sort((a, b) => b.sanPhamId - a.sanPhamId);
+  }
+});
+
+/** Danh sách sau khi lọc theo từ khóa tìm kiếm */
 const filteredGroupedProducts = computed(() => {
   const q = productSearch.value.trim().toLowerCase();
-  if (!q) return groupedProducts.value;
-  return groupedProducts.value.filter(
+  if (!q) return sortedGroupedProducts.value;
+  return sortedGroupedProducts.value.filter(
     (p) =>
       (p.tenSanPham ?? "").toLowerCase().includes(q) ||
       (p.tenThuongHieu ?? "").toLowerCase().includes(q),
@@ -124,7 +158,8 @@ const deleteProduct = async (id) => {
   >
     <span class="text-secondary small">{{ filteredGroupedProducts.length }}/{{ groupedProducts.length }}
       {{ t("admin.products.countSuffix") }}</span>
-    <div class="d-flex gap-2 flex-wrap">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <!-- Tìm kiếm -->
       <input
         v-model="productSearch"
         class="form-control form-control-sm"
@@ -136,6 +171,25 @@ const deleteProduct = async (id) => {
         "
         :placeholder="t('admin.products.searchPlaceholder')"
       />
+      <!-- Lọc nâng cao: sắp xếp -->
+      <select
+        v-model="sortKey"
+        class="form-select form-select-sm sort-select"
+        title="Sắp xếp nâng cao"
+        style="
+          width: auto;
+          min-width: 160px;
+          background: var(--bg-input);
+          border-color: var(--border-color-strong);
+          color: var(--text-primary);
+        "
+      >
+        <option
+          v-for="opt in sortOptions"
+          :key="opt.value"
+          :value="opt.value"
+        >{{ opt.label }}</option>
+      </select>
       <button
         v-if="!readonly"
         class="btn btn-sm btn-warning text-dark fw-bold"
@@ -176,7 +230,11 @@ const deleteProduct = async (id) => {
       </thead>
       <tbody>
         <tr v-for="(p, idx) in pagedProducts" :key="p.sanPhamId">
-          <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+          <td class="text-secondary">{{
+            sortKey === 'stt_desc'
+              ? filteredGroupedProducts.length - (currentPage * pageSize + idx)
+              : currentPage * pageSize + idx + 1
+          }}</td>
           <td class="text-secondary" style="font-family: monospace; font-size: 0.8rem">{{ p.maSanPham }}</td>
           <td>
             <div class="d-flex align-items-center gap-2">
@@ -254,5 +312,10 @@ const deleteProduct = async (id) => {
 <style scoped>
 .text-light {
   color: var(--text-primary) !important;
+}
+
+.sort-select option {
+  background: var(--bg-card);
+  color: var(--text-primary);
 }
 </style>

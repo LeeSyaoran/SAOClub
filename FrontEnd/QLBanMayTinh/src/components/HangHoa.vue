@@ -112,6 +112,16 @@
               <span>Giá bán đến</span>
               <input v-model="filters.giaDen" type="number" min="0" step="100000" placeholder="Không giới hạn" />
             </label>
+
+            <label class="hh-field">
+              <span>Sắp xếp</span>
+              <select v-model="sortKey">
+                <option value="stt_desc">STT: Lớn → Nhỏ</option>
+                <option value="stt_asc">STT: Nhỏ → Lớn</option>
+                <option value="name_asc">Tên: A → Z</option>
+                <option value="name_desc">Tên: Z → A</option>
+              </select>
+            </label>
           </div>
 
           <div class="hh-filter__foot">
@@ -1035,6 +1045,7 @@ const filters = reactive({
 const selectedIds = ref([])
 const page = ref(1)
 const pageSize = ref(10)
+const sortKey = ref('stt_desc') // 'stt_desc' | 'stt_asc' | 'name_asc' | 'name_desc'
 
 const hienToast = (msg) => {
   toast.value = msg
@@ -1309,17 +1320,34 @@ const groupsDaLoc = computed(() =>
     .map((g) => ({ ...g, variants: g.variants.filter((v) => khopTuKhoa(g, v) && khopBoLoc(g, v)) }))
     .filter((g) => g.variants.length)
 )
+
+// Sắp xếp danh sách sau khi lọc theo tiêu chí đã chọn
+const groupsDaSapXep = computed(() => {
+  const list = [...groupsDaLoc.value]
+  switch (sortKey.value) {
+    case 'stt_asc':
+      return list.sort((a, b) => Number(a.sanPhamId) - Number(b.sanPhamId))
+    case 'name_asc':
+      return list.sort((a, b) => (a.tenSanPham ?? '').localeCompare(b.tenSanPham ?? '', 'vi'))
+    case 'name_desc':
+      return list.sort((a, b) => (b.tenSanPham ?? '').localeCompare(a.tenSanPham ?? '', 'vi'))
+    case 'stt_desc':
+    default:
+      return list.sort((a, b) => Number(b.sanPhamId) - Number(a.sanPhamId))
+  }
+})
 const bienTheDaLoc = computed(() => groupsDaLoc.value.flatMap((g) => g.variants.map((v) => ({ g, v }))))
 const danhSachMauSac = computed(() => [...new Set(bienTheChuan.value.map((v) => v.mauSac).filter(Boolean))].sort())
 
 /* ════════════ PHÂN TRANG ════════════ */
-const totalPages = computed(() => Math.ceil(groupsDaLoc.value.length / pageSize.value))
-const pagedGroups = computed(() => groupsDaLoc.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
-watch([searchKeyword, filters, pageSize], () => { page.value = 1 }, { deep: true })
+const totalPages = computed(() => Math.ceil(groupsDaSapXep.value.length / pageSize.value))
+const pagedGroups = computed(() => groupsDaSapXep.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
+watch([searchKeyword, filters, pageSize, sortKey], () => { page.value = 1 }, { deep: true })
 
 const resetFilters = () => {
   Object.keys(filters).forEach((k) => (filters[k] = ''))
   searchKeyword.value = ''
+  sortKey.value = 'stt_desc'
 }
 
 /* ════════════ MODAL XUẤT FILE ════════════ */

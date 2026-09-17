@@ -6,6 +6,7 @@ import { t } from "../../i18n/index.js";
 import { showToast } from "../../stores/toast.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatDate } from "../../utils/adminFormat.js";
+import { uploadImage } from "../../services/CaiDatService.js";
 import * as XLSX from "xlsx";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
@@ -265,6 +266,26 @@ const importSerialsFromFile = async (e) => {
   e.target.value = "";
 };
 
+// Upload ảnh minh hoạ cho CPU/RAM/GPU/Ổ cứng — gọi lại /api/upload/image có sẵn.
+const dangTaiAnh = ref(false);
+const loiUploadAnh = ref("");
+const chonFileAnh = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  dangTaiAnh.value = true;
+  loiUploadAnh.value = "";
+  try {
+    const { url } = await uploadImage(file);
+    formValue.value.hinhAnh = url;
+    formValue.value.imgError = false;
+  } catch (err) {
+    loiUploadAnh.value = err.message || "Tải ảnh thất bại";
+  } finally {
+    dangTaiAnh.value = false;
+    e.target.value = "";
+  }
+};
+
 const openAdd = () => {
   editingId.value = null;
   formValue.value = { [props.nameField]: "", hinhAnh: "" };
@@ -287,9 +308,12 @@ const saveItem = async () => {
     return;
   }
   const serialList = newSerials.value.map((s) => s.trim()).filter(Boolean);
-  if (!editingId.value && serialList.length === 0) {
-    formError.value = t("admin.dmCategory.serialRequired", { label: props.nameLabel });
-    return;
+  // Chỉ yêu cầu serial khi THÊM mới (editingId == null). Khi SỬA chỉ cập nhật ảnh → không cần serial.
+  if (!editingId.value) {
+    if (serialList.length === 0) {
+      formError.value = t("admin.dmCategory.serialRequired", { label: props.nameLabel });
+      return;
+    }
   }
   if (saving.value) return;
   saving.value = true;
@@ -300,9 +324,9 @@ const saveItem = async () => {
     };
     let res;
     if (editingId.value) {
-      res = await props.service.update(editingId.value, payload);
+      res = await props.service.save(editingId.value, payload);
     } else {
-      res = await props.service.create(payload);
+      res = await props.service.save(null, payload);
     }
     if (!res.ok) {
       formError.value = t("admin.errors.saveFailed", { status: res.status, text: await res.text() });
@@ -494,18 +518,26 @@ const openSerials = (item) => {
       <div v-if="formError" class="alert alert-danger small py-2 mb-3">{{ formError }}</div>
       <div class="mb-4">
         <label class="form-label" style="font-size:0.8rem;color:var(--text-secondary);">
-          Hình ảnh (URL)
+          Hình ảnh
         </label>
-        <div class="d-flex gap-3 align-items-center">
+        <div class="d-flex gap-3 align-items-start">
           <div style="width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: var(--bg-input); flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
             <img v-if="formValue?.hinhAnh && !formValue.imgError" :src="formValue.hinhAnh" @error="formValue.imgError = true" style="width:100%; height:100%; object-fit: contain;" />
             <ImageIcon v-else class="text-secondary" :size="28" />
           </div>
-          <input
-            v-model="formValue.hinhAnh"
-            class="form-control admin-input"
-            placeholder="Nhập đường dẫn ảnh..."
-          />
+          <div class="flex-grow-1 d-flex flex-column gap-2">
+            <label class="btn btn-sm btn-outline-info" style="padding:2px 10px;font-size:0.72rem;cursor:pointer;width:fit-content;">
+              <FolderOpen :size="14" style="vertical-align:-2px;" />
+              {{ dangTaiAnh ? 'Đang tải…' : 'Tải ảnh lên' }}
+              <input type="file" accept="image/*" class="d-none" :disabled="dangTaiAnh" @change="chonFileAnh" />
+            </label>
+            <input
+              v-model="formValue.hinhAnh"
+              class="form-control admin-input"
+              placeholder="Hoặc dán đường dẫn ảnh..."
+            />
+            <small v-if="loiUploadAnh" class="text-danger">{{ loiUploadAnh }}</small>
+          </div>
         </div>
       </div>
 

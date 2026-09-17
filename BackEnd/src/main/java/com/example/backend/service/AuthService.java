@@ -57,13 +57,13 @@ public class AuthService {
         if (tk.getNhanVien() != null) {
             NhanVien nv = tk.getNhanVien();
             return new LoginResponse(nv.getNhanVienId(), nv.getHoTen(), tk.getUsername(),
-                    nv.getSoDienThoai(), nv.getEmail(), role, token);
+                    nv.getSoDienThoai(), nv.getEmail(), role, token, tk.getAvatarUrl());
         }
 
         if (tk.getKhachHang() != null) {
             KhachHang kh = tk.getKhachHang();
             return new LoginResponse(kh.getKhachHangId(), kh.getHoTen(), tk.getUsername(),
-                    kh.getSoDienThoai(), kh.getEmail(), role, token);
+                    kh.getSoDienThoai(), kh.getEmail(), role, token, tk.getAvatarUrl());
         }
 
         throw new UsernameNotFoundException("Tài khoản không liên kết với người dùng: " + username);

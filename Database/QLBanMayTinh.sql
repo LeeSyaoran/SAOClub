@@ -1,4 +1,4 @@
-﻿use master;
+use master;
 GO
 
 -- Luôn DROP + tạo lại database mỗi lần chạy file — SINGLE_USER trước để đá hết
@@ -86,6 +86,12 @@ BEGIN
 END
 GO
 
+IF COL_LENGTH('nha_cung_cap', 'hinh_anh') IS NULL
+BEGIN
+    ALTER TABLE nha_cung_cap ADD hinh_anh NVARCHAR(500) NULL;
+END
+GO
+
 -- ============================================================
 --  2. KHÁCH HÀNG & NHÂN VIÊN
 -- ============================================================
@@ -109,6 +115,13 @@ BEGIN
         ngay_cap_nhat  DATETIME       NOT NULL DEFAULT GETDATE()
     );
 END
+GO
+
+IF COL_LENGTH('khach_hang', 'hinh_anh') IS NULL
+BEGIN
+    ALTER TABLE khach_hang ADD hinh_anh NVARCHAR(500) NULL;
+END
+GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chuc_vu')
 BEGIN
@@ -368,6 +381,30 @@ BEGIN
     ALTER TABLE chi_tiet_san_pham
         ADD CONSTRAINT FK_ctsp_phieu_nhap FOREIGN KEY (phieu_nhap_id)
         REFERENCES phieu_nhap_kho(phieu_nhap_id);
+END
+GO
+
+IF COL_LENGTH('chi_tiet_san_pham', 'locked_by') IS NULL
+BEGIN
+    ALTER TABLE chi_tiet_san_pham ADD locked_by INT NULL;
+END
+GO
+
+IF COL_LENGTH('chi_tiet_san_pham', 'locked_at') IS NULL
+BEGIN
+    ALTER TABLE chi_tiet_san_pham ADD locked_at DATETIME NULL;
+END
+GO
+
+IF COL_LENGTH('chi_tiet_san_pham', 'lock_session') IS NULL
+BEGIN
+    ALTER TABLE chi_tiet_san_pham ADD lock_session VARCHAR(64) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_serial_lock' AND object_id = OBJECT_ID('chi_tiet_san_pham'))
+BEGIN
+    CREATE INDEX idx_serial_lock ON chi_tiet_san_pham(locked_at, lock_session);
 END
 GO
 
@@ -763,6 +800,31 @@ BEGIN
         CONSTRAINT FK_pbh_ctsp       FOREIGN KEY (chi_tiet_id)   REFERENCES chi_tiet_san_pham(chi_tiet_id)
     );
 END
+GO
+
+IF COL_LENGTH('phieu_bao_hanh', 'ngay_bat_dau_xu_ly') IS NULL
+BEGIN
+    ALTER TABLE phieu_bao_hanh ADD ngay_bat_dau_xu_ly DATETIME NULL;
+END
+GO
+
+IF COL_LENGTH('phieu_bao_hanh', 'phuong_thuc') IS NULL
+BEGIN
+    ALTER TABLE phieu_bao_hanh ADD phuong_thuc NVARCHAR(30) NULL;
+END
+GO
+
+IF COL_LENGTH('phieu_bao_hanh', 'dia_chi_lay_hang') IS NULL
+BEGIN
+    ALTER TABLE phieu_bao_hanh ADD dia_chi_lay_hang NVARCHAR(500) NULL;
+END
+GO
+
+IF COL_LENGTH('phieu_bao_hanh', 'ly_do_tu_choi') IS NULL
+BEGIN
+    ALTER TABLE phieu_bao_hanh ADD ly_do_tu_choi NVARCHAR(500) NULL;
+END
+GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham_yeu_thich')
 BEGIN

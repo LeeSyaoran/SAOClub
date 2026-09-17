@@ -1,15 +1,15 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import { Search } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as KhuyenMaiService from "../../services/KhuyenMaiService.js";
 import * as VongQuayService from "../../services/VongQuayService.js";
-import { formatPrice, formatDate, statusLabel, toLocalDT } from "../../utils/adminFormat.js";
+import { formatPrice, formatDate, statusLabel, toLocalDT, boDauTiengViet } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
 import { PromotionsStore, ensurePromotions, refreshPromotions } from "../../stores/promotions.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { Filter, RotateCcw, X, Plus, Gift, Tag, Sparkles } from '@lucide/vue';
+import { Filter, RotateCcw, X, Plus, Gift, Tag, Sparkles, ChevronDown } from '@lucide/vue';
 
 onMounted(() => {
   ensurePromotions();
@@ -76,6 +76,7 @@ const resetFilters = () => {
   filters.usage = "";
   filters.dateStartFrom = "";
   filters.dateEndTo = "";
+  search.value = "";
 };
 
 const getPromoValidity = (p) => {
@@ -86,12 +87,12 @@ const getPromoValidity = (p) => {
 };
 
 const filteredPromotions = computed(() => {
-  const q = search.value.trim().toLowerCase();
-  const now = new Date();
+  const rawQ = search.value.trim();
+  const q = boDauTiengViet(rawQ);
   return promotions.value.filter((p) => {
     if (q) {
-      const codeMatch = (p.maKhuyenMai ?? '').toLowerCase().includes(q);
-      const nameMatch = (p.tenKhuyenMai ?? '').toLowerCase().includes(q);
+      const codeMatch = boDauTiengViet(p.maKhuyenMai ?? '').includes(q);
+      const nameMatch = boDauTiengViet(p.tenKhuyenMai ?? '').includes(q);
       if (!codeMatch && !nameMatch) return false;
     }
     if (filters.loai && p.loai !== filters.loai) return false;
@@ -120,6 +121,14 @@ const filteredPromotions = computed(() => {
 });
 
 const { currentPage, totalPages, pagedItems: pagedPromotions, pageSize } = usePagination(filteredPromotions);
+
+// Reset trang về 0 khi bộ lọc hoặc tìm kiếm thay đổi
+watch(
+  [search, () => filters.loai, () => filters.trangThai, () => filters.validity, () => filters.usage, () => filters.dateStartFrom, () => filters.dateEndTo],
+  () => {
+    currentPage.value = 0;
+  }
+);
 
 // ── Modal Thêm / Sửa Khuyến mại ──────────────────────────────────────────────
 const showModal = ref(false);
@@ -225,6 +234,9 @@ const savePromo = async () => {
           <div class="alt-search">
             <Search class="alt-search__icon" :size="14" />
             <input v-model="search" placeholder="Tìm theo mã, tên khuyến mại..." />
+            <button v-if="search" type="button" class="alt-search__clear" @click="search = ''" title="Xóa tìm kiếm">
+              <X :size="12" />
+            </button>
           </div>
           <button
             type="button"
@@ -235,6 +247,7 @@ const savePromo = async () => {
             <Filter :size="13" />
             <span>Lọc nâng cao</span>
             <span v-if="activeFilterCount > 0" class="alt-badge-count">{{ activeFilterCount }}</span>
+            <ChevronDown :size="13" class="filter-caret" :class="{ 'is-open': isFilterOpen }" />
           </button>
           <button class="alt-btn alt-btn--primary" @click="openAdd">
             <Plus :size="13" /> {{ t('admin.promotions.add') }}
@@ -417,10 +430,37 @@ const savePromo = async () => {
 
 <style scoped>
 /* ══ Nút lọc & badge ══ */
+.alt-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.alt-search__clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+.alt-search__clear:hover {
+  color: var(--text-primary, #0f172a);
+}
+.filter-caret {
+  transition: transform 0.2s ease;
+}
+.filter-caret.is-open {
+  transform: rotate(180deg);
+}
 .alt-btn--filter-active {
-  background: var(--pink-100, #ffe6f0) !important;
-  color: var(--pink-700, #a81b5d) !important;
-  border-color: var(--pink-300, #f7a8c8) !important;
+  background: rgba(236, 72, 153, 0.15) !important;
+  color: var(--pink-600, #db2777) !important;
+  border-color: var(--pink-400, #f472b6) !important;
   font-weight: 700 !important;
 }
 .alt-badge-count {
@@ -444,7 +484,7 @@ const savePromo = async () => {
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.24s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  background: var(--pink-50, #fff5f9);
+  background: var(--bg-card-alt, #fff5f9);
   border-bottom: 1px solid var(--border-color, #f1dbe6);
 }
 .sm-filter-collapse.is-open {
@@ -473,7 +513,7 @@ const savePromo = async () => {
 .sm-filter-field label {
   font-size: 12px;
   font-weight: 700;
-  color: var(--pink-700, #a81b5d);
+  color: var(--pink-600, #db2777);
 }
 .sm-filter-field input[type="date"],
 .sm-filter-field select {
@@ -514,7 +554,7 @@ const savePromo = async () => {
   gap: 8px;
   flex-wrap: wrap;
   padding: 8px 16px;
-  background: #fff;
+  background: var(--bg-card, #fff);
   border-bottom: 1px solid var(--border-color, #f1dbe6);
   font-size: 12.5px;
 }
@@ -529,9 +569,9 @@ const savePromo = async () => {
   gap: 6px;
   padding: 2px 10px;
   border-radius: 999px;
-  background: var(--pink-50, #fff5f9);
+  background: var(--bg-card-alt, #fff5f9);
   border: 1px solid var(--pink-200, #ffcfe1);
-  color: var(--pink-700, #a81b5d);
+  color: var(--pink-600, #db2777);
   font-size: 12px;
 }
 .sm-chip button {
@@ -539,7 +579,7 @@ const savePromo = async () => {
   border: none;
   padding: 0;
   cursor: pointer;
-  color: var(--pink-700, #a81b5d);
+  color: var(--pink-600, #db2777);
   display: inline-flex;
   align-items: center;
   opacity: 0.7;

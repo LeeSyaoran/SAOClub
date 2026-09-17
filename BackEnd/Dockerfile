@@ -11,10 +11,12 @@ RUN chmod +x ./mvnw && ./mvnw package -DskipTests -B
 # Stage 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-RUN addgroup -S spring && adduser -S spring -G spring \
-    && mkdir -p /app/logs && chown -R spring:spring /app
+RUN addgroup -S spring && adduser -S spring -G spring
 COPY --from=builder /app/target/BackEnd-0.0.1-SNAPSHOT.jar app.jar
-USER spring
+RUN mkdir -p /app/logs /app/uploads && chown -R spring:spring /app
 EXPOSE 8080
 ENV SPRING_PROFILES_ACTIVE=docker
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# ponytail: volume mount vào /app/uploads có thể tạo thư mục với owner mới.
+# chmod u+w đủ cho spring user ghi file; chown xử lý trường hợp volume chưa tồn tại.
+ENTRYPOINT ["sh", "-c", "chmod -R u+w /app/uploads 2>/dev/null; exec java -jar app.jar"]
+USER spring
