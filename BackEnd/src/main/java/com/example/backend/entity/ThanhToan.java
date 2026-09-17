@@ -1,5 +1,6 @@
 package com.example.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,6 +23,7 @@ public class ThanhToan {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "don_hang_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private DonHang donHang;
 
     @Column(name = "ngay_thanh_toan", nullable = false)
