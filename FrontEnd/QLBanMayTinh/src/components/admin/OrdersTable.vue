@@ -564,8 +564,6 @@ const canJumpToStep = (order, stepId) => {
     return idx === cur + 1;
   }
   return idx >= cur;
-  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
-  return idx !== -1 && cur !== -1 && idx >= cur;
 };
 
 // Bấm vào step để chuyển trạng thái. Nếu trùng trạng thái hiện tại thì noop.
