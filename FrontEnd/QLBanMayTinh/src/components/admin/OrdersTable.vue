@@ -537,13 +537,28 @@ const orderTimelineSteps = computed(() => {
 // "Đã qua" = vị trí trong timeline <= trạng thái hiện tại (vd đang 'shipping' thì
 // pending/confirmed/processing/shipping đều tính là đã qua).
 const isStepReached = (order, stepId) => {
+  if (order?.kenhBan === 'in_store') {
+    const timelineIds = orderTimelineSteps.value.map(s => s.id);
+    const cur = timelineIds.indexOf(order.trangThaiDonHang);
+    const idx = timelineIds.indexOf(stepId);
+    return cur !== -1 && idx !== -1 && idx <= cur;
+  }
   const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return cur !== -1 && idx !== -1 && idx <= cur;
 };
 
 // Step đã tick xanh = đã qua VÀ không phải bước hiện tại (bước hiện tại sáng cam chứ không tick).
+// Đơn tại quầy chỉ có 3 step (pending/confirmed/delivered) — phải so trên index cục bộ của
+// orderTimelineSteps để khớp quy trình 3 bước, không dùng LINEAR_STATUS_ORDER (7 step) sẽ
+// làm đơn đã 'delivered' tick hết cả 'pending'/'confirmed' (bug trước đây).
 const isStepDoneById = (order, stepId) => {
+  if (order?.kenhBan === 'in_store') {
+    const timelineIds = orderTimelineSteps.value.map(s => s.id);
+    const cur = timelineIds.indexOf(order.trangThaiDonHang);
+    const idx = timelineIds.indexOf(stepId);
+    return cur !== -1 && idx !== -1 && idx < cur;
+  }
   const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return cur !== -1 && idx !== -1 && idx < cur;
