@@ -790,7 +790,7 @@ const posPlaceOrder = async () => {
       tongTien: posCartTotal.value, giamGia: posGiamGia.value,
       phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
       ngayDat,
-      trangThaiDonHang: "confirmed", trangThaiThanhToan: "paid", kenhBan: "in_store",
+      trangThaiDonHang: "pending", trangThaiThanhToan: "paid", kenhBan: "in_store",
     });
     if (!orderRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(orderRes) }));
     const created = await orderRes.json();
@@ -828,24 +828,9 @@ const posPlaceOrder = async () => {
         });
         if (!ttRes.ok) throw new Error(t('admin.errors.createPaymentError', { message: await parsePosApiError(ttRes) }));
       }
-      // Don tai quay: khach nhan hang ngay luc thanh toan, khong qua cac buoc giao hang online
-      // (processing/shipping/out_for_delivery) — chuyen thang sang "delivered" ngay sau khi
-      // tao don + ghi nhan thanh toan xong. Backend chi cho phep nhay thang confirmed->delivered
-      // voi kenhBan="in_store" (xem DonHangService.kiemTraChuyenTrangThai), don online van phai
-      // di tuan tu nhu cu.
-      if (posDeliveryMode.value === 'pickup') {
-        const finalizeRes = await DonHangService.update(donHangId, {
-          khachHangId, nguoiNhan, sdtNguoiNhan: posFoundCust.value.soDienThoai,
-          diaChiGiaoHangText: diaChiGiao,
-          khuyenMaiId: posAppliedPromo.value?.khuyenMaiId ?? null,
-          tongTien: posCartTotal.value, giamGia: posGiamGia.value,
-          phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
-          ngayDat,
-          ngayGiaoThucTe: nowLocalIso(),
-          trangThaiDonHang: "delivered", trangThaiThanhToan: "paid", kenhBan: "in_store",
-        });
-        if (!finalizeRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(finalizeRes) }));
-      }
+      // Don tai quay: tao o trang thai "pending", staff tu bam timeline de xac nhan "confirmed"
+      // roi "delivered" nhu quy trinh 3 buoc. Backend kich hoat bao hanh serials khi chuyen sang
+      // "delivered" (xem DonHangService.kichHoatBaoHanhTuDong).
     } catch (e) {
       await DonHangService.remove(donHangId).catch(() => {});
       // Xoa xong nhung khong refresh thi danh sach don hang tren UI (da tang truoc do qua

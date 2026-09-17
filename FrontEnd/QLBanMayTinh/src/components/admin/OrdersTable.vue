@@ -552,11 +552,18 @@ const isStepDoneById = (order, stepId) => {
 // Bấm được khi step đó nằm sau trạng thái hiện tại (chuyển tiến), HOẶC chính là bước hiện tại
 // (cho phép "bấm lại" - sẽ bị noop ở jumpToStatus). Lùi về bước trước KHÔNG cho phép qua
 // timeline-click (chỉ qua modal cập nhật đầy đủ hoặc nhờ thủ tục hủy đơn).
-// Đơn tại quầy đã chốt trạng thái 'delivered' lúc thanh toán — không cho click đổi step nào.
+// Đơn tại quầy: chỉ cho phép chuyển đúng 1 bước tiếp theo (pending→confirmed→delivered),
+// không cho nhảy bước hoặc chuyển sang delivered khi chưa confirmed.
 const canJumpToStep = (order, stepId) => {
-  if (order?.kenhBan === 'in_store') return false;
   if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
   const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
+  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
+  if (order?.kenhBan === 'in_store') {
+    // Chỉ cho next step tiến 1 bước: pending→confirmed hoặc confirmed→delivered
+    if (idx === -1) return false;
+    return idx === cur + 1;
+  }
+  return idx >= cur;
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return idx !== -1 && cur !== -1 && idx >= cur;
 };
@@ -579,14 +586,15 @@ const jumpToStatus = async (order, stepId) => {
     await openXacNhanSerialModal(order);
     return;
   }
-  // Tự động cập nhật payment + ngày giao giống advanceOrderStatus để tránh 2 nơi logic lệch
+  // Tự động cập nhật payment + ngày giao giống advanceOrderStatus để tránh 2 nơi logic lệch.
+  // Đơn tại quầy: đánh dấu ngày giao thực tế khi bấm "Đã giao hàng".
   const body = buildOrderUpdateBody(order, {
     trangThaiDonHang: stepId,
     trangThaiThanhToan: stepId === 'awaiting_confirmation' && order.trangThaiThanhToan === 'unpaid'
       ? 'paid'
       : order.trangThaiThanhToan,
     ngayGiaoDuKien: order.ngayGiaoDuKien,
-    ngayGiaoThucTe: stepId === 'awaiting_confirmation' && !order.ngayGiaoThucTe
+    ngayGiaoThucTe: (stepId === 'awaiting_confirmation' || stepId === 'delivered') && !order.ngayGiaoThucTe
       ? nowLocalIso()
       : order.ngayGiaoThucTe,
     maVanDon: order.maVanDon,
