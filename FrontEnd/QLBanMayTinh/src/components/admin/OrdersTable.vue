@@ -511,15 +511,17 @@ const LINEAR_STATUS_ORDER = [
   'out_for_delivery', 'awaiting_confirmation', 'delivered',
 ];
 
-// Đơn tại quầy (kenhBan='in_store') không đi qua pipeline giao hàng online — tạo xong +
-// thanh toán + nhận hàng là xong, timeline chỉ hiện 1 step "Hoàn tất", không cho click đổi
-// trạng thái qua các bước pending/confirmed/.../shipping (bug trước đây: hiện đủ 7 step vì
-// trangThaiDonHang='delivered', LINEAR_STATUS_ORDER.indexOf=6 → tất cả đều tick xanh như
-// đơn online đã giao tới bước cuối).
+// Đơn tại quầy (kenhBan='in_store') có flow riêng 3 bước: Chờ xác nhận (mới bấm thanh toán,
+// chưa xác nhận) -> Đã xác nhận (admin/staff đã duyệt) -> Đã giao (khách đã nhận hàng tại
+// quầy). Bước đầu POS tự tạo 'confirmed', bước cuối 'delivered' chỉ chuyển được khi staff
+// chọn xác nhận (có thể auto khi khách nhận luôn trong buổi thanh toán).
 const orderTimelineSteps = computed(() => {
   if (orderDetailData.value?.kenhBan === 'in_store') {
-    return [{ id: 'delivered', title: orderStatusLabel('delivered'),
-              desc: t('orderStatus.timeline.deliveredDesc'), icon: CheckCircle2 }];
+    return [
+      { id: 'pending',    title: t('orderStatus.timeline.placedTitle'),     desc: t('orderStatus.timeline.placedDesc'),     icon: CheckCircle2 },
+      { id: 'confirmed',  title: t('orderStatus.timeline.confirmedTitle'),  desc: t('orderStatus.timeline.confirmedDesc'),  icon: CheckCircle2 },
+      { id: 'delivered',  title: t('orderStatus.timeline.deliveredTitle'),  desc: t('orderStatus.timeline.deliveredDesc'),  icon: CheckCircle2 },
+    ];
   }
   return [
     { id: 'pending',                title: orderStatusLabel('pending'),                desc: t('orderStatus.timeline.placedDesc'),    icon: CheckCircle2 },
