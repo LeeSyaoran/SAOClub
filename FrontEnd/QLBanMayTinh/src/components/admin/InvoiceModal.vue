@@ -170,13 +170,13 @@ table.p th{background:#111;color:#fff;padding:5px 6px;font-size:11px;border:1px 
 <div class="hb"><h2>HÓA ĐƠN BÁN HÀNG</h2><p>Số: ${esc(o?.maDonHang??`#${o?.donHangId}`)}</p></div>
 <div class="st"><div class="sn">⭐ SAO CLUB</div><div class="si">Cửa hàng máy tính & công nghệ · Hotline: 1900-xxxx</div></div>
 <div class="sec">Thông tin khách hàng</div>
-<table class="ct">
+<table class="ct"><tbody>
 <tr><td>Khách hàng:</td><td><strong>${esc(c?.hoTen??o?.nguoiNhan??"Khách lẻ")}</strong></td></tr>
 <tr><td>Điện thoại:</td><td>${esc(c?.soDienThoai??o?.sdtNguoiNhan??"—")}</td></tr>
 ${c?.email?`<tr><td>Email:</td><td>${esc(c.email)}</td></tr>`:""}
 ${(o?.diaChiGiaoHangText??c?.diaChi)?`<tr><td>Địa chỉ:</td><td>${esc(o?.diaChiGiaoHangText??c?.diaChi)}</td></tr>`:""}
 <tr><td>Hình thức:</td><td>${o?.kenhBan==="in_store"?"Mua tại quầy":"Mua hàng online"}</td></tr>
-</table>
+</tbody></table>
 <div class="sec">Danh sách sản phẩm</div>
 <table class="p"><thead><tr><th style="width:28px;">STT</th><th>Tên hàng hóa</th><th style="width:34px;">ĐVT</th><th style="width:26px;">SL</th><th style="width:100px;">Đơn giá</th><th style="width:100px;">Thành tiền</th></tr></thead>
 <tbody>${rows}</tbody>
@@ -239,6 +239,7 @@ ${tongDiem.value!==null?`<div class="pr" style="color:#555;margin-top:2px;font-w
             <hr class="inv-hr" />
             <div class="inv-sec-title">THÔNG TIN KHÁCH HÀNG</div>
             <table class="inv-cust">
+              <tbody>
               <tr><td>Khách hàng:</td><td><strong>{{ kh?.hoTen ?? order?.nguoiNhan ?? 'Khách lẻ' }}</strong></td></tr>
               <tr><td>Điện thoại:</td><td>{{ kh?.soDienThoai ?? order?.sdtNguoiNhan ?? '—' }}</td></tr>
               <tr v-if="kh?.email"><td>Email:</td><td>{{ kh.email }}</td></tr>
@@ -247,6 +248,7 @@ ${tongDiem.value!==null?`<div class="pr" style="color:#555;margin-top:2px;font-w
                 <td>Hình thức:</td>
                 <td><span :class="order?.kenhBan==='in_store'?'inv-badge-s':'inv-badge-o'">{{ order?.kenhBan==='in_store'?'Mua tại quầy':'Mua hàng online' }}</span></td>
               </tr>
+              </tbody>
             </table>
 
             <hr class="inv-hr" />
