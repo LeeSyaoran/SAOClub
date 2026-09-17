@@ -618,6 +618,9 @@ const jumpToStatus = async (order, stepId) => {
   const res = await DonHangService.update(order.donHangId, body);
   if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.updateFailed', { status: res.status }))); return; }
   await refreshOrders();
+  // Cập nhật lại orderDetailData để sidebar hiển thị đúng trạng thái mới ngay lập tức
+  const updated = OrdersStore.items.find(o => o.donHangId === order.donHangId);
+  if (updated) orderDetailData.value = updated;
 };
 const advanceOrderStatus = async (o) => {
   const next = NEXT_ORDER_STATUS[o.trangThaiDonHang];
@@ -661,6 +664,9 @@ const advanceOrderStatus = async (o) => {
   // Tải lại ngay thay vì tự ráp state cục bộ — chắc chắn đúng dữ liệu server, không phụ
   // thuộc việc SSE (chỉ để đồng bộ các tab/khách hàng khác) có tới kịp hay không.
   await refreshOrders();
+  // Cập nhật lại orderDetailData để sidebar hiển thị đúng trạng thái mới ngay lập tức
+  const updated = OrdersStore.items.find(o2 => o2.donHangId === o.donHangId);
+  if (updated) orderDetailData.value = updated;
 };
 
 // ── Modal "Chọn serial trước khi xác nhận" (chỉ đơn online) ──────────────────────
