@@ -254,6 +254,21 @@ IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'dm_gpu')
 GO
 
 -- ============================================================
+--  Ảnh minh hoạ cho danh mục CPU/RAM/GPU/Ổ cứng — schema gốc chưa có cột này,
+--  thêm sau vì CREATE TABLE đã chốt ở phía trên. NULL để không vi phạm NOT NULL
+--  của các dòng seed ở mục 13 đã có sẵn. NVARCHAR(500) khớp độ dài URL ảnh + path.
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dm_cpu')    AND name = 'hinh_anh')
+    ALTER TABLE dm_cpu    ADD hinh_anh NVARCHAR(500) NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dm_ram')    AND name = 'hinh_anh')
+    ALTER TABLE dm_ram    ADD hinh_anh NVARCHAR(500) NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dm_o_cung') AND name = 'hinh_anh')
+    ALTER TABLE dm_o_cung ADD hinh_anh NVARCHAR(500) NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dm_gpu')    AND name = 'hinh_anh')
+    ALTER TABLE dm_gpu    ADD hinh_anh NVARCHAR(500) NULL;
+GO
+
+-- ============================================================
 --  4. BIẾN THỂ SẢN PHẨM (ĐỊNH GIÁ & THÔNG SỐ KỸ THUẬT)
 -- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'bien_the_san_pham')
@@ -336,6 +351,23 @@ BEGIN
         da_xoa        BIT           NOT NULL DEFAULT 0,
         CONSTRAINT FK_ctsp_bien_the FOREIGN KEY (bien_the_id) REFERENCES bien_the_san_pham(bien_the_id) ON DELETE CASCADE
     );
+END
+GO
+
+-- Cột phieu_nhap_id (FK nullable) — entity ChiTietSanPham map tới đây, thêm idempotent
+IF COL_LENGTH('chi_tiet_san_pham', 'phieu_nhap_id') IS NULL
+BEGIN
+    ALTER TABLE chi_tiet_san_pham ADD phieu_nhap_id INT NULL;
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_ctsp_phieu_nhap'
+)
+BEGIN
+    ALTER TABLE chi_tiet_san_pham
+        ADD CONSTRAINT FK_ctsp_phieu_nhap FOREIGN KEY (phieu_nhap_id)
+        REFERENCES phieu_nhap_kho(phieu_nhap_id);
 END
 GO
 
