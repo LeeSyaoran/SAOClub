@@ -548,20 +548,20 @@ const isStepReached = (order, stepId) => {
   return cur !== -1 && idx !== -1 && idx <= cur;
 };
 
-// Step đã tick xanh = đã qua VÀ không phải bước hiện tại (bước hiện tại sáng cam chứ không tick).
-// Đơn tại quầy chỉ có 3 step (pending/confirmed/delivered) — phải so trên index cục bộ của
-// orderTimelineSteps để khớp quy trình 3 bước, không dùng LINEAR_STATUS_ORDER (7 step) sẽ
-// làm đơn đã 'delivered' tick hết cả 'pending'/'confirmed' (bug trước đây).
+// Step đã tick xanh = đã qua (idx < cur). Bước hiện tại (idx === cur) luôn được coi là
+// "đã hoàn tất" và hiển thị tích — kể cả bước cuối 'delivered' (đơn đã giao xong) cũng vậy,
+// tránh tình trạng vòng tròn sáng cam đứng cuối trông như "chưa xong" (bug trước đây).
+// Đơn tại quầy dùng timelineIds 3 step, đơn online dùng LINEAR_STATUS_ORDER 7 step.
 const isStepDoneById = (order, stepId) => {
   if (order?.kenhBan === 'in_store') {
     const timelineIds = orderTimelineSteps.value.map(s => s.id);
     const cur = timelineIds.indexOf(order.trangThaiDonHang);
     const idx = timelineIds.indexOf(stepId);
-    return cur !== -1 && idx !== -1 && idx < cur;
+    return cur !== -1 && idx !== -1 && idx <= cur;
   }
   const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
-  return cur !== -1 && idx !== -1 && idx < cur;
+  return cur !== -1 && idx !== -1 && idx <= cur;
 };
 
 // Bấm được khi step đó nằm sau trạng thái hiện tại (chuyển tiến), HOẶC chính là bước hiện tại
