@@ -571,13 +571,16 @@ const isStepDoneById = (order, stepId) => {
 // không cho nhảy bước hoặc chuyển sang delivered khi chưa confirmed.
 const canJumpToStep = (order, stepId) => {
   if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
-  const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
-  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   if (order?.kenhBan === 'in_store') {
-    // Chỉ cho next step tiến 1 bước: pending→confirmed hoặc confirmed→delivered
-    if (idx === -1) return false;
+    // Timeline in_store: pending(0) → confirmed(1) → delivered(2). Cho next step tiến 1 bước.
+    const timelineIds = orderTimelineSteps.value.map(s => s.id);
+    const cur = timelineIds.indexOf(order.trangThaiDonHang);
+    const idx = timelineIds.indexOf(stepId);
+    if (cur === -1 || idx === -1) return false;
     return idx === cur + 1;
   }
+  const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
+  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return idx >= cur;
 };
 
