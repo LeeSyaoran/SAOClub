@@ -511,18 +511,26 @@ const LINEAR_STATUS_ORDER = [
   'out_for_delivery', 'awaiting_confirmation', 'delivered',
 ];
 
-// Timeline sidebar: đầy đủ 7 step tuyến tính, mỗi step là 1 nút bấm được. Bấm = chuyển thẳng
-// sang trạng thái đó (có thể bỏ qua step - vd đang 'pending' bấm thẳng 'shipping' cũng được,
-// tiện khi muốn gộp nhiều bước).
-const orderTimelineSteps = computed(() => [
-  { id: 'pending',                title: orderStatusLabel('pending'),                desc: t('orderStatus.timeline.placedDesc'),    icon: CheckCircle2 },
-  { id: 'confirmed',              title: orderStatusLabel('confirmed'),              desc: t('orderStatus.timeline.confirmedDesc'), icon: CheckCircle2 },
-  { id: 'processing',             title: orderStatusLabel('processing'),             desc: t('orderStatus.timeline.packingDesc'),   icon: Package },
-  { id: 'shipping',               title: orderStatusLabel('shipping'),               desc: t('orderStatus.timeline.shippingDesc'),  icon: Truck },
-  { id: 'out_for_delivery',       title: orderStatusLabel('out_for_delivery'),       desc: t('orderStatus.timeline.outForDeliveryDesc'), icon: Bike },
-  { id: 'awaiting_confirmation',  title: orderStatusLabel('awaiting_confirmation'),  desc: t('orderStatus.timeline.deliveredDesc'),  icon: Inbox },
-  { id: 'delivered',              title: orderStatusLabel('delivered'),              desc: t('orderStatus.timeline.deliveredDesc'),  icon: CheckCircle2 },
-]);
+// Đơn tại quầy (kenhBan='in_store') không đi qua pipeline giao hàng online — tạo xong +
+// thanh toán + nhận hàng là xong, timeline chỉ hiện 1 step "Hoàn tất", không cho click đổi
+// trạng thái qua các bước pending/confirmed/.../shipping (bug trước đây: hiện đủ 7 step vì
+// trangThaiDonHang='delivered', LINEAR_STATUS_ORDER.indexOf=6 → tất cả đều tick xanh như
+// đơn online đã giao tới bước cuối).
+const orderTimelineSteps = computed(() => {
+  if (orderDetailData.value?.kenhBan === 'in_store') {
+    return [{ id: 'delivered', title: orderStatusLabel('delivered'),
+              desc: t('orderStatus.timeline.deliveredDesc'), icon: CheckCircle2 }];
+  }
+  return [
+    { id: 'pending',                title: orderStatusLabel('pending'),                desc: t('orderStatus.timeline.placedDesc'),    icon: CheckCircle2 },
+    { id: 'confirmed',              title: orderStatusLabel('confirmed'),              desc: t('orderStatus.timeline.confirmedDesc'), icon: CheckCircle2 },
+    { id: 'processing',             title: orderStatusLabel('processing'),             desc: t('orderStatus.timeline.packingDesc'),   icon: Package },
+    { id: 'shipping',               title: orderStatusLabel('shipping'),               desc: t('orderStatus.timeline.shippingDesc'),  icon: Truck },
+    { id: 'out_for_delivery',       title: orderStatusLabel('out_for_delivery'),       desc: t('orderStatus.timeline.outForDeliveryDesc'), icon: Bike },
+    { id: 'awaiting_confirmation',  title: orderStatusLabel('awaiting_confirmation'),  desc: t('orderStatus.timeline.deliveredDesc'),  icon: Inbox },
+    { id: 'delivered',              title: orderStatusLabel('delivered'),              desc: t('orderStatus.timeline.deliveredDesc'),  icon: CheckCircle2 },
+  ];
+});
 
 // "Đã qua" = vị trí trong timeline <= trạng thái hiện tại (vd đang 'shipping' thì
 // pending/confirmed/processing/shipping đều tính là đã qua).
@@ -542,7 +550,9 @@ const isStepDoneById = (order, stepId) => {
 // Bấm được khi step đó nằm sau trạng thái hiện tại (chuyển tiến), HOẶC chính là bước hiện tại
 // (cho phép "bấm lại" - sẽ bị noop ở jumpToStatus). Lùi về bước trước KHÔNG cho phép qua
 // timeline-click (chỉ qua modal cập nhật đầy đủ hoặc nhờ thủ tục hủy đơn).
+// Đơn tại quầy đã chốt trạng thái 'delivered' lúc thanh toán — không cho click đổi step nào.
 const canJumpToStep = (order, stepId) => {
+  if (order?.kenhBan === 'in_store') return false;
   if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
   const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);

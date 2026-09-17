@@ -726,7 +726,7 @@ const handleOutsideClick = (e) => {
                             {{ orderStatusLabel(o.trangThaiDonHang) }}
                           </span>
                         </div>
-                        <div class="order-timeline"><OrderStatusTimeline :status="o.trangThaiDonHang" /></div>
+                        <div class="order-timeline"><OrderStatusTimeline :status="o.trangThaiDonHang" :kenh-ban="o.kenhBan" /></div>
                         <div class="order-products">
                           <div v-for="item in (itemsByOrder[o.donHangId] || []).slice(0, 2)" :key="item.id" class="order-product-mini" @click="viewProductDetail(item)">
                             <div class="product-thumb">
