@@ -32,7 +32,6 @@ import * as SanPhamService from "./services/SanPhamService.js";
 import * as AuthService from "./services/AuthService.js";
 import * as YeuThichService from "./services/YeuThichService.js";
 import * as DanhGiaService from "./services/DanhGiaService.js";
-import { handleRedirectResult } from "./firebase.js";
 import { firebaseLogin } from "./services/AuthService.js";
 
 import LoginForm from "./components/auth/LoginForm.vue";
@@ -69,6 +68,12 @@ const openLogin = () => {
   showLoginModal.value = true;
 };
 
+const openRegister = () => {
+  loginModalErr.value = "";
+  authTab.value = "register";
+  showLoginModal.value = true;
+};
+
 const onRegisterSuccess = (newAccount) => {
   if (newAccount?.khachHangId != null) {
     localStorage.removeItem(`saoclub_cart_${newAccount.khachHangId}`);
@@ -97,19 +102,9 @@ const handleModalLogin = async ({ username, password }) => {
   }
 };
 
-// Social Login handler (Google/Facebook)
-const handleSocialLogin = (user) => {
-  showLoginModal.value = false;
-  showToast(t("toast.welcomeUser", { name: user.hoTen }), "success");
-  onLoginSuccess(user);
-};
-
-// Xử lý OAuth2 redirect result (chạy sau khi Google/Facebook redirect về)
-const processRedirectAuth = async () => {
+// Social Login handler (Google/Facebook) — gọi backend để tạo/lấy tài khoản
+const handleSocialLogin = async (result) => {
   try {
-    const result = await handleRedirectResult();
-    if (!result) return;
-
     const res = await firebaseLogin(result.idToken, result.provider);
     if (!res.ok) {
       const msg = await res.text();
@@ -121,7 +116,6 @@ const processRedirectAuth = async () => {
     showToast(t("toast.welcomeUser", { name: user.hoTen }), "success");
     onLoginSuccess(user);
   } catch (err) {
-    console.error("Redirect auth error:", err);
     showToast("Đăng nhập thất bại. Vui lòng thử lại.", "error");
   }
 };
@@ -338,6 +332,8 @@ const fetchProducts = async () => {
 
 const selectedProduct = ref(null);
 
+const handleSearch = (q) => { router.push({ path: "/", query: { q } }); };
+
 const openProduct = (p) => {
   selectedProduct.value = p;
   history.pushState({ view: "product", bienTheId: p.bienTheId }, "");
@@ -401,6 +397,7 @@ provide("appActions", {
   closeProduct,
   showToast,
   openLogin,
+  openRegister,
   onLogout,
   onBuyAgainUnavailable,
   fetchProducts,
@@ -418,8 +415,6 @@ onMounted(async () => {
   loadRatingSummaries();
   await loadSettings();
   applySystemDefaultLocale(SettingsStore.ngonNguMacDinh);
-  // Xử lý OAuth2 redirect result (Google/Facebook)
-  await processRedirectAuth();
 });
 
 onBeforeUnmount(() => {
@@ -435,7 +430,7 @@ onBeforeUnmount(() => {
         @add-to-cart="addToCart"
         @buy-again-unavailable="onBuyAgainUnavailable"
         @toast="(msg, type) => showToast(msg, type)"
-        @go-home="() => router.push('/')"
+        @go-home="() => { onLogout(); router.push('/'); }"
       />
     </router-view>
 
@@ -504,13 +499,16 @@ onBeforeUnmount(() => {
         :products="ProductsStore.items"
         :wishlist-ids="wishlistIds"
         :auth-user="auth.user"
+        :cart-count="cartCount"
         @close="closeProduct"
-        @add-to-cart="
-          (p) => {
-            addToCart(p);
-            closeProduct();
-          }
-        "
+        @toggle-cart="toggleCart"
+        @search="handleSearch"
+        @open-admin="() => router.push('/admin')"
+        @open-account="() => router.push('/account')"
+        @open-login="openLogin"
+        @logout="onLogout"
+        @open-register="openRegister"
+        @add-to-cart="(p) => { addToCart(p); closeProduct(); }"
         @open-product="openProduct"
         @toggle-wishlist="toggleWishlist"
       />

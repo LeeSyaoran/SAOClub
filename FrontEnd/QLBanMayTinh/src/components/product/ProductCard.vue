@@ -148,3 +148,35 @@ const stockBadgeText = computed(() => {
   return t('home.inStockCount', { count: soLuong });
 });
 </script>
+
+<style scoped>
+/* ── Card sản phẩm hiệu ứng 3D giống thẻ flash sale ── */
+article.card {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+  border: none !important;
+  outline: none !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+article.card:hover {
+  border: none !important;
+  outline: none !important;
+  transform: translateY(-4px);
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.18),
+    0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+article.card:active {
+  border: none !important;
+  outline: none !important;
+  transform: translateY(2px);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.1);
+}
+</style>

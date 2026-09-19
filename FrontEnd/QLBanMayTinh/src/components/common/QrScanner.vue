@@ -251,8 +251,8 @@ const startDirectCamera = async () => {
     });
     isOpen.value = true;
   } catch (e) {
-    if (e.name === 'NotAllowedError') error.value = 'Không có quyền truy cập camera.';
-    else if (e.name === 'NotFoundError') error.value = 'Không tìm thấy camera.';
+    if (e.name === 'NotAllowedError') error.value = 'Camera bị chặn. Vào Settings của trình duyệt và bật quyền truy cập camera cho trang này.';
+    else if (e.name === 'NotFoundError') error.value = 'Không tìm thấy camera. Hãy cắm camera hoặc chọn nguồn khác.';
     else error.value = 'Lỗi: ' + (e.message || e.name);
   }
 };

@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from "vue-router";
 import CustomerPage from "@/pages/CustomerPage.vue";
+const ProductDetailPage = () => import("@/pages/ProductDetailPage.vue");
 const AdminPage = () => import("@/pages/AdminPage.vue");
 const StaffPage = () => import("@/pages/StaffPage.vue");
 const WarehouseManagementPage = () => import("@/pages/WarehouseManagementPage.vue");
@@ -9,6 +10,7 @@ const PhieuNhapSerialPage = () => import("@/pages/PhieuNhapSerialPage.vue");
 
 const routes = [
   { path: "/", name: "home", component: CustomerPage },
+  { path: "/product/:id", name: "product-detail", component: ProductDetailPage },
   { path: "/admin", name: "admin", component: AdminPage, meta: { requiresAuth: true, roles: ["admin"] } },
   { path: "/admin/san-pham/:id", name: "admin-san-pham-detail", component: AdminPage, meta: { requiresAuth: true, roles: ["admin"] } },
   // Trang chi tiết phiếu nhập — xem thông tin, in serial, mở tab con chi tiết serial.

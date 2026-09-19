@@ -69,7 +69,7 @@
 
       <!-- Forgot Password -->
       <div class="form-options">
-        <a href="#" class="link-forgot" @click.prevent>{{ t('login.forgotPassword') }}</a>
+        <button type="button" class="link-forgot" @click="handleForgotPassword">{{ t('login.forgotPassword') }}</button>
       </div>
 
       <!-- Error Alert -->
@@ -145,11 +145,16 @@ import { loginSchema } from '../../utils/validators.js';
 import { t } from '../../i18n/index.js';
 import { Eye, EyeOff, User, Lock, AlertCircle } from '@lucide/vue';
 import { signInWithGoogle, signInWithFacebook } from '../../firebase.js';
+import { showToast } from '../../stores/toast.js';
 
 const emit = defineEmits(["submit", "login-success", "close", "open-register", "social-success"]);
 
 const error = ref('');
 const showPassword = ref(false);
+
+const handleForgotPassword = () => {
+  showToast("Tính năng đang phát triển. Vui lòng liên hệ hotline để hỗ trợ.", "info");
+};
 const loadingSocial = ref(false);
 const socialLoading = ref('');
 const submitting = ref(false);
@@ -170,15 +175,14 @@ const onSubmit = handleSubmit((values) => {
   setTimeout(() => { submitting.value = false; }, 1500);
 });
 
-// Social Login: Google — redirect flow (OAuth2 standard)
-// Kết quả được xử lý ở App.vue sau khi redirect về
+// Social Login: Google — popup flow
 const handleGoogleLogin = async () => {
   loadingSocial.value = true;
   socialLoading.value = 'google';
   error.value = '';
   try {
-    await signInWithGoogle();
-    // Redirect xảy ra ngay — code bên dưới không chạy
+    const result = await signInWithGoogle();
+    emit('social-success', result);
   } catch (err) {
     error.value = 'Đăng nhập Google thất bại. Vui lòng thử lại.';
     loadingSocial.value = false;
@@ -186,15 +190,14 @@ const handleGoogleLogin = async () => {
   }
 };
 
-// Social Login: Facebook — redirect flow (OAuth2 standard)
-// Kết quả được xử lý ở App.vue sau khi redirect về
+// Social Login: Facebook — popup flow
 const handleFacebookLogin = async () => {
   loadingSocial.value = true;
   socialLoading.value = 'facebook';
   error.value = '';
   try {
-    await signInWithFacebook();
-    // Redirect xảy ra ngay — code bên dưới không chạy
+    const result = await signInWithFacebook();
+    emit('social-success', result);
   } catch (err) {
     error.value = 'Đăng nhập Facebook thất bại. Vui lòng thử lại.';
     loadingSocial.value = false;

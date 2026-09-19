@@ -10,32 +10,8 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: ["images/**/*"],
-      manifest: {
-        name: "SAOPhone",
-        short_name: "SAOPhone",
-        description: "Cửa hàng laptop & thiết bị công nghệ",
-        theme_color: "#0f0d1a",
-        background_color: "#0f0d1a",
-        display: "standalone",
-        icons: [
-          {
-            src: "/images/icon-192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "/images/icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-        ],
-      },
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-      },
+      // Tắt PWA hoàn toàn trong dev để tránh service worker can thiệp asset loading.
+      disable: true,
     }),
   ],
   build: {
@@ -77,25 +53,21 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      // Ảnh upload nằm trong volume backend (Docker) hoặc ../public/images (host).
-      // Browser request /images/<uuid> — không proxy thì Vite serve từ public/images
-      // của FE container (rỗng khi chạy Docker) → 404. Proxy về backend như /api.
-      "/images": {
-        target: process.env.VITE_API_PROXY_TARGET || "http://localhost:8080",
-        changeOrigin: true,
-        secure: false,
-      },
+      // Lưu ý: KHÔNG proxy /images qua backend. Vite serve trực tiếp public/images và
+      // browser sẽ gọi backend /api/images/upload/... cho ảnh động. Proxy ở đây khiến
+      // Vite cố "import" SVG trong /public/images và gây lỗi MIME type trong trình duyệt.
     },
     headers: {
       "Content-Security-Policy": [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseapp.com",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://accounts.google.com https://apis.google.com https://*.firebaseapp.com blob:",
         "worker-src 'self' blob:",
+        "child-src 'self' blob:",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "img-src 'self' data: https: blob:",
+        "img-src 'self' data: https: blob: https://*.googleusercontent.com",
         "font-src 'self' data: https://fonts.gstatic.com",
-        "connect-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://www.gstatic.com https://accounts.google.com https://oauth2.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.googleapis.com http://localhost:* ws://localhost:*",
-        "frame-src 'self' https://accounts.google.com https://*.googleapis.com https://*.googleusercontent.com https://*.firebaseapp.com",
+        "connect-src 'self' https://www.gstatic.com https://accounts.google.com https://apis.google.com https://oauth2.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.googleapis.com https://*.firebaseapp.com http://localhost:* ws://localhost:*",
+        "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://*.googleapis.com https://*.googleusercontent.com",
       ].join("; "),
     },
   },

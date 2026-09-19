@@ -912,15 +912,23 @@ onUnmounted(() => {
         class="d-flex align-items-center gap-2 p-3 border-bottom adm-brand-row"
         style="border-color:var(--border-color-soft)!important;"
       >
+        <!-- Logo: ưu tiên ảnh từ store, fallback circle SAO -->
+        <img
+          v-if="SettingsStore.logoUrl"
+          :src="SettingsStore.logoUrl"
+          class="rounded-circle flex-shrink-0"
+          style="width:38px;height:38px;object-fit:contain;"
+        />
         <div
+          v-else
           class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
           style="width:38px;height:38px;background:var(--gradient-brand);color:var(--accent-text);font-size:0.8rem;"
         >
           SAO
         </div>
         <div class="adm-brand-text">
-          <div class="fw-bold" style="font-size:0.95rem;">{{ t('admin.brand.name') }}</div>
-          <div style="font-size:0.7rem;color:var(--text-muted);">{{ t('admin.brand.tagline') }}</div>
+          <div class="fw-bold" style="font-size:0.95rem;">{{ SettingsStore.tenCuaHang || t('admin.brand.name') }}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">{{ SettingsStore.diaChi || t('admin.brand.tagline') }}</div>
         </div>
       </div>
 

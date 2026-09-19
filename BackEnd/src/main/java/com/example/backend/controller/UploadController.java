@@ -8,9 +8,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -77,5 +80,56 @@ public class UploadController {
         int cham = tenFile.lastIndexOf('.');
         if (cham < 0 || cham == tenFile.length() - 1) return "";
         return tenFile.substring(cham + 1).toLowerCase(Locale.ROOT);
+    }
+
+    @PostMapping("/image-by-url")
+    public ResponseEntity<?> uploadImageByUrl(@RequestBody Map<String, String> body) {
+        String imageUrl = body.get("url");
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "URL rong"));
+        }
+
+        // Chi cho phep tu cac domain hinh anh pho bien
+        String[] duocPhep = { "imgur.com", "i.imgur.com", "flic.kr", "flickr.com", "bb.com.vn" };
+        boolean choPhep = false;
+        for (String d : duocPhep) {
+            if (imageUrl.contains(d)) { choPhep = true; break; }
+        }
+        if (!choPhep) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Chi chap nhan tu imgur.com, flickr.com, bb.com.vn"));
+        }
+
+        try {
+            URI uri = URI.create(imageUrl);
+            URL url = uri.toURL();
+            String duoi = layDuoiTuUrl(imageUrl);
+            if (!DUOI_ANH_HOP_LE.contains(duoi)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "URL khong tro toi anh hop le"));
+            }
+
+            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Files.createDirectories(uploadPath);
+            String filename = UUID.randomUUID() + "." + duoi;
+            Path dest = uploadPath.resolve(filename);
+
+            try (InputStream is = url.openStream()) {
+                Files.copy(is, dest, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            return ResponseEntity.ok(Map.of("url", "/images/" + filename, "filename", filename));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "URL khong hop le"));
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Loi tai anh: " + e.getMessage()));
+        }
+    }
+
+    private static String layDuoiTuUrl(String url) {
+        try {
+            String path = URI.create(url).getPath();
+            return layDuoiFile(path);
+        } catch (Exception e) {
+            return "";
+        }
     }
 }

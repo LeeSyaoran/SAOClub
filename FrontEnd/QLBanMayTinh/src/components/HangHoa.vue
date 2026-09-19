@@ -1790,10 +1790,23 @@ const chonAnhSanPham = async (e) => {
   e.target.value = ''
 }
 
-const themAnhTuUrl = (e) => {
+const themAnhTuUrl = async (e) => {
   const url = e.target.value.trim()
-  if (url) form.hinhAnhList.push(url)
+  if (!url) return
   e.target.value = ''
+  try {
+    const token = layToken()
+    const res = await fetch('/api/upload/image-by-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ url }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data?.error || 'Tải ảnh thất bại')
+    form.hinhAnhList.push(data.url)
+  } catch (err) {
+    hienToast(err.message || 'Tải ảnh thất bại')
+  }
 }
 const xoaAnhTaiViTri = (i) => { form.hinhAnhList.splice(i, 1) }
 const datLamAnhChinh = (i) => {

@@ -1,272 +1,301 @@
 <template>
   <div
-    class="position-fixed top-0 start-0 w-100 h-100"
-    style="background:var(--bg-card-inset); z-index:900; overflow-y:auto;"
+    class="position-fixed start-0 w-100"
+    style="top: 0px; height: 100vh; background: #FFFFFF; z-index: 99999; overflow-y: auto;"
   >
-    <!-- ── Header sticky ── -->
+    <!-- ── NavBar ── -->
+    <NavBar
+      :cart-count="cartCount"
+      :user="authUser"
+      @toggle-cart="$emit('toggle-cart')"
+      @search="$emit('search', $event)"
+      @open-admin="$emit('open-admin')"
+      @open-account="$emit('open-account')"
+      @open-login="$emit('open-login')"
+      @logout="$emit('logout')"
+    />
+
+    <!-- ── Header Breadcrumb ── -->
     <div
-      class="d-flex align-items-center gap-3 px-3 py-2 position-sticky top-0"
-      style="background:var(--bg-card-inset); backdrop-filter:blur(8px); border-bottom:1px solid var(--border-color); z-index:10; opacity:0.98;"
+      class="d-flex align-items-center gap-2 px-4 py-3 position-sticky"
+      style="top: 0; background: #FFFFFF; border-bottom: 1px solid #E5E5E7; z-index: 10;"
     >
-      <button
-        class="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-        style="width:36px; height:36px; padding:0;"
-        @click="$emit('close')"
-      >
-        ‹
-      </button>
-      <span class="fw-semibold small text-truncate" style="color:var(--text-primary);">{{ activeVariant.tenSanPham }}</span>
-      <button
-        type="button"
-        class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ms-auto"
-        style="width:34px; height:34px; padding:0; border:none; background:transparent; font-size:15px;"
-        :aria-label="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
-        :title="isWishlisted ? t('wishlist.remove') : t('wishlist.add')"
-        @click="$emit('toggle-wishlist', activeVariant)"
-      >
-        <Heart :size="18" :fill="isWishlisted ? 'currentColor' : 'none'" />
-      </button>
-      <span
-        class="badge flex-shrink-0"
-        :class="stockBadgeClass"
-        style="font-size:10px;"
-      >{{ stockBadgeText }}</span>
+      <nav aria-label="breadcrumb" class="flex-grow-1" style="font-size: 13px;">
+        <ol class="breadcrumb mb-0 align-items-center">
+          <li class="breadcrumb-item">
+            <a
+              href="/"
+              @click.prevent="goHome"
+              class="d-inline-flex align-items-center gap-1 text-decoration-none"
+              style="color: #777777; cursor: pointer; line-height: 1;"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span style="font-weight: 500;">Trang chủ</span>
+            </a>
+          </li>
+          <li v-if="activeVariant.tenThuongHieu" class="breadcrumb-item">
+            <a
+              href="/"
+              @click.prevent="goHome"
+              class="text-decoration-none"
+              style="color: #777777; cursor: pointer;"
+            >{{ activeVariant.tenThuongHieu }}</a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page" style="color: #333333; font-weight: 500;">
+            {{ activeVariant.tenSanPham }}
+          </li>
+        </ol>
+      </nav>
     </div>
 
-    <div class="container-xl py-4">
+    <!-- ── Nội dung chính ── -->
+    <div class="container-xl py-4 px-4">
       <div class="row g-4">
-        <!-- ── Cột trái: ảnh ── -->
-        <div class="col-12 col-lg-5">
+        <!-- ════════════ CỘT TRÁI: Ảnh sản phẩm ════════════ -->
+        <div class="col-12 col-lg-6">
+          <!-- Ảnh chính -->
           <div
-            class="rounded-3 d-flex align-items-center justify-content-center"
-            style="background:var(--bg-card); border:1px solid var(--border-color); min-height:320px; padding:24px;"
+            class="rounded-2 d-flex align-items-center justify-content-center mb-3"
+            style="background: #F5F5F7; min-height: 400px; padding: 32px;"
           >
             <img
               v-if="displayedImage"
               :src="displayedImage"
               :alt="activeVariant.tenSanPham"
-              style="max-width:100%; max-height:360px; object-fit:contain;"
+              style="max-width: 100%; max-height: 400px; object-fit: contain;"
             />
-            <span v-else><Laptop :size="96" color="var(--text-muted)" /></span>
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
           </div>
 
-          <!-- Gallery ảnh -->
-          <div v-if="galleryImages.length > 1" class="d-flex gap-2 mt-2" style="overflow-x:auto;">
+          <!-- Gallery carousel ngang -->
+          <div v-if="galleryImages.length > 1" class="d-flex gap-2" style="overflow-x: auto; padding-bottom: 8px;">
             <button
-              v-for="(url, i) in galleryImages" :key="i" type="button"
-              class="p-0 flex-shrink-0 rounded-2 overflow-hidden"
-              style="width:56px; height:56px; background:var(--bg-card);"
-              :style="activeImageIndex === i ? 'border:2px solid var(--accent);' : 'border:1px solid var(--border-color);'"
+              v-for="(url, i) in galleryImages"
+              :key="i"
+              type="button"
+              class="flex-shrink-0 rounded"
+              :style="activeImageIndex === i
+                ? 'width: 70px; height: 70px; border: 2px solid #D40F28; padding: 3px;'
+                : 'width: 70px; height: 70px; border: 1px solid #E5E5E7; padding: 3px;'"
+              style="cursor: pointer; background: #F5F5F7; transition: all 0.15s;"
               @click="activeImageIndex = i"
             >
-              <img :src="url" alt="" style="width:100%; height:100%; object-fit:cover;" />
+              <img :src="url" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" />
             </button>
-          </div>
-
-          <!-- Tags phân loại -->
-          <div v-if="activeVariant.phanLoaiTen" class="d-flex flex-wrap gap-2 mt-3">
-            <span
-              v-for="tag in activeVariant.phanLoaiTen.split(',')"
-              :key="tag"
-              class="badge bg-warning text-dark"
-              style="font-size:11px;"
-            >{{ tag.trim() }}</span>
           </div>
         </div>
 
-        <!-- ── Cột phải: thông tin ── -->
-        <div class="col-12 col-lg-7 d-flex flex-column gap-3">
-          <!-- Tên + brand -->
-          <div>
-            <div class="small mb-1" style="color:var(--text-secondary);">
-              {{ activeVariant.tenThuongHieu }} · {{ activeVariant.tenDanhMuc }}
-            </div>
-            <h1 class="fw-black mb-2" style="font-size:1.3rem; line-height:1.3; color:var(--text-heading);">
+        <!-- ════════════ CỘT PHẢI: Thông tin sản phẩm ════════════ -->
+        <div class="col-12 col-lg-6 d-flex flex-column">
+
+          <!-- Tên sản phẩm -->
+          <div class="mb-3">
+            <p class="mb-1" style="font-size: 13px; color: #777777; text-transform: uppercase; letter-spacing: 0.03em;">
+              {{ activeVariant.tenThuongHieu }}
+            </p>
+            <h1 class="mb-0" style="font-size: 1.4rem; line-height: 1.4; color: #333333; font-weight: 600;">
               {{ activeVariant.tenSanPham }}
             </h1>
+          </div>
+
+          <!-- SKU & Bảo hành -->
+          <div class="d-flex gap-3 mb-3" style="font-size: 12px; color: #777777;">
+            <span v-if="activeVariant.baoHanhThang">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Bảo hành: <strong style="color: #333333;">{{ activeVariant.baoHanhThang }} tháng</strong>
+            </span>
+          </div>
+
+          <!-- Giá tiền nổi bật -->
+          <div class="mb-3 p-3 rounded" style="background: #F5F5F7;">
             <div class="d-flex align-items-baseline gap-3 flex-wrap">
-              <span class="fw-black" style="font-size:1.8rem; color:var(--accent-fg);">
+              <span style="font-size: 2rem; font-weight: 700; color: #D40F28;">
                 {{ formatPrice(activeVariant.giaBan) }}
               </span>
-              <span class="small" style="color:var(--text-secondary);">{{ t('productDetail.freeShipping') }}</span>
+              <span
+                v-if="activeVariant.giaGoc && activeVariant.giaGoc > activeVariant.giaBan"
+                class="text-decoration-line-through"
+                style="color: #999999; font-size: 1rem;"
+              >
+                {{ formatPrice(activeVariant.giaGoc) }}
+              </span>
+            </div>
+            <div style="font-size: 12px; color: #777777;">
+              ✓ Đã bao gồm VAT. Miễn phí giao hàng toàn quốc.
             </div>
           </div>
 
-          <!-- ── Phiên bản (cấu hình) ── -->
-          <div v-if="configs.length > 1">
-            <div class="fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
-              {{ t('productDetail.versions', { count: configs.length }) }}
+          <!-- Chọn Phiên bản -->
+          <div v-if="configs.length > 1" class="mb-3">
+            <div class="fw-bold mb-2" style="font-size: 13px; color: #333333;">
+              Phiên bản cấu hình
             </div>
             <div class="d-flex flex-wrap gap-2">
               <button
                 v-for="v in configs"
                 :key="configKey(v)"
-                class="btn btn-sm d-flex flex-column align-items-start text-start px-3 py-2"
-                style="border-radius:10px; min-width:140px; transition:all 0.15s;"
+                type="button"
+                class="btn d-flex flex-column align-items-start text-start px-3 py-2"
+                style="border-radius: 8px; min-width: 150px; font-size: 12px; transition: all 0.15s;"
                 :style="activeConfigKey === configKey(v)
-                  ? 'background:rgba(244,63,94,0.12); border:1.5px solid var(--accent); color:var(--accent-fg);'
-                  : 'background:var(--bg-input); border:1.5px solid var(--border-color-strong); color:var(--text-secondary);'"
+                  ? 'background: #FFFFFF; border: 2px solid #D40F28; color: #D40F28; box-shadow: 0 2px 8px rgba(212,15,40,0.15);'
+                  : 'background: #FFFFFF; border: 1px solid #E5E5E7; color: #333333;'"
                 @click="selectConfig(v)"
               >
-                <span class="fw-semibold" style="font-size:11px; line-height:1.5;">{{ configLabel(v).line1 }}</span>
-                <span v-if="configLabel(v).line2" style="font-size:10px; opacity:0.75;">{{ configLabel(v).line2 }}</span>
+                <span class="fw-semibold">{{ configLabel(v).line1 }}</span>
+                <span v-if="configLabel(v).line2" style="color: #777777; font-size: 11px;">{{ configLabel(v).line2 }}</span>
               </button>
             </div>
           </div>
 
-          <!-- ── Màu sắc ── -->
-          <div v-if="colorsForConfig.some(v => v.mauSac)">
-            <div class="fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
-              {{ t('productDetail.colorHeading') }}
+          <!-- Chọn Màu sắc -->
+          <div v-if="colorsForConfig.some(v => v.mauSac)" class="mb-3">
+            <div class="fw-bold mb-2" style="font-size: 13px; color: #333333;">
+              Màu sắc: <span style="color: #D40F28;">{{ activeVariant.mauSac }}</span>
             </div>
             <div class="d-flex flex-wrap gap-2">
               <button
                 v-for="v in colorsForConfig"
                 :key="v.bienTheId"
-                class="btn btn-sm d-flex align-items-center gap-2 px-3 py-2"
-                style="border-radius:10px; transition:all 0.15s;"
+                type="button"
+                class="d-flex align-items-center gap-2 px-3 py-2 rounded"
+                style="font-size: 12px; transition: all 0.15s; background: #FFFFFF;"
                 :style="activeColor === v.mauSac
-                  ? 'background:rgba(244,63,94,0.12); border:1.5px solid var(--accent); color:var(--accent-fg);'
-                  : 'background:var(--bg-input); border:1.5px solid var(--border-color-strong); color:var(--text-secondary);'"
+                  ? 'border: 2px solid #D40F28; color: #D40F28; box-shadow: 0 2px 8px rgba(212,15,40,0.15);'
+                  : 'border: 1px solid #E5E5E7; color: #333333;'"
                 @click="selectColor(v)"
               >
                 <span
-                  class="rounded-circle flex-shrink-0"
-                  :style="`width:13px; height:13px; background:${colorDot(v.mauSac)}; border:1.5px solid #666; display:inline-block;`"
+                  class="rounded-circle"
+                  :style="`width: 16px; height: 16px; background: ${colorDot(v.mauSac)}; border: 1px solid #DDD;`"
                 ></span>
-                <div class="d-flex flex-column align-items-start text-start">
-                  <span class="fw-semibold" style="font-size:11px; line-height:1.3;">{{ v.mauSac }}</span>
-                  <span style="font-size:10px; color:var(--accent-fg);">{{ formatPrice(v.giaBan) }}</span>
-                </div>
+                <span class="fw-medium">{{ v.mauSac }}</span>
               </button>
             </div>
           </div>
 
-          <!-- Meta: màu sắc, SKU, bảo hành -->
-          <div class="d-flex flex-wrap gap-3 small" style="color:var(--text-secondary);">
-            <span v-if="activeVariant.mauSac" class="d-inline-flex align-items-center gap-1"><Palette :size="14" /> {{ t('productDetail.color') }} <strong style="color:var(--text-primary);">{{ activeVariant.mauSac }}</strong></span>
-            <span v-if="activeVariant.baoHanhThang" class="d-inline-flex align-items-center gap-1"><Shield :size="14" /> {{ t('productDetail.warranty') }} <strong style="color:var(--text-primary);">{{ activeVariant.baoHanhThang }} {{ t('productDetail.months') }}</strong></span>
-          </div>
-
-          <!-- ── Thông số kỹ thuật (nhóm) ── -->
-          <div v-if="specGroups.phancung.length || specGroups.manha.length || specGroups.hethong.length || specGroups.sanpham.length">
-            <div class="fw-semibold mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
-              {{ t('productDetail.specsHeading') }}
+          <!-- Thông số kỹ thuật -->
+          <div v-if="specGroups.phancung.length || specGroups.hethong.length" class="mb-3">
+            <div class="fw-bold mb-2" style="font-size: 13px; color: #333333;">
+              Thông số kỹ thuật
             </div>
-            <div class="d-flex flex-column gap-3">
-              <!-- Phần cứng -->
-              <div v-if="specGroups.phancung.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
-                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:var(--accent-fg); text-transform:uppercase;">
-                  {{ t('productDetail.hardwareGroup') }}
-                </div>
-                <table class="w-100 mb-0" style="border-collapse:collapse;">
-                  <tbody>
-                    <tr v-for="s in specGroups.phancung" :key="s.label" style="border-top:1px solid var(--border-color-soft);">
-                      <td class="px-3 py-2" style="width:42%; background:var(--bg-card-alt); font-size:0.8rem; font-weight:600; white-space:nowrap; color:var(--text-secondary);">{{ s.label }}</td>
-                      <td class="px-3 py-2" style="background:var(--bg-card); font-size:0.82rem; color:var(--text-primary);">{{ s.value }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Màn hình & Thiết kế -->
-              <div v-if="specGroups.manha.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
-                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#60a5fa; text-transform:uppercase;">
-                  {{ t('productDetail.displayGroup') }}
-                </div>
-                <table class="w-100 mb-0" style="border-collapse:collapse;">
-                  <tbody>
-                    <tr v-for="s in specGroups.manha" :key="s.label" style="border-top:1px solid var(--border-color-soft);">
-                      <td class="px-3 py-2" style="width:42%; background:var(--bg-card-alt); font-size:0.8rem; font-weight:600; white-space:nowrap; color:var(--text-secondary);">{{ s.label }}</td>
-                      <td class="px-3 py-2" style="background:var(--bg-card); font-size:0.82rem; color:var(--text-primary);">{{ s.value }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Hệ thống -->
-              <div v-if="specGroups.hethong.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
-                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#34d399; text-transform:uppercase;">
-                  {{ t('productDetail.systemGroup') }}
-                </div>
-                <table class="w-100 mb-0" style="border-collapse:collapse;">
-                  <tbody>
-                    <tr v-for="s in specGroups.hethong" :key="s.label" style="border-top:1px solid var(--border-color-soft);">
-                      <td class="px-3 py-2" style="width:42%; background:var(--bg-card-alt); font-size:0.8rem; font-weight:600; white-space:nowrap; color:var(--text-secondary);">{{ s.label }}</td>
-                      <td class="px-3 py-2" style="background:var(--bg-card); font-size:0.82rem; color:var(--text-primary);">{{ s.value }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Thông tin sản phẩm -->
-              <div v-if="specGroups.sanpham.length" class="rounded-3 overflow-hidden" style="border:1px solid var(--border-color);">
-                <div class="px-3 py-1" style="background:var(--bg-input); font-size:0.68rem; font-weight:700; letter-spacing:0.08em; color:#a78bfa; text-transform:uppercase;">
-                  {{ t('productDetail.productGroup') }}
-                </div>
-                <table class="w-100 mb-0" style="border-collapse:collapse;">
-                  <tbody>
-                    <tr v-for="s in specGroups.sanpham" :key="s.label" style="border-top:1px solid var(--border-color-soft);">
-                      <td class="px-3 py-2" style="width:42%; background:var(--bg-card-alt); font-size:0.8rem; font-weight:600; white-space:nowrap; color:var(--text-secondary);">{{ s.label }}</td>
-                      <td class="px-3 py-2" style="background:var(--bg-card); font-size:0.82rem; color:var(--text-primary);">{{ s.value }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+            <div class="rounded" style="background: #FFFFFF; border: 1px solid #E5E5E7;">
+              <table class="w-100 mb-0" style="border-collapse: collapse; font-size: 12px;">
+                <tbody>
+                  <tr
+                    v-for="s in [...specGroups.phancung, ...specGroups.hethong].slice(0, 6)"
+                    :key="s.label"
+                    style="border-bottom: 1px solid #F0F0F0;"
+                  >
+                    <td class="px-3 py-2" style="width: 40%; color: #777777;">{{ s.label }}</td>
+                    <td class="px-3 py-2" style="color: #333333; font-weight: 500;">{{ s.value }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <!-- Nút thêm vào giỏ -->
-          <div class="d-flex gap-2 mt-auto pt-2">
+          <!-- Nút Thêm vào giỏ hàng - MÀU HỒNG NHƯ MENU -->
+          <div class="mt-auto">
             <button
-              class="btn fw-black flex-grow-1 py-2"
-              style="background:var(--accent); color:var(--accent-text); border-radius:12px; font-size:0.95rem;"
-              :disabled="stockBadgeClass === 'bg-secondary'"
+              class="btn w-100 py-3 d-flex align-items-center justify-content-center gap-2"
+              style="background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%); color: #FFFFFF; border-radius: 8px; font-size: 15px; font-weight: 700; border: none; transition: all 0.2s; box-shadow: 0 4px 12px rgba(244,63,94,0.35);"
+              :disabled="isOutOfStock"
+              @mouseenter="e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(244,63,94,0.45)'; }"
+              @mouseleave="e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(244,63,94,0.35)'; }"
               @click="$emit('add-to-cart', activeVariant)"
             >
-              {{ t('productDetail.addToCart') }}
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+              THÊM VÀO GIỎ HÀNG
             </button>
+            <p v-if="isOutOfStock" class="text-center mt-2 mb-0" style="font-size: 12px; color: #D40F28;">
+              Sản phẩm hiện hết hàng
+            </p>
           </div>
         </div>
-      </div><!-- /row -->
+      </div>
 
-      <!-- ── Sản phẩm gợi ý ── -->
-      <div v-if="related.length > 0" class="mt-5">
-        <h2 class="fw-bold mb-3" style="font-size:1rem; border-bottom:1px solid var(--border-color); padding-bottom:8px; color:var(--text-heading);">
-          {{ t('productDetail.relatedProducts') }}
-        </h2>
-        <div class="d-flex gap-3 pb-2" style="overflow-x:auto; scrollbar-width:thin; scrollbar-color:#333 transparent;">
+      <!-- ── Khối Cam kết & Chính sách ── -->
+      <div class="mt-4 p-4 rounded" style="background: #F5F5F7; border: 1px solid #E5E5E7;">
+        <h3 class="fw-bold mb-3" style="font-size: 14px; color: #333333;">
+          ✨ Cam kết mua hàng
+        </h3>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="d-flex align-items-start gap-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <div>
+                <div class="fw-medium" style="font-size: 13px; color: #333333;">Bộ sản phẩm</div>
+                <div style="font-size: 12px; color: #777777;">Hộp, Sách hướng dẫn, Cáp/Sạc, Máy chính</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex align-items-start gap-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <div>
+                <div class="fw-medium" style="font-size: 13px; color: #333333;">Bảo hành chính hãng</div>
+                <div style="font-size: 12px; color: #777777;">{{ activeVariant.baoHanhThang || 12 }} tháng tại trung tâm ủy quyền</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex align-items-start gap-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <div>
+                <div class="fw-medium" style="font-size: 13px; color: #333333;">Giao hàng miễn phí</div>
+                <div style="font-size: 12px; color: #777777;">Toàn quốc nhanh chóng</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Mô tả sản phẩm ── -->
+      <div v-if="activeVariant.moTa" class="mt-4 p-4 rounded" style="background: #FFFFFF; border: 1px solid #E5E5E7;">
+        <h3 class="fw-bold mb-3" style="font-size: 14px; color: #333333;">
+          📝 Mô tả sản phẩm
+        </h3>
+        <div style="font-size: 13px; line-height: 1.8; color: #555555; white-space: pre-wrap;">
+          {{ activeVariant.moTa }}
+        </div>
+      </div>
+
+      <!-- ── Sản phẩm gợi ý - KHÔNG VIỀN MẶC ĐỊNH ── -->
+      <div v-if="related.length > 0" class="mt-4">
+        <h3 class="fw-bold mb-3" style="font-size: 14px; color: #333333;">
+          ⚡ Có thể bạn cũng thích
+        </h3>
+        <div class="d-flex gap-3 pb-2" style="overflow-x: auto;">
           <div
             v-for="p in related"
             :key="p.sanPhamId"
-            class="flex-shrink-0 rounded-3 d-flex flex-column"
-            style="width:160px; background:var(--bg-card); border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;"
-            @mouseenter="e => e.currentTarget.style.transform='translateY(-3px)'"
-            @mouseleave="e => e.currentTarget.style.transform=''"
+            class="flex-shrink-0 rounded d-flex flex-column"
+            style="width: 180px; background: #FFFFFF; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;"
+            @mouseenter="e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)'; e.currentTarget.style.borderColor = '#D40F28'; }"
+            @mouseleave="e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'transparent'; }"
             @click="$emit('open-product', p)"
           >
-            <!-- Ảnh -->
             <div
               class="d-flex align-items-center justify-content-center rounded-top"
-              style="height:110px; background:var(--bg-card-inset); padding:8px;"
+              style="height: 120px; background: #F5F5F7; padding: 12px;"
             >
               <img
                 v-if="p.hinhAnhChinh"
-                :src="p.hinhAnhChinh" :alt="p.tenSanPham"
-                style="max-width:100%; max-height:90px; object-fit:contain;"
+                :src="p.hinhAnhChinh"
+                :alt="p.tenSanPham"
+                style="max-width: 100%; max-height: 100px; object-fit: contain;"
               />
-              <span v-else><Laptop :size="40" color="var(--text-muted)" /></span>
+              <span v-else style="font-size: 40px; opacity: 0.3;">💻</span>
             </div>
-            <!-- Info -->
-            <div class="p-2 d-flex flex-column gap-1 flex-grow-1">
+            <div class="p-2 d-flex flex-column gap-1">
               <p
-                class="fw-semibold mb-0"
-                style="font-size:10px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-clamp:2; color:var(--text-primary);"
+                class="mb-0 text-truncate"
+                style="font-size: 12px; color: #333333; font-weight: 500;"
               >
                 {{ p.tenSanPham }}
               </p>
-              <p class="mb-0" style="font-size:9px; color:var(--text-secondary);">{{ p.tenThuongHieu }}</p>
-              <p class="fw-black mb-0 mt-auto" style="font-size:11px; color:var(--accent-fg);">
+              <p style="font-size: 14px; font-weight: 700; color: #D40F28; margin: 0;">
                 {{ formatPrice(p.giaBan) }}
               </p>
             </div>
@@ -274,78 +303,114 @@
         </div>
       </div>
 
-      <!-- ── Mô tả sản phẩm ── -->
-      <div v-if="activeVariant.moTa" class="mt-5">
-        <h2 class="fw-bold mb-3" style="font-size:1rem; border-bottom:1px solid var(--border-color); padding-bottom:8px; color:var(--text-heading);">
-          {{ t('productDetail.description') }}
-        </h2>
-        <div class="small" style="line-height:1.8; white-space:pre-wrap; color:var(--text-secondary);">{{ activeVariant.moTa }}</div>
-      </div>
-
       <!-- ── Đánh giá sản phẩm ── -->
-      <div class="mt-5">
-        <h2 class="fw-bold mb-3" style="font-size:1rem; border-bottom:1px solid var(--border-color); padding-bottom:8px; color:var(--text-heading);">
-          {{ t('review.heading') }}
-          <span v-if="avgRating != null" class="fw-normal" style="font-size:0.85rem; color:var(--text-secondary);">
-            · <Star :size="13" fill="currentColor" style="vertical-align:-2px;" /> {{ avgRating.toFixed(1) }} ({{ reviews.length }})
+      <div class="mt-4 p-4 rounded" style="background: #FFFFFF; border: 1px solid #E5E5E7;">
+        <h3 class="fw-bold mb-3" style="font-size: 14px; color: #333333;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#D40F28" stroke="#D40F28" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Đánh giá sản phẩm
+          <span v-if="avgRating != null" style="font-weight: 400; font-size: 13px; color: #777777;">
+            · {{ avgRating.toFixed(1) }}/5 ({{ reviews.length }} đánh giá)
           </span>
-        </h2>
+        </h3>
 
-        <!-- Form viết đánh giá — chỉ hiện khi đã đăng nhập và chưa đánh giá -->
-        <div v-if="authUser && !myReview" class="mb-4 p-3 rounded-3" style="background:var(--bg-card); border:1px solid var(--border-color);">
+        <!-- Form đánh giá -->
+        <div v-if="authUser && !myReview" class="mb-4 p-3 rounded" style="background: #F5F5F7;">
           <div class="d-flex align-items-center gap-1 mb-2">
             <button
-              v-for="n in 5" :key="n" type="button"
-              class="btn btn-sm p-0" style="font-size:20px; background:transparent; border:none; line-height:1;"
+              v-for="n in 5"
+              :key="n"
+              type="button"
+              class="btn p-0"
+              style="background: transparent; border: none;"
               @click="newSoSao = n"
             >
-              <Star :size="20" :fill="n <= newSoSao ? 'currentColor' : 'none'" />
+              <svg width="24" height="24" viewBox="0 0 24 24" :fill="n <= newSoSao ? '#D40F28' : 'none'" :stroke="n <= newSoSao ? '#D40F28' : '#CCC'" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </button>
           </div>
           <textarea
-            v-model="newNoiDung" class="form-control form-control-sm mb-2" rows="2" maxlength="1000"
-            :placeholder="t('review.placeholder')"
+            v-model="newNoiDung"
+            class="form-control mb-2"
+            rows="3"
+            maxlength="1000"
+            placeholder="Chia sẻ cảm nhận của bạn về sản phẩm..."
+            style="font-size: 13px; border-radius: 6px; border: 1px solid #E5E5E7;"
           ></textarea>
-          <div v-if="reviewError" class="small text-danger mb-2">{{ reviewError }}</div>
-          <button class="btn btn-sm btn-warning fw-bold" :disabled="submittingReview" @click="submitReview">
-            {{ t('review.submit') }}
+          <div v-if="reviewError" class="small mb-2" style="color: #D40F28;">{{ reviewError }}</div>
+          <button
+            class="btn px-4 py-2"
+            style="background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%); color: #FFFFFF; border: none; border-radius: 6px; font-weight: 600; font-size: 13px;"
+            :disabled="submittingReview"
+            @click="submitReview"
+          >
+            Gửi đánh giá
           </button>
         </div>
-        <div v-else-if="!authUser" class="mb-4 small" style="color:var(--text-secondary);">
-          {{ t('review.loginToReview') }}
+
+        <div v-if="!authUser" class="mb-4" style="font-size: 13px; color: #777777;">
+          Vui lòng <a href="#" @click.prevent="$emit('open-login')" style="color: #0066CC;">đăng nhập</a> để đánh giá sản phẩm.
         </div>
 
         <!-- Đánh giá của tôi -->
         <div
-          v-if="myReview" class="mb-4 p-3 rounded-3 d-flex justify-content-between align-items-start gap-2"
-          style="background:rgba(244,63,94,0.08); border:1px solid rgba(244,63,94,0.3);"
+          v-if="myReview"
+          class="mb-4 p-3 rounded d-flex justify-content-between align-items-start gap-3"
+          style="background: rgba(244,63,94,0.05); border: 1px solid rgba(244,63,94,0.2);"
         >
           <div>
-            <div class="small fw-semibold mb-1" style="color:var(--text-primary);">
-              {{ t('review.yourReview') }} · <span class="d-inline-flex" style="gap:1px;"><Star v-for="n in myReview.soSao" :key="n" :size="13" fill="currentColor" /></span>
+            <div class="fw-medium mb-1" style="font-size: 13px; color: #333333;">
+              Đánh giá của bạn
+              <span class="ms-1" style="opacity: 0.7;">
+                <span style="font-size: 14px;" v-for="n in myReview.soSao" :key="n"><svg width="14" height="14" viewBox="0 0 24 24" fill="#D40F28" stroke="#D40F28" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+              </span>
             </div>
-            <div v-if="myReview.noiDung" class="small" style="color:var(--text-secondary);">{{ myReview.noiDung }}</div>
+            <div v-if="myReview.noiDung" style="font-size: 12px; color: #555555;">{{ myReview.noiDung }}</div>
           </div>
-          <button class="btn btn-sm btn-outline-danger flex-shrink-0" @click="deleteMyReview">{{ t('review.delete') }}</button>
+          <button
+            class="btn btn-sm"
+            style="border: 1px solid #D40F28; color: #D40F28; background: transparent; font-size: 12px;"
+            @click="deleteMyReview"
+          >
+            Xóa
+          </button>
         </div>
 
-        <!-- Danh sách đánh giá của khách khác -->
-        <div v-if="reviewsLoading" class="small" style="color:var(--text-secondary);">{{ t('review.loading') }}</div>
-        <div v-else-if="otherReviews.length === 0 && !myReview" class="small" style="color:var(--text-secondary);">
-          {{ t('review.empty') }}
+        <!-- Loading -->
+        <div v-if="reviewsLoading" style="font-size: 13px; color: #777777;">
+          Đang tải đánh giá...
         </div>
+
+        <!-- Empty state -->
+        <div v-else-if="reviews.length === 0 && !myReview" style="font-size: 13px; color: #777777;">
+          Chưa có đánh giá nào cho sản phẩm này.
+        </div>
+
+        <!-- Danh sách đánh giá -->
         <div v-else class="d-flex flex-column gap-3">
-          <div v-for="r in pagedReviews" :key="r.danhGiaId" class="pb-3" style="border-bottom:1px solid var(--border-color-soft);">
+          <div
+            v-for="r in pagedReviews"
+            :key="r.danhGiaId"
+            class="pb-3"
+            style="border-bottom: 1px solid #F0F0F0;"
+          >
             <div class="d-flex justify-content-between align-items-center mb-1">
-              <span class="fw-semibold small" style="color:var(--text-primary);">{{ r.tenKhachHang }}</span>
-              <span class="d-inline-flex" style="gap:1px;"><Star v-for="n in r.soSao" :key="n" :size="12" fill="currentColor" /></span>
+              <span class="fw-medium" style="font-size: 13px; color: #333333;">{{ r.tenKhachHang }}</span>
+              <span style="opacity: 0.8;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#D40F28" stroke="#D40F28" stroke-width="2" v-for="n in r.soSao" :key="n"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </span>
             </div>
-            <div v-if="r.noiDung" class="small" style="color:var(--text-secondary);">{{ r.noiDung }}</div>
+            <div v-if="r.noiDung" style="font-size: 12px; color: #555555;">{{ r.noiDung }}</div>
           </div>
-          <Pagination :current-page="reviewsPage" :total-pages="reviewsTotalPages" @page-change="reviewsPage = $event" />
+          <Pagination
+            v-if="reviewsTotalPages > 1"
+            :current-page="reviewsPage"
+            :total-pages="reviewsTotalPages"
+            @page-change="reviewsPage = $event"
+          />
         </div>
       </div>
-    </div><!-- /container -->
+    </div>
+
+    <!-- ── Footer ── -->
+    <AppFooter @open-register="$emit('open-register')" />
   </div>
 </template>
 
@@ -358,52 +423,54 @@ import * as DanhGiaService from '../../services/DanhGiaService.js';
 import * as SanPhamService from '../../services/SanPhamService.js';
 import Pagination from '../common/Pagination.vue';
 import { usePagination } from '../../composables/usePagination.js';
-import { Heart, Laptop, Palette, Shield, Star } from '@lucide/vue';
+import NavBar from '@/components/layout/NavBar.vue';
+import AppFooter from '@/components/layout/Footer.vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const goHome = () => {
+  emit('close');
+  router.push('/');
+};
 
 const props = defineProps({
-  product:     { type: Object,  required: true },
-  products:    { type: Array,   default: () => [] },
-  // Set các bienTheId đang yêu thích (App.vue giữ state dùng chung) — truyền cả Set thay vì
-  // 1 boolean tính sẵn, vì trang này cho đổi cấu hình/màu (activeVariant đổi bienTheId), phải
-  // tự tính lại theo đúng biến thể đang xem chứ không cố định theo product lúc mở trang.
+  product: { type: Object, required: true },
+  products: { type: Array, default: () => [] },
   wishlistIds: { type: Set, default: () => new Set() },
-  // Khách đang đăng nhập (null nếu chưa) — dùng để ẩn/hiện form đánh giá và nhận diện đánh giá
-  // của chính mình (so khachHangId), giống cách wishlist nhờ App.vue quyết định đăng nhập chưa.
   authUser: { type: Object, default: null },
+  cartCount: { type: Number, default: 0 },
 });
 
-defineEmits(['close', 'add-to-cart', 'open-product', 'toggle-wishlist']);
+const emit = defineEmits([
+  'close', 'add-to-cart', 'open-product', 'toggle-wishlist',
+  'toggle-cart', 'search', 'open-admin', 'open-account',
+  'open-login', 'logout', 'open-register',
+]);
 
-// Khóa scroll trang nền khi overlay mở để tránh 2 scrollbar
-onMounted(() => { document.body.style.overflow = 'hidden'; });
-onUnmounted(() => { document.body.style.overflow = ''; });
-
-// Tất cả biến thể cùng sanPhamId
+// Variants
 const variants = computed(() =>
   props.products.filter(p => p.sanPhamId === props.product.sanPhamId)
 );
 
-// Trạng thái lựa chọn
 const activeConfigKey = ref(configKey(props.product));
-const activeColor     = ref(props.product.mauSac ?? '');
+const activeColor = ref(props.product.mauSac ?? '');
 
-// Reset khi mở sản phẩm khác
 watch(() => props.product, (p) => {
   activeConfigKey.value = configKey(p);
-  activeColor.value     = p.mauSac ?? '';
+  activeColor.value = p.mauSac ?? '';
 });
 
-// Cấu hình duy nhất (deduplicate theo cpu+ram+oCung)
 const configs = computed(() => {
   const seen = new Set();
   return variants.value.filter(v => {
     const k = configKey(v);
     if (seen.has(k)) return false;
-    seen.add(k); return true;
+    seen.add(k);
+    return true;
   });
 });
 
-// Màu sắc của cấu hình đang chọn (deduplicate theo mauSac)
 const colorsForConfig = computed(() => {
   const seen = new Set();
   return variants.value
@@ -411,11 +478,11 @@ const colorsForConfig = computed(() => {
     .filter(v => {
       const c = v.mauSac ?? '';
       if (seen.has(c)) return false;
-      seen.add(c); return true;
+      seen.add(c);
+      return true;
     });
 });
 
-// Variant hiện tại = giao của cấu hình + màu đã chọn
 const activeVariant = computed(() =>
   variants.value.find(v =>
     configKey(v) === activeConfigKey.value &&
@@ -423,12 +490,14 @@ const activeVariant = computed(() =>
   ) ?? props.product
 );
 
-const isWishlisted = computed(() => props.wishlistIds.has(activeVariant.value.bienTheId));
+const isWishlisted = computed(() =>
+  props.wishlistIds.has(activeVariant.value.bienTheId)
+);
 
-// ── Gallery ảnh — server trả thêm ảnh ngoài ảnh đại diện (hinhAnhChinh) theo sanPhamId,
-// dùng chung cho mọi biến thể/màu nên chỉ cần tải lại khi đổi sang sản phẩm khác. ────────
+// Gallery
 const galleryExtra = ref([]);
 const activeImageIndex = ref(0);
+
 const loadGallery = async (sanPhamId) => {
   activeImageIndex.value = 0;
   try {
@@ -437,31 +506,37 @@ const loadGallery = async (sanPhamId) => {
     galleryExtra.value = [];
   }
 };
-onMounted(() => loadGallery(props.product.sanPhamId));
-watch(() => props.product.sanPhamId, (id) => loadGallery(id));
 
-// Ảnh đại diện (hinhAnhChinh) luôn là ảnh đầu — tránh trùng nếu backfill gallery đã có nó.
+watch(() => props.product.sanPhamId, (id) => loadGallery(id), { immediate: true });
+
 const galleryImages = computed(() => {
   const anh = activeVariant.value.hinhAnhChinh;
   const list = anh ? [anh, ...galleryExtra.value.filter((u) => u !== anh)] : galleryExtra.value;
   return list;
 });
-const displayedImage = computed(() => galleryImages.value[activeImageIndex.value] ?? activeVariant.value.hinhAnhChinh);
 
-// Ngưỡng "sắp hết hàng" — dùng chung với ProductCard.vue.
+const displayedImage = computed(() =>
+  galleryImages.value[activeImageIndex.value] ?? activeVariant.value.hinhAnhChinh
+);
+
+// Stock
 const LOW_STOCK_THRESHOLD = 5;
 
+const isOutOfStock = computed(() => {
+  return activeVariant.value.trangThai !== 'active' || (activeVariant.value.soLuongTon ?? 0) <= 0;
+});
+
 const stockBadgeClass = computed(() => {
-  if (activeVariant.value.trangThai !== 'active' || (activeVariant.value.soLuongTon ?? 0) <= 0) return 'bg-secondary';
+  if (isOutOfStock.value) return 'bg-secondary';
   if (activeVariant.value.soLuongTon <= LOW_STOCK_THRESHOLD) return 'bg-warning text-dark';
   return 'bg-success';
 });
 
 const stockBadgeText = computed(() => {
   const soLuong = activeVariant.value.soLuongTon ?? 0;
-  if (activeVariant.value.trangThai !== 'active' || soLuong <= 0) return t('productDetail.outOfStock');
-  if (soLuong <= LOW_STOCK_THRESHOLD) return t('productDetail.lowStockCount', { count: soLuong });
-  return t('productDetail.inStockCount', { count: soLuong });
+  if (isOutOfStock.value) return 'Hết hàng';
+  if (soLuong <= LOW_STOCK_THRESHOLD) return `Chỉ còn ${soLuong} máy`;
+  return `Còn ${soLuong} máy`;
 });
 
 const selectConfig = (v) => {
@@ -470,9 +545,12 @@ const selectConfig = (v) => {
   if (!available.find(vv => (vv.mauSac ?? '') === activeColor.value))
     activeColor.value = available[0]?.mauSac ?? '';
 };
-const selectColor = (v) => { activeColor.value = v.mauSac ?? ''; };
 
-// Sản phẩm gợi ý: cùng danh mục hoặc thương hiệu, khác sanPhamId, lấy 1 variant/sp
+const selectColor = (v) => {
+  activeColor.value = v.mauSac ?? '';
+};
+
+// Related
 const related = computed(() => {
   const seen = new Set();
   return props.products
@@ -488,41 +566,29 @@ const related = computed(() => {
     .slice(0, 8);
 });
 
-const formatPrice = (v) => (v == null ? t('productDetail.contact') : formatPriceRaw(v));
+const formatPrice = (v) => (v == null ? 'Liên hệ' : formatPriceRaw(v));
 
+// Spec groups
 const row = (label, value) => (value ? { label, value } : null);
 const specGroups = computed(() => {
   const v = activeVariant.value ?? {};
   const f = (arr) => arr.filter(Boolean);
-  const s = t('productDetail.specs');
   return {
     phancung: f([
-      row(s.cpu,  v.cpu),
-      row(s.ram,  v.ram),
-      row(s.storage, v.oCung),
-      row(s.gpu, v.gpu),
-    ]),
-    manha: f([
-      row(s.screenSize, v.kichThuocManHinh),
-      row(s.color,       v.mauSac),
-      row(s.weight,       v.trongLuongKg ? `${v.trongLuongKg} kg` : null),
+      row('CPU', v.cpu),
+      row('RAM', v.ram),
+      row('Ổ cứng', v.oCung),
+      row('Card đồ họa', v.gpu),
     ]),
     hethong: f([
-      row(s.os,      v.heDieuHanh),
-      row(s.battery, v.pin),
-      row(s.warranty, v.baoHanhThang ? `${v.baoHanhThang} ${t('productDetail.months')}` : null),
-    ]),
-    sanpham: f([
-      row(s.brand,       v.tenThuongHieu),
-      row(s.category,    v.tenDanhMuc),
-      row(s.supplier,    v.tenNhaCungCap),
-      row(s.productType, v.loaiSanPham),
+      row('Hệ điều hành', v.heDieuHanh),
+      row('Pin', v.pin),
+      row('Màn hình', v.kichThuocManHinh),
     ]),
   };
 });
 
-// ── Đánh giá sản phẩm — theo sanPhamId (chung cho mọi biến thể/màu), không đổi khi chọn lại
-// cấu hình/màu trong cùng lần mở nên chỉ cần load 1 lần lúc mount. ─────────────────────────
+// Reviews
 const reviews = ref([]);
 const reviewsLoading = ref(true);
 
@@ -536,17 +602,19 @@ const loadReviews = async () => {
     reviewsLoading.value = false;
   }
 };
+
 onMounted(loadReviews);
 
-// auth.user.id = khachHangId cho tài khoản khách hàng (xem AuthService.buildLoginResponse —
-// LoginResponse dùng field chung "id", không phải "khachHangId").
 const myReview = computed(() =>
   props.authUser ? reviews.value.find(r => r.khachHangId === props.authUser.id) ?? null : null
 );
+
 const otherReviews = computed(() =>
   reviews.value.filter(r => r.danhGiaId !== myReview.value?.danhGiaId)
 );
+
 const { currentPage: reviewsPage, totalPages: reviewsTotalPages, pagedItems: pagedReviews } = usePagination(otherReviews, 5);
+
 const avgRating = computed(() =>
   reviews.value.length ? reviews.value.reduce((sum, r) => sum + r.soSao, 0) / reviews.value.length : null
 );
@@ -566,7 +634,7 @@ const submitReview = async () => {
     newNoiDung.value = '';
     await loadReviews();
   } catch (e) {
-    reviewError.value = e.message || t('review.submitFailed');
+    reviewError.value = e.message || 'Không thể gửi đánh giá.';
   } finally {
     submittingReview.value = false;
   }
@@ -579,7 +647,10 @@ const deleteMyReview = async () => {
     if (!res.ok) { reviewError.value = await res.text().catch(() => res.statusText); return; }
     await loadReviews();
   } catch (e) {
-    reviewError.value = e.message || t('review.deleteFailed');
+    reviewError.value = e.message || 'Không thể xóa đánh giá.';
   }
 };
+
+onMounted(() => { document.body.style.overflow = 'hidden'; });
+onUnmounted(() => { document.body.style.overflow = ''; });
 </script>

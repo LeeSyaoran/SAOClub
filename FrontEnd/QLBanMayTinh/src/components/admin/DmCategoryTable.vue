@@ -485,6 +485,11 @@ const openSerials = (item) => {
               {{ search || activeFilterCount > 0
                 ? (t("admin.dmCategory.noResult") || "Không có kết quả phù hợp")
                 : (t("admin.dmCategory.empty", { label })) }}
+              <span v-if="search || activeFilterCount > 0" class="d-block mt-1 small">
+                <button type="button" class="btn btn-link p-0 small border-0" @click="clearFilters(); search = ''">
+                  Xóa bộ lọc để xem tất cả
+                </button>
+              </span>
             </td>
           </tr>
         </tbody>

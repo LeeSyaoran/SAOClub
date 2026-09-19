@@ -18,6 +18,7 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,14 @@ public class AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    public LoginResponse getCurrentUser(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new UsernameNotFoundException("Chưa đăng nhập");
+        }
+        String username = auth.getName();
+        return buildLoginResponse(username);
+    }
 
     public LoginResponse buildLoginResponse(String username) {
         TaiKhoan tk = taiKhoanRepository.findByUsername(username)
@@ -123,11 +132,25 @@ public class AuthService {
                     .orElseThrow(() -> new RuntimeException("Role khach_hang not found"));
 
             // Create KhachHang profile
+            // Lưu ý: so_dien_thoai NOT NULL UNIQUE trong DB — không được để "" (hai user GG/FB
+            // khác nhau sẽ trùng nhau → unique violation). Dùng prefix provider + uid làm
+            // placeholder duy nhất, user có thể cập nhật SĐT thật sau trong hồ sơ.
+            String phonePlaceholder = provider + "_" + uid;
+            if (phonePlaceholder.length() > 20) {
+                phonePlaceholder = phonePlaceholder.substring(0, 20);
+            }
             KhachHang kh = new KhachHang();
-            kh.setHoTen(name != null ? name : email);
+            kh.setHoTen(name != null ? name : (email != null ? email : "Khách hàng"));
             kh.setEmail(email);
-            kh.setSoDienThoai("");
-            kh.setTrangThai("active");
+            kh.setSoDienThoai(phonePlaceholder);
+            // dia_chi, hinh_anh là NULL trong DB
+            kh.setDiaChi(null);
+            kh.setHinhAnh(null);
+            kh.setLoaiKhach("ca_nhan"); // NOT NULL
+            kh.setDiemTichLuy(0);       // NOT NULL
+            kh.setTrangThai("active");   // NOT NULL DEFAULT 'active'
+            kh.setDaXoa(false);          // NOT NULL DEFAULT 0
+            kh.setSoDuVi(java.math.BigDecimal.ZERO); // NOT NULL DEFAULT 0
             kh.setNgayTao(LocalDateTime.now());
             kh = khachHangRepository.save(kh);
 

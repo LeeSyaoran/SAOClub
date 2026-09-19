@@ -3,8 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   FacebookAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   getAdditionalUserInfo,
 } from 'firebase/auth';
 
@@ -27,60 +26,30 @@ const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 const facebookProvider = new FacebookAuthProvider();
 
-// Đăng nhập Google — redirect flow (OAuth2 standard)
+// Đăng nhập Google — popup flow (không cần redirect)
 export async function signInWithGoogle() {
   try {
-    await signInWithRedirect(auth, googleProvider);
-    // Redirect xảy ra ngay, code bên dưới chạy sau khi redirect về
-    return null;
+    const result = await signInWithPopup(auth, googleProvider);
+    const { user: firebaseUser } = result;
+    const idToken = await firebaseUser.getIdToken();
+    const isNewUser = getAdditionalUserInfo(result)?.isNewUser ?? false;
+    return { idToken, provider: 'google', user: firebaseUser, isNewUser };
   } catch (error) {
     console.error('Google sign-in error:', error);
     throw error;
   }
 }
 
-// Đăng nhập Facebook — redirect flow (OAuth2 standard)
+// Đăng nhập Facebook — popup flow (không cần redirect)
 export async function signInWithFacebook() {
   try {
-    await signInWithRedirect(auth, facebookProvider);
-    // Redirect xảy ra ngay, code bên dưới chạy sau khi redirect về
-    return null;
+    const result = await signInWithPopup(auth, facebookProvider);
+    const { user: firebaseUser } = result;
+    const idToken = await firebaseUser.getIdToken();
+    const isNewUser = getAdditionalUserInfo(result)?.isNewUser ?? false;
+    return { idToken, provider: 'facebook', user: firebaseUser, isNewUser };
   } catch (error) {
     console.error('Facebook sign-in error:', error);
-    throw error;
-  }
-}
-
-// Lấy kết quả sau khi redirect về — gọi trong App.vue onMounted
-export async function handleRedirectResult() {
-  try {
-    const result = await getRedirectResult(auth);
-    if (!result) return null;
-
-    const { user, _tokenResponse } = result;
-    let idToken, provider;
-
-    // Xác định provider từ tokenResponse
-    if (_tokenResponse?.oauthIdToken) {
-      // Google
-      idToken = _tokenResponse.oauthIdToken;
-      provider = 'google';
-    } else if (_tokenResponse?.accessToken) {
-      // Facebook — Firebase đã exchange token rồi, lấy idToken từ user
-      idToken = await user.getIdToken();
-      provider = 'facebook';
-    } else {
-      throw new Error('Unknown OAuth provider');
-    }
-
-    return {
-      idToken,
-      provider,
-      user,
-      isNewUser: getAdditionalUserInfo(result)?.isNewUser ?? false,
-    };
-  } catch (error) {
-    console.error('Handle redirect result error:', error);
     throw error;
   }
 }
