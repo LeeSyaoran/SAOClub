@@ -10,7 +10,7 @@ export const LOCALES = [
 ];
 
 const STORAGE_KEY = "saoclub_locale";
-const saved = localStorage.getItem(STORAGE_KEY);
+const saved = typeof localStorage !== "undefined" && typeof localStorage.getItem === "function" ? localStorage.getItem(STORAGE_KEY) : null;
 
 export const I18nStore = reactive({
   locale: MESSAGES[saved] ? saved : "vi",
@@ -19,17 +19,29 @@ export const I18nStore = reactive({
 export const setLocale = (code) => {
   if (!MESSAGES[code]) return;
   I18nStore.locale = code;
-  localStorage.setItem(STORAGE_KEY, code);
+  if (typeof localStorage !== "undefined" && typeof localStorage.setItem === "function") {
+    localStorage.setItem(STORAGE_KEY, code);
+  }
 };
 
 // Tìm giá trị theo đường dẫn "a.b.c" trong object lồng nhau
 const resolve = (obj, path) => path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), obj);
 
-// t('nav.login') → chuỗi đã dịch theo locale hiện tại (fallback: vi, rồi chính key đó)
-export const t = (key, vars) => {
+// t('nav.login') → chuỗi đã dịch theo locale hiện tại (fallback: vi, rồi fallback argument, rồi chính key đó)
+export const t = (key, vars, fallback) => {
+  if (typeof vars === "string" && fallback === undefined) {
+    fallback = vars;
+    vars = undefined;
+  }
   let msg = resolve(MESSAGES[I18nStore.locale], key);
   if (msg == null) msg = resolve(MESSAGES.vi, key);
-  if (msg == null) return key;
+  if (msg == null) {
+    if (fallback !== undefined) {
+      if (!vars) return fallback;
+      return Object.keys(vars).reduce((s, k) => s.replaceAll(`{${k}}`, vars[k]), fallback);
+    }
+    return key;
+  }
   if (!vars) return msg;
   return Object.keys(vars).reduce((s, k) => s.replaceAll(`{${k}}`, vars[k]), msg);
 };
@@ -37,7 +49,8 @@ export const t = (key, vars) => {
 // Áp dụng ngôn ngữ mặc định hệ thống (Cài đặt) CHỈ khi người dùng chưa từng tự chọn ngôn
 // ngữ ở trình duyệt này (chưa có key trong localStorage) — không ghi đè lựa chọn đã có.
 export const applySystemDefaultLocale = (code) => {
-  if (!localStorage.getItem(STORAGE_KEY) && MESSAGES[code]) {
+  const hasSaved = typeof localStorage !== "undefined" && typeof localStorage.getItem === "function" && localStorage.getItem(STORAGE_KEY);
+  if (!hasSaved && MESSAGES[code]) {
     setLocale(code);
   }
 };

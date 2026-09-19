@@ -73,12 +73,27 @@ const serialsByBienThe = computed(() => {
   return map;
 });
 
-const itemsWithSerials = computed(() =>
-  chiTietList.value.map((c) => ({
+const itemsWithSerials = computed(() => {
+  // Fallback: nếu chiTietList rỗng (phiếu cũ chưa có dòng chi tiết) nhưng có serial,
+  // nhóm serial theo bienTheId và lookup maSku từ chính dữ liệu serial để hiển thị.
+  if (chiTietList.value.length === 0 && serialList.value.length > 0) {
+    const avgDonGia = phieu.value?.tongTien && serialList.value.length
+      ? phieu.value.tongTien / serialList.value.length
+      : 0;
+    return Array.from(serialsByBienThe.value.entries()).map(([bienTheId, serials]) => ({
+      id: bienTheId,
+      bienTheId,
+      maSku: serials[0]?.maSku || "—",
+      donGiaNhap: avgDonGia,
+      thanhTien: avgDonGia * serials.length,
+      serials,
+    }));
+  }
+  return chiTietList.value.map((c) => ({
     ...c,
     serials: serialsByBienThe.value.get(c.bienTheId) ?? [],
-  }))
-);
+  }));
+});
 
 const totalSerials = computed(() => serialList.value.length);
 
@@ -122,7 +137,12 @@ const loadAll = async () => {
   }
 };
 
+// watch phieuNhapId cơ bản để load khi id thay đổi.
 watch(phieuNhapId, () => loadAll());
+
+// force reload khi click cùng 1 phiếu 2 lần liên tiếp (vue-router không trigger
+// watch nếu param trùng) — watch route.fullPath bắt cả trường hợp này.
+watch(() => route.params.id, () => loadAll());
 
 onMounted(() => {
   loadAll();

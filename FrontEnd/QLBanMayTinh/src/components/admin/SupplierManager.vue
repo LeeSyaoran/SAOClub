@@ -8,7 +8,7 @@ import { showToast } from "../../stores/toast.js";
 import { SuppliersStore, ensureSuppliers, refreshSuppliers } from "../../stores/suppliers.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { Building2, Truck, X } from "@lucide/vue";
+import { Building2, Truck, X, Hash, Image, Phone, Mail, MapPin, FileText, User, Activity, SlidersHorizontal } from "@lucide/vue";
 
 onMounted(() => { ensureSuppliers(); });
 
@@ -202,34 +202,34 @@ const saveSupplier = async () => {
       <table class="alt-table">
         <thead>
           <tr>
-            <th style="width:40px;">{{ t("admin.common.stt") }}</th>
-            <th>Hình ảnh</th>
-            <th>{{ t("admin.suppliers.colName") }}</th>
-            <th>{{ t("admin.suppliers.colPhone") }}</th>
-            <th>{{ t("admin.suppliers.colEmail") }}</th>
-            <th>{{ t("admin.suppliers.colAddress") || "Địa chỉ" }}</th>
-            <th>{{ t("admin.suppliers.colTaxCode") || "Mã số thuế" }}</th>
-            <th>{{ t("admin.suppliers.colContact") }}</th>
-            <th>{{ t("admin.suppliers.colStatus") }}</th>
-            <th style="width:90px;">{{ t("admin.suppliers.colAction") }}</th>
+            <th style="width:4%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t("admin.common.stt") }}</span></th>
+            <th style="width:5%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Image :size="12" /> Hình ảnh</span></th>
+            <th style="width:18%;"><span class="d-inline-flex align-items-center gap-1.5"><Building2 :size="12" /> {{ t("admin.suppliers.colName") }}</span></th>
+            <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Phone :size="12" /> {{ t("admin.suppliers.colPhone") }}</span></th>
+            <th style="width:12%;"><span class="d-inline-flex align-items-center gap-1.5"><Mail :size="12" /> {{ t("admin.suppliers.colEmail") }}</span></th>
+            <th style="width:18%;"><span class="d-inline-flex align-items-center gap-1.5"><MapPin :size="12" /> {{ t("admin.suppliers.colAddress") || "Địa chỉ" }}</span></th>
+            <th style="width:9%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><FileText :size="12" /> {{ t("admin.suppliers.colTaxCode") || "Mã số thuế" }}</span></th>
+            <th style="width:10%;"><span class="d-inline-flex align-items-center gap-1.5"><User :size="12" /> {{ t("admin.suppliers.colContact") }}</span></th>
+            <th style="width:7%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t("admin.suppliers.colStatus") }}</span></th>
+            <th style="width:7%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t("admin.suppliers.colAction") }}</span></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(s, idx) in pagedSuppliers" :key="s.nhaCungCapId">
-            <td class="sup-stt">{{ currentPage * pageSize + idx + 1 }}</td>
-            <td>
-              <img v-if="s.hinhAnh" :src="s.hinhAnh" style="width:40px;height:40px;object-fit:contain;border-radius:4px;border:1px solid var(--border-color);" />
-              <div v-else class="sup-name__icon" style="margin:0;"><Truck :size="16" /></div>
+            <td class="sup-stt text-center">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td class="text-center">
+              <img v-if="s.hinhAnh" :src="s.hinhAnh" style="width:40px;height:40px;object-fit:contain;border-radius:4px;border:1px solid var(--border-color);" class="mx-auto" />
+              <div v-else class="sup-name__icon mx-auto" style="margin:0;"><Truck :size="16" /></div>
             </td>
             <td class="sup-name">
               <span>{{ s.tenNhaCungCap }}</span>
             </td>
-            <td class="sup-phone">{{ s.soDienThoai }}</td>
+            <td class="sup-phone text-center">{{ s.soDienThoai }}</td>
             <td class="sup-email">{{ s.email || "—" }}</td>
             <td class="sup-address" :title="s.diaChi">{{ s.diaChi || "—" }}</td>
-            <td class="sup-taxcode">{{ s.maSoThue || "—" }}</td>
+            <td class="sup-taxcode text-center">{{ s.maSoThue || "—" }}</td>
             <td class="sup-contact">{{ s.nguoiLienHe || "—" }}</td>
-            <td>
+            <td class="text-center">
               <span
                 class="alt-tag"
                 :style="s.trangThai === 'active'
@@ -239,7 +239,7 @@ const saveSupplier = async () => {
                 {{ statusLabel(s.trangThai) }}
               </span>
             </td>
-            <td>
+            <td class="text-center">
               <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEdit(s)">
                 {{ t("admin.suppliers.edit") }}
               </button>
@@ -338,7 +338,7 @@ const saveSupplier = async () => {
           {{ t("admin.productModal.cancel") }}
         </button>
         <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="saving" @click="saveSupplier">
-          <span v-if="saving">{{ t("admin.saving") || "Đang lưu..." }}</span>
+          <span v-if="saving">{{ t("admin.saving", "Đang lưu...") }}</span>
           <span v-else>{{ editingId ? t("admin.productModal.update") : t("admin.productModal.addNew") }}</span>
         </button>
       </div>

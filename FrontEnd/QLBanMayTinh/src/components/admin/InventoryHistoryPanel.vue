@@ -7,7 +7,7 @@ import * as NhanVienService from "../../services/NhanVienService.js";
 import { formatDateTime } from "../../utils/adminFormat.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { History, Package, User, X } from "@lucide/vue";
+import { History, Package, User, X, Hash, Calendar, Laptop, Tag, ArrowUpDown, Layers, FileText } from "@lucide/vue";
 
 const items = ref([]);
 const loading = ref(false);
@@ -194,20 +194,20 @@ const { currentPage, totalPages, pagedItems: pagedHistory, pageSize } = usePagin
       <table class="alt-table">
         <thead>
           <tr>
-            <th style="width:40px;">#</th>
-            <th style="width:140px;">{{ t("admin.inventoryHistory.colDate") }}</th>
-            <th>{{ t("admin.inventoryHistory.colProduct") }}</th>
-            <th style="width:130px;">{{ t("admin.inventoryHistory.colSku") }}</th>
-            <th style="width:120px;">{{ t("admin.inventoryHistory.colType") }}</th>
-            <th style="width:80px;">{{ t("admin.inventoryHistory.colQty") }}</th>
-            <th>{{ t("admin.inventoryHistory.colStaff") }}</th>
-            <th>{{ t("admin.inventoryHistory.colNote") }}</th>
+            <th style="width:4%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> #</span></th>
+            <th style="width:12%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> {{ t("admin.inventoryHistory.colDate") }}</span></th>
+            <th style="width:24%;"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> {{ t("admin.inventoryHistory.colProduct") }}</span></th>
+            <th style="width:12%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Tag :size="12" /> {{ t("admin.inventoryHistory.colSku") }}</span></th>
+            <th style="width:12%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><ArrowUpDown :size="12" /> {{ t("admin.inventoryHistory.colType") }}</span></th>
+            <th style="width:8%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Layers :size="12" /> {{ t("admin.inventoryHistory.colQty") }}</span></th>
+            <th style="width:13%;"><span class="d-inline-flex align-items-center gap-1.5"><User :size="12" /> {{ t("admin.inventoryHistory.colStaff") }}</span></th>
+            <th style="width:15%;"><span class="d-inline-flex align-items-center gap-1.5"><FileText :size="12" /> {{ t("admin.inventoryHistory.colNote") }}</span></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(h, idx) in pagedHistory" :key="h.lichSuId">
-            <td class="invhis-stt">{{ currentPage * pageSize + idx + 1 }}</td>
-            <td class="invhis-date">{{ formatDateTime(h.ngayTao) }}</td>
+            <td class="invhis-stt text-center">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td class="invhis-date text-center">{{ formatDateTime(h.ngayTao) }}</td>
             <td class="invhis-product">
               <div v-if="h.tenSanPham" class="invhis-product__name">
                 <Package :size="13" />
@@ -215,8 +215,8 @@ const { currentPage, totalPages, pagedItems: pagedHistory, pageSize } = usePagin
               </div>
               <span v-else class="text-secondary">—</span>
             </td>
-            <td class="invhis-sku">{{ h.maSku || "—" }}</td>
-            <td>
+            <td class="invhis-sku text-center">{{ h.maSku || "—" }}</td>
+            <td class="text-center">
               <span
                 class="invhis-type-tag"
                 :style="{ background: typeColor(h.loaiBienDong) + '26', color: typeColor(h.loaiBienDong) }"
@@ -224,7 +224,7 @@ const { currentPage, totalPages, pagedItems: pagedHistory, pageSize } = usePagin
                 {{ typeLabel(h.loaiBienDong) }}
               </span>
             </td>
-            <td class="invhis-qty" :class="h.soLuongThayDoi >= 0 ? 'invhis-qty--plus' : 'invhis-qty--minus'">
+            <td class="invhis-qty text-center" :class="h.soLuongThayDoi >= 0 ? 'invhis-qty--plus' : 'invhis-qty--minus'">
               {{ h.soLuongThayDoi >= 0 ? "+" : "" }}{{ h.soLuongThayDoi }}
             </td>
             <td class="invhis-staff">

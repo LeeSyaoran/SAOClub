@@ -17,12 +17,24 @@ export const requiredString = (fieldName) => z.string().min(1, `${fieldName} kh�
 
 export const numberSchema = z.number().min(0, 'Giá trị phải >= 0');
 
+export const isValidPhoneNumber = (phone) => {
+  if (!phone || typeof phone !== 'string') return false;
+  const clean = phone.trim();
+  if (clean.startsWith('google_') || clean.startsWith('fb_')) return false;
+  return /^0[0-9]{9,10}$/.test(clean);
+};
+
 export const checkoutInfoSchema = z.object({
-  soDienThoai: z.string().min(1, 'Vui lòng nhập số điện thoại'),
-  hoTen: z.string().min(1, 'Vui lòng nhập họ tên'),
   nguoiNhan: z.string().min(1, 'Vui lòng nhập tên người nhận'),
-  sdtNguoiNhan: z.string().min(1, 'Vui lòng nhập SĐT người nhận'),
+  sdtNguoiNhan: z.string()
+    .min(1, 'Vui lòng nhập số điện thoại người nhận')
+    .refine((val) => isValidPhoneNumber(val) || val === 'logged-in', {
+      message: 'Số điện thoại nhận hàng không hợp lệ (cần 10 số bắt đầu bằng 0)',
+    }),
   diaChiGiaoHangText: z.string().min(1, 'Vui lòng nhập địa chỉ giao hàng'),
+  soDienThoai: z.string().optional(),
+  hoTen: z.string().optional(),
+  email: emailSchema,
 });
 
 export const loginSchema = z.object({

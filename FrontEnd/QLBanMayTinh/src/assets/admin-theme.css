@@ -56,6 +56,11 @@
 .text-success { color: var(--success); }
 .text-info { color: var(--info); }
 
+/* ─── Gap Utilities for Icons & Content ─── */
+.gap-1 { gap: 5px !important; }
+.gap-1\.5 { gap: 7px !important; }
+.gap-2 { gap: 9px !important; }
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    CARD - Tất cả card trong admin đều dùng chung
    ═══════════════════════════════════════════════════════════════════════════════ */

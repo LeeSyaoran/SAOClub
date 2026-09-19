@@ -224,7 +224,7 @@ const showGiftVoucherModal = ref(false);
 
     <div v-else-if="activeDetailTab === 'wishlist'" class="customer-wishlist-panel">
       <div v-if="wishlistLoading" class="text-secondary small">{{ t('admin.customers.loading') }}</div>
-      <div v-else-if="wishlist.length === 0" class="text-secondary small">{{ t('admin.customerDetail.wishlistEmpty') || 'Khách hàng chưa có sản phẩm yêu thích nào.' }}</div>
+      <div v-else-if="wishlist.length === 0" class="text-secondary small">{{ t('admin.customerDetail.wishlistEmpty', 'Khách hàng chưa có sản phẩm yêu thích nào.') }}</div>
       <div v-else class="wishlist-grid">
         <div v-for="item in wishlist" :key="item.yeuThichId" class="wishlist-card">
           <div class="wishlist-card__img-wrap">

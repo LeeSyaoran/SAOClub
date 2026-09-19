@@ -2,6 +2,8 @@ package com.example.backend.controller;
 
 import com.example.backend.request.FirebaseTokenRequest;
 import com.example.backend.request.LoginRequest;
+import com.example.backend.request.HoSoRequest;
+import com.example.backend.response.LoginResponse;
 import com.example.backend.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +59,19 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Xác thực Firebase thất bại: " + e.getMessage());
+        }
+    }
+
+    // Cập nhật hồ sơ khách hàng sau khi Firebase login (hoàn tất thông tin bắt buộc)
+    @PutMapping("/profile")
+    public ResponseEntity<LoginResponse> updateProfile(Authentication auth, @Valid @RequestBody HoSoRequest request) {
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            return ResponseEntity.ok(authService.capNhatHoSo(auth.getName(), request));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 }

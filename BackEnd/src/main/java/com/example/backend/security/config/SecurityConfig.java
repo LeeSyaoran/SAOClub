@@ -95,6 +95,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/phieu-bao-hanh/**").permitAll()
                 .requestMatchers("/api/yeu-thich/**").authenticated()
 
+                // Chat endpoints — public cho khách (tạo phien, gui tin nhan), staff cho admin/NV
+                .requestMatchers("/ws/chat/**").permitAll()
+                .requestMatchers("/topic/**").permitAll()
+
                 .anyRequest().authenticated()
             )
 

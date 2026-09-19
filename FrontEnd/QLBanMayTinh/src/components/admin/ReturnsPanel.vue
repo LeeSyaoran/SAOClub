@@ -1,7 +1,11 @@
 <script setup>
 import { ref, computed, onMounted, reactive, watch } from "vue";
-import { Search } from "@lucide/vue";
-import { Filter, X, ChevronDown, ChevronUp } from "@lucide/vue";
+import {
+  Search, Filter, X, ChevronDown, ChevronUp,
+  Hash, FileText, Package, User, DollarSign, CreditCard, Activity,
+  SlidersHorizontal, RotateCcw, Clock, CheckCircle2, XCircle,
+  Wallet, Banknote, Landmark, Eye, Edit3, Plus,
+} from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as PhieuTraHangService from "../../services/PhieuTraHangService.js";
 import * as ChiTietTraHangService from "../../services/ChiTietTraHangService.js";
@@ -38,7 +42,18 @@ onMounted(() => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const customerName = (id) =>
-  (CustomersStore.items ?? []).find((c) => c.khachHangId === id)?.hoTen ?? `KH#${id}`;
+  (CustomersStore.items ?? []).find((c) => c.khachHangId === id)?.hoTen ?? (id > 0 ? `Khách #${id}` : 'Khách vãng lai');
+
+const returnStats = computed(() => {
+  const all = ReturnsStore?.items ?? [];
+  const choXuLy = all.filter((r) => r.trangThai === 'cho_xu_ly').length;
+  const daXuLy = all.filter((r) => r.trangThai === 'da_xu_ly').length;
+  const tuChoi = all.filter((r) => r.trangThai === 'tu_choi').length;
+  const tongTien = all
+    .filter((r) => r.trangThai === 'da_xu_ly')
+    .reduce((sum, r) => sum + (Number(r.soTienHoan) || 0), 0);
+  return { total: all.length, choXuLy, daXuLy, tuChoi, tongTien };
+});
 const productByBienThe = (bienTheId) =>
   (ProductsStore.items ?? []).find((p) => p.bienTheId === bienTheId);
 const staffName = (id) =>
@@ -317,10 +332,69 @@ const saveReturn = async () => {
 </script>
 
 <template>
+  <!-- KPI Summary Cards -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Tổng phiếu trả</div>
+            <div class="fs-4 fw-bold mt-1" style="color:var(--text-heading);">{{ returnStats.total }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(168,85,247,0.12);color:#a855f7;">
+            <RotateCcw :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Chờ xử lý</div>
+            <div class="fs-4 fw-bold mt-1 text-warning">{{ returnStats.choXuLy }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(234,179,8,0.12);color:#eab308;">
+            <Clock :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Đã xử lý</div>
+            <div class="fs-4 fw-bold mt-1 text-success">{{ returnStats.daXuLy }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(34,197,94,0.12);color:#22c55e;">
+            <CheckCircle2 :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="min-w-0 me-2">
+            <div class="text-secondary small fw-semibold text-truncate" style="font-size:11.5px;">Tổng tiền đã hoàn</div>
+            <div class="fs-5 fw-bold mt-1 text-danger font-monospace text-truncate">{{ formatPrice(returnStats.tongTien) }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(239,68,68,0.12);color:#ef4444;">
+            <DollarSign :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="alt-card">
     <div class="alt-toolbar">
-      <span class="alt-toolbar__count">{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
-        {{ t("admin.returns.countSuffix") }}</span>
+      <div class="d-flex align-items-center gap-2">
+        <RotateCcw :size="16" class="text-secondary" />
+        <span class="alt-toolbar__count">{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
+          {{ t("admin.returns.countSuffix") }}</span>
+      </div>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
           <Search class="alt-search__icon" :size="14" />
@@ -339,8 +413,8 @@ const saveReturn = async () => {
         <button v-if="activeFilterCount > 0" class="alt-btn alt-btn--ghost-sm" @click="resetFilters">
           <X :size="13" /> Xóa lọc
         </button>
-        <button v-if="!readonly" class="alt-btn alt-btn--primary" @click="openAdd">
-          {{ t("admin.returns.add") }}
+        <button v-if="!readonly" class="alt-btn alt-btn--primary d-inline-flex align-items-center gap-1.5" @click="openAdd">
+          <Plus :size="14" /> {{ t("admin.returns.add") }}
         </button>
       </div>
     </div>
@@ -395,34 +469,68 @@ const saveReturn = async () => {
       <table class="alt-table">
         <thead>
           <tr>
-            <th style="width: 40px">{{ t("admin.common.stt") }}</th>
-            <th>{{ t("admin.returns.colId") }}</th>
-            <th>{{ t("admin.returns.colOrder") }}</th>
-            <th>{{ t("admin.returns.colCustomer") }}</th>
-            <th>{{ t("admin.returns.colAmount") }}</th>
-            <th>{{ t("admin.returns.colHinhThucHoan") }}</th>
-            <th>{{ t("admin.returns.colStatus") }}</th>
-            <th>{{ t("admin.returns.colAction") }}</th>
+            <th style="width: 45px"><span class="d-inline-flex align-items-center gap-1"><Hash :size="12" /> {{ t("admin.common.stt") }}</span></th>
+            <th style="width: 90px"><span class="d-inline-flex align-items-center gap-1">{{ t("admin.returns.colId") }}</span></th>
+            <th><span class="d-inline-flex align-items-center gap-1">{{ t("admin.returns.colOrder") }}</span></th>
+            <th><span class="d-inline-flex align-items-center gap-1"><User :size="12" /> {{ t("admin.returns.colCustomer") }}</span></th>
+            <th><span class="d-inline-flex align-items-center gap-1"><DollarSign :size="12" /> {{ t("admin.returns.colAmount") }}</span></th>
+            <th><span class="d-inline-flex align-items-center gap-1"><CreditCard :size="12" /> {{ t("admin.returns.colHinhThucHoan") }}</span></th>
+            <th><span class="d-inline-flex align-items-center gap-1"><Activity :size="12" /> {{ t("admin.returns.colStatus") }}</span></th>
+            <th style="width: 100px"><span class="d-inline-flex align-items-center gap-1"><SlidersHorizontal :size="12" /> {{ t("admin.returns.colAction") }}</span></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(p, idx) in pagedReturns" :key="p.phieuTraId">
             <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-            <td class="text-secondary" style="font-family: monospace">
-              {{ p.maPhieu || "#" + p.phieuTraId }}
-            </td>
-            <td class="text-secondary">
-              {{ orderById(p.donHangId)?.maDonHang || "#" + p.donHangId }}
-            </td>
-            <td>{{ customerName(orderById(p.donHangId)?.khachHangId ?? -1) }}</td>
-            <td class="fw-semibold" style="color: var(--accent-fg)">
-              {{ formatPrice(p.soTienHoan) }}
-            </td>
-            <td class="text-secondary">
-              {{ hinhThucHoanLabel(p.hinhThucHoan) }}
+            <td>
+              <span class="badge font-monospace bg-body-secondary text-body-secondary border px-2 py-1">
+                {{ p.maPhieu || "#" + p.phieuTraId }}
+              </span>
             </td>
             <td>
+              <span class="badge font-monospace bg-light-subtle text-body border px-2 py-1">
+                {{ orderById(p.donHangId)?.maDonHang || "#" + p.donHangId }}
+              </span>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-1.5">
+                <User :size="13" class="text-secondary flex-shrink-0" />
+                <span :class="{ 'text-muted fst-italic': !orderById(p.donHangId)?.khachHangId || orderById(p.donHangId)?.khachHangId <= 0 }">
+                  {{ customerName(orderById(p.donHangId)?.khachHangId ?? -1) }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="fw-bold font-monospace" :class="Number(p.soTienHoan) > 0 ? 'text-danger' : 'text-muted'">
+                {{ formatPrice(p.soTienHoan) }}
+              </span>
+            </td>
+            <td>
+              <span v-if="p.hinhThucHoan === 'vi'" class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+                <Wallet :size="12" /> Ví điện tử
+              </span>
+              <span v-else-if="p.hinhThucHoan === 'tien_mat'" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+                <Banknote :size="12" /> Tiền mặt
+              </span>
+              <span v-else-if="p.hinhThucHoan === 'chuyen_khoan'" class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+                <Landmark :size="12" /> Chuyển khoản
+              </span>
+              <span v-else class="badge rounded-pill bg-secondary-subtle text-secondary border px-2 py-1" style="font-size:11px;">
+                {{ hinhThucHoanLabel(p.hinhThucHoan) }}
+              </span>
+            </td>
+            <td>
+              <span v-if="p.trangThai === 'cho_xu_ly'" class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1" style="font-size:11.5px;">
+                <Clock :size="12" /> {{ statusLabel(p.trangThai) }}
+              </span>
+              <span v-else-if="p.trangThai === 'da_xu_ly'" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1" style="font-size:11.5px;">
+                <CheckCircle2 :size="12" /> {{ statusLabel(p.trangThai) }}
+              </span>
+              <span v-else-if="p.trangThai === 'tu_choi'" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1" style="font-size:11.5px;">
+                <XCircle :size="12" /> {{ statusLabel(p.trangThai) }}
+              </span>
               <span
+                v-else
                 class="alt-tag"
                 :style="{
                   background: statusColor(p.trangThai).bg,
@@ -432,10 +540,14 @@ const saveReturn = async () => {
             </td>
             <td>
               <div class="d-flex gap-1">
-                <button class="alt-btn alt-btn--ghost" style="padding: 4px 12px" @click="openDetail(p)">
-                  {{
-                    readonly ? t("admin.returns.view") : t("admin.returns.edit")
-                  }}
+                <button
+                  class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 px-2.5 py-1 rounded-2"
+                  style="font-size:12px;"
+                  @click="openDetail(p)"
+                >
+                  <Eye v-if="readonly" :size="13" />
+                  <Edit3 v-else :size="13" />
+                  <span>{{ readonly ? t("admin.returns.view") : t("admin.returns.edit") }}</span>
                 </button>
               </div>
             </td>

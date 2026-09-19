@@ -13,7 +13,7 @@ import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { PromotionsStore, refreshPromotions } from "../../stores/promotions.js";
 import { refreshOrders } from "../../stores/orders.js";
 import CustomerFormModal from "./CustomerFormModal.vue";
-import ProductDetailModal from "./ProductDetailModal.vue";
+import PosVariantDetailPanel from "./PosVariantDetailPanel.vue";
 import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot } from "../../utils/productGrouping.js";
 import { POS_PAYMENT_METHODS, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
 import * as ThanhToanService from "../../services/ThanhToanService.js";
@@ -37,7 +37,7 @@ import { Laptop, ShoppingCart, Receipt, Info, Hash, X, Check, ImageOff, Printer,
 import InvoiceModal from "./InvoiceModal.vue";
 
 onMounted(async () => {
-  ensureProducts();
+  await ensureProducts();
   ensureCustomers();
   // Fetch luôn danh sách khuyến mãi khi vào POS — dropdown "Chọn mã giảm giá" cần có sẵn
   // dữ liệu trước khi nhân viên tick, không phụ thuộc AdminPage.fetchAll() đã chạy xong chưa
@@ -122,26 +122,26 @@ const posProducts = computed(() => {
 const posProductGroups = computed(() => groupBySanPham(posProducts.value));
 const posVariantCountMap = computed(() => variantCountBySanPham(posProducts.value));
 
-// Modal "Chi tiet san pham" xem-thuan (khong qua cong khach hang, khong dinh vao luong
-// them-vao-gio) — mo tu nut "Chi tiet" tren dong gio hang, dung lai ProductDetailModal.vue.
-// onlyBienTheIds gioi han modal chi hien DUNG cac bien the dang co trong nhom gio hang nay
-// (khong phai toan bo ho bien the trong catalogue) — them 1 bien the moi cung sanPhamId
-// vao gio thi lan mo sau se tu dong hien them, vi tinh lai luc mo (khong luu snapshot).
-const showPosDetailModal = ref(false);
-const posDetailSanPhamId = ref(null);
-const posDetailSanPhamName = ref('');
-const posDetailOnlyBienTheIds = ref(null);
+// Panel "Xem biến thể" (read-only) — thay thế ProductDetailModal khi bấm nút con mắt
+// trong POS catalog hoặc giỏ hàng. Hiện đầy đủ biến thể cùng sanPhamId (không giới
+// hạn theo giỏ), mỗi biến thể 1 card gọn gàng, không có nút Thêm/Sửa/Xoá.
+const showVariantDetailPanel = ref(false);
+const variantDetailSanPhamId = ref(null);
+const variantDetailSanPhamName = ref('');
+// Map bienTheId → số serial đang trong giỏ — truyền sang panel để hiện badge "Trong giỏ: N".
+const variantDetailCartCount = computed(() => {
+  const map = {};
+  posCart.value.forEach((item) => {
+    map[item.bienTheId] = (map[item.bienTheId] ?? 0) + (item.soLuong ?? 1);
+  });
+  return map;
+});
 const openPosDetail = async (g) => {
-  // Đảm bảo products đã loaded trước khi modal đọc ProductsStore.items
+  // Đảm bảo products đã loaded trước khi panel đọc ProductsStore.items
   await ensureProducts();
-  posDetailSanPhamId.value = g.sanPhamId;
-  posDetailSanPhamName.value = g.tenSanPham;
-  // Từ catalog: g là biến thể phẳng (không có .items) → hiện tất cả biến thể cùng sanPhamId.
-  // Từ cart: g.items chứa các serial khác biến thể → chỉ hiện các biến thể đang trong giỏ.
-  posDetailOnlyBienTheIds.value = g.items
-    ? [...new Set(g.items.map((i) => i.bienTheId))]
-    : null;
-  showPosDetailModal.value = true;
+  variantDetailSanPhamId.value = g.sanPhamId;
+  variantDetailSanPhamName.value = g.tenSanPham;
+  showVariantDetailPanel.value = true;
 };
 
 const posCartTotal = computed(() =>
@@ -1313,17 +1313,13 @@ const posPlaceOrder = async () => {
        CustomersTable.vue vi 2 noi mo modal doc lap nhau ══ -->
   <CustomerFormModal ref="quickCustomerModalRef" v-model="showQuickCustomerModal" @saved="onQuickCustomerSaved" />
 
-  <!-- ══ MODAL CHI TIET SAN PHAM (POS) — xem-thuan, mo tu nut "Chi tiet" tren dong gio hang,
-       chi hien dung cac bien the dang co trong nhom do (onlyBienTheIds). z-index 1080 cao hon
-       catalog overlay (1060) de khong bi che. ══ -->
-  <div v-if="showPosDetailModal" style="position:fixed;inset:0;z-index:1080;">
-    <ProductDetailModal
-      v-model="showPosDetailModal"
-      :san-pham-id="posDetailSanPhamId"
-      :san-pham-name="posDetailSanPhamName"
-      :only-bien-the-ids="posDetailOnlyBienTheIds"
-    />
-  </div>
+  <!-- ══ PANEL XEM BIEN THE (POS) — thay ProductDetailModal khi bam nut con mat. ══ -->
+  <PosVariantDetailPanel
+    v-model="showVariantDetailPanel"
+    :san-pham-id="variantDetailSanPhamId"
+    :san-pham-name="variantDetailSanPhamName"
+    :pos-cart-count="variantDetailCartCount"
+  />
 
   <!-- ══ MODAL DANH SÁCH SERIAL (BARCODE) — mở từ nút # trên cart item, hiện mỗi serial
        dạng mã vạch text lớn để nhân viên dễ nhìn/đối chiếu khi giao hàng ══ -->

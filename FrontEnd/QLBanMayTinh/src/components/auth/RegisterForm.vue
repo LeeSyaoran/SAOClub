@@ -140,13 +140,13 @@
         :disabled="submitting"
       >
         <span v-if="submitting" class="spinner-border spinner-border-sm"></span>
-        {{ submitting ? (t('register.submitting') || 'Đang xử lý...') : t('register.submit') }}
+        {{ submitting ? t('register.submitting', 'Đang đăng ký...') : t('register.submit') }}
       </button>
     </form>
 
     <!-- Chuyển sang đăng nhập -->
     <div class="text-center mt-4 pt-3 border-top small" style="border-color:var(--border-color)!important; color:var(--text-secondary);">
-      {{ t('register.hasAccount') }}
+      {{ t('register.hasAccount', t('register.haveAccount', 'Đã có tài khoản?')) }}
       <button
         type="button"
         class="btn btn-link btn-sm text-warning fw-bold p-0 text-decoration-none"

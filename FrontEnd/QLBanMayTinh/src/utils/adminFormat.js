@@ -5,7 +5,25 @@ import { formatPrice as formatPriceRaw } from "./formatPrice.js";
 // Trước đây là hàm cục bộ trong AdminPage.vue — promote lên đây để các trang khác
 // (StaffPage, WarehouseManagementPage) dùng lại được, không phải copy-paste.
 
-export const statusLabel = (s) => t(`admin.statusLabel.${s}`);
+export const statusLabel = (s) => {
+  if (s == null || s === "") return "—";
+  const str = String(s);
+  const normalized = str.toLowerCase();
+  // 1. Check lowercase in admin.statusLabel
+  const direct = t(`admin.statusLabel.${normalized}`);
+  if (direct && direct !== `admin.statusLabel.${normalized}`) return direct;
+  // 2. Check direct key in admin.statusLabel
+  const raw = t(`admin.statusLabel.${str}`);
+  if (raw && raw !== `admin.statusLabel.${str}`) return raw;
+  // 3. Fallback to orderStatus
+  const os = t(`orderStatus.${normalized}`);
+  if (os && os !== `orderStatus.${normalized}`) return os;
+  // 4. Fallback to admin.returnStatus
+  const rs = t(`admin.returnStatus.${normalized}`);
+  if (rs && rs !== `admin.returnStatus.${normalized}`) return rs;
+  // 5. If nothing matches, return original value rather than raw key code
+  return str;
+};
 
 export const formatPrice = (v) => (v == null ? "—" : formatPriceRaw(v));
 

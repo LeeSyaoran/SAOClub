@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { Search, Filter, ChevronDown, Plus } from "@lucide/vue";
-import { Hash, FolderOpen, X, Cpu, MemoryStick, HardDrive, Monitor, Image as ImageIcon } from "@lucide/vue";
+import { Hash, FolderOpen, X, Cpu, MemoryStick, HardDrive, Monitor, Image as ImageIcon, Package, SlidersHorizontal, Layers } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import { showToast } from "../../stores/toast.js";
 import { nowLocalIso } from "../../utils/datetime.js";
@@ -446,30 +446,36 @@ const openSerials = (item) => {
       <table class="alt-table">
         <thead>
           <tr>
-            <th style="width:40px;">{{ t("admin.common.stt") }}</th>
-            <th style="width:80px;">Hình ảnh</th>
-            <th>{{ nameLabel }}</th>
-            <th style="width:150px;">{{ t("admin.dmCategory.colStock") }}</th>
-            <th style="width:140px;">{{ t("admin.dmCategory.colAction") }}</th>
+            <th style="width:5%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t("admin.common.stt") }}</span></th>
+            <th style="width:8%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><ImageIcon :size="12" /> Hình ảnh</span></th>
+            <th style="width:55%;">
+              <span class="d-inline-flex align-items-center gap-1.5">
+                <component v-if="props.headerIcon && (typeof props.headerIcon === 'object' || typeof props.headerIcon === 'function')" :is="props.headerIcon" :size="12" />
+                <Layers v-else :size="12" />
+                {{ nameLabel }}
+              </span>
+            </th>
+            <th style="width:14%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Package :size="12" /> {{ t("admin.dmCategory.colStock") }}</span></th>
+            <th style="width:18%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t("admin.dmCategory.colAction") }}</span></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(item, idx) in pagedRows" :key="item[idField]">
-            <td class="dm-stt">{{ currentPage * pageSize + idx + 1 }}</td>
-            <td>
-              <div style="width: 40px; height: 40px; border-radius: 6px; overflow: hidden; background: var(--bg-input); display: flex; align-items: center; justify-content: center;">
+            <td class="dm-stt text-center">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td class="text-center">
+              <div class="mx-auto" style="width: 40px; height: 40px; border-radius: 6px; overflow: hidden; background: var(--bg-input); display: flex; align-items: center; justify-content: center;">
                 <img v-if="item.hinhAnh && !item.imgError" :src="item.hinhAnh" @error="item.imgError = true" style="width: 100%; height: 100%; object-fit: contain;" />
                 <ImageIcon v-else class="text-secondary" :size="20" />
               </div>
             </td>
             <td class="dm-name">{{ item[nameField] }}</td>
-            <td>
+            <td class="text-center">
               <span class="dm-stock-badge" :class="{ 'dm-stock--zero': stockCountOf(item) === 0 }">
                 {{ stockCountOf(item) }}
               </span>
             </td>
-            <td>
-              <div class="d-flex gap-1">
+            <td class="text-center">
+              <div class="d-flex justify-content-center gap-1">
                 <button class="alt-btn alt-btn--ghost" style="padding:4px 10px;" @click="openSerials(item)">
                   <Hash :size="12" style="vertical-align:-2px;" />
                   {{ t("admin.dmCategory.viewSerials", { count: stockCountOf(item) }) }}

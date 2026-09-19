@@ -85,14 +85,14 @@
         <span v-if="!submitting">{{ t('login.submit') }}</span>
         <span v-else class="d-flex align-items-center justify-content-center gap-2">
           <span class="spinner-border spinner-border-sm"></span>
-          {{ t('login.submitting') || 'Đang xử lý...' }}
+          {{ t('login.submitting', 'Đang đăng nhập...') }}
         </span>
       </button>
     </form>
 
     <!-- Divider -->
     <div class="divider">
-      <span class="divider-text">Hoặc đăng nhập với</span>
+      <span class="divider-text">{{ t('login.orLoginWith', 'Hoặc đăng nhập với') }}</span>
     </div>
 
     <!-- Social Login -->

@@ -88,24 +88,36 @@ public class AuthService {
         taiKhoanRepository.save(tk);
     }
 
-    public HoSoResponse capNhatHoSo(String username, HoSoRequest req) {
+    public LoginResponse capNhatHoSo(String username, HoSoRequest req) {
         TaiKhoan tk = taiKhoanRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + username));
-        NhanVien nv = tk.getNhanVien();
-        if (nv == null) {
-            throw new IllegalStateException("Tài khoản này không có hồ sơ nhân viên để chỉnh sửa");
-        }
-        nv.setHoTen(req.getHoTen());
-        nv.setSoDienThoai(req.getSoDienThoai());
-        nv.setEmail(req.getEmail());
-        nhanVienRepository.save(nv);
-        
-        if (req.getAvatarUrl() != null && !req.getAvatarUrl().isEmpty()) {
-            tk.setAvatarUrl(req.getAvatarUrl());
-            taiKhoanRepository.save(tk);
+
+        if (tk.getNhanVien() != null) {
+            NhanVien nv = tk.getNhanVien();
+            nv.setHoTen(req.getHoTen());
+            nv.setSoDienThoai(req.getSoDienThoai());
+            nv.setEmail(req.getEmail());
+            nhanVienRepository.save(nv);
+            if (req.getAvatarUrl() != null && !req.getAvatarUrl().isEmpty()) {
+                tk.setAvatarUrl(req.getAvatarUrl());
+                taiKhoanRepository.save(tk);
+            }
+        } else if (tk.getKhachHang() != null) {
+            KhachHang kh = tk.getKhachHang();
+            kh.setHoTen(req.getHoTen());
+            kh.setSoDienThoai(req.getSoDienThoai());
+            kh.setEmail(req.getEmail());
+            khachHangRepository.save(kh);
+            if (req.getAvatarUrl() != null && !req.getAvatarUrl().isEmpty()) {
+                tk.setAvatarUrl(req.getAvatarUrl());
+                taiKhoanRepository.save(tk);
+            }
+        } else {
+            throw new IllegalStateException("Tài khoản không có hồ sơ để chỉnh sửa");
         }
 
-        return new HoSoResponse(nv.getHoTen(), nv.getSoDienThoai(), nv.getEmail(), tk.getAvatarUrl());
+        // Trả LoginResponse với JWT mới sau khi update
+        return buildLoginResponse(username);
     }
 
     @Transactional
@@ -132,22 +144,16 @@ public class AuthService {
                     .orElseThrow(() -> new RuntimeException("Role khach_hang not found"));
 
             // Create KhachHang profile
-            // Lưu ý: so_dien_thoai NOT NULL UNIQUE trong DB — không được để "" (hai user GG/FB
-            // khác nhau sẽ trùng nhau → unique violation). Dùng prefix provider + uid làm
-            // placeholder duy nhất, user có thể cập nhật SĐT thật sau trong hồ sơ.
-            String phonePlaceholder = provider + "_" + uid;
-            if (phonePlaceholder.length() > 20) {
-                phonePlaceholder = phonePlaceholder.substring(0, 20);
-            }
+            // so_dien_thoai NULL được (migration mới: filtered unique index cho phép nhiều NULL).
+            // User Firebase sẽ tự cập nhật SĐT thật khi mua hàng — checkout sẽ bắt buộc điền.
             KhachHang kh = new KhachHang();
             kh.setHoTen(name != null ? name : (email != null ? email : "Khách hàng"));
             kh.setEmail(email);
-            kh.setSoDienThoai(phonePlaceholder);
-            // dia_chi, hinh_anh là NULL trong DB
-            kh.setDiaChi(null);
-            kh.setHinhAnh(null);
-            kh.setLoaiKhach("ca_nhan"); // NOT NULL
-            kh.setDiemTichLuy(0);       // NOT NULL
+            kh.setSoDienThoai(null);     // cho phép null; user cập nhật trong hồ sơ / khi checkout
+            kh.setDiaChi(null);          // NULL trong DB
+            kh.setHinhAnh(null);         // NULL trong DB
+            kh.setLoaiKhach("ca_nhan");  // NOT NULL
+            kh.setDiemTichLuy(0);        // NOT NULL
             kh.setTrangThai("active");   // NOT NULL DEFAULT 'active'
             kh.setDaXoa(false);          // NOT NULL DEFAULT 0
             kh.setSoDuVi(java.math.BigDecimal.ZERO); // NOT NULL DEFAULT 0

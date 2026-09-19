@@ -217,11 +217,12 @@ public class PhieuNhapKhoService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        // Insert serial
+        // Insert serial + chi_tiet_phieu_nhap cùng lúc
         for (PhieuNhapSerialDraft draft : drafts) {
             if (draft.getSerials() == null || draft.getSerials().isEmpty()) continue;
             BienTheSanPham bienThe = bienTheSanPhamRepository.findById(draft.getBienTheId())
                     .orElseThrow(() -> new IllegalArgumentException("Biến thể không tồn tại: " + draft.getBienTheId()));
+            int serialCount = 0;
             for (String soSerial : draft.getSerials()) {
                 if (soSerial == null || soSerial.isBlank()) continue;
                 ChiTietSanPham ctsp = new ChiTietSanPham();
@@ -244,6 +245,16 @@ public class PhieuNhapKhoService {
                 log.setGhiChu("Nhập kho từ phiếu " + phieu.getMaPhieuNhap());
                 log.setNgayTao(now);
                 lichSuTonKhoRepository.save(log);
+                serialCount++;
+            }
+            // Insert dòng chi tiết phiếu nhập (để frontend hiển thị đúng bảng SKU + đơn giá)
+            if (serialCount > 0) {
+                ChiTietPhieuNhap ctpn = new ChiTietPhieuNhap();
+                ctpn.setPhieuNhapKho(phieu);
+                ctpn.setBienThe(bienThe);
+                ctpn.setSoLuong(serialCount);
+                ctpn.setDonGiaNhap(draft.getDonGia() != null ? draft.getDonGia() : BigDecimal.ZERO);
+                chiTietPhieuNhapRepository.save(ctpn);
             }
         }
 

@@ -1,29 +1,51 @@
 <template>
   <div class="position-relative">
-    <input
-      v-model="query" class="form-control form-control-sm" style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);border-radius:10px;" :placeholder="placeholder"
-      @input="onInput"
-      @focus="onFocus"
-      @blur="onBlur"
-    />
-
-    <div
-      v-if="showSuggestions && suggestions.length" class="position-absolute w-100 rounded-3 mt-1 shadow-lg"
-      style="z-index:20; background:var(--bg-card); border:1px solid var(--border-color-strong); max-height:220px; overflow-y:auto;"
-    >
-      <div
-        v-for="s in suggestions" :key="s.place_id" class="px-3 py-2 small"
-        style="cursor:pointer;" @mousedown.prevent="selectSuggestion(s)"
-        @mouseenter="$event.currentTarget.style.background='var(--bg-hover)'"
-        @mouseleave="$event.currentTarget.style.background=''"
-      >
-        {{ s.display_name }}
+    <div class="address-input-wrapper position-relative d-flex align-items-center">
+      <MapPin :size="16" class="position-absolute start-0 ms-3 text-muted pointer-events-none" style="z-index:2;" />
+      <input
+        v-model="query"
+        type="text"
+        class="form-control form-control-sm ps-5 pe-5 address-field"
+        :placeholder="placeholder"
+        @input="onInput"
+        @focus="onFocus"
+        @blur="onBlur"
+      />
+      <div class="position-absolute end-0 me-2 d-flex align-items-center gap-1" style="z-index:2;">
+        <Loader2 v-if="searching" :size="14" class="text-warning spinner-border-sm" style="animation: spin 1s linear infinite;" />
+        <button
+          v-if="query && !searching"
+          type="button"
+          class="btn btn-sm btn-link p-0 text-muted hover-text-primary"
+          style="text-decoration:none; line-height:1;"
+          @mousedown.prevent="clearQuery"
+        >
+          <X :size="15" />
+        </button>
       </div>
     </div>
-    <div v-if="searching" class="small mt-1" style="color:var(--text-secondary);">{{ t('checkout.addressSearching') }}</div>
 
-    <div v-if="hasCoords" ref="mapEl" style="height:200px;border-radius:10px;margin-top:8px;overflow:hidden;"></div>
-    <div v-if="hasCoords" class="small mt-1" style="color:var(--text-secondary);">{{ t('checkout.addressDragHint') }}</div>
+    <!-- Dropdown gợi ý địa chỉ -->
+    <div
+      v-if="showSuggestions && suggestions.length"
+      class="position-absolute w-100 rounded-3 mt-1 shadow-lg suggestions-box"
+      style="z-index:100; background:var(--bg-card); border:1px solid var(--border-color-strong); max-height:220px; overflow-y:auto;"
+    >
+      <div
+        v-for="s in suggestions" :key="s.place_id"
+        class="px-3 py-2 small d-flex align-items-start gap-2 suggestion-item"
+        style="cursor:pointer;"
+        @mousedown.prevent="selectSuggestion(s)"
+      >
+        <MapPin :size="14" class="text-danger flex-shrink-0 mt-1" />
+        <span class="flex-grow-1" style="color:var(--text-primary);">{{ s.display_name }}</span>
+      </div>
+    </div>
+
+    <div v-if="hasCoords" ref="mapEl" class="border" style="height:180px;border-radius:10px;margin-top:8px;overflow:hidden;border-color:var(--border-color-soft) !important;"></div>
+    <div v-if="hasCoords" class="small mt-1 d-flex align-items-center gap-1" style="color:var(--text-secondary); font-size:11px;">
+      <MapPin :size="12" class="text-warning" /> {{ t('checkout.addressDragHint') }}
+    </div>
   </div>
 </template>
 
@@ -34,6 +56,7 @@
 // dùng gõ tìm; nếu lượng truy cập lớn hơn cần đổi sang provider trả phí hoặc tự host.
 import { ref, watch, nextTick, onBeforeUnmount } from 'vue';
 import { t } from '../../i18n/index.js';
+import { MapPin, X, Loader2 } from '@lucide/vue';
 import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -125,5 +148,40 @@ const selectSuggestion = async (s) => {
   await initMap(Number(s.lat), Number(s.lon));
 };
 
+const clearQuery = () => {
+  query.value = '';
+  emit('update:modelValue', '');
+  suggestions.value = [];
+  showSuggestions.value = false;
+};
+
 onBeforeUnmount(() => { if (map) { map.remove(); map = null; } });
 </script>
+
+<style scoped>
+.address-field {
+  background: var(--bg-input);
+  border-color: var(--border-color-strong);
+  color: var(--text-primary);
+  border-radius: 10px;
+  height: 38px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.address-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.15);
+}
+.suggestion-item {
+  transition: background 0.15s ease;
+  border-bottom: 1px solid var(--border-color-soft);
+}
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+.suggestion-item:hover {
+  background: var(--bg-hover);
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>

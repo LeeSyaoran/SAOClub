@@ -143,14 +143,14 @@
         <table class="hh-table">
           <thead>
             <tr>
-              <th class="hh-col-ma">Mã sản phẩm</th>
-              <th class="hh-col-ten">Tên sản phẩm</th>
-              <th class="ta-r">Giá bán</th>
-              <th class="ta-r">Giá vốn</th>
-              <th>Trạng thái</th>
-              <th>Ngày tạo</th>
-              <th>Ngày cập nhật</th>
-              <th class="hh-col-go"></th>
+              <th class="hh-col-ma" style="width: 12%;"><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã sản phẩm</span></th>
+              <th class="hh-col-ten" style="width: 30%;"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> Tên sản phẩm</span></th>
+              <th class="ta-r" style="width: 13%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> Giá bán</span></th>
+              <th class="ta-r" style="width: 13%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> Giá vốn</span></th>
+              <th class="ta-c" style="width: 10%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> Trạng thái</span></th>
+              <th class="ta-c" style="width: 10%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> Ngày tạo</span></th>
+              <th class="ta-c" style="width: 10%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><CalendarCheck :size="12" /> Ngày cập nhật</span></th>
+              <th class="hh-col-go ta-c" style="width: 2%; text-align: center;"></th>
             </tr>
           </thead>
 
@@ -177,12 +177,12 @@
               </td>
               <td class="ta-r hh-td-gia">{{ group.khoangGia }}</td>
               <td class="ta-r hh-td-gia hh-muted">{{ group.khoangGiaVon }}</td>
-              <td>
+              <td class="ta-c">
                 <span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span>
               </td>
-              <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayTao) }}</td>
-              <td class="hh-muted hh-td-ngay">{{ formatDate(group.ngayCapNhat) }}</td>
-              <td class="hh-col-go"><ChevronRight :size="14" /></td>
+              <td class="ta-c hh-muted hh-td-ngay">{{ formatDate(group.ngayTao) }}</td>
+              <td class="ta-c hh-muted hh-td-ngay">{{ formatDate(group.ngayCapNhat) }}</td>
+              <td class="hh-col-go ta-c"><ChevronRight :size="14" /></td>
             </tr>
           </tbody>
         </table>
@@ -309,12 +309,12 @@
                 <table class="hh-vt">
                   <thead>
                     <tr>
-                      <th>Mã SKU</th>
-                      <th>Mã vạch</th>
-                      <th>Cấu hình</th>
-                      <th class="ta-r">Giá vốn</th>
-                      <th class="ta-r">Giá bán</th>
-                      <th>Trạng thái</th>
+                      <th><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã SKU</span></th>
+                      <th><span class="d-inline-flex align-items-center gap-1.5"><Barcode :size="12" /> Mã vạch</span></th>
+                      <th><span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> Cấu hình</span></th>
+                      <th class="ta-r"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> Giá vốn</span></th>
+                      <th class="ta-r"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> Giá bán</span></th>
+                      <th><span class="d-inline-flex align-items-center gap-1.5"><Activity :size="12" /> Trạng thái</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -745,10 +745,10 @@
                     <table class="hh-matrix">
                       <thead>
                         <tr>
-                          <th class="hh-matrix__stt">#</th>
-                          <th>Mã SKU</th>
-                          <th>Mã vạch</th>
-                          <th>Cấu hình</th>
+                          <th class="hh-matrix__stt"><span class="d-inline-flex align-items-center gap-1.5"><Hash :size="12" /> #</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã SKU</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><Barcode :size="12" /> Mã vạch</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> Cấu hình</span></th>
                           <th></th>
                         </tr>
                       </thead>
@@ -907,7 +907,7 @@ import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '
 import * as bienTheApi from '@/services/bienTheSanPhamService.js'
 import * as sanPhamApi from '@/services/sanPhamService.js'
 import { getLichSu } from '@/services/SanPhamService.js'
-import { Cpu, MemoryStick, HardDrive, Palette, Monitor, Barcode, Search, X, Filter, ChevronDown, Plus, Download, RefreshCw, ChevronLeft, ChevronRight, Inbox, Hand, Edit, Pencil, Trash2, Copy, History, Star, BarChart2, Loader2, Save, ExternalLink, Clock, ArrowRight, Eraser, ShoppingBag, Phone, Mail, MapPin, Building2, Tag, Briefcase, FileText, Settings, ToggleLeft, User, IdCard, Headphones, Send, AlertCircle, Info, Link, ListOrdered, ListIcon, MousePointer2 } from '@lucide/vue'
+import { Cpu, MemoryStick, HardDrive, Palette, Monitor, Barcode, Search, X, Filter, ChevronDown, Plus, Download, RefreshCw, ChevronLeft, ChevronRight, Inbox, Hand, Edit, Pencil, Trash2, Copy, History, Star, BarChart2, Loader2, Save, ExternalLink, Clock, ArrowRight, Eraser, ShoppingBag, Phone, Mail, MapPin, Building2, Tag, Briefcase, FileText, Settings, ToggleLeft, User, IdCard, Headphones, Send, AlertCircle, Info, Link, ListOrdered, ListIcon, MousePointer2, Laptop, DollarSign, Coins, Activity, Calendar, CalendarCheck, Hash } from '@lucide/vue'
 import JsBarcode from 'jsbarcode'
 
 /* ════════════════════════════════════════════════════════════
@@ -2795,15 +2795,15 @@ const submitForm = async () => {
 .hh-row:focus-visible { outline: 2px solid var(--pink-500); outline-offset: -2px; }
 .hh-row:hover .hh-col-go { color: var(--pink-600); }
 
-.hh-col-ma { width: 130px; }
-.hh-col-ten { min-width: 260px; }
-.hh-col-go { width: 34px; text-align: center; color: var(--pink-200); }
+.hh-col-ma { width: 12%; }
+.hh-col-ten { width: 30%; }
+.hh-col-go { width: 2%; text-align: center; color: var(--pink-200); }
 .hh-td-ma { font-weight: 700; }
 .hh-td-gia { font-variant-numeric: tabular-nums; font-weight: 600; }
 .hh-td-ngay { font-size: 12.5px; }
 
-/* tên dài thì xuống dòng, không phá khung */
-.hh-td-ten { white-space: normal; max-width: 420px; }
+/* tên dài thì xuống dòng, dãn tự nhiên theo khung */
+.hh-td-ten { white-space: normal; }
 .hh-code__main { color: var(--pink-700); font-weight: 700; letter-spacing: .3px; }
 
 .hh-name { display: flex; align-items: center; gap: 10px; min-width: 0; }

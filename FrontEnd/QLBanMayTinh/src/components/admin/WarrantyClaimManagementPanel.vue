@@ -169,6 +169,22 @@ const rejectMode = ref(false);
 const newComment = ref('');
 const sendingComment = ref(false);
 
+const parseErrorMsg = async (res, fallback = "Thao tác không thành công, vui lòng thử lại.") => {
+  try {
+    const text = await res.text();
+    if (text) {
+      try {
+        const json = JSON.parse(text);
+        if (json.message) return json.message;
+        if (json.error) return json.error;
+      } catch {
+        return text;
+      }
+    }
+  } catch {}
+  return fallback;
+};
+
 const receiveClaim = async () => {
   if (!detailClaim.value) return;
   processing.value = true;
@@ -178,14 +194,15 @@ const receiveClaim = async () => {
       ngayBatDauXuLy: nowLocalIso(new Date()),
     });
     if (!res.ok) {
-      showToast(`Lỗi: ${res.status}`, 'error');
+      const msg = await parseErrorMsg(res, 'Tiếp nhận phiếu bảo hành thất bại.');
+      showToast(msg, 'error');
       return;
     }
     showToast('Đã tiếp nhận phiếu bảo hành', 'success');
     await refreshBaoHanh();
     closeDetail();
   } catch (e) {
-    showToast(e.message, 'error');
+    showToast(e?.message || 'Có lỗi xảy ra, vui lòng thử lại.', 'error');
   } finally {
     processing.value = false;
   }
@@ -201,11 +218,15 @@ const submitProcessing = async () => {
       chiPhiPhatSinh: receiptForm.value.chiPhiPhatSinh || 0,
     };
     const res = await PhieuBaoHanhService.updateStatus(detailClaim.value.baoHanhId, payload);
-    if (!res.ok) { showToast(`Lỗi: ${res.status}`, 'error'); return; }
+    if (!res.ok) {
+      const msg = await parseErrorMsg(res, 'Cập nhật tiến độ thất bại.');
+      showToast(msg, 'error');
+      return;
+    }
     showToast('Đã cập nhật tiến độ', 'success');
     await refreshBaoHanh();
   } catch (e) {
-    showToast(e.message, 'error');
+    showToast(e?.message || 'Có lỗi xảy ra, vui lòng thử lại.', 'error');
   } finally {
     processing.value = false;
   }
@@ -226,12 +247,16 @@ const completeClaim = async () => {
         : nowLocalIso(new Date()),
     };
     const res = await PhieuBaoHanhService.updateStatus(detailClaim.value.baoHanhId, payload);
-    if (!res.ok) { showToast(`Lỗi: ${res.status}`, 'error'); return; }
+    if (!res.ok) {
+      const msg = await parseErrorMsg(res, 'Hoàn thành phiếu bảo hành thất bại.');
+      showToast(msg, 'error');
+      return;
+    }
     showToast('Đã hoàn thành phiếu bảo hành', 'success');
     await refreshBaoHanh();
     closeDetail();
   } catch (e) {
-    showToast(e.message, 'error');
+    showToast(e?.message || 'Có lỗi xảy ra, vui lòng thử lại.', 'error');
   } finally {
     processing.value = false;
   }
@@ -251,12 +276,16 @@ const rejectClaim = async () => {
       trangThai: WARRANTY_STATUS.TU_CHOI,
       lyDoTuChoi: receiptForm.value.lyDoTuChoi,
     });
-    if (!res.ok) { showToast(`Lỗi: ${res.status}`, 'error'); return; }
+    if (!res.ok) {
+      const msg = await parseErrorMsg(res, 'Từ chối phiếu bảo hành thất bại.');
+      showToast(msg, 'error');
+      return;
+    }
     showToast('Đã từ chối phiếu', 'success');
     await refreshBaoHanh();
     closeDetail();
   } catch (e) {
-    showToast(e.message, 'error');
+    showToast(e?.message || 'Có lỗi xảy ra, vui lòng thử lại.', 'error');
   } finally {
     processing.value = false;
   }
@@ -267,13 +296,17 @@ const sendAdminComment = async () => {
   sendingComment.value = true;
   try {
     const res = await BinhLuanBaoHanhService.send(detailClaim.value.baoHanhId, newComment.value.trim());
-    if (!res.ok) { showToast(`Lỗi: ${res.status}`, 'error'); return; }
+    if (!res.ok) {
+      const msg = await parseErrorMsg(res, 'Gửi phản hồi thất bại.');
+      showToast(msg, 'error');
+      return;
+    }
     newComment.value = '';
     const comments = await BinhLuanBaoHanhService.getByBaoHanh(detailClaim.value.baoHanhId);
     detailComments.value = comments || [];
     showToast('Đã gửi phản hồi cho khách', 'success');
   } catch (e) {
-    showToast(e.message, 'error');
+    showToast(e?.message || 'Có lỗi xảy ra, vui lòng thử lại.', 'error');
   } finally {
     sendingComment.value = false;
   }

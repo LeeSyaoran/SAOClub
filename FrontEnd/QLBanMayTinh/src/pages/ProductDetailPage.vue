@@ -76,7 +76,7 @@
         <!-- ── Loading ── -->
         <div v-else-if="loading" class="text-center py-5">
           <div class="spinner-border" role="status" style="color: var(--accent);">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden">{{ t('common.loading') }}</span>
           </div>
         </div>
 

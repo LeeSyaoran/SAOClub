@@ -103,6 +103,16 @@
             <artifactId>firebase-admin</artifactId>
             <version>9.4.2</version>
         </dependency>
+        <!-- Spring WebSocket (STOMP) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        <!-- WebClient for Ollama API calls -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

@@ -6,6 +6,7 @@ import {
   CheckCircle2, XCircle, Clock, Package, ClipboardList, BarChart3, AlertTriangle,
   Ban, Search, Pencil, Printer, Download, Plus, Check, X, Trash2, Truck,
   Building2, User, Calendar, FileText, FolderOpen, Filter, ChevronDown, ChevronUp, RefreshCw, ExternalLink, Cpu, MemoryStick, HardDrive, Palette,
+  Tag, Laptop, DollarSign, Coins, Lock, Activity, CalendarCheck, Hash,
 } from '@lucide/vue';
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatPrice, formatDate, statusLabel, toLocalDT } from "../../utils/adminFormat.js";
@@ -1175,15 +1176,15 @@ const exportPhieuNhapExcel = () => {
           <table class="inv-table">
             <thead>
               <tr>
-                <th>{{ tt('admin.inventory.colProductCode', 'Mã sản phẩm') }}</th>
-                <th>{{ t('admin.variants.colProduct') }}</th>
-                <th>{{ t('admin.variants.colConfig') }}</th>
-                <th class="ta-r">{{ t('admin.variants.colPriceSell') }}</th>
-                <th class="ta-r">{{ tt('admin.inventory.colPriceBuy', 'Giá vốn') }}</th>
-                <th class="ta-c">{{ t('admin.inventory.colStock') }}</th>
-                <th class="ta-c">{{ tt('admin.inventory.colHeld', 'Giữ') }}</th>
-                <th>{{ t('admin.variants.colStatus') }}</th>
-                <th>{{ tt('admin.inventory.colUpdatedAt', 'Ngày cập nhật') }}</th>
+                <th style="width: 12%;"><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> {{ tt('admin.inventory.colProductCode', 'Mã sản phẩm') }}</span></th>
+                <th style="width: 24%;"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> {{ t('admin.variants.colProduct') }}</span></th>
+                <th style="width: 20%;"><span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> {{ t('admin.variants.colConfig') }}</span></th>
+                <th class="ta-r" style="width: 10%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t('admin.variants.colPriceSell') }}</span></th>
+                <th class="ta-r" style="width: 10%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> {{ tt('admin.inventory.colPriceBuy', 'Giá vốn') }}</span></th>
+                <th class="ta-c" style="width: 6%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Package :size="12" /> {{ t('admin.inventory.colStock') }}</span></th>
+                <th class="ta-c" style="width: 5%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Lock :size="12" /> {{ tt('admin.inventory.colHeld', 'Giữ') }}</span></th>
+                <th class="ta-c" style="width: 7%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t('admin.variants.colStatus') }}</span></th>
+                <th class="ta-c" style="width: 6%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><CalendarCheck :size="12" /> {{ tt('admin.inventory.colUpdatedAt', 'Ngày cập nhật') }}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -1211,10 +1212,10 @@ const exportPhieuNhapExcel = () => {
                 <td class="ta-r inv-muted">{{ formatPrice(v?.giaNhap) }}</td>
                 <td class="ta-c"><span class="inv-ton" :class="{ 'text-danger': status==='out', 'text-warning': status==='low', 'text-success': status==='ok', 'text-info': status==='pending' }">{{ item.soLuongTon ?? '—' }}</span></td>
                 <td class="ta-c"><span class="inv-held" :class="{ 'text-warning': item.soLuongGiu > 0 }">{{ item.soLuongGiu ?? 0 }}</span></td>
-                <td>
+                <td class="ta-c">
                   <span class="inv-tag" :class="'inv-tag--' + status">{{ stockStatusLabel(status) }}</span>
                 </td>
-                <td class="inv-muted">{{ formatDate(v?.ngayCapNhat) }}</td>
+                <td class="ta-c inv-muted">{{ formatDate(v?.ngayCapNhat) }}</td>
               </tr>
               <tr v-if="flatInventory.length === 0"><td colspan="9" class="inv-empty">{{ t('admin.inventory.empty') }}</td></tr>
             </tbody>
@@ -1341,24 +1342,24 @@ const exportPhieuNhapExcel = () => {
           <table class="inv-table">
             <thead>
               <tr>
-                <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-                <th>{{ t('admin.phieuNhap.colCode') }}</th>
-                <th>{{ t('admin.phieuNhap.colDate') }}</th>
-                <th>{{ t('admin.phieuNhap.colSupplier') }}</th>
-                <th>{{ t('admin.phieuNhap.colStaff') }}</th>
-                <th class="ta-r">{{ t('admin.phieuNhap.colTotal') }}</th>
-                <th>{{ t('admin.phieuNhap.colStatus') }}</th>
+                <th class="ta-c" style="width:5%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t('admin.common.stt') }}</span></th>
+                <th class="ta-c" style="width:15%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><FileText :size="12" /> {{ t('admin.phieuNhap.colCode') }}</span></th>
+                <th class="ta-c" style="width:12%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> {{ t('admin.phieuNhap.colDate') }}</span></th>
+                <th style="width:23%;"><span class="d-inline-flex align-items-center gap-1.5"><Building2 :size="12" /> {{ t('admin.phieuNhap.colSupplier') }}</span></th>
+                <th style="width:17%;"><span class="d-inline-flex align-items-center gap-1.5"><User :size="12" /> {{ t('admin.phieuNhap.colStaff') }}</span></th>
+                <th class="ta-r" style="width:15%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t('admin.phieuNhap.colTotal') }}</span></th>
+                <th class="ta-c" style="width:13%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t('admin.phieuNhap.colStatus') }}</span></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(p, idx) in pagedPhieuNhap" :key="p.phieuNhapId" class="inv-row" @click="openPhieuNhapDetail(p)">
-                <td class="inv-muted">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
-                <td class="inv-code">{{ p.maPhieuNhap }}</td>
-                <td>{{ formatDate(p.ngayNhap) }}</td>
+                <td class="inv-muted ta-c">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
+                <td class="inv-code ta-c">{{ p.maPhieuNhap }}</td>
+                <td class="ta-c">{{ formatDate(p.ngayNhap) }}</td>
                 <td>{{ supplierName(p.nhaCungCapId) }}</td>
                 <td>{{ staffName(p.nhanVienId) }}</td>
                 <td class="ta-r inv-price">{{ formatPrice(p.tongTien) }}</td>
-                <td>
+                <td class="ta-c">
                   <span class="inv-tag" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
                     <component :is="phieuNhapStatusIcon(p.trangThai)" :size="13" /> {{ statusLabel(p.trangThai) }}
                   </span>

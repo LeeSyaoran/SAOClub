@@ -752,6 +752,34 @@ BEGIN
         CONSTRAINT CK_kh_sodu_vi CHECK (so_du_vi >= 0);
 END
 
+-- ============================================================
+--  MIGRATION: Cho phép so_dien_thoai NULL (Firebase login placeholder)
+--  User đăng nhập bằng Google/FB chưa cập nhật SĐT thì cột này NULL,
+--  không dùng placeholder 'google_<uid>' nữa. UNIQUE cũ chỉ áp dụng khi có giá trị.
+-- ============================================================
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('khach_hang') AND name = 'so_dien_thoai' AND is_nullable = 0)
+BEGIN
+    -- Bỏ UNIQUE constraint cũ (tên tự sinh của SQL Server) trước khi đổi cột sang NULL
+    DECLARE @uq_kh_sdt NVARCHAR(200) = (
+        SELECT name FROM sys.key_constraints
+        WHERE parent_object_id = OBJECT_ID('khach_hang') AND type = 'UQ'
+          AND EXISTS (SELECT 1 FROM sys.indexes WHERE name = sys.key_constraints.name
+                      AND object_id = OBJECT_ID('khach_hang'))
+    );
+    IF @uq_kh_sdt IS NOT NULL
+        EXEC('ALTER TABLE khach_hang DROP CONSTRAINT ' + @uq_kh_sdt);
+
+    ALTER TABLE khach_hang ALTER COLUMN so_dien_thoai VARCHAR(20) NULL;
+END
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_khach_hang_sdt' AND object_id = OBJECT_ID('khach_hang'))
+BEGIN
+    -- Filtered unique: cho phép nhiều NULL (user GG/FB chưa cập nhật), vẫn đảm bảo
+    -- 2 user thường không trùng SĐT thật. WHERE NOT NULL tương đương Oracle unique.
+    CREATE UNIQUE INDEX UX_khach_hang_sdt ON khach_hang(so_dien_thoai) WHERE so_dien_thoai IS NOT NULL;
+END
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('phieu_tra_hang') AND name = 'hinh_thuc_hoan')
 BEGIN
     ALTER TABLE phieu_tra_hang ADD hinh_thuc_hoan NVARCHAR(20) NOT NULL DEFAULT N'vi'
@@ -2734,6 +2762,95 @@ GO
 select*from ton_kho
 select*from bien_the_san_pham
 select*from chi_tiet_san_pham
+
+-- ═══════════════════════════════════════════════════════════════════════════
+--  CHAT & AI CHATBOT
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Bảng 1: Cuộc trò chuyện
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'cuoc_tro_chuyen')
+BEGIN
+    CREATE TABLE cuoc_tro_chuyen (
+        id                     BIGINT IDENTITY(1,1) PRIMARY KEY,
+        loai_khach             NVARCHAR(20) NOT NULL,        -- 'HE_THONG' | 'ANONYMOUS'
+        khach_hang_id          INT NULL,
+        session_id             NVARCHAR(100) NULL,
+        ho_ten_khach          NVARCHAR(150) NULL,
+        trang_thai             NVARCHAR(30) DEFAULT 'HOI_DAP_AI',  -- HOI_DAP_AI | CHAT_NHAN_VIEN | DA_DONG
+        nhan_vien_phu_trach    INT NULL,
+        so_lan_escalate        INT DEFAULT 0,
+        created_at             DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at             DATETIME DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_ctc_kh FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
+        CONSTRAINT fk_ctc_nv FOREIGN KEY (nhan_vien_phu_trach) REFERENCES nhan_vien(nhan_vien_id)
+    );
+    CREATE INDEX idx_ctc_loai ON cuoc_tro_chuyen(loai_khach);
+    CREATE INDEX idx_ctc_kh ON cuoc_tro_chuyen(khach_hang_id);
+    CREATE INDEX idx_ctc_trang_thai ON cuoc_tro_chuyen(trang_thai);
+END
+GO
+
+-- Bảng 2: Tin nhắn
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'tin_nhan')
+BEGIN
+    CREATE TABLE tin_nhan (
+        id                     BIGINT IDENTITY(1,1) PRIMARY KEY,
+        cuoc_tro_chuyen_id     BIGINT NOT NULL,
+        nguoi_gui              NVARCHAR(20) NOT NULL,  -- 'KHACH' | 'NHAN_VIEN' | 'ADMIN' | 'AI'
+        nhan_vien_id           INT NULL,
+        noi_dung               NVARCHAR(MAX) NOT NULL,
+        loai_nguoi_gui        NVARCHAR(20) DEFAULT 'ANONYMOUS',  -- ANONYMOUS | KHACH_HANG | NHAN_VIEN | ADMIN | AI
+        da_doc                 BIT DEFAULT 0,
+        la_cau_hoi_cua_ai     BIT DEFAULT 0,
+        created_at             DATETIME DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_tn_ctc FOREIGN KEY (cuoc_tro_chuyen_id) REFERENCES cuoc_tro_chuyen(id),
+        CONSTRAINT fk_tn_nv FOREIGN KEY (nhan_vien_id) REFERENCES nhan_vien(nhan_vien_id)
+    );
+    CREATE INDEX idx_tn_ctc ON tin_nhan(cuoc_tro_chuyen_id);
+    CREATE INDEX idx_tn_chua_doc ON tin_nhan(cuoc_tro_chuyen_id, da_doc) WHERE da_doc = 0;
+END
+GO
+
+-- Bảng 3: Cơ sở kiến thức AI (RAG)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ai_kien_thuc')
+BEGIN
+    CREATE TABLE ai_kien_thuc (
+        id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+        loai            NVARCHAR(30) NOT NULL,  -- 'SAN_PHAM' | 'CHINH_SACH' | 'FAQ' | 'KHAC'
+        tieu_de         NVARCHAR(255) NOT NULL,
+        noi_dung        NVARCHAR(MAX) NOT NULL,
+        san_pham_id     INT NULL,
+        active          BIT DEFAULT 1,
+        created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_ai_kt_sp FOREIGN KEY (san_pham_id) REFERENCES san_pham(san_pham_id)
+    );
+    CREATE INDEX idx_ai_kien_thuc_loai ON ai_kien_thuc(loai);
+    CREATE INDEX idx_ai_kien_thuc_active ON ai_kien_thuc(active);
+END
+GO
+
+-- Seed cơ sở kiến thức mặc định
+IF NOT EXISTS (SELECT * FROM ai_kien_thuc)
+BEGIN
+    -- FAQ
+    INSERT INTO ai_kien_thuc (loai, tieu_de, noi_dung) VALUES
+    ('FAQ', 'Chính sách đổi trả', 'Quý khách được đổi trả sản phẩm trong vòng 7 ngày kể từ ngày mua nếu sản phẩm còn nguyên vẹn, chưa qua sử dụng và còn đầy đủ phụ kiện đi kèm. Sản phẩm được bảo hành theo chính sách bảo hành của nhà sản xuất.'),
+    ('FAQ', 'Phương thức thanh toán', 'Chúng tôi hỗ trợ thanh toán bằng tiền mặt, chuyển khoản ngân hàng, thẻ ATM nội địa và thẻ tín dụng quốc tế (Visa, Mastercard, JCB).'),
+    ('FAQ', 'Chính sách bảo hành', 'Tất cả sản phẩm laptop được bảo hành 12-24 tháng tùy theo nhà sản xuất. Bảo hành bao gồm lỗi phần cứng từ nhà sản xuất. Không bảo hành các lỗi do va đập, vào nước hoặc tự ý sửa chữa.'),
+    ('FAQ', 'Vận chuyển và giao hàng', 'Chúng tôi giao hàng toàn quốc qua các đơn vị vận chuyển uy tín. Nội thành TP.HCM và Hà Nội: 1-2 ngày. Các tỉnh khác: 2-5 ngày. Miễn phí vận chuyển cho đơn hàng từ 500.000đ.'),
+    ('FAQ', 'Laptop gaming', 'Chúng tôi cung cấp đa dạng laptop gaming từ các thương hiệu ASUS ROG, Acer Predator, MSI, Lenovo Legion, Dell G Series. Máy được trang bị card đồ họa rời NVIDIA GeForce RTX 30xx/40xx series.'),
+    ('FAQ', 'Laptop văn phòng', 'Dòng laptop văn phòng phù hợp cho công việc hàng ngày, học tập. Giá từ 10-20 triệu. Cấu hình đề xuất: CPU Intel Core i5/i7 thế hệ 13, RAM 8-16GB, SSD 512GB.'),
+    ('FAQ', 'Cách đặt hàng', 'Quý khách có thể đặt hàng trực tiếp trên website, gọi điện hotline hoặc đến cửa hàng. Sau khi đặt hàng, nhân viên sẽ liên hệ xác nhận trong vòng 30 phút.');
+
+    -- Chính sách
+    INSERT INTO ai_kien_thuc (loai, tieu_de, noi_dung) VALUES
+    ('CHINH_SACH', 'Giới thiệu cửa hàng', 'SAOClub là cửa hàng chuyên cung cấp laptop và thiết bị công nghệ chính hãng. Chúng tôi cam kết 100% sản phẩm chính hãng, giá tốt nhất thị trường và dịch vụ hậu mãi chu đáo.'),
+    ('CHINH_SACH', 'Tích điểm thưởng', 'Khách hàng tích lũy 1% giá trị đơn hàng vào tài khoản. Điểm thưởng có thể đổi thành phiếu giảm giá hoặc sử dụng để thanh toán đơn hàng tiếp theo.'),
+    ('CHINH_SACH', 'Khuyến mãi', 'Chúng tôi thường xuyên có các chương trình khuyến mãi hấp dẫn. Đăng ký nhận tin để cập nhật các ưu đãi mới nhất. Giảm 5-15% cho học sinh, sinh viên khi xuất trình thẻ.'),
+    ('CHINH_SACH', 'Liên hệ', 'Hotline: 1900.xxxx. Địa chỉ: [địa chỉ cửa hàng]. Giờ làm việc: 8h-21h các ngày trong tuần. Email: contact@saoclub.com');
+END
+GO
 
 -- Thêm cột serial_draft_json: lưu serial tạm khi tạo phiếu nhập, xóa sau khi duyệt.
 IF COL_LENGTH('phieu_nhap_kho', 'serial_draft_json') IS NULL

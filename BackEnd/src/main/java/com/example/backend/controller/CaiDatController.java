@@ -4,7 +4,7 @@ import com.example.backend.request.CaiDatHeThongRequest;
 import com.example.backend.request.DoiMatKhauRequest;
 import com.example.backend.request.HoSoRequest;
 import com.example.backend.response.CaiDatHeThongResponse;
-import com.example.backend.response.HoSoResponse;
+import com.example.backend.response.LoginResponse;
 import com.example.backend.service.AuthService;
 import com.example.backend.service.CaiDatHeThongService;
 import jakarta.validation.Valid;
@@ -59,7 +59,7 @@ public class CaiDatController {
     }
 
     @PutMapping("/ho-so")
-    public HoSoResponse capNhatHoSo(@Valid @RequestBody HoSoRequest req) {
+    public LoginResponse capNhatHoSo(@Valid @RequestBody HoSoRequest req) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return authService.capNhatHoSo(username, req);
     }

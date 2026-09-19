@@ -39,6 +39,14 @@ const activeTab = ref("info");
 const showEditModal = ref(false);
 const onSaved = () => refreshProducts();
 const back = () => router.push("/admin");
+
+const formatFieldName = (f) => {
+  if (!f) return "—";
+  const key = `admin.productDetail.fields.${f}`;
+  const translated = t(key);
+  if (translated && translated !== key) return translated;
+  return f;
+};
 </script>
 
 <template>
@@ -152,7 +160,7 @@ const back = () => router.push("/admin");
                 <span v-if="h.doiTuong === 'bien_the'">{{ t("admin.productDetail.historyTargetVariant") }} ({{ h.maSku }})</span>
                 <span v-else>{{ t("admin.productDetail.historyTargetProduct") }}</span>
               </td>
-              <td>{{ t(`admin.productDetail.fields.${h.tenTruong}`) }}</td>
+              <td>{{ formatFieldName(h.tenTruong) }}</td>
               <td class="text-secondary">{{ h.giaTriCu ?? "—" }}</td>
               <td class="text-primary">{{ h.giaTriMoi ?? "—" }}</td>
             </tr>

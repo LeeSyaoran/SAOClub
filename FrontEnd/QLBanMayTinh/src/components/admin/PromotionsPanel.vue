@@ -9,7 +9,7 @@ import { showToast } from "../../stores/toast.js";
 import { PromotionsStore, ensurePromotions, refreshPromotions } from "../../stores/promotions.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { Filter, RotateCcw, X, Plus, Gift, Tag, Sparkles, ChevronDown } from '@lucide/vue';
+import { Filter, RotateCcw, X, Plus, Gift, Tag, Sparkles, ChevronDown, Hash, FileText, Percent, DollarSign, Calendar, CalendarCheck, Users, Activity, SlidersHorizontal } from '@lucide/vue';
 
 onMounted(() => {
   ensurePromotions();
@@ -347,45 +347,45 @@ const savePromo = async () => {
         <table class="alt-table">
           <thead>
             <tr>
-              <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-              <th>{{ t('admin.promotions.colCode') }}</th>
-              <th>{{ t('admin.promotions.colName') }}</th>
-              <th>{{ t('admin.promotions.colType') }}</th>
-              <th>{{ t('admin.promotions.colValue') }}</th>
-              <th>{{ t('admin.promotions.colStart') }}</th>
-              <th>{{ t('admin.promotions.colEnd') }}</th>
-              <th>{{ t('admin.promotions.colUsed') }}</th>
-              <th>{{ t('admin.promotions.colStatus') }}</th>
-              <th>{{ t('admin.promotions.colAction') }}</th>
+              <th style="width:4%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t('admin.common.stt') }}</span></th>
+              <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Tag :size="12" /> {{ t('admin.promotions.colCode') }}</span></th>
+              <th style="width:20%;"><span class="d-inline-flex align-items-center gap-1.5"><FileText :size="12" /> {{ t('admin.promotions.colName') }}</span></th>
+              <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Percent :size="12" /> {{ t('admin.promotions.colType') }}</span></th>
+              <th style="width:10%; text-align:right;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t('admin.promotions.colValue') }}</span></th>
+              <th style="width:9%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> {{ t('admin.promotions.colStart') }}</span></th>
+              <th style="width:9%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><CalendarCheck :size="12" /> {{ t('admin.promotions.colEnd') }}</span></th>
+              <th style="width:9%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Users :size="12" /> {{ t('admin.promotions.colUsed') }}</span></th>
+              <th style="width:9%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t('admin.promotions.colStatus') }}</span></th>
+              <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t('admin.promotions.colAction') }}</span></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(p, idx) in pagedPromotions" :key="p.khuyenMaiId">
-              <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-              <td class="fw-bold" style="font-family:monospace; color:var(--pink-600, #db2777);">{{ p.maKhuyenMai }}</td>
+              <td class="text-secondary text-center">{{ currentPage * pageSize + idx + 1 }}</td>
+              <td class="fw-bold text-center" style="font-family:monospace; color:var(--pink-600, #db2777);">{{ p.maKhuyenMai }}</td>
               <td>{{ p.tenKhuyenMai }}</td>
-              <td>
+              <td class="text-center">
                 <span class="alt-tag" :style="p.loai==='percent' ? 'background:rgba(236,72,153,0.12); color:#db2777;' : 'background:rgba(59,130,246,0.12); color:#2563eb;'">
                   {{ p.loai === 'percent' ? t('admin.promotions.typePercent') : t('admin.promotions.typeFixed') }}
                 </span>
               </td>
-              <td class="fw-semibold" style="color:var(--accent-fg);">
+              <td class="fw-semibold text-end" style="color:var(--accent-fg);">
                 {{ p.loai === 'percent' ? `${p.giaTri}%` : formatPrice(p.giaTri) }}
               </td>
-              <td class="text-secondary">{{ formatDate(p.ngayBatDau) }}</td>
-              <td class="text-secondary">{{ formatDate(p.ngayKetThuc) }}</td>
-              <td>
+              <td class="text-secondary text-center">{{ formatDate(p.ngayBatDau) }}</td>
+              <td class="text-secondary text-center">{{ formatDate(p.ngayKetThuc) }}</td>
+              <td class="text-center">
                 <span :class="p.soLuongToiDa && p.soLanDaDung >= p.soLuongToiDa ? 'text-danger fw-bold' : ''">
                   {{ p.soLanDaDung ?? 0 }}/{{ p.soLuongToiDa ?? '∞' }}
                 </span>
               </td>
-              <td>
+              <td class="text-center">
                 <span class="alt-tag" :style="p.trangThai === 'active' ? 'background:rgba(22,163,74,0.14);color:var(--state-success);' : 'background:var(--bg-card-alt);color:var(--text-secondary);'">
                   {{ statusLabel(p.trangThai) }}
                 </span>
               </td>
-              <td>
-                <div class="d-flex gap-1">
+              <td class="text-center">
+                <div class="d-flex justify-content-center gap-1">
                   <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEdit(p)">{{ t('admin.promotions.edit') }}</button>
                 </div>
               </td>

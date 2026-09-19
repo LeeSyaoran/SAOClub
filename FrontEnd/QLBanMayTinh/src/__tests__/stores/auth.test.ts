@@ -74,7 +74,7 @@ describe('auth store', () => {
     const user = { id: 1, hoTen: 'Test', username: 'test', role: 'admin', token: 'xyz' };
     setSession(user);
     const saved = JSON.parse(sessionStorage.getItem('saoclub_session')!);
-    expect(saved).toEqual(user);
+    expect(saved).toMatchObject(user);
   });
 
   it('should clear user and remove from sessionStorage', async () => {

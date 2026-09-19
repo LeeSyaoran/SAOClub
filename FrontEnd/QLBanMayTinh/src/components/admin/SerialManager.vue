@@ -1,7 +1,11 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from "vue";
-import { Search } from "@lucide/vue";
-import { Filter, X, ChevronDown, ChevronUp } from "@lucide/vue";
+import {
+  Search, Filter, X, ChevronDown, ChevronUp,
+  Hash, Layers, Laptop, Barcode, Activity, Calendar,
+  SlidersHorizontal, CheckCircle2, Clock, Package, AlertTriangle,
+  RotateCcw, Eye, Pencil, Trash2, Plus, Cpu, MemoryStick, HardDrive, Monitor, Lock, User,
+} from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../../services/ChiTietLinhKienService.js";
@@ -51,7 +55,7 @@ const load = async () => {
     loading.value = false;
   }
 };
-let refreshTimer;
+let refreshTimer = null;
 onMounted(() => {
   load();
   ensureProducts();
@@ -96,6 +100,28 @@ const rowSpecLabel = (item) => {
   if (item.loai === 'sanPham') return variantLabel(item.bienTheId) || item.maSku;
   const meta = LINH_KIEN_META[item.loai];
   return meta ? item[meta.nameField] : '';
+};
+
+const itemProductName = (item) => {
+  if (item.loai === 'sanPham') {
+    const v = findVariant(item.bienTheId);
+    if (v?.tenSanPham) return v.tenSanPham;
+    const label = variantLabel(item.bienTheId);
+    if (label && label.includes(' — ')) return label.split(' — ')[0];
+    return label || item.tenSanPham || item.maSku || '—';
+  }
+  return rowSpecLabel(item);
+};
+
+const itemProductSku = (item) => {
+  if (item.loai === 'sanPham') {
+    const v = findVariant(item.bienTheId);
+    if (v?.maSku) return v.maSku;
+    const label = variantLabel(item.bienTheId);
+    if (label && label.includes(' — ')) return label.split(' — ')[1];
+    return item.maSku || '';
+  }
+  return '';
 };
 
 // ── Bộ lọc nâng cao: Serial ────────────────────────────────────────────────────
@@ -149,6 +175,14 @@ const STATUS_COLOR = {
 };
 const statusColor = (s) => STATUS_COLOR[s] ?? '#6b7280';
 const statusLabel = (s) => t(`admin.statusLabel.${s}`);
+
+const serialStats = computed(() => {
+  const all = items.value ?? [];
+  const trongKho = all.filter((i) => i.trangThai === 'trong_kho').length;
+  const daBan = all.filter((i) => i.trangThai === 'da_ban').length;
+  const giuHangOrLoi = all.filter((i) => i.trangThai === 'giu_hang' || i.trangThai === 'loi_bao_hanh').length;
+  return { total: all.length, trongKho, daBan, giuHangOrLoi };
+});
 
 // Kiểm tra serial có đang trong giỏ POS hiện tại không (cùng tab, tức thì)
 const isInPosCart = (item) => item.loai === 'sanPham' && posCartChiTietIds.value.has(item.chiTietId);
@@ -269,9 +303,68 @@ const deleteSerial = async (item) => {
 </script>
 
 <template>
+  <!-- KPI Summary Cards for Serial Manager -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Tổng serial hệ thống</div>
+            <div class="fs-4 fw-bold mt-1" style="color:var(--text-heading);">{{ serialStats.total }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(168,85,247,0.12);color:#a855f7;">
+            <Barcode :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Đang trong kho (sẵn bán)</div>
+            <div class="fs-4 fw-bold mt-1 text-success">{{ serialStats.trongKho }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(34,197,94,0.12);color:#22c55e;">
+            <CheckCircle2 :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Đã xuất bán</div>
+            <div class="fs-4 fw-bold mt-1 text-primary">{{ serialStats.daBan }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(59,130,246,0.12);color:#3b82f6;">
+            <Package :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Giữ hàng POS / Lỗi</div>
+            <div class="fs-4 fw-bold mt-1 text-warning">{{ serialStats.giuHangOrLoi }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(234,179,8,0.12);color:#eab308;">
+            <Clock :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="alt-card">
     <div class="alt-toolbar">
-      <span class="alt-toolbar__count">{{ filteredItems.length }}/{{ items.length }} serial</span>
+      <div class="d-flex align-items-center gap-2">
+        <Barcode :size="16" class="text-secondary" />
+        <span class="alt-toolbar__count">{{ filteredItems.length }}/{{ items.length }} serial</span>
+      </div>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
           <Search class="alt-search__icon" :size="14" />
@@ -290,7 +383,9 @@ const deleteSerial = async (item) => {
         <button v-if="activeFilterCount > 0" class="alt-btn alt-btn--ghost-sm" @click="resetFilters">
           <X :size="13" /> Xóa lọc
         </button>
-        <button class="alt-btn alt-btn--primary" @click="openAdd">{{ t('admin.serialManager.add') }}</button>
+        <button class="alt-btn alt-btn--primary d-inline-flex align-items-center gap-1.5" @click="openAdd">
+          <Plus :size="14" /> {{ t('admin.serialManager.add') }}
+        </button>
       </div>
     </div>
 
@@ -343,17 +438,17 @@ const deleteSerial = async (item) => {
 
     <div v-if="loading" class="alt-empty">{{ t('admin.serialManager.loading') }}</div>
     <div v-else class="alt-table-wrap">
-      <table class="alt-table">
+      <table class="alt-table" style="width: 100%; min-width: 950px;">
         <thead>
           <tr>
-            <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-            <th>{{ t('admin.serialManager.colLoai') }}</th>
-            <th>{{ t('admin.serialManager.colVariant') }}</th>
-            <th>{{ t('admin.serialManager.colSerial') }}</th>
-            <th>{{ t('admin.serialManager.colStatus') }}</th>
-            <th>{{ t('admin.serialManager.colDate') }}</th>
-            <th>{{ t('admin.serialManager.colNote') }}</th>
-            <th style="width:140px;">{{ t('admin.serialManager.colAction') }}</th>
+            <th style="width:4%; min-width:45px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t('admin.common.stt') }}</span></th>
+            <th style="width:8%; min-width:85px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Layers :size="12" /> {{ t('admin.serialManager.colLoai') }}</span></th>
+            <th style="width:25%; min-width:180px;"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> {{ t('admin.serialManager.colVariant') }}</span></th>
+            <th style="width:17%; min-width:160px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Barcode :size="12" /> {{ t('admin.serialManager.colSerial') }}</span></th>
+            <th style="width:11%; min-width:110px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t('admin.serialManager.colStatus') }}</span></th>
+            <th style="width:11%; min-width:120px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><User :size="12" /> {{ t('admin.serialManager.colPerformer') }}</span></th>
+            <th style="width:9%; min-width:95px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> {{ t('admin.serialManager.colDate') }}</span></th>
+            <th style="width:16%; min-width:235px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t('admin.serialManager.colAction') }}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -362,31 +457,121 @@ const deleteSerial = async (item) => {
             :key="`${item.loai}-${item.rowId}`"
             :class="{ 'sm-row--held': item.trangThai === 'giu_hang' }"
           >
-            <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
-            <td>{{ t(`admin.productsTabs.${item.loai}`) }}</td>
-            <td>{{ rowSpecLabel(item) }}</td>
-            <td style="font-family:monospace;">{{ item.soSerial }}</td>
+            <td class="text-center text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td class="text-center text-nowrap">
+              <span v-if="item.loai === 'sanPham'" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+                <Laptop :size="11" /> Sản phẩm
+              </span>
+              <span v-else-if="item.loai === 'cpu'" class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+                <Cpu :size="11" /> CPU
+              </span>
+              <span v-else-if="item.loai === 'ram'" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+                <MemoryStick :size="11" /> RAM
+              </span>
+              <span v-else-if="item.loai === 'gpu'" class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+                <Monitor :size="11" /> GPU
+              </span>
+              <span v-else-if="item.loai === 'oCung'" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+                <HardDrive :size="11" /> Ổ cứng
+              </span>
+              <span v-else class="badge rounded-pill bg-secondary-subtle text-secondary border px-2 py-1" style="font-size:11px;">
+                {{ t(`admin.productsTabs.${item.loai}`) }}
+              </span>
+            </td>
             <td>
-              <span v-if="item.trangThai === 'giu_hang'" class="sm-badge sm-badge--held" :title="isInPosCart(item) ? 'Đang trong giỏ POS hiện tại' : 'Đang giữ (có thể từ phiên POS khác)'">
+              <div v-if="item.loai === 'sanPham'" class="d-flex flex-column py-0.5">
+                <span class="fw-semibold" style="color:var(--text-heading); font-size: 0.86rem; line-height: 1.35; word-break: break-word;" :title="itemProductName(item)">
+                  {{ itemProductName(item) }}
+                </span>
+                <span v-if="itemProductSku(item)" class="text-secondary font-monospace" style="font-size: 0.74rem;">
+                  {{ itemProductSku(item) }}
+                </span>
+              </div>
+              <div v-else>
+                <span class="fw-semibold" style="color:var(--text-heading); font-size: 0.86rem; line-height: 1.35; word-break: break-word;">
+                  {{ rowSpecLabel(item) }}
+                </span>
+              </div>
+            </td>
+            <td class="text-center text-nowrap">
+              <span class="font-monospace fw-semibold px-2 py-0.5 rounded text-nowrap" style="font-size: 0.83rem; background: var(--bg-card-alt); border: 1px solid var(--border-color-soft); color: var(--text-primary); letter-spacing: 0.3px; white-space: nowrap; display: inline-block;">
+                {{ item.soSerial }}
+              </span>
+            </td>
+            <td class="text-center text-nowrap">
+              <span v-if="item.trangThai === 'giu_hang'" class="sm-badge sm-badge--held text-nowrap" :title="isInPosCart(item) ? 'Đang trong giỏ POS hiện tại' : 'Đang giữ (có thể từ phiên POS khác)'">
                 <span class="sm-dot sm-dot--held"></span>
+                <Clock :size="11" class="me-1" />
                 {{ statusLabel(item.trangThai) }}
-                <span v-if="isInPosCart(item)" class="sm-pos-indicator" title="Đang trong giỏ POS">⬤ POS</span>
               </span>
-              <span v-else-if="item.lockedBy && item.lockedByTen" class="sm-badge" style="background:#b45309;color:#fef9c3;" :title="`Đang được ${item.lockedByTen} chọn trong picker`">
-                🔒 {{ item.lockedByTen }}
+              <span v-else-if="item.trangThai === 'trong_kho'" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
+                <CheckCircle2 :size="12" /> {{ statusLabel(item.trangThai) }}
               </span>
-              <span v-else>
+              <span v-else-if="item.trangThai === 'da_ban'" class="badge rounded-pill bg-secondary-subtle text-secondary border px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
+                <Package :size="12" /> {{ statusLabel(item.trangThai) }}
+              </span>
+              <span v-else-if="item.trangThai === 'loi_bao_hanh'" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
+                <AlertTriangle :size="12" /> {{ statusLabel(item.trangThai) }}
+              </span>
+              <span v-else-if="item.trangThai === 'da_tra_hang'" class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
+                <RotateCcw :size="12" /> {{ statusLabel(item.trangThai) }}
+              </span>
+              <span v-else class="text-nowrap">
                 <span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;" :style="{ background: statusColor(item.trangThai) }"></span>
                 {{ statusLabel(item.trangThai) }}
               </span>
             </td>
-            <td class="text-secondary">{{ formatDate(item.ngayNhapKho) }}</td>
-            <td class="text-secondary">{{ item.ghiChu }}</td>
-            <td>
-              <div class="d-flex gap-1">
-                <button v-if="item.loai === 'sanPham'" class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openDetail(item)">{{ t('admin.products.detail') }}</button>
-                <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEdit(item)">{{ t('admin.serialManager.edit') }}</button>
-                <button v-if="item.trangThai === 'trong_kho'" class="alt-btn alt-btn--ghost" style="padding:4px 12px;color:var(--state-danger);border-color:var(--state-danger);" @click="deleteSerial(item)">{{ t('admin.serialManager.delete') }}</button>
+            <td class="text-center text-nowrap">
+              <span
+                v-if="item.lockedBy && item.lockedByTen"
+                class="badge d-inline-flex align-items-center gap-1 text-nowrap px-2.5 py-1"
+                style="background: #b45309; color: #fef9c3; font-size: 11.5px; font-weight: 600; border-radius: 6px;"
+                :title="`Đang được ${item.lockedByTen} chọn trong POS / picker`"
+              >
+                <Lock :size="11" /> {{ item.lockedByTen }}
+              </span>
+              <span
+                v-else-if="isInPosCart(item)"
+                class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                style="font-size: 11px; font-weight: 600;"
+                title="Đang trong giỏ hàng POS"
+              >
+                <Clock :size="11" /> Giỏ POS
+              </span>
+              <span v-else class="text-secondary opacity-75">—</span>
+            </td>
+            <td class="text-center text-secondary small text-nowrap">{{ formatDate(item.ngayNhapKho) }}</td>
+            <td class="text-center">
+              <div class="d-inline-flex align-items-center justify-content-start gap-1.5 text-nowrap" style="width: 222px;">
+                <button
+                  v-if="item.loai === 'sanPham'"
+                  class="btn btn-sm btn-outline-info d-inline-flex align-items-center justify-content-center gap-1.5 px-2 py-1 rounded-2 text-nowrap"
+                  style="font-size: 11.5px; font-weight: 500; width: 82px;"
+                  :title="t('admin.products.detail')"
+                  @click="openDetail(item)"
+                >
+                  <Eye :size="13" />
+                  <span>{{ t('admin.products.detail') }}</span>
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-1.5 px-2 py-1 rounded-2 text-nowrap"
+                  style="font-size: 11.5px; font-weight: 500; width: 64px;"
+                  :title="t('admin.serialManager.edit')"
+                  @click="openEdit(item)"
+                >
+                  <Pencil :size="13" />
+                  <span>{{ t('admin.serialManager.edit') }}</span>
+                </button>
+                <button
+                  v-if="item.trangThai === 'trong_kho'"
+                  class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center gap-1.5 px-2 py-1 rounded-2 text-nowrap"
+                  style="font-size: 11.5px; font-weight: 500; width: 64px;"
+                  :title="t('admin.serialManager.delete')"
+                  @click="deleteSerial(item)"
+                >
+                  <Trash2 :size="13" />
+                  <span>{{ t('admin.serialManager.delete') }}</span>
+                </button>
               </div>
             </td>
           </tr>

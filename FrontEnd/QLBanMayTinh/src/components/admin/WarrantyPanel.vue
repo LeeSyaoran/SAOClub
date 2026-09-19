@@ -16,6 +16,9 @@ import { usePagination } from "../../composables/usePagination.js";
 import {
   Calendar, Shield, ScanLine, Cpu, MemoryStick, HardDrive, Monitor,
   Tag, User, Phone, Package, ImageOff, X, Camera, AlertTriangle,
+  Hash, Barcode, Laptop, CalendarCheck, Clock, ShieldCheck,
+  SlidersHorizontal, Wrench, CheckCircle2, DollarSign, Edit3, Eye,
+  FileText, Activity, Pencil,
 } from '@lucide/vue';
 
 onMounted(() => {
@@ -74,9 +77,24 @@ const { currentPage: wCurrentPage, totalPages: wTotalPages, pagedItems: pagedWar
 watch([warrantySearch, () => warrantyFilters.expireDays, () => warrantyFilters.ngayFrom, () => warrantyFilters.ngayTo], () => { wCurrentPage.value = 0; });
 const daysUntilExpiry = (isoDate) => Math.ceil((new Date(isoDate) - new Date()) / 86400000);
 
+const warrantyStats = computed(() => {
+  const list = warrantyList.value ?? [];
+  const totalUnderWarranty = list.length;
+  const expiringSoon30 = list.filter((w) => daysUntilExpiry(w.ngayHetBaoHanh) <= 30 && daysUntilExpiry(w.ngayHetBaoHanh) >= 0).length;
+  const expiringSoon90 = list.filter((w) => daysUntilExpiry(w.ngayHetBaoHanh) <= 90 && daysUntilExpiry(w.ngayHetBaoHanh) > 30).length;
+  const totalClaims = (BaoHanhStore.items ?? []).length;
+  return { totalUnderWarranty, expiringSoon30, expiringSoon90, totalClaims };
+});
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const customerName = (id) => (CustomersStore.items ?? []).find(c => c.khachHangId === id)?.hoTen ?? `KH#${id}`;
-const statusLabel = (s) => t(`admin.warrantyClaimStatus.${s}`);
+const customerName = (id) => (CustomersStore.items ?? []).find(c => c.khachHangId === id)?.hoTen ?? (id > 0 ? `Khách #${id}` : 'Khách vãng lai');
+const statusLabel = (s) => {
+  if (!s) return "—";
+  const normalized = String(s).toLowerCase();
+  const direct = t(`admin.warrantyClaimStatus.${normalized}`);
+  if (direct && direct !== `admin.warrantyClaimStatus.${normalized}`) return direct;
+  return s;
+};
 const STATUS_COLOR = {
   con_bao_hanh: { bg: '#bfdbfe', text: '#1e3a8a' },
   dang_xu_ly:   { bg: '#fde68a', text: '#92400e' },
@@ -624,7 +642,7 @@ const lookupBanner = computed(() => {
             <div class="p-2 rounded-2 small" style="background:var(--bg-input);">
               <div class="d-flex justify-content-between align-items-center">
                 <span class="font-monospace text-secondary">#{{ p.baoHanhId }}</span>
-                <span class="badge" :style="{ background: statusColor(p.trangThai).bg, color: statusColor(p.trangThai).text }">{{ t(`admin.warrantyClaimStatus.${p.trangThai}`) }}</span>
+                <span class="badge" :style="{ background: statusColor(p.trangThai).bg, color: statusColor(p.trangThai).text }">{{ statusLabel(p.trangThai) }}</span>
               </div>
               <div class="text-secondary" style="font-size:0.78rem;">{{ p.ngayTiepNhan ? formatDate(p.ngayTiepNhan) : '—' }}</div>
               <div class="text-secondary" style="font-size:0.78rem;" :title="p.moTaLoi">{{ p.moTaLoi ? (p.moTaLoi.length > 40 ? p.moTaLoi.slice(0,40)+'…' : p.moTaLoi) : '—' }}</div>
@@ -658,9 +676,68 @@ const lookupBanner = computed(() => {
     </div>
   </div>
 
+  <!-- KPI Summary Cards for Warranty -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Serial còn bảo hành</div>
+            <div class="fs-4 fw-bold mt-1 text-success">{{ warrantyStats.totalUnderWarranty }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(34,197,94,0.12);color:#22c55e;">
+            <ShieldCheck :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Sắp hết hạn (≤30 ngày)</div>
+            <div class="fs-4 fw-bold mt-1 text-danger">{{ warrantyStats.expiringSoon30 }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(239,68,68,0.12);color:#ef4444;">
+            <AlertTriangle :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Hết hạn trong ≤90 ngày</div>
+            <div class="fs-4 fw-bold mt-1 text-warning">{{ warrantyStats.expiringSoon90 }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(234,179,8,0.12);color:#eab308;">
+            <Clock :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Phiếu BH đã tiếp nhận</div>
+            <div class="fs-4 fw-bold mt-1 text-primary">{{ warrantyStats.totalClaims }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(59,130,246,0.12);color:#3b82f6;">
+            <Wrench :size="20" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="alt-card mb-4">
     <div class="alt-toolbar">
-      <span class="alt-toolbar__count">{{ filteredWarranty.length }} {{ t('admin.warranty.countSuffix') }}</span>
+      <div class="d-flex align-items-center gap-2">
+        <ShieldCheck :size="16" class="text-success" />
+        <span class="alt-toolbar__count">{{ filteredWarranty.length }} {{ t('admin.warranty.countSuffix') }}</span>
+      </div>
       <span class="alt-tag" style="background:var(--bg-card-alt);color:var(--text-secondary);"><Calendar :size="11" /> {{ t('admin.warranty.today') }}: {{ formatDate(new Date()) }}</span>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
@@ -713,41 +790,90 @@ const lookupBanner = computed(() => {
       <table class="alt-table">
         <thead>
           <tr>
-            <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-            <th>{{ t('admin.warranty.colSerial') }}</th>
-            <th>{{ t('admin.warranty.colProduct') }}</th>
-            <th>{{ t('admin.warranty.colCustomer') }}</th>
-            <th>{{ t('admin.warranty.colPhone') }}</th>
-            <th>{{ t('admin.warranty.colOrder') }}</th>
-            <th>{{ t('admin.warranty.colDelivered') }}</th>
-            <th>{{ t('admin.warranty.colExpires') }}</th>
-            <th>{{ t('admin.warranty.colRemaining') }}</th>
-            <th>{{ t('admin.warranty.colAction') }}</th>
+            <th style="width:4%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t('admin.common.stt') }}</span></th>
+            <th style="width:11%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100">{{ t('admin.warranty.colSerial') }}</span></th>
+            <th style="width:23%;"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> {{ t('admin.warranty.colProduct') }}</span></th>
+            <th style="width:13%;"><span class="d-inline-flex align-items-center gap-1.5"><User :size="12" /> {{ t('admin.warranty.colCustomer') }}</span></th>
+            <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Phone :size="12" /> {{ t('admin.warranty.colPhone') }}</span></th>
+            <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100">{{ t('admin.warranty.colOrder') }}</span></th>
+            <th style="width:8%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> {{ t('admin.warranty.colDelivered') }}</span></th>
+            <th style="width:8%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><CalendarCheck :size="12" /> {{ t('admin.warranty.colExpires') }}</span></th>
+            <th style="width:11%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Clock :size="12" /> {{ t('admin.warranty.colRemaining') }}</span></th>
+            <th style="width:12%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t('admin.warranty.colAction') }}</span></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(w, idx) in pagedWarranty" :key="w.chiTietId">
-            <td class="text-secondary">{{ wCurrentPage * wPageSize + idx + 1 }}</td>
-            <td class="text-secondary" style="font-family:monospace;">{{ w.soSerial }}</td>
-            <td>{{ w.tenSanPham }} <span class="text-secondary" style="font-size:0.75rem;">({{ w.maSku }})</span></td>
-            <td>{{ w.tenKhachHang }}</td>
-            <td class="text-secondary">{{ w.soDienThoaiKhachHang }}</td>
-            <td class="text-secondary" style="font-family:monospace;">{{ w.maDonHang }}</td>
-            <td>{{ formatDate(w.ngayGiaoThucTe) }}</td>
-            <td>{{ formatDate(w.ngayHetBaoHanh) }}</td>
-            <td>
-              <span
-                class="alt-tag" :style="daysUntilExpiry(w.ngayHetBaoHanh) <= 30
-                  ? { background: 'rgba(248,113,113,0.15)', color: '#f87171' }
-                  : daysUntilExpiry(w.ngayHetBaoHanh) <= 90
-                    ? { background: 'rgba(250,204,21,0.15)', color: '#facc15' }
-                    : { background: 'rgba(34,197,94,0.15)', color: '#22c55e' }"
-              >
-                {{ t('admin.warranty.daysLeft', { count: daysUntilExpiry(w.ngayHetBaoHanh) }) }}
+            <td class="text-center text-secondary">{{ wCurrentPage * wPageSize + idx + 1 }}</td>
+            <td class="text-center">
+              <span class="font-monospace fw-semibold px-2 py-0.5 rounded" style="font-size: 0.83rem; background: var(--bg-card-alt); border: 1px solid var(--border-color-soft); color: var(--text-primary); letter-spacing: 0.3px;">
+                {{ w.soSerial }}
               </span>
             </td>
             <td>
-              <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openCreateFromWarranty(w)"><Shield :size="12" style="vertical-align:-2px;" /> {{ t('admin.warranty.createClaim') }}</button>
+              <div class="d-flex flex-column py-0.5">
+                <div class="d-flex align-items-center gap-2">
+                  <Laptop :size="14" class="text-primary flex-shrink-0" />
+                  <span class="fw-semibold text-truncate" style="color:var(--text-heading); font-size: 0.86rem;" :title="w.tenSanPham">
+                    {{ w.tenSanPham }}
+                  </span>
+                </div>
+                <span v-if="w.maSku" class="text-secondary font-monospace" style="font-size: 0.74rem; padding-left: 22px;">
+                  {{ w.maSku }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2 text-nowrap">
+                <User :size="13" class="text-secondary flex-shrink-0" />
+                <span>{{ w.tenKhachHang || 'Khách vãng lai' }}</span>
+              </div>
+            </td>
+            <td class="text-center">
+              <div class="d-inline-flex align-items-center gap-1.5 font-monospace small text-nowrap">
+                <Phone :size="12" class="text-muted flex-shrink-0" />
+                <span>{{ w.soDienThoaiKhachHang || '—' }}</span>
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="badge font-monospace bg-light-subtle text-body border px-2 py-1 text-nowrap">
+                {{ w.maDonHang }}
+              </span>
+            </td>
+            <td class="text-center small text-secondary text-nowrap">{{ formatDate(w.ngayGiaoThucTe) }}</td>
+            <td class="text-center small text-secondary text-nowrap">{{ formatDate(w.ngayHetBaoHanh) }}</td>
+            <td class="text-center">
+              <span
+                v-if="daysUntilExpiry(w.ngayHetBaoHanh) <= 30"
+                class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1.5 text-nowrap"
+                style="font-size:11px;"
+              >
+                <AlertTriangle :size="12" /> {{ t('admin.warranty.daysLeft', { count: daysUntilExpiry(w.ngayHetBaoHanh) }) }} (Sắp hết)
+              </span>
+              <span
+                v-else-if="daysUntilExpiry(w.ngayHetBaoHanh) <= 90"
+                class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1.5 text-nowrap"
+                style="font-size:11px;"
+              >
+                <Clock :size="12" /> {{ t('admin.warranty.daysLeft', { count: daysUntilExpiry(w.ngayHetBaoHanh) }) }}
+              </span>
+              <span
+                v-else
+                class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1.5 text-nowrap"
+                style="font-size:11px;"
+              >
+                <ShieldCheck :size="12" /> {{ t('admin.warranty.daysLeft', { count: daysUntilExpiry(w.ngayHetBaoHanh) }) }}
+              </span>
+            </td>
+            <td class="text-center">
+              <button
+                class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-2 shadow-sm text-nowrap"
+                style="font-size:12px; font-weight:600;"
+                :title="t('admin.warranty.createClaim')"
+                @click="openCreateFromWarranty(w)"
+              >
+                <Wrench :size="12" /> Tạo phiếu
+              </button>
             </td>
           </tr>
           <tr v-if="filteredWarranty.length===0"><td colspan="10" class="alt-empty">{{ t('admin.warranty.empty') }}</td></tr>
@@ -759,7 +885,10 @@ const lookupBanner = computed(() => {
 
   <div class="alt-card">
     <div class="alt-toolbar">
-      <span class="alt-toolbar__count">{{ filteredClaims.length }}/{{ (BaoHanhStore.items ?? []).length }} {{ t('admin.warrantyClaims.countSuffix') }}</span>
+      <div class="d-flex align-items-center gap-2">
+        <Wrench :size="16" class="text-primary" />
+        <span class="alt-toolbar__count">{{ filteredClaims.length }}/{{ (BaoHanhStore.items ?? []).length }} {{ t('admin.warrantyClaims.countSuffix') }}</span>
+      </div>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
           <Search class="alt-search__icon" :size="14" />
@@ -776,8 +905,8 @@ const lookupBanner = computed(() => {
         <button v-if="claimStatusFilter" class="alt-btn alt-btn--ghost-sm" @click="claimStatusFilter = ''">
           <X :size="12" /> Xóa lọc
         </button>
-        <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openCreateManual">
-          <Shield :size="12" style="vertical-align:-2px;" /> {{ t('admin.warrantyClaims.createManual') }}
+        <button class="alt-btn alt-btn--ghost d-inline-flex align-items-center gap-1.5" style="padding:4px 12px;" @click="openCreateManual">
+          <Shield :size="13" /> {{ t('admin.warrantyClaims.createManual') }}
         </button>
       </div>
     </div>
@@ -786,25 +915,67 @@ const lookupBanner = computed(() => {
       <table class="alt-table">
         <thead>
           <tr>
-            <th style="width:40px;">{{ t('admin.common.stt') }}</th>
-            <th>{{ t('admin.warrantyClaims.colId') }}</th><th>{{ t('admin.warrantyClaims.colProduct') }}</th><th>{{ t('admin.warrantyClaims.colSerial') }}</th>
-            <th>{{ t('admin.warrantyClaims.colCustomer') }}</th><th>{{ t('admin.warrantyClaims.colOrder') }}</th>
-            <th>{{ t('admin.warrantyClaims.colCost') }}</th><th>{{ t('admin.warrantyClaims.colStatus') }}</th><th>{{ t('admin.warrantyClaims.colAction') }}</th>
+            <th style="width:4%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t('admin.common.stt') }}</span></th>
+            <th style="width:9%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100">{{ t('admin.warrantyClaims.colId') }}</span></th>
+            <th style="width:20%;"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> {{ t('admin.warrantyClaims.colProduct') }}</span></th>
+            <th style="width:13%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100">{{ t('admin.warrantyClaims.colSerial') }}</span></th>
+            <th style="width:15%;"><span class="d-inline-flex align-items-center gap-1.5"><User :size="12" /> {{ t('admin.warrantyClaims.colCustomer') }}</span></th>
+            <th style="width:9%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100">{{ t('admin.warrantyClaims.colOrder') }}</span></th>
+            <th style="width:10%; text-align:end;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end w-100"><DollarSign :size="12" /> {{ t('admin.warrantyClaims.colCost') }}</span></th>
+            <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t('admin.warrantyClaims.colStatus') }}</span></th>
+            <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t('admin.warrantyClaims.colAction') }}</span></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(p, idx) in pagedClaims" :key="p.baoHanhId">
-            <td class="text-secondary">{{ cCurrentPage * cPageSize + idx + 1 }}</td>
-            <td class="text-secondary" style="font-family:monospace;">#{{ p.baoHanhId }}</td>
-            <td class="text-secondary" style="font-family:monospace;">{{ p.maSku }}</td>
-            <td class="text-secondary" style="font-family:monospace;">{{ p.soSerial || '—' }}</td>
-            <td>{{ customerName(p.khachHangId) }}</td>
-            <td class="text-secondary">#{{ p.donHangId }}</td>
-            <td class="fw-semibold" style="color:var(--accent-fg);">{{ formatPrice(p.chiPhiPhatSinh) }}</td>
-            <td><span class="alt-tag" :style="{ background: statusColor(p.trangThai).bg, color: statusColor(p.trangThai).text }">{{ statusLabel(p.trangThai) }}</span></td>
+            <td class="text-center text-secondary">{{ cCurrentPage * cPageSize + idx + 1 }}</td>
+            <td class="text-center">
+              <span class="badge font-monospace bg-body-secondary text-body border px-2 py-1">
+                #{{ p.baoHanhId }}
+              </span>
+            </td>
             <td>
-              <div class="d-flex gap-1">
-                <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openEdit(p)">{{ t('admin.warrantyClaims.edit') }}</button>
+              <span class="badge rounded-pill bg-light-subtle text-secondary border px-2 py-1 font-monospace" style="font-size:11px;">
+                {{ p.maSku }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span v-if="p.soSerial" class="font-monospace fw-semibold px-2 py-0.5 rounded" style="font-size: 0.83rem; background: var(--bg-card-alt); border: 1px solid var(--border-color-soft); color: var(--text-primary); letter-spacing: 0.3px;">
+                {{ p.soSerial }}
+              </span>
+              <span v-else class="text-secondary">—</span>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2 text-nowrap">
+                <User :size="13" class="text-secondary flex-shrink-0" />
+                <span>{{ customerName(p.khachHangId) }}</span>
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="badge font-monospace bg-light-subtle text-body border px-2 py-1">
+                #{{ p.donHangId }}
+              </span>
+            </td>
+            <td class="text-end">
+              <span class="fw-semibold font-monospace" :class="Number(p.chiPhiPhatSinh) > 0 ? 'text-danger' : 'text-muted'">
+                {{ formatPrice(p.chiPhiPhatSinh) }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="alt-tag" :style="{ background: statusColor(p.trangThai).bg, color: statusColor(p.trangThai).text }">
+                {{ statusLabel(p.trangThai) }}
+              </span>
+            </td>
+            <td class="text-center">
+              <div class="d-flex justify-content-center gap-1 text-nowrap">
+                <button
+                  class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-2 text-nowrap"
+                  style="font-size:12px; font-weight: 500;"
+                  @click="openEdit(p)"
+                >
+                  <Pencil :size="13" />
+                  <span>{{ t('admin.warrantyClaims.edit') }}</span>
+                </button>
               </div>
             </td>
           </tr>

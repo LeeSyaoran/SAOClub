@@ -26,19 +26,20 @@ import { resetAllStores } from "./stores/resetAll.js";
 import { loadSettings, SettingsStore } from "./stores/settings.js";
 import { ProductsStore, refreshProducts } from "./stores/products.js";
 import { formatPrice as formatPriceRaw } from "./utils/formatPrice.js";
+import { isValidPhoneNumber } from "./utils/validators.js";
 import { t, applySystemDefaultLocale } from "./i18n/index.js";
 
 import * as SanPhamService from "./services/SanPhamService.js";
 import * as AuthService from "./services/AuthService.js";
 import * as YeuThichService from "./services/YeuThichService.js";
 import * as DanhGiaService from "./services/DanhGiaService.js";
-import { firebaseLogin } from "./services/AuthService.js";
 
 import LoginForm from "./components/auth/LoginForm.vue";
 import RegisterForm from "./components/auth/RegisterForm.vue";
 import CheckoutModal from "./components/checkout/CheckoutModal.vue";
 import ProductDetail from "./components/product/ProductDetail.vue";
 import Modal from "./components/common/Modal.vue";
+import ProfileCompletionModal from "./components/auth/ProfileCompletionModal.vue";
 
 const router = useRouter();
 
@@ -61,6 +62,10 @@ const showToast = (msg, type = "success", duration = 3500) => {
 const showLoginModal = ref(false);
 const loginModalErr = ref("");
 const authTab = ref("login");
+
+// ── Profile completion modal ─────────────────────────────────────────────────
+const showProfileCompletion = ref(false);
+const pendingSocialUser = ref(null); // Lưu user từ Firebase login trước khi hoàn tất profile
 
 const openLogin = () => {
   loginModalErr.value = "";
@@ -105,19 +110,45 @@ const handleModalLogin = async ({ username, password }) => {
 // Social Login handler (Google/Facebook) — gọi backend để tạo/lấy tài khoản
 const handleSocialLogin = async (result) => {
   try {
-    const res = await firebaseLogin(result.idToken, result.provider);
+    const res = await AuthService.firebaseLogin(result.idToken, result.provider);
     if (!res.ok) {
       const msg = await res.text();
       showToast(msg || "Đăng nhập thất bại", "error");
       return;
     }
     const user = await res.json();
+
+    // Lưu session ngay (chứa JWT) để các request sau (PUT /api/auth/profile) có auth header,
+    // kể cả khi chưa đủ thông tin và cần hiện modal hoàn tất hồ sơ.
+    setSession(user);
+
+    // Nếu thiếu thông tin bắt buộc hoặc SĐT là mã định danh không hợp lệ → hiện form hoàn tất hồ sơ
+    if (!user.soDienThoai || !isValidPhoneNumber(user.soDienThoai)) {
+      if (user.soDienThoai && !isValidPhoneNumber(user.soDienThoai)) {
+        user.soDienThoai = '';
+      }
+      showLoginModal.value = false;
+      pendingSocialUser.value = user;
+      showProfileCompletion.value = true;
+      return;
+    }
+
+    // Đủ thông tin → đăng nhập luôn
     showLoginModal.value = false;
     showToast(t("toast.welcomeUser", { name: user.hoTen }), "success");
     onLoginSuccess(user);
   } catch (err) {
     showToast("Đăng nhập thất bại. Vui lòng thử lại.", "error");
   }
+};
+
+// Sau khi hoàn tất profile → cập nhật session với JWT mới rồi đăng nhập
+const onProfileCompletionSuccess = (user) => {
+  showProfileCompletion.value = false;
+  pendingSocialUser.value = null;
+  setSession(user);
+  showToast(t("toast.welcomeUser", { name: user.hoTen }), "success");
+  onLoginSuccess(user);
 };
 
 // ── Logout ────────────────────────────────────────────────────────────────────
@@ -483,6 +514,14 @@ onBeforeUnmount(() => {
         {{ loginModalErr }}
       </div>
     </Modal>
+
+    <ProfileCompletionModal
+      v-model="showProfileCompletion"
+      :default-name="pendingSocialUser?.hoTen || ''"
+      :default-email="pendingSocialUser?.email || ''"
+      :avatar-url="pendingSocialUser?.avatarUrl || ''"
+      @success="onProfileCompletionSuccess"
+    />
 
     <CheckoutModal
       v-model="showCheckout"

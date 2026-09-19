@@ -15,7 +15,7 @@ import { showToast } from "../../stores/toast.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { refreshInventory } from "../../stores/inventory.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
-import { Camera, Image, Cpu, MemoryStick, HardDrive, Monitor, Barcode, Palette } from '@lucide/vue';
+import { Camera, Image, Cpu, MemoryStick, HardDrive, Monitor, Barcode, Palette, Hash, Tag, Laptop, Coins, DollarSign, Activity } from '@lucide/vue';
 import Pagination from "../common/Pagination.vue";
 import SearchSelect from "../common/SearchSelect.vue";
 import { usePagination } from "../../composables/usePagination.js";
@@ -781,15 +781,15 @@ const saveVariant = async () => {
       <table class="vt-table">
         <thead>
           <tr>
-            <th class="vt-col-stt">{{ t('admin.common.stt') }}</th>
-            <th class="vt-col-img">{{ t('admin.variants.colImage') }}</th>
-            <th class="vt-col-sku">{{ t('admin.variants.colSku') }}</th>
-            <th class="vt-col-barcode">{{ tt('admin.variants.colBarcode', 'Mã vạch') }}</th>
-            <th class="vt-col-name">{{ t('admin.variants.colProduct') }}</th>
-            <th class="vt-col-config">{{ t('admin.variants.colConfig') }}</th>
-            <th v-if="canViewCost" class="vt-col-price">{{ tt('admin.variants.colPriceBuy', 'Giá nhập') }}</th>
-            <th class="vt-col-price">{{ t('admin.variants.colPriceSell') }}</th>
-            <th class="vt-col-status">{{ t('admin.variants.colStatus') }}</th>
+            <th class="vt-col-stt"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t('admin.common.stt') }}</span></th>
+            <th class="vt-col-img"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Image :size="12" /> {{ t('admin.variants.colImage') }}</span></th>
+            <th class="vt-col-sku"><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> {{ t('admin.variants.colSku') }}</span></th>
+            <th class="vt-col-barcode"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Barcode :size="12" /> {{ tt('admin.variants.colBarcode', 'Mã vạch') }}</span></th>
+            <th class="vt-col-name"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> {{ t('admin.variants.colProduct') }}</span></th>
+            <th class="vt-col-config"><span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> {{ t('admin.variants.colConfig') }}</span></th>
+            <th v-if="canViewCost" class="vt-col-price"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> {{ tt('admin.variants.colPriceBuy', 'Giá nhập') }}</span></th>
+            <th class="vt-col-price"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t('admin.variants.colPriceSell') }}</span></th>
+            <th class="vt-col-status"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t('admin.variants.colStatus') }}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -799,15 +799,15 @@ const saveVariant = async () => {
             :title="tt('admin.variants.rowHint', 'Bấm để xem chi tiết')"
             @click="openRowDetail(p)" @keydown.enter.prevent="openRowDetail(p)"
           >
-            <td class="vt-muted">{{ currentPage * pageSize + idx + 1 }}</td>
-            <td>
-              <div class="vt-thumb">
+            <td class="vt-muted text-center">{{ currentPage * pageSize + idx + 1 }}</td>
+            <td class="text-center">
+              <div class="vt-thumb mx-auto">
                 <img v-if="p.hinhAnhChinh" :src="p.hinhAnhChinh" :alt="p.tenSanPham" />
                 <Image v-else :size="14" color="var(--muted)" />
               </div>
             </td>
             <td class="vt-sku" :title="p.maSku">{{ p.maSku }}</td>
-            <td class="vt-barcode">
+            <td class="vt-barcode text-center">
               <div v-if="p.barcode" class="hh-barcode-card" :title="'Mã vạch: ' + p.barcode">
                 <svg :key="p.barcode" :ref="(el) => renderBarcodeTable(el, p.barcode)"></svg>
               </div>
@@ -825,7 +825,7 @@ const saveVariant = async () => {
             </td>
             <td v-if="canViewCost" class="vt-col-price vt-muted">{{ formatPrice(p.giaNhap) }}</td>
             <td class="vt-col-price vt-price">{{ formatPrice(p.giaBan) }}</td>
-            <td>
+            <td class="text-center">
               <span class="vt-tag" :class="stockOf(p) === 0 ? 'vt-tag--wait' : (p.trangThai === 'active' ? 'vt-tag--on' : 'vt-tag--off')">
                 {{ stockOf(p) === 0 ? tt('admin.variants.statusWait', 'Chờ nhập hàng') : statusLabel(p.trangThai) }}
               </span>
@@ -1364,7 +1364,7 @@ const saveVariant = async () => {
    nhu cu, man/khung hep hon tong do rong cot thi table tu no rong ra, .vt-table-wrap
    overflow-x:auto se hien thanh cuon ngang thay vi bop chu. */
 .vt-table-wrap { overflow-x: auto; }
-.vt-table { min-width: 1050px; width: 100%; table-layout: fixed; border-collapse: collapse; }
+.vt-table { width: 100%; border-collapse: collapse; }
 .vt-table th {
   background: var(--pink-50); color: var(--pink-700);
   font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
@@ -1385,16 +1385,16 @@ const saveVariant = async () => {
 .vt-row:hover { background: var(--pink-50); }
 .vt-row:focus-visible { outline: 2px solid var(--pink-500); outline-offset: -2px; }
 
-.vt-col-stt { width: 54px; }
-.vt-col-img { width: 56px; }
-.vt-col-sku { width: 140px; }
-.vt-col-barcode { width: 130px; }
-.vt-col-name { width: 190px; }
-.vt-col-config { width: 230px; }
+.vt-col-stt { width: 4%; text-align: center; }
+.vt-col-img { width: 5%; text-align: center; }
+.vt-col-sku { width: 12%; }
+.vt-col-barcode { width: 12%; text-align: center; }
+.vt-col-name { width: 18%; }
+.vt-col-config { width: 22%; }
 .vt-col-color { width: 90px; }
 .vt-col-num { width: 80px; text-align: center; }
-.vt-col-price { width: 110px; text-align: right; white-space: nowrap; }
-.vt-col-status { width: 90px; }
+.vt-col-price { width: 10%; text-align: right; white-space: nowrap; }
+.vt-col-status { width: 8%; text-align: center; }
 
 .vt-thumb {
   width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; overflow: hidden;

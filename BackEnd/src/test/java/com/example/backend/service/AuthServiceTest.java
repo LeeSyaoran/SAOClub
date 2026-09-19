@@ -3,10 +3,12 @@ package com.example.backend.service;
 import com.example.backend.entity.ChucVu;
 import com.example.backend.entity.NhanVien;
 import com.example.backend.entity.TaiKhoan;
+import com.example.backend.repository.ChucVuRepository;
+import com.example.backend.repository.KhachHangRepository;
 import com.example.backend.repository.NhanVienRepository;
 import com.example.backend.repository.TaiKhoanRepository;
 import com.example.backend.request.HoSoRequest;
-import com.example.backend.response.HoSoResponse;
+import com.example.backend.response.LoginResponse;
 import com.example.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +31,8 @@ class AuthServiceTest {
 
     @Mock private TaiKhoanRepository taiKhoanRepository;
     @Mock private NhanVienRepository nhanVienRepository;
+    @Mock private KhachHangRepository khachHangRepository;
+    @Mock private ChucVuRepository chucVuRepository;
     @Mock private JwtUtil jwtUtil;
     @Mock private PasswordEncoder passwordEncoder;
 
@@ -65,34 +69,40 @@ class AuthServiceTest {
     }
 
     @Test
-    void capNhatHoSo_coNhanVien_chiSuaDungBaTruong() {
+    void capNhatHoSo_coNhanVien_luuVaTraLoginResponse() {
+        ChucVu cv = new ChucVu();
+        cv.setMaChucVu("nhan_vien");
         NhanVien nv = new NhanVien();
         nv.setNhanVienId(7);
         nv.setHoTen("Tên cũ");
         nv.setSoDienThoai("0900000000");
         nv.setEmail("cu@example.com");
-        nv.setChucVu(new ChucVu()); 
+        nv.setChucVu(cv);
         TaiKhoan tk = new TaiKhoan();
         tk.setUsername("admin");
+        tk.setMatKhauHash("hash");
         tk.setNhanVien(nv);
+        tk.setChucVu(cv);
         when(taiKhoanRepository.findByUsername("admin")).thenReturn(Optional.of(tk));
+        when(jwtUtil.generateToken("admin", "nhan_vien")).thenReturn("jwt-token");
 
         HoSoRequest req = new HoSoRequest();
         req.setHoTen("Tên mới");
         req.setSoDienThoai("0911111111");
         req.setEmail("moi@example.com");
 
-        HoSoResponse res = authService.capNhatHoSo("admin", req);
+        LoginResponse res = authService.capNhatHoSo("admin", req);
 
         assertThat(res.getHoTen()).isEqualTo("Tên mới");
         assertThat(res.getSoDienThoai()).isEqualTo("0911111111");
         assertThat(res.getEmail()).isEqualTo("moi@example.com");
-        assertThat(nv.getChucVu()).isNotNull(); 
+        assertThat(res.getToken()).isEqualTo("jwt-token");
+        assertThat(nv.getChucVu()).isNotNull();
         verify(nhanVienRepository).save(nv);
     }
 
     @Test
-    void capNhatHoSo_taiKhoanKhongCoNhanVien_nemLoi() {
+    void capNhatHoSo_taiKhoanKhongCoNhanVienVaKhachHang_nemLoi() {
         TaiKhoan tk = new TaiKhoan();
         tk.setUsername("khachle");
         tk.setNhanVien(null);

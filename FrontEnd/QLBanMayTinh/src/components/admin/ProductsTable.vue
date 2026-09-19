@@ -15,7 +15,7 @@ import ProductDetailModal from "./ProductDetailModal.vue";
 import ProductFormModal from "./ProductFormModal.vue";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { Image } from "@lucide/vue";
+import { Image, Hash, Tag, Laptop, Layers, Building2, DollarSign, Activity, Calendar, CalendarCheck, SlidersHorizontal } from "@lucide/vue";
 
 const props = defineProps({ readonly: { type: Boolean, default: false } });
 const router = useRouter();
@@ -215,22 +215,22 @@ const deleteProduct = async (id) => {
     >
       <thead>
         <tr>
-          <th style="width: 40px">{{ t("admin.common.stt") }}</th>
-          <th>{{ t("admin.products.colSku") }}</th>
-          <th>{{ t("admin.products.colName") }}</th>
-          <th>{{ t("admin.products.colCategory") }}</th>
-          <th>{{ t("admin.products.colBrand") }}</th>
-          <th>{{ t("admin.products.colPriceFrom") }}</th>
-          <th>{{ t("admin.products.colPriceTo") }}</th>
-          <th>{{ t("admin.products.colStatus") }}</th>
-          <th>{{ t("admin.products.colCreated") }}</th>
-          <th>{{ t("admin.products.colUpdated") }}</th>
-          <th>{{ t("admin.products.colAction") }}</th>
+          <th style="width: 4%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t("admin.common.stt") }}</span></th>
+          <th style="width: 9%;"><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> {{ t("admin.products.colSku") }}</span></th>
+          <th style="width: 24%;"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> {{ t("admin.products.colName") }}</span></th>
+          <th style="width: 10%;"><span class="d-inline-flex align-items-center gap-1.5"><Layers :size="12" /> {{ t("admin.products.colCategory") }}</span></th>
+          <th style="width: 10%;"><span class="d-inline-flex align-items-center gap-1.5"><Building2 :size="12" /> {{ t("admin.products.colBrand") }}</span></th>
+          <th style="width: 9%; text-align: right;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t("admin.products.colPriceFrom") }}</span></th>
+          <th style="width: 9%; text-align: right;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t("admin.products.colPriceTo") }}</span></th>
+          <th style="width: 8%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t("admin.products.colStatus") }}</span></th>
+          <th style="width: 6%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> {{ t("admin.products.colCreated") }}</span></th>
+          <th style="width: 6%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><CalendarCheck :size="12" /> {{ t("admin.products.colUpdated") }}</span></th>
+          <th style="width: 5%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t("admin.products.colAction") }}</span></th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(p, idx) in pagedProducts" :key="p.sanPhamId">
-          <td class="text-secondary">{{
+          <td class="text-secondary text-center">{{
             sortKey === 'stt_desc'
               ? filteredGroupedProducts.length - (currentPage * pageSize + idx)
               : currentPage * pageSize + idx + 1
@@ -255,18 +255,18 @@ const deleteProduct = async (id) => {
           </td>
           <td>{{ p.tenDanhMuc }}</td>
           <td>{{ p.tenThuongHieu }}</td>
-          <td>{{ formatPrice(p.minPrice) }}</td>
-          <td>{{ formatPrice(p.maxPrice) }}</td>
-          <td>
+          <td class="text-end">{{ formatPrice(p.minPrice) }}</td>
+          <td class="text-end">{{ formatPrice(p.maxPrice) }}</td>
+          <td class="text-center">
             <span
               class="badge"
               :class="p.trangThai === 'active' ? 'bg-success' : 'bg-secondary'"
             >{{ statusLabel(p.trangThai) }}</span>
           </td>
-          <td class="text-secondary" style="font-size: 0.78rem">{{ formatDateTime(p.ngayTao) }}</td>
-          <td class="text-secondary" style="font-size: 0.78rem">{{ formatDateTime(p.ngayCapNhat) }}</td>
-          <td>
-            <div class="d-flex gap-1">
+          <td class="text-secondary text-center" style="font-size: 0.78rem">{{ formatDateTime(p.ngayTao) }}</td>
+          <td class="text-secondary text-center" style="font-size: 0.78rem">{{ formatDateTime(p.ngayCapNhat) }}</td>
+          <td class="text-center">
+            <div class="d-flex justify-content-center gap-1">
               <button
                 class="btn btn-sm btn-outline-primary"
                 style="font-size: 0.78rem; padding: 2px 8px"

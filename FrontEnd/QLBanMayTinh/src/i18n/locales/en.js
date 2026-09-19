@@ -106,6 +106,8 @@ export default {
     passwordPlaceholder: "••••••••",
     forgotPassword: "Forgot password?",
     submit: "SIGN IN",
+    submitting: "Logging in...",
+    orLoginWith: "Or sign in with",
     noAccount: "Don't have an account?",
     registerNow: "Register now",
     fillAllFields: "Please fill in all fields.",
@@ -134,10 +136,12 @@ export default {
     submit: "REGISTER NOW",
     submitting: "Registering...",
     haveAccount: "Already have an account?",
+    hasAccount: "Already have an account?",
     loginNow: "Sign in",
     showPassword: "Show password",
     hidePassword: "Hide password",
     success: "Registration successful! Please sign in.",
+
     errors: {
       fillAllFields: "Please fill in all fields.",
       required: "This field is required.",
@@ -168,7 +172,9 @@ export default {
     delivered: "Delivered",
     cancelled: "Cancelled",
     returned: "Returned",
+    deliveryTitle: "Delivery Information",
     timeline: {
+      title: "Status History",
       placedTitle: "Order placed",
       placedDesc: "System has received it",
       confirmedTitle: "Confirmed",
@@ -278,6 +284,8 @@ export default {
     errReceiverRequired: "Please enter receiver's name",
     errReceiverPhoneRequired: "Please enter receiver's phone number",
     errAddressRequired: "Please enter a delivery address",
+    errValidation: "Please check your delivery information.",
+    promoChecking: "Checking promo code...",
     createCustomerError: "Could not create customer account",
     createOrderError: "Could not create order",
     addItemError: "Could not add \"{name}\" to the order",
@@ -324,6 +332,14 @@ export default {
     qrInstruction: "Thank you! We will confirm your payment once the transfer is received.",
     bankInstruction: "Please transfer {amount} using the information provided.",
     close: "Close",
+    orderNotes: "Order notes",
+    orderNotesPlaceholder: "Deliver during office hours, call before arrival...",
+    copy: "Copy",
+    copied: "Copied!",
+    phoneNoticeMissing: "Please provide a delivery phone number",
+    vatIncluded: "(VAT included)",
+    recommended: "Recommended",
+    removeVoucher: "Remove",
   },
 
   toast: {
@@ -610,6 +626,9 @@ export default {
       traHang: "Returns",
       warrantyClaims: "Warranty claims",
       serial: "Serial",
+      linhKien: "Component",
+      laptop: "Laptop",
+      all: "All",
       groupComponents: "Components",
     },
 
@@ -801,6 +820,18 @@ export default {
       edit: "Edit",
       empty: "No variants yet",
       searchPlaceholder: "Search product name, SKU...",
+      filterCategory: "Category",
+      filterCategoryAll: "All categories",
+      filterStatus: "Status",
+      filterStatusAll: "All statuses",
+      colPriceBuy: "Cost Price",
+      rowHint: "Click row to view details / edit variant",
+      statusWait: "Awaiting restock",
+      noBarcodeShort: "None",
+      margin: "Margin",
+      viewProduct: "View product",
+      printLabel: "Print label",
+      genBarcode: "Generate barcode",
     },
 
     productDetail: {
@@ -905,6 +936,7 @@ export default {
     },
 
     orderDetailModal: {
+      noNextStep: "Order is at final status",
       titlePrefix: "Order #",
       loading: "Loading...",
       empty: "No products",
@@ -959,6 +991,7 @@ export default {
     },
 
     orderStatusModal: {
+      trackingCodeTitle: "Tracking Code",
       title: "Update order status",
       orderPrefix: "Order #",
       customerLabel: "Customer:",
@@ -1055,6 +1088,7 @@ export default {
       noLastOrder: "No orders yet",
       ordersTitle: "Orders",
       ordersEmpty: "This customer has no orders yet",
+      wishlistEmpty: "Customer has no favorite products.",
       colOrderCode: "Order code",
       colOrderDate: "Order date",
       colOrderTotal: "Total",
@@ -1204,6 +1238,7 @@ export default {
     },
 
     warrantyClaims: {
+      createManual: "Create New Claim",
       countSuffix: "warranty claims",
       loading: "Loading...",
       colId: "Claim ID",
@@ -1269,6 +1304,9 @@ export default {
     },
 
     warrantyClaimModal: {
+      manualHint: "Enter warranty claim details manually",
+      variantLabel: "Variant / Spec",
+      chiTietLabel: "Product Details",
       titleAdd: "Create warranty claim",
       titleEdit: "Warranty claim details",
       productLabel: "Product",
@@ -1289,6 +1327,7 @@ export default {
       datesRequired: "Please enter both the purchase date and warranty expiry date",
       cancel: "Cancel",
       save: "Save",
+      savedToast: "Inventory updated successfully",
     },
 
     inventory: {
@@ -1326,6 +1365,12 @@ export default {
       detail: "Details",
       update: "Update",
       empty: "No data",
+      syncGiaNhapFailed: "Failed to sync cost price",
+      quickViewNote: "Quick inventory view",
+      quickViewClear: "Clear quick view",
+      colProductCode: "Product Code",
+      colPriceBuy: "Cost Price",
+      colUpdatedAt: "Updated at",
       tabSerial: "Serial",
     },
 
@@ -1337,6 +1382,9 @@ export default {
       gpu: "GPU",
       oCung: "Storage",
       serial: "Serial",
+      linhKien: "Components",
+      laptop: "Laptop",
+      all: "All",
     },
 
     dmCategory: {
@@ -1369,6 +1417,7 @@ export default {
       colStatus: "Status",
       colDate: "Stock-in date",
       colNote: "Note",
+      colPerformer: "Performer",
       colAction: "Actions",
       edit: "Edit",
       delete: "Delete",
@@ -1516,6 +1565,8 @@ export default {
       colSerial: "Serial number",
       colImportDate: "Import date",
       colStatus: "Status",
+      searchPlaceholder: "Search serial...",
+      allStatus: "All statuses",
     },
 
     warranty: {
@@ -1746,6 +1797,7 @@ export default {
 
     pos: {
       searchPlaceholder: "Search product by name or SKU...",
+      barcodePlaceholder: "Scan barcode or enter serial / SKU...",
       loading: "Loading...",
       chooseSerial: "Choose serial (IMEI)",
       addChosenSerials: "Add {count} unit(s) to cart",
@@ -1833,7 +1885,14 @@ export default {
       update: "Update",
       addNew: "Add",
       stt: "No.",
+      filter: "Filter",
+      status: "Status",
     },
+
+    toast: {
+      serialDeleted: "Deleted serial {serial} from inventory",
+    },
+    saving: "Saving...",
 
     confirm: {
       deleteProduct: "Are you sure you want to delete this product?",
@@ -1845,6 +1904,7 @@ export default {
       deleteSerial: "Delete this serial from the system? Only use this if it was added by mistake.",
       deletePhieuNhap: "Delete this goods receipt? All line items in it will be lost too.",
       deleteReview: "Delete this review? This action cannot be undone.",
+      approvePhieuNhap: "Are you sure you want to approve this receipt? Inventory quantities and serials will be updated.",
     },
 
     errors: {
@@ -1864,6 +1924,11 @@ export default {
       createOrderError: "Error creating order: {message}",
       addProductError: "Error adding product: {message}",
       createPaymentError: "Error recording payment: {message}",
+      approveFailed: "Failed to approve receipt",
+    },
+
+    success: {
+      approveSuccess: "Receipt approved successfully!",
     },
 
     statusLabel: {
@@ -1879,6 +1944,33 @@ export default {
       cho_duyet: "Pending",
       hoan_thanh: "Completed",
       huy: "Cancelled",
+      cho_xu_ly: "Pending",
+      da_xu_ly: "Processed",
+      tu_choi: "Rejected",
+      con_bao_hanh: "Under Warranty",
+      dang_xu_ly: "Processing",
+      het_bao_hanh: "Expired Warranty",
+      cho_tiep_nhan: "Awaiting Receipt",
+      hoat_dong: "Active",
+      ngung_hoat_dong: "Inactive",
+      dang_giao: "Delivering",
+      da_giao: "Delivered",
+      tra_hang: "Return",
+      con_hang: "In Stock",
+      het_hang: "Out of Stock",
+      available: "Available",
+      sold: "Sold",
+      faulty: "Faulty",
+      in_warranty: "In Warranty",
+      draft: "Draft",
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Rejected",
+      deleted: "Deleted",
+      cho_nhap_hang: "Awaiting restock",
+      da_nghi_viec: "Resigned",
+      dang_lam_viec: "Working",
+      tam_dung: "Stopped",
     },
   },
 };
