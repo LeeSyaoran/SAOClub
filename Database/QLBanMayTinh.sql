@@ -1,11 +1,7 @@
 use master;
 GO
 
--- Luôn DROP + tạo lại database mỗi lần chạy file — SINGLE_USER trước để đá hết
--- session khác đang giữ DB (vd tab query khác lỡ mở sẵn), tránh lỗi "database in use".
--- Lưu ý: nếu vẫn treo ở bước này, khả năng cao là IntelliSense của SSMS đang tự giữ 1
--- session nền trong chính DB này (Tools → Options → Text Editor → Transact-SQL →
--- IntelliSense → tắt "Enable IntelliSense" rồi mở lại tab query để giải phóng session cũ).
+-- Xóa và tạo lại database nếu đã tồn tại
 IF EXISTS (SELECT name FROM sys.databases WHERE name = N'QLBanMayTinh')
 BEGIN
     ALTER DATABASE QLBanMayTinh SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -20,9 +16,7 @@ GO
 USE QLBanMayTinh;
 GO
 
--- sqlcmd mặc định QUOTED_IDENTIFIER OFF (khác SSMS mặc định ON) — các CREATE INDEX có
--- WHERE (filtered index) bên dưới sẽ báo lỗi Msg 1934 và dừng cả file giữa chừng nếu
--- thiếu dòng này. Đặt 1 lần ở đây, giữ nguyên suốt phiên (không cần lặp lại sau mỗi GO).
+-- Thiết lập QUOTED_IDENTIFIER cho filtered index
 SET QUOTED_IDENTIFIER ON;
 GO
 
@@ -54,8 +48,7 @@ BEGIN
     );
 END
 
--- Bảng phân loại theo mục đích sử dụng (văn phòng, gaming, đồ họa,...)
--- Tách riêng khỏi danh_muc để 1 sản phẩm có thể thuộc nhiều nhóm
+-- Bảng phân loại sản phẩm
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'phan_loai')
 BEGIN
     CREATE TABLE phan_loai (
@@ -190,10 +183,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham')
 BEGIN
     CREATE TABLE san_pham (
         san_pham_id     INT             IDENTITY(1,1) PRIMARY KEY,
-        -- Mã sản phẩm nội bộ hiển thị/tra cứu trên UI (vd 'SP0001') và mã vạch EAN-13 in
-        -- trên vỏ hộp (dùng cho máy quét ở quầy). Để NULL được: sản phẩm mới tạo từ form
-        -- admin có thể chưa gán mã / chưa dán tem, và các INSERT cũ không truyền 2 cột này
-        -- vẫn chạy bình thường. Tính duy nhất xử lý bằng filtered unique index bên dưới.
+        -- Mã sản phẩm nội bộ và mã vạch EAN-13
         ma_san_pham     VARCHAR(50)     NULL,
         barcode         VARCHAR(50)     NULL,
         ten_san_pham    NVARCHAR(200)   NOT NULL,
@@ -216,17 +206,14 @@ BEGIN
 END
 GO
 
--- Mã sản phẩm & barcode phải duy nhất, nhưng phải cho phép NHIỀU dòng NULL (sản phẩm chưa
--- gán mã / chưa dán tem) → dùng filtered unique index; UNIQUE constraint của SQL Server chỉ
--- chấp nhận đúng 1 giá trị NULL nên không dùng được ở đây. Index này cũng giúp truy vấn
--- quét barcode (WHERE barcode = ?) seek thẳng thay vì quét cả bảng.
+-- Index duy nhất cho ma_san_pham và barcode
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_san_pham_ma')
     CREATE UNIQUE INDEX UX_san_pham_ma ON san_pham(ma_san_pham) WHERE ma_san_pham IS NOT NULL;
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_san_pham_barcode')
     CREATE UNIQUE INDEX UX_san_pham_barcode ON san_pham(barcode) WHERE barcode IS NOT NULL;
 GO
 
--- Junction table: 1 sản phẩm có thể thuộc nhiều phân loại (nhiều-nhiều)
+-- Bảng liên kết sản phẩm và phân loại
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham_phan_loai')
 BEGIN
     CREATE TABLE san_pham_phan_loai (
@@ -239,10 +226,7 @@ BEGIN
 END
 GO
 
--- Gallery nhiều ảnh/sản phẩm — san_pham.hinh_anh_chinh vẫn giữ nguyên làm ảnh đại diện
--- (dùng ở mọi nơi hiện có: giỏ hàng, bảng admin, thẻ sản phẩm...) để không phải sửa lại
--- những chỗ đó; bảng này chỉ phục vụ thêm khu vực gallery nhiều ảnh (form tạo sản phẩm +
--- trang chi tiết khách hàng). thu_tu = 0 luôn trùng với hinh_anh_chinh.
+-- Bảng thư viện ảnh sản phẩm
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham_hinh_anh')
 BEGIN
     CREATE TABLE san_pham_hinh_anh (
@@ -266,11 +250,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'dm_gpu')
     CREATE TABLE dm_gpu    ( gpu_id    INT IDENTITY(1,1) PRIMARY KEY, ten_gpu     NVARCHAR(100) NOT NULL UNIQUE );
 GO
 
--- ============================================================
---  Ảnh minh hoạ cho danh mục CPU/RAM/GPU/Ổ cứng — schema gốc chưa có cột này,
---  thêm sau vì CREATE TABLE đã chốt ở phía trên. NULL để không vi phạm NOT NULL
---  của các dòng seed ở mục 13 đã có sẵn. NVARCHAR(500) khớp độ dài URL ảnh + path.
--- ============================================================
+-- Thêm ảnh cho danh mục linh kiện
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dm_cpu')    AND name = 'hinh_anh')
     ALTER TABLE dm_cpu    ADD hinh_anh NVARCHAR(500) NULL;
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dm_ram')    AND name = 'hinh_anh')
@@ -292,10 +272,7 @@ BEGIN
         ma_sku              VARCHAR(50)     NOT NULL UNIQUE,
         gia_nhap            DECIMAL(18,0)   NOT NULL CONSTRAINT CK_bt_gianhap CHECK (gia_nhap >= 0),
         gia_ban             DECIMAL(18,0)   NOT NULL CONSTRAINT CK_bt_giaban  CHECK (gia_ban  >= 0),
-        -- gia_ban = 0 la trang thai tam "chua gan gia ban" (bien the moi tao / vua nhap
-        -- hang nhung admin chua nhap tay gia ban — xem InventoryPanel.vue isPendingItem) —
-        -- phai cho qua rang buoc nay luc do, khong thi lan dau dong bo gia_nhap tu phieu
-        -- nhap se luon bi CSDL choi vi 0 < gia_nhap*0.5.
+        -- Ràng buộc giá bán hợp lý
         CONSTRAINT CK_bt_giaban_hop_ly CHECK (gia_ban = 0 OR gia_ban >= gia_nhap * 0.5),
         bao_hanh_thang      INT             NOT NULL DEFAULT 24 CONSTRAINT CK_bt_baohanh CHECK (bao_hanh_thang >= 0),
         hinh_anh_bien_the   NVARCHAR(500)   NULL,
@@ -314,8 +291,7 @@ BEGIN
         pin                 NVARCHAR(50)    NULL,
         trong_luong_kg      DECIMAL(5,2)    NULL,
 
-        -- Phân loại theo mục đích sử dụng — cache từ san_pham_phan_loai để filter nhanh
-        -- VD: 'gaming,do_hoa' | 'van_phong,sinh_vien'
+        -- Cache phân loại sản phẩm
         phan_loai_tags      NVARCHAR(200)   NULL,
         phan_loai_ten       NVARCHAR(200)   NULL,
         ngay_tao            DATETIME        NOT NULL DEFAULT GETDATE(),
@@ -349,8 +325,7 @@ BEGIN
 END
 GO
 
--- Mỗi hàng = 1 đơn vị laptop/phụ kiện vật lý, nhận dạng qua số serial
--- so_serial: bắt buộc (NOT NULL), in trên máy hoặc hộp đóng gói
+-- Chi tiết sản phẩm vật lý theo số serial
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_san_pham')
 BEGIN
     CREATE TABLE chi_tiet_san_pham (
@@ -413,10 +388,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_ctsp_serial')
     CREATE UNIQUE INDEX UX_ctsp_serial ON chi_tiet_san_pham(so_serial);
 GO
 
--- Serial linh kiện rời (CPU/RAM/GPU/Ổ cứng) — CHỈ để truy vết bảo hành/nhập kho nội bộ,
--- KHÔNG bán rời (không có giá bán, không gắn đơn hàng) nên trạng thái khác chi_tiet_san_pham:
--- trong_kho (còn hàng) / da_su_dung (đã lắp vào máy, không theo dõi lắp vào máy nào cụ thể)
--- / loi_bao_hanh (lỗi, cần đổi trả nhà cung cấp).
+-- Bảng serial linh kiện rời (CPU, RAM, GPU, Ổ cứng)
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_cpu')
 BEGIN
     CREATE TABLE chi_tiet_cpu (
@@ -629,11 +601,7 @@ BEGIN
     );
 END
 
--- Gắn nhiều serial cho 1 dòng đơn hàng — chi_tiet_don_hang.chi_tiet_id (FK đơn) chỉ giữ
--- được 1 serial đại diện, bảng này là nguồn đầy đủ khi so_luong > 1. Dùng cho cả 2 kênh
--- bán, nhưng chỉ đơn online thực sự cần luồng giữ chỗ ("giu_hang") -> chọn lại -> đóng gói.
--- IF NOT EXISTS: file này giờ chạy được thẳng (nhấn Execute) vào DB đã có sẵn dữ liệu từ
--- bản dump cũ, không chỉ vào DB trắng — bỏ qua nếu bảng đã tồn tại thay vì báo lỗi.
+-- Bảng liên kết nhiều serial cho một chi tiết đơn hàng
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_don_hang_serial')
 BEGIN
     CREATE TABLE chi_tiet_don_hang_serial (
@@ -647,14 +615,35 @@ BEGIN
 END
 GO
 
--- DB đã có sẵn bảng lich_su_ton_kho (CREATE TABLE bên dưới sẽ báo lỗi "already an object"
--- và không chạy) vẫn cần constraint cho phép "giu_hang" — áp dụng luôn ở đây, độc lập với
--- CREATE TABLE bên dưới, drop-rồi-add nên chạy lại bao nhiêu lần cũng an toàn.
+-- Cập nhật ràng buộc loại biến động tồn kho
 IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_lsdk_loai')
     ALTER TABLE lich_su_ton_kho DROP CONSTRAINT CK_lsdk_loai;
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'lich_su_ton_kho')
     ALTER TABLE lich_su_ton_kho ADD CONSTRAINT CK_lsdk_loai
         CHECK (loai_bien_dong IN (N'nhap', N'xuat_ban', N'tra_hang', N'dieu_chinh', N'huy', N'giu_hang'));
+GO
+
+-- Thêm cột phieu_nhap_id
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID('chi_tiet_san_pham') AND name = 'phieu_nhap_id'
+)
+BEGIN
+    ALTER TABLE chi_tiet_san_pham
+        ADD phieu_nhap_id INT NULL
+        CONSTRAINT FK_chi_tiet_san_pham__phieu_nhap
+        FOREIGN KEY REFERENCES phieu_nhap(phieu_nhap_id);
+END;
+GO
+
+-- Bổ sung trạng thái giu_hang cho serial
+IF EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_chi_tiet_san_pham_trang_thai'
+)
+BEGIN
+    ALTER TABLE chi_tiet_san_pham DROP CONSTRAINT CK_chi_tiet_san_pham_trang_thai;
+END;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'lich_su_ton_kho')
@@ -664,7 +653,7 @@ BEGIN
         bien_the_id       INT            NOT NULL,
         chi_tiet_id       INT            NULL,
         loai_bien_dong    NVARCHAR(30)   NOT NULL
-            -- "giu_hang": giữ chỗ serial cho đơn online lúc đặt hàng, trước khi đóng gói chốt "da_ban".
+            -- Biến động giữ hàng
             CONSTRAINT CK_lsdk_loai CHECK (loai_bien_dong IN (N'nhap', N'xuat_ban', N'tra_hang', N'dieu_chinh', N'huy', N'giu_hang')),
         so_luong_thay_doi INT            NOT NULL,
         don_hang_id       INT            NULL,
@@ -752,11 +741,7 @@ BEGIN
         CONSTRAINT CK_kh_sodu_vi CHECK (so_du_vi >= 0);
 END
 
--- ============================================================
---  MIGRATION: Cho phép so_dien_thoai NULL (Firebase login placeholder)
---  User đăng nhập bằng Google/FB chưa cập nhật SĐT thì cột này NULL,
---  không dùng placeholder 'google_<uid>' nữa. UNIQUE cũ chỉ áp dụng khi có giá trị.
--- ============================================================
+-- Cho phép so_dien_thoai NULL
 IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('khach_hang') AND name = 'so_dien_thoai' AND is_nullable = 0)
 BEGIN
     -- Bỏ UNIQUE constraint cũ (tên tự sinh của SQL Server) trước khi đổi cột sang NULL
@@ -774,8 +759,7 @@ END
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_khach_hang_sdt' AND object_id = OBJECT_ID('khach_hang'))
 BEGIN
-    -- Filtered unique: cho phép nhiều NULL (user GG/FB chưa cập nhật), vẫn đảm bảo
-    -- 2 user thường không trùng SĐT thật. WHERE NOT NULL tương đương Oracle unique.
+    -- Index duy nhất cho so_dien_thoai
     CREATE UNIQUE INDEX UX_khach_hang_sdt ON khach_hang(so_dien_thoai) WHERE so_dien_thoai IS NOT NULL;
 END
 GO
@@ -785,7 +769,6 @@ BEGIN
     ALTER TABLE phieu_tra_hang ADD hinh_thuc_hoan NVARCHAR(20) NOT NULL DEFAULT N'vi'
         CONSTRAINT CK_pth_hinhthuchoan CHECK (hinh_thuc_hoan IN (N'tien_mat', N'vi'));
 END
--- `ma_phieu` đã được định nghĩa là cột computed trong CREATE TABLE, vì vậy không cần ALTER/UPDATE ở đây.
 
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_tra_hang')
 BEGIN
@@ -880,10 +863,7 @@ BEGIN
         noi_dung      NVARCHAR(1000) NULL,
         ngay_danh_gia DATETIME       NOT NULL DEFAULT GETDATE(),
 
-        -- 1 khach chi danh gia 1 san pham 1 lan (theo san_pham_id, khong phai tung bien_the/
-        -- don_hang) — mua nhieu lan hoac nhieu cau hinh khac nhau cua cung 1 san pham khong
-        -- tao them danh gia moi, tranh spam. don_hang_id luu lai don nao dung de xac minh
-        -- "da mua" luc tao (xem DanhGiaService.themDanhGia).
+        -- Khóa duy nhất đảm bảo mỗi khách chỉ đánh giá một sản phẩm một lần
         CONSTRAINT UQ_dg_kh_sp UNIQUE (khach_hang_id, san_pham_id),
         CONSTRAINT FK_dg_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id),
         CONSTRAINT FK_dg_san_pham   FOREIGN KEY (san_pham_id)   REFERENCES san_pham(san_pham_id),
@@ -907,63 +887,60 @@ AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @TmpTable TABLE (bien_the_id INT, bien_dong INT);
 
-    -- INSERT mới → chỉ cộng nếu trạng thái là "trong_kho"
-    IF EXISTS (SELECT 1 FROM inserted) AND NOT EXISTS (SELECT 1 FROM deleted)
-    BEGIN
-        INSERT INTO @TmpTable
-        SELECT bien_the_id, COUNT(*)
-        FROM inserted WHERE trang_thai = N'trong_kho'
-        GROUP BY bien_the_id;
-    END
+    -- Bảng tạm gom biến động theo bien_the_id
+    DECLARE @TmpTable TABLE (
+        bien_the_id   INT NOT NULL,
+        bien_dong_ton INT NOT NULL,
+        bien_dong_giu INT NOT NULL
+    );
 
-    -- UPDATE trạng thái
-    IF EXISTS (SELECT 1 FROM deleted) AND EXISTS (SELECT 1 FROM inserted)
-    BEGIN
-        -- Rời "trong_kho" → trừ tồn
-        INSERT INTO @TmpTable
-        SELECT d.bien_the_id, -COUNT(*)
-        FROM deleted d JOIN inserted i ON d.chi_tiet_id = i.chi_tiet_id
-        WHERE d.trang_thai = N'trong_kho' AND i.trang_thai <> N'trong_kho'
-        GROUP BY d.bien_the_id;
+    -- 1) Dòng bị xóa hoặc giá trị cũ trước khi update (dấu âm -)
+    INSERT INTO @TmpTable (bien_the_id, bien_dong_ton, bien_dong_giu)
+    SELECT
+        d.bien_the_id,
+        -SUM(CASE WHEN d.trang_thai IN (N'trong_kho', N'giu_hang') THEN 1 ELSE 0 END),
+        -SUM(CASE WHEN d.trang_thai = N'giu_hang' THEN 1 ELSE 0 END)
+    FROM deleted d
+    GROUP BY d.bien_the_id;
 
-        -- Quay về "trong_kho" (trả hàng / hoàn bảo hành) → cộng tồn
-        INSERT INTO @TmpTable
-        SELECT i.bien_the_id, COUNT(*)
-        FROM deleted d JOIN inserted i ON d.chi_tiet_id = i.chi_tiet_id
-        WHERE d.trang_thai <> N'trong_kho' AND i.trang_thai = N'trong_kho'
-        GROUP BY i.bien_the_id;
-    END
+    -- 2) Dòng mới được thêm hoặc giá trị mới sau khi update (dấu dương +)
+    INSERT INTO @TmpTable (bien_the_id, bien_dong_ton, bien_dong_giu)
+    SELECT
+        i.bien_the_id,
+        SUM(CASE WHEN i.trang_thai IN (N'trong_kho', N'giu_hang') THEN 1 ELSE 0 END),
+        SUM(CASE WHEN i.trang_thai = N'giu_hang' THEN 1 ELSE 0 END)
+    FROM inserted i
+    GROUP BY i.bien_the_id;
 
-    -- DELETE đơn vị đang ở trong kho → trừ tồn
-    IF EXISTS (SELECT 1 FROM deleted) AND NOT EXISTS (SELECT 1 FROM inserted)
-    BEGIN
-        INSERT INTO @TmpTable
-        SELECT bien_the_id, -COUNT(*)
-        FROM deleted WHERE trang_thai = N'trong_kho'
-        GROUP BY bien_the_id;
-    END
-
+    -- 3) Cập nhật ton_kho nếu có biến động thực sự
     IF EXISTS (SELECT 1 FROM @TmpTable)
     BEGIN
         UPDATE tk
-        SET tk.so_luong_ton_thuc_te = tk.so_luong_ton_thuc_te + t.bien_dong,
+        SET tk.so_luong_ton_thuc_te = CASE
+                WHEN tk.so_luong_ton_thuc_te + t.tong_bien_dong_ton < 0 THEN 0
+                ELSE tk.so_luong_ton_thuc_te + t.tong_bien_dong_ton
+            END,
+            tk.so_luong_giu = CASE
+                WHEN tk.so_luong_giu + t.tong_bien_dong_giu < 0 THEN 0
+                ELSE tk.so_luong_giu + t.tong_bien_dong_giu
+            END,
             tk.ngay_cap_nhat = GETDATE()
         FROM ton_kho tk
-        JOIN (SELECT bien_the_id, SUM(bien_dong) AS bien_dong FROM @TmpTable GROUP BY bien_the_id) t
-            ON tk.bien_the_id = t.bien_the_id;
+        JOIN (
+            SELECT
+                bien_the_id,
+                SUM(bien_dong_ton) AS tong_bien_dong_ton,
+                SUM(bien_dong_giu) AS tong_bien_dong_giu
+            FROM @TmpTable
+            GROUP BY bien_the_id
+            HAVING SUM(bien_dong_ton) <> 0 OR SUM(bien_dong_giu) <> 0
+        ) t ON tk.bien_the_id = t.bien_the_id;
     END
 END;
 GO
 
--- Trigger 2: Kiểm tra khuyến mãi khi tạo đơn hàng
--- Chặn: voucher hết hạn | hết lượt | đơn chưa đủ giá trị tối thiểu
--- LƯU Ý: không dùng ROLLBACK TRANSACTION ở đây (anti-pattern trong AFTER INSERT trigger) —
--- nó làm lệch trạng thái transaction mà connection pool (Hibernate/JDBC) đang theo dõi,
--- khiến một số row bị mất ngầm sau khi client đã nhận response thành công, đặc biệt khi
--- insert hàng loạt. Chỉ RAISERROR rồi RETURN, để lỗi lan ra ngoài và Spring's @Transactional
--- tự rollback đúng cách theo exception.
+-- Trigger kiểm tra điều kiện khuyến mãi khi tạo đơn hàng
 IF OBJECT_ID('trg_KiemTra_KhuyenMai', 'TR') IS NOT NULL
     DROP TRIGGER trg_KiemTra_KhuyenMai;
 GO
@@ -1098,7 +1075,7 @@ GO
 --  12. VIEWS TỔNG HỢP
 -- ============================================================
 
--- Tồn kho tổng quan — dùng cho màn hình quản lý kho
+-- View tồn kho tổng quan
 IF OBJECT_ID('vw_ton_kho_tong_quan', 'V') IS NOT NULL
     DROP VIEW vw_ton_kho_tong_quan;
 GO
@@ -1130,7 +1107,7 @@ JOIN danh_muc    dm ON sp.danh_muc_id    = dm.danh_muc_id
 WHERE bt.trang_thai = N'active';
 GO
 
--- Danh sách sản phẩm cho trang khách hàng
+-- View danh sách sản phẩm hiển thị
 IF OBJECT_ID('vw_san_pham_hien_thi', 'V') IS NOT NULL
     DROP VIEW vw_san_pham_hien_thi;
 GO
@@ -1190,15 +1167,7 @@ GO
 -- ============================================================
 --  13. DỮ LIỆU MẪU
 -- ============================================================
--- KHÔNG còn guard "IF NOT EXISTS" hay sentinel tạm nào ở đây nữa — vì phần đầu file đã
--- luôn DROP + CREATE DATABASE mới toanh trước khi chạy tới đây, database CHẮC CHẮN rỗng
--- mỗi lần, nên không cần kiểm tra "đã seed chưa" nữa, chạy thẳng.
--- (Từng thử dùng 1 bảng tạm ##seed_run làm "cờ nhớ" xuyên suốt toàn bộ khối, nhưng cách
--- đó có rủi ro: nếu công cụ chạy file (SSMS...) bị ngắt/kết nối lại kết nối giữa chừng
--- — dễ xảy ra với script dài hàng nghìn dòng, nhiều batch GO — bảng tạm đó biến mất theo
--- phiên cũ, khiến toàn bộ phần seed còn lại bị bỏ qua âm thầm không báo lỗi. Bỏ hẳn guard
--- là cách chắc chắn nhất: không phụ thuộc gì vào việc kết nối có ổn định xuyên suốt hay
--- không.)
+-- Dữ liệu mẫu ban đầu
     INSERT INTO chuc_vu (ma_chuc_vu, ten_chuc_vu, cap_do, mo_ta) VALUES
     ('admin',      N'Admin',       9, N'Toàn quyền hệ thống'),
     ('nhan_vien',  N'Nhân viên',   1, N'Bán hàng, tư vấn sản phẩm'),
@@ -1246,9 +1215,7 @@ GO
     (N'Khách Hàng Demo',   '0900000002',  'demo@saoclub.vn',        N'123 Đường Demo, TP.HCM',              N'ca_nhan',       0);
     -- khach_hang: VietAnh=1, Binh=2, Cuong=3, Duyen=4, Duc=5, MinhAnh=6, Demo=7
 
-    -- Sinh thêm 123 khách hàng nữa (tổng 130, gồm 7 khách "có tên" ở trên) — set-based,
-    -- ghép Họ x Tên (15x15=225 cặp) lấy 123 cặp đầu, số điện thoại & email suy ra từ rn
-    -- nên luôn duy nhất, không cần liệt kê tay từng dòng.
+    -- Sinh dữ liệu mẫu bổ sung cho khách hàng
     ;WITH Ho(ho, ho_ascii) AS (
         SELECT * FROM (VALUES
             (N'Nguyễn','nguyen'),(N'Trần','tran'),(N'Lê','le'),(N'Phạm','pham'),(N'Hoàng','hoang'),
@@ -1270,21 +1237,14 @@ GO
     INSERT INTO khach_hang (ho_ten, so_dien_thoai, email, loai_khach, diem_tich_luy)
     SELECT TOP (123)
         g.ho + N' ' + g.ten,
-        -- RIGHT('0000000' + số, 7): cách pad số 0 phía trước cho đủ 7 ký tự (T-SQL không
-        -- có hàm LPAD như MySQL) — vd rn=5 → '0000005', ghép với '097' ra SĐT 10 số.
         '097' + RIGHT('0000000' + CAST(g.rn AS VARCHAR(7)), 7),
         LOWER(g.ten_ascii) + '.' + LOWER(g.ho_ascii) + CAST(g.rn AS VARCHAR(10)) + '@gmail.com',
         N'ca_nhan',
         ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 300
     FROM Ganh g
     ORDER BY g.rn;
-    -- khach_hang: 8..130 sinh tự động
 
-    -- ── Tài khoản đăng nhập ───────────────────────────────────────────────────────
-    -- Mật khẩu tất cả: 123456  (BCrypt $2a$10$)
-    -- chuc_vu : admin=1, nhan_vien=2, quan_kho=3, khach_hang=4
-    -- nhan_vien: Admin=1, An=2, Bao=3, Cuong=4, Dung=5
-    -- khach_hang: ..., Demo=7
+    -- Dữ liệu mẫu tài khoản người dùng
     INSERT INTO tai_khoan (username, mat_khau_hash, chuc_vu_id, nhan_vien_id, khach_hang_id) VALUES
     ('admin',        '$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 1, 1, NULL),
     ('nhanvienan',   '$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 2, 2, NULL),
@@ -1343,26 +1303,24 @@ GO
          cpu_id, ram_id, o_cung_id, gpu_id,
          kich_thuoc_man_hinh, he_dieu_hanh, pin, trong_luong_kg, mau_sac)
     VALUES
-    -- Dell Inspiron 15 (sp=1)
+    -- Dell Inspiron 15
     (1,'DELL-3520-I5-8G',  13000000, 15490000, 24, 1,1,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'54Wh', 1.70, N'Xám Bạc'),
     (1,'DELL-3520-I7-16G', 15500000, 17990000, 24, 2,2,2,1, N'15.6" FHD 60Hz', N'Windows 11 Home', N'54Wh', 1.70, N'Đen'),
-    -- Asus Vivobook 15 (sp=2)
+    -- Asus Vivobook 15
     (2,'ASUS-X1504-I5-8G', 12500000, 14990000, 24, 3,1,2,5, N'15.6" FHD 60Hz', N'Windows 11 Home', N'50Wh', 1.70, N'Bạc'),
     (2,'ASUS-X1504-I7-16G',16000000, 19490000, 24, 7,2,2,5, N'15.6" FHD 60Hz', N'Windows 11 Home', N'50Wh', 1.70, N'Bạc'),
-    -- Lenovo IdeaPad 5 Pro (sp=3)
+    -- Lenovo IdeaPad 5 Pro
     (3,'LENO-IP5P-R5-8G',  14500000, 17490000, 24, 5,1,2,5, N'16" 2.5K 120Hz', N'Windows 11 Home', N'75Wh', 1.85, N'Xám Bão'),
     (3,'LENO-IP5P-R7-16G', 18000000, 22490000, 24, 6,2,3,5, N'16" 2.5K 120Hz', N'Windows 11 Home', N'75Wh', 1.85, N'Xám Bão'),
-    -- HP Envy x360 (sp=4)
+    -- HP Envy x360
     (4,'HP-ENVY-I7-16G',   22000000, 27490000, 24, 7,2,2,2, N'16" 2.8K OLED 120Hz', N'Windows 11 Home', N'86Wh', 2.10, N'Bạc Tự Nhiên'),
     (4,'HP-ENVY-I9-32G',   28000000, 34990000, 24, 4,3,3,3, N'16" 2.8K OLED 120Hz', N'Windows 11 Home', N'86Wh', 2.10, N'Bạc Tự Nhiên'),
     -- MSI Stealth 15M (sp=5)
     (5,'MSI-STL15-RTX4050',22500000, 27990000, 24, 7,2,2,2, N'15.6" FHD 144Hz', N'Windows 11 Home', N'52Wh', 1.70, N'Đen'),
     (5,'MSI-STL15-RTX4070',30000000, 37490000, 24, 7,2,3,4, N'15.6" QHD 240Hz', N'Windows 11 Home', N'52Wh', 1.70, N'Đen');
-    -- bien_the: Dell_i5=1,Dell_i7=2, Asus_i5=3,Asus_i7=4, Leno_R5=5,Leno_R7=6, HP_i7=7,HP_i9=8, MSI_4050=9,MSI_4070=10
+    -- Danh sách ID biến thể mẫu
 
-    -- Tồn kho ban đầu
-    -- Dell (bien_the 1,2): khởi tạo 0, trigger tự cộng khi nhập serial bên dưới
-    -- Các model khác: số liệu nhập thủ công (chưa đăng ký serial chi tiết)
+    -- Khởi tạo số lượng tồn kho ban đầu
     INSERT INTO ton_kho (bien_the_id, so_luong_ton_thuc_te, so_luong_giu, ton_kho_toi_thieu) VALUES
     ( 1,  0, 0, 5),  -- Dell i5 (trigger cộng)
     ( 2,  0, 0, 3),  -- Dell i7 (trigger cộng)
@@ -1400,9 +1358,7 @@ GO
     (6, N'Cty Minh Anh Tech', '02838901234', N'50 Lê Lợi, Quận 1',         N'TP. Hồ Chí Minh', 1);
 GO
 
-    -- Khuyến mãi
-    -- so_lan_da_dung: số lần dùng trước khi insert sample data dưới đây
-    -- VIP500 sẽ được trigger tăng thêm 1 khi DH3 (Lenovo) được chèn
+    -- Dữ liệu mẫu khuyến mãi
     INSERT INTO khuyen_mai (ma_khuyen_mai, ten_khuyen_mai, loai, gia_tri, gia_tri_toi_da, don_hang_toi_thieu, ngay_bat_dau, ngay_ket_thuc, so_luong_toi_da, so_lan_da_dung, trang_thai) VALUES
     (N'SUMMER24',  N'Mùa hè 2024 - Giảm 10%',              N'percent', 10, 500000,  2000000, N'2024-06-01', N'2026-12-31', 200, 44, N'active'),
     (N'NEWCUST',   N'Khách hàng mới - Giảm 200.000đ',       N'fixed',  200000, NULL,  500000, N'2024-01-01', N'2026-12-31',1000,  7, N'active'),
@@ -1412,9 +1368,7 @@ GO
     -- Sau trigger DH3 insert: VIP500.so_lan_da_dung = 2
 GO
 
-    -- Phiếu nhập kho
-    -- P1: 5×13M + 3×15.5M = 65M + 46.5M = 111.500.000
-    -- P2: 10×12.5M+7×16M+12×14.5M+5×18M+8×22M+3×28M+6×22.5M+4×30M = 1.016.000.000
+    -- Dữ liệu mẫu phiếu nhập kho
     INSERT INTO phieu_nhap_kho (nha_cung_cap_id, nhan_vien_id, ngay_nhap, tong_tien, trang_thai, ghi_chu) VALUES
     (1, 4, N'2024-05-01',  111500000, N'hoan_thanh', N'Nhập hàng đợt 1 - Dell Inspiron 15 từ Digiworld'),
     (2, 4, N'2024-06-15', 1016000000, N'hoan_thanh', N'Nhập hàng đợt 2 - Asus, Lenovo, HP, MSI từ FPT Trading');
@@ -1480,24 +1434,16 @@ GO
     (3, N'2024-07-10 08:40:00', N'chuyen_khoan', 21990000, N'success', N'CK doanh nghiệp Minh Anh — DH3');
 GO
 
-    -- Gán phân loại cho từng sản phẩm (nhiều-nhiều)
-    -- san_pham: Dell=1, Asus=2, Lenovo=3, HP=4, MSI=5
-    -- phan_loai: van_phong=1, sinh_vien=2, gaming=3, do_hoa=4, ky_thuat=5, macbook=6
+    -- Gán phân loại cho từng sản phẩm
     INSERT INTO san_pham_phan_loai (san_pham_id, phan_loai_id) VALUES
-    -- Dell Inspiron 15: văn phòng + sinh viên (giá phải chăng, dùng hàng ngày)
     (1, 1), (1, 2),
-    -- Asus Vivobook 15: văn phòng + sinh viên (tương tự Dell, thị trường phổ thông)
     (2, 1), (2, 2),
-    -- Lenovo IdeaPad 5 Pro: văn phòng + kỹ thuật (màn 2.5K, Ryzen mạnh, dân lập trình hay dùng)
     (3, 1), (3, 5),
-    -- HP Envy x360: đồ họa + kỹ thuật (màn OLED chuẩn màu, 2-in-1 cao cấp)
     (4, 4), (4, 5),
-    -- MSI Stealth 15M: gaming + đồ họa (RTX 4050/4070, render được video & 3D)
     (5, 3), (5, 4);
 GO
 
-    -- Sync cột phan_loai_tags / phan_loai_ten trong bien_the_san_pham từ junction table
-    -- Chạy sau mỗi lần thay đổi san_pham_phan_loai (hoặc dùng trigger bên dưới)
+    -- Đồng bộ thẻ phân loại cho biến thể sản phẩm
     UPDATE bt
     SET
         bt.phan_loai_tags = (
@@ -1528,10 +1474,7 @@ GO
     -- 13.B. DỮ LIỆU BỔ SUNG — Thêm sản phẩm mới + màu sắc
     -- ============================================================
 
-    -- ── Sản phẩm mới (sp 6-11) ───────────────────────────────────────────────────
-    -- thuong_hieu: Dell=1,Apple=2,Asus=3,Lenovo=4,HP=5,MSI=6,Acer=7
-    -- nha_cung_cap: Digiworld=1, FPT=2, Synnex=3
-    -- ma_san_pham / barcode: đánh tiếp từ SP0005 & dải barcode ở mục 13
+    -- Thêm dữ liệu mẫu sản phẩm mới
     INSERT INTO san_pham (ma_san_pham, barcode, ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
     ('SP0006', '8934567000060', N'Acer Aspire 5 A515-58',   7, 1, 3, N'LAPTOP', N'Laptop học tập văn phòng phổ thông 15.6" FHD, pin 48Wh cả ngày, giá hợp lý',                 N'/images/Acer Aspire 5 A515-58.webp'),
     ('SP0007', '8934567000077', N'Asus ROG Strix G16 G614', 3, 1, 2, N'LAPTOP', N'Gaming cao cấp RTX 40 series, màn 16" 165Hz, tản nhiệt triple fan, RGB Aura Sync',            N'/images/Asus ROG Strix G16 G614.webp'),
@@ -1542,10 +1485,7 @@ GO
     -- san_pham: Acer_Aspire5=6, ROG_Strix=7, Legion5Pro=8, Pavilion15=9, XPS15=10, NitroV=11
 GO
 
-    -- ── Biến thể bổ sung: thêm màu cho sp hiện có (1-5) ─────────────────────────
-    -- dm_cpu: i5-1235U=1,i7-13620H=2,i5-13420H=3,i9-13900H=4,R5-7530U=5,R7-7745H=6,i7-13700H=7
-    -- dm_ram: 8GB DDR4=1,16GB DDR5=2,32GB DDR5=3,8GB LPDDR5=4,16GB LPDDR5=5
-    -- dm_o_cung: 256GB=1,512GB=2,1TB=3,2TB=4  |  dm_gpu: IrisXe=1,RTX4050=2,RTX4060=3,RTX4070=4,Radeon780M=5
+    -- Thêm biến thể bổ sung cho sản phẩm hiện có
     INSERT INTO bien_the_san_pham
         (san_pham_id, ma_sku, gia_nhap, gia_ban, bao_hanh_thang,
          cpu_id, ram_id, o_cung_id, gpu_id,
@@ -1703,8 +1643,7 @@ select*from bien_the_san_pham
     (11, 3);
 GO
 
-    -- Sync phan_loai_tags / phan_loai_ten cho sp mới (trigger đã xử lý khi INSERT,
-    -- block này sync thủ công phòng trường hợp trigger chưa active)
+    -- Đồng bộ phan_loai_tags và phan_loai_ten cho sản phẩm mới
     UPDATE bt
     SET
         bt.phan_loai_tags = (
@@ -1723,9 +1662,7 @@ GO
     WHERE bt.san_pham_id IN (6, 7, 8, 9, 10, 11);
 GO
 
-    -- ── Serial numbers cho tất cả biến thể (bt 3-41) ─────────────────────────────
-    -- Format: N{năm}{brand}{bt_id:02d}{seq:04d}  (10 ký tự, giống serial laptop thật)
-    -- Trước khi INSERT: reset ton_kho về 0 để trigger tính lại đúng
+    -- Khởi tạo số serial mẫu cho các biến thể
     UPDATE ton_kho SET so_luong_ton_thuc_te = 0, so_luong_giu = 0 WHERE bien_the_id BETWEEN 3 AND 41;
 GO
 
@@ -1980,14 +1917,7 @@ GO
     (41,'N25C410003',N'trong_kho','2025-01-10'),(41,'N25C410004',N'da_ban',   '2025-01-10');
 GO
 -- ============================================================
---  13.C. DỮ LIỆU ĐƠN HÀNG MỞ RỘNG — 20-30 đơn/ngày, đa số đã giao + đã thanh toán
--- Từ 01/01/2026 đến 03/07/2026 (khớp khoảng ngày gốc file này từng dùng).
--- Set-based (Tally + random rn rồi JOIN), không liệt kê tay từng dòng như trước.
--- Không dùng UPDATE để vá lại tong_tien sau khi insert — các bước làm ĐÚNG THỨ TỰ:
--- chọn sản phẩm & tính tổng tiền trước (bảng tạm #Staging) → insert don_hang với
--- tong_tien đã đúng ngay từ đầu → MERGE...OUTPUT lấy don_hang_id IDENTITY mới sinh,
--- khớp lại đúng dòng nguồn (INSERT...OUTPUT thường không cho output cột nguồn ngoài
--- inserted.*, MERGE thì được) → insert chi_tiet_don_hang/thanh_toan dựa trên mapping đó.
+--  13.C. DỮ LIỆU ĐƠN HÀNG MỞ RỘNG
 -- ============================================================
     IF OBJECT_ID('tempdb..#Days') IS NOT NULL DROP TABLE #Days;
     IF OBJECT_ID('tempdb..#Slots') IS NOT NULL DROP TABLE #Slots;
@@ -2013,31 +1943,7 @@ GO
     DECLARE @SoKhach INT = (SELECT COUNT(*) FROM khach_hang);
     DECLARE @SoBienThe INT = (SELECT COUNT(*) FROM bien_the_san_pham WHERE trang_thai = N'active');
 
-    -- Bước 1: chọn khách hàng + sản phẩm + tính tổng tiền cho từng đơn, TRƯỚC khi insert
-    --
-    -- Giải thích các "hàm lạ" dùng bên dưới, để lần sau đọc lại không phải tra cứu:
-    --
-    -- 1) Tally (E1→E2→E4): T-SQL không có hàm "sinh dãy số 1..N" dựng sẵn (khác
-    --    GENERATE_SERIES của Postgres). Đây là idiom kinh điển để tự tạo: E1 có 10 dòng
-    --    (từ VALUES), CROSS JOIN E1 với chính nó ra E2 = 10×10 = 100 dòng, CROSS JOIN E2
-    --    với chính nó ra E4 = 100×100 = 10.000 dòng — nhân đôi số mũ mỗi bước nên rất ít
-    --    dòng CTE mà ra được tập lớn. ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) chỉ để
-    --    đánh số thứ tự 1..10000 cho các dòng đó — ORDER BY (SELECT NULL) nghĩa là "thứ
-    --    tự nào cũng được, tôi chỉ cần con số tăng dần", không có cột nào thật để sort.
-    --
-    -- 2) ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % N: cách chuẩn để sinh số nguyên ngẫu
-    --    nhiên 0..N-1 cho MỖI DÒNG trong T-SQL. Không dùng RAND() vì RAND() chỉ tính 1
-    --    lần cho cả câu lệnh (mọi dòng ra cùng 1 số) — NEWID() thì luôn duy nhất mỗi
-    --    dòng. CAST sang BIGINT trước ABS() để tránh tràn số (CHECKSUM trả về INT, có 1
-    --    giá trị INT âm nhỏ nhất mà ABS() không biểu diễn nổi dưới dạng INT dương).
-    --
-    -- 3) VẬT CHẤT HOÁ TỪNG GIAI ĐOẠN VÀO BẢNG TẠM (#Days, #Slots...) thay vì lồng CTE
-    --    nhiều tầng dùng chung: từng thử dùng toàn CTE lồng nhau, kết quả là SQL Server
-    --    có thể tính lại cả nhánh chứa NEWID() nhiều lần trong 1 câu lệnh — vừa chạy rất
-    --    chậm (đã gặp: hơn 1 phút cho ~4600 đơn, đáng lẽ chỉ vài giây), vừa tràn số nguyên
-    --    (Msg 8115) do CHECKSUM(NEWID()) bị gọi nhiều hơn hẳn dự tính. Bảng tạm ép SQL
-    --    Server tính xong 1 giai đoạn, lưu lại, rồi mới sang giai đoạn tiếp theo — không
-    --    còn mập mờ "tính bao nhiêu lần" nữa, tốc độ ổn định và dự đoán được.
+    -- Bước 1: Khởi tạo danh sách ngày và số lượng đơn ngẫu nhiên
     ;WITH E1(n) AS (SELECT n FROM (VALUES(1),(1),(1),(1),(1),(1),(1),(1),(1),(1)) v(n)),
     E2(n) AS (SELECT 1 FROM E1 a CROSS JOIN E1 b),
     E4(n) AS (SELECT 1 FROM E2 a CROSS JOIN E2 b),
@@ -2048,12 +1954,7 @@ GO
     FROM Tally
     WHERE n <= DATEDIFF(DAY, @TuNgay, @DenNgay) + 1;
 
-    -- LƯU Ý: sinh số ngẫu nhiên (kh_rn/bt1_rn/bt2_rn...) NGAY trong SELECT trên #Days×Tally
-    -- (bảng tạm × tally, nhiều dòng thật) rồi mới JOIN sang #KhachSo/#BienTheSo theo rn ở
-    -- bước sau — KHÔNG dùng CROSS APPLY (SELECT TOP 1 ... ORDER BY NEWID()) để chọn ngẫu
-    -- nhiên, vì APPLY không tương quan (không tham chiếu cột nào của bảng ngoài) có thể bị
-    -- SQL Server tối ưu gộp thành CROSS JOIN và chỉ tính NEWID() MỘT LẦN cho cả tập kết
-    -- quả — đúng lỗi thực tế gặp phải khi test: mọi đơn trong ngày ra cùng 1 khách/1 sp.
+    -- Tạo danh sách đơn hàng chi tiết theo ngày
     ;WITH E1(n) AS (SELECT n FROM (VALUES(1),(1),(1),(1),(1),(1),(1),(1),(1),(1)) v(n)),
     E2(n) AS (SELECT 1 FROM E1 a CROSS JOIN E1 b),
     Tally30 AS (SELECT TOP (30) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n FROM E2)
@@ -2113,14 +2014,7 @@ GO
     JOIN #BienTheSo bt1 ON bt1.rn = sl.bt1_rn
     JOIN #BienTheSo bt2 ON bt2.rn = sl.bt2_rn;
 
-    -- Bước 2: insert don_hang với tong_tien ĐÃ ĐÚNG ngay từ đầu — dùng MERGE thay vì
-    -- INSERT thường vì lý do sau: sau khi insert cần biết "dòng #Staging nào ứng với
-    -- don_hang_id (IDENTITY) nào vừa sinh ra" để bước 3/4 insert đúng chi_tiet_don_hang.
-    -- INSERT ... OUTPUT chỉ cho lấy cột của bảng đích (inserted.*), KHÔNG cho lấy cột từ
-    -- bảng nguồn (#Staging) — nên không thể output staging_key kèm theo. MERGE thì OUTPUT
-    -- lấy được cả 2 phía. "ON 1 = 0" là điều kiện luôn sai, có nghĩa ép mọi dòng #Staging
-    -- rơi vào nhánh WHEN NOT MATCHED (không tìm được khớp), tức là always insert — MERGE
-    -- ở đây chỉ dùng như một cách "INSERT có OUTPUT nguồn", không thật sự merge/update gì.
+    -- Bước 2: Thêm đơn hàng vào bảng don_hang và lưu mapping staging_key
     MERGE don_hang AS tgt
     USING #Staging AS src
     ON 1 = 0
@@ -2141,8 +2035,7 @@ GO
     FROM #Mapping m JOIN #Staging s ON m.staging_key = s.staging_key
     WHERE s.item2_bien_the_id IS NOT NULL;
 
-    -- Bước 4: sinh thanh_toan cho các đơn đã 'paid' — so_tien tính thẳng từ staging
-    -- (tong_tien - giam_gia(=0) + phi_van_chuyen), không cần đọc lại don_hang.
+    -- Bước 4: sinh thanh_toan cho các đơn đã thanh toán
     INSERT INTO thanh_toan (don_hang_id, ngay_thanh_toan, phuong_thuc_thanh_toan, so_tien, trang_thai)
     SELECT m.don_hang_id, s.ngay_dat,
            CASE ABS(CAST(CHECKSUM(NEWID()) AS BIGINT)) % 5
@@ -2164,19 +2057,7 @@ GO
 -- ============================================================
 --  13b. PHIẾU TRẢ HÀNG + VÍ KHÁCH HÀNG DEMO
 -- ============================================================
--- Random ~5% đơn "delivered" (vừa sinh ở mục 13) thành có phiếu trả hàng — đa dạng
--- trạng thái (da_xu_ly/cho_xu_ly/tu_choi) và hình thức hoàn (vi/tien_mat) để có sẵn dữ
--- liệu demo cho tính năng Trả hàng + Ví khách hàng mỗi lần chạy lại file. Sản phẩm trả =
--- dòng chi_tiet_don_hang đầu tiên (id nhỏ nhất) của đơn đó — không gán chi_tiet_id
--- (serial cụ thể) vì đơn demo không theo dõi serial theo từng đơn.
---
--- Random dùng NEWID() trực tiếp trong SELECT list, VẬT CHẤT HOÁ ngay vào bảng tạm thật
--- (#DonDaGiao) trước khi JOIN/lọc tiếp — đúng bài học đã rút ra ở mục 13: nếu chỉ dùng
--- CTE (không vật chất hoá) rồi JOIN/CROSS APPLY/WHERE lên các cột NEWID() của nó, SQL
--- Server có thể tính lại các cột NEWID() nhiều lần cho cùng 1 dòng logic (từng thực tế
--- gặp lỗi trùng khoá ở #MapTraHang khi thử theo cách CTE thuần). CROSS APPLY
--- chi_tiet_don_hang bên dưới có tương quan (WHERE don_hang_id = dg.don_hang_id) nên an
--- toàn dù không vật chất hoá riêng.
+-- Tạo dữ liệu mẫu phiếu trả hàng và hoàn tiền ví từ đơn hàng đã giao
 IF OBJECT_ID('tempdb..#NhanVienSo') IS NOT NULL DROP TABLE #NhanVienSo;
 IF OBJECT_ID('tempdb..#DonDaGiao') IS NOT NULL DROP TABLE #DonDaGiao;
 IF OBJECT_ID('tempdb..#DonTra') IS NOT NULL DROP TABLE #DonTra;
@@ -2245,10 +2126,7 @@ SELECT m.phieu_tra_id, s.bien_the_id, s.so_luong, s.don_gia,
 FROM #MapTraHang m
 JOIN #DonTra s ON s.don_hang_id = m.don_hang_id;
 
--- Đồng bộ ví: logic cộng ví (PhieuTraHangService.congViNeuVuaHoanTat) chỉ chạy khi đi
--- qua tầng ứng dụng Java lúc tạo/sửa phiếu qua API — INSERT thẳng bằng SQL ở đây không
--- tự kích hoạt, nên phải tự đồng bộ so_du_vi = tổng so_tien_hoan các phiếu da_xu_ly+vi
--- của khách đó. Khách không có phiếu nào qua ví thì giữ nguyên so_du_vi = 0 mặc định.
+-- Đồng bộ số dư ví khách hàng từ các phiếu trả hàng đã xử lý
 UPDATE kh
 SET so_du_vi = tong.so_tien
 FROM khach_hang kh
@@ -2269,16 +2147,7 @@ GO
 -- ============================================================
 --  13c. PHIẾU BẢO HÀNH DEMO
 -- ============================================================
--- Random ~5% đơn "delivered" thành có phiếu bảo hành — đa dạng trạng thái xử lý
--- (con_bao_hanh/dang_xu_ly/da_xu_ly/het_bao_hanh/tu_choi) để có sẵn dữ liệu demo. Sản
--- phẩm bảo hành = dòng chi_tiet_don_hang đầu tiên (id nhỏ nhất) của đơn đó — không gán
--- chi_tiet_id (serial cụ thể) vì đơn demo không theo dõi serial theo từng đơn. ngay_mua
--- lấy từ ngay_dat của đơn (đơn demo không có ngay_giao_thuc_te), ngay_het_bh = ngay_mua +
--- 12-24 tháng ngẫu nhiên. phieu_bao_hanh không có cột nhân viên xử lý nên không cần bảng
--- tạm kiểu #NhanVienSo như mục 13b.
---
--- Vật chất hoá NEWID() vào bảng tạm thật (#DonBaoHanh) trước khi CROSS APPLY/lọc — cùng
--- lý do đã ghi ở mục 13b (tránh SQL Server tính lại NEWID() nhiều lần cho cùng 1 dòng).
+-- Tạo dữ liệu mẫu phiếu bảo hành từ đơn hàng đã giao
 IF OBJECT_ID('tempdb..#DonBaoHanh') IS NOT NULL DROP TABLE #DonBaoHanh;
 IF OBJECT_ID('tempdb..#PhieuBaoHanh') IS NOT NULL DROP TABLE #PhieuBaoHanh;
 
@@ -2353,12 +2222,7 @@ GO
 -- ============================================================
 --  14. NÂNG TỒN KHO DEMO (mỗi biến thể ~20-30 máy, trừ 1 biến thể sắp hết hàng)
 -- ============================================================
--- Đồng bộ ton_kho TRƯỚC — nhiều biến thể ngoài Dell đang bị lệch (so_luong_ton_thuc_te
--- sai lệch so với số serial "trong_kho" thật) do 1 dòng UPDATE reset cũ trong file này.
--- Trigger trg_CapNhatTonKhoThucTe chỉ CỘNG/TRỪ phần thay đổi (delta) mỗi khi serial đổi
--- trạng thái — nếu baseline sai từ trước, delta cộng/trừ vẫn cho ra kết quả sai và có
--- thể vi phạm CHECK (>= 0). Phải sửa đúng baseline ở đây trước khi các bước bên dưới
--- thêm/đổi trạng thái serial.
+-- Đồng bộ số lượng tồn kho theo serial thực tế
 UPDATE tk
 SET so_luong_ton_thuc_te = ISNULL(tinh_lai.trong_kho, 0),
     so_luong_giu         = ISNULL(tinh_lai.giu_hang, 0)
@@ -2372,8 +2236,7 @@ LEFT JOIN (
 ) tinh_lai ON tk.bien_the_id = tinh_lai.bien_the_id;
 GO
 
--- Chỉ chạy 1 lần (đánh dấu bằng tiền tố serial 'RESTOCK-') dù file được Execute lại
--- bao nhiêu lần — không cộng dồn thêm máy mỗi lần chạy.
+-- Thêm serial mẫu nếu chưa tồn tại
 IF NOT EXISTS (SELECT 1 FROM chi_tiet_san_pham WHERE so_serial LIKE N'RESTOCK-%')
 BEGIN
     ;WITH Numbers AS (
@@ -2381,9 +2244,7 @@ BEGIN
         UNION ALL SELECT n + 1 FROM Numbers WHERE n < 30
     ),
     Targets AS (
-        -- Mỗi biến thể mục tiêu 20-30 máy (rải theo bien_the_id cho đa dạng), riêng
-        -- bien_the_id=37 (Dell XPS 15 i9 32GB, ton_kho_toi_thieu=1) giữ mục tiêu chỉ 1
-        -- máy để luôn hiện "sắp hết hàng" làm demo.
+        -- Xác định số lượng máy mục tiêu cho từng biến thể
         SELECT bien_the_id,
                CASE WHEN bien_the_id = 37 THEN 1 ELSE 20 + (bien_the_id % 11) END AS muc_tieu
         FROM bien_the_san_pham
@@ -2405,9 +2266,7 @@ BEGIN
 END
 GO
 
--- bien_the_id=37 đã có sẵn vài máy trong_kho — đánh dấu bớt còn đúng 1 máy để mô phỏng
--- sản phẩm sắp hết hàng. Tách guard riêng theo số lượng thật (không dùng chung guard
--- 'RESTOCK-%' ở trên) — tự chạy lại đến khi đúng còn 1 máy, kể cả khi lần trước lỡ dở.
+-- Giữ 1 máy cho biến thể demo sắp hết hàng
 IF (SELECT COUNT(*) FROM chi_tiet_san_pham WHERE bien_the_id = 37 AND trang_thai = N'trong_kho') > 1
 BEGIN
     UPDATE TOP (1) chi_tiet_san_pham
@@ -2416,8 +2275,7 @@ BEGIN
 END
 GO
 
--- Đồng bộ lại lần nữa sau khi thêm máy demo + đánh dấu bán ở trên — an toàn chạy lại
--- nhiều lần, luôn tính lại từ dữ liệu thật, không cộng dồn sai.
+-- Đồng bộ lại số lượng tồn kho sau khi thêm serial mẫu
 UPDATE tk
 SET so_luong_ton_thuc_te = ISNULL(tinh_lai.trong_kho, 0),
     so_luong_giu         = ISNULL(tinh_lai.giu_hang, 0)
@@ -2431,10 +2289,7 @@ LEFT JOIN (
 ) tinh_lai ON tk.bien_the_id = tinh_lai.bien_the_id;
 GO
 
--- Serial mẫu cho linh kiện rời (CPU/RAM/GPU/Ổ cứng) — 10 serial/loại, rải đều qua các
--- mục danh mục đã seed ở trên (dm_cpu 1-7, dm_ram 1-5, dm_gpu 1-5, dm_o_cung 1-4).
--- Trước đây các bảng chi_tiet_cpu/ram/gpu/o_cung không có dữ liệu mẫu nên tab "Serial"
--- (Kho hàng) chỉ thấy serial sản phẩm, không thấy serial linh kiện.
+-- Tạo serial mẫu cho linh kiện rời (CPU, RAM, GPU, ổ cứng)
 ;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
 INSERT INTO chi_tiet_cpu (cpu_id, so_serial, trang_thai)
 SELECT ((n - 1) % 7) + 1, N'CPU-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
@@ -2512,8 +2367,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_lsdh_don_hang')
     CREATE INDEX IX_lsdh_don_hang ON lich_su_don_hang(don_hang_id, thoi_gian);
 GO
 
--- Tự ghi log mỗi khi trạng thái đơn đổi — chỗ duy nhất phát sinh log, không cần backend
--- Java can thiệp, không sợ thiếu dòng nếu sau này có thêm đường cập nhật trạng thái khác.
+-- Trigger ghi lịch sử thay đổi trạng thái đơn hàng
 CREATE OR ALTER TRIGGER trg_don_hang_log_trangthai
 ON don_hang
 AFTER UPDATE
@@ -2540,11 +2394,7 @@ BEGIN
 END
 GO
 
--- Cộng điểm khi đơn chuyển "delivered" — tức lúc khách bấm "Xác nhận đã nhận hàng" (đơn
--- online, xem xacNhanDaNhanHang() ở DonHangService) hoặc lúc bán tại quầy (đơn in_store vào
--- thẳng "delivered"). Không cộng sớm hơn (lúc đặt/thanh toán) để tránh khách "cày" điểm bằng
--- cách đặt rồi hủy liên tục — đơn đã "delivered" không còn hủy được nữa (xem
--- CHUYEN_TRANG_THAI_DON_HANG), nên không cần trigger trừ điểm riêng cho trường hợp hủy.
+-- Trigger cộng điểm tích lũy cho khách hàng khi hoàn tất đơn hàng
 IF EXISTS (SELECT 1 FROM sys.triggers WHERE name = 'trg_don_hang_tru_diem_huy')
     DROP TRIGGER trg_don_hang_tru_diem_huy;
 GO
@@ -2557,9 +2407,7 @@ BEGIN
     SET NOCOUNT ON;
     IF UPDATE(trang_thai_don_hang)
     BEGIN
-        -- Cộng dồn theo GROUP BY khach_hang_id trước khi UPDATE — 1 câu UPDATE...FROM...JOIN
-        -- trực tiếp trên "many" side chỉ lấy được giá trị từ 1 dòng khớp bất kỳ khi 1 khách có
-        -- nhiều đơn cùng chuyển "delivered" trong cùng 1 batch, làm mất điểm âm thầm.
+        -- Cập nhật điểm tích lũy của khách hàng
         UPDATE kh
         SET kh.diem_tich_luy = kh.diem_tich_luy + x.diem_cong
         FROM khach_hang kh
@@ -2622,9 +2470,7 @@ BEGIN
 END
 GO
 
--- Voucher cá nhân trúng từ vòng quay giữ nguyên đơn tối thiểu của khuyến mãi gốc (khách vẫn
--- phải đạt đơn tối thiểu mới áp được, y hệt mã khuyến mãi công khai) — cột thêm sau, ALTER
--- idempotent cho DB đã có sẵn bảng từ trước.
+-- Thêm cột đơn hàng tối thiểu cho phiếu giảm giá cá nhân
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('phieu_giam_gia_ca_nhan') AND name = 'don_hang_toi_thieu')
 BEGIN
     ALTER TABLE phieu_giam_gia_ca_nhan ADD don_hang_toi_thieu DECIMAL(18,0) NULL;
@@ -2679,12 +2525,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_pggcn_khach_hang')
 GO
 
 -- ============================================================
---  Mở rộng danh sách trạng thái đơn hàng theo thời gian (out_for_delivery, rồi
---  awaiting_confirmation) — Drop-rồi-add (không gói trong CREATE TABLE) nên chạy lại file
---  bao nhiêu lần trên DB đã có sẵn cũng an toàn. "awaiting_confirmation": admin đã bấm "Đã
---  giao" nhưng khách chưa bấm "Xác nhận đã nhận hàng" — chỉ khách (hoặc staff) xác nhận mới
---  chuyển tiếp "delivered", đơn mới thật sự rơi vào tab "Hoàn tất" phía khách hàng. Xem
---  DonHangService.xacNhanDaNhanHang() (BackEnd) và CHUYEN_TRANG_THAI_DON_HANG.
+--  Cập nhật ràng buộc các trạng thái đơn hàng hợp lệ
 -- ============================================================
 IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_dh_trangthai')
     ALTER TABLE don_hang DROP CONSTRAINT CK_dh_trangthai;
@@ -2693,8 +2534,7 @@ ALTER TABLE don_hang ADD CONSTRAINT CK_dh_trangthai
 GO
 
 -- ============================================================
---  Mã vạch ở CẤP BIẾN THỂ — để sau này quét bán/quét nhập kho ra đúng biến thể
---  (màu/cấu hình cụ thể), khác với san_pham.barcode chỉ là mã tra cứu chung chung.
+--  Thêm mã vạch cho biến thể sản phẩm
 -- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('bien_the_san_pham') AND name = 'barcode')
 BEGIN
@@ -2705,18 +2545,16 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_bien_the_barcode')
     CREATE UNIQUE INDEX UX_bien_the_barcode ON bien_the_san_pham(barcode) WHERE barcode IS NOT NULL;
 GO
 
--- Sinh barcode minh hoạ (893 + bien_the_id đệm 10 số = đủ 13 số) cho các biến thể seed
--- sẵn chưa có mã — chỉ điền chỗ NULL, không đụng barcode đã gán tay/qua UI.
+-- Tạo mã vạch mặc định cho các biến thể chưa có mã
 UPDATE bien_the_san_pham
 SET barcode = '893' + RIGHT('0000000000' + CAST(bien_the_id AS VARCHAR(10)), 10)
 WHERE barcode IS NULL;
 GO
 
 -- ============================================================
---  AUTO-GENERATE ma_san_pham (SP0001, SP0002, ...)
+--  Tự động sinh mã sản phẩm (SP0001, SP0002, ...)
 -- ============================================================
--- Trigger gán mã SP tự tăng khi INSERT mà ma_san_pham IS NULL.
--- Không gán trên UPDATE — mã đã có thì giữ nguyên, không đổi.
+-- Trigger gán mã SP tự tăng khi thêm sản phẩm mới
 IF OBJECT_ID('trg_AutoGen_MaSanPham', 'TR') IS NOT NULL
     DROP TRIGGER trg_AutoGen_MaSanPham;
 GO
@@ -2728,17 +2566,14 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Lấy số lớn nhất hiện có (loại bỏ prefix 'SP', chỉ lấy phần số)
     DECLARE @MaxNum INT;
     SELECT @MaxNum = MAX(CAST(SUBSTRING(ma_san_pham, 3, 10) AS INT))
     FROM san_pham
     WHERE ma_san_pham IS NOT NULL
       AND ma_san_pham LIKE 'SP%';
 
-    -- @MaxNum NULL (chưa có SP nào) → bắt đầu từ 0
     IF @MaxNum IS NULL SET @MaxNum = 0;
 
-    -- Gán cho các dòng vừa insert mà chưa có mã
     UPDATE sp
     SET sp.ma_san_pham = 'SP' + RIGHT('0000' + CAST(@MaxNum + ROW_NUMBER() OVER (ORDER BY i.san_pham_id), 10), 4)
     FROM san_pham sp
@@ -2747,10 +2582,7 @@ BEGIN
 END
 GO
 
--- Backfill gallery: sản phẩm seed sẵn có hinh_anh_chinh nhưng chưa có dòng gallery nào ->
--- tạo dòng đầu tiên. Đặt Ở ĐÂY (cuối file, sau khi toàn bộ san_pham đã được INSERT ở trên)
--- chứ không phải ngay sau CREATE TABLE — DB bị DROP + tạo lại mỗi lần chạy file (xem đầu
--- file), nên đặt sớm sẽ chạy trên bảng san_pham còn rỗng và không backfill được gì.
+-- Tạo ảnh gallery mặc định cho các sản phẩm đã có ảnh chính
 INSERT INTO san_pham_hinh_anh (san_pham_id, duong_dan, thu_tu)
 SELECT sp.san_pham_id, sp.hinh_anh_chinh, 0
 FROM san_pham sp
@@ -2858,3 +2690,35 @@ BEGIN
     ALTER TABLE phieu_nhap_kho ADD serial_draft_json NVARCHAR(MAX) NULL;
 END
 GO
+
+-- ============================================================
+--  Tự động tạo bản ghi tồn kho khi thêm biến thể mới
+-- ============================================================
+IF OBJECT_ID('trg_BienThe_TaoTonKho', 'TR') IS NOT NULL
+    DROP TRIGGER trg_BienThe_TaoTonKho;
+GO
+
+CREATE TRIGGER trg_BienThe_TaoTonKho
+ON bien_the_san_pham
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO ton_kho (bien_the_id, so_luong_ton_thuc_te, so_luong_giu, ton_kho_toi_thieu, ngay_tao, ngay_cap_nhat)
+    SELECT i.bien_the_id, 0, 0, 5, GETDATE(), GETDATE()
+    FROM inserted i
+    WHERE NOT EXISTS (
+        SELECT 1 FROM ton_kho tk WHERE tk.bien_the_id = i.bien_the_id
+    );
+END;
+GO
+
+-- Backfill: Tạo bản ghi tồn kho cho các biến thể chưa có trong ton_kho
+INSERT INTO ton_kho (bien_the_id, so_luong_ton_thuc_te, so_luong_giu, ton_kho_toi_thieu, ngay_tao, ngay_cap_nhat)
+SELECT bt.bien_the_id, 0, 0, 5, GETDATE(), GETDATE()
+FROM bien_the_san_pham bt
+WHERE NOT EXISTS (
+    SELECT 1 FROM ton_kho tk WHERE tk.bien_the_id = bt.bien_the_id
+);
+GO
+

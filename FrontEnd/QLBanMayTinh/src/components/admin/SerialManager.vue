@@ -4,7 +4,7 @@ import {
   Search, Filter, X, ChevronDown, ChevronUp,
   Hash, Layers, Laptop, Barcode, Activity, Calendar,
   SlidersHorizontal, CheckCircle2, Clock, Package, AlertTriangle,
-  RotateCcw, Eye, Pencil, Trash2, Plus, Cpu, MemoryStick, HardDrive, Monitor, Lock, User,
+  RotateCcw, Eye, Pencil, Plus, Cpu, MemoryStick, HardDrive, Monitor, Lock, User,
 } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
@@ -77,9 +77,7 @@ const variantOptions = computed(() =>
 const variantLabel = (bienTheId) => variantOptions.value.find((o) => o.value === bienTheId)?.label ?? '';
 const findVariant = (bienTheId) => (ProductsStore.items ?? []).find((p) => p.bienTheId === bienTheId);
 
-// Modal "Chi tiet san pham" xem-thuan cho dong loai "sanPham" — chi hien DUNG bien the cua
-// serial dang xem (onlyBienTheIds), khong phai ca ho bien the cua san pham do. Dong loai
-// linh kien (cpu/ram/gpu/oCung) khong co nut nay — khong co "san pham"/bien the de xem.
+// Xem chi tiết biến thể của serial
 const showDetailModal = ref(false);
 const detailSanPhamId = ref(null);
 const detailSanPhamName = ref('');
@@ -93,9 +91,7 @@ const openDetail = (item) => {
   showDetailModal.value = true;
 };
 
-// Nhãn hiển thị cột "Sản phẩm/SKU" cho MỌI loại dòng (sản phẩm lẫn linh kiện) —
-// linh kiện đã có sẵn tên spec (tenCpu/dungLuong/...) ngay trong response, không cần
-// tra cứu thêm.
+// Nhãn hiển thị sản phẩm hoặc linh kiện
 const rowSpecLabel = (item) => {
   if (item.loai === 'sanPham') return variantLabel(item.bienTheId) || item.maSku;
   const meta = LINH_KIEN_META[item.loai];
@@ -205,10 +201,7 @@ const STATUS_OPTIONS_LINH_KIEN = ['trong_kho', 'da_su_dung', 'loi_bao_hanh'];
 const statusOptions = computed(() =>
   form.value.loai === 'sanPham' ? STATUS_OPTIONS_SAN_PHAM : STATUS_OPTIONS_LINH_KIEN
 );
-// Đổi Loại (người dùng bấm chọn trong modal) → trạng thái/spec cũ có thể không hợp lệ
-// với loại mới, reset về mặc định. Gắn vào @change của <select> (xem Step 8), KHÔNG
-// dùng watch(() => form.value.loai) — watch sẽ fire cả lúc openEdit() gán nguyên object
-// form mới (loai đổi từ giá trị cũ sang item.loai), xoá mất specId/trangThai vừa set.
+// Đặt lại dữ liệu khi thay đổi loại serial
 const onLoaiChange = () => {
   form.value.trangThai = 'trong_kho';
   form.value.specId = '';
@@ -296,10 +289,7 @@ const deleteSerial = async (item) => {
   await load();
 };
 
-// Lưu ý: việc dọn rác serial 'giu_hang' bị kẹt (đơn đã bị xóa/hủy hoặc user đóng tab POS
-// giữa chừng) được backend xử lý TỰ ĐỘNG mỗi khi load() chạy — xem
-// ChiTietSanPhamService.hienThiChiTietSanPham() gọi releaseOrphanSerials() ở đầu. Staff
-// không cần bấm nút, chỉ cần mở tab Kho hàng là bảng sẽ hiển thị serial đã được giải phóng.
+// Tải danh sách serial
 </script>
 
 <template>
@@ -448,7 +438,7 @@ const deleteSerial = async (item) => {
             <th style="width:11%; min-width:110px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t('admin.serialManager.colStatus') }}</span></th>
             <th style="width:11%; min-width:120px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><User :size="12" /> {{ t('admin.serialManager.colPerformer') }}</span></th>
             <th style="width:9%; min-width:95px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> {{ t('admin.serialManager.colDate') }}</span></th>
-            <th style="width:16%; min-width:235px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t('admin.serialManager.colAction') }}</span></th>
+            <th style="width:13%; min-width:160px; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t('admin.serialManager.colAction') }}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -542,7 +532,7 @@ const deleteSerial = async (item) => {
             </td>
             <td class="text-center text-secondary small text-nowrap">{{ formatDate(item.ngayNhapKho) }}</td>
             <td class="text-center">
-              <div class="d-inline-flex align-items-center justify-content-start gap-1.5 text-nowrap" style="width: 222px;">
+              <div class="d-inline-flex align-items-center justify-content-center gap-1.5 text-nowrap">
                 <button
                   v-if="item.loai === 'sanPham'"
                   class="btn btn-sm btn-outline-info d-inline-flex align-items-center justify-content-center gap-1.5 px-2 py-1 rounded-2 text-nowrap"
@@ -561,16 +551,6 @@ const deleteSerial = async (item) => {
                 >
                   <Pencil :size="13" />
                   <span>{{ t('admin.serialManager.edit') }}</span>
-                </button>
-                <button
-                  v-if="item.trangThai === 'trong_kho'"
-                  class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center gap-1.5 px-2 py-1 rounded-2 text-nowrap"
-                  style="font-size: 11.5px; font-weight: 500; width: 64px;"
-                  :title="t('admin.serialManager.delete')"
-                  @click="deleteSerial(item)"
-                >
-                  <Trash2 :size="13" />
-                  <span>{{ t('admin.serialManager.delete') }}</span>
                 </button>
               </div>
             </td>

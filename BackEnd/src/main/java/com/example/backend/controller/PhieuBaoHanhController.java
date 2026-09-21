@@ -58,28 +58,20 @@ public class PhieuBaoHanhController {
     }
 
 
-    /**
-     * Lấy phiếu BH theo khách hàng — dùng cho trang Tài khoản KH.
-     * Cần đăng nhập (JWT token).
-     */
+    // Lấy phiếu bảo hành theo khách hàng
     @GetMapping("/khach-hang/{khachHangId}")
     public List<PhieuBaoHanhResponse> getByKhachHang(@PathVariable Integer khachHangId) {
         return phieuBaoHanhService.getByKhachHang(khachHangId);
     }
 
-
-    /**
-     * Cập nhật trạng thái phiếu BH (tiếp nhận, hoàn thành, từ chối).
-     */
+    // Cập nhật trạng thái phiếu bảo hành
     @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
     @PutMapping("/{id}/status")
     public ResponseEntity<PhieuBaoHanh> updateStatus(@PathVariable Integer id, @RequestBody PhieuBaoHanhRequest request) {
         return ResponseEntity.ok(phieuBaoHanhService.update(id, request));
     }
 
-    /**
-     * Khách hàng tự hủy phiếu BH (chỉ khi còn trạng thái 'cho_xu_ly').
-     */
+    // Hủy phiếu bảo hành
     @PutMapping("/{id}/huy")
     public ResponseEntity<Void> huyPhieu(@PathVariable Integer id, @RequestBody java.util.Map<String, String> body) {
         phieuBaoHanhService.huyPhieu(id, body.get("lyDo"));

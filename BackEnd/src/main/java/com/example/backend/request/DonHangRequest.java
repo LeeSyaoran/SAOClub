@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -67,4 +68,7 @@ public class DonHangRequest {
     private String maVanDon;
 
     private Integer phieuGiamGiaCaNhanId;
+
+    // Danh sách sanPhamId trong đơn hàng để kiểm tra khuyến mãi theo sản phẩm
+    private List<Integer> sanPhamIds;
 }

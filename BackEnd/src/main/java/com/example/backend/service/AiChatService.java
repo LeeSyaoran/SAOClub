@@ -14,31 +14,29 @@ import java.util.stream.Collectors;
 @Service
 public class AiChatService {
 
-    @Value("${ai.ollama.url:http://localhost:11434}")
-    private String ollamaUrl;
-
-    @Value("${ai.ollama.model:llama3.2}")
-    private String model;
-
-    @Value("${ai.ollama.enabled:true}")
-    private boolean enabled;
-
-    private final WebClient webClient = WebClient.builder()
-            .baseUrl("http://localhost:11434")
-            .build();
+    private final String ollamaUrl;
+    private final String model;
+    private final boolean enabled;
+    private final WebClient webClient;
 
     private final AiKienThucRepository aiKienThucRepository;
     private final SanPhamRepository sanPhamRepository;
 
-    public AiChatService(AiKienThucRepository aiKienThucRepository,
-                          SanPhamRepository sanPhamRepository) {
+    public AiChatService(
+            @Value("${ai.ollama.url:http://localhost:11434}") String ollamaUrl,
+            @Value("${ai.ollama.model:llama3.2}") String model,
+            @Value("${ai.ollama.enabled:true}") boolean enabled,
+            AiKienThucRepository aiKienThucRepository,
+            SanPhamRepository sanPhamRepository) {
+        this.ollamaUrl = ollamaUrl;
+        this.model = model;
+        this.enabled = enabled;
         this.aiKienThucRepository = aiKienThucRepository;
         this.sanPhamRepository = sanPhamRepository;
+        this.webClient = WebClient.builder().baseUrl(ollamaUrl).build();
     }
 
-    /**
-     * Tin nhắn chào mừng
-     */
+    // Lấy tin nhắn chào mừng
     public String getWelcomeMessage() {
         return "Xin chào! 👋 Mình là trợ lý AI của **SAOClub**. " +
                 "Mình có thể giúp bạn:\n\n" +
@@ -50,35 +48,25 @@ public class AiChatService {
                 "bạn có thể gõ **\"chuyển nhân viên\"** nhé!";
     }
 
-    /**
-     * Trả lời câu hỏi
-     */
+    // Trả lời câu hỏi của khách hàng
     public String traLoi(String cauHoi, Long cuocTroChuyenId) {
         if (!enabled) {
             return fallbackResponse();
         }
 
         try {
-            // 1. Tìm kiến thức liên quan
             String context = layContext(cauHoi);
-
-            // 2. Gọi Ollama
             String prompt = buildPrompt(cauHoi, context);
-            String traLoi = goiOllama(prompt);
-
-            return traLoi;
+            return goiOllama(prompt);
         } catch (Exception e) {
             return fallbackResponse();
         }
     }
 
-    /**
-     * Lấy context từ cơ sở kiến thức
-     */
+    // Lấy ngữ cảnh từ cơ sở kiến thức
     private String layContext(String cauHoi) {
         StringBuilder context = new StringBuilder();
 
-        // Tìm kiếm theo keyword
         List<AiKienThuc> kienThuc = aiKienThucRepository.searchByKeyword(cauHoi);
 
         if (!kienThuc.isEmpty()) {
@@ -88,7 +76,6 @@ public class AiChatService {
                 context.append(k.getNoiDung()).append("\n\n");
             }
         } else {
-            // Fallback: lấy FAQ chung
             List<AiKienThuc> faq = aiKienThucRepository.findGeneralKnowledge();
             if (!faq.isEmpty()) {
                 context.append("## Câu hỏi thường gặp:\n\n");
@@ -102,9 +89,7 @@ public class AiChatService {
         return context.toString();
     }
 
-    /**
-     * Build prompt cho Ollama
-     */
+    // Tạo prompt gửi cho mô hình AI
     private String buildPrompt(String cauHoi, String context) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("Bạn là trợ lý AI của cửa hàng laptop SAOClub. ");
@@ -126,44 +111,40 @@ public class AiChatService {
         return prompt.toString();
     }
 
-    /**
-     * Gọi Ollama API
-     */
+    // Gửi yêu cầu sinh phản hồi đến Ollama API
     private String goiOllama(String prompt) {
+        Map<String, Object> message = new HashMap<>();
+        message.put("role", "user");
+        message.put("content", prompt);
+
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", model);
-        requestBody.put("prompt", prompt);
+        requestBody.put("messages", List.of(message));
         requestBody.put("stream", false);
-        requestBody.put("options", Map.of(
-                "temperature", 0.7,
-                "num_predict", 500
-        ));
 
         Map<String, Object> response = webClient.post()
-                .uri("/api/generate")
+                .uri("/api/chat")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(Map.class)
                 .block();
 
-        if (response != null && response.containsKey("response")) {
-            return formatResponse((String) response.get("response"));
+        if (response != null && response.containsKey("message")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> msg = (Map<String, Object>) response.get("message");
+            return formatResponse((String) msg.get("content"));
         }
 
         return fallbackResponse();
     }
 
-    /**
-     * Format response từ Ollama — loại bỏ dấu <> nếu có
-     */
+    // Chuẩn hóa định dạng phản hồi
     private String formatResponse(String raw) {
         if (raw == null) return fallbackResponse();
 
-        // Loại bỏ các tag không mong muốn
         raw = raw.trim();
 
-        // Giới hạn độ dài
         if (raw.length() > 1500) {
             raw = raw.substring(0, 1500) + "...";
         }
@@ -171,9 +152,7 @@ public class AiChatService {
         return raw;
     }
 
-    /**
-     * Fallback khi Ollama không hoạt động
-     */
+    // Phản hồi mặc định khi dịch vụ AI không khả dụng
     private String fallbackResponse() {
         return "Xin lỗi, hiện tại mình chưa thể trả lời câu hỏi của bạn ngay lúc này. 😅\n\n" +
                 "Bạn có thể:\n" +
@@ -182,9 +161,7 @@ public class AiChatService {
                 "📧 Email: contact@saoclub.com";
     }
 
-    /**
-     * Kiểm tra Ollama có đang chạy không
-     */
+    // Kiểm tra trạng thái kết nối Ollama
     public boolean isOllamaAvailable() {
         if (!enabled) return false;
         try {
@@ -199,9 +176,7 @@ public class AiChatService {
         }
     }
 
-    /**
-     * Lấy danh sách models available
-     */
+    // Lấy danh sách các mô hình AI khả dụng
     public List<String> getAvailableModels() {
         try {
             Map<String, Object> response = webClient.get()

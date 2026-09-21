@@ -97,18 +97,7 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
 
     void deleteByBienThe_BienTheId(Integer bienTheId);
 
-    // Tìm serial đang 'giu_hang' mà KHÔNG liên kết với bất kỳ chi_tiet_don_hang nào
-    // (orphan - xảy ra khi đơn đã bị xóa/hủy nhưng serial đã được set 'giu_hang' từ frontend
-    // trước đó, hoặc user đóng tab giữa chừng trước khi đơn được tạo chính thức).
-    // Dùng cho action dọn rác tự động (gọi từ ChiTietSanPhamService.hienThiChiTietSanPham
-    // mỗi lần load bảng serial). JOIN FETCH bienThe để tránh LazyInitializationException
-    // khi service cần ghi lich_su_ton_kho với serial.getBienThe() — đặc biệt vì
-    // releaseOrphanSerials() được gọi nội bộ (self-call) nên @Transactional có thể không
-    // kích hoạt qua Spring proxy, session đã đóng trước khi lặp.
-    // 
-    // Kiểm tra cả ChiTietDonHangSerial (many-to-many) và ChiTietDonHang.chiTietSanPham
-    // (direct reference) để tránh dọn nhầm serial vừa tạo nhưng ChiTietDonHangSerial chưa
-    // được sync/flush trong transaction.
+    // Tìm serial giữ hàng không thuộc đơn nào
     @Query("""
         SELECT c FROM ChiTietSanPham c
         JOIN FETCH c.bienThe
@@ -127,13 +116,11 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     // Batch check trùng serial trong DB (chỉ serial chưa xóa) — dùng khi duyệt phiếu nhập.
     List<ChiTietSanPham> findBySoSerialInAndDaXoaFalse(Collection<String> soSerials);
 
-    // Lấy tất cả serial (kể cả đã bán/giữ hàng và đã soft-delete) thuộc 1 phiếu nhập.
-    // Dùng khi xóa phiếu nhập để quyết định serial nào được phép soft-delete.
+    // Lấy tất cả serial thuộc phiếu nhập (bao gồm đã xóa)
     @Query("SELECT c FROM ChiTietSanPham c WHERE c.phieuNhap.phieuNhapId = :phieuNhapId")
     List<ChiTietSanPham> findByPhieuNhap_PhieuNhapIdIncludingDeleted(@Param("phieuNhapId") Integer phieuNhapId);
 
-    // Tra cuu serial chinh xac theo soSerial — chi tra ve serial chua xoa
-    // JOIN FETCH BienThe + SanPham de tranh N+1. Tra ve Optional de service xu ly not-found.
+    // Tra cứu serial theo số serial kèm biến thể và sản phẩm
     @Query("""
         SELECT c FROM ChiTietSanPham c
         JOIN FETCH c.bienThe bt
@@ -146,8 +133,7 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
         """)
     java.util.Optional<ChiTietSanPham> findBySoSerialWithVariant(@Param("soSerial") String soSerial);
 
-    // Tim theo barcode (bien_the) hoac so_serial (chi_tiet_san_pham) — dung cho tra cuu bao hanh bang ma vach
-    // Chi tra ve serial chua bi xoa (da_xoa = false)
+    // Tìm serial còn hoạt động theo barcode hoặc số serial
     @Query("""
         SELECT c FROM ChiTietSanPham c
         JOIN FETCH c.bienThe
@@ -182,8 +168,7 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
 
     // ========== SERIAL LOCKING ==========
 
-    // Lock nhiều serial cùng lúc — chỉ lock serial đang 'trong_kho' và chưa bị lock (hoặc lock đã hết hạn)
-    // Trả về số serial đã lock được
+    // Khóa danh sách serial khi đưa vào giỏ hàng POS
     @org.springframework.data.jpa.repository.Modifying
     @Query("""
         UPDATE ChiTietSanPham c SET c.lockedBy = :lockedBy, c.lockedAt = :lockedAt,

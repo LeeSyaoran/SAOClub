@@ -14,10 +14,7 @@ public class DevController {
     @Autowired
     private DataSource dataSource;
 
-    /**
-     * Endpoint tạm thời để thêm cột Firebase Auth vào bảng tai_khoan.
-     * XÓA SAU KHI CHẠY XONG!
-     */
+    // Migration cột Firebase Auth cho bảng tài khoản
     @PostMapping("/migrate-firebase-columns")
     public ResponseEntity<?> migrateFirebaseColumns() {
         String[] sqls = {

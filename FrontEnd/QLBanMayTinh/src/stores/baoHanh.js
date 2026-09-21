@@ -5,7 +5,7 @@ export const BaoHanhStore = reactive({ items: [], loading: false, loaded: false 
 
 let baoHanhPromise = null;
 
-// Xem resetProducts() ở stores/products.js — cùng lý do reset khi đổi tài khoản cùng tab.
+// Reset dữ liệu store khi đăng xuất hoặc đổi tài khoản
 export const resetBaoHanh = () => {
   baoHanhPromise = null;
   BaoHanhStore.items = [];

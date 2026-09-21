@@ -1,7 +1,6 @@
 import { get, post, put } from './api.js';
 
-// Toàn bộ màn Kho hàng chỉ dùng nhóm endpoint /api/kho — mọi truy vấn tồn kho, serial,
-// lịch sử và nhập hàng đều gom về một chỗ để dễ kiểm soát quyền và dễ sửa sau này.
+// Quản lý nghiệp vụ kho hàng và kiểm kê
 
 export const getTonKho = () => get('/api/kho/ton-kho');
 
@@ -13,7 +12,7 @@ export const getNhanVien = () => get('/api/kho/nhan-vien');
 
 export const getPhieuNhap = () => get('/api/kho/phieu-nhap');
 
-// body: { nhaCungCapId, nhanVienId, ngayNhap, ghiChu, capNhatGiaNhap, dongNhap: [...] }
+// Tạo phiếu nhập kho hàng
 export const nhapHang = (body) => post('/api/kho/nhap-hang', body);
 
 export const capNhatBienThe = (bienTheId, body) => put(`/api/kho/bien-the/${bienTheId}`, body);

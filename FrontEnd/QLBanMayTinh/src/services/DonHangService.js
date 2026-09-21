@@ -1,59 +1,57 @@
 import { get, post, put, patch, del, authHeaders } from './api.js';
 
-// Tính phí vận chuyển — body: { items: [{ giaBan, soLuong }], diaChi }
+// Tính phí vận chuyển
 export const tinhPhiVanChuyen = (body) => post('/api/don-hang/tinh-phi-van-chuyen', body);
 
-// Backend giờ trả Page<DonHangResponse> — xem BackEnd/.../DonHangController.getAll().
-// getPage() trả nguyên object Page cho bảng Đơn hàng có nút Trước/Sau.
-// khachHangId optional: lọc sẵn ở server, dùng cho trang "Đơn hàng của tôi" (AccountPage)
-// để khỏi tải hết đơn toàn hệ thống rồi lọc ở trình duyệt.
+// Lấy danh sách đơn hàng phân trang
 export const getPage = ({ page = 0, size = 20, khachHangId } = {}) => {
   const params = new URLSearchParams({ page, size });
   if (khachHangId) params.set('khachHangId', khachHangId);
   return get(`/api/don-hang?${params}`);
 };
 
-// Tương thích các chỗ đang cần "toàn bộ" đơn hàng trong bộ nhớ (dashboard, auto-merge,
-// tra cứu...) — lấy 1 trang lớn rồi trả thẳng mảng .content.
+// Lấy toàn bộ đơn hàng
 export const getAll = () => getPage({ size: 200 }).then((p) => p.content);
 
-// Toàn bộ đơn hàng của 1 khách hàng cụ thể — dùng cho AccountPage thay vì getAll().
+// Lấy danh sách đơn hàng theo khách hàng
 export const getByKhachHang = (khachHangId) =>
   getPage({ size: 200, khachHangId }).then((p) => p.content);
 
+// Tạo đơn hàng
 export const create = (body) => post('/api/don-hang', body);
 
-// Checkout hoàn chỉnh: tạo đơn + thêm sản phẩm trong 1 transaction
+// Tạo đơn hàng hoàn chỉnh (checkout)
 export const checkoutComplete = (body) => post('/api/don-hang/checkout-complete', body);
 
+// Cập nhật đơn hàng
 export const update = (id, body) => put(`/api/don-hang/update/${id}`, body);
 
+// Xóa đơn hàng
 export const remove = (id) => del(`/api/don-hang/delete/${id}`);
 
-// Tính lại tong_tien sau khi thêm/xóa sản phẩm trong đơn
+// Tính lại tổng tiền đơn hàng
 export const recalculate = (id) => fetch(`/api/don-hang/${id}/recalculate`, { method: 'PATCH', headers: authHeaders() });
 
-// Gộp nhiều đơn vào 1 đơn đích
+// Gộp đơn hàng
 export const merge = (targetId, sourceIds) =>
   post('/api/don-hang/merge', { targetId, sourceIds });
 
+// Thêm sản phẩm vào đơn hàng
 export const addChiTiet = (body) => post('/api/chi-tiet-don-hang', body);
 
-// Chọn serial cho từng dòng + chốt bán + chuyển đơn sang "confirmed" (xác nhận) — chỉ
-// dùng cho đơn online. body: { lines: [{ chiTietDonHangId, serialIds: [...] }] }
+// Xác nhận đơn online và gán serial
 export const xacNhan = (donHangId, body) => patch(`/api/don-hang/${donHangId}/xac-nhan`, body);
 
-// Khách tự bấm "Đã nhận được hàng" khi đơn ở "awaiting_confirmation" — chuyển hẳn sang
-// "delivered". Route mở cho khách (không staff-only), backend tự kiểm tra đúng chủ đơn.
+// Khách hàng xác nhận đã nhận hàng
 export const xacNhanDaNhanHang = (donHangId) => patch(`/api/don-hang/${donHangId}/xac-nhan-nhan-hang`, {});
 
 // ── POS helpers ────────────────────────────────────────────────────────────────
 
-// Don hang gan nhat trong 30 ngay — cho POS panel don gan day
+// Đơn hàng gần đây cho POS
 export const getRecentForPos = () => get('/api/don-hang/pos/recent');
 
-// Top khach hang theo chi tieu — cho POS quick-select
+// Top khách hàng chi tiêu nhiều nhất
 export const getTopCustomers = (limit = 5) => get(`/api/don-hang/pos/top-customers?limit=${limit}`);
 
-// Don hang gan nhat cua 1 khach — khi POS chon khach
+// Đơn hàng gần nhất của một khách hàng
 export const getRecentByKhachHang = (khachHangId) => get(`/api/don-hang/pos/customer/${khachHangId}/orders`);

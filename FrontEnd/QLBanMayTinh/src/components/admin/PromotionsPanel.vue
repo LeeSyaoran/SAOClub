@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted, watch } from "vue";
 import { Search } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as KhuyenMaiService from "../../services/KhuyenMaiService.js";
+import * as SanPhamService from "../../services/SanPhamService.js";
 import * as VongQuayService from "../../services/VongQuayService.js";
 import { formatPrice, formatDate, statusLabel, toLocalDT, boDauTiengViet } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
@@ -14,9 +15,30 @@ import { Filter, RotateCcw, X, Plus, Gift, Tag, Sparkles, ChevronDown, Hash, Fil
 onMounted(() => {
   ensurePromotions();
   loadWheelConfig();
+  loadSanPhamList();
 });
 
 const promotions = computed(() => PromotionsStore?.items ?? []);
+
+// ── Danh sách sản phẩm cho modal chọn ───────────────────────────────────────
+const sanPhamList = ref([]);
+const sanPhamSearch = ref("");
+const loadSanPhamList = async () => {
+  try {
+    const data = await SanPhamService.getDanhSachChon();
+    sanPhamList.value = data;
+  } catch (e) {
+    console.error("Lỗi load sản phẩm:", e);
+  }
+};
+const filteredSanPhams = computed(() => {
+  if (!sanPhamSearch.value.trim()) return sanPhamList.value.slice(0, 50);
+  const q = boDauTiengViet(sanPhamSearch.value);
+  return sanPhamList.value.filter(sp =>
+    boDauTiengViet(sp.tenSanPham ?? '').includes(q) ||
+    boDauTiengViet(sp.maSanPham ?? '').includes(q)
+  ).slice(0, 50);
+});
 
 // ── Cấu hình Vòng quay may mắn ───────────────────────────────────────────────
 const wheelConfig = ref({ diemMoiLuot: 0, tyLeTruot: 0 });
@@ -145,8 +167,29 @@ const emptyForm = () => ({
   ngayKetThuc: "",
   soLuongToiDa: "",
   trangThai: "active",
+  sanPhamIds: [], // Danh sách sản phẩm áp dụng - rỗng = tất cả
 });
 const form = reactive(emptyForm());
+
+// Sản phẩm đã chọn để hiển thị trong modal
+const selectedSanPhams = computed(() => {
+  if (!form.sanPhamIds || form.sanPhamIds.length === 0) return [];
+  return sanPhamList.value.filter(sp => form.sanPhamIds.includes(sp.sanPhamId));
+});
+
+const toggleSanPham = (sanPhamId) => {
+  const idx = form.sanPhamIds.indexOf(sanPhamId);
+  if (idx === -1) {
+    form.sanPhamIds.push(sanPhamId);
+  } else {
+    form.sanPhamIds.splice(idx, 1);
+  }
+};
+
+const removeSanPham = (sanPhamId) => {
+  const idx = form.sanPhamIds.indexOf(sanPhamId);
+  if (idx !== -1) form.sanPhamIds.splice(idx, 1);
+};
 
 const openAdd = () => {
   Object.assign(form, emptyForm());
@@ -155,7 +198,7 @@ const openAdd = () => {
   showModal.value = true;
 };
 
-const openEdit = (p) => {
+const openEdit = async (p) => {
   const dt = (d) => (d ? d.slice(0, 16) : "");
   Object.assign(form, {
     maKhuyenMai: p.maKhuyenMai,
@@ -168,7 +211,15 @@ const openEdit = (p) => {
     ngayKetThuc: dt(p.ngayKetThuc),
     soLuongToiDa: p.soLuongToiDa ?? "",
     trangThai: p.trangThai ?? "active",
+    sanPhamIds: [],
   });
+  // Load sản phẩm đã chọn từ API
+  try {
+    const sanPhams = await KhuyenMaiService.getSanPhamApDung(p.khuyenMaiId);
+    form.sanPhamIds = sanPhams.map(sp => sp.sanPhamId);
+  } catch (e) {
+    console.error("Lỗi load sản phẩm khuyến mãi:", e);
+  }
   editingId.value = p.khuyenMaiId;
   formError.value = "";
   showModal.value = true;
@@ -399,7 +450,7 @@ const savePromo = async () => {
 
     <!-- ══ MODAL KHUYẾN MẠI ══ -->
     <div v-if="showModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showModal=false">
-      <div class="alt-card d-flex flex-column" style="width:620px;max-width:95vw;max-height:90vh;border-radius:14px;">
+      <div class="alt-card d-flex flex-column" style="width:720px;max-width:95vw;max-height:90vh;border-radius:14px;">
         <div class="alt-toolbar">
           <span>{{ editingId ? t('admin.promoModal.titleEdit') : t('admin.promoModal.titleAdd') }}</span>
           <button class="btn-close btn-sm ms-auto" :aria-label="t('common.close')" @click="showModal=false"></button>
@@ -417,6 +468,61 @@ const savePromo = async () => {
             <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.endDateLabel') }}</label><input v-model="form.ngayKetThuc" type="datetime-local" class="form-control form-control-sm admin-input" /></div>
             <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.maxUsageLabel') }}</label><input v-model="form.soLuongToiDa" type="number" class="form-control form-control-sm admin-input" /></div>
             <div class="col-6"><label class="form-label small">{{ t('admin.promoModal.statusLabel') }}</label><select v-model="form.trangThai" class="form-select form-select-sm admin-input"><option value="active">{{ t('admin.promoModal.statusActive') }}</option><option value="inactive">{{ t('admin.promoModal.statusStopped') }}</option></select></div>
+
+            <!-- ══ CHỌN SẢN PHẨM ÁP DỤNG ══ -->
+            <div class="col-12">
+              <label class="form-label small fw-bold" style="color:var(--pink-600);">
+                <Tag :size="12" class="me-1" />
+                Sản phẩm áp dụng
+                <span class="text-muted fw-normal ms-1">(để trống = áp dụng cho tất cả sản phẩm)</span>
+              </label>
+
+              <!-- Chips sản phẩm đã chọn -->
+              <div v-if="selectedSanPhams.length > 0" class="d-flex flex-wrap gap-1 mb-2">
+                <span v-for="sp in selectedSanPhams" :key="sp.sanPhamId"
+                  class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                  style="background:rgba(236,72,153,0.12);color:#db2777;font-size:11px;">
+                  <img v-if="sp.hinhAnhChinh" :src="sp.hinhAnhChinh" style="width:16px;height:16px;object-fit:cover;border-radius:2px;" />
+                  <span>{{ sp.tenSanPham }}</span>
+                  <button type="button" @click="removeSanPham(sp.sanPhamId)" style="background:none;border:none;padding:0;cursor:pointer;color:#db2777;display:flex;">
+                    <X :size="10" />
+                  </button>
+                </span>
+              </div>
+
+              <!-- Dropdown chọn sản phẩm -->
+              <div class="position-relative">
+                <div class="d-flex align-items-center gap-2">
+                  <input v-model="sanPhamSearch" type="text" placeholder="Tìm sản phẩm..." class="form-control form-control-sm admin-input" style="max-width:250px;" />
+                </div>
+                <div v-if="sanPhamSearch.trim()" class="position-absolute bg-white shadow rounded border overflow-y-auto" style="max-height:200px;min-width:350px;z-index:100;top:100%;left:0;">
+                  <div v-if="filteredSanPhams.length === 0" class="p-2 text-secondary small">Không tìm thấy sản phẩm</div>
+                  <div v-for="sp in filteredSanPhams" :key="sp.sanPhamId"
+                    class="d-flex align-items-center gap-2 px-2 py-1-5 cursor-pointer"
+                    :class="form.sanPhamIds.includes(sp.sanPhamId) ? 'bg-pink-50' : ''"
+                    :style="form.sanPhamIds.includes(sp.sanPhamId) ? 'background:rgba(236,72,153,0.12)' : ''"
+                    style="cursor:pointer;"
+                    @click="toggleSanPham(sp.sanPhamId)">
+                    <img v-if="sp.hinhAnhChinh" :src="sp.hinhAnhChinh" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" />
+                    <div v-else class="bg-light rounded d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                      <Gift :size="16" class="text-secondary" />
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                      <div class="fw-medium small text-truncate">{{ sp.tenSanPham }}</div>
+                      <div class="text-muted" style="font-size:11px;">{{ sp.maSanPham || sp.maSku }}</div>
+                    </div>
+                    <div v-if="form.sanPhamIds.includes(sp.sanPhamId)" class="text-success"><span class="badge bg-success-subtle text-success">✓</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hint -->
+              <div v-if="form.sanPhamIds.length > 0" class="mt-1">
+                <span class="text-muted small">
+                  Đã chọn {{ form.sanPhamIds.length }} sản phẩm. Khuyến mãi chỉ áp dụng cho các sản phẩm đã chọn.
+                </span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="alt-toolbar" style="border-top:1px solid var(--border-color);border-bottom:none;justify-content:flex-end;gap:8px;">

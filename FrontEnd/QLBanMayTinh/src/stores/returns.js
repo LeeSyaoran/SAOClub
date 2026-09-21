@@ -5,7 +5,7 @@ export const ReturnsStore = reactive({ items: [], loading: false, loaded: false 
 
 let returnsPromise = null;
 
-// Xem resetProducts() ở stores/products.js — cùng lý do reset khi đổi tài khoản cùng tab.
+// Reset dữ liệu store khi đăng xuất hoặc đổi tài khoản
 export const resetReturns = () => {
   returnsPromise = null;
   ReturnsStore.items = [];

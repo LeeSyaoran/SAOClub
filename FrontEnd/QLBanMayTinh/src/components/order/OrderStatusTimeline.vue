@@ -1,6 +1,5 @@
 <template>
-  <!-- Bố cục đứng (vertical), gọn để đặt sidebar trong modal chi tiết đơn — step đang active
-       phát sáng nhẹ để tách bạch với step done (đã tick xanh) và step pending (mờ). -->
+  <!-- Timeline dọc chi tiết đơn hàng -->
   <div class="d-flex flex-column gap-0" style="position:relative;">
     <div
       v-for="(step, index) in steps" :key="index"
@@ -49,31 +48,27 @@ import { computed } from 'vue';
 import { t } from '../../i18n/index.js';
 import { Check, Send, Bike, PartyPopper, FileText, CheckCircle2, Package, Clock } from '@lucide/vue';
 
-// Nhận thẳng trạng thái đơn (status) — timeline tự chọn hiển thị 3 bước pre-ship
-// ("Chờ xác nhận/Đã xác nhận/Đang đóng gói") hay 3 bước post-ship ("Đã gửi hàng/
-// Đang giao/Chờ khách xác nhận"). Bước cuối pre-ship "Đang đóng gói" thực chất ứng với
-// trạng thái "processing" — đơn đang chuẩn bị hàng trong kho trước khi giao cho shipper.
+// Danh sách bước xử lý đơn hàng theo trạng thái
 const props = defineProps({
   status:    { type: String, default: 'pending' },
   kenhBan:   { type: String, default: 'online' },
 });
 
 const PRE_SHIP  = ['pending', 'confirmed', 'processing'];
-const POST_SHIP = ['shipping', 'out_for_delivery', 'awaiting_confirmation'];
+const POST_SHIP = ['out_for_delivery', 'awaiting_confirmation'];
 
 const isInStore = computed(() => props.kenhBan === 'in_store');
-const isPostShip = computed(() => POST_SHIP.includes(props.status));
+const isPostShip = computed(() => POST_SHIP.includes(props.status) || props.status === 'shipping');
 const isAwaitingConfirmation = computed(() => props.status === 'awaiting_confirmation');
 
 const steps = computed(() => {
   // Đơn tại quầy: mua + thanh toán + nhận hàng tại quầy = xong, không đi qua pipeline ship.
   if (isInStore.value) {
     return [
-      { title: t('orderStatus.timeline.deliveredTitle'), desc: t('orderStatus.timeline.deliveredDesc'), icon: PartyPopper },
+      { title: t('orderStatus.timeline.deliveredTitle'), desc: t('orderStatus.timeline.inStoreDeliveredDesc') || t('orderStatus.timeline.deliveredDesc'), icon: PartyPopper },
     ];
   }
   return isPostShip.value ? [
-    { title: t('orderStatus.timeline.shippingTitle'),        desc: t('orderStatus.timeline.shippingDesc'),        icon: Send },
     { title: t('orderStatus.timeline.outForDeliveryTitle'),  desc: t('orderStatus.timeline.outForDeliveryDesc'),  icon: Bike },
     { title: t('orderStatus.timeline.deliveredTitle'),       desc: t('orderStatus.timeline.deliveredDesc'),       icon: PartyPopper },
   ] : [
@@ -86,15 +81,15 @@ const steps = computed(() => {
 const currentStep = computed(() => {
   if (isInStore.value) return 0;
   const list = isPostShip.value ? POST_SHIP : PRE_SHIP;
-  const idx = list.indexOf(props.status);
+  let status = props.status;
+  if (status === 'shipping') status = 'out_for_delivery';
+  const idx = list.indexOf(status);
   return idx === -1 ? list.length - 1 : idx;
 });
 
-// Dấu tích cho bước đã hoàn tất. Bước cuối "awaiting_confirmation" (admin đã giao) cũng
-// tính là hoàn tất dù đang là bước active — hành động "giao hàng" xong rồi, phần còn thiếu
-// (khách xác nhận) là 1 hành động khác, có nút riêng bên dưới.
+// Kiểm tra bước đã hoàn tất
 const isStepDone = (index) => {
-  if (isInStore.value) return false; // đơn tại quầy: chỉ 1 step, không tick thêm
+  if (isInStore.value) return props.status === 'delivered';
   return index < currentStep.value || (index === currentStep.value && isAwaitingConfirmation.value);
 };
 </script>

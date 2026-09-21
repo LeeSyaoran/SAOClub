@@ -20,7 +20,7 @@ import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { CheckCircle2, Check, Package, Truck, Bike, Inbox, Laptop, User, Printer } from '@lucide/vue';
+import { CheckCircle2, Check, Package, Truck, Bike, Inbox, Laptop, User, Printer, Phone, Mail, MapPin } from '@lucide/vue';
 import InvoiceModal from "./InvoiceModal.vue";
 
 // Nhận order ID để navigate từ ngoài (CustomerDetailModal tab đơn hàng → "Xem chi tiết")
@@ -39,12 +39,28 @@ watch(() => props.navigateToOrderId, (id) => {
 }, { immediate: true });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const customerName = (id) =>
-  (CustomersStore.items ?? []).find((c) => c.khachHangId === id)?.hoTen ?? `KH#${id}`;
+const customerObj = (id) =>
+  (CustomersStore.items ?? []).find((c) => c.khachHangId === id);
 
-// Ngày dạng YYYY-MM-DD cho input[type=date] / so sánh — bản sao cục bộ của cùng hàm
-// ở AdminPage.vue (dùng chung ở Dashboard/Reports, không đáng promote lên module chung
-// chỉ vì 1 hàm thuần 3 dòng).
+const customerName = (id) =>
+  customerObj(id)?.hoTen ?? `KH#${id}`;
+
+const customerPhone = (order) =>
+  order?.sdtNguoiNhan || order?.khachHangSdt || customerObj(order?.khachHangId)?.soDienThoai || '';
+
+const customerEmail = (order) =>
+  customerObj(order?.khachHangId)?.email || '';
+
+const deliveryAddressText = (order) => {
+  if (order?.diaChiGiaoHangText) return order.diaChiGiaoHangText;
+  if (order?.khachHangDiaChi) return order.khachHangDiaChi;
+  const c = customerObj(order?.khachHangId);
+  if (c?.diaChi) return c.diaChi;
+  if (order?.kenhBan === 'in_store') return 'Khách nhận tại quầy';
+  return 'Chưa có địa chỉ giao hàng';
+};
+
+// Định dạng ngày YYYY-MM-DD cho input date
 const toDateInputValue = (d) => {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
@@ -82,8 +98,7 @@ const resetOrderFilters = () => {
   orderSearch.value = "";
 };
 
-// Chế độ xem đơn hàng: 'today' = mặc định chỉ đơn hôm nay, 'history-dates' = danh
-// sách các ngày có đơn (để xem lịch sử), 'history-day' = đơn của 1 ngày cụ thể đã chọn.
+// Chế độ xem danh sách đơn hàng
 const orderViewMode = ref('today');
 const historySelectedDate = ref(null); // 'YYYY-MM-DD'
 
@@ -145,9 +160,7 @@ const openHistoryDay = (dateKey) => { historySelectedDate.value = dateKey; order
 const backToToday = () => { orderViewMode.value = 'today'; historySelectedDate.value = null; };
 const backToDateList = () => { orderViewMode.value = 'history-dates'; historySelectedDate.value = null; };
 
-// Helper: fetch serial của nhiều bienTheId song song → { bienTheId: serial[] } — dùng bởi
-// openXacNhanSerialModal() (xác nhận đơn online). ProductDetailModal.vue có bản sao riêng
-// của hàm này cho luồng "xem chi tiết sản phẩm" — 2 luồng độc lập, không đáng gộp.
+// Tải danh sách serial theo biến thể
 const fetchSerialMap = async (bienTheIds) => {
   const results = await Promise.all(
     bienTheIds.map(id => ChiTietSanPhamService.getByBienThe(id).catch(() => []))
@@ -168,8 +181,7 @@ const orderDetailLoading   = ref(false);
 const showInvoice = ref(false);
 const invoiceOrder = ref(null);
 
-// Gom nhieu ThanhToan cung phuong thuc (vd don tai quay tra nhieu dot) thanh 1 dong —
-// hien so lan + tong tien thay vi lap ten phuong thuc nhieu lan trong theo nhau.
+// Gom các khoản thanh toán theo phương thức
 const orderDetailPaymentsSummary = computed(() => {
   const map = new Map();
   for (const p of orderDetailPayments.value) {
@@ -188,6 +200,10 @@ const openOrderDetail = async (o) => {
   showOrderDetailModal.value = true;
   orderDetailLoading.value = true;
   emit("order-detail-opened", o.donHangId); // thông báo cho AdminPage reset selectedOrderId
+  // Chuyển đơn tại quầy sang delivered
+  if (o.kenhBan === 'in_store' && o.trangThaiDonHang === 'pending') {
+    jumpToStatus(o, 'delivered').catch(() => {});
+  }
   try {
     orderDetailItems.value = await ChiTietDonHangService.getByDonHang(o.donHangId).catch(err => { console.error('chi tiet don hang error', err); return []; });
     orderDetailPayments.value = await ThanhToanService.getByDonHang(o.donHangId).catch(err => { console.error('thanh toan error', err); return []; });
@@ -346,9 +362,7 @@ const removeItemFromOrder = async (chiTietId) => {
 // ── Gop don hang ─────────────────────────────────────────────────────────────
 const mergeLoading = ref(false);
 
-// Don hang cung khach, cung ngay dat (khong tinh gio), khac don hien tai — loai don
-// "pending" vi backend tu choi gop don chua xac nhan (xem mergeOrders() service),
-// hien nut gop voi ung vien chac chan fail se lam nguoi dung bam lai vo ich.
+// Danh sách đơn hàng có thể gộp
 const mergeCandidates = computed(() => {
   if (!orderDetailData.value) return [];
   const curDate = orderDetailData.value.ngayDat?.slice(0, 10);
@@ -360,7 +374,7 @@ const mergeCandidates = computed(() => {
   );
 });
 
-// Gop tat ca don cung ngay cung khach vao don hien tai (khong can chon thu cong)
+// Gộp các đơn hàng hợp lệ vào đơn hiện tại
 const autoMergeOrders = async () => {
   if (mergeCandidates.value.length === 0) return;
   if (!(await askConfirm(t('admin.confirm.mergeOrders', { count: mergeCandidates.value.length, id: orderDetailData.value.donHangId })))) return;
@@ -377,7 +391,7 @@ const autoMergeOrders = async () => {
   }
 };
 
-// ── Modal "Chi tiet san pham" (xem cac bien the da mua trong don nay) — dung lai ProductDetailModal.vue
+// Modal xem chi tiết biến thể sản phẩm
 const showDetailModal = ref(false);
 const detailModalSanPhamId = ref(null);
 const detailModalSanPhamName = ref('');
@@ -388,9 +402,7 @@ const openVariantDetail = (bienTheId) => {
   if (!v) return;
   detailModalSanPhamId.value = v.sanPhamId;
   detailModalSanPhamName.value = v.tenSanPham;
-  // Khach co the mua cung 1 san pham nhung nhieu bien the khac nhau trong CUNG don nay
-  // (vd may A bien the 1 va 2) — bam "Chi tiet" o dong nao cung phai hien du cac bien the
-  // da mua trong don, khong chi dung dong vua bam.
+  // Hiển thị biến thể trong chi tiết đơn hàng
   detailModalBienTheIds.value = [...new Set(
     orderDetailItems.value
       .map((item) => item.bienTheId)
@@ -401,11 +413,7 @@ const openVariantDetail = (bienTheId) => {
 
 // ── Order status helpers (dùng chung — xem src/utils/orderStatus.js) ──────────
 
-// ── Orders status update ──────────────────────────────────────────────────────
-// Modal "Cập nhật trạng thái" cũ đã được thay thế bằng timeline-click ở sidebar phải.
-// State còn lại (showOrderModal/editingOrder/saveOrderStatus...) chỉ phục vụ luồng nhập
-// mã vận đơn khi chuyển sang "shipping" — bấm step "shipping" trên timeline sẽ mở modal
-// này để admin nhập mã, vì lý do đó nên giữ lại cấu trúc modal (z-index/showOrderModal).
+// Cập nhật trạng thái đơn hàng
 const showOrderModal = ref(false);
 const editingOrder = ref(null);
 const orderStatusError = ref("");
@@ -428,8 +436,7 @@ const openOrderStatus = (o) => {
   orderStatusError.value = "";
   showOrderModal.value = true;
 };
-// Dựng body PUT /don-hang/update — dùng chung cho nút "next step" nhanh trên bảng, nút
-// "bước tiếp theo" trong modal, và modal "Nhập mã vận đơn" khi chuyển sang shipping.
+// Tạo dữ liệu cập nhật trạng thái đơn hàng
 const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGiaoDuKien, ngayGiaoThucTe, maVanDon }) => ({
   khachHangId: o.khachHangId,
   nhanVienId: o.nhanVienId ?? null,
@@ -482,119 +489,89 @@ const saveOrderStatus = async () => {
   }
 };
 
-// Quy trình xử lý đơn thực tế: chờ xác nhận -> đã xác nhận -> đang đóng gói -> đã gửi
-// hàng -> đang giao -> đã giao (chờ khách xác nhận) -> hoàn tất. Nút "bước tiếp theo" trên
-// bảng đơn hàng đi đúng theo thứ tự này, khỏi phải mở modal chọn tay mỗi lần chỉ để nhích 1
-// bước — mở modal vẫn dùng được cho các trường hợp khác (hủy đơn, sửa ngày giao...). Bước
-// cuối "awaiting_confirmation -> delivered" KHÔNG có nút ở đây — chỉ khách hàng (hoặc staff
-// qua modal "Cập nhật trạng thái") mới xác nhận được, xem AccountPage.vue confirmReceived().
+// Trạng thái đơn hàng kế tiếp
 const NEXT_ORDER_STATUS = {
-  pending: 'confirmed', confirmed: 'processing', processing: 'shipping',
+  pending: 'confirmed', confirmed: 'processing', processing: 'out_for_delivery',
   shipping: 'out_for_delivery', out_for_delivery: 'awaiting_confirmation',
 };
 const NEXT_ORDER_STATUS_LABEL = {
   pending:          { icon: CheckCircle2, key: 'admin.orders.nextConfirm' },
   confirmed:        { icon: Package, key: 'admin.orders.nextPack' },
-  processing:       { icon: Truck, key: 'admin.orders.nextShip' },
+  processing:       { icon: Bike, key: 'admin.orders.nextOutForDelivery' },
   shipping:         { icon: Bike, key: 'admin.orders.nextOutForDelivery' },
   out_for_delivery: { icon: Inbox, key: 'admin.orders.nextDelivered' },
 };
 
-// Thứ tự trạng thái tuyến tính dùng cho sidebar timeline-click (không phụ thuộc phase
-// pre/post-ship như component OrderStatusTimeline ở AccountPage). Mỗi đơn khi đã xác nhận
-// thì đi đúng 1 đường: pending -> confirmed -> processing -> shipping -> out_for_delivery
-// -> awaiting_confirmation -> delivered. cancelled/returned là nhánh rẽ riêng, không vẽ
-// trên timeline chính (vẽ thì phức tạp và admin không cần - nếu đơn bị hủy/trả thì hiện
-// dòng "Đơn đã ở trạng thái cuối" là đủ).
+// Danh sách trạng thái theo quy trình đơn hàng
 const LINEAR_STATUS_ORDER = [
-  'pending', 'confirmed', 'processing', 'shipping',
+  'pending', 'confirmed', 'processing',
   'out_for_delivery', 'awaiting_confirmation', 'delivered',
 ];
 
-// Đơn tại quầy (kenhBan='in_store') có flow riêng 3 bước: Chờ xác nhận (mới bấm thanh toán,
-// chưa xác nhận) -> Đã xác nhận (admin/staff đã duyệt) -> Đã giao (khách đã nhận hàng tại
-// quầy). Bước đầu POS tự tạo 'confirmed', bước cuối 'delivered' chỉ chuyển được khi staff
-// chọn xác nhận (có thể auto khi khách nhận luôn trong buổi thanh toán).
+const getLinearStatusIndex = (status) => {
+  if (status === 'shipping') return LINEAR_STATUS_ORDER.indexOf('processing');
+  return LINEAR_STATUS_ORDER.indexOf(status);
+};
+
+// Timeline đơn hàng tại quầy
 const orderTimelineSteps = computed(() => {
   if (orderDetailData.value?.kenhBan === 'in_store') {
     return [
-      { id: 'pending',    title: t('orderStatus.timeline.placedTitle'),     desc: t('orderStatus.timeline.placedDesc'),     icon: CheckCircle2 },
-      { id: 'confirmed',  title: t('orderStatus.timeline.confirmedTitle'),  desc: t('orderStatus.timeline.confirmedDesc'),  icon: CheckCircle2 },
-      { id: 'delivered',  title: t('orderStatus.timeline.deliveredTitle'),  desc: t('orderStatus.timeline.deliveredDesc'),  icon: CheckCircle2 },
+      {
+        id: 'delivered',
+        title: t('orderStatus.timeline.deliveredTitle'),
+        desc: t('orderStatus.timeline.inStoreDeliveredDesc') || t('orderStatus.timeline.deliveredDesc'),
+        icon: CheckCircle2,
+      },
     ];
   }
   return [
     { id: 'pending',                title: orderStatusLabel('pending'),                desc: t('orderStatus.timeline.placedDesc'),    icon: CheckCircle2 },
     { id: 'confirmed',              title: orderStatusLabel('confirmed'),              desc: t('orderStatus.timeline.confirmedDesc'), icon: CheckCircle2 },
     { id: 'processing',             title: orderStatusLabel('processing'),             desc: t('orderStatus.timeline.packingDesc'),   icon: Package },
-    { id: 'shipping',               title: orderStatusLabel('shipping'),               desc: t('orderStatus.timeline.shippingDesc'),  icon: Truck },
     { id: 'out_for_delivery',       title: orderStatusLabel('out_for_delivery'),       desc: t('orderStatus.timeline.outForDeliveryDesc'), icon: Bike },
     { id: 'awaiting_confirmation',  title: orderStatusLabel('awaiting_confirmation'),  desc: t('orderStatus.timeline.deliveredDesc'),  icon: Inbox },
     { id: 'delivered',              title: orderStatusLabel('delivered'),              desc: t('orderStatus.timeline.deliveredDesc'),  icon: CheckCircle2 },
   ];
 });
 
-// "Đã qua" = vị trí trong timeline <= trạng thái hiện tại (vd đang 'shipping' thì
-// pending/confirmed/processing/shipping đều tính là đã qua).
+// Kiểm tra trạng thái đã qua trên timeline
 const isStepReached = (order, stepId) => {
   if (order?.kenhBan === 'in_store') {
-    const timelineIds = orderTimelineSteps.value.map(s => s.id);
-    const cur = timelineIds.indexOf(order.trangThaiDonHang);
-    const idx = timelineIds.indexOf(stepId);
-    return cur !== -1 && idx !== -1 && idx <= cur;
+    return !['cancelled', 'returned'].includes(order.trangThaiDonHang);
   }
-  const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
+  const cur = getLinearStatusIndex(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return cur !== -1 && idx !== -1 && idx <= cur;
 };
 
-// Step đã tick xanh = đã qua (idx < cur). Bước hiện tại (idx === cur) luôn được coi là
-// "đã hoàn tất" và hiển thị tích — kể cả bước cuối 'delivered' (đơn đã giao xong) cũng vậy,
-// tránh tình trạng vòng tròn sáng cam đứng cuối trông như "chưa xong" (bug trước đây).
-// Đơn tại quầy dùng timelineIds 3 step, đơn online dùng LINEAR_STATUS_ORDER 7 step.
+// Kiểm tra bước đã hoàn tất trên timeline
 const isStepDoneById = (order, stepId) => {
   if (order?.kenhBan === 'in_store') {
-    const timelineIds = orderTimelineSteps.value.map(s => s.id);
-    const cur = timelineIds.indexOf(order.trangThaiDonHang);
-    const idx = timelineIds.indexOf(stepId);
-    return cur !== -1 && idx !== -1 && idx <= cur;
+    return !['cancelled', 'returned'].includes(order.trangThaiDonHang);
   }
-  const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
+  const cur = getLinearStatusIndex(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return cur !== -1 && idx !== -1 && idx <= cur;
 };
 
 // Bấm được khi step đó nằm sau trạng thái hiện tại (chuyển tiến), HOẶC chính là bước hiện tại
-// (cho phép "bấm lại" - sẽ bị noop ở jumpToStatus). Lùi về bước trước KHÔNG cho phép qua
-// timeline-click (chỉ qua modal cập nhật đầy đủ hoặc nhờ thủ tục hủy đơn).
-// Đơn tại quầy: chỉ cho phép chuyển đúng 1 bước tiếp theo (pending→confirmed→delivered),
-// không cho nhảy bước hoặc chuyển sang delivered khi chưa confirmed.
 const canJumpToStep = (order, stepId) => {
   if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
-  if (order?.kenhBan === 'in_store') {
-    // Timeline in_store: pending(0) → confirmed(1) → delivered(2). Cho next step tiến 1 bước.
-    const timelineIds = orderTimelineSteps.value.map(s => s.id);
-    const cur = timelineIds.indexOf(order.trangThaiDonHang);
-    const idx = timelineIds.indexOf(stepId);
-    if (cur === -1 || idx === -1) return false;
-    return idx === cur + 1;
-  }
-  const cur = LINEAR_STATUS_ORDER.indexOf(order.trangThaiDonHang);
+  if (order?.kenhBan === 'in_store') return false;
+  const cur = getLinearStatusIndex(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return idx >= cur;
 };
 
-// Bấm vào step để chuyển trạng thái. Nếu trùng trạng thái hiện tại thì noop.
-// Nếu step là 'shipping' (bắt buộc nhập mã vận đơn) thì mở modal cũ để nhập - không
-// nhảy thẳng được. Nếu đơn online + step là 'confirmed' thì mở modal chọn serial.
-// Ngược lại: gọi thẳng DonHangService.update với logic giống advanceOrderStatus.
+// Chuyển trạng thái đơn hàng theo bước đã chọn
 const jumpToStatus = async (order, stepId) => {
   if (order.trangThaiDonHang === stepId) return;
   if (!canJumpToStep(order, stepId)) return;
-  // Bước cần nhập thêm thông tin: mở modal cập nhật đầy đủ
-  if (stepId === 'shipping') {
+  // Bước cần nhập thêm mã vận đơn: mở modal nếu chưa có mã
+  if (stepId === 'out_for_delivery' && !order.maVanDon) {
     openOrderStatus(order);
-    orderStatusForm.trangThaiDonHang = 'shipping';
+    orderStatusForm.trangThaiDonHang = 'out_for_delivery';
     return;
   }
   // Đơn online pending -> confirmed: mở modal chọn serial (giống advanceOrderStatus)
@@ -602,8 +579,7 @@ const jumpToStatus = async (order, stepId) => {
     await openXacNhanSerialModal(order);
     return;
   }
-  // Tự động cập nhật payment + ngày giao giống advanceOrderStatus để tránh 2 nơi logic lệch.
-  // Đơn tại quầy: đánh dấu ngày giao thực tế khi bấm "Đã giao hàng".
+  // Cập nhật thanh toán và ngày giao hàng thực tế
   const body = buildOrderUpdateBody(order, {
     trangThaiDonHang: stepId,
     trangThaiThanhToan: stepId === 'awaiting_confirmation' && order.trangThaiThanhToan === 'unpaid'
@@ -625,55 +601,38 @@ const jumpToStatus = async (order, stepId) => {
 const advanceOrderStatus = async (o) => {
   const next = NEXT_ORDER_STATUS[o.trangThaiDonHang];
   if (!next) return;
-  // Đơn online chuyển sang "confirmed" (xác nhận) phải chọn serial trước — mở modal thay
-  // vì đổi trạng thái thẳng. Sau khi xác nhận xong, bước "đóng gói" (confirmed -> processing)
-  // chỉ còn đổi trạng thái đơn thuần, không qua modal nữa. Đơn tại quầy đã chốt serial từ
-  // lúc tạo, không qua đây.
+  // Đơn online chuyển sang "confirmed" (xác nhận) phải chọn serial trước
   if (next === 'confirmed' && o.kenhBan === 'online') {
     await openXacNhanSerialModal(o);
     return;
   }
-  // Chuyển sang "Đã gửi hàng" bắt buộc dừng lại nhập mã vận đơn — mở modal thay vì 1-click.
-  if (next === 'shipping') {
+  // Chuyển sang "Đang giao hàng": mở modal nhập mã vận đơn nếu chưa có
+  if (next === 'out_for_delivery' && !o.maVanDon) {
     openOrderStatus(o);
-    orderStatusForm.trangThaiDonHang = 'shipping';
+    orderStatusForm.trangThaiDonHang = 'out_for_delivery';
     return;
   }
   const body = buildOrderUpdateBody(o, {
     trangThaiDonHang: next,
-    // Admin đánh dấu "đã giao" (awaiting_confirmation) mà thanh toán vẫn "chưa thanh toán" ->
-    // tự chuyển "đã thanh toán" (đơn ở đây mặc định thu tiền khi giao — COD, tiền đã thu
-    // xong tại thời điểm giao chứ không đợi khách bấm xác nhận). "partial"/"paid"/"refunded"
-    // giữ nguyên, chỉ tự động hoá đúng 1 chiều unpaid -> paid, không đụng trạng thái staff
-    // đã set tay.
     trangThaiThanhToan: next === 'awaiting_confirmation' && o.trangThaiThanhToan === 'unpaid'
       ? 'paid'
       : o.trangThaiThanhToan,
     ngayGiaoDuKien: o.ngayGiaoDuKien,
-    // Chuyển sang "awaiting_confirmation" (shipper đã giao) mà chưa có ngày khách nhận hàng
-    // -> tự đóng dấu thời điểm này ngay lúc đó, không đợi khách bấm "Xác nhận đã nhận hàng"
-    // (có thể vài ngày sau) — hạn trả hàng 7 ngày phải tính từ lúc giao thật, không phải lúc
-    // khách rảnh bấm xác nhận.
-    ngayGiaoThucTe: next === 'awaiting_confirmation' && !o.ngayGiaoThucTe
+    ngayGiaoThucTe: (next === 'awaiting_confirmation' || next === 'delivered') && !o.ngayGiaoThucTe
       ? nowLocalIso()
       : o.ngayGiaoThucTe,
     maVanDon: o.maVanDon,
   });
   const res = await DonHangService.update(o.donHangId, body);
   if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.updateFailed', { status: res.status }))); return; }
-  // Tải lại ngay thay vì tự ráp state cục bộ — chắc chắn đúng dữ liệu server, không phụ
-  // thuộc việc SSE (chỉ để đồng bộ các tab/khách hàng khác) có tới kịp hay không.
+  // Tải lại danh sách đơn hàng từ máy chủ
   await refreshOrders();
   // Cập nhật lại orderDetailData để sidebar hiển thị đúng trạng thái mới ngay lập tức
   const updated = OrdersStore.items.find(o2 => o2.donHangId === o.donHangId);
   if (updated) orderDetailData.value = updated;
 };
 
-// ── Modal "Chọn serial trước khi xác nhận" (chỉ đơn online) ──────────────────────
-// Đơn online chỉ giữ chỗ serial ("giu_hang") lúc đặt hàng — admin phải xem lại/đổi rồi
-// xác nhận ở đây trước khi đơn chuyển "confirmed". Sau đó bước "Đóng gói" (confirmed ->
-// processing) chỉ còn là đổi trạng thái đơn thuần. Serial đã giữ chỗ sẵn từ lúc đặt hàng
-// được tick trước, admin chỉ cần xác nhận hoặc đổi sang serial khác.
+// Modal chọn serial xác nhận đơn online
 const showXacNhanSerialModal = ref(false);
 const xacNhanOrder     = ref(null);
 const xacNhanLines     = ref([]);   // [{ ...ChiTietDonHangResponse, chosenSerialIds: Set<number> }]
@@ -708,8 +667,7 @@ const openXacNhanSerialModal = async (o) => {
   }
 };
 
-// Serial khả dụng để chọn cho 1 dòng: đang "trong_kho", hoặc đang "giu_hang" nhưng đã
-// giữ sẵn cho chính dòng này (FIFO lúc đặt hàng) — không hiện serial đang giữ cho đơn khác.
+// Lọc danh sách serial khả dụng
 const xacNhanAvailableSerials = (line) => {
   const all = xacNhanSerialMap.value[line.bienTheId] ?? [];
   return all.filter((s) => s.trangThai === 'trong_kho' || line.chosenSerialIds.has(s.chiTietId));
@@ -717,9 +675,7 @@ const xacNhanAvailableSerials = (line) => {
 
 const xacNhanToggleSerial = (line, serialId) => {
   if (line.chosenSerialIds.has(serialId)) { line.chosenSerialIds.delete(serialId); return; }
-  // Dòng chỉ cần 1 serial: bấm serial khác thay luôn cái đang chọn (kiểu radio) — nếu
-  // không, đã chọn đủ 1/1 thì bấm serial khác không có tác dụng, phải bỏ tích cái cũ
-  // trước mới chọn được cái mới.
+  // Chọn serial cho chi tiết đơn hàng
   if (line.soLuong === 1) { line.chosenSerialIds.clear(); line.chosenSerialIds.add(serialId); return; }
   if (line.chosenSerialIds.size < line.soLuong) line.chosenSerialIds.add(serialId);
 };
@@ -821,7 +777,6 @@ const confirmXacNhanSerial = async () => {
               <option value="pending">{{ orderStatusLabel('pending') }}</option>
               <option value="confirmed">{{ orderStatusLabel('confirmed') }}</option>
               <option value="processing">{{ orderStatusLabel('processing') }}</option>
-              <option value="shipping">{{ orderStatusLabel('shipping') }}</option>
               <option value="out_for_delivery">{{ orderStatusLabel('out_for_delivery') }}</option>
               <option value="awaiting_confirmation">{{ orderStatusLabel('awaiting_confirmation') }}</option>
               <option value="delivered">{{ orderStatusLabel('delivered') }}</option>
@@ -867,8 +822,7 @@ const confirmXacNhanSerial = async () => {
         </div>
       </div>
 
-      <!-- Hàng riêng cho nút "Lịch sử đơn hàng" — tách khỏi toolbar để search + 3 select luôn
-           nằm cùng 1 hàng ngang, không bị flex-wrap xô xuống khi viewport hẹp. -->
+      <!-- Nút xem lịch sử đơn hàng -->
       <div v-if="orderViewMode==='today'" class="alt-history-row">
         <button class="alt-btn alt-btn--ghost" @click="openOrderHistory">{{ t('admin.orders.history') }}</button>
       </div>
@@ -1067,10 +1021,11 @@ const confirmXacNhanSerial = async () => {
       <!-- Header gọn: chỉ tên khách + mã đơn + nút đóng. Tất cả action nằm bên sidebar phải. -->
       <div class="alt-toolbar">
         <div>
-          <div class="fw-bold" style="font-size:1.05rem;color:var(--text-heading);">
-            <User :size="14" style="vertical-align:-2px;" /> {{ customerName(orderDetailData?.khachHangId) }}
+          <div class="fw-bold d-flex align-items-center gap-2" style="font-size:1.05rem;color:var(--text-heading);">
+            <User :size="15" style="vertical-align:-2px;" />
+            <span>{{ customerName(orderDetailData?.khachHangId) }}</span>
           </div>
-          <div class="d-flex align-items-center gap-2" style="font-size:0.78rem;flex-wrap:wrap;color:var(--text-muted);">
+          <div class="d-flex align-items-center gap-2 mt-0.5" style="font-size:0.78rem;flex-wrap:wrap;color:var(--text-muted);">
             <span>{{ t('admin.orderDetailModal.titlePrefix') }}{{ orderDetailData?.donHangId }}</span>
             <span v-if="orderDetailData?.maDonHang" style="font-family:monospace;">{{ orderDetailData.maDonHang }}</span>
             <span v-if="orderDetailData?.kenhBan" class="alt-tag" style="font-size:0.7rem;" :style="{ background: channelColor(orderDetailData.kenhBan).bg, color: channelColor(orderDetailData.kenhBan).text }">
@@ -1093,69 +1048,64 @@ const confirmXacNhanSerial = async () => {
         <div class="overflow-y-auto flex-grow-1" style="border-right:1px solid var(--border-color-soft);">
           <!-- Danh sach san pham trong don -->
           <div class="p-3">
+            <div class="text-secondary fw-bold mb-2 text-uppercase" style="font-size:0.72rem; letter-spacing:0.05em;">
+              Sản phẩm trong đơn ({{ orderDetailItems.length }})
+            </div>
             <div v-if="orderDetailLoading" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.loading') }}</div>
             <div v-else-if="orderDetailItems.length === 0" class="text-secondary small text-center py-4">{{ t('admin.orderDetailModal.empty') }}</div>
-            <table v-else class="w-100 mb-0" style="border-collapse:collapse;font-size:0.82rem;">
-              <thead>
-                <tr style="background:var(--bg-input);">
-                  <th class="px-3 py-2 text-secondary" style="font-weight:600;width:55%;">{{ t('admin.orderDetailModal.colProduct') }}</th>
-                  <th class="px-3 py-2 text-secondary text-center" style="font-weight:600;width:8%;">{{ t('admin.orderDetailModal.colQty') }}</th>
-                  <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colUnitPrice') }}</th>
-                  <th class="px-3 py-2 text-secondary text-end" style="font-weight:600;width:14%;">{{ t('admin.orderDetailModal.colTotal') }}</th>
-                  <th class="px-3 py-2 text-secondary" style="font-weight:600;width:9%;"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in orderDetailItems" :key="item.id" style="border-top:1px solid var(--border-color-soft);">
-                  <!-- San pham: anh + ten + SKU + serial -->
-                  <td class="px-3 py-3" colspan="1">
-                    <div class="d-flex align-items-start gap-3">
-                      <div style="flex-shrink:0;width:52px;height:44px;background:var(--bg-card-inset);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-                        <img
-                          v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
-                          :src="productByBienThe(item.bienTheId).hinhAnhChinh"
-                          style="max-width:48px;max-height:40px;object-fit:contain;"
-                        />
-                        <Laptop v-else :size="22" color="var(--text-muted)" />
-                      </div>
-                      <div style="min-width:0;">
-                        <div class="fw-semibold" style="color:var(--text-heading);font-size:0.88rem;line-height:1.3;">
-                          {{ productByBienThe(item.bienTheId)?.tenSanPham || '—' }}
-                        </div>
-                        <div
-                          v-if="[productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).length"
-                          class="mt-1"
-                          style="font-size:0.74rem;color:var(--text-secondary);"
-                        >
-                          {{ [productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).join(' · ') }}
-                        </div>
-                        <div v-if="item.maSku" class="mt-1" style="font-size:0.72rem;color:var(--text-muted);">
-                          Mã hàng: <span style="font-family:monospace;color:var(--text-secondary);">{{ item.maSku }}</span>
-                        </div>
-                        <div v-if="item.soSerial" class="mt-1" style="font-size:0.75rem;color:var(--text-secondary);">
-                          Số serial: <strong style="font-family:monospace;color:var(--text-primary);letter-spacing:0.03em;">{{ item.soSerial }}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="px-3 py-3 text-center fw-bold" style="color:var(--text-heading);vertical-align:middle;">{{ item.soLuong }}</td>
-                  <td class="px-3 py-3 text-end text-secondary" style="vertical-align:middle;">{{ formatPrice(item.donGia) }}</td>
-                  <td class="px-3 py-3 text-end fw-semibold" style="color:var(--accent-fg);vertical-align:middle;">{{ formatPrice(item.thanhTien) }}</td>
-                  <td class="px-3 py-3" style="vertical-align:middle;">
-                    <div class="d-flex gap-1 justify-content-center">
-                      <button
-                        v-if="productByBienThe(item.bienTheId)"
-                        class="btn btn-sm btn-outline-secondary"
-                        style="font-size:0.72rem;padding:2px 8px;"
-                        @click="openVariantDetail(item.bienTheId)"
-                      >
-                        {{ t('admin.orderDetailModal.detail') }}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div v-else class="d-flex flex-column gap-2">
+              <div
+                v-for="item in orderDetailItems" :key="item.id"
+                class="d-flex align-items-start gap-3 p-2.5 rounded-3"
+                style="background:var(--bg-input); border:1px solid var(--border-color-soft);"
+              >
+                <!-- Ảnh sản phẩm -->
+                <div style="width:56px; height:50px; flex-shrink:0; background:var(--bg-card); border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid var(--border-color-soft);">
+                  <img
+                    v-if="productByBienThe(item.bienTheId)?.hinhAnhChinh"
+                    :src="productByBienThe(item.bienTheId).hinhAnhChinh"
+                    style="max-width:50px; max-height:44px; object-fit:contain;"
+                  />
+                  <Laptop v-else :size="22" style="color:var(--text-muted);" />
+                </div>
+
+                <!-- Thông tin SP -->
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-semibold text-truncate" style="font-size:0.88rem; color:var(--text-heading);">
+                    {{ productByBienThe(item.bienTheId)?.tenSanPham || item.tenSanPham || 'Sản phẩm' }}
+                  </div>
+                  <!-- Phân loại cấu hình -->
+                  <div
+                    v-if="[productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).length"
+                    class="mt-1" style="font-size:0.74rem; color:var(--text-secondary);"
+                  >
+                    {{ [productByBienThe(item.bienTheId)?.cpu, productByBienThe(item.bienTheId)?.ram, productByBienThe(item.bienTheId)?.oCung, productByBienThe(item.bienTheId)?.mauSac].filter(Boolean).join(' · ') }}
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mt-1" style="font-size:0.72rem; color:var(--text-muted); flex-wrap:wrap;">
+                    <span v-if="item.maSku">SKU: <code style="color:var(--text-secondary);">{{ item.maSku }}</code></span>
+                    <span v-if="item.soSerial">· Serial: <strong style="color:var(--accent-fg); font-family:monospace;">{{ item.soSerial }}</strong></span>
+                  </div>
+                </div>
+
+                <!-- Giá + Số lượng -->
+                <div class="text-end flex-shrink-0 d-flex flex-column align-items-end" style="min-width:110px;">
+                  <div class="fw-bold" style="font-size:0.9rem; color:var(--accent-fg);">
+                    {{ formatPrice(item.thanhTien ?? (item.donGia * (item.soLuong || 1))) }}
+                  </div>
+                  <div class="text-secondary" style="font-size:0.74rem;">
+                    {{ formatPrice(item.donGia) }} × {{ item.soLuong || 1 }}
+                  </div>
+                  <button
+                    v-if="productByBienThe(item.bienTheId)"
+                    class="btn btn-sm btn-outline-secondary mt-1 py-0 px-2"
+                    style="font-size:0.68rem; border-radius:4px;"
+                    @click="openVariantDetail(item.bienTheId)"
+                  >
+                    {{ t('admin.orderDetailModal.detail') }}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Footer: tong ket -->
@@ -1197,7 +1147,7 @@ const confirmXacNhanSerial = async () => {
           </div>
         </div>
 
-        <!-- Sidebar phải: trạng thái đơn + thanh toán + timeline các-step-có-thể-bấm + nút chuyển step + cập nhật -->
+        <!-- Sidebar chi tiết trạng thái đơn hàng -->
         <div v-if="orderDetailData" class="d-flex flex-column" style="width:280px; min-width:280px; flex-shrink:0; background:var(--bg-card-alt);">
           <div class="overflow-y-auto p-3 d-flex flex-column gap-3">
             <!-- Nhóm trạng thái: badge trạng thái hiện tại -->
@@ -1205,15 +1155,13 @@ const confirmXacNhanSerial = async () => {
               <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
                 {{ t('admin.orderDetailModal.orderStatus') }}
               </div>
-              <span class="alt-tag d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.trangThaiDonHang).text }">
-                <component :is="orderStatusIcon(orderDetailData.trangThaiDonHang)" :size="13" />
-                {{ orderStatusLabel(orderDetailData.trangThaiDonHang) }}
+              <span class="alt-tag d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang).text }">
+                <component :is="orderStatusIcon(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang)" :size="13" />
+                {{ orderStatusLabel(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang) }}
               </span>
             </div>
 
-            <!-- Timeline dọc: mỗi step là 1 nút bấm được - bấm vào step tương lai = chuyển thẳng trạng thái đó
-                 (bước nào đã qua thì bấm không tác dụng, chỉ tham khảo). Step cuối chưa đạt của phase
-                 hiện tại là "next step" nhanh nhất - không cần qua modal chọn trạng thái nữa. -->
+            <!-- Timeline các bước xử lý đơn hàng -->
             <div>
               <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
                 {{ t('orderStatus.timeline.title') }}
@@ -1248,7 +1196,7 @@ const confirmXacNhanSerial = async () => {
                   <div class="flex-grow-1 pb-3" style="padding-top:4px;">
                     <div
                       class="fw-semibold" style="font-size:0.85rem; line-height:1.3;"
-                      :style="orderDetailData.trangThaiDonHang === step.id
+                      :style="(orderDetailData.trangThaiDonHang === step.id || orderDetailData.kenhBan === 'in_store')
                         ? 'color:var(--accent-fg);'
                         : isStepReached(orderDetailData, step.id) ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'"
                     >
@@ -1310,6 +1258,49 @@ const confirmXacNhanSerial = async () => {
                 {{ t('admin.orderStatusModal.trackingCodeLabel') }}
               </div>
               <div class="fw-semibold" style="font-family:monospace; color:var(--text-primary);">{{ orderDetailData.maVanDon }}</div>
+            </div>
+
+            <!-- Thông tin khách hàng & Giao hàng -->
+            <div style="border-top:1px solid var(--border-color-soft); padding-top:12px;">
+              <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
+                Thông tin khách hàng & Giao hàng
+              </div>
+              <div class="d-flex flex-column gap-2 small">
+                <!-- Khách hàng / liên hệ -->
+                <div class="p-2 rounded-2" style="background:var(--bg-input); border:1px solid var(--border-color-soft);">
+                  <div class="d-flex align-items-center gap-1.5 fw-semibold" style="color:var(--text-primary); font-size:0.82rem;">
+                    <User :size="13" class="text-primary flex-shrink-0" />
+                    <span>{{ customerName(orderDetailData.khachHangId) }}</span>
+                  </div>
+                  <div v-if="customerPhone(orderDetailData)" class="d-flex align-items-center gap-1.5 text-secondary mt-1" style="font-size:0.76rem;">
+                    <Phone :size="11" class="flex-shrink-0" />
+                    <span>{{ customerPhone(orderDetailData) }}</span>
+                  </div>
+                  <div v-if="customerEmail(orderDetailData)" class="d-flex align-items-center gap-1.5 text-secondary mt-0.5" style="font-size:0.76rem;">
+                    <Mail :size="11" class="flex-shrink-0" />
+                    <span class="text-truncate">{{ customerEmail(orderDetailData) }}</span>
+                  </div>
+                </div>
+
+                <!-- Địa chỉ giao hàng & Người nhận -->
+                <div class="p-2 rounded-2" style="background:var(--bg-input); border:1px solid var(--border-color-soft);">
+                  <div class="text-secondary fw-semibold mb-1 d-flex align-items-center gap-1" style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">
+                    <MapPin :size="11" class="text-danger" /> Địa chỉ giao hàng:
+                  </div>
+                  <div v-if="orderDetailData.nguoiNhan && orderDetailData.nguoiNhan !== customerName(orderDetailData.khachHangId)" class="small mb-1" style="font-size:0.76rem; color:var(--text-secondary);">
+                    Người nhận: <strong style="color:var(--text-primary);">{{ orderDetailData.nguoiNhan }}</strong>
+                  </div>
+                  <div v-if="orderDetailData.sdtNguoiNhan && orderDetailData.sdtNguoiNhan !== customerPhone(orderDetailData)" class="small text-secondary mb-1" style="font-size:0.76rem;">
+                    SĐT nhận: <strong>{{ orderDetailData.sdtNguoiNhan }}</strong>
+                  </div>
+                  <div style="font-size:0.78rem; color:var(--text-primary); line-height:1.4;">
+                    {{ deliveryAddressText(orderDetailData) }}
+                  </div>
+                  <div v-if="orderDetailData.ghiChu" class="mt-1 pt-1 border-top border-secondary small text-secondary" style="font-size:0.73rem;">
+                    <span class="fw-semibold">Ghi chú:</span> {{ orderDetailData.ghiChu }}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1397,17 +1388,12 @@ const confirmXacNhanSerial = async () => {
 </template>
 
 <style scoped>
-/* Bootstrap .text-light hardcode mau trang co dinh — ghi de theo theme hien tai (dung
-   tren nen the/card, khong phai nen mau thuong hieu co dinh, nen an toan khi ghi de
-   theo bien theme). Scoped rieng cho component nay vi CSS scoped khong ke thua qua bien
-   gioi component. */
+/* Màu chữ sáng tùy chỉnh */
 .text-light {
   color: var(--text-primary) !important;
 }
 
-/* Hàng riêng cho nút "Lịch sử đơn hàng" — tách khỏi toolbar chính để search + 3 select
-   luôn nằm 1 hàng ngang phía trên, không bị flex-wrap xô xuống. Đẩy nút sang phải bằng
-   margin-left:auto cho cân đối với cụm filter phía trên. */
+/* Hàng nút lịch sử đơn hàng */
 .alt-history-row {
   display: flex;
   align-items: center;
@@ -1417,9 +1403,7 @@ const confirmXacNhanSerial = async () => {
   border-bottom: 1px solid var(--border-color);
 }
 
-/* Ghi đè flex-wrap của alt-toolbar__actions từ admin-list-theme.css để search + 3 select
-   luôn nằm cùng hàng ngang — nếu trình duyệt quá hẹp thì scroll ngang trong toolbar
-   thay vì xuống hàng, việc xuống hàng làm rối layout bảng. */
+/* Bố cục thanh thao tác toolbar */
 .alt-toolbar__actions {
   flex-wrap: nowrap !important;
 }

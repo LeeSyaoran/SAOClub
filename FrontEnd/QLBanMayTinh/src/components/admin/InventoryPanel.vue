@@ -28,16 +28,13 @@ import { usePagination } from "../../composables/usePagination.js";
 
 const router = useRouter();
 
-// products/inventory: chi doc (khong CRUD o day) — ProductsStore da duoc tai eager tu
-// fetchAll() (AdminPage.vue), goi lai ensureProducts() o day chi de an toan neu component
-// nay lo mount truoc luc do (cached-promise, khong tai trung).
+// Tải trước danh sách sản phẩm
 onMounted(() => {
   ensureInventory();
   ensureProducts();
 });
 
-// t() trả nguyên chuỗi key (vd "admin.common.filter") nếu chưa có bản dịch, KHÔNG nhận
-// tham số fallback như tt() bên dưới — dùng cho vài nhãn UI mới thêm chưa kịp có key i18n.
+// Dịch đa ngôn ngữ
 const tt = (key, fallback) => {
   const s = t(key);
   return !s || s === key ? fallback : s;
@@ -59,8 +56,7 @@ const maSanPhamCuaItem = (item) => {
   return item.bienTheId != null ? 'SP' + String(item.bienTheId).padStart(4, '0') : '—';
 };
 
-// BienTheSanPhamService.update() dùng BeanUtils.copyProperties nên cần body ĐẦY ĐỦ (thiếu
-// field nào sẽ bị null hết field đó) — lấy từ ProductsStore (biến thể flat) để đủ fields.
+// Cập nhật thông tin biến thể sản phẩm
 const buildBienTheUpdateBody = (bienThe, overrides = {}) => ({
   sanPhamId: bienThe?.sanPhamId,
   maSku: bienThe?.maSku ?? '',
@@ -82,8 +78,7 @@ const buildBienTheUpdateBody = (bienThe, overrides = {}) => ({
   ...overrides,
 });
 
-// Đồng bộ giá nhập của biến thể theo đơn giá của phiếu nhập mới nhất — theo đúng yêu cầu:
-// biến thể mới tạo giaNhap=0, sau khi nhập hàng thì lấy giá nhập từ phiếu.
+// Đồng bộ giá nhập của biến thể theo đơn giá phiếu nhập mới nhất
 const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
   const item = inventory.value.find((i) => i.bienTheId === bienTheId);
   const bienThe = getVariantInfo(item);
@@ -100,14 +95,7 @@ const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
   }
 };
 
-// ── Phân loại 1 dòng tồn kho — 4 nhóm ─────────────────────────────────────────────────
-// "pending" (Chờ nhập hàng): biến thể vừa tạo, CHƯA đủ giá nhập/giá bán (mặc định = 0 lúc
-// tạo mới) — coi như chưa sẵn sàng bán, KHÔNG hiện ở danh sách chính, chỉ xem được qua
-// ô thống kê "Chờ nhập hàng". Biến thể chỉ thật sự "vào kho" sau khi 1 phiếu nhập gán giá
-// nhập + serial cho nó (xem savePhieuNhap()).
-// "out" (Hết hàng): đã đủ giá nhưng tồn = 0 (bán hết) — cũng ẩn khỏi ds chính, chỉ xem qua
-// ô "Hết hàng" để không làm rối danh sách "đang có thể bán".
-// "low"/"ok": đủ giá + còn hàng — hiện bình thường ở danh sách chính.
+// Phân loại trạng thái tồn kho của biến thể
 const isPendingItem = (v) => !(Number(v?.giaNhap) > 0) || !(Number(v?.giaBan) > 0);
 const stockStatusOf = (item, v) => {
   if (isPendingItem(v)) return 'pending';
@@ -131,12 +119,11 @@ const lowStockOnlyItems = computed(() =>
 );
 const totalStockQty = computed(() => inventory.value.reduce((s, i) => s + (i.soLuongTon || 0), 0));
 
-// ── So sánh config với variant đầu tiên của cùng sản phẩm (để highlight giá trị khác nhau) ──
+// So sánh cấu hình để làm nổi bật sự khác biệt
 const getFirstVariantOfProduct = (v) => products.value.find(p => p.sanPhamId === v?.sanPhamId && p.bienTheId !== v?.bienTheId);
 // Diff highlight đã bỏ — mọi chip đều cùng tông hồng nhạt để đồng bộ UI.
 
-// ── Tồn kho: bảng PHẲNG theo từng biến thể (không gộp theo sản phẩm nữa) — biến thể
-// mới tạo gần nhất hiện đầu trang, có bộ lọc riêng (trạng thái tồn/thương hiệu/danh mục). ──
+// Bảng tồn kho theo từng biến thể sản phẩm
 const inventorySearch = ref('');
 const isInvFilterOpen = ref(false);
 const invFilterStatus = ref(''); // '' | 'pending' | 'out' | 'low' | 'ok'
@@ -144,12 +131,10 @@ const invFilterThuongHieu = ref('');
 const invFilterDanhMuc = ref('');
 const invTonMin = ref('');
 const invTonMax = ref('');
-// Bấm vào 1 trong 3 ô thống kê "Chờ nhập hàng/Sắp hết/Hết hàng" — bấm lại lần nữa thì tắt,
-// quay về danh sách mặc định.
+// Lọc danh sách theo trạng thái tồn kho
 const toggleInvQuickFilter = (status) => { invFilterStatus.value = invFilterStatus.value === status ? '' : status; };
 
-// Thương hiệu/danh mục lấy thẳng từ dữ liệu đang có trong ProductsStore — không gọi thêm
-// API danh mục riêng, bộ lọc luôn khớp 100% với những gì có trong bảng tồn kho.
+// Danh sách thương hiệu và danh mục phục vụ bộ lọc
 const invBrandOptions = computed(() => {
   const map = new Map();
   products.value.forEach((p) => { if (p.thuongHieuId != null && !map.has(p.thuongHieuId)) map.set(p.thuongHieuId, p.tenThuongHieu ?? '—'); });
@@ -191,16 +176,13 @@ const flatInventory = computed(() => {
       if (invFilterDanhMuc.value && String(v?.danhMucId ?? '') !== String(invFilterDanhMuc.value)) return false;
       // Có chọn lọc rõ ràng (kể cả từ bấm ô thống kê) -> hiện ĐÚNG nhóm đó.
       if (invFilterStatus.value) return status === invFilterStatus.value;
-      // Mặc định: ẩn "Chờ nhập hàng" (chưa đủ giá) và "Hết hàng" (đã bán hết) khỏi ds chính,
-      // chỉ xem được qua các ô thống kê tương ứng — theo đúng yêu cầu nghiệp vụ.
       // khoảng số lượng tồn kho
       const ton = item.soLuongTon ?? 0;
       if (invTonMin.value !== '' && ton < Number(invTonMin.value)) return false;
       if (invTonMax.value !== '' && ton > Number(invTonMax.value)) return false;
-      return status !== 'pending' && status !== 'out';
+      return true;
     })
-    // Mới tạo gần nhất lên đầu — ưu tiên ngày tạo của biến thể, nếu thiếu thì lùi về
-    // bienTheId (tự tăng, càng lớn càng mới) để vẫn có thứ tự hợp lý.
+    // Sắp xếp danh sách biến thể theo ngày tạo mới nhất
     .sort((a, b) => {
       const da = a.v?.ngayTao ? new Date(a.v.ngayTao).getTime() : (a.item.bienTheId ?? 0);
       const db = b.v?.ngayTao ? new Date(b.v.ngayTao).getTime() : (b.item.bienTheId ?? 0);
@@ -210,14 +192,12 @@ const flatInventory = computed(() => {
 const { currentPage: invCurrentPage, totalPages: invTotalPages, pagedItems: pagedFlatInventory } = usePagination(flatInventory);
 watch([inventorySearch, invFilterStatus, invFilterThuongHieu, invFilterDanhMuc, invTonMin, invTonMax], () => { invCurrentPage.value = 0; });
 
-// ── Ô chi tiết 1 dòng tồn kho — GỘP 2 modal cũ (xem serial / sửa+thêm hàng) thành 1
-// modal có 2 tab, mở bằng cách bấm vào dòng (bỏ hẳn nút cây bút riêng). ──────────────────
+// Chi tiết thông tin và danh sách serial của biến thể
 const showDetailModal = ref(false);
 const detailItem = ref(null); // tonKho item đang xem
 const detailTab = ref('serials'); // 'serials' | 'add'
 
-// Tab "Danh sách serial" — chỉ xem, có tìm kiếm + lọc trạng thái (không còn ô thêm dòng
-// nhanh ở đây nữa, thêm serial dồn hết sang tab "Thêm hàng").
+// Danh sách serial thuộc biến thể
 const detailSerials = ref([]);
 const detailSerialsLoading = ref(false);
 const detailSerialSearch = ref('');
@@ -232,7 +212,7 @@ const filteredDetailSerials = computed(() => {
   });
 });
 
-// Xóa serial thêm nhầm — chỉ cho phép khi đang "trong_kho" (server chặn nếu đã bán/đã dùng).
+// Xóa bản ghi serial trong kho
 const removeStockSerial = async (chiTietId) => {
   if (!(await askConfirm(t('admin.confirm.deleteSerial')))) return;
   const bienTheId = detailItem.value?.bienTheId;
@@ -248,9 +228,7 @@ const removeStockSerial = async (chiTietId) => {
   } catch (e) { showToast(e.message); }
 };
 
-// Tab "Thêm hàng" — y hệt logic cũ của nút cây bút: sửa số đang giữ/tồn tối thiểu, thêm
-// serial mới (gõ tay từng dòng hoặc nhập file). soLuongTon KHÔNG sửa tay được — chỉ tăng
-// khi thêm serial mới, khớp đúng thực tế: mỗi máy nhập kho có 1 serial.
+// Biểu mẫu nhập thêm hàng và điều chỉnh tồn kho
 const stockSaving = ref(false);
 const stockForm = reactive({ soLuongGiu: 0, tonKhoToiThieu: 0, newSerials: [''], giaBan: 0 });
 const addStockSerialRow = () => stockForm.newSerials.push('');
@@ -258,9 +236,7 @@ const removeStockSerialRow = (idx) => {
   if (stockForm.newSerials.length > 1) stockForm.newSerials.splice(idx, 1);
   else stockForm.newSerials[idx] = '';
 };
-// Nhập hàng loạt từ file — .xlsx/.xls đọc qua thư viện xlsx (mọi ô có dữ liệu, không
-// phân biệt hàng/cột), .csv/.txt đọc thẳng dạng text (mỗi serial 1 dòng hoặc cách nhau
-// bằng dấu phẩy) — khỏi phải gõ/dán tay từng dòng.
+// Nhập danh sách số serial từ tệp tin
 const importSerialsFromFile = async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
@@ -305,8 +281,7 @@ const saveStock = async () => {
   const item = detailItem.value;
   const bienTheId = item.bienTheId;
   try {
-    // 1) Thêm từng serial mới — mỗi cái tự tăng soLuongTon ở server (trigger DB tính lại
-    // từ số serial "trong_kho", không phải giá trị FE gửi lên).
+    // Thêm mới các số serial vào kho
     const serials = stockForm.newSerials.map((s) => s.trim()).filter(Boolean);
     for (const soSerial of serials) {
       const res = await ChiTietSanPhamService.create({
@@ -315,14 +290,12 @@ const saveStock = async () => {
       });
       if (!res.ok) { showToast(t('admin.errors.addSerialError')); return; }
     }
-    // 2) Đang giữ / tồn kho tối thiểu — 2 field còn lại được sửa tay bình thường.
+    // Cập nhật ngưỡng tồn kho tối thiểu
     const res = await TonKhoService.update(item.tonKhoId, {
-      soLuongGiu: Number(stockForm.soLuongGiu),
       tonKhoToiThieu: Number(stockForm.tonKhoToiThieu),
     });
     if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
-    // 3) Giá bán — chỉ gọi update biến thể nếu có đổi, tránh ghi đè vô ích. Đây là bước
-    // "tốt nghiệp" khỏi Chờ nhập hàng: đủ giaNhap (đã có từ phiếu nhập) + giaBan (nhập ở đây).
+    // Cập nhật giá bán biến thể
     const currentGiaBan = Number(getVariantInfo(item)?.giaBan ?? 0);
     if (stockForm.giaBan !== currentGiaBan) {
       const bienThe = getVariantInfo(item);
@@ -332,10 +305,7 @@ const saveStock = async () => {
         if (!priceRes.ok) { showToast(t('admin.errors.updateFailed', { status: priceRes.status })); return; }
       }
     }
-    // Lấy lại đúng dòng vừa đổi để có soLuongTon mới nhất do server tính, rồi quay về tab
-    // danh sách serial để thấy ngay kết quả — không đóng hẳn modal. refreshProducts() để
-    // giaBan/giaNhap vừa đổi phản ánh ngay ở bảng chính + phân loại pending/out (đọc từ
-    // ProductsStore, không phải inventory flat item) — không cần F5.
+    // Làm mới dữ liệu tồn kho sau khi chỉnh sửa
     const [updated] = await Promise.all([
       TonKhoService.getByBienThe(bienTheId).catch(() => null),
       refreshProducts().catch(() => {}),
@@ -377,8 +347,7 @@ const ensurePhieuNhapData = () => {
 const supplierName = (id) => suppliers.value.find(s => s.nhaCungCapId === id)?.tenNhaCungCap ?? '—';
 const staffName = (id) => staff.value.find(s => s.nhanVienId === id)?.hoTen ?? '—';
 
-// Cùng tông màu với orderStatusColor() (utils/orderStatus.js) — dùng lại đúng hex
-// cho vàng/xanh lá/đỏ để nhất quán trạng thái trên toàn app.
+// Màu sắc đại diện trạng thái phiếu nhập
 const phieuNhapStatusColor = (s) => {
   if (s === 'hoan_thanh') return { bg: 'rgba(34,197,94,0.15)',  text: '#22c55e' };
   if (s === 'huy')        return { bg: 'rgba(239,68,68,0.15)',  text: '#f87171' };
@@ -466,22 +435,19 @@ watch([phieuNhapSearch, phieuNhapStatusFilter, pnFilterDateFrom, pnFilterDateTo,
 });
 const { currentPage: pnCurrentPage, totalPages: pnTotalPages, pagedItems: pagedPhieuNhap, pageSize: pnPageSize } = usePagination(filteredPhieuNhap);
 
-// San pham + bien the de chon khi tao dong phieu nhap — lay tu ton kho (da co san, khoi tai them)
-// Options dang {value,label} de dung truc tiep voi SearchSelect.
+// Danh sách sản phẩm và biến thể để chọn trong phiếu nhập
 const productOptionsForPhieuNhap = computed(() => {
   const map = new Map();
-  for (const item of inventory.value) {
-    const sp = getVariantInfo(item);
-    if (sp?.sanPhamId != null && !map.has(sp.sanPhamId)) {
-      map.set(sp.sanPhamId, { value: sp.sanPhamId, label: sp.tenSanPham ?? '' });
+  for (const p of products.value) {
+    if (p?.sanPhamId != null && !map.has(p.sanPhamId)) {
+      map.set(p.sanPhamId, { value: p.sanPhamId, label: p.tenSanPham ?? '' });
     }
   }
   return [...map.values()];
 });
 const variantOptionsByProduct = computed(() => {
   const map = new Map();
-  for (const item of inventory.value) {
-    const bt = getVariantInfo(item);
+  for (const bt of products.value) {
     if (!bt || bt.sanPhamId == null || bt.bienTheId == null) continue;
     if (!map.has(bt.sanPhamId)) map.set(bt.sanPhamId, new Map());
     const variants = map.get(bt.sanPhamId);
@@ -569,10 +535,7 @@ const resetPhieuNhapItem = (row) => {
   row.serials = [];
   row.lockedCount = 0;
 };
-// Auto-detect một row có phải header (tiêu đề cột) trong file import serial.
-// Trả về true nếu giá trị ở cột A trông giống tên cột thay vì serial thật:
-//  - text thuần (Serial, Serials, Số Serial, Mã, SKU...) không chứa chữ số ở vị trí serial
-//  - HOẶC là một trong các từ khóa header phổ biến (so sánh lowercase, trim).
+// Kiểm tra dòng tiêu đề trong tệp serial
 const SERIAL_HEADER_KEYWORDS = new Set([
   'serial', 'serials', 'so serial', 'số serial', 'sn', 's/n',
   'ma', 'mã', 'ma serial', 'mã serial', 'sku', 'code',
@@ -584,16 +547,12 @@ const isLikelyHeaderRow = (serial, hasGiaCell) => {
   if (!serial) return false;
   const s = String(serial).trim();
   if (!s) return false;
-  // Header thường ngắn (≤ 25 ký tự), không có dấu gạch ngang giữa chữ-số (pattern serial)
-  const lower = s.toLowerCase();
-  if (SERIAL_HEADER_KEYWORDS.has(lower)) return true;
-  // Nếu kèm đơn giá ở cùng row → gần như chắc chắn là header (ví dụ "Serial,DonGia").
+  // Nhận diện dòng tiêu đề tệp tin
   if (hasGiaCell && /^[A-Za-zÀ-ỹ\s]+$/.test(s)) return true;
   return false;
 };
 
-// Import serial từ file — định dạng: cột serial + cột đơn giá (tùy chọn).
-// File có thể là Excel (xlsx/xls), CSV, hoặc TXT (mỗi serial 1 dòng).
+// Nhập danh sách serial từ file
 const importSerialsForRow = async (row, event) => {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -613,9 +572,7 @@ const importSerialsForRow = async (row, event) => {
       const serial = serialCell ? String(serialCell.v ?? '').trim() : '';
       const gia = giaCell ? Number(giaCell.v) : null;
       if (!serial) continue;
-      // Bỏ qua row tiêu đề (Serial, Serials, No, STT...) — row đầu của file Excel thường
-      // chứa header. Tránh bị backend đẩy vào list kiểm tra và match với các row có
-      // so_serial literal (do người dùng/patch cũ đã từng insert).
+      // Bỏ qua dòng tiêu đề tệp Excel
       if (isLikelyHeaderRow(serial, giaCell != null)) continue;
       parsed.push(serial);
       if (gia != null && !isNaN(gia)) {
@@ -637,8 +594,7 @@ const importSerialsForRow = async (row, event) => {
       const parts = lines[i].split(/[,\t]/);
       const serial = parts[0]?.trim() ?? '';
       if (!serial) continue;
-      // Bỏ qua row tiêu đề (chỉ áp dụng cho dòng đầu có chữ, vì file CSV/TXT ít có
-      // header và dòng sau có thể là text hợp lệ).
+      // Bỏ qua dòng tiêu đề tệp CSV hoặc TXT
       if (i === 0 && isLikelyHeaderRow(serial, parts.length > 1)) continue;
       parsed.push(serial);
       if (parts[1]) {
@@ -686,10 +642,7 @@ const openAddPhieuNhap = () => {
   closeSerialViewer();
   showPhieuNhapModal.value = true;
 };
-// Chỉ sửa được khi còn "cho_duyet" — đã duyệt/hủy thì coi như chốt sổ, sửa lại sẽ sai đối
-// chiếu với NCC. Nạp lại đúng dữ liệu đang có: header + từng dòng chi tiết (kèm id để
-// savePhieuNhap() biết dòng nào update, dòng nào tạo mới/xóa khi lưu) + serial đã nhập thật
-// của riêng phiếu này (khóa lại, chỉ cho thêm serial mới nếu tăng số lượng).
+// Nạp dữ liệu phiếu nhập để chỉnh sửa
 const openEditPhieuNhap = async (p) => {
   editingPhieuNhapId.value = p.phieuNhapId;
   const bienTheToSanPham = new Map(products.value.map(pp => [pp.bienTheId, pp.sanPhamId]));
@@ -699,12 +652,27 @@ const openEditPhieuNhap = async (p) => {
     if (!serialsByBienThe.has(s.bienTheId)) serialsByBienThe.set(s.bienTheId, []);
     serialsByBienThe.get(s.bienTheId).push(s.soSerial);
   }
+  // Nạp danh sách serial tạm từ bản nháp
+  if (existingSerials.length === 0) {
+    const detail = await PhieuNhapKhoService.getById(p.phieuNhapId).catch(() => null);
+    if (detail?.serialDraftJson) {
+      try {
+        const drafts = JSON.parse(detail.serialDraftJson);
+        for (const d of drafts) {
+          if (!serialsByBienThe.has(d.bienTheId)) serialsByBienThe.set(d.bienTheId, []);
+          for (const s of (d.serials || [])) {
+            if (s) serialsByBienThe.get(d.bienTheId).push(String(s).trim());
+          }
+        }
+      } catch (e) {}
+    }
+  }
   const items = chiTietPhieuNhapList.value
     .filter(c => c.phieuNhapId === p.phieuNhapId)
     .map(c => {
-      const locked = serialsByBienThe.get(c.bienTheId) ?? [];
+      const loaded = serialsByBienThe.get(c.bienTheId) ?? [];
       const soLuong = c.soLuong;
-      const serials = [...locked];
+      const serials = [...loaded];
       while (serials.length < soLuong) serials.push('');
       return {
         id: c.id,
@@ -713,7 +681,7 @@ const openEditPhieuNhap = async (p) => {
         soLuong,
         donGia: c.donGiaNhap,
         serials,
-        lockedCount: locked.length,
+        lockedCount: existingSerials.length ? loaded.length : 0,
       };
     });
   Object.assign(phieuNhapForm, {
@@ -827,8 +795,7 @@ const savePhieuNhap = async () => {
     }
     let phieuNhapId = editingPhieuNhapId.value;
     if (editingPhieuNhapId.value) {
-      // Đối chiếu dòng cũ/mới: id có sẵn -> update, không có id -> tạo mới,
-      // dòng cũ không còn trong form -> xóa.
+// Đối chiếu chi tiết phiếu nhập cũ và mới
       const originalIds = chiTietPhieuNhapList.value
         .filter(c => c.phieuNhapId === phieuNhapId).map(c => c.id);
       const keptIds = items.filter(i => i.id).map(i => i.id);
@@ -859,15 +826,12 @@ const savePhieuNhap = async () => {
     for (const i of items) {
       await syncGiaNhapFromReceipt(Number(i.bienTheId), i.donGia);
     }
-    // API tạo trả về entity lồng nhau (nhaCungCap/nhanVien object) khác format phẳng của
-    // getAll() (PhieuNhapKhoResponse) — tải lại danh sách thay vì tự ráp để tránh lệch dữ liệu.
+    // Tải lại danh sách phiếu nhập sau khi tạo
     [phieuNhapList.value, chiTietPhieuNhapList.value] = await Promise.all([
       PhieuNhapKhoService.getAll().catch(() => phieuNhapList.value),
       ChiTietPhieuNhapService.getAll().catch(() => chiTietPhieuNhapList.value),
     ]);
-    // refreshProducts() vì syncGiaNhapFromReceipt() ở trên vừa đổi giaNhap của biến thể —
-    // bảng chính/phân loại pending đọc giá từ ProductsStore, không refresh sẽ phải F5 mới
-    // thấy giá mới hoặc thấy hàng "tốt nghiệp" khỏi Chờ nhập hàng.
+    // Làm mới dữ liệu sản phẩm dùng chung
     await Promise.all([refreshInventory(), refreshProducts()]).catch(() => {});
     showPhieuNhapModal.value = false;
   } catch (e) {
@@ -923,8 +887,7 @@ const phieuNhapDetailData = ref(null);
 const phieuNhapDetailItems = computed(() =>
   chiTietPhieuNhapList.value.filter(c => c.phieuNhapId === phieuNhapDetailData.value?.phieuNhapId),
 );
-// Mở thẳng trang chi tiết phiếu nhập mới (PhieuNhapSerialPage) với giao diện đầy đủ,
-// chuẩn chỉnh theo thiết kế (có nút Xem serial mở modal tab con, nút Quay lại, v.v.).
+// Mở trang chi tiết phiếu nhập kho
 const openPhieuNhapDetail = (p) => {
   if (!p?.phieuNhapId) return;
   router.push(`/admin/phieu-nhap/${p.phieuNhapId}/serial`);
@@ -936,18 +899,13 @@ const openPhieuNhapSerialTab = (p) => {
   router.push(`/admin/phieu-nhap/${p.phieuNhapId}/serial`);
 };
 
-// Phiếu nhập kho chỉ là chứng từ đối soát nhà cung cấp — hoàn toàn tách rời việc nhập serial
-// thật vào kho (tab "Tồn kho", vì serial là mã vật lý trên máy, hệ thống không tự bịa ra
-// được). soLuong ghi trên phiếu có thể không khớp số serial nhân viên đã thực sự nhập —
-// hiện cảnh báo đối chiếu (không chặn, vì 2 việc có thể lệch thời điểm) để nhân viên tự biết
-// còn thiếu bao nhiêu máy chưa gán serial cho đúng lô hàng này.
+// Cảnh báo chênh lệch số lượng thực nhập và số lượng chứng từ
 const tonThucTeCuaBienThe = (bienTheId) =>
   inventory.value.find((i) => i.bienTheId === bienTheId)?.soLuongTon ?? 0;
 
 const printEsc = (v) => String(v ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
-// In HTML qua iframe ẩn thay vì window.open('_blank') — tránh mở tab/cửa sổ mới lộ ra
-// phía sau hộp thoại in, và tránh window.print() in nguyên trang admin (sidebar, topbar...).
+// In tài liệu qua iframe ẩn
 const printHtmlInIframe = (html) => {
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden;';
@@ -960,10 +918,7 @@ const printHtmlInIframe = (html) => {
   };
 };
 
-// In DANH SÁCH nhiều phiếu — chỉ bảng tóm tắt (báo cáo/xem nhanh cho quản lý), không
-// kèm chi tiết từng dòng hàng (kèm hết sẽ ra rất nhiều trang nếu danh sách dài).
-// Muốn xem chi tiết 1 phiếu cụ thể để đối chiếu/ký nhận thì dùng "In phiếu" trong
-// modal Chi tiết (xem printPhieuNhapDetail bên dưới).
+// In danh sách tóm tắt các phiếu nhập kho
 const printPhieuNhapList = () => {
   const headers = ['Mã', 'Ngày nhập', 'Nhà cung cấp', 'Nhân viên', 'Tổng tiền', 'Trạng thái'];
   const rows = filteredPhieuNhap.value.map(p => [
@@ -985,8 +940,7 @@ const printPhieuNhapList = () => {
   printHtmlInIframe(html);
 };
 
-// In 1 PHIẾU — chứng từ đầy đủ để đối chiếu/lưu kho: thông tin phiếu, bảng chi tiết hàng,
-// tổng tiền, và 3 dòng ký tên (người lập phiếu / thủ kho / người giao hàng).
+// In chi tiết phiếu nhập kho
 const printPhieuNhapDetail = (p) => {
   if (!p) return;
   const items = chiTietPhieuNhapList.value.filter(c => c.phieuNhapId === p.phieuNhapId);
@@ -1033,7 +987,7 @@ const printPhieuNhapDetail = (p) => {
   printHtmlInIframe(html);
 };
 
-// Xuất CSV (mở được bằng Excel) — khỏi cần thêm thư viện xlsx cho một bảng đơn giản
+// Xuất danh sách phiếu nhập ra tệp CSV
 const exportPhieuNhapExcel = () => {
   const rows = [
     ['Mã', 'Ngày nhập', 'Nhà cung cấp', 'Nhân viên', 'Tổng tiền', 'Trạng thái'],
@@ -1643,9 +1597,7 @@ const exportPhieuNhapExcel = () => {
 </template>
 
 <style scoped>
-/* Nhại đúng bảng màu + tỉ lệ của HangHoa.vue để đồng bộ phong cách toàn bộ khối quản trị —
-   cố tình dùng cùng giá trị hex/hồng cứng như HangHoa.vue thay vì biến theme sáng/tối dùng
-   chung, cho khớp pixel với các màn hình khác. */
+/* Bảng màu và tỷ lệ giao diện kho hàng */
 .inv, .inv-modal-mask {
   --pink-50:  #fff5f9;
   --pink-100: #ffe6f0;
@@ -1708,7 +1660,7 @@ const exportPhieuNhapExcel = () => {
 .inv-icon-btn--danger:hover { background: #fef2f2; }
 .inv-icon-btn--disabled { opacity: 0.35; pointer-events: none; cursor: not-allowed; }
 
-/* ══════════ STAT CARD — khối màu đậm giống ảnh mẫu, icon/số trắng ══════════ */
+/* Thẻ thống kê số liệu kho hàng */
 .inv-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
 .inv-stat {
   display: flex; align-items: center; gap: 14px;

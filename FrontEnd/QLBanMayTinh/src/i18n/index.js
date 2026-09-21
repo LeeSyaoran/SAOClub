@@ -27,7 +27,7 @@ export const setLocale = (code) => {
 // Tìm giá trị theo đường dẫn "a.b.c" trong object lồng nhau
 const resolve = (obj, path) => path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), obj);
 
-// t('nav.login') → chuỗi đã dịch theo locale hiện tại (fallback: vi, rồi fallback argument, rồi chính key đó)
+// Dịch đa ngôn ngữ theo locale hiện tại
 export const t = (key, vars, fallback) => {
   if (typeof vars === "string" && fallback === undefined) {
     fallback = vars;
@@ -46,8 +46,7 @@ export const t = (key, vars, fallback) => {
   return Object.keys(vars).reduce((s, k) => s.replaceAll(`{${k}}`, vars[k]), msg);
 };
 
-// Áp dụng ngôn ngữ mặc định hệ thống (Cài đặt) CHỈ khi người dùng chưa từng tự chọn ngôn
-// ngữ ở trình duyệt này (chưa có key trong localStorage) — không ghi đè lựa chọn đã có.
+// Áp dụng ngôn ngữ mặc định hệ thống nếu chưa chọn
 export const applySystemDefaultLocale = (code) => {
   const hasSaved = typeof localStorage !== "undefined" && typeof localStorage.getItem === "function" && localStorage.getItem(STORAGE_KEY);
   if (!hasSaved && MESSAGES[code]) {

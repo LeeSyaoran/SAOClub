@@ -24,8 +24,7 @@ onMounted(() => {
   ensureProducts();
 });
 
-// ── Sắp xếp nâng cao ──────────────────────────────────────────────────────────
-// sortKey: 'stt_desc' | 'stt_asc' | 'name_asc' | 'name_desc'
+// Sắp xếp danh sách sản phẩm
 const sortKey = ref("stt_desc");
 const sortOptions = [
   { value: "stt_desc",  label: "STT: Lớn → Nhỏ" },
@@ -104,9 +103,7 @@ const openDetail = (sanPhamId, name) => {
   router.push(`/admin/san-pham/${sanPhamId}`);
 };
 
-// ── Products CRUD (chỉ tạo mới — sửa/thêm biến thể đã chuyển sang BienTheTable.vue,
-// xem tab "Biến thể") ───────────────────────────────────────────────────────────────
-// Form thêm/sửa sản phẩm đã tách sang ProductFormModal.vue (dùng lại ở SanPhamDetailPage.vue).
+// Thêm sản phẩm mới
 const showProductModal = ref(false);
 const formMode = ref("create");
 const formSanPhamId = ref(null);
@@ -121,12 +118,7 @@ const openEdit = (sanPhamId) => {
   formSanPhamId.value = sanPhamId;
   showProductModal.value = true;
 };
-// Xoa xong khong can tai lai ca bang — API tra 204 rong nen chi can biet ID
-// vua xoa la du de loc khoi mang cuc bo (products = 1 dong/bien the, nen xoa
-// san pham = xoa het cac dong cung sanPhamId).
-// Hoi truoc khi bam xoa: san pham chua tung ban -> chi hoi xac nhan don gian; da co giao
-// dich -> bao thang ly do khong xoa duoc, khoi can hoi "co chac khong" cho viec chac chan
-// se that bai.
+// Xóa sản phẩm
 const deleteProduct = async (id) => {
   const name =
     (ProductsStore.items ?? []).find((p) => p.sanPhamId === id)?.tenSanPham ?? "";

@@ -5,15 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 
-/**
- * Không dùng @Data ở entity có quan hệ LAZY:
- *  - toString() sinh ra sẽ gọi sanPham.toString(); nếu SanPham có List<BienTheSanPham>
- *    ngược lại thì hai bên gọi nhau vô hạn → StackOverflowError.
- *  - equals()/hashCode() đụng vào proxy LAZY ngoài session → LazyInitializationException,
- *    hoặc bắn thêm query thừa khi entity nằm trong Set/Map.
- *  - @Data trên class extends BaseEntity còn lặng lẽ bỏ qua toàn bộ field của lớp cha.
- * Thay bằng @Getter/@Setter, toString loại quan hệ, equals/hashCode chỉ theo khoá chính.
- */
+// Entity biến thể sản phẩm
 @Getter
 @Setter
 @NoArgsConstructor
@@ -37,9 +29,7 @@ public class BienTheSanPham extends BaseEntity {
     @Column(name = "ma_sku", length = 50, unique = true)
     private String maSku;
 
-    // unique = true ở đây chỉ có tác dụng khi Hibernate tự sinh schema. Dự án dùng CSDL
-    // có sẵn từ QLBanMayTinh.sql nên ràng buộc thật nằm ở unique index trong file SQL —
-    // giữ lại cho đúng ý đồ thiết kế, nhưng đừng trông chờ nó tự tạo index.
+    // Mã vạch biến thể sản phẩm
     @Column(name = "barcode", length = 50, unique = true)
     private String barcode;
 

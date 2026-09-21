@@ -99,9 +99,7 @@ const select = (value) => {
   rootEl.value?.querySelector('button')?.focus();
 };
 
-// Điều hướng bàn phím — trước đây chỉ bấm chuột chọn được, không thao tác được bằng
-// bàn phím (Tab vào nút thì mở/đóng được nhờ semantics <button> gốc, nhưng vào trong danh
-// sách option thì bó tay vì các dòng chỉ là <div> thường, không nhận phím mũi tên/Enter).
+// Điều hướng lựa chọn bằng bàn phím
 const moveHighlight = (delta) => {
   const len = filteredOptions.value.length;
   if (len === 0) return;
@@ -134,9 +132,7 @@ const onTriggerKeydown = (e) => {
   }
 };
 
-// Modal cha cuộn được trong lúc panel mở → toa do cu thanh sai vi tri, dong panel cho don gian.
-// Nhưng cuộn BÊN TRONG panel (danh sách option dài) không được tính — đó là scroll bình
-// thường của người dùng, không phải scroll của modal cha.
+// Đóng panel khi cuộn modal cha
 const closeOnScroll = (e) => {
   if (panelEl.value?.contains(e.target)) return;
   open.value = false;

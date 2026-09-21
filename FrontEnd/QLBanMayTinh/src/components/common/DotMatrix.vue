@@ -1,6 +1,5 @@
 <template>
-  <!-- Lưới chấm tỉ lệ theo danh mục — dùng cho "Nhân viên theo chức vụ". Lưới cố định
-       50 dot (5 hàng x 10 cột), mỗi category lấp 1 số dot liên tục tỉ lệ theo value. -->
+  <!-- Lưới chấm tỉ lệ theo danh mục -->
   <div class="d-flex align-items-center gap-3 flex-wrap">
     <svg :width="gridWidth" :height="gridHeight" :viewBox="`0 0 ${gridWidth} ${gridHeight}`" style="flex-shrink:0;">
       <circle v-for="(dot, i) in dots" :key="i" :cx="dot.x" :cy="dot.y" :r="DOT_RADIUS" :fill="dot.color" />
@@ -38,8 +37,7 @@ const segments = computed(() => {
   return props.data.filter(d => d.value > 0).map(d => ({ ...d, pct: (d.value / total.value) * 100 }));
 });
 
-// Category cuối lấy hết dot còn lại (thay vì round riêng từng category) để tổng luôn
-// đúng 50, không lệch do làm tròn.
+// Tính số lượng chấm cho nhóm danh mục cuối
 const dots = computed(() => {
   if (total.value === 0) return [];
   const result = [];

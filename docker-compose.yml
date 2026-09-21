@@ -35,6 +35,7 @@ services:
       JWT_SECRET: "${JWT_SECRET}"
       UPLOAD_DIR: /app/uploads
       CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:4173"
+      OLLAMA_URL: "http://host.docker.internal:11434"
     volumes:
       - ./FrontEnd/QLBanMayTinh/public/images:/app/uploads
     depends_on:
@@ -46,6 +47,7 @@ services:
     working_dir: /app
     environment:
       VITE_API_PROXY_TARGET: "http://backend:8080"
+      VITE_API_URL: "http://localhost:8080"
     volumes:
       - ./FrontEnd/QLBanMayTinh:/app
     ports:

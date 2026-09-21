@@ -1,9 +1,6 @@
 package com.example.backend.exception;
 
-/**
- * Throw khi serial (soSerial) đã tồn tại trong hệ thống.
- * Đánh dấu rõ ràng để GlobalExceptionHandler trả HTTP 409 CONFLICT.
- */
+// Ngoại lệ khi trùng số serial
 public class DuplicateSerialException extends IllegalArgumentException {
 
     public DuplicateSerialException(String soSerial) {

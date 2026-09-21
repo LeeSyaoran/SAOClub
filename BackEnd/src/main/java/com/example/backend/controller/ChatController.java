@@ -24,11 +24,7 @@ public class ChatController {
 
     // ─── Public endpoints (khách hàng) ─────────────────────────────────────────
 
-    /**
-     * Tạo phiên chat mới
-     * POST /api/chat/tao-phien
-     * Body: { sessionId?: string, khachHangId?: number, hoTen?: string }
-     */
+    // Tạo phiên chat mới
     @PostMapping("/tao-phien")
     public ResponseEntity<ChatCuocTroChuyenResponse> taoPhienChat(
             @RequestParam(required = false) String sessionId,
@@ -37,19 +33,13 @@ public class ChatController {
         return ResponseEntity.ok(chatService.taoPhienChat(sessionId, khachHangId, hoTen));
     }
 
-    /**
-     * Lấy phiên chat theo sessionId
-     * GET /api/chat/phien/{sessionId}
-     */
+    // Lấy phiên chat theo session ID
     @GetMapping("/phien/{sessionId}")
     public ResponseEntity<ChatCuocTroChuyenResponse> layPhienChat(@PathVariable String sessionId) {
         return ResponseEntity.ok(chatService.layPhienChat(sessionId));
     }
 
-    /**
-     * Lấy tin nhắn trong cuộc trò chuyện
-     * GET /api/chat/{id}/tin-nhan?page=0&size=50
-     */
+    // Lấy danh sách tin nhắn của cuộc trò chuyện
     @GetMapping("/{id}/tin-nhan")
     public ResponseEntity<Page<ChatTinNhanResponse>> layTinNhan(
             @PathVariable Long id,
@@ -58,11 +48,7 @@ public class ChatController {
         return ResponseEntity.ok(chatService.layTinNhan(id, PageRequest.of(page, size)));
     }
 
-    /**
-     * Gửi tin nhắn từ khách hàng
-     * POST /api/chat/{id}/tin-nhan
-     * Body: { noiDung: string }
-     */
+    // Gửi tin nhắn từ khách hàng
     @PostMapping("/{id}/tin-nhan")
     public ResponseEntity<ChatTinNhanResponse> guiTinNhan(
             @PathVariable Long id,
@@ -70,12 +56,7 @@ public class ChatController {
         return ResponseEntity.ok(chatService.guiTinNhan(id, request));
     }
 
-    // ─── Staff endpoints ────────────────────────────────────────────────────────
-
-    /**
-     * Danh sách cuộc trò chuyện
-     * GET /api/chat/danh-sach?loai=HE_THONG&page=0&size=20
-     */
+    // Lấy danh sách cuộc trò chuyện cho nhân viên
     @GetMapping("/danh-sach")
     @PreAuthorize("hasAnyRole('ADMIN', 'NHAN_VIEN', 'QUAN_KHO')")
     public ResponseEntity<Page<ChatCuocTroChuyenResponse>> layDanhSachChat(
@@ -86,21 +67,14 @@ public class ChatController {
         return ResponseEntity.ok(chatService.layDanhSachChat(loai, trangThai, PageRequest.of(page, size)));
     }
 
-    /**
-     * Nhân viên nhận tiếp cuộc trò chuyện
-     * POST /api/chat/{id}/nhan-tiep
-     */
+    // Nhân viên tiếp nhận cuộc trò chuyện
     @PostMapping("/{id}/nhan-tiep")
     @PreAuthorize("hasAnyRole('ADMIN', 'NHAN_VIEN', 'QUAN_KHO')")
     public ResponseEntity<ChatCuocTroChuyenResponse> nhanTiepChat(@PathVariable Long id) {
         return ResponseEntity.ok(chatService.nhanTiepChat(id));
     }
 
-    /**
-     * Gửi tin nhắn từ nhân viên
-     * POST /api/chat/{id}/nv-tin-nhan
-     * Body: { noiDung: string }
-     */
+    // Gửi tin nhắn từ nhân viên
     @PostMapping("/{id}/nv-tin-nhan")
     @PreAuthorize("hasAnyRole('ADMIN', 'NHAN_VIEN', 'QUAN_KHO')")
     public ResponseEntity<ChatTinNhanResponse> guiTinNhanTuNhanVien(
@@ -109,30 +83,21 @@ public class ChatController {
         return ResponseEntity.ok(chatService.guiTinNhanTuNhanVien(id, request));
     }
 
-    /**
-     * Quay lại AI
-     * POST /api/chat/{id}/quay-lai-ai
-     */
+    // Chuyển cuộc trò chuyện lại cho AI
     @PostMapping("/{id}/quay-lai-ai")
     @PreAuthorize("hasAnyRole('ADMIN', 'NHAN_VIEN', 'QUAN_KHO')")
     public ResponseEntity<ChatCuocTroChuyenResponse> quayLaiAI(@PathVariable Long id) {
         return ResponseEntity.ok(chatService.quayLaiAI(id));
     }
 
-    /**
-     * Đóng cuộc trò chuyện
-     * POST /api/chat/{id}/dong
-     */
+    // Đóng cuộc trò chuyện
     @PostMapping("/{id}/dong")
     @PreAuthorize("hasAnyRole('ADMIN', 'NHAN_VIEN', 'QUAN_KHO')")
     public ResponseEntity<ChatCuocTroChuyenResponse> dongChat(@PathVariable Long id) {
         return ResponseEntity.ok(chatService.dongChat(id));
     }
 
-    /**
-     * Lịch sử chat của khách hàng
-     * GET /api/chat/khach/{khId}?page=0&size=10
-     */
+    // Lấy lịch sử chat của khách hàng
     @GetMapping("/khach/{khId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'NHAN_VIEN', 'QUAN_KHO')")
     public ResponseEntity<Page<ChatCuocTroChuyenResponse>> layLichSuChatKhach(
@@ -142,10 +107,7 @@ public class ChatController {
         return ResponseEntity.ok(chatService.layLichSuChatKhach(khId, PageRequest.of(page, size)));
     }
 
-    /**
-     * Thông báo cho dashboard
-     * GET /api/chat/thong-bao
-     */
+    // Đếm số thông báo tin nhắn mới
     @GetMapping("/thong-bao")
     @PreAuthorize("hasAnyRole('ADMIN', 'NHAN_VIEN', 'QUAN_KHO')")
     public ResponseEntity<Map<String, Long>> demThongBao() {

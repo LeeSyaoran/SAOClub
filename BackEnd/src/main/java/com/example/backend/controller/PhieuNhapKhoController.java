@@ -68,4 +68,12 @@ public class PhieuNhapKhoController {
         phieuNhapKhoService.approve(id);
         return ResponseEntity.ok().build();
     }
+
+    /** Từ chối phiếu nhập: chuyển trạng thái sang huy */
+    @PostMapping("/{id}/tu-choi")
+    public ResponseEntity<Void> tuChoi(@PathVariable Integer id, @RequestBody(required = false) Map<String, String> body) {
+        String lyDo = (body != null) ? body.get("lyDo") : null;
+        phieuNhapKhoService.reject(id, lyDo);
+        return ResponseEntity.ok().build();
+    }
 }

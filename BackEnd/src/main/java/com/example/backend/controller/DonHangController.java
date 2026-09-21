@@ -50,10 +50,7 @@ public class DonHangController {
         return ResponseEntity.status(HttpStatus.CREATED).body(donHangService.create(request));
     }
 
-    /**
-     * Checkout online: tạo đơn + thêm tất cả sản phẩm trong 1 transaction.
-     * Dùng cho khách vãng lai không đăng nhập — không cần quyền staff.
-     */
+    // Checkout đơn hàng online
     @PostMapping("/checkout-complete")
     public ResponseEntity<?> checkoutComplete(@RequestBody Map<String, Object> body) {
         try {

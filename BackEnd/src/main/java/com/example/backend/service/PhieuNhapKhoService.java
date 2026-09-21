@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -56,9 +57,11 @@ public class PhieuNhapKhoService {
     public PhieuNhapKho create(PhieuNhapKhoRequest request) {
         PhieuNhapKho entity = new PhieuNhapKho();
         BeanUtils.copyProperties(request, entity, "nhaCungCapId", "nhanVienId", "serials");
-        entity.setNhaCungCap(nhaCungCapRepository.getReferenceById(request.getNhaCungCapId()));
+        entity.setNhaCungCap(nhaCungCapRepository.findById(request.getNhaCungCapId())
+                .orElseThrow(() -> new IllegalArgumentException("Nhà cung cấp không tồn tại với id: " + request.getNhaCungCapId())));
         if (request.getNhanVienId() != null)
-            entity.setNhanVien(nhanVienRepository.getReferenceById(request.getNhanVienId()));
+            entity.setNhanVien(nhanVienRepository.findById(request.getNhanVienId())
+                    .orElseThrow(() -> new IllegalArgumentException("Nhân viên không tồn tại với id: " + request.getNhanVienId())));
         // Lưu serial draft vào JSON column
         if (request.getSerials() != null && !request.getSerials().isEmpty()) {
             try {
@@ -73,9 +76,10 @@ public class PhieuNhapKhoService {
     public PhieuNhapKho update(Integer id, PhieuNhapKhoRequest request) {
         PhieuNhapKho entity = getById(id);
         BeanUtils.copyProperties(request, entity, "phieuNhapId", "nhaCungCapId", "nhanVienId");
-        entity.setNhaCungCap(nhaCungCapRepository.getReferenceById(request.getNhaCungCapId()));
+        entity.setNhaCungCap(nhaCungCapRepository.findById(request.getNhaCungCapId())
+                .orElseThrow(() -> new IllegalArgumentException("Nhà cung cấp không tồn tại với id: " + request.getNhaCungCapId())));
         entity.setNhanVien(request.getNhanVienId() != null
-                ? nhanVienRepository.getReferenceById(request.getNhanVienId()) : null);
+                ? nhanVienRepository.findById(request.getNhanVienId()).orElse(null) : null);
         return phieuNhapKhoRepository.save(entity);
     }
 
@@ -85,12 +89,7 @@ public class PhieuNhapKhoService {
             throw new IllegalArgumentException("Phiếu nhập kho không tồn tại với id: " + id);
         PhieuNhapKho phieu = getById(id);
 
-        // Dọn serial thuộc phiếu: chỉ soft-delete các serial 'trong_kho' CHƯA được link với
-        // đơn hàng nào. Serial đã bán / đang giữ phải giữ nguyên để bảo toàn tham chiếu từ
-        // chi_tiet_don_hang_serial (lịch sử bảo hành + đối soát đơn). Soft-delete (không xóa
-        // cứng) vì so_serial UNIQUE — nếu trước đó user từng bán-trả-hàng thì xóa cứng sẽ phá
-        // vỡ khả năng nhập lại cùng serial (giải thích triệu chứng user báo: phiếu cũ đã xóa
-        // nhưng serial vẫn nằm trong DB với da_xoa=false, cản trở nhập lại).
+        // Xóa mềm các serial trong kho thuộc phiếu nhập chưa liên kết đơn hàng
         List<ChiTietSanPham> serials = chiTietSanPhamRepository.findByPhieuNhap_PhieuNhapIdIncludingDeleted(id);
         int deleted = 0;
         for (ChiTietSanPham s : serials) {
@@ -119,12 +118,7 @@ public class PhieuNhapKhoService {
         phieuNhapKhoRepository.deleteById(id);
     }
 
-    // ── Duyệt phiếu nhập kho: tạo serial vào kho ───────────────────────────
-
-    /**
-     * Check serial trùng với DB — dùng khi tạo phiếu mới (chưa có phieuNhapId).
-     * Trả về list serial trùng.
-     */
+    // Kiểm tra danh sách serial đã tồn tại trong cơ sở dữ liệu
     public List<String> kiemTraSerialVoiDb(List<String> serials) {
         if (serials == null || serials.isEmpty()) return Collections.emptyList();
         return chiTietSanPhamRepository.findBySoSerialInAndDaXoaFalse(serials)
@@ -133,10 +127,7 @@ public class PhieuNhapKhoService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Trả về map: bienTheId → danh sách serial trùng trong DB.
-     * Nếu map rỗng → không có trùng, có thể duyệt.
-     */
+    // Kiểm tra serial trùng trong phiếu nhập
     public Map<Integer, List<String>> kiemTraSerialTrung(Integer phieuNhapId) {
         PhieuNhapKho phieu = getById(phieuNhapId);
         if (phieu.getSerialDraftJson() == null || phieu.getSerialDraftJson().isBlank())
@@ -167,10 +158,7 @@ public class PhieuNhapKhoService {
         return trungTheoBienThe;
     }
 
-    /**
-     * Duyệt phiếu: tạo chi_tiet_san_pham + lich_su_ton_kho cho mỗi serial.
-     * Nếu serial trùng trong DB hoặc trùng cross-row trong cùng phiếu → throw.
-     */
+    // Duyệt phiếu nhập kho và khởi tạo serial vào kho
     @Transactional
     public void approve(Integer phieuNhapId) {
         PhieuNhapKho phieu = getById(phieuNhapId);
@@ -260,6 +248,23 @@ public class PhieuNhapKhoService {
 
         phieu.setTrangThai("hoan_thanh");
         phieu.setSerialDraftJson(null);
+        phieuNhapKhoRepository.save(phieu);
+    }
+
+    // Từ chối duyệt phiếu nhập kho
+    @Transactional
+    public void reject(Integer phieuNhapId, String lyDo) {
+        PhieuNhapKho phieu = getById(phieuNhapId);
+        if (!"cho_duyet".equals(phieu.getTrangThai())) {
+            throw new IllegalArgumentException("Chỉ có thể từ chối phiếu ở trạng thái 'Chờ duyệt'");
+        }
+        phieu.setTrangThai("huy");
+        if (lyDo != null && !lyDo.isBlank()) {
+            String note = phieu.getGhiChu() != null && !phieu.getGhiChu().isBlank()
+                    ? phieu.getGhiChu() + " [Từ chối: " + lyDo.trim() + "]"
+                    : "Từ chối: " + lyDo.trim();
+            phieu.setGhiChu(note);
+        }
         phieuNhapKhoRepository.save(phieu);
     }
 }

@@ -96,7 +96,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/yeu-thich/**").authenticated()
 
                 // Chat endpoints — public cho khách (tạo phien, gui tin nhan), staff cho admin/NV
-                .requestMatchers("/ws/chat/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/chat/tao-phien").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/chat/phien/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/chat/*/tin-nhan").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/chat/*/tin-nhan").permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/topic/**").permitAll()
 
                 .anyRequest().authenticated()

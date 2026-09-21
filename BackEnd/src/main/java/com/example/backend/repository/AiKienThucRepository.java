@@ -59,5 +59,5 @@ public interface AiKienThucRepository extends JpaRepository<AiKienThuc, Long> {
 
     long countByLoai(String loai);
 
-    List<AiKienThuc> findBySanPhamId(Integer sanPhamId);
+    List<AiKienThuc> findBySanPham_SanPhamId(Integer sanPhamId);
 }

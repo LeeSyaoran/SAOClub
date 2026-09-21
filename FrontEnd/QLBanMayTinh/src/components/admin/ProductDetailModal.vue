@@ -7,10 +7,7 @@ import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
 import { variantsForDetail } from "../../utils/productGrouping.js";
 import { Laptop, X } from '@lucide/vue';
 
-// ── Modal "Chi tiết sản phẩm" — dùng chung bởi ProductsTable.vue (xem/so sánh toàn bộ
-// biến thể của 1 sản phẩm) và OrdersTable.vue (chỉ xem (các) biến thể khách đã mua trong
-// 1 đơn cụ thể, qua prop onlyBienTheIds — nhận 1 id hoặc mảng nhiều id). Thuần XEM —
-// sửa/thêm/xóa biến thể giờ ở tab "Biến thể" riêng (BienTheTable.vue).
+// Modal chi tiết sản phẩm và biến thể
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   sanPhamId: { type: [Number, String], default: null },

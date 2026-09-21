@@ -33,11 +33,7 @@
 </template>
 
 <script setup>
-// Ô gõ có gợi ý xổ xuống TỰ VẼ (thay cho <input list> + <datalist> của trình duyệt —
-// popup datalist không style được, mỗi máy/trình duyệt hiện 1 kiểu xấu khác nhau).
-// Dùng cho các trường "gõ rồi Enter để thêm thẻ" (chọn nhiều): bấm 1 gợi ý trong danh
-// sách → bắn sự kiện "pick" (component cha tự thêm vào mảng qua hàm add sẵn có, y hệt
-// hành vi cũ); gõ chữ mới rồi Enter vẫn hoạt động như trước qua sự kiện "enter".
+// Ô nhập liệu thẻ có gợi ý tự động
 import { ref, reactive, computed, nextTick, onBeforeUnmount } from "vue";
 
 const props = defineProps({

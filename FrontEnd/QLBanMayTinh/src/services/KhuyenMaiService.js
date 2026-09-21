@@ -5,6 +5,10 @@ export const getAll = () => get(`/api/khuyen-mai`);
 export const save = (id, body) =>
   id ? put(`/api/khuyen-mai/update/${id}`, body) : post('/api/khuyen-mai', body);
 
-// Validate a promo code — returns { valid, ...data } or throws with error message
+// Kiểm tra tính hợp lệ của mã khuyến mãi
 export const kiemTra = (maKhuyenMai) =>
   post(`/api/khuyen-mai/kiem-tra`, { maKhuyenMai });
+
+// Lấy danh sách sản phẩm áp dụng cho một khuyến mãi
+export const getSanPhamApDung = (khuyenMaiId) =>
+  get(`/api/khuyen-mai/${khuyenMaiId}/san-pham`);

@@ -73,9 +73,7 @@
           {{ tag.trim() }}
         </span>
       </div>
-      <!-- Nút thêm vào giỏ — disabled nếu hết hàng. Cha quyết định mở trang chi tiết
-           thay vì thêm thẳng nếu sản phẩm có nhiều biến thể (tránh thêm nhầm biến
-           thể giá thấp nhất đang hiển thị đại diện). -->
+      <!-- Nút thêm vào giỏ hàng -->
       <button
         class="btn btn-sm w-100 fw-bold mt-1"
         style="font-size:11px; border-radius:8px;"
@@ -86,8 +84,7 @@
         <ShoppingCart :size="12" style="vertical-align:-2px;" /> {{ t('home.addToCart') }}
       </button>
 
-      <!-- Checkbox "So sánh" — disabled khi đã chọn đủ số lượng tối đa (trừ chính nó, vẫn
-           bấm được để bỏ chọn). Cha (CustomerPage.vue) giữ danh sách so sánh dùng chung. -->
+      <!-- Nút so sánh sản phẩm -->
       <label
         class="d-flex align-items-center gap-1 mt-1"
         style="font-size:10px; color:var(--text-secondary); cursor:pointer; user-select:none;"
@@ -128,8 +125,7 @@ const props = defineProps({
   rating: { type: Object, default: null },
 });
 
-// Emits: click (xem chi tiết), add-to-cart (thêm nhanh — cha tự quyết định có mở trang chi tiết
-// trước hay không), toggle-compare (bật/tắt trong danh sách so sánh), toggle-wishlist (bật/tắt yêu thích)
+// Sự kiện tương tác với thẻ sản phẩm
 defineEmits(['click', 'add-to-cart', 'toggle-compare', 'toggle-wishlist']);
 
 // Ngưỡng "sắp hết hàng" — dưới mức này tạo cảm giác khan hiếm (giống nhiều sàn TMĐT khác).

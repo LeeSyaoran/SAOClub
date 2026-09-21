@@ -142,17 +142,12 @@ public class PhieuBaoHanhService {
         // TODO: implement when extension logic is finalized
     }
 
-    /**
-     * Từ chối gia hạn BH.
-     */
+    // Từ chối gia hạn bảo hành
     public void rejectExtension(Integer baoHanhId, String lyDoTuChoi, String rejectedAt) {
         // TODO: implement when extension logic is finalized
     }
 
-    /**
-     * Tra cuu serial theo soSerial — tra duoc bat ky trang thai nao.
-     * Lay day du thong tin bien the, san pham, don hang, khach hang + lich su phieu bao hanh cu.
-     */
+    // Tra cứu thông tin bảo hành theo số serial
     public WarrantyLookupResponse traCuuSerial(String soSerial) {
         // Bước 1: Tìm serial chưa xóa theo barcode (bien_the) hoac so_serial (chi_tiet_san_pham)
         List<ChiTietSanPham> results = chiTietSanPhamRepository

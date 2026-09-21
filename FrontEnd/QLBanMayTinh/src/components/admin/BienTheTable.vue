@@ -21,30 +21,24 @@ import SearchSelect from "../common/SearchSelect.vue";
 import { usePagination } from "../../composables/usePagination.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 
-// Không dựa vào ProductsTable.vue (tab anh em) đã tải sẵn ProductsStore — self-contained,
-// đúng pattern ensureX() dùng chung toàn app (no-op nếu đã tải/đang tải).
+// Tải trước danh sách sản phẩm
 onMounted(() => { ensureProducts(); });
 
-// Danh sách PHẲNG mọi biến thể (sửa/thêm/xóa trực tiếp) — tách ra khỏi ProductsTable.vue
-// (vốn trước đây phải mở "Chi tiết sản phẩm" rồi mới sửa được 1 biến thể) để đứng ngang
-// hàng CPU/RAM/GPU/Ổ cứng, đúng yêu cầu "1 tab riêng bên ngoài".
+// Danh sách biến thể sản phẩm
 const props = defineProps({
   readonly: { type: Boolean, default: false },
   filterSanPhamId: { type: Number, default: null },
-  // Giá nhập (giá vốn) là số nhạy cảm — chỉ quản lý mới cần thấy biên lợi nhuận.
-  // Truyền :can-view-cost="false" cho nhân viên bán hàng để ẩn cả cột lẫn dòng trong chi tiết.
+// Quyền xem giá vốn
   canViewCost: { type: Boolean, default: true },
 });
 
-// t() có thể chưa có key mới → rơi về chuỗi tiếng Việt mặc định thay vì hiện trơ key ra UI.
-// Thêm key vào i18n lúc nào cũng được, không phải sửa lại component.
+// Dịch đa ngôn ngữ với fallback
 const tt = (key, fallback) => {
   const s = t(key);
   return !s || s === key ? fallback : s;
 };
 
-// ── Danh muc/hang/CPU/RAM/o cung/GPU — chi can khi mo form them/sua bien the. Copy nguyen
-// pattern tu ProductsTable.vue (Task goc) — 2 component doc lap, khong dang chia se state.
+// Tải danh mục và linh kiện cho form
 const categories = ref([]);
 const brands = ref([]);
 const cpuList = ref([]);
@@ -75,10 +69,7 @@ const ensureProductRefData = () => {
 };
 const suppliers = computed(() => SuppliersStore.items ?? []);
 
-// ── Tim kiem + bo loc ────────────────────────────────────────────────────────────────
-// Danh sach lua chon cua 3 dropdown lay thang tu du lieu dang hien (ProductsStore.items),
-// KHONG goi them API danh muc/thuong hieu: bo loc luon khop 100% voi nhung gi co trong
-// bang, khong bao gio hien mot hang ma loc ra 0 dong.
+// Tìm kiếm và bộ lọc biến thể
 const variantSearch = ref("");
 const filterThuongHieu = ref("");
 const filterDanhMuc = ref("");
@@ -167,15 +158,13 @@ const { currentPage, totalPages, pagedItems: pagedVariants, pageSize } = usePagi
 // Đổi bộ lọc mà vẫn đứng ở trang 5 thì bảng trông như rỗng — luôn kéo về trang đầu.
 watch([variantSearch, filterThuongHieu, filterDanhMuc, filterTrangThai, filterCpu, filterRam, filterMauSac, filterGiaMin, filterGiaMax, filterTonMin, filterTonMax], () => { currentPage.value = 0; });
 
-// Bỏ tiền tố hãng CPU (Intel Core/AMD Ryzen) — dư thừa, không cần trong bảng liệt kê gọn,
-// tên đầy đủ vẫn hiện nguyên trong ô chi tiết lúc bấm vào dòng.
+// Chuẩn hóa tên CPU
 const shortCpu = (cpu) => cpu?.replace(/^(Intel Core|AMD Ryzen)\s+/i, '') ?? '';
 const configLabel = (p) => [shortCpu(p.cpu), p.ram, p.oCung, p.gpu].filter(Boolean).join(' · ') || '—';
 const stockOf = (p) => Number(p.soLuongTon ?? 0);
 const stockClass = (p) => (stockOf(p) === 0 ? 'vt-stock--out' : stockOf(p) <= 5 ? 'vt-stock--low' : '');
 
-// Map mauSac (text tu do - "Xám", "Đen", "Bạc"...) -> style chip tuong ung. Khi khong
-// nhan dang duoc thi fallback mau hong mac dinh de giu nhat quan voi design system.
+// Lấy màu sắc biến thể
 const COLOR_CHIP_MAP = {
   'xám': { bg: '#9ca3af', fg: '#111' }, 'xam': { bg: '#9ca3af', fg: '#111' },
   'đen': { bg: '#111827', fg: '#fff' }, 'den': { bg: '#111827', fg: '#fff' },
@@ -229,9 +218,7 @@ const marginOf = (p) => {
 };
 const colCount = computed(() => (props.canViewCost ? 9 : 8));
 
-// ── Ve ma vach ───────────────────────────────────────────────────────────────────────
-// Mã vạch sinh từ CSDL là EAN-13 (13 số, có chữ số kiểm tra) → vẽ đúng chuẩn EAN13 để máy
-// quét đọc được; mã cũ/nhập tay không đủ chuẩn thì rơi về CODE128 (mã hoá được mọi ký tự).
+// Vẽ mã vạch
 const barcodeFormat = (v) => (/^\d{13}$/.test(String(v ?? '')) ? 'EAN13' : 'CODE128');
 const drawBarcode = (el, value, opts = {}) => {
   if (!el || !value) return;
@@ -286,8 +273,7 @@ const printLabel = (p) => {
   setTimeout(() => win.print(), 350);
 };
 
-// ── Bấm vào dòng → ô chi tiết (thay cho 2 nút "Chi tiết"/"Sửa" ở cuối mỗi dòng) ───────
-// Mọi thao tác trên 1 biến thể gom về đây: xem thông tin trước, hành động nằm ở chân ô.
+// Xem chi tiết biến thể
 const showRowDetail = ref(false);
 const selectedVariant = ref(null);
 const openRowDetail = (p) => {
@@ -346,9 +332,7 @@ const toggleTag = (value) => {
 };
 const isTagSelected = (value) => form.phanLoaiTags.split(',').map(s => s.trim()).includes(value);
 
-// ── Combobox thật (SearchSelect, không dùng datalist trình duyệt — popup datalist
-// không style được, mỗi máy/trình duyệt hiện một kiểu xấu khác nhau) + tag hiện giá trị
-// đang chọn bên dưới kèm nút xóa. Combobox vẫn luôn còn đó để chọn lại. ─────────────────
+// Combobox chọn linh kiện
 const NONE_LABEL = () => tt('admin.productModal.noneOption', 'Không chọn');
 const cpuOptions = computed(() => [
   { value: null, label: NONE_LABEL() },
@@ -372,9 +356,7 @@ const gpuName = (id) => gpuList.value.find((g) => g.gpuId === id)?.tenGpu ?? '';
 const ramName = (id) => ramList.value.find((r) => r.ramId === id)?.dungLuong ?? '';
 const oCungName = (id) => oCungList.value.find((o) => o.oCungId === id)?.loaiOcung ?? '';
 
-// Trường chuỗi/số không có bảng riêng (màu, màn hình, HĐH, pin, bảo hành, trọng lượng) —
-// gợi ý gộp: danh sách cố định + mọi giá trị thực tế đang có trong dữ liệu + giá trị hiện
-// tại của form (không mất khi sửa 1 biến thể có giá trị lạ, hiếm, không nằm trong gợi ý).
+// Gợi ý thuộc tính biến thể
 const stringOptionsFor = (field, base) => {
   const real = allVariants.value.map((p) => p[field]).filter((v) => v !== null && v !== undefined && v !== '');
   const cur = form[field];
@@ -419,9 +401,7 @@ const emptyForm = () => ({
 const form = reactive(emptyForm());
 const resetImageState = () => { imagePreview.value = ''; imageFilePending.value = null; };
 
-// Sinh mã vạch EAN-13 hợp lệ ngay trên form (cùng công thức với file CSDL): '893' + 9 số +
-// chữ số kiểm tra (vị trí lẻ ×1 + vị trí chẵn ×3, lấy phần bù 10). Có chữ số kiểm tra đúng
-// thì máy quét mới đọc được.
+// Sinh mã vạch EAN-13
 const checkDigitEan13 = (base12) => {
   let sum = 0;
   for (let i = 0; i < 12; i++) sum += Number(base12[i] || 0) * (i % 2 === 0 ? 1 : 3);
@@ -436,8 +416,7 @@ const generateBarcode = () => {
   }
 };
 
-// ── Them bien the moi cho 1 san pham DA TON TAI — can chon san pham truoc (khac
-// ProductsTable.vue cu, truoc day mo tu trong "Chi tiet san pham" nen da co san context) ──
+// Thêm biến thể cho sản phẩm
 const addVariantMode      = ref(false);
 const addVariantSanPhamId = ref(null);
 const addVariantSanPhamName = ref('');
@@ -451,9 +430,7 @@ const distinctProducts = computed(() => {
 });
 const searchedProducts = computed(() => {
   const q = variantProductSearch.value.trim().toLowerCase();
-  // Không gõ gì -> liệt kê sẵn toàn bộ sản phẩm (số lượng sản phẩm nhỏ, không cần bắt gõ
-  // trước mới thấy như ReturnsPanel.vue's order picker — đơn hàng nhiều hơn hẳn nên phải
-  // bắt gõ, sản phẩm thì không).
+// Lọc danh sách sản phẩm gợi ý
   const list = q ? distinctProducts.value.filter(p => (p.tenSanPham ?? '').toLowerCase().includes(q)) : distinctProducts.value;
   return list.slice(0, 30);
 });
@@ -556,8 +533,7 @@ const saveVariant = async () => {
     }
   }
 
-  // Mã vạch là cột riêng của biến thể, có unique index — chặn sớm ở form cho khỏi ăn
-  // lỗi 500 từ CSDL, và báo đúng chỗ sai thay vì "duplicate key" khó hiểu.
+// Kiểm tra trùng mã vạch
   const barcode = (form.barcodeBienThe ?? '').trim();
   if (barcode) {
     if (!/^\d{8,13}$/.test(barcode)) {
@@ -614,8 +590,7 @@ const saveVariant = async () => {
       resetImageState();
       showToast(tt('admin.variants.addedToast', 'Đã thêm phiên bản mới'));
       await refreshProducts();
-      // Biến thể mới phải hiện ngay ở "Hàng sắp về" bên Kho hàng — InventoryStore tách rời
-      // ProductsStore, không tự làm mới theo.
+// Đồng bộ dữ liệu kho hàng
       refreshInventory().catch(() => {});
     } catch (e) {
       formError.value = e.message;
@@ -986,9 +961,7 @@ const saveVariant = async () => {
               </select>
             </div>
             <div class="col-4">
-              <!-- Chỉ active/inactive: ràng buộc CK_bt_trangthai của bảng biến thể không nhận
-                   'ngung_kinh_doanh' (giá trị đó chỉ hợp lệ ở bảng san_pham) — trước đây còn
-                   gõ nhầm thành 'ngung_kin_doanh' nên lưu là đổ. -->
+              <!-- Trạng thái biến thể -->
               <label class="vt-label">{{ t('admin.productModal.statusLabel') }}</label>
               <select v-model="form.trangThai" class="form-select form-select-sm vt-input">
                 <option value="active">{{ t('admin.productModal.statusActive') }}</option>
@@ -1357,12 +1330,7 @@ const saveVariant = async () => {
 .vt-range-sep { color: var(--pink-400, #f472b6); font-size: 13px; font-weight: 700; flex-shrink: 0; }
 
 /* ══════════ BẢNG ══════════ */
-/* table-layout: fixed + moi cot deu co width — trinh khong-gian-thua-do-mot-cot-choan-het
-   (truoc day cot "Cau hinh" khong co width nen an het toan bo khoang trong con lai). */
-/* width:100% ep table luon vua khung, cot hep di la chu bi cat + "..." (vd "Trang th...").
-   Doi sang min-width:100% + khong ep width — man rong thi cac cot van gian ti le lap day
-   nhu cu, man/khung hep hon tong do rong cot thi table tu no rong ra, .vt-table-wrap
-   overflow-x:auto se hien thanh cuon ngang thay vi bop chu. */
+/* Cố định độ rộng cột bảng */
 .vt-table-wrap { overflow-x: auto; }
 .vt-table { width: 100%; border-collapse: collapse; }
 .vt-table th {
@@ -1371,9 +1339,7 @@ const saveVariant = async () => {
   padding: 11px 12px; white-space: nowrap; border-bottom: none;
   overflow: hidden; text-overflow: ellipsis;
 }
-/* border-collapse:collapse tren <table> khong duoc overflow:hidden cua .vt-card bo
-   goc dung cach — o dau hang tieu de vuot goc tron, trong nhu net ke de len vien
-   card. Bo goc thang vao chinh o th dau/cuoi de nen hong di dung theo duong bo tron. */
+/* Bo góc hàng tiêu đề bảng */
 .vt-table thead th:first-child { border-top-left-radius: 13px; }
 .vt-table thead th:last-child { border-top-right-radius: 13px; }
 .vt-table td {
@@ -1601,8 +1567,7 @@ const saveVariant = async () => {
 
 .vt-tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* Tag hiển thị giá trị vừa chọn trong combobox (CPU/RAM/GPU/Ổ cứng/Màu sắc/Màn hình/
-   HĐH/Pin) — bấm dấu x để bỏ chọn, y hệt kiểu hh-tag-pill bên HangHoa.vue. */
+/* Tag hiển thị giá trị linh kiện đã chọn */
 .vt-picked-tags { margin-top: 6px; }
 .vt-tag-pill {
   display: inline-flex; align-items: center; gap: 6px; max-width: 100%;

@@ -3,15 +3,12 @@ import { pinia } from "./pinia.js";
 
 const STORAGE_KEY = "saoclub_session";
 
-// Lưu bootId trong session object — so sánh với __DEV_BOOT_ID__ để phát hiện
-// dev server restart (bundle mới) mà không bị ảnh hưởng bởi F5 trong cùng bundle.
-// __DEV_BOOT_ID__ = Date.now() tại thời điểm bundle, thay đổi khi restart dev
-// nhưng giữ nguyên khi chỉ reload trang (cùng bundle đang chạy).
+// Khôi phục phiên đăng nhập từ sessionStorage
 const saved = (() => {
   try {
     const s = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
     if (import.meta.env.DEV && s?.bootId && s.bootId !== __DEV_BOOT_ID__) {
-      // Dev server restarted between sessions — invalidate old session.
+      // Hủy phiên cũ khi dev server khởi động lại
       sessionStorage.removeItem(STORAGE_KEY);
       return null;
     }

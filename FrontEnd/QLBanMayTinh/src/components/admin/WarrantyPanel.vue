@@ -153,8 +153,7 @@ const openCreateFromWarranty = (w) => {
   showModal.value = true;
 };
 
-// Tạo phiếu thủ công (không qua bảng "Còn hạn bảo hành") — khi serial đã hết hạn hoặc cần
-// mở phiếu khi không tìm được serial trong danh sách. Người dùng phải tự nhập các ID.
+// Tạo phiếu bảo hành thủ công
 const openCreateManual = () => {
   editingId.value = null;
   form.value = emptyForm();

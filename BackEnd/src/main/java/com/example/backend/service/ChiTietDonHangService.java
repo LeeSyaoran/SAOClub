@@ -182,11 +182,7 @@ public class ChiTietDonHangService {
         return chiTietDonHangSerialRepository.findByDonHangId(donHangId);
     }
 
-    /**
-     * Lấy tất cả sản phẩm đã giao của 1 khách hàng, kèm thông tin bảo hành.
-     * Bao gồm: tên SP, ảnh, serial, ngày hết BH.
-     * Chỉ trả đơn hàng có trangThaiDonHang = 'delivered'.
-     */
+    // Lấy danh sách sản phẩm bảo hành theo khách hàng
     public List<WarrantyProductResponse> getWarrantyProductsByKhachHang(Integer khachHangId) {
         List<ChiTietDonHang> details = chiTietDonHangRepository.findByKhachHangId(khachHangId);
         return details.stream().map(d -> {

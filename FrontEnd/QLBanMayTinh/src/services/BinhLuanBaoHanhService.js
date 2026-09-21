@@ -1,15 +1,10 @@
-// BinhLuanBaoHanhService.js — Trao đổi giữa khách hàng và nhân viên trên 1 phiếu BH
+// Trao đổi bình luận trên phiếu bảo hành
 import { get, post } from './api.js';
 
-/**
- * Lấy tất cả bình luận/trao đổi của 1 phiếu BH, sắp xếp theo thời gian tăng dần.
- * @returns {Promise<Array<{binhLuanId, baoHanhId, nguoiGuiId, tenNguoiGui, vaiTro, noiDung, ngayGui}>>}
- */
+// Lấy danh sách bình luận của phiếu bảo hành
 export const getByBaoHanh = (baoHanhId) =>
   get(`/api/binh-luan-bao-hanh/bao-hanh/${baoHanhId}`).catch(() => []);
 
-/**
- * Khách hàng hoặc nhân viên gửi bình luận mới.
- */
+// Gửi bình luận mới vào phiếu bảo hành
 export const send = (baoHanhId, noiDung) =>
   post(`/api/binh-luan-bao-hanh/bao-hanh/${baoHanhId}`, { noiDung });

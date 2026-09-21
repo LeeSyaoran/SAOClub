@@ -1,6 +1,5 @@
 <template>
-  <!-- Vòng tròn tiến độ 1 giá trị (0-100), gradient thương hiệu — khác DonutChart.vue
-       (nhiều segment + legend): chỉ 1 giá trị, không legend, không thư viện ngoài. -->
+  <!-- Vòng tròn tiến độ -->
   <div class="d-flex flex-column align-items-center">
     <svg :width="size" :height="size" :viewBox="`0 0 ${size} ${size}`">
       <defs>
@@ -34,8 +33,7 @@ const props = defineProps({
   color2:    { type: String, default: 'var(--accent)' },
 });
 
-// id ngẫu nhiên/instance — nhiều RingProgress trên cùng trang không được trùng id
-// <linearGradient>, nếu không SVG sau sẽ vẽ đè gradient của SVG trước.
+// Định danh gradient duy nhất cho mỗi instance
 const gradientId = `ring-grad-${Math.random().toString(36).slice(2, 9)}`;
 
 const radius = computed(() => props.size / 2 - props.thickness / 2 - 2);

@@ -39,7 +39,7 @@ import RegisterForm from "./components/auth/RegisterForm.vue";
 import CheckoutModal from "./components/checkout/CheckoutModal.vue";
 import ProductDetail from "./components/product/ProductDetail.vue";
 import Modal from "./components/common/Modal.vue";
-import ProfileCompletionModal from "./components/auth/ProfileCompletionModal.vue";
+import ChatWidget from "./components/account/ChatWidget.vue";
 
 const router = useRouter();
 
@@ -62,10 +62,6 @@ const showToast = (msg, type = "success", duration = 3500) => {
 const showLoginModal = ref(false);
 const loginModalErr = ref("");
 const authTab = ref("login");
-
-// ── Profile completion modal ─────────────────────────────────────────────────
-const showProfileCompletion = ref(false);
-const pendingSocialUser = ref(null); // Lưu user từ Firebase login trước khi hoàn tất profile
 
 const openLogin = () => {
   loginModalErr.value = "";
@@ -107,6 +103,12 @@ const handleModalLogin = async ({ username, password }) => {
   }
 };
 
+// Sau khi hoàn tất profile → cập nhật session với JWT mới rồi đăng nhập
+const onProfileCompletionSuccess = (user) => {
+  showToast(t("toast.welcomeUser", { name: user.hoTen }), "success");
+  onLoginSuccess(user);
+};
+
 // Social Login handler (Google/Facebook) — gọi backend để tạo/lấy tài khoản
 const handleSocialLogin = async (result) => {
   try {
@@ -118,37 +120,14 @@ const handleSocialLogin = async (result) => {
     }
     const user = await res.json();
 
-    // Lưu session ngay (chứa JWT) để các request sau (PUT /api/auth/profile) có auth header,
-    // kể cả khi chưa đủ thông tin và cần hiện modal hoàn tất hồ sơ.
+    // Lưu phiên đăng nhập người dùng
     setSession(user);
-
-    // Nếu thiếu thông tin bắt buộc hoặc SĐT là mã định danh không hợp lệ → hiện form hoàn tất hồ sơ
-    if (!user.soDienThoai || !isValidPhoneNumber(user.soDienThoai)) {
-      if (user.soDienThoai && !isValidPhoneNumber(user.soDienThoai)) {
-        user.soDienThoai = '';
-      }
-      showLoginModal.value = false;
-      pendingSocialUser.value = user;
-      showProfileCompletion.value = true;
-      return;
-    }
-
-    // Đủ thông tin → đăng nhập luôn
     showLoginModal.value = false;
     showToast(t("toast.welcomeUser", { name: user.hoTen }), "success");
     onLoginSuccess(user);
   } catch (err) {
     showToast("Đăng nhập thất bại. Vui lòng thử lại.", "error");
   }
-};
-
-// Sau khi hoàn tất profile → cập nhật session với JWT mới rồi đăng nhập
-const onProfileCompletionSuccess = (user) => {
-  showProfileCompletion.value = false;
-  pendingSocialUser.value = null;
-  setSession(user);
-  showToast(t("toast.welcomeUser", { name: user.hoTen }), "success");
-  onLoginSuccess(user);
 };
 
 // ── Logout ────────────────────────────────────────────────────────────────────
@@ -281,9 +260,7 @@ const onBuyAgainUnavailable = (names) => {
   showToast(t("toast.buyAgainUnavailable", { names: names.join(", ") }), "error");
 };
 
-// ── Wishlist (yêu thích) — lưu ở backend theo khách hàng (không phải localStorage như giỏ
-// hàng), nên cần load lại mỗi khi đăng nhập/đăng xuất. Set để tra cứu isWishlisted() O(1)
-// trên lưới sản phẩm thay vì .find() O(n) trên mảng mỗi lần render 1 thẻ. ────────────────
+// Quản lý danh sách sản phẩm yêu thích của khách hàng
 const wishlistIds = ref(new Set());
 
 const loadWishlist = async () => {
@@ -320,8 +297,7 @@ const toggleWishlist = async (product) => {
   }
 };
 
-// ── Đánh giá (rating summary) — công khai, không phụ thuộc đăng nhập nên chỉ load 1 lần lúc
-// mount (khác wishlist phải reload theo phiên). Map để ProductCard tra cứu O(1) theo sanPhamId. ──
+// Tải tổng hợp điểm đánh giá các sản phẩm
 const ratingSummaries = ref(new Map());
 
 const loadRatingSummaries = async () => {
@@ -329,11 +305,11 @@ const loadRatingSummaries = async () => {
     const list = await DanhGiaService.getTongHop();
     ratingSummaries.value = new Map((list ?? []).map((s) => [s.sanPhamId, s]));
   } catch {
-    // giữ nguyên map cũ nếu lỗi mạng
+    // Giữ nguyên dữ liệu cũ nếu lỗi
   }
 };
 
-// ── Checkout ──────────────────────────────────────────────────────────────────
+// Xử lý quy trình đặt hàng và thanh toán
 const showCheckout = ref(false);
 
 const openCheckout = () => {
@@ -355,8 +331,7 @@ const handleOrderPlaced = () => {
   cartSelected.value = new Set();
 };
 
-// ── Products (shared state for ProductDetail overlay) ─────────────────────────
-// Dùng ProductsStore để các bảng admin đổi serial xong → trang khách tự thấy cập nhật
+// Tải lại danh sách sản phẩm dùng chung
 const fetchProducts = async () => {
   await refreshProducts();
 };
@@ -515,14 +490,6 @@ onBeforeUnmount(() => {
       </div>
     </Modal>
 
-    <ProfileCompletionModal
-      v-model="showProfileCompletion"
-      :default-name="pendingSocialUser?.hoTen || ''"
-      :default-email="pendingSocialUser?.email || ''"
-      :avatar-url="pendingSocialUser?.avatarUrl || ''"
-      @success="onProfileCompletionSuccess"
-    />
-
     <CheckoutModal
       v-model="showCheckout"
       :cart="cart.filter(i => cartSelected.has(i.bienTheId))"
@@ -552,6 +519,9 @@ onBeforeUnmount(() => {
         @toggle-wishlist="toggleWishlist"
       />
     </Transition>
+
+    <!-- Chat Widget — hiển thị toàn site -->
+    <ChatWidget />
   </div>
 </template>
 

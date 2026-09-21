@@ -156,8 +156,7 @@ public class ChatService {
             // AI trả lời
             return xuLyTraLoiAI(ctc, tinNhan);
         } else {
-            // Đang ở chế độ chat NV — chỉ lưu, NV sẽ reply
-            // Notify staff có tin nhắn mới
+            // Thông báo cho nhân viên khi có tin nhắn mới
             notifyStaffNewMessage(ctc);
             return toTinNhanResponse(tinNhan);
         }

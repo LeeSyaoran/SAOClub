@@ -4,7 +4,7 @@ import {
   Wallet, Banknote, Smartphone, Landmark, CreditCard, Circle,
 } from "@lucide/vue";
 
-// Bảng màu chốt — không tự ý đổi giá trị nếu không được yêu cầu.
+// Nhãn và màu sắc trạng thái đơn hàng
 export const orderStatusLabel = (s) => t(`orderStatus.${s}`);
 
 export const orderStatusColor = (s) => {
@@ -20,7 +20,7 @@ export const orderStatusColor = (s) => {
   return { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af' };
 };
 
-// Icon theo trạng thái đơn hàng — dùng thay cho chấm tròn chung chung ở badge trạng thái
+// Biểu tượng theo trạng thái đơn hàng
 export const orderStatusIcon = (s) => {
   if (s === 'pending')    return Clock;
   if (s === 'confirmed')  return CheckCircle2;
@@ -34,9 +34,7 @@ export const orderStatusIcon = (s) => {
   return Circle;
 };
 
-// Trạng thái THANH TOÁN (khác trạng thái đơn hàng ở trên) — dùng chung cho bảng đơn hàng
-// admin, modal chi tiết đơn, và thẻ đơn hàng bên trang khách (trước đây mỗi chỗ hiển thị
-// khác nhau: có chỗ hiện đúng nhãn tiếng Việt, có chỗ hiện thẳng chuỗi "unpaid"/"paid" thô).
+// Nhãn và màu sắc trạng thái thanh toán
 export const paymentStatusLabel = (s) => t(`admin.paymentStatus.${s}`);
 
 export const paymentStatusColor = (s) => {
@@ -55,15 +53,12 @@ export const paymentStatusIcon = (s) => {
   return Circle;
 };
 
-// Phuong thuc thanh toan — dung o POS (chon luc tao don) va modal "Chi tiet don hang"
-// (hien lai). 1 nguon duy nhat cho danh sach gia tri + icon, tranh 2 noi tu dinh nghia
-// roi lech nhau (dung bai hoc tu vu colorDot o productGrouping.js).
+// Danh sách phương thức thanh toán hỗ trợ tại POS
 export const POS_PAYMENT_METHODS = ['tien_mat', 'vnpay', 'chuyen_khoan', 'the_tin_dung'];
 
-// Kênh bán — hiển thị badge ở bảng đơn hàng
+// Nhãn và màu sắc kênh bán hàng
 export const channelLabel = (k) => t(`orderChannel.${k}`);
 
-// kenhBan -> { bg, text }
 export const channelColor = (k) => {
   if (k === 'in_store')    return { bg: 'rgba(34,197,94,0.15)',  text: '#22c55e' };
   if (k === 'online')      return { bg: 'rgba(59,130,246,0.15)', text: '#60a5fa' };

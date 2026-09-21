@@ -39,16 +39,11 @@ import InvoiceModal from "./InvoiceModal.vue";
 onMounted(async () => {
   await ensureProducts();
   ensureCustomers();
-  // Fetch luôn danh sách khuyến mãi khi vào POS — dropdown "Chọn mã giảm giá" cần có sẵn
-  // dữ liệu trước khi nhân viên tick, không phụ thuộc AdminPage.fetchAll() đã chạy xong chưa
-  // (nếu user vào thẳng POS hoặc AdminPage fetchAll bị lỗi nuốt thì dropdown sẽ trống).
+  // Tải danh sách khuyến mãi
   await refreshPromotions();
 });
 
-// ── Phí vận chuyển (POS) ──────────────────────────────────────────────────────
-// Tính theo khoảng cách + miễn phí khi đơn đủ lớn. Tier đơn giản theo km — khớp với
-// CheckoutModal.vue (cùng bảng, copy-paste trực tiếp để nhân viên tại quầy nhập km tay
-// thay vì chọn địa chỉ như khách online).
+// Tính phí vận chuyển theo khoảng cách
 const POS_FREE_SHIP_THRESHOLD = 300000;
 const POS_SHIP_TIERS = [
   { maxKm: 2,  fee: 10000 },
@@ -57,24 +52,19 @@ const POS_SHIP_TIERS = [
   { maxKm: 999, fee: 50000 },
 ];
 
-// ── POS / Ban hang ───────────────────────────────────────────────────────────
-// Luong bat buoc: phai xac dinh khach hang (co san hoac tao moi) TRUOC khi duoc
-// them san pham vao gio — tranh tao hoa don "vo danh" roi moi lo tim/tao khach sau.
-// posStage: 'start' (chua bat dau) -> 'phone' (dang nhap SDT tim/tao khach) -> 'selling' (da co khach, duoc them SP)
+// Quản lý quy trình bán hàng tại quầy POS
 const posStage = ref('start');
 const posPhoneNotFound = ref(false); // da tim nhung khong thay khach ung voi SDT vua nhap
 const posSearch = ref("");
 const posCart = ref([]);
-// Đồng bộ posCartStore liên tục khi giỏ hàng thay đổi — InventoryPanel và SerialManager
-// đọc store này để hiển thị trạng thái "đang lên đơn" tức thì (không cần API round-trip).
+// Đồng bộ giỏ hàng với posCartStore
 watch(posCart, (v) => syncPosCart(v), { deep: true });
 
 const posPhone = ref("");
 const posFoundCust = ref(null);
 const posError = ref("");
 const posPlacing = ref(false);
-// Modal toan man hinh de nhan vien de nhin serial khi gio co nhieu may — modal rieng de
-// khong bi gioi han chieu cao cua cart list.
+// Modal danh sách serial
 const serialModalGroup = ref(null);
 const showSerialModal = ref(false);
 const openSerialModal = (g) => {
@@ -92,12 +82,11 @@ const posPromoCode = ref("");
 const posAppliedPromo = ref(null);
 const posPromoMsg = ref("");
 const posPaymentMethod = ref(null); // 1 trong POS_PAYMENT_METHODS — bat buoc chon truoc khi tao don
-// POS luon la ban tai quay — phi van chuyen luon = 0, khong co UI chon hinh thuc nhan hang.
+// Phí vận chuyển bán tại quầy mặc định 0
 const posDeliveryMode = ref('pickup');
 const posDeliveryAddress = ref('');
 const posDistanceKm = ref('');
-// Xac nhan thu cong "da quet QR" — chua co webhook ngan hang that nen nhan vien tu bam
-// sau khi (gia lap) thay khach quet xong. Reset ve false moi khi doi phuong thuc thanh toan.
+// Xác nhận khách đã quét mã QR thanh toán
 const posQrScanned = ref(false);
 const posQrImageFailed = ref(false);
 
@@ -115,20 +104,15 @@ const posProducts = computed(() => {
   );
 });
 
-// Gộp posProducts (đã lọc active + tìm kiếm) còn 1 card/sản phẩm — dùng cho lưới hiển
-// thị. Modal chọn cấu hình/màu bên dưới KHÔNG dùng posProducts làm pool (sẽ bị bó hẹp
-// theo từ khóa tìm kiếm hiện tại) — nó tự lấy từ ProductsStore.items, xem
-// variantPickerVariants.
+// Gom nhóm danh sách sản phẩm hiển thị trên lưới
 const posProductGroups = computed(() => groupBySanPham(posProducts.value));
 const posVariantCountMap = computed(() => variantCountBySanPham(posProducts.value));
 
-// Panel "Xem biến thể" (read-only) — thay thế ProductDetailModal khi bấm nút con mắt
-// trong POS catalog hoặc giỏ hàng. Hiện đầy đủ biến thể cùng sanPhamId (không giới
-// hạn theo giỏ), mỗi biến thể 1 card gọn gàng, không có nút Thêm/Sửa/Xoá.
+// Xem thông tin các biến thể sản phẩm
 const showVariantDetailPanel = ref(false);
 const variantDetailSanPhamId = ref(null);
 const variantDetailSanPhamName = ref('');
-// Map bienTheId → số serial đang trong giỏ — truyền sang panel để hiện badge "Trong giỏ: N".
+// Đếm số lượng serial trong giỏ theo biến thể
 const variantDetailCartCount = computed(() => {
   const map = {};
   posCart.value.forEach((item) => {
@@ -147,10 +131,7 @@ const openPosDetail = async (g) => {
 const posCartTotal = computed(() =>
   posCart.value.reduce((s, i) => s + i.giaBan * i.soLuong, 0),
 );
-// Gom posCart (van la mang phang 1 phan tu/serial — nguon su that cho posCartTotal/
-// posPlaceOrder, khong doi) theo sanPhamId de hien thi — mua nhieu bien the KHAC NHAU
-// (khac mau/cau hinh) cung 1 san pham van gom chung 1 dong "x N", giong dung cach lai
-// san pham da gom o luoi ben trai.
+// Gom nhóm sản phẩm trong giỏ hàng theo sản phẩm chính
 const posCartGroups = computed(() => {
   const map = new Map();
   posCart.value.forEach((item) => {
@@ -159,9 +140,7 @@ const posCartGroups = computed(() => {
   });
   return [...map.values()];
 });
-// Gia ban 1 may (khong nhan so luong) — cart the hien cac serial trong cung 1 group,
-// gia hien thi luon la gia cua 1 don vi de nhan vien khong bi nham voi tong tien (tong
-// tien cua ca group hien o Subtotal phia duoi).
+// Đơn giá bán của một đơn vị sản phẩm
 const formatPriceShort = (v) => {
   if (v == null) return '—';
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(v % 1_000_000 === 0 ? 0 : 2)}tr`;
@@ -169,7 +148,7 @@ const formatPriceShort = (v) => {
   return String(v);
 };
 const posGroupPriceShort = (g) => formatPriceShort(g.items[0]?.giaBan);
-// Ghép cpu + ram + oCung + mauSac thành 1 dòng spec rút gọn hiển thị trên card giỏ hàng.
+// Ghép chuỗi thông số kỹ thuật hiển thị trên thẻ
 const specLine = (item) => [item.cpu, item.ram, item.oCung, item.mauSac].filter(Boolean).join(' · ');
 const posFee = computed(() => {
   if (posDeliveryMode.value !== 'delivery') return 0;
@@ -190,7 +169,7 @@ const posGiamGia = computed(() => {
 });
 const posGrandTotal = computed(() => Math.max(0, posCartTotal.value + posFee.value - posGiamGia.value));
 
-// Tai dung dung cach CheckoutModal.vue tao QR — VietQR API, cung tai khoan VCB demo.
+// Tạo mã VietQR cho đơn hàng
 const posQrImageUrl = computed(() => {
   const bank    = 'VCB';
   const account = '9876543210';
@@ -199,8 +178,7 @@ const posQrImageUrl = computed(() => {
   return `https://img.vietqr.io/image/${bank}-${account}-compact2.png?amount=${posGrandTotal.value}&addInfo=${info}&accountName=${name}`;
 });
 
-// Danh sach khuyen mai ap dung duoc cho don hien tai (dang active + dat don toi thieu).
-// Dong thoi tra ve text hien thi ben option dropdown.
+// Danh sách mã khuyến mãi đủ điều kiện áp dụng
 const promoConditionLabel = (p) => {
   if (!p.donHangToiThieu || Number(p.donHangToiThieu) === 0) return null;
   return `Áp dụng cho đơn từ ${formatPrice(Number(p.donHangToiThieu))}`;
@@ -231,10 +209,7 @@ const posApplyPromo = () => {
   }
 };
 
-// ── Hoa don cho (giu don POS) ─────────────────────────────────────────────────
-// Luu tam gio hang dang ban do khach chua thanh toan xong / nhan vien can phuc vu
-// khach khac — luu o localStorage (tinh nang tien loi cho nhan vien tai quay,
-// khong can bang rieng trong DB vi don chua thuc su ton tai cho toi khi thanh toan).
+// Quản lý các đơn hàng tạm đang giữ tại quầy
 const HELD_ORDERS_KEY = 'saoclub_pos_held_orders';
 const CART_KEY = 'saoclub_pos_cart';
 const heldOrders = ref([]);
@@ -318,9 +293,7 @@ const posHoldOrder = () => {
     paymentMethod: posPaymentMethod.value,
   });
   saveHeldOrders();
-  // Chi don sach form tai cho — KHONG goi posReset() vi no se tra serial ve trong_kho.
-  // Cac serial trong gio nay van phai o trang thai "giu_hang" cho toi khi tiep tuc
-  // ban (Tiep tuc) hoac huy han (Xoa o danh sach don dang giu).
+  // Làm sạch biểu mẫu khi giữ đơn
   posCart.value = [];
   posPhone.value = "";
   posFoundCust.value = null;
@@ -350,7 +323,7 @@ const posResumeHeld = (id) => {
   heldOrders.value = heldOrders.value.filter((h) => h.id !== id);
   saveHeldOrders();
   showHeldOrders.value = false;
-  // Khach hang cua don nay da duoc xac dinh tu truoc (luc giu don) — vao thang man hinh ban
+  // Tiếp tục xử lý đơn hàng đang giữ
   posStage.value = 'selling';
 };
 
@@ -358,19 +331,15 @@ const posDeleteHeld = async (id) => {
   const held = heldOrders.value.find((h) => h.id === id);
   heldOrders.value = heldOrders.value.filter((h) => h.id !== id);
   saveHeldOrders();
-  // Huy han don giu -> tra lai tat ca serial trong don do ve trong_kho de ban duoc tiep
+  // Hủy đơn giữ và hoàn lại serial vào kho
   if (held) await Promise.all(held.cart.map((item) => setSerialTrangThai(item, 'trong_kho')));
 };
 
-// ── Chon cau hinh/mau truoc khi vao modal chon serial ─────────────────────────
-// Luon mo modal nay khi bam "Them vao gio", ke ca san pham chi co 1 bien the — dong
-// nhat trai nghiem cho moi truong hop (khac voi trang khach hang, von bo qua buoc nay
-// neu chi co 1 lua chon — xem App.vue handleQuickAdd). Bam "Tiep tuc chon serial" se
-// goi thang posOpenSerialPicker() hien co, khong doi gi ben trong ham do.
+// Mở hộp thoại chọn cấu hình và màu sắc
 const showVariantPicker = ref(false);
 const variantPickerBase = ref(null);
 
-// ── POS Catalog: categories + barcode scan ─────────────────────────────────────
+// Danh mục sản phẩm và quét mã vạch
 const posCategories = ref([]);
 const posCatalogCategory = ref(null);
 const posBarcodeInput = ref("");
@@ -401,7 +370,7 @@ const posHandleBarcode = async () => {
     }
     posBarcodeInput.value = "";
     posBarcodeError.value = "";
-    // Dong catalog overlay (neu dang mo) roi mo variant picker voi bien the chinh xac
+    // Đóng danh mục và mở bộ chọn biến thể
     showCatalog.value = false;
     posOpenVariantPicker(variant);
     // Auto-select trong modal picker: chon dung config + mau cua bien the
@@ -417,17 +386,14 @@ const posHandleBarcode = async () => {
 const variantPickerActiveConfigKey = ref('');
 const variantPickerActiveColor = ref('');
 
-// Toan bo bien the active cung sanPhamId — lay tu ProductsStore.items (khong qua bo loc
-// tim kiem cua posProducts) de modal luon hien DAY DU cac lua chon cua san pham, ke ca khi
-// nhan vien dang go tim theo 1 SKU/cau hinh cu the. Chi loai bien the da het hang, giong
-// y het hanh vi da co truoc khi co thay doi nay.
+// Lấy tất cả biến thể đang kinh doanh của sản phẩm
 const variantPickerVariants = computed(() =>
   ProductsStore.items.filter(
     (v) => v.trangThai === 'active' && v.sanPhamId === variantPickerBase.value?.sanPhamId,
   ),
 );
 
-// Cau hinh duy nhat (deduplicate theo cpu+ram+oCung) — copy logic tu ProductDetail.vue
+// Lấy danh sách cấu hình duy nhất
 const variantPickerConfigs = computed(() => {
   const seen = new Set();
   return variantPickerVariants.value.filter((v) => {
@@ -467,9 +433,7 @@ const variantPickerSelectConfig = (v) => {
 };
 const variantPickerSelectColor = (v) => { variantPickerActiveColor.value = v.mauSac ?? ''; };
 
-// Mo modal chon cau hinh/mau — thay the diem goi cu tu nut "Them vao gio" tren card san
-// pham. Giu nguyen dung guard dang co o dau posOpenSerialPicker (chan neu chua xac dinh
-// khach hang), copy nguyen khong doi.
+// Mở modal chọn cấu hình và màu sắc sản phẩm
 const posOpenVariantPicker = (p) => {
   if (posStage.value !== 'selling') {
     if (posStage.value === 'start') posStartInvoice();
@@ -482,41 +446,31 @@ const posOpenVariantPicker = (p) => {
   showVariantPicker.value = true;
 };
 
-// ── Danh sach hang hoa (catalog) mo toan man hinh ──────────────────────────────
-// Luoi san pham truoc day chiem thang ben trai man hinh POS, nay chuyen vao day de
-// nhuong cho gio hang (2/3) + thong tin don hang (1/3). Mo qua nut FAB bieu tuong
-// hop hang o canh man hinh. Neu chua xac dinh khach hang, dong overlay lai truoc de
-// nhan vien thay ngay man hinh nhap SDT (posOpenVariantPicker se tu dat loi/chuyen stage).
+// Mở danh mục sản phẩm toàn màn hình
 const showCatalog = ref(false);
 const catalogAddToCart = (p) => {
   if (posStage.value !== 'selling') showCatalog.value = false;
   posOpenVariantPicker(p);
 };
 
-// Chot bien the da chon -> dong modal nay, mo modal chon serial hien co (khong sua gi
-// ben trong posOpenSerialPicker).
+// Xác nhận biến thể và chuyển sang bước chọn serial
 const posConfirmVariant = () => {
   showVariantPicker.value = false;
   posOpenSerialPicker(variantPickerActiveVariant.value);
 };
 
-// Ban tai quay bat buoc chon serial cu the truoc khi cho vao gio — moi dong trong
-// gio la 1 don vi vat ly rieng (chiTietId rieng), khong dung soLuong gop nhieu may
-// lai vi moi may co IMEI khac nhau. Serial da o trong gio se khong hien lai de chon.
+// Bắt buộc chọn số serial cụ thể cho sản phẩm bán tại quầy
 const showSerialPicker = ref(false);
 const serialPickerProduct = ref(null);
 const serialPickerList = ref([]);
 const serialPickerLoading = ref(false);
-// Khac null khi mo picker de DOI serial cua 1 dong da co san trong gio (nut 🔄) — thay vi
-// them dong moi. Serial cu se duoc tra ve "trong_kho" sau khi chon xong (xem posSelectSerial).
+// Mã serial cần thay thế trong giỏ
 const serialPickerSwapChiTietId = ref(null);
-// Cac serial da duoc tick chon trong lan mo picker nay (chi dung khi them-moi, khong
-// dung khi doi-serial vi luong doi van la 1-doi-1).
+// Danh sách serial đang được chọn
 const serialPickerChosenIds = ref(new Set());
 
 const posOpenSerialPicker = async (p, swapChiTietId = null) => {
-  // Chan them vao gio neu chua xac dinh khach hang — nhan vien duyet san pham
-  // thoai mai, nhung phai qua cong "Tao hoa don" (o khu vuc gio hang) truoc.
+  // Kiểm tra thông tin khách hàng trước khi thêm vào giỏ
   if (posStage.value !== 'selling') {
     if (posStage.value === 'start') posStartInvoice();
     posError.value = t('admin.pos.needCustomerFirst');
@@ -528,22 +482,17 @@ const posOpenSerialPicker = async (p, swapChiTietId = null) => {
   serialPickerList.value = [];
   showSerialPicker.value = true;
   serialPickerLoading.value = true;
-  // Load ALL serials (including locked) — locked serials shown as disabled with lock badge.
-  // Only 'trong_kho' serials can be picked (filter in template).
+  // Tải toàn bộ serial kèm trạng thái khóa
   const all = await ChiTietSanPhamService.getByBienThe(p.bienTheId).catch(() => []);
   serialPickerList.value = all;
   serialPickerLoading.value = false;
 };
 
-// Toggle serial trong picker — goi lock/unlock API de phien POS khac thay duoc lock status.
-// Khi lock: chi goi khi serial trang thai = trong_kho va chua bi nguoi khac lock.
-// Khi unlock: tra serial ve trong_kho ngay lap tuc de nguoi khac co the chon.
-// Dong modal chon serial — unlock tat ca serial da tick (neu chua them vao gio).
-// Vi serial da add vao gio se co trangThai=giu_hang roi, khong can unlock.
+// Mở khóa các serial chưa thêm vào giỏ khi đóng modal
 const posCloseSerialPicker = async () => {
   const chosen = [...serialPickerChosenIds.value];
   if (chosen.length > 0) {
-    // Chi unlock nhung serial chua duoc them vao gio (van con trang thai trong_kho)
+    // Mở khóa các serial chưa thêm vào giỏ
     const toUnlock = serialPickerList.value
       .filter(s => chosen.includes(s.chiTietId) && s.trangThai === 'trong_kho')
       .map(s => s.chiTietId);
@@ -559,7 +508,7 @@ const posCloseSerialPicker = async () => {
 const posToggleSerial = async (serial) => {
   // Serial dang o trong_kho -> tick chon -> lock
   if (!serialPickerChosenIds.value.has(serial.chiTietId)) {
-    // Kiem tra serial co bi lock boi nguoi khac chua (lockedByTen se co gia tri)
+    // Kiểm tra serial có đang bị tài khoản khác khóa không
     if (serial.lockedBy && serial.lockedByTen) {
       showToast(`Serial đang được ${serial.lockedByTen} giữ`);
       return;
@@ -586,9 +535,7 @@ const posToggleSerial = async (serial) => {
   }
 };
 
-// Doi trang thai 1 serial — dung khi chon vao gio (giu_hang) hoac tra lai kho (trong_kho).
-// Phai truyen du bienTheId/soSerial/ngayNhapKho vi backend dung BeanUtils copy toan bo
-// request len entity, thieu ngayNhapKho se lam mat ngay nhap kho goc.
+// Cập nhật trạng thái serial trong kho
 const setSerialTrangThai = async (item, trangThai) => {
   await ChiTietSanPhamService.update(item.chiTietId, {
     bienTheId: item.bienTheId,
@@ -627,15 +574,12 @@ const posSelectSerial = async (serial) => {
     : [...posCart.value, item];
   showSerialPicker.value = false;
   serialPickerSwapChiTietId.value = null;
-  // Danh dau giu ngay khi chon — de phien POS khac (hoac don khac) khong the chon trung
-  // serial nay, ke ca khi don nay chua duoc "giu don" chinh thuc.
+  // Đánh dấu giữ chỗ serial ngay khi chọn
   await setSerialTrangThai(item, 'giu_hang');
   if (oldItem) await setSerialTrangThai(oldItem, 'trong_kho');
 };
 
-// Them nhieu serial cung luc vao gio — chi dung khi KHONG phai doi-serial (swapChiTietId
-// null). Moi serial da chon tao 1 dong rieng trong posCart, giong het cau truc item cua
-// posSelectSerial(), roi danh dau giu_hang tung cai.
+// Thêm nhiều serial đã chọn vào giỏ hàng
 const posAddChosenSerials = async () => {
   const p = serialPickerProduct.value;
   const chosen = serialPickerList.value.filter((s) => serialPickerChosenIds.value.has(s.chiTietId));
@@ -667,8 +611,7 @@ const posDecrementGroup = async (g) => {
   await setSerialTrangThai(lastItem, 'trong_kho');
 };
 
-// Xoa toan bo 1 group (cung bienTheId) trong 1 lan xac nhan — dung khi mua nhieu may cung
-// bien the va muon huy ca lo, thay vi bam xoa tung serial rieng.
+// Xóa toàn bộ sản phẩm cùng biến thể khỏi giỏ hàng
 const posRemoveGroup = async (g) => {
   if (!(await askConfirm(t('admin.pos.confirmRemoveGroup', { name: g.tenSanPham, count: g.items.length })))) return;
   const ids = new Set(g.items.map((i) => i.chiTietId));
@@ -714,7 +657,7 @@ const posLookup = () => {
   }
 };
 
-// ── Goi y khach hang theo SDT (tu 2 so dau) khi nhap tren POS ──────────────────
+// Gợi ý thông tin khách hàng theo số điện thoại
 const showPosSuggestions = ref(false);
 const posPhoneSuggestions = computed(() => {
   const q = posPhone.value.trim();
@@ -738,10 +681,7 @@ const posCancelCreateCustomer = () => {
   posPhone.value = '';
 };
 
-// ── Them khach hang nhanh tu luong POS ────────────────────────────────────────
-// Modal rieng cua PosPanel (KHONG dung chung instance voi CustomersTable.vue — 2 noi
-// mo modal doc lap nhau, khong cung luc hien thi). Mo san SDT vua nhap, luu xong gan
-// thang khach hang vua tao lam khach hang cua hoa don POS dang tao qua su kien @saved.
+// Thêm nhanh khách hàng mới tại quầy POS
 const showQuickCustomerModal = ref(false);
 const quickCustomerModalRef = ref(null);
 
@@ -754,7 +694,7 @@ const onQuickCustomerSaved = (customer) => {
   posStage.value = 'selling';
 };
 
-// Chuyen loi validate dang JSON {"field":"message"} tu backend thanh 1 dong text de doc
+// Chuyển đổi thông báo lỗi validate thành chuỗi hiển thị
 const parsePosApiError = async (res) => {
   const raw = await res.text();
   try {
@@ -767,8 +707,7 @@ const parsePosApiError = async (res) => {
 
 const posPlaceOrder = async () => {
   if (!posCart.value.length) { posError.value = t('admin.pos.cartEmpty'); return; }
-  // Khach hang bat buoc phai duoc xac dinh (co san hoac tao moi) TRUOC khi co san pham
-  // trong gio (theo luong posStage) nen o day luon phai co san posFoundCust.
+  // Bắt buộc chọn khách hàng trước khi thanh toán
   if (!posFoundCust.value) { posError.value = t('admin.pos.phoneRequired'); return; }
   if (!posPaymentMethod.value) { posError.value = t('admin.pos.paymentRequired'); return; }
   if (posPlacing.value) return;
@@ -790,32 +729,23 @@ const posPlaceOrder = async () => {
       tongTien: posCartTotal.value, giamGia: posGiamGia.value,
       phiVanChuyen: posFee.value, thanhTien: posGrandTotal.value,
       ngayDat,
-      trangThaiDonHang: "pending", trangThaiThanhToan: "paid", kenhBan: "in_store",
+      ngayGiaoThucTe: ngayDat,
+      trangThaiDonHang: "delivered", trangThaiThanhToan: "paid", kenhBan: "in_store",
     });
     if (!orderRes.ok) throw new Error(t('admin.errors.createOrderError', { message: await parsePosApiError(orderRes) }));
     const created = await orderRes.json();
     const donHangId = created.id ?? created.donHangId;
-    // Don vua tao da danh dau "paid"/"confirmed" ngay (xem DonHangService.create) — neu 1 dong
-    // gan hang loi giua chung (vd het hang, serial vua bi don khac gianh mat), phai xoa luon don
-    // vua tao thay vi de lai 1 don "da thanh toan" nhung thieu san pham. Mirror dung pattern da
-    // dung o CheckoutModal.vue.
+    // Xử lý hoàn tác đơn hàng nếu xảy ra lỗi trong quá trình tạo
     try {
       for (const item of posCart.value) {
-        // Serial dang o "giu_hang" (tu luc chon vao gio, xem posSelectSerial) — backend chi
-        // nhan gan serial dang "trong_kho" (chong ban trung bang pessimistic lock), nen phai
-        // tra ve "trong_kho" ngay truoc khi gui de backend tu khoa + gan lai. Neu nhan vien
-        // khac vua nhanh tay gianh mat serial trong khe ho nay, backend se bao loi dung nhu
-        // thiet ke — do la hanh vi dung, khong phai bug.
+        // Cập nhật serial để chuẩn bị gán vào chi tiết đơn hàng
         await setSerialTrangThai(item, 'trong_kho');
         const ctRes = await DonHangService.addChiTiet({
           donHangId, bienTheId: item.bienTheId, chiTietId: item.chiTietId, soLuong: item.soLuong, donGia: item.giaBan, giamGiaDong: 0,
         });
         if (!ctRes.ok) throw new Error(t('admin.errors.addProductError', { message: await ctRes.text() }));
       }
-      // Ghi nhan phuong thuc thanh toan — cung nam trong try nay nen loi cung duoc rollback
-      // (xoa don) giong het loi 1 dong san pham, khong de lai don "da thanh toan" nhung
-      // thieu record thanh toan.
-      // DB bat buoc so_tien > 0 — don giam gia 100% (tong = 0) khong co gi de ghi nhan thanh toan, nen bo qua.
+      // Ghi nhận bản ghi thanh toán cho đơn hàng
       if (posGrandTotal.value > 0) {
         const ttRes = await ThanhToanService.create({
           donHangId,
@@ -828,13 +758,10 @@ const posPlaceOrder = async () => {
         });
         if (!ttRes.ok) throw new Error(t('admin.errors.createPaymentError', { message: await parsePosApiError(ttRes) }));
       }
-      // Don tai quay: tao o trang thai "pending", staff tu bam timeline de xac nhan "confirmed"
-      // roi "delivered" nhu quy trinh 3 buoc. Backend kich hoat bao hanh serials khi chuyen sang
-      // "delivered" (xem DonHangService.kichHoatBaoHanhTuDong).
+      // Tạo đơn hàng tại quầy ở trạng thái đã giao
     } catch (e) {
       await DonHangService.remove(donHangId).catch(() => {});
-      // Xoa xong nhung khong refresh thi danh sach don hang tren UI (da tang truoc do qua
-      // SSE "don moi") van con dong "ma" cua don vua bi xoa — refresh lai cho khop backend.
+      // Làm mới danh sách đơn hàng sau khi hoàn tất
       await refreshOrders();
       throw e;
     }
@@ -1309,7 +1236,7 @@ const posPlaceOrder = async () => {
     </div>
   </div>
 
-  <!-- ══ MODAL THEM KHACH HANG NHANH (POS) — instance rieng, khong dung chung voi
+  <!-- Modal thêm khách hàng nhanh -->
        CustomersTable.vue vi 2 noi mo modal doc lap nhau ══ -->
   <CustomerFormModal ref="quickCustomerModalRef" v-model="showQuickCustomerModal" @saved="onQuickCustomerSaved" />
 
@@ -1321,7 +1248,7 @@ const posPlaceOrder = async () => {
     :pos-cart-count="variantDetailCartCount"
   />
 
-  <!-- ══ MODAL DANH SÁCH SERIAL (BARCODE) — mở từ nút # trên cart item, hiện mỗi serial
+  <!-- Modal danh sách serial -->
        dạng mã vạch text lớn để nhân viên dễ nhìn/đối chiếu khi giao hàng ══ -->
   <div
     v-if="showSerialModal"
@@ -1370,8 +1297,7 @@ const posPlaceOrder = async () => {
   height: calc(100vh - 120px);
 }
 
-/* 2/3 gio hang (trai) — 1/3 nut + thong tin (phai), dong bo card/toolbar voi cac tab
-   quan tri khac (xem admin-list-theme.css: .alt-card/.alt-toolbar/.alt-btn). */
+/* Bố cục giao diện bán hàng tại quầy POS */
 .pos-grid-layout {
   display: grid;
   grid-template-columns: 2fr 1fr;

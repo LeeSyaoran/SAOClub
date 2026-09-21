@@ -97,9 +97,7 @@ const allBrands = computed(() => [
   ...new Set(products.value.map((p) => p.tenThuongHieu).filter(Boolean)),
 ]);
 
-// Chỉ liệt kê giá trị cấu hình THỰC SỰ có trong tập sản phẩm hiện tại — tránh chip lọc ra
-// danh sách rỗng. sort() cho RAM/Ổ cứng chỉ là sắp chữ (không phải theo dung lượng tăng dần)
-// nhưng với số lượng giá trị nhỏ (xem ProductFilter.vue) không đáng để viết parser riêng.
+// Danh sách cấu hình lọc theo sản phẩm thực tế
 const allCpus = computed(() => [...new Set(products.value.map((p) => p.cpu).filter(Boolean))].sort());
 const allRams = computed(() => [...new Set(products.value.map((p) => p.ram).filter(Boolean))].sort());
 const allGpus = computed(() => [...new Set(products.value.map((p) => p.gpu).filter(Boolean))].sort());
@@ -320,8 +318,7 @@ const handleQuickAdd = (product) => {
   addToCart(product);
 };
 
-// ── So sánh sản phẩm — thuần frontend, mọi thông số cần đều đã có sẵn trong products
-// (SanPhamResponse.java), không cần gọi thêm API nào. ─────────────────────────────────────
+// So sánh sản phẩm
 const MAX_COMPARE = 4;
 const compareList = ref([]);
 const showCompareModal = ref(false);
@@ -499,10 +496,7 @@ const goToSlide = (idx) => {
   startSlider();
 };
 
-// ─── Flashsale ─────────────────────────────────────────────────────────────────────
-// Lấy TOP sản phẩm mới nhất (group theo sanPhamId như filteredProducts) làm deal flashsale.
-// Không phải sản phẩm nào cũng có giaGoc, nên giả định: sản phẩm flashsale = sản phẩm có
-// giaGoc hợp lệ VÀ giaGoc > giaBan; fallback nếu không có thì lấy 10 sp đầu tiên.
+// Lấy danh sách sản phẩm flash sale
 const flashsaleProducts = computed(() => {
   const list = groupBySanPham(products.value);
   const withDiscount = list.filter(

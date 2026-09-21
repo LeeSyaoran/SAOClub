@@ -3,13 +3,7 @@ import { authHeaders } from './api.js';
 const BASE = '/api/chi-tiet-san-pham';
 
 export const SerialLockService = {
-  /**
-   * Lock nhiều serial cùng lúc
-   * @param {number[]} chiTietIds
-   * @param {string} sessionId - UUID của POS session
-   * @param {number} nhanVienId
-   * @returns {Promise<{success: boolean, lockedCount: number, failedIds: number[], message: string}>}
-   */
+  // Khóa giữ chỗ danh sách serial theo phiên làm việc
   async lock(chiTietIds, sessionId, nhanVienId) {
     const res = await fetch(`${BASE}/lock`, {
       method: 'POST',
@@ -19,12 +13,7 @@ export const SerialLockService = {
     return res.json();
   },
 
-  /**
-   * Unlock nhiều serial
-   * @param {number[]} chiTietIds
-   * @param {string} sessionId
-   * @returns {Promise<{unlocked: number}>}
-   */
+  // Mở khóa danh sách serial theo phiên làm việc
   async unlock(chiTietIds, sessionId) {
     const res = await fetch(`${BASE}/unlock`, {
       method: 'POST',

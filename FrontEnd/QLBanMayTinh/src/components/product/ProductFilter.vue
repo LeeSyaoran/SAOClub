@@ -186,9 +186,7 @@ const props = defineProps({
   brands:     { type: Array, default: () => [] },
   // Danh sách danh mục từ API [{ id, tenDanhMuc }]
   categories: { type: Array, default: () => [] },
-  // Danh sách giá trị cấu hình xuất hiện trong tập sản phẩm hiện tại (string[]) — CustomerPage.vue
-  // tự tính từ products.value, chỉ hiện chip cho giá trị THỰC SỰ có hàng, tránh chip chọn xong
-  // ra danh sách rỗng.
+  // Danh sách giá trị cấu hình theo sản phẩm hiện tại
   cpus:     { type: Array, default: () => [] },
   rams:     { type: Array, default: () => [] },
   gpus:     { type: Array, default: () => [] },
@@ -211,8 +209,7 @@ const selectedRam      = ref([]);
 const selectedGpu      = ref([]);
 const selectedStorage  = ref([]);
 
-// Bật/tắt 1 giá trị trong mảng multi-select (dùng chung cho CPU/RAM/GPU/Ổ cứng — cùng kiểu
-// chip nhiều lựa chọn như Thương hiệu, khác Giá/Danh mục là chọn đơn).
+// Bật tắt giá trị trong bộ lọc
 const toggleSpec = (arr, value) => {
   const idx = arr.indexOf(value);
   if (idx === -1) arr.push(value);

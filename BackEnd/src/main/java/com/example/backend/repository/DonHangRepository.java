@@ -23,8 +23,8 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
         kh.khachHangId,
         nv.nhanVienId,
         km.khuyenMaiId,
-        dcgh.id, dcgh.diaChi,
-        d.nguoiNhan, d.sdtNguoiNhan,
+        dcgh.id, COALESCE(d.diaChiGiaoHangText, dcgh.diaChi, kh.diaChi),
+        COALESCE(d.nguoiNhan, kh.hoTen), COALESCE(d.sdtNguoiNhan, kh.soDienThoai),
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
         d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon,
@@ -56,19 +56,19 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     """)
     List<RevenueByDayResponse> doanhThuTheoNgay(@Param("tuNgay") LocalDateTime tuNgay, @Param("denNgay") LocalDateTime denNgay);
 
-    // Tim don pending qua han 30 phut (dung cho auto-cancel)
+    // Tìm đơn hàng pending quá hạn
     @Query("SELECT d FROM DonHang d WHERE d.trangThaiDonHang = 'pending' AND d.ngayDat < :cutoff")
     List<DonHang> findPendingOrdersOlderThan(@Param("cutoff") LocalDateTime cutoff);
 
-    // POS: don hang gan nhat cua 1 khach hang (cho quick-select)
+    // Đơn hàng gần nhất của một khách hàng
     @Query("""
     SELECT new com.example.backend.response.DonHangResponse(
         d.id, d.maDonHang,
         kh.khachHangId,
         nv.nhanVienId,
         km.khuyenMaiId,
-        dcgh.id, dcgh.diaChi,
-        d.nguoiNhan, d.sdtNguoiNhan,
+        dcgh.id, COALESCE(d.diaChiGiaoHangText, dcgh.diaChi, kh.diaChi),
+        COALESCE(d.nguoiNhan, kh.hoTen), COALESCE(d.sdtNguoiNhan, kh.soDienThoai),
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
         d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon,
@@ -84,15 +84,15 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     """)
     java.util.List<DonHangResponse> findRecentByKhachHang(@Param("khachHangId") Integer khachHangId);
 
-    // POS: tong hop don gan nhat trong 30 ngay (cho POS recent orders)
+    // Đơn hàng gần nhất cho POS
     @Query(value = """
     SELECT new com.example.backend.response.DonHangResponse(
         d.id, d.maDonHang,
         kh.khachHangId,
         nv.nhanVienId,
         km.khuyenMaiId,
-        dcgh.id, dcgh.diaChi,
-        d.nguoiNhan, d.sdtNguoiNhan,
+        dcgh.id, COALESCE(d.diaChiGiaoHangText, dcgh.diaChi, kh.diaChi),
+        COALESCE(d.nguoiNhan, kh.hoTen), COALESCE(d.sdtNguoiNhan, kh.soDienThoai),
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
         d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon,

@@ -20,15 +20,13 @@ import { ShoppingCart, Receipt, Users, Undo2, Laptop, X, Menu, Moon, Sun } from 
 
 // ── Navigation — mac dinh vao thang Ban hang (viec chinh hang ngay cua nhan vien) ──
 const currentPage = ref("ban-hang");
-// Sidebar bat/tat duoc o moi kich thuoc man hinh, mac dinh mo tren desktop, dong tren
-// mobile (dong bo AdminPage.vue). ponytail: khong dong bo lai khi resize giua chung.
+// Đóng mở sidebar nhân viên
 const sidebarOpen = ref(window.matchMedia("(min-width: 768px)").matches);
 const productsMainTab = ref("sanPham");
 const navigate = (page) => {
   currentPage.value = page;
   if (window.matchMedia("(max-width: 767.98px)").matches) sidebarOpen.value = false; // chon xong tu dong dong lai tren mobile
-  // ReturnsPanel.vue chỉ tải dữ liệu 1 lần lúc mount — làm mới lại mỗi lần vào tab để
-  // thấy yêu cầu trả hàng khách vừa gửi (xem AdminPage.vue navigate() cùng lý do).
+// Làm mới dữ liệu trả hàng khi chuyển tab
   if (page === "tra-hang") refreshReturns();
 };
 
@@ -43,8 +41,7 @@ const topbarTitle = computed(() => t(PAGE_META[currentPage.value]?.titleKey ?? "
 const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
 const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? ShoppingCart);
 
-// ── Badge sidebar: don hang hom nay, tong khach hang — doc thang tu store, khong
-// can qua AdminPage.vue vi trang nay doc lap hoan toan ──
+// Thống kê số lượng trên sidebar
 const toDateInputValue = (d) => {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;

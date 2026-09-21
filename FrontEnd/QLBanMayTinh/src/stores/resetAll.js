@@ -9,10 +9,7 @@ import { resetReturns } from "./returns.js";
 import { resetBaoHanh } from "./baoHanh.js";
 import { resetDoiThuong } from "./doiThuong.js";
 
-// Gọi mỗi lần đăng xuất (chủ động hoặc do hết phiên — xem Service/api.js) — các store
-// staff/admin dùng promise nhớ nhớ (ensureX, "gọi nhiều lần chỉ tải 1 lần"), nếu không reset
-// thì đổi tài khoản khác cùng tab (không reload trang) sẽ thấy dữ liệu cũ của phiên trước
-// cho tới khi tự bấm refresh ở từng tab.
+// Xóa cache của tất cả các store khi đăng xuất
 export const resetAllStores = () => {
   resetProducts();
   resetCustomers();
@@ -24,9 +21,7 @@ export const resetAllStores = () => {
   resetReturns();
   resetBaoHanh();
   resetDoiThuong();
-  // Tab admin đang đứng (AdminPage.vue) nhớ qua sessionStorage để F5 không rớt về
-  // dashboard — xóa luôn khi đăng xuất, tránh tài khoản khác đăng nhập cùng tab bị "kẹt"
-  // ở đúng trang tài khoản trước đang xem.
+  // Xóa vị trí tab quản trị đã lưu trong phiên
   sessionStorage.removeItem("admin.lastPage");
   sessionStorage.removeItem("admin.lastInventoryTab");
 };

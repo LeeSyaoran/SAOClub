@@ -9,6 +9,7 @@ import { formatPrice, formatDate, statusLabel } from "../utils/adminFormat.js";
 import { get } from "../services/api.js";
 import { showToast } from "../stores/toast.js";
 import { askConfirm } from "../stores/confirm.js";
+import ConfirmDialog from "../components/common/ConfirmDialog.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -53,6 +54,7 @@ const serialStatusClass = (s) => {
   if (s === "trong_kho") return "pnser-status-badge--in-stock";
   if (s === "da_ban") return "pnser-status-badge--sold";
   if (s === "giu_hang") return "pnser-status-badge--reserved";
+  if (s === "cho_duyet") return "pnser-status-badge--draft";
   return "pnser-status-badge--default";
 };
 
@@ -60,6 +62,7 @@ const serialStatusText = (s) => {
   if (s === "trong_kho") return "Trong kho";
   if (s === "da_ban") return "Đã bán";
   if (s === "giu_hang") return "Đang đặt hàng";
+  if (s === "cho_duyet") return "Chờ duyệt";
   return statusLabel(s) || s || "Trong kho";
 };
 
@@ -74,8 +77,7 @@ const serialsByBienThe = computed(() => {
 });
 
 const itemsWithSerials = computed(() => {
-  // Fallback: nếu chiTietList rỗng (phiếu cũ chưa có dòng chi tiết) nhưng có serial,
-  // nhóm serial theo bienTheId và lookup maSku từ chính dữ liệu serial để hiển thị.
+// Gom nhóm serial theo biến thể
   if (chiTietList.value.length === 0 && serialList.value.length > 0) {
     const avgDonGia = phieu.value?.tongTien && serialList.value.length
       ? phieu.value.tongTien / serialList.value.length
@@ -117,21 +119,88 @@ const approveReceipt = async () => {
   }
 };
 
+const rejecting = ref(false);
+const rejectReceipt = async () => {
+  if (!phieu.value) return;
+  if (!(await askConfirm("Xác nhận từ chối phiếu nhập này? Phiếu sẽ chuyển sang trạng thái Hủy."))) return;
+  rejecting.value = true;
+  try {
+    let res;
+    try {
+      res = await PhieuNhapKhoService.tuChoi(phieu.value.phieuNhapId);
+    } catch (_) {
+      // Bỏ qua nếu endpoint chưa sẵn sàng
+    }
+    if (!res || !res.ok) {
+      const body = {
+        nhaCungCapId: phieu.value.nhaCungCap?.nhaCungCapId ?? phieu.value.nhaCungCapId,
+        nhanVienId: phieu.value.nhanVien?.nhanVienId ?? phieu.value.nhanVienId,
+        ngayNhap: phieu.value.ngayNhap,
+        tongTien: phieu.value.tongTien,
+        trangThai: "huy",
+        ghiChu: phieu.value.ghiChu ? (phieu.value.ghiChu + " [Đã từ chối]") : "Đã từ chối",
+      };
+      res = await PhieuNhapKhoService.save(phieu.value.phieuNhapId, body);
+    }
+    if (!res.ok) {
+      showToast(await res.text().catch(() => "Từ chối phiếu thất bại"), "error");
+      return;
+    }
+    showToast("Đã từ chối phiếu nhập thành công!", "success");
+    await loadAll();
+  } catch (e) {
+    showToast(e.message || "Từ chối phiếu thất bại", "error");
+  } finally {
+    rejecting.value = false;
+  }
+};
+
 const loadAll = async () => {
   loading.value = true;
   try {
-    const [pnAll, ctAll, suppliers, staffList, serials] = await Promise.all([
+    const [pnDetail, pnAll, ctAll, suppliers, staffList, serials] = await Promise.all([
+      PhieuNhapKhoService.getById(phieuNhapId.value).catch(() => null),
       PhieuNhapKhoService.getAll().catch(() => []),
       ChiTietPhieuNhapService.getAll().catch(() => []),
       get("/api/nha-cung-cap").catch(() => []),
       get("/api/nhan-vien?page=0&size=200").then((r) => r?.content || r || []).catch(() => []),
       ChiTietSanPhamService.getByPhieuNhap(phieuNhapId.value).catch(() => []),
     ]);
-    phieu.value = (pnAll || []).find((p) => p.phieuNhapId === phieuNhapId.value) ?? null;
+    const fallbackPhieu = (pnAll || []).find((p) => p.phieuNhapId === phieuNhapId.value) ?? null;
+    phieu.value = pnDetail || fallbackPhieu;
     chiTietList.value = (ctAll || []).filter((c) => c.phieuNhapId === phieuNhapId.value);
-    serialList.value = serials || [];
-    supplier.value = (suppliers || []).find((s) => s.nhaCungCapId === phieu.value?.nhaCungCapId) ?? null;
-    staff.value = (staffList || []).find((s) => s.nhanVienId === phieu.value?.nhanVienId) ?? null;
+
+    // Lấy serial: ưu tiên serial thực tế từ DB nếu đã duyệt / đã có
+    let effectiveSerials = serials || [];
+    // Nếu chưa có serial trong kho (phiếu chờ duyệt), nạp từ serialDraftJson đã import
+    if (effectiveSerials.length === 0 && phieu.value?.serialDraftJson) {
+      try {
+        const drafts = JSON.parse(phieu.value.serialDraftJson);
+        if (Array.isArray(drafts)) {
+          for (const d of drafts) {
+            const list = Array.isArray(d.serials) ? d.serials : [];
+            for (const s of list) {
+              if (s) {
+                effectiveSerials.push({
+                  bienTheId: d.bienTheId,
+                  soSerial: String(s).trim(),
+                  ngayNhapKho: phieu.value.ngayNhap,
+                  trangThai: "cho_duyet",
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Lỗi parse serialDraftJson:", e);
+      }
+    }
+    serialList.value = effectiveSerials;
+
+    const nccId = phieu.value?.nhaCungCap?.nhaCungCapId ?? phieu.value?.nhaCungCapId;
+    supplier.value = (suppliers || []).find((s) => s.nhaCungCapId === nccId) || phieu.value?.nhaCungCap || null;
+    const nvId = phieu.value?.nhanVien?.nhanVienId ?? phieu.value?.nhanVienId;
+    staff.value = (staffList || []).find((s) => s.nhanVienId === nvId) || phieu.value?.nhanVien || null;
   } finally {
     loading.value = false;
   }
@@ -140,8 +209,7 @@ const loadAll = async () => {
 // watch phieuNhapId cơ bản để load khi id thay đổi.
 watch(phieuNhapId, () => loadAll());
 
-// force reload khi click cùng 1 phiếu 2 lần liên tiếp (vue-router không trigger
-// watch nếu param trùng) — watch route.fullPath bắt cả trường hợp này.
+// Tải lại chi tiết phiếu nhập khi thay đổi route
 watch(() => route.params.id, () => loadAll());
 
 onMounted(() => {
@@ -244,8 +312,16 @@ const backToList = () => {
         <div style="display:flex;gap:8px;align-items:center;">
           <button
             v-if="phieu?.trangThai === 'cho_duyet'"
+            class="pnser-btn pnser-btn--danger"
+            :disabled="approving || rejecting"
+            @click="rejectReceipt"
+          >
+            <X :size="14" /> Từ chối
+          </button>
+          <button
+            v-if="phieu?.trangThai === 'cho_duyet'"
             class="pnser-btn pnser-btn--ok"
-            :disabled="approving"
+            :disabled="approving || rejecting"
             @click="approveReceipt"
           >
             <Check :size="14" /> Duyệt phiếu
@@ -408,6 +484,9 @@ const backToList = () => {
         </div>
       </div>
     </template>
+
+    <!-- Dialog xác nhận hiển thị ngay tại trang chi tiết phiếu nhập -->
+    <ConfirmDialog />
   </div>
 </div>
 </template>
@@ -500,6 +579,15 @@ const backToList = () => {
 .pnser-btn--ok:hover:not(:disabled) {
   background: #047857;
   border-color: #047857;
+}
+.pnser-btn--danger {
+  background: #dc2626;
+  color: #fff;
+  border: 1px solid #dc2626;
+}
+.pnser-btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
 }
 .pnser-btn:disabled {
   opacity: 0.45;
@@ -827,6 +915,10 @@ const backToList = () => {
   color: #64748b;
 }
 .pnser-status-badge--reserved {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+.pnser-status-badge--draft {
   background: rgba(245, 158, 11, 0.15);
   color: #d97706;
 }

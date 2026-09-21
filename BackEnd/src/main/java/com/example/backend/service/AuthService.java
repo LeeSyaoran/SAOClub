@@ -143,9 +143,7 @@ public class AuthService {
             ChucVu khachHangRole = chucVuRepository.findByMaChucVu("khach_hang")
                     .orElseThrow(() -> new RuntimeException("Role khach_hang not found"));
 
-            // Create KhachHang profile
-            // so_dien_thoai NULL được (migration mới: filtered unique index cho phép nhiều NULL).
-            // User Firebase sẽ tự cập nhật SĐT thật khi mua hàng — checkout sẽ bắt buộc điền.
+            // Tạo hồ sơ khách hàng mới
             KhachHang kh = new KhachHang();
             kh.setHoTen(name != null ? name : (email != null ? email : "Khách hàng"));
             kh.setEmail(email);

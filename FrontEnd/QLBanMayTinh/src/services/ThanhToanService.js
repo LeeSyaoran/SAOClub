@@ -1,8 +1,7 @@
 import { get, post } from './api.js';
 
-// Tao record thanh toan cho 1 don — dung o POS ngay sau khi tao don + dong san pham
-// thanh cong (xem PosPanel.vue posPlaceOrder).
+// Tạo bản ghi thanh toán cho đơn hàng
 export const create = (body) => post('/api/thanh-toan', body);
 
-// Toan bo record thanh toan cua 1 don — dung o modal "Chi tiet don hang" (OrdersTable.vue).
+// Lấy danh sách bản ghi thanh toán theo mã đơn hàng
 export const getByDonHang = (donHangId) => get(`/api/thanh-toan/don-hang/${donHangId}`);

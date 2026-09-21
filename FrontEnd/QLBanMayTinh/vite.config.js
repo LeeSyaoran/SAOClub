@@ -31,6 +31,8 @@ export default defineConfig({
   // restart, không đăng xuất oan khi F5.
   define: {
     __DEV_BOOT_ID__: JSON.stringify(Date.now().toString()),
+    // Polyfill global cho SockJS-client (browser không có global như Node.js)
+    global: "globalThis",
   },
   resolve: {
     alias: {
@@ -53,6 +55,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/ws": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://localhost:8080",
+        changeOrigin: true,
+        ws: true,
+      },
       // Lưu ý: KHÔNG proxy /images qua backend. Vite serve trực tiếp public/images và
       // browser sẽ gọi backend /api/images/upload/... cho ảnh động. Proxy ở đây khiến
       // Vite cố "import" SVG trong /public/images và gây lỗi MIME type trong trình duyệt.
@@ -66,7 +73,7 @@ export default defineConfig({
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: https: blob: https://*.googleusercontent.com",
         "font-src 'self' data: https://fonts.gstatic.com",
-        "connect-src 'self' https://www.gstatic.com https://accounts.google.com https://apis.google.com https://oauth2.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.googleapis.com https://*.firebaseapp.com http://localhost:* ws://localhost:*",
+        "connect-src 'self' https://www.gstatic.com https://accounts.google.com https://apis.google.com https://oauth2.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.googleapis.com https://*.firebaseapp.com http://localhost:* ws://localhost:* wss://localhost:* http://host.docker.internal:*",
         "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://*.googleapis.com https://*.googleusercontent.com",
       ].join("; "),
     },

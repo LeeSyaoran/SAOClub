@@ -44,9 +44,7 @@ const submit = async () => {
     error.value = t("admin.giftVoucherModal.percentMax100");
     return;
   }
-  // So sánh chuỗi ngày địa phương (YYYY-MM-DD) — không qua Date/toISOString() để tránh lệch
-  // múi giờ (new Date("2026-08-15") parse thành UTC midnight). Cho phép chọn "hôm nay" vì
-  // voucher sẽ hết hạn vào cuối ngày đó (xem submit() bên dưới), không phải đầu ngày.
+  // Kiểm tra ngày hết hạn voucher
   if (!form.value.ngayHetHan || form.value.ngayHetHan < nowLocalIso().slice(0, 10)) {
     error.value = t("admin.giftVoucherModal.expiryRequired");
     return;
@@ -58,8 +56,7 @@ const submit = async () => {
       loai: form.value.loai,
       giaTri: Number(form.value.giaTri),
       giaTriToiDa: form.value.giaTriToiDa ? Number(form.value.giaTriToiDa) : null,
-      // Chuỗi ngày-giờ địa phương "trần" (không timezone) — hết hạn vào cuối ngày đã chọn,
-      // khớp quy ước của cả dự án (xem toLocalDT() trong utils/adminFormat.js).
+// Định dạng thời gian hết hạn vào cuối ngày
       ngayHetHan: `${form.value.ngayHetHan}T23:59:59`,
       donHangToiThieu: form.value.donHangToiThieu ? Number(form.value.donHangToiThieu) : null,
     };

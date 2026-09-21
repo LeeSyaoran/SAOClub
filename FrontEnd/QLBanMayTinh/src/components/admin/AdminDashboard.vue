@@ -66,14 +66,12 @@ const anyStoreLoading = computed(() =>
   ProductsStore.loading || OrdersStore.loading || CustomersStore.loading || InventoryStore.loading || !StaffStore.loaded
 );
 
-// ensureStaff() không set StaffStore.loading (chỉ refreshStaff() có) — dùng .loaded làm
-// cờ chờ thay vì .loading cho đúng với cách store này báo trạng thái.
+// Trạng thái tải dữ liệu nhân viên
 const weeklyRevenueBarData = computed(() =>
   props.weeklyRevenueChart.map((d) => ({ ...d, color: 'var(--accent-2)' }))
 );
 
-// Tính 1 lần lúc mount — component giữ nguyên qua v-show nên không tự cập nhật qua nửa
-// đêm, chấp nhận được cho dashboard admin (F5 lại nếu cần đúng tháng mới).
+// Khởi tạo dữ liệu tháng hiện tại cho dashboard
 const now = new Date();
 const heatmapMonth = now.getMonth();
 const heatmapYear = now.getFullYear();

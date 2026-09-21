@@ -62,7 +62,7 @@ const props = defineProps({
   granularity: { type: String, default: 'day' }, // 'day' | 'month' | 'year' — chỉ ảnh hưởng cách hiển thị nhãn trục X/tooltip
 });
 
-// id gradient riêng theo instance — phòng khi có 2 biểu đồ cùng lúc trên 1 trang, tránh trùng #id SVG
+// ID gradient riêng cho instance
 const gradientId = `revenue-bar-gradient-${useId()}`;
 
 const hoverIndex = ref(null);

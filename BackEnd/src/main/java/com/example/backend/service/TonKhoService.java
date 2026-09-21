@@ -39,7 +39,6 @@ public class TonKhoService {
 
     public TonKho update(Integer id, TonKho item) {
         TonKho existing = getById(id);
-        if (item.getSoLuongGiu()     != null) existing.setSoLuongGiu(item.getSoLuongGiu());
         if (item.getTonKhoToiThieu() != null) existing.setTonKhoToiThieu(item.getTonKhoToiThieu());
         existing.setNgayCapNhat(LocalDateTime.now());
         return tonKhoRepository.save(existing);

@@ -7,8 +7,8 @@ export const getById = (id) => get(`/api/phieu-tra-hang/${id}`);
 export const save = (id, body) =>
   id ? put(`/api/phieu-tra-hang/update/${id}`, body) : post('/api/phieu-tra-hang', body);
 
-// Khách hàng tự gửi yêu cầu trả hàng — body: { donHangId, lyDo, dongTra: [{ chiTietDonHangId, soLuong }] }
+// Khách hàng gửi yêu cầu đổi trả hàng
 export const taoYeuCau = (body) => post('/api/phieu-tra-hang/tu-yeu-cau', body);
 
-// Lấy các yêu cầu trả hàng của 1 đơn — dùng cho AccountPage hiện trạng thái xử lý.
+// Lấy danh sách yêu cầu đổi trả theo mã đơn hàng
 export const getByDonHang = (donHangId) => get(`/api/phieu-tra-hang/don-hang/${donHangId}`);

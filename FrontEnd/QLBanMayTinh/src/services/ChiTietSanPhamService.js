@@ -15,8 +15,8 @@ export const create = (body) => post('/api/chi-tiet-san-pham', body);
 
 export const update = (id, body) => put(`/api/chi-tiet-san-pham/update/${id}`, body);
 
-// Chỉ xóa được serial đang "trong_kho" (thêm nhầm) — server chặn nếu đã bán/đã dùng.
+// Xóa bản ghi serial theo ID
 export const remove = (id) => del(`/api/chi-tiet-san-pham/delete/${id}`);
 
-// Serial đã bán còn trong hạn bảo hành (server tự lọc theo ngày, hết hạn tự rớt khỏi danh sách).
+// Lấy danh sách serial đã bán còn thời hạn bảo hành
 export const getUnderWarranty = () => get('/api/chi-tiet-san-pham/con-bao-hanh');

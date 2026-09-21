@@ -3,8 +3,7 @@ import { showToast } from '../stores/toast.js';
 import { t } from '../i18n/index.js';
 import { resetAllStores } from '../stores/resetAll.js';
 
-// Gắn JWT (nếu đã đăng nhập) vào mọi request — token được lưu trong session
-// bởi stores/index.js sau khi login (xem setSession).
+// Gắn token xác thực JWT vào header request
 export const authHeaders = () => {
   try {
     const session = JSON.parse(sessionStorage.getItem('saoclub_session'));
@@ -15,10 +14,7 @@ export const authHeaders = () => {
 };
 const headers = () => ({ 'Content-Type': 'application/json', ...authHeaders() });
 
-// 401 = JwtAuthFilter không xác thực được (thiếu/hết hạn token, xem SecurityConfig.java) —
-// khác 403 (đã đăng nhập nhưng sai vai trò, không tự đăng xuất). Trước đây không xử lý gì,
-// request cứ lỗi âm thầm (bảng trống/lỗi thô) đến khi khách tự F5/đăng nhập lại. Chỉ đăng
-// xuất 1 lần dù nhiều request 401 cùng lúc (vd trang có vài fetch song song).
+// Cờ chống lặp thao tác đăng xuất khi nhận nhiều lỗi 401
 let dangDangXuatDoHetPhien = false;
 const hasTokenSession = () => {
   try {
@@ -36,23 +32,16 @@ const kiemTraHetPhien = (r) => {
     resetAllStores();
     showToast(t('toast.sessionExpired'), 'error');
     window.location.hash = '#/';
-    // Cờ này chỉ để gộp nhiều request 401 xảy ra gần như đồng thời (cùng 1 lần hết phiên,
-    // vd trang có vài fetch song song) thành 1 lần xử lý — KHÔNG phải khóa vĩnh viễn cho cả
-    // tab. Không tự reset thì lần hết phiên thứ 2 (sau khi đăng nhập lại trong cùng tab, vd
-    // ca làm dài, JWT hết hạn lần nữa) sẽ bị bỏ qua hoàn toàn, không tự đăng xuất nữa.
+    // Mở lại cờ sau 2 giây
     setTimeout(() => { dangDangXuatDoHetPhien = false; }, 2000);
   }
   return r;
 };
 
-// QUAN TRỌNG — return type khác nhau:
-//   get()           → Promise<parsed JSON>   (throw nếu HTTP error)
-//   post/put/del()  → Promise<Response>      (caller tự kiểm tra res.ok)
-// Không dùng .then(r => r.ok ? r.json() : []) sau get() — nó đã parse sẵn rồi.
-
+// Gửi GET request và parse JSON kết quả
 export const get = async (url) => {
   const r = kiemTraHetPhien(await fetch(url, { headers: authHeaders() }));
-  // 403 = đã login nhưng không có quyền — không throw (admin-only API gọi khi là khách)
+  // Trả về null nếu không có quyền truy cập
   if (r.status === 403) {
     return null;
   }

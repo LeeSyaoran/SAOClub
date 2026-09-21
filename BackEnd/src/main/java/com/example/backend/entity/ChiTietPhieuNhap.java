@@ -1,5 +1,6 @@
 package com.example.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Formula;
@@ -22,10 +23,12 @@ public class ChiTietPhieuNhap {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phieu_nhap_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private PhieuNhapKho phieuNhapKho;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bien_the_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private BienTheSanPham bienThe;
 
     @Column(name = "so_luong")

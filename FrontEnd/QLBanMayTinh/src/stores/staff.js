@@ -5,7 +5,7 @@ export const StaffStore = reactive({ items: [], loading: false, loaded: false })
 
 let staffPromise = null;
 
-// Xem resetProducts() ở stores/products.js — cùng lý do reset khi đổi tài khoản cùng tab.
+// Reset danh sách nhân viên khi đăng xuất hoặc đổi tài khoản
 export const resetStaff = () => {
   staffPromise = null;
   StaffStore.items = [];
@@ -21,9 +21,7 @@ export const ensureStaff = () => {
   return staffPromise;
 };
 
-// AdminPage.vue cần refetch có chủ đích sau khi thêm/xóa nhân viên (ensureStaff() chỉ tải
-// 1 lần rồi cache promise, không refetch lại) — thêm refreshStaff() theo đúng pattern
-// refreshXxx() của các store khác.
+// Tải lại danh sách nhân viên từ backend
 export const refreshStaff = async () => {
   StaffStore.loading = true;
   try {

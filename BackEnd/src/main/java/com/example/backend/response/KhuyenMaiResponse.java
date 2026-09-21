@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,4 +28,24 @@ public class KhuyenMaiResponse {
     private Integer soLuotConLai;
     private String trangThai;
     private LocalDateTime ngayTao;
+
+    // Danh sách sản phẩm áp dụng - null hoặc rỗng = áp dụng cho tất cả
+    private List<SanPhamSimpleResponse> sanPhams;
+
+    public KhuyenMaiResponse(Integer khuyenMaiId, String maKhuyenMai, String tenKhuyenMai,
+                             String loai, BigDecimal giaTri, BigDecimal giaTriToiDa, BigDecimal donHangToiThieu,
+                             LocalDateTime ngayBatDau, LocalDateTime ngayKetThuc, Integer soLuongToiDa,
+                             Integer soLanDaDung, Integer soLuotConLai, String trangThai, LocalDateTime ngayTao) {
+        this(khuyenMaiId, maKhuyenMai, tenKhuyenMai, loai, giaTri, giaTriToiDa, donHangToiThieu,
+                ngayBatDau, ngayKetThuc, soLuongToiDa, soLanDaDung, soLuotConLai, trangThai, ngayTao, null);
+    }
+
+    @lombok.Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SanPhamSimpleResponse {
+        private Integer sanPhamId;
+        private String tenSanPham;
+        private String hinhAnhChinh;
+    }
 }

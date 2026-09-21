@@ -193,7 +193,7 @@
       <div v-if="!isLoading && !pagedGroups.length" class="hh-empty">
         <Inbox :size="48" />
         <p v-if="coBoLoc">Không có sản phẩm nào khớp với bộ lọc hiện tại.</p>
-        <p v-else>Chưa có sản phẩm nào. Bấm “Tạo mới” để thêm sản phẩm đầu tiên.</p>
+        <p v-else>Chưa có sản phẩm nào. Bấm "Tạo mới" để thêm sản phẩm đầu tiên.</p>
         <button v-if="coBoLoc" class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters">Xóa lọc</button>
         <button v-else class="hh-btn hh-btn--primary hh-btn--sm" @click="openCreate">Tạo mới</button>
       </div>
@@ -294,7 +294,7 @@
               <section class="hh-ct-block">
                 <h3>Mô tả</h3>
                 <div v-if="chiTiet.moTa" class="hh-ct-mota" v-html="chiTiet.moTa"></div>
-                <p v-else class="hh-muted">Chưa có mô tả. Bấm “Chỉnh sửa” để bổ sung.</p>
+                <p v-else class="hh-muted">Chưa có mô tả. Bấm "Chỉnh sửa" để bổ sung.</p>
               </section>
             </div>
 
@@ -658,48 +658,83 @@
               <!-- Sinh nhiều phiên bản (khi modalMode === 'create' hoặc 'variant') -->
               <template v-else>
                 <fieldset class="hh-block">
-                  <legend>Bước 1 · Thuộc tính để ghép ra phiên bản</legend>
+                  <legend>Phiên bản <span class="hh-chip">{{ bienTheRows.length }}</span></legend>
                   <p class="hh-note hh-note--plain">
-                    Gõ hoặc chọn gợi ý rồi <b>nhấn Enter</b> để thêm thành thẻ. Mỗi thuộc tính thêm được nhiều giá trị,
-                    hệ thống tự ghép thành danh sách phiên bản bên dưới. Không thêm gì thì sản phẩm chỉ có một phiên bản.
+                    Mỗi dòng là một phiên bản hoàn chỉnh. Bấm <b>"+ Thêm dòng"</b> để tạo thêm.
                   </p>
 
-                  <div class="hh-grid">
-                    <div class="hh-field">
-                      <span>Màu sắc</span>
-                      <TagComboInput
-                        v-model="chon.mauSac" :options="optMauSacSelect"
-                        placeholder="Gõ màu rồi nhấn Enter"
-                        @enter="themMau()" @pick="(v) => { chon.mauSac = v; themMau(true) }"
-                      />
-                      <div v-if="form.mauSacList.length" class="hh-tags">
-                        <span v-for="m in form.mauSacList" :key="m" class="hh-tag-pill">
-                          {{ m }}
-                          <button type="button" aria-label="Bỏ màu" @click="xoaMau(m)">&times;</button>
-                        </span>
-                      </div>
-                    </div>
+                  <em v-if="errors.bienThe" class="hh-err hh-mb8">{{ errors.bienThe }}</em>
 
-                    <div v-for="attr in thuocTinhTron" :key="attr.field" class="hh-field">
-                      <span>{{ attr.label }}</span>
-                      <TagComboInput
-                        v-model="chon[attr.field]" :options="attr.options().map((o) => ({ value: o.ten, label: o.ten }))"
-                        :allow-custom="false"
-                        :placeholder="'Gõ ' + attr.label.toLowerCase() + ' rồi nhấn Enter'"
-                        @enter="themThuocTinh(attr.field)" @pick="(v) => { chon[attr.field] = v; themThuocTinh(attr.field, true) }"
-                      />
-                      <div v-if="form[attr.field].length" class="hh-tags">
-                        <span v-for="id in form[attr.field]" :key="id" class="hh-tag-pill">
-                          {{ attr.ten(id) }}
-                          <button type="button" aria-label="Bỏ giá trị" @click="xoaThuocTinh(attr.field, id)">&times;</button>
-                        </span>
-                      </div>
-                    </div>
+                  <div class="hh-rows-wrap">
+                    <table class="hh-rows">
+                      <thead>
+                        <tr>
+                          <th class="hh-rows__stt">#</th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã SKU</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><Barcode :size="12" /> Mã vạch</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><Palette :size="12" /> Màu sắc</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> CPU</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><MemoryStick :size="12" /> RAM</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><HardDrive :size="12" /> Ổ cứng</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><Monitor :size="12" /> GPU</span></th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(row, i) in bienTheRows" :key="row._key">
+                          <td class="hh-muted hh-rows__stt">{{ i + 1 }}</td>
+                          <td><input v-model.trim="row.maSku" class="hh-cell hh-cell--sku" placeholder="Tự sinh nếu trống" /></td>
+                          <td><input v-model.trim="row.barcode" class="hh-cell hh-cell--ma" placeholder="8–13 số" /></td>
+                          <td>
+                            <select v-model="row.mauSac" class="hh-cell hh-cell--sel">
+                              <option value="">— Không —</option>
+                              <option v-for="m in optMauSac.value" :key="m" :value="m">{{ m }}</option>
+                            </select>
+                          </td>
+                          <td>
+                            <select v-model="row.cpuId" class="hh-cell hh-cell--sel">
+                              <option value="">— Không —</option>
+                              <option v-for="c in danhSachCpu" :key="idOf(c,'cpuId')" :value="idOf(c,'cpuId')">{{ c.tenCpu }}</option>
+                            </select>
+                          </td>
+                          <td>
+                            <select v-model="row.ramId" class="hh-cell hh-cell--sel">
+                              <option value="">— Không —</option>
+                              <option v-for="r in danhSachRam" :key="idOf(r,'ramId')" :value="idOf(r,'ramId')">{{ r.dungLuong || r.tenRam }}</option>
+                            </select>
+                          </td>
+                          <td>
+                            <select v-model="row.oCungId" class="hh-cell hh-cell--sel">
+                              <option value="">— Không —</option>
+                              <option v-for="o in danhSachOCung" :key="idOf(o,'oCungId')" :value="idOf(o,'oCungId')">{{ tenOCung(o) }}</option>
+                            </select>
+                          </td>
+                          <td>
+                            <select v-model="row.gpuId" class="hh-cell hh-cell--sel">
+                              <option value="">— Không —</option>
+                              <option v-for="g in danhSachGpu" :key="idOf(g,'gpuId')" :value="idOf(g,'gpuId')">{{ g.tenGpu }}</option>
+                            </select>
+                          </td>
+                          <td class="ta-c">
+                            <button type="button" class="hh-icon-btn" title="Xóa dòng này" @click="xoaDong(row._key)">
+                              <X :size="14" />
+                            </button>
+                          </td>
+                        </tr>
+                        <tr v-if="!bienTheRows.length">
+                          <td colspan="9" class="hh-rows__empty">Chưa có phiên bản nào — bấm "+ Thêm dòng" để tạo.</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
+
+                  <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" style="margin-top:10px" @click="themDong">
+                    <Plus :size="14" /> Thêm dòng
+                  </button>
                 </fieldset>
 
                 <fieldset class="hh-block">
-                  <legend>Bước 2 · Thông số chung cho mọi phiên bản</legend>
+                  <legend>Thông số chung <span class="hh-chip hh-chip--soft">áp dụng mọi phiên bản</span></legend>
                   <div class="hh-grid">
                     <label class="hh-field">
                       <span>Màn hình</span>
@@ -724,52 +759,14 @@
                     </label>
                     <label class="hh-field">
                       <span>Tiền tố mã SKU</span>
-                      <input v-model.trim="form.skuPrefix" placeholder="Để trống sẽ lấy theo mã sản phẩm" />
+                      <input v-model.trim="form.skuPrefix" placeholder="Để trống lấy theo mã sản phẩm" />
+                      <em class="hh-hint">Dùng khi cần SKU theo quy tắc riêng.</em>
                     </label>
                   </div>
                   <p class="hh-note">
                     <Info :size="14" />
-                    Giá vốn và giá bán đặt sau — mở chi tiết sản phẩm, chọn phiên bản rồi bấm “Chỉnh sửa”, hoặc để phiếu nhập kho ghi giá vốn.
+                    Giá vốn và giá bán đặt sau — mở chi tiết sản phẩm, chọn phiên bản rồi bấm "Chỉnh sửa", hoặc dùng phiếu nhập kho.
                   </p>
-                </fieldset>
-
-                <fieldset class="hh-block">
-                  <legend>
-                    Bước 3 · Danh sách phiên bản sẽ tạo
-                    <span class="hh-chip">{{ bienTheRows.length }}</span>
-                  </legend>
-
-                  <em v-if="errors.bienThe" class="hh-err hh-mb8">{{ errors.bienThe }}</em>
-
-                  <div class="hh-matrix-wrap">
-                    <table class="hh-matrix">
-                      <thead>
-                        <tr>
-                          <th class="hh-matrix__stt"><span class="d-inline-flex align-items-center gap-1.5"><Hash :size="12" /> #</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã SKU</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><Barcode :size="12" /> Mã vạch</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> Cấu hình</span></th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="(row, i) in bienTheRows" :key="row.key">
-                          <td class="hh-muted hh-matrix__stt">{{ i + 1 }}</td>
-                          <td><input v-model.trim="row.maSku" class="hh-cell hh-cell--sku" /></td>
-                          <td><input v-model.trim="row.barcode" class="hh-cell hh-cell--ma" placeholder="8–13 số" /></td>
-                          <td class="hh-matrix__cfg">{{ moTaCauHinh(row) || 'Phiên bản tiêu chuẩn' }}</td>
-                          <td class="ta-c">
-                            <button type="button" class="hh-icon-btn" title="Bỏ phiên bản này" @click="xoaDong(row.key)">
-                              <X :size="14" />
-                            </button>
-                          </td>
-                        </tr>
-                        <tr v-if="!bienTheRows.length">
-                          <td colspan="5" class="hh-matrix__empty">Chưa có phiên bản nào — thêm thuộc tính ở Bước 1.</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
                 </fieldset>
               </template>
             </div>
@@ -904,19 +901,14 @@ import { get, put } from '@/services/api.js'
 import { refreshProducts as lamMoiKhoDuLieuChung } from '@/stores/products.js'
 import { refreshInventory as lamMoiTonKhoDuLieuChung } from '@/stores/inventory.js'
 import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '@/services/DmService.js'
+import { ThuocTinhService } from '@/services/ThuocTinhService.js'
 import * as bienTheApi from '@/services/bienTheSanPhamService.js'
 import * as sanPhamApi from '@/services/sanPhamService.js'
 import { getLichSu } from '@/services/SanPhamService.js'
 import { Cpu, MemoryStick, HardDrive, Palette, Monitor, Barcode, Search, X, Filter, ChevronDown, Plus, Download, RefreshCw, ChevronLeft, ChevronRight, Inbox, Hand, Edit, Pencil, Trash2, Copy, History, Star, BarChart2, Loader2, Save, ExternalLink, Clock, ArrowRight, Eraser, ShoppingBag, Phone, Mail, MapPin, Building2, Tag, Briefcase, FileText, Settings, ToggleLeft, User, IdCard, Headphones, Send, AlertCircle, Info, Link, ListOrdered, ListIcon, MousePointer2, Laptop, DollarSign, Coins, Activity, Calendar, CalendarCheck, Hash } from '@lucide/vue'
 import JsBarcode from 'jsbarcode'
 
-/* ════════════════════════════════════════════════════════════
- * LỚP GỌI API
- * Mỗi service đặt tên hàm một kiểu (save / create / add) và chữ ký cũng
- * khác nhau — save(id, data) hay save(data). Gọi cứng save(null, payload)
- * mà service chỉ nhận 1 tham số thì body gửi lên là null và backend trả
- * 400 ngay. Hai hàm dưới dò đúng hàm có thật rồi gọi cho khớp chữ ký.
- * ══════════════════════════════════════════════════════════ */
+// Gọi hàm API tương ứng của service
 const timHam = (api, ...tenList) => {
   for (const ten of tenList) if (typeof api?.[ten] === 'function') return api[ten]
   return null
@@ -940,15 +932,11 @@ const apiTaoSanPham = (payload) => goiTao(sanPhamApi, payload, 'sanPhamService')
 const apiSuaSanPham = (id, payload) => goiSua(sanPhamApi, id, payload, 'sanPhamService')
 const apiTaoBienThe = (payload) => goiTao(bienTheApi, payload, 'bienTheSanPhamService')
 
-/** Endpoint upload ảnh. Nếu backend chưa có, form tự chuyển sang
- *  chế độ "lấy tên file" → đường dẫn /images/<tên file>. */
+// Tải ảnh sản phẩm lên server
 const UPLOAD_URL = '/api/upload'
 const THU_MUC_ANH = '/images/'
 
-/* ─── Hằng số khớp CHECK constraint trong CSDL ─── */
-/* SanPhamRequest chỉ có MỘT trường trangThai, service copy nó sang cả SanPham lẫn
-   BienTheSanPham. Mà CK_bt_trangthai của bảng biến thể chỉ nhận active/inactive —
-   gửi 'ngung_kinh_doanh' là insert biến thể đổ, nên bỏ hẳn lựa chọn đó. */
+// Trạng thái kinh doanh sản phẩm
 const TRANG_THAI_SAN_PHAM = [
   { value: 'active', label: 'Đang kinh doanh' },
   { value: 'inactive', label: 'Ngừng kinh doanh' }
@@ -967,12 +955,62 @@ const PHAN_LOAI_DU_PHONG = [
   { phanLoaiId: 6, maPhanLoai: 'macbook', tenPhanLoai: 'MacBook' },
   { phanLoaiId: 7, maPhanLoai: 'laptop_cu', tenPhanLoai: 'Laptop cũ' }
 ]
-const MAN_HINH_GOI_Y = ['15.6" FHD 60Hz', '15.6" FHD 144Hz', '15.6" QHD 240Hz', '16" 2.5K 120Hz', '16" FHD 165Hz', '16" WQXGA 165Hz', '16" 2.8K OLED 120Hz']
-const PIN_GOI_Y = ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh', '86Wh', '90Wh']
-const HDH_GOI_Y = ['Windows 11 Home', 'Windows 11 Pro', 'macOS', 'Không kèm HĐH']
-const MAU_SAC_GOI_Y = ['Đen', 'Trắng', 'Bạc', 'Xám', 'Xanh Dương', 'Xanh Lá', 'Đỏ', 'Vàng', 'Hồng', 'Tím', 'Cam', 'Nâu']
+
+// Thuộc tính từ API (P3 - động thay hardcoded)
+const HE_THONG_THUOC_TINH = {
+  mau_sac: {
+    field: 'mauSac',
+    default: ['Đen', 'Trắng', 'Bạc', 'Xám', 'Xanh Dương', 'Xanh Lá', 'Đỏ', 'Vàng', 'Hồng', 'Tím', 'Cam', 'Nâu']
+  },
+  man_hinh: {
+    field: 'kichThuocManHinh',
+    default: ['15.6" FHD 60Hz', '15.6" FHD 144Hz', '15.6" QHD 240Hz', '16" 2.5K 120Hz', '16" FHD 165Hz', '16" WQXGA 165Hz', '16" 2.8K OLED 120Hz']
+  },
+  pin: {
+    field: 'pin',
+    default: ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh', '86Wh', '90Wh']
+  },
+  he_dieu_hanh: {
+    field: 'heDieuHanh',
+    default: ['Windows 11 Home', 'Windows 11 Pro', 'macOS', 'Không kèm HĐH']
+  }
+}
 const BAO_HANH_GOI_Y = [6, 12, 18, 24, 36]
 const TRONG_LUONG_GOI_Y = [1.2, 1.3, 1.5, 1.7, 1.8, 2.0, 2.3, 2.5]
+
+// Cache thuộc tính động từ API
+const thuocTinhDong = ref({})
+const loadThuocTinh = async () => {
+  try {
+    const list = await ThuocTinhService.getAll()
+    const map = {}
+    for (const tt of list) {
+      const cfg = HE_THONG_THUOC_TINH[tt.tenTruong]
+      if (cfg) {
+        // Gộp giá trị API + giá trị đã có trong data + default
+        const apiValues = (tt.giaTriList || []).map(g => g.giaTri)
+        const existingValues = bienTheChuan.value.map(v => v[cfg.field]).filter(Boolean)
+        map[tt.tenTruong] = {
+          field: cfg.field,
+          tenHienThi: tt.tenHienThi,
+          loaiDuLieu: tt.loaiDuLieu,
+          batBuoc: tt.batBuoc,
+          values: [...new Set([...cfg.default, ...existingValues, ...apiValues])].sort()
+        }
+      }
+    }
+    thuocTinhDong.value = map
+  } catch (e) {
+    // Fallback to hardcoded
+    console.warn('Không load được thuộc tính từ API, dùng mặc định', e)
+  }
+}
+onMounted(loadThuocTinh)
+
+const MAN_HINH_GOI_Y = computed(() => thuocTinhDong.value.man_hinh?.values || ['15.6" FHD 60Hz', '15.6" FHD 144Hz', '15.6" QHD 240Hz', '16" 2.5K 120Hz', '16" FHD 165Hz', '16" WQXGA 165Hz', '16" 2.8K OLED 120Hz'])
+const PIN_GOI_Y = computed(() => thuocTinhDong.value.pin?.values || ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh', '86Wh', '90Wh'])
+const HDH_GOI_Y = computed(() => thuocTinhDong.value.he_dieu_hanh?.values || ['Windows 11 Home', 'Windows 11 Pro', 'macOS', 'Không kèm HĐH'])
+const MAU_SAC_GOI_Y = computed(() => thuocTinhDong.value.mau_sac?.values || ['Đen', 'Trắng', 'Bạc', 'Xám', 'Xanh Dương', 'Xanh Lá', 'Đỏ', 'Vàng', 'Hồng', 'Tím', 'Cam', 'Nâu'])
 
 const ANH_MAC_DINH = 'https://cdn-icons-png.flaticon.com/512/664/664457.png'
 const TOI_DA_BIEN_THE = 60
@@ -1069,1210 +1107,16 @@ const fetchMasterData = async () => {
   danhSachPhanLoai.value = toArray(pl)
 }
 
-/* GET /api/san-pham/hien-thi trả Page<SanPhamResponse>: mỗi dòng là MỘT phiên bản,
-   kèm sẵn thông tin sản phẩm cha, tên CPU/RAM/ổ cứng/GPU và số lượng tồn. Dùng đúng
-   một nguồn này thay vì ghép hai API — không còn cảnh hai danh sách lệch nhau. */
-const fetchAllRows = async () => {
-  const all = []
-  let p = 0
-  let totalPages = 1
-  while (p < totalPages && p < 20) {
-    const res = await sanPhamApi.getPage({ page: p, size: 200 })
-    all.push(...toArray(res))
-    totalPages = res?.totalPages ?? 1
-    p++
-  }
-  return all
-}
+// Gom nhóm danh sách biến thể theo sản phẩm
 
-const fetchData = async () => {
-  isLoading.value = true
-  loadError.value = ''
-  try {
-    const rows = await fetchAllRows()
-    danhSachSanPham.value = rows
-    bienThe.value = rows
-  } catch (e) {
-    console.error('Lỗi tải dữ liệu hàng hóa:', e)
-    loadError.value = 'Không tải được danh sách hàng hóa. Kiểm tra backend có đang chạy và bạn đã đăng nhập chưa.'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-onMounted(async () => {
-  await fetchMasterData()
-  await fetchData()
-})
-
-/* ════════════ TRA CỨU TÊN THEO ID ════════════ */
-const lapMap = (list, idKey, nameKeys) => {
-  const m = new Map()
-  list.forEach((o) => {
-    const key = idOf(o, idKey)
-    const name = nameKeys.map((k) => o[k]).find((v) => v)
-    if (key != null) m.set(String(key), name)
-  })
-  return m
-}
-const mapCpu = computed(() => lapMap(danhSachCpu.value, 'cpuId', ['tenCpu', 'ten']))
-const mapRam = computed(() => lapMap(danhSachRam.value, 'ramId', ['dungLuong', 'tenRam', 'ten']))
-const mapOCung = computed(() => lapMap(danhSachOCung.value, 'oCungId', ['loaiOCung', 'loaiOcung', 'ten']))
-const mapGpu = computed(() => lapMap(danhSachGpu.value, 'gpuId', ['tenGpu', 'ten']))
-const mapThuongHieu = computed(() => lapMap(danhSachThuongHieu.value, 'thuongHieuId', ['tenThuongHieu']))
-const mapNhaCungCap = computed(() => lapMap(danhSachNhaCungCap.value, 'nhaCungCapId', ['tenNhaCungCap']))
-const mapDanhMuc = computed(() => lapMap(danhSachDanhMuc.value, 'danhMucId', ['tenDanhMuc']))
-const tra = (map, id) => (id == null || id === '' ? '' : map.get(String(id)) || '')
-
-const phanLoaiOptions = computed(() => (danhSachPhanLoai.value.length ? danhSachPhanLoai.value : PHAN_LOAI_DU_PHONG))
-const tenTheoMaPhanLoai = (ma) => phanLoaiOptions.value.find((p) => p.maPhanLoai === ma)?.tenPhanLoai || ma
-
-/* ════════════ CHUẨN HÓA + GOM NHÓM ════════════ */
-
-/** SanPhamResponse chỉ có tên linh kiện (cpu, ram, oCung, gpu là String).
- *  Tra ngược ra id để bộ lọc và form sửa vẫn chọn đúng mục. */
-const traId = (map, ten) => {
-  if (!ten) return null
-  for (const [id, name] of map) if (name === ten) return Number(id)
-  return null
-}
-const tenCua = (v) => (typeof v === 'string' ? v : '')
-
-const bienTheChuan = computed(() =>
-  bienThe.value.map((raw) => {
-    const sanPhamId = raw.sanPhamId ?? raw.sanPham?.sanPhamId ?? raw.sanPham?.id ?? null
-    const tenCpu = raw.tenCpu || tenCua(raw.cpu)
-    const tenRam = raw.dungLuong || tenCua(raw.ram)
-    const tenOCung = raw.loaiOCung || raw.loaiOcung || tenCua(raw.oCung)
-    const tenGpu = raw.tenGpu || tenCua(raw.gpu)
-    const cpuId = raw.cpuId ?? raw.cpu?.cpuId ?? traId(mapCpu.value, tenCpu)
-    const ramId = raw.ramId ?? raw.ram?.ramId ?? traId(mapRam.value, tenRam)
-    const oCungId = raw.oCungId ?? raw.oCung?.oCungId ?? traId(mapOCung.value, tenOCung)
-    const gpuId = raw.gpuId ?? raw.gpu?.gpuId ?? traId(mapGpu.value, tenGpu)
-    return {
-      bienTheId: idOf(raw, 'bienTheId'),
-      sanPhamId,
-      maSku: raw.maSku || '—',
-      // Mã vạch nay thuộc về TỪNG PHIÊN BẢN (bien_the_san_pham.barcode), không còn ở san_pham.
-      barcode: raw.barcode || raw.barcodeBienThe || '',
-      mauSac: raw.mauSac || '',
-      giaBan: Number(raw.giaBan || 0),
-      giaVon: Number(raw.giaNhap ?? raw.giaVon ?? 0),
-      baoHanhThang: raw.baoHanhThang,
-      tonKho: Number(raw.soLuongTon ?? raw.tonKho ?? raw.soLuongTonThucTe ?? 0),
-      khachDat: Number(raw.khachDat ?? raw.soLuongGiu ?? 0),
-      trangThai: raw.trangThai || 'active',
-      ngayTao: raw.ngayTao,
-      hinhAnh: raw.hinhAnhBienThe || '',
-      kichThuocManHinh: raw.kichThuocManHinh || '',
-      heDieuHanh: raw.heDieuHanh || '',
-      pin: raw.pin || '',
-      trongLuongKg: raw.trongLuongKg,
-      cpuId, ramId, oCungId, gpuId,
-      tenCpu: tenCpu || tra(mapCpu.value, cpuId),
-      tenRam: tenRam || tra(mapRam.value, ramId),
-      tenOCung: tenOCung || tra(mapOCung.value, oCungId),
-      tenGpu: tenGpu || tra(mapGpu.value, gpuId),
-      phanLoaiTags: raw.phanLoaiTags || ''
-    }
-  })
-)
-
-const barcodeDaDung = computed(() => new Set(bienTheChuan.value.map((v) => v.barcode).filter(Boolean)))
-const moTaBienThe = (v) => [v.mauSac, v.tenCpu, v.tenRam, v.tenOCung, v.tenGpu].filter(Boolean).join(' · ')
-const layTen = (val) => {
-  if (!val) return ''
-  if (typeof val === 'string') return val
-  return val.tenCpu || val.dungLuong || val.loaiOCung || val.loaiOcung || val.tenGpu || val.ten || ''
-}
-const layCpu = (v) => v?.tenCpu || layTen(v?.cpu) || ''
-const layRam = (v) => v?.tenRam || layTen(v?.ram) || ''
-const layOCung = (v) => v?.tenOCung || layTen(v?.oCung) || layTen(v?.loaiOCung) || ''
-const layGpu = (v) => v?.tenGpu || layTen(v?.gpu) || ''
-const coThongSoBienThe = (v) => !!(layCpu(v) || layRam(v) || layOCung(v) || layGpu(v) || v?.mauSac)
-
-const renderBarcode = (el, value) => {
-  if (!el || !value) return
-  const s = String(value).trim()
-  if (!s) return
-  try {
-    const isEan13 = /^\d{13}$/.test(s)
-    JsBarcode(el, s, {
-      format: isEan13 ? 'EAN13' : 'CODE128',
-      width: 1.15,
-      height: 28,
-      displayValue: true,
-      fontSize: 10.5,
-      font: 'monospace',
-      textMargin: 3,
-      margin: 2,
-      background: '#ffffff',
-      lineColor: '#111827'
-    })
-  } catch (e) {
-    try {
-      JsBarcode(el, s, {
-        format: 'CODE128',
-        width: 1.15,
-        height: 28,
-        displayValue: true,
-        fontSize: 10.5,
-        font: 'monospace',
-        textMargin: 3,
-        margin: 2,
-        background: '#ffffff',
-        lineColor: '#111827'
-      })
-    } catch (err) {
-      console.warn('Barcode render failed:', s, err)
-    }
-  }
-}
-
-const khoangGia = (ds) => {
-  if (!ds.length) return '—'
-  const min = Math.min(...ds)
-  const max = Math.max(...ds)
-  return min === max ? formatNumber(min) : `${formatNumber(min)} – ${formatNumber(max)}`
-}
-
-/** Mã hiển thị: ưu tiên ma_san_pham; sản phẩm cũ chưa gán mã thì
- *  hiện tạm SP + id để cột này không bao giờ trống. */
-const maHienThi = (sp, id) => sp?.maSanPham || 'SP' + String(id).padStart(4, '0')
-
-const groups = computed(() => {
-  const map = new Map()
-  bienTheChuan.value.forEach((v) => {
-    const key = String(v.sanPhamId ?? 'khac')
-    if (!map.has(key)) {
-      const sp = danhSachSanPham.value.find((p) => String(idOf(p, 'sanPhamId')) === key) || {}
-      map.set(key, {
-        sanPhamId: key,
-        maSanPham: maHienThi(sp, key),
-        coMaThat: !!sp.maSanPham,
-        tenSanPham: sp.tenSanPham || 'Sản phẩm chưa đặt tên',
-        moTa: sp.moTa || '',
-        hinhAnh: sp.hinhAnhChinh || ANH_MAC_DINH,
-        thuongHieuId: sp.thuongHieuId ?? sp.thuongHieu?.thuongHieuId ?? null,
-        danhMucId: sp.danhMucId ?? sp.danhMuc?.danhMucId ?? null,
-        nhaCungCapId: sp.nhaCungCapId ?? sp.nhaCungCap?.nhaCungCapId ?? null,
-        loaiSanPham: sp.loaiSanPham || 'LAPTOP',
-        trangThai: sp.trangThai || 'active',
-        ngayTao: sp.ngayTao,
-        ngayCapNhat: sp.ngayCapNhat,
-        tenThuongHieu: sp.tenThuongHieu || tra(mapThuongHieu.value, sp.thuongHieuId),
-        tenNhaCungCap: sp.tenNhaCungCap || tra(mapNhaCungCap.value, sp.nhaCungCapId),
-        tenDanhMuc: sp.tenDanhMuc || tra(mapDanhMuc.value, sp.danhMucId),
-        variants: []
-      })
-    }
-    const g = map.get(key)
-    g.variants.push({ ...v, tenPhienBan: [g.tenSanPham, v.mauSac, v.tenCpu, v.tenRam].filter(Boolean).join(' · ') })
-  })
-
-  return [...map.values()].map((g) => {
-    const dau = g.variants[0] || {}
-    const tags = dau.phanLoaiTags
-    const soThang = [...new Set(g.variants.map((v) => v.baoHanhThang).filter((x) => x != null))]
-    return {
-      ...g,
-      phanLoai: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-      khoangGia: khoangGia(g.variants.map((v) => v.giaBan)),
-      khoangGiaVon: khoangGia(g.variants.map((v) => v.giaVon)),
-      tonKho: g.variants.reduce((s, v) => s + v.tonKho, 0),
-      khachDat: g.variants.reduce((s, v) => s + v.khachDat, 0),
-      baoHanh: soThang.length ? soThang.join(' / ') + ' tháng' : 'Chưa có',
-      thongSo: {
-        kichThuocManHinh: dau.kichThuocManHinh,
-        heDieuHanh: dau.heDieuHanh,
-        pin: dau.pin,
-        trongLuongKg: dau.trongLuongKg
-      }
-    }
-  })
-})
-
-/* ════════════ TÌM KIẾM + LỌC ════════════ */
-const soBoLocDangDung = computed(() => Object.values(filters).filter((v) => v !== '' && v !== null).length)
-const coBoLoc = computed(() => !!searchKeyword.value || soBoLocDangDung.value > 0)
-
-const khopTuKhoa = (group, v) => {
-  const kw = khongDau(searchKeyword.value.trim())
-  if (!kw) return true
-  return [group.maSanPham, group.tenSanPham, v.maSku, v.barcode, v.mauSac, v.tenCpu].some((f) => khongDau(f).includes(kw))
-}
-
-const khopBoLoc = (group, v) => {
-  if (filters.trangThai && group.trangThai !== filters.trangThai) return false
-  if (filters.thuongHieuId && String(group.thuongHieuId) !== String(filters.thuongHieuId)) return false
-  if (filters.nhaCungCapId && String(group.nhaCungCapId) !== String(filters.nhaCungCapId)) return false
-  if (filters.phanLoai && !v.phanLoaiTags.split(',').includes(filters.phanLoai)) return false
-  if (filters.cpuId && String(v.cpuId) !== String(filters.cpuId)) return false
-  if (filters.ramId && String(v.ramId) !== String(filters.ramId)) return false
-  if (filters.mauSac && v.mauSac !== filters.mauSac) return false
-  if (filters.giaTu !== '' && v.giaBan < Number(filters.giaTu)) return false
-  if (filters.giaDen !== '' && v.giaBan > Number(filters.giaDen)) return false
-  return true
-}
-
-const groupsDaLoc = computed(() =>
-  groups.value
-    .map((g) => ({ ...g, variants: g.variants.filter((v) => khopTuKhoa(g, v) && khopBoLoc(g, v)) }))
-    .filter((g) => g.variants.length)
-)
-
-// Sắp xếp danh sách sau khi lọc theo tiêu chí đã chọn
-const groupsDaSapXep = computed(() => {
-  const list = [...groupsDaLoc.value]
-  switch (sortKey.value) {
-    case 'stt_asc':
-      return list.sort((a, b) => Number(a.sanPhamId) - Number(b.sanPhamId))
-    case 'name_asc':
-      return list.sort((a, b) => (a.tenSanPham ?? '').localeCompare(b.tenSanPham ?? '', 'vi'))
-    case 'name_desc':
-      return list.sort((a, b) => (b.tenSanPham ?? '').localeCompare(a.tenSanPham ?? '', 'vi'))
-    case 'stt_desc':
-    default:
-      return list.sort((a, b) => Number(b.sanPhamId) - Number(a.sanPhamId))
-  }
-})
-const bienTheDaLoc = computed(() => groupsDaLoc.value.flatMap((g) => g.variants.map((v) => ({ g, v }))))
-const danhSachMauSac = computed(() => [...new Set(bienTheChuan.value.map((v) => v.mauSac).filter(Boolean))].sort())
-
-/* ════════════ PHÂN TRANG ════════════ */
-const totalPages = computed(() => Math.ceil(groupsDaSapXep.value.length / pageSize.value))
-const pagedGroups = computed(() => groupsDaSapXep.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
-watch([searchKeyword, filters, pageSize, sortKey], () => { page.value = 1 }, { deep: true })
-
-const resetFilters = () => {
-  Object.keys(filters).forEach((k) => (filters[k] = ''))
-  searchKeyword.value = ''
-  sortKey.value = 'stt_desc'
-}
-
-/* ════════════ MODAL XUẤT FILE ════════════ */
-const showExportModal = ref(false)
-const exportSearch = ref('')
-
-const openExportModal = () => {
-  selectedIds.value = bienTheDaLoc.value.map(({ v }) => v.bienTheId)
-  exportSearch.value = ''
-  showExportModal.value = true
-}
-
-const exportGroups = computed(() => {
-  const q = khongDau(exportSearch.value.trim())
-  if (!q) return groupsDaLoc.value
-  return groupsDaLoc.value.filter((g) =>
-    khongDau(g.tenSanPham).includes(q) || g.variants.some((v) => khongDau(v.maSku).includes(q))
-  )
-})
-
-const isGroupChecked = (g) => g.variants.length > 0 && g.variants.every((v) => selectedIds.value.includes(v.bienTheId))
-const toggleGroupCheck = (g) => {
-  const ids = g.variants.map((v) => v.bienTheId)
-  selectedIds.value = isGroupChecked(g)
-    ? selectedIds.value.filter((id) => !ids.includes(id))
-    : [...new Set([...selectedIds.value, ...ids])]
-}
-const toggleVariantCheck = (id) => {
-  const i = selectedIds.value.indexOf(id)
-  if (i === -1) selectedIds.value.push(id)
-  else selectedIds.value.splice(i, 1)
-}
-const setIndeterminate = (el, g) => {
-  if (!el) return
-  const checkedCount = g.variants.filter((v) => selectedIds.value.includes(v.bienTheId)).length
-  el.indeterminate = checkedCount > 0 && checkedCount < g.variants.length
-}
-const allChecked = computed(() => bienTheDaLoc.value.length > 0 && bienTheDaLoc.value.every(({ v }) => selectedIds.value.includes(v.bienTheId)))
-const toggleAll = () => { selectedIds.value = allChecked.value ? [] : bienTheDaLoc.value.map(({ v }) => v.bienTheId) }
-
-const exportCsv = () => {
-  const rows = bienTheDaLoc.value.filter(({ v }) => selectedIds.value.includes(v.bienTheId))
-  showExportModal.value = false
-
-  const cols = ['Mã sản phẩm', 'Tên sản phẩm', 'Mã SKU', 'Mã vạch', 'Màu sắc', 'CPU', 'RAM', 'Ổ cứng', 'GPU',
-    'Màn hình', 'Giá vốn', 'Giá bán', 'Tồn kho', 'Bảo hành (tháng)', 'Trạng thái', 'Thương hiệu', 'Nhà cung cấp']
-  const esc = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`
-  const lines = [cols.map(esc).join(',')]
-
-  rows.forEach(({ g, v }) => {
-    lines.push([g.maSanPham, g.tenSanPham, v.maSku, v.barcode, v.mauSac, v.tenCpu, v.tenRam, v.tenOCung, v.tenGpu,
-      v.kichThuocManHinh, v.giaVon, v.giaBan, v.tonKho, v.baoHanhThang,
-      nhanTrangThai(v.trangThai), g.tenThuongHieu, g.tenNhaCungCap].map(esc).join(','))
-  })
-
-  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `hang-hoa-${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
-  hienToast(`Đã xuất ${rows.length} dòng ra file CSV`)
-}
-
-/* ════════════════════════════════════════════════════════════
- *              NHẬT KÝ THAY ĐỔI (tab "Lịch sử thay đổi")
- * CSDL chưa có bảng lịch sử cho hàng hóa, nên nhật ký lưu ở localStorage của
- * máy đang dùng: mỗi lần LƯU THÀNH CÔNG mới ghi một dòng. Khi backend có bảng
- * riêng, chỉ cần thay 2 hàm docNhatKy/ghiNhatKy bằng lời gọi API là xong.
- * ══════════════════════════════════════════════════════════ */
-const KHOA_NHAT_KY = 'saoclub_nhatky_hang_hoa'
-const docNhatKyCu = () => {
-  try { return JSON.parse(localStorage.getItem(KHOA_NHAT_KY) || '{}') } catch { return {} }
-}
-const nhatKy = ref(docNhatKyCu())
-const nhatKyLoading = ref(false)
-
-// Transform backend response → format template
-const transformLichSu = (backendList) =>
-  (backendList || []).map((m) => ({
-    thoiGian: m.thoiGian,
-    nguoiDung: m.tenNhanVien || 'không rõ',
-    hanhDong: m.doiTuong || 'Thay đổi',
-    doiTuong: m.tenTruong ? `${m.tenTruong} · SKU ${m.maSku || '?'}` : m.maSku || null,
-    loai: 'sua',
-    thayDoi: (m.tenTruong && m.giaTriCu !== m.giaTriMoi)
-      ? [{ truong: m.tenTruong, cu: m.giaTriCu, moi: m.giaTriMoi }]
-      : [],
-  }))
-
-// Gọi API khi user mở tab lichsu
-const taiLichSu = async (sanPhamId) => {
-  if (!sanPhamId) return
-  nhatKyLoading.value = true
-  try {
-    const apiData = await getLichSu(sanPhamId)
-    const apiList = transformLichSu(apiData)
-    // Merge: bản ghi cũ từ localStorage (key là string sanPhamId) + bản ghi mới từ API
-    const kho = { ...nhatKy.value }
-    const local = kho[String(sanPhamId)] || []
-    // API trả theo thứ tự mới → cũ, giống format local — trộn và de-dupe theo thoiGian
-    const seenTimes = new Set(local.map((l) => l.thoiGian))
-    const moiTuApi = apiList.filter((a) => !seenTimes.has(a.thoiGian))
-    kho[String(sanPhamId)] = [...local, ...moiTuApi].sort(
-      (a, b) => new Date(b.thoiGian) - new Date(a.thoiGian),
-    )
-    nhatKy.value = kho
-    try { localStorage.setItem(KHOA_NHAT_KY, JSON.stringify(kho)) } catch { /* bỏ qua */ }
-  } catch {
-    // không ảnh hưởng UX nếu lỗi mạng
-  } finally {
-    nhatKyLoading.value = false
-  }
-}
-
-const nguoiDangDangNhap = () => {
-  try {
-    const j = JSON.parse(sessionStorage.getItem('saoclub_session') || '{}')
-    return j?.hoTen || j?.username || j?.user?.username || 'không rõ'
-  } catch { return 'không rõ' }
-}
-
-const ghiNhatKy = (sanPhamId, muc) => {
-  if (!sanPhamId) return
-  const key = String(sanPhamId)
-  const kho = { ...nhatKy.value }
-  kho[key] = [{ thoiGian: new Date().toISOString(), nguoiDung: nguoiDangDangNhap(), ...muc }, ...(kho[key] || [])].slice(0, 50)
-  nhatKy.value = kho
-  try { localStorage.setItem(KHOA_NHAT_KY, JSON.stringify(kho)) } catch (e) { console.warn('[Hàng hóa] không ghi được nhật ký:', e) }
-}
-
-/* ════════════════════════════════════════════════════════════
- *                    MODAL CHI TIẾT SẢN PHẨM
- * ══════════════════════════════════════════════════════════ */
-const showDetail = ref(false)
-const tabCT = ref('info')
-const chiTietId = ref(null)
-const bienTheChonId = ref(null)
-const anhDangXem = ref('')
-const dangSaoChepBienThe = ref(false)
-
-watch(tabCT, (tab) => { if (tab === 'lichsu' && chiTietId.value) taiLichSu(chiTietId.value) })
-
-/* Lấy thẳng từ groups nên sau mỗi lần lưu + fetchData, cửa sổ chi tiết tự cập nhật */
-const chiTiet = computed(() => groups.value.find((g) => String(g.sanPhamId) === String(chiTietId.value)) || null)
-const anhSanPham = computed(() => {
-  if (!chiTiet.value) return []
-  const ds = [chiTiet.value.hinhAnh, ...chiTiet.value.variants.map((v) => v.hinhAnh)].filter(Boolean)
-  return [...new Set(ds)]
-})
-const bienTheDangChon = computed(() =>
-  chiTiet.value?.variants.find((v) => String(v.bienTheId) === String(bienTheChonId.value)) || null
-)
-const lichSuHienTai = computed(() => (chiTiet.value ? nhatKy.value[String(chiTiet.value.sanPhamId)] || [] : []))
-
-const moChiTiet = (group) => {
-  chiTietId.value = group.sanPhamId
-  bienTheChonId.value = group.variants[0]?.bienTheId ?? null
-  anhDangXem.value = group.hinhAnh || ANH_MAC_DINH
-  tabCT.value = 'info'
-  showDetail.value = true
-}
-const dongChiTiet = () => { showDetail.value = false }
-
-const xoaLichSu = () => {
-  if (!chiTiet.value) return
-  const kho = { ...nhatKy.value }
-  delete kho[String(chiTiet.value.sanPhamId)]
-  nhatKy.value = kho
-  try { localStorage.setItem(KHOA_NHAT_KY, JSON.stringify(kho)) } catch { /* bỏ qua */ }
-  hienToast('Đã xóa nhật ký của sản phẩm này')
-}
-
-/* ─── In tem mã: vẽ mã vạch EAN-13 bằng SVG rồi mở cửa sổ in ─── */
-const EAN_L = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011']
-const EAN_G = ['0100111', '0110011', '0011011', '0100001', '0011101', '0111001', '0000101', '0010001', '0001001', '0010111']
-const EAN_R = ['1110010', '1100110', '1101100', '1000010', '1011100', '1001110', '1010000', '1000100', '1001000', '1110100']
-const EAN_PARITY = ['LLLLLL', 'LLGLGG', 'LLGGLG', 'LLGGGL', 'LGLLGG', 'LGGLLG', 'LGGGLL', 'LGLGLG', 'LGLGGL', 'LGGLGL']
-
-const veMaVach = (ma) => {
-  const s = String(ma || '')
-  if (!/^\d{13}$/.test(s)) return ''
-  const parity = EAN_PARITY[Number(s[0])]
-  let bits = '101'
-  for (let i = 1; i <= 6; i++) bits += (parity[i - 1] === 'L' ? EAN_L : EAN_G)[Number(s[i])]
-  bits += '01010'
-  for (let i = 7; i <= 12; i++) bits += EAN_R[Number(s[i])]
-  bits += '101'
-
-  const w = 2
-  const h = 56
-  let rects = ''
-  for (let i = 0; i < bits.length; i++) if (bits[i] === '1') rects += `<rect x="${i * w}" y="0" width="${w}" height="${h}"/>`
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${bits.length * w}" height="${h}" viewBox="0 0 ${bits.length * w} ${h}" fill="#000">${rects}</svg>`
-}
-
-const thoat = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-const inTemMa = (v) => {
-  if (!v || !chiTiet.value) return
-  const g = chiTiet.value
-  const svg = veMaVach(v.barcode)
-  const cua = window.open('', '_blank', 'width=460,height=600')
-  if (!cua) { hienToast('Trình duyệt đang chặn cửa sổ in — cho phép pop-up rồi thử lại'); return }
-
-  cua.document.write(`<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8" />
-    <title>Tem ${thoat(v.maSku)}</title>
-    <style>
-      *{box-sizing:border-box} body{margin:0;padding:16px;font-family:"Segoe UI",Roboto,Arial,sans-serif;color:#111}
-      .tem{width:58mm;border:1px dashed #bbb;border-radius:6px;padding:8px 10px;text-align:center}
-      .ten{font-size:11px;font-weight:700;line-height:1.3;margin-bottom:2px;word-break:break-word}
-      .cfg{font-size:9px;color:#555;line-height:1.3;margin-bottom:4px;word-break:break-word}
-      .sku{font-size:9px;font-family:ui-monospace,Menlo,monospace;margin-bottom:4px}
-      .so{font-size:11px;font-family:ui-monospace,Menlo,monospace;letter-spacing:2px;margin-top:2px}
-      .gia{font-size:13px;font-weight:700;margin-top:4px}
-      @media print{ body{padding:0} .tem{border:none} }
-    </style></head><body>
-    <div class="tem">
-      <div class="ten">${thoat(g.tenSanPham)}</div>
-      <div class="cfg">${thoat(moTaBienThe(v) || 'Phiên bản tiêu chuẩn')}</div>
-      <div class="sku">SKU: ${thoat(v.maSku)}</div>
-      ${svg || '<div class="cfg">Phiên bản này chưa có mã vạch EAN-13</div>'}
-      <div class="so">${thoat(v.barcode || '')}</div>
-      <div class="gia">${formatNumber(v.giaBan)} đ</div>
-    </div></body></html>`)
-  cua.document.close()
-  cua.focus()
-  setTimeout(() => cua.print(), 350)
-}
-
-/* ════════════════════════════════════════════════════════════
- *                    MODAL THÊM / SỬA
- * ══════════════════════════════════════════════════════════ */
-const showModal = ref(false)
-const modalMode = ref('create') // 'create' | 'edit' | 'variant'
-const tab = ref('info')
-const isSaving = ref(false)
-const saveError = ref('')
-const errors = reactive({})
-const moTaEl = ref(null)
-const dangTaiAnh = ref(false)
-const ghiChuAnh = ref('Ảnh tải lên sẽ được lưu về server; nếu backend chưa có API upload, hệ thống dùng đường dẫn /images/<tên file>. Ảnh đầu tiên trong danh sách là ảnh đại diện.')
-const moLaiChiTiet = ref(null) // sanPhamId cần mở lại cửa sổ chi tiết sau khi lưu
-
-const tabs = [
-  { key: 'info', label: 'Thông tin' },
-  { key: 'bienthe', label: 'Phiên bản' },
-  { key: 'mota', label: 'Mô tả' }
-]
-
-const formRong = () => ({
-  sanPhamId: null,
-  bienTheId: null,
-  // san_pham (không còn barcode ở cấp sản phẩm)
-  maSanPham: '', tenSanPham: '',
-  thuongHieuId: '', danhMucId: '', nhaCungCapId: '',
-  loaiSanPham: 'LAPTOP', trangThaiSanPham: 'active',
-  moTa: '', hinhAnhList: [], phanLoaiIds: [], phanLoaiTags: '', phanLoaiTen: '',
-  // thông số chung của phiên bản
-  giaNhap: 0, giaBan: 0, baoHanhThang: 24,
-  kichThuocManHinh: '', heDieuHanh: 'Windows 11 Home', pin: '', trongLuongKg: '',
-  skuPrefix: '',
-  // thuộc tính trộn ra phiên bản
-  mauSacList: [], ramIds: [], cpuIds: [], oCungIds: [], gpuIds: [],
-  // chỉ dùng khi sửa 1 phiên bản
-  maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '', hinhAnhBienThe: ''
-})
-
-const form = reactive(formRong())
-const chon = reactive({ mauSac: '', ramIds: '', cpuIds: '', oCungIds: '', gpuIds: '' })
-const bienTheRows = ref([])
-
-const tieuDeModal = computed(() =>
-  ({ create: 'Tạo hàng hóa', edit: 'Chỉnh sửa hàng hóa', variant: 'Thêm phiên bản cho sản phẩm' }[modalMode.value])
-)
-const soPhienBan = computed(() => (modalMode.value === 'edit' ? 0 : bienTheRows.value.length))
-
-/* ─── Đồng hồ hiển thị thời điểm sẽ ghi vào ngày tạo ─── */
-const dongHo = ref('')
-let dongHoTimer = null
-const capNhatDongHo = () => { dongHo.value = new Date().toLocaleString('vi-VN') }
-watch(showModal, (mo) => {
-  clearInterval(dongHoTimer)
-  if (mo) {
-    capNhatDongHo()
-    dongHoTimer = setInterval(capNhatDongHo, 1000)
-  }
-})
-onBeforeUnmount(() => clearInterval(dongHoTimer))
-
-/* ─── Gợi ý cho các select dạng văn bản: giá trị đã có + danh sách chuẩn ─── */
-const gopGoiY = (key, goiY) =>
-  [...new Set([...goiY, ...bienTheChuan.value.map((v) => v[key]).filter(Boolean)])].sort()
-const optManHinh = computed(() => gopGoiY('kichThuocManHinh', MAN_HINH_GOI_Y))
-const optPin = computed(() => gopGoiY('pin', PIN_GOI_Y))
-const optHeDieuHanh = computed(() => gopGoiY('heDieuHanh', HDH_GOI_Y))
-const optMauSac = computed(() => gopGoiY('mauSac', MAU_SAC_GOI_Y))
-// Bảo hành/trọng lượng là số — gopGoiY() sắp theo kiểu chuỗi sẽ sai thứ tự (vd 12 đứng
-// trước 6), nên gộp + sắp số rieng cho 2 truong nay.
-const gopGoiYSo = (key, goiY) =>
-  [...new Set([...goiY, ...bienTheChuan.value.map((v) => Number(v[key])).filter((x) => Number.isFinite(x) && x > 0)])]
-    .sort((a, b) => a - b)
-const optBaoHanh = computed(() => gopGoiYSo('baoHanhThang', BAO_HANH_GOI_Y))
-const optTrongLuong = computed(() => gopGoiYSo('trongLuongKg', TRONG_LUONG_GOI_Y))
-
-/* ─── Bản {value,label} cho SearchSelect (combobox tự vẽ, không dùng datalist trình
-   duyệt — popup datalist không style được, mỗi máy/trình duyệt hiện 1 kiểu xấu khác
-   nhau). Giữ nguyên các opt* gốc ở trên vì nơi khác (chuẩn hóa màu, ô gõ-Enter-thêm-thẻ
-   ở Bước 1) đang cần mảng giá trị thô, không phải mảng {value,label}. ─── */
-const asOptions = (arr) => arr.map((v) => ({ value: v, label: String(v) }))
-const optMauSacSelect = computed(() => asOptions(optMauSac.value))
-const optManHinhSelect = computed(() => asOptions(optManHinh.value))
-const optPinSelect = computed(() => asOptions(optPin.value))
-const optHeDieuHanhSelect = computed(() => asOptions(optHeDieuHanh.value))
-const optBaoHanhSelect = computed(() => optBaoHanh.value.map((v) => ({ value: v, label: `${v} tháng` })))
-const optTrongLuongSelect = computed(() => optTrongLuong.value.map((v) => ({ value: v, label: `${v} kg` })))
-
-const KHONG_CHON = { value: '', label: '-- Không chọn --' }
-const cpuOptionsSel = computed(() => [KHONG_CHON, ...danhSachCpu.value.map((c) => ({ value: idOf(c, 'cpuId'), label: c.tenCpu }))])
-const ramOptionsSel = computed(() => [KHONG_CHON, ...danhSachRam.value.map((r) => ({ value: idOf(r, 'ramId'), label: r.dungLuong || r.tenRam }))])
-const oCungOptionsSel = computed(() => [KHONG_CHON, ...danhSachOCung.value.map((o) => ({ value: idOf(o, 'oCungId'), label: tenOCung(o) }))])
-const gpuOptionsSel = computed(() => [KHONG_CHON, ...danhSachGpu.value.map((g) => ({ value: idOf(g, 'gpuId'), label: g.tenGpu }))])
-
-/* ─── Thuộc tính dùng để trộn — gõ rồi Enter là ra thẻ ─── */
-const thuocTinhTron = [
-  {
-    field: 'cpuIds', label: 'CPU',
-    options: () => danhSachCpu.value.map((o) => ({ id: idOf(o, 'cpuId'), ten: o.tenCpu })),
-    ten: (id) => tra(mapCpu.value, id)
-  },
-  {
-    field: 'ramIds', label: 'RAM',
-    options: () => danhSachRam.value.map((o) => ({ id: idOf(o, 'ramId'), ten: o.dungLuong || o.tenRam })),
-    ten: (id) => tra(mapRam.value, id)
-  },
-  {
-    field: 'oCungIds', label: 'Ổ cứng',
-    options: () => danhSachOCung.value.map((o) => ({ id: idOf(o, 'oCungId'), ten: tenOCung(o) })),
-    ten: (id) => tra(mapOCung.value, id)
-  },
-  {
-    field: 'gpuIds', label: 'GPU',
-    options: () => danhSachGpu.value.map((o) => ({ id: idOf(o, 'gpuId'), ten: o.tenGpu })),
-    ten: (id) => tra(mapGpu.value, id)
-  }
-]
-
-/** Thêm giá trị đang gõ vào danh sách thẻ.
- *  imLang = true khi gọi từ sự kiện change (người dùng bấm chọn trong gợi ý hoặc rời ô)
- *  — chỉ nhận giá trị khớp chính xác, không báo lỗi để khỏi làm phiền khi gõ dở. */
-const themThuocTinh = (field, imLang = false) => {
-  const attr = thuocTinhTron.find((a) => a.field === field)
-  if (!attr) return
-  const raw = String(chon[field] || '').trim()
-  if (!raw) return
-
-  const ds = attr.options().filter((o) => o.id != null && o.ten)
-  const chinhXac = ds.find((o) => khongDau(o.ten) === khongDau(raw))
-  const gan = chinhXac || (imLang ? null : ds.find((o) => khongDau(o.ten).includes(khongDau(raw))))
-
-  if (!gan) {
-    if (!imLang) hienToast(`Không có ${attr.label} nào tên “${raw}” — chọn trong danh sách gợi ý`)
-    return
-  }
-  if (!form[field].includes(gan.id)) form[field].push(gan.id)
-  chon[field] = ''
-}
-const xoaThuocTinh = (field, id) => { form[field] = form[field].filter((x) => x !== id) }
-
-const themMau = (imLang = false) => {
-  const raw = String(chon.mauSac || '').trim()
-  if (!raw) return
-  // Màu là chữ tự do (CSDL không có bảng màu) — gõ gì nhận nấy, chỉ chuẩn hóa nếu trùng gợi ý
-  const chuan = optMauSac.value.find((m) => khongDau(m) === khongDau(raw)) || raw
-  if (imLang && !optMauSac.value.some((m) => khongDau(m) === khongDau(raw))) return
-  if (!form.mauSacList.includes(chuan)) form.mauSacList.push(chuan)
-  chon.mauSac = ''
-}
-const xoaMau = (m) => { form.mauSacList = form.mauSacList.filter((x) => x !== m) }
-
-/* ─── Phân loại (chọn nhiều bằng chip bật/tắt) ─── */
-const tenPhanLoai = (id) => phanLoaiOptions.value.find((p) => String(p.phanLoaiId) === String(id))?.tenPhanLoai || id
-const maPhanLoai = (id) => phanLoaiOptions.value.find((p) => String(p.phanLoaiId) === String(id))?.maPhanLoai || ''
-const idPhanLoaiTuMa = (dsMa = []) =>
-  dsMa.map((ma) => phanLoaiOptions.value.find((p) => p.maPhanLoai === ma)?.phanLoaiId).filter((x) => x != null)
-const togglePhanLoai = (id) => {
-  form.phanLoaiIds = form.phanLoaiIds.includes(id)
-    ? form.phanLoaiIds.filter((x) => x !== id)
-    : [...form.phanLoaiIds, id]
-}
-
-/* Hai cột cache phan_loai_tags / phan_loai_ten trong CSDL */
-watch(() => form.phanLoaiIds.slice(), (ids) => {
-  form.phanLoaiTags = ids.map(maPhanLoai).filter(Boolean).join(',')
-  form.phanLoaiTen = ids.map(tenPhanLoai).filter(Boolean).join(', ')
-}, { deep: true })
-
-/* ─── Ảnh: chọn từ máy ─── */
-const layToken = () => {
-  const raw = sessionStorage.getItem('saoclub_session') || ''
-  try {
-    const j = JSON.parse(raw)
-    return j?.token || j?.accessToken || ''
-  } catch {
-    return raw
-  }
-}
-
-const uploadAnh = async (file) => {
-  const fd = new FormData()
-  fd.append('file', file)
-  const token = layToken()
-  const res = await fetch(UPLOAD_URL, {
-    method: 'POST',
-    body: fd,
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
-  if (!res.ok) throw new Error('upload thất bại')
-  const data = await res.json().catch(() => ({}))
-  const url = data?.url || data?.path || data?.duongDan || data?.data
-  if (!url) throw new Error('API upload không trả về đường dẫn')
-  return url
-}
-
-const chonAnhSanPham = async (e) => {
-  const files = Array.from(e.target.files || [])
-  if (!files.length) return
-  dangTaiAnh.value = true
-  for (const file of files) {
-    try {
-      form.hinhAnhList.push(await uploadAnh(file))
-    } catch {
-      const duongDan = THU_MUC_ANH + file.name
-      form.hinhAnhList.push(duongDan)
-      ghiChuAnh.value = `Chưa có API upload — đã đặt đường dẫn ${duongDan}. Hãy chép file ảnh vào thư mục public${THU_MUC_ANH} của FrontEnd.`
-    }
-  }
-  dangTaiAnh.value = false
-  e.target.value = ''
-}
-
-const themAnhTuUrl = async (e) => {
-  const url = e.target.value.trim()
-  if (!url) return
-  e.target.value = ''
-  try {
-    const token = layToken()
-    const res = await fetch('/api/upload/image-by-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ url }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data?.error || 'Tải ảnh thất bại')
-    form.hinhAnhList.push(data.url)
-  } catch (err) {
-    hienToast(err.message || 'Tải ảnh thất bại')
-  }
-}
-const xoaAnhTaiViTri = (i) => { form.hinhAnhList.splice(i, 1) }
-const datLamAnhChinh = (i) => {
-  const [anh] = form.hinhAnhList.splice(i, 1)
-  form.hinhAnhList.unshift(anh)
-}
-
-/* ─── Trình soạn mô tả ─── */
-const dinhDang = (cmd) => {
-  moTaEl.value?.focus()
-  document.execCommand(cmd, false, null)
-  form.moTa = moTaEl.value?.innerHTML || ''
-}
-const chenLink = () => {
-  const url = window.prompt('Nhập đường dẫn:')
-  if (!url) return
-  moTaEl.value?.focus()
-  document.execCommand('createLink', false, url)
-  form.moTa = moTaEl.value?.innerHTML || ''
-}
-watch([showModal, tab], async () => {
-  if (!showModal.value || tab.value !== 'mota') return
-  await nextTick()
-  if (moTaEl.value && moTaEl.value.innerHTML !== form.moTa) moTaEl.value.innerHTML = form.moTa || ''
-})
-
-/* ─── Sinh mã sản phẩm (ô này chỉ đọc, không cho gõ tay) ─── */
-const sinhMaSanPham = () => {
-  const soTuMa = danhSachSanPham.value
-    .map((p) => Number(String(p.maSanPham || '').replace(/\D/g, '')))
-    .filter((n) => !Number.isNaN(n) && n > 0)
-  // Cộng thêm sanPhamId vào phép tính max — sản phẩm CHƯA gán mã (maSanPham NULL) vẫn hiện
-  // tạm "SPxxxx" theo id trên UI (xem maHienThi()), dù không lưu vào cột maSanPham nên
-  // không đụng UNIQUE index thật. Bỏ qua các id này khi sinh mã mới sẽ có lúc trùng NHÌN
-  // GIỐNG hệt một mã tạm đang hiển thị của sản phẩm khác — trông như trùng mã dù CSDL
-  // không báo lỗi gì. Tính cả id vào max để mã thật luôn vượt qua mọi mã tạm hiện có.
-  const soTuId = danhSachSanPham.value
-    .map((p) => Number(idOf(p, 'sanPhamId')))
-    .filter((n) => !Number.isNaN(n) && n > 0)
-  const max = Math.max(0, ...soTuMa, ...soTuId)
-  return 'SP' + String(max + 1).padStart(4, '0')
-}
-
-/* ─── Ma trận phiên bản ─── */
-const moTaCauHinh = (row) =>
-  [row.mauSac, tra(mapCpu.value, row.cpuId), tra(mapRam.value, row.ramId), tra(mapOCung.value, row.oCungId), tra(mapGpu.value, row.gpuId)]
-    .filter(Boolean)
-    .join(' · ')
-
-const khoaDong = (c) => [c.mauSac, c.cpuId, c.ramId, c.oCungId, c.gpuId].join('|')
-
-const sinhSku = (c, index) => {
-  const prefix = (form.skuPrefix || form.maSanPham || vietTat(form.tenSanPham, 6) || 'SP').toUpperCase()
-  // Thiếu GPU trong chuỗi này là lý do 2 phiên bản khác GPU (vd cùng CPU/RAM/ổ cứng/màu,
-  // chỉ khác card đồ họa) sinh ra CÙNG một mã SKU — thêm GPU vào để phân biệt đúng.
-  const phan = [
-    vietTat(tra(mapCpu.value, c.cpuId).split(' ').pop(), 6),
-    vietTat(tra(mapRam.value, c.ramId), 5),
-    vietTat(tra(mapOCung.value, c.oCungId), 5),
-    vietTat(tra(mapGpu.value, c.gpuId), 5),
-    vietTat(c.mauSac, 3)
-  ].filter(Boolean)
-  return [prefix, ...phan].join('-') || `${prefix}-${index + 1}`
-}
-
-/** SKU phải là duy nhất toàn hệ thống — nếu trùng thì thêm hậu tố -2, -3…
- *  (hay gặp khi bấm "Sao chép" một phiên bản: cấu hình giống hệt nên SKU sinh ra y như cũ) */
-const skuKhongTrung = (goc, daDung) => {
-  let ma = goc
-  let i = 2
-  while (daDung.has(ma)) { ma = `${goc}-${i}`; i++ }
-  daDung.add(ma)
-  return ma
-}
-
-/** Trộn các thuộc tính đã chọn thành danh sách phiên bản.
- *  Giữ nguyên SKU/mã vạch mà người dùng đã sửa tay (khớp theo khóa cấu hình). */
-const dungLaiMaTran = () => {
-  const chieu = [
-    form.mauSacList.length ? form.mauSacList.map((m) => ({ mauSac: m })) : [{ mauSac: '' }],
-    form.cpuIds.length ? form.cpuIds.map((id) => ({ cpuId: id })) : [{ cpuId: '' }],
-    form.ramIds.length ? form.ramIds.map((id) => ({ ramId: id })) : [{ ramId: '' }],
-    form.oCungIds.length ? form.oCungIds.map((id) => ({ oCungId: id })) : [{ oCungId: '' }],
-    form.gpuIds.length ? form.gpuIds.map((id) => ({ gpuId: id })) : [{ gpuId: '' }]
-  ]
-
-  let tohop = chieu.reduce((acc, dim) => acc.flatMap((a) => dim.map((d) => ({ ...a, ...d }))), [{}])
-  let vuot = false
-  if (tohop.length > TOI_DA_BIEN_THE) {
-    tohop = tohop.slice(0, TOI_DA_BIEN_THE)
-    vuot = true
-  }
-
-  const cu = new Map(bienTheRows.value.map((r) => [r.key, r]))
-  const skuDaDung = new Set(bienTheChuan.value.map((v) => v.maSku).filter((s) => s && s !== '—'))
-  // Nạp trước SKU của những dòng được GIỮ LẠI (khớp key với lần dựng ma trận trước, có thể
-  // đã bị người dùng sửa tay) vào skuDaDung trước khi sinh SKU cho dòng mới — nếu không, một
-  // dòng mới (vd thêm GPU thứ 2) có thể sinh trùng y hệt SKU của dòng giữ lại mà không bị
-  // phát hiện, vì skuDaDung trước đây chỉ biết SKU đã có thật trong CSDL, không biết các
-  // dòng đang giữ lại ngay trong chính lần dựng này.
-  tohop.forEach((c) => {
-    const sku = cu.get(khoaDong(c))?.maSku
-    if (sku) skuDaDung.add(sku)
-  })
-  const barcodeDangDung = new Set(barcodeDaDung.value)
-
-  bienTheRows.value = tohop.map((c, i) => {
-    const key = khoaDong(c)
-    const truoc = cu.get(key)
-    const sku = truoc?.maSku || skuKhongTrung(sinhSku(c, i), skuDaDung)
-    if (truoc?.barcode) barcodeDangDung.add(truoc.barcode)
-    return {
-      key,
-      mauSac: c.mauSac,
-      cpuId: c.cpuId,
-      ramId: c.ramId,
-      oCungId: c.oCungId,
-      gpuId: c.gpuId,
-      maSku: sku,
-      barcode: truoc?.barcode || sinhBarcode(barcodeDangDung)
-    }
-  })
-
-  if (vuot) hienToast(`Chỉ giữ ${TOI_DA_BIEN_THE} phiên bản đầu — bớt bớt thuộc tính lại nhé`)
-}
-
-const xoaDong = (key) => { bienTheRows.value = bienTheRows.value.filter((r) => r.key !== key) }
-
-/* Danh sách phiên bản tự dựng lại mỗi khi thuộc tính đổi — không cần bấm nút nào */
-watch(
-  () => [form.mauSacList.slice(), form.cpuIds.slice(), form.ramIds.slice(), form.oCungIds.slice(), form.gpuIds.slice()],
-  () => { if (showModal.value && modalMode.value !== 'edit') dungLaiMaTran() },
-  { deep: true }
-)
-
-/* ─── Mở / đóng modal ─── */
-const resetForm = (patch = {}) => {
-  Object.assign(form, formRong(), patch)
-  Object.keys(errors).forEach((k) => delete errors[k])
-  Object.keys(chon).forEach((k) => (chon[k] = ''))
-  bienTheRows.value = []
-  saveError.value = ''
-  tab.value = 'info'
-  if (moTaEl.value) moTaEl.value.innerHTML = form.moTa || ''
-}
-
-/** Phần thông tin sản phẩm chính dùng chung cho sửa / sao chép / thêm phiên bản */
-const duLieuSanPham = (g) => ({
-  tenSanPham: g.tenSanPham,
-  thuongHieuId: g.thuongHieuId ?? '',
-  danhMucId: g.danhMucId ?? '',
-  nhaCungCapId: g.nhaCungCapId ?? '',
-  loaiSanPham: g.loaiSanPham || 'LAPTOP',
-  trangThaiSanPham: g.trangThai === 'inactive' ? 'inactive' : 'active',
-  moTa: g.moTa || '',
-  hinhAnhList: g.hinhAnh && g.hinhAnh !== ANH_MAC_DINH ? [g.hinhAnh] : [],
-  phanLoaiIds: idPhanLoaiTuMa(g.phanLoai)
-})
-
-/** Thông số chung lấy theo một phiên bản cụ thể */
-const duLieuThongSo = (v = {}) => ({
-  baoHanhThang: v.baoHanhThang ?? 24,
-  kichThuocManHinh: v.kichThuocManHinh || '',
-  heDieuHanh: v.heDieuHanh || 'Windows 11 Home',
-  pin: v.pin || '',
-  trongLuongKg: v.trongLuongKg ?? ''
-})
-
-const openCreate = () => {
-  moLaiChiTiet.value = null
-  resetForm({ maSanPham: sinhMaSanPham() })
-  modalMode.value = 'create'
-  showDetail.value = false
-  showModal.value = true
-  dungLaiMaTran()
-}
-
-/* ─── Ảnh chụp form để so sánh trước/sau khi sửa (dựng ra tab Lịch sử thay đổi) ─── */
-let banGoc = null
-const anhChupForm = () => ({
-  'Tên sản phẩm': form.tenSanPham,
-  'Thương hiệu': tra(mapThuongHieu.value, form.thuongHieuId),
-  'Danh mục': tra(mapDanhMuc.value, form.danhMucId),
-  'Nhà cung cấp': tra(mapNhaCungCap.value, form.nhaCungCapId),
-  'Loại sản phẩm': nhanLoaiSanPham(form.loaiSanPham),
-  'Trạng thái': nhanTrangThai(form.trangThaiSanPham),
-  'Phân loại': form.phanLoaiTen,
-  'Ảnh chính': form.hinhAnhList[0] || '',
-  'Mô tả': chuThuong(form.moTa).slice(0, 60),
-  'Mã SKU': form.maSku,
-  'Mã vạch': form.barcode,
-  'Màu sắc': form.mauSac,
-  CPU: tra(mapCpu.value, form.cpuId),
-  RAM: tra(mapRam.value, form.ramId),
-  'Ổ cứng': tra(mapOCung.value, form.oCungId),
-  GPU: tra(mapGpu.value, form.gpuId),
-  'Màn hình': form.kichThuocManHinh,
-  'Hệ điều hành': form.heDieuHanh,
-  Pin: form.pin,
-  'Trọng lượng (kg)': form.trongLuongKg,
-  'Bảo hành (tháng)': form.baoHanhThang,
-  'Giá nhập': formatNumber(form.giaNhap),
-  'Giá bán': formatNumber(form.giaBan)
-})
-const soSanhAnhChup = (cu, moi) =>
-  Object.keys(moi)
-    .filter((k) => String(cu?.[k] ?? '') !== String(moi[k] ?? ''))
-    .map((k) => ({ truong: k, cu: cu?.[k], moi: moi[k] }))
-
-const openEdit = (g, v) => {
-  if (!g) return
-  moLaiChiTiet.value = g.sanPhamId
-
-  // Populate bienTheRows với các biến thể của sản phẩm
-  bienTheRows.value = g.variants.map((bv) => ({
-    key: String(bv.bienTheId),
-    bienTheId: bv.bienTheId,
-    maSku: bv.maSku || '',
-    barcode: bv.barcode || '',
-    mauSac: bv.mauSac || '',
-    cpuId: bv.cpuId ?? '',
-    ramId: bv.ramId ?? '',
-    oCungId: bv.oCungId ?? '',
-    gpuId: bv.gpuId ?? '',
-    giaNhap: bv.giaVon,
-    giaBan: bv.giaBan,
-    hinhAnhBienThe: bv.hinhAnh || ''
-  }))
-
-  // Nếu có biến thể được chọn (v), populate form với biến thể đó
-  if (v) {
-    Object.assign(form, {
-      sanPhamId: g.sanPhamId,
-      bienTheId: v.bienTheId,
-      maSanPham: g.maSanPham,
-      ...duLieuSanPham(g),
-      ...duLieuThongSo(v),
-      maSku: v.maSku === '—' ? '' : v.maSku,
-      barcode: v.barcode || '',
-      mauSac: v.mauSac || '',
-      cpuId: v.cpuId ?? '',
-      ramId: v.ramId ?? '',
-      oCungId: v.oCungId ?? '',
-      gpuId: v.gpuId ?? '',
-      hinhAnhBienThe: v.hinhAnh || '',
-      giaNhap: v.giaVon,
-      giaBan: v.giaBan
-    })
-    banGoc = anhChupForm()
-  } else {
-    // Reset form nhưng giữ sanPhamId để biết đang sửa sản phẩm nào
-    resetForm({ sanPhamId: g.sanPhamId, maSanPham: g.maSanPham, ...duLieuSanPham(g) })
-  }
-
-  modalMode.value = 'edit'
-  tab.value = 'bienthe' // Mở tab phiên bản để chọn biến thể sửa
-  showDetail.value = false
-  showModal.value = true
-}
-
-/** Khi chọn một biến thể trong danh sách để sửa */
-const chonBienTheDeSua = (row) => {
-  // Lưu ảnh chụp trước khi sửa (cho lịch sử)
-  banGoc = anhChupForm()
-
-  Object.assign(form, {
-    bienTheId: row.bienTheId,
-    maSku: row.maSku || '',
-    barcode: row.barcode || '',
-    mauSac: row.mauSac || '',
-    cpuId: row.cpuId ?? '',
-    ramId: row.ramId ?? '',
-    oCungId: row.oCungId ?? '',
-    gpuId: row.gpuId ?? '',
-    giaNhap: row.giaNhap,
-    giaBan: row.giaBan,
-    hinhAnhBienThe: row.hinhAnhBienThe || ''
-  })
-}
-
-const suaSanPham = (g) => openEdit(g, g.variants[0])
-const suaBienThe = (v) => openEdit(chiTiet.value, v)
-
-const themPhienBan = (g) => {
-  if (!g) return
-  moLaiChiTiet.value = g.sanPhamId
-  resetForm({
-    sanPhamId: g.sanPhamId,
-    maSanPham: g.maSanPham,
-    ...duLieuSanPham(g),
-    ...duLieuThongSo(g.variants[0])
-  })
-  modalMode.value = 'variant'
-  tab.value = 'bienthe'
-  showDetail.value = false
-  showModal.value = true
-  dungLaiMaTran()
-}
-
-/** Sao chép NGAY 1 phiên bản — nhân bản toàn bộ dữ liệu (giá, cấu hình, thông số...),
- *  chỉ tự sinh lại SKU + mã vạch (2 trường bắt buộc duy nhất toàn hệ thống, giữ nguyên
- *  sẽ trùng bản gốc). Tạo thẳng qua API, không mở form ma trận — khác "Thêm phiên bản"
- *  (phải chọn cấu hình MỚI nên vẫn cần qua form Bước 2). Xong là thấy ngay trong danh
- *  sách Biến thể, không cần bấm Lưu ở đâu nữa. */
-const saoChepBienThe = async (v) => {
-  const g = chiTiet.value
-  if (!g || !v || dangSaoChepBienThe.value) return
-  dangSaoChepBienThe.value = true
-  try {
-    const skuDaDung = new Set(bienTheChuan.value.map((x) => x.maSku).filter((s) => s && s !== '—'))
-    const maSku = skuKhongTrung(v.maSku, skuDaDung)
-    const barcode = v.barcode ? sinhBarcode(new Set(barcodeDaDung.value)) : null
-    const body = {
-      sanPhamId: g.sanPhamId,
-      maSku,
-      barcode,
-      giaNhap: v.giaVon,
-      giaBan: v.giaBan,
-      baoHanhThang: v.baoHanhThang,
-      hinhAnhBienThe: v.hinhAnh || null,
-      trangThai: v.trangThai,
-      mauSac: v.mauSac || null,
-      cpuId: v.cpuId,
-      ramId: v.ramId,
-      oCungId: v.oCungId,
-      gpuId: v.gpuId,
-      kichThuocManHinh: v.kichThuocManHinh || null,
-      heDieuHanh: v.heDieuHanh || null,
-      pin: v.pin || null,
-      trongLuongKg: v.trongLuongKg
-    }
-    const res = await apiTaoBienThe(body)
-    if (!res.ok) {
-      hienToast(`Sao chép thất bại: ${await res.text().catch(() => res.statusText)}`)
-      return
-    }
-    await fetchData()
-    lamMoiKhoDuLieuChung().catch(() => {})
-    lamMoiTonKhoDuLieuChung().catch(() => {})
-    // chiTiet tự cập nhật theo groups (computed) — chỉ cần trỏ lại dòng đang chọn sang
-    // phiên bản vừa tạo để người dùng thấy ngay kết quả.
-    const updated = groups.value.find((x) => String(x.sanPhamId) === String(g.sanPhamId))
-    const moi = updated?.variants.find((x) => x.maSku === maSku)
-    if (moi) bienTheChonId.value = moi.bienTheId
-    hienToast(`Đã tạo phiên bản mới ${maSku}`)
-  } catch (e) {
-    hienToast(`Sao chép thất bại: ${e.message}`)
-  } finally {
-    dangSaoChepBienThe.value = false
-  }
-}
-
-/** Sao chép cả sản phẩm: tạo sản phẩm mới với đủ thuộc tính của các phiên bản cũ */
-const saoChepSanPham = (g) => {
-  if (!g) return
-  const v0 = g.variants[0] || {}
-  moLaiChiTiet.value = null
-  resetForm({
-    maSanPham: sinhMaSanPham(),
-    ...duLieuSanPham(g),
-    ...duLieuThongSo(v0),
-    tenSanPham: `${g.tenSanPham} (bản sao)`,
-    mauSacList: [...new Set(g.variants.map((v) => v.mauSac).filter(Boolean))],
-    cpuIds: [...new Set(g.variants.map((v) => v.cpuId).filter(Boolean))],
-    ramIds: [...new Set(g.variants.map((v) => v.ramId).filter(Boolean))],
-    oCungIds: [...new Set(g.variants.map((v) => v.oCungId).filter(Boolean))],
-    gpuIds: [...new Set(g.variants.map((v) => v.gpuId).filter(Boolean))]
-  })
-  modalMode.value = 'create'
-  showDetail.value = false
-  showModal.value = true
-  dungLaiMaTran()
-  hienToast('Đã sao chép — đổi tên sản phẩm rồi bấm Lưu')
-}
-
-const closeModal = () => {
-  showModal.value = false
-  resetForm()
-}
-
-/* ─── Form đã đủ điều kiện lưu chưa (chỉ soi điều kiện, không set lỗi) ─── */
-const formHopLe = computed(() => {
-  const coCoBan = !!(form.tenSanPham && form.maSanPham && form.thuongHieuId && form.danhMucId)
-  const coBaoHanh = Number(form.baoHanhThang) >= 0
-  const coBienThe = bienTheRows.value.length > 0 && bienTheRows.value.every((r) => r.maSku)
-
-  if (modalMode.value === 'edit') {
-    const nhap = Number(form.giaNhap)
-    const ban = Number(form.giaBan)
-    return coCoBan && coBaoHanh && !!form.maSku && nhap >= 0 && ban >= 0 && ban >= nhap * 0.5
-  }
-  if (modalMode.value === 'variant') return coBaoHanh && coBienThe
-  return coCoBan && coBaoHanh && coBienThe
-})
-
-/* ─── Kiểm tra trước khi gửi ─── */
-const laMaVachHopLe = (ma) => /^\d{8,13}$/.test(ma)
-
-const validate = () => {
-  Object.keys(errors).forEach((k) => delete errors[k])
-  const laVariant = modalMode.value === 'variant'
-  const khacBienThe = (v) => String(v.bienTheId) !== String(form.bienTheId)
-  const skuDaCo = new Set(bienTheChuan.value.filter(khacBienThe).map((v) => v.maSku))
-  const barcodeDaCo = new Set(bienTheChuan.value.filter(khacBienThe).map((v) => v.barcode).filter(Boolean))
-
-  if (!laVariant) {
-    if (!form.tenSanPham) errors.tenSanPham = 'Nhập tên sản phẩm'
-    if (!form.thuongHieuId) errors.thuongHieuId = 'Chọn thương hiệu'
-    if (!form.danhMucId) errors.danhMucId = 'Chọn danh mục'
-  }
-  if (!(Number(form.baoHanhThang) >= 0)) errors.baoHanhThang = 'Số tháng bảo hành không hợp lệ'
-
-  if (modalMode.value === 'edit') {
-    const nhap = Number(form.giaNhap)
-    const ban = Number(form.giaBan)
-    if (!(nhap >= 0)) errors.giaNhap = 'Giá nhập không hợp lệ'
-    if (!(ban >= 0)) errors.giaBan = 'Giá bán không hợp lệ'
-    else if (ban < nhap * 0.5) errors.giaBan = 'Giá bán phải ≥ 50% giá nhập (ràng buộc của CSDL)'
-
-    if (!form.maSku) errors.maSku = 'Nhập mã SKU'
-    else if (skuDaCo.has(form.maSku)) errors.maSku = 'SKU này đã tồn tại'
-
-    if (form.barcode && !laMaVachHopLe(form.barcode)) errors.barcode = 'Mã vạch chỉ gồm 8–13 chữ số'
-    else if (form.barcode && barcodeDaCo.has(form.barcode)) errors.barcode = 'Mã vạch này đã có phiên bản khác dùng'
-  } else if (!bienTheRows.value.length) {
-    errors.bienThe = 'Chưa có phiên bản nào để lưu'
-  } else {
-    const skuTrong = bienTheRows.value.filter((r) => !r.maSku || skuDaCo.has(r.maSku))
-    const trungTrongForm = bienTheRows.value.length !== new Set(bienTheRows.value.map((r) => r.maSku)).size
-    const maVachXau = bienTheRows.value.find((r) => r.barcode && !laMaVachHopLe(r.barcode))
-    const maVachTrung = bienTheRows.value.find((r) => r.barcode && barcodeDaCo.has(r.barcode))
-    const maVachTrungForm = (() => {
-      const ds = bienTheRows.value.map((r) => r.barcode).filter(Boolean)
-      return ds.length !== new Set(ds).size
-    })()
-
-    if (skuTrong.length) errors.bienThe = `SKU trống hoặc đã tồn tại: ${skuTrong.map((r) => r.maSku || '(trống)').join(', ')}`
-    else if (trungTrongForm) errors.bienThe = 'Có hai phiên bản trùng mã SKU'
-    else if (maVachXau) errors.bienThe = `Phiên bản ${maVachXau.maSku}: mã vạch phải gồm 8–13 chữ số`
-    else if (maVachTrung) errors.bienThe = `Phiên bản ${maVachTrung.maSku}: mã vạch đã có phiên bản khác dùng`
-    else if (maVachTrungForm) errors.bienThe = 'Có hai phiên bản trùng mã vạch'
-  }
-
-  return Object.keys(errors).length === 0
-}
-
-/* ════════════════════════════════════════════════════════════
- *                        PAYLOAD
- * SanPhamController.create() nhận SanPhamRequest và tạo LUÔN cả SanPham lẫn
- * BienTheSanPham đầu tiên trong một request (xem SanPhamService.createSanPham:
- * BeanUtils copy chung request sang cả hai entity). Vì vậy POST /api/san-pham
- * bắt buộc phải kèm maSku, giaNhap, giaBan — thiếu là ma_sku/gia_nhap/gia_ban
- * nhận NULL và cả giao dịch bị rollback.
- * Các phiên bản còn lại đi bằng POST /api/bien-the-san-pham với sanPhamId.
- * LƯU Ý: barcode nay là cột của bien_the_san_pham → gửi kèm theo từng phiên bản,
- * không còn trường barcode ở cấp sản phẩm nữa.
- * ══════════════════════════════════════════════════════════ */
-
-/** Thời điểm hoàn tất thao tác, dạng ISO giờ địa phương (không lệch UTC). */
+// Lấy mốc thời gian hiện tại
 const bayGio = () => {
   const d = new Date()
   const p = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
-/** Phần dùng chung cho mọi phiên bản (thông số + trạng thái + phân loại). */
+// Chuẩn bị thuộc tính chung của sản phẩm
 const phanChungBienThe = () => ({
   baoHanhThang: Number(form.baoHanhThang || 0),
   kichThuocManHinh: form.kichThuocManHinh || null,
@@ -2284,7 +1128,7 @@ const phanChungBienThe = () => ({
   trangThai: form.trangThaiSanPham
 })
 
-/** Body cho POST/PUT /api/san-pham — gộp sản phẩm chính + một phiên bản. */
+// Dữ liệu tạo sản phẩm và biến thể chính
 const payloadSanPham = (row) => ({
   ...(form.sanPhamId ? { sanPhamId: Number(form.sanPhamId) } : {}),
   maSanPham: form.maSanPham || null,
@@ -2317,7 +1161,7 @@ const payloadSanPham = (row) => ({
     : {})
 })
 
-/** Body cho POST /api/bien-the-san-pham — các phiên bản thứ 2 trở đi. */
+// Dữ liệu tạo các biến thể tiếp theo
 const payloadBienThe = (sanPhamId, row) => ({
   sanPhamId: soHoacNull(sanPhamId),
   maSku: row.maSku,
@@ -2335,9 +1179,7 @@ const payloadBienThe = (sanPhamId, row) => ({
 
 const layId = (res, key) => res?.[key] ?? res?.id ?? res?.data?.[key] ?? res?.data?.id ?? null
 
-/** Controller trả entity SanPham có quan hệ LAZY — Jackson có thể vỡ khi ghi body,
- *  lúc đó frontend không đọc được id dù bản ghi đã lưu xong. Tìm lại bằng chính API
- *  danh sách (nó lọc theo maSanPham / tenSanPham). */
+// Tìm lại ID sản phẩm vừa tạo
 const timIdVuaTao = async () => {
   for (const kw of [form.maSanPham, form.tenSanPham]) {
     if (!kw) continue
@@ -2383,8 +1225,7 @@ const goiYSua = (msg) => {
   return ''
 }
 
-/** Bảng nối san_pham_phan_loai được ghi bằng một lệnh riêng (SanPhamRequest không có
- *  trường phanLoaiIds). Lỗi ở bước này không làm hỏng việc lưu sản phẩm — chỉ ghi log. */
+// Cập nhật bảng liên kết phân loại sản phẩm
 const luuPhanLoai = async (sanPhamId) => {
   if (!sanPhamId) return
   try {
@@ -2394,12 +1235,7 @@ const luuPhanLoai = async (sanPhamId) => {
   }
 }
 
-/* ─── Lưu ───
- * Tạo mới:  POST /api/san-pham (sản phẩm + phiên bản #1)  →  lấy sanPhamId
- *           →  POST /api/bien-the-san-pham cho phiên bản #2..n
- * Sửa:      PUT  /api/san-pham/update/{id} kèm bienTheId — service tự cập nhật cả hai
- * Thêm phiên bản: chỉ POST /api/bien-the-san-pham
- */
+// Lưu thông tin sản phẩm và các biến thể
 const submitForm = async () => {
   saveError.value = ''
   if (!validate()) {
@@ -2458,6 +1294,13 @@ const submitForm = async () => {
       hienToast('Đã lưu thay đổi')
       closeModal()
     } else if (modalMode.value === 'variant') {
+      // Sinh SKU tự động cho các dòng để trống
+      bienTheRows.value.forEach((row, i) => {
+        if (!row.maSku) {
+          const prefix = (form.skuPrefix || form.maSanPham || vietTat(form.tenSanPham, 6) || 'SP').toUpperCase()
+          row.maSku = `${prefix}-${String(i + 1).padStart(3, '0')}`
+        }
+      })
       const dsSku = []
       for (const row of bienTheRows.value) {
         buoc = `thêm phiên bản ${row.maSku}`
@@ -2476,6 +1319,13 @@ const submitForm = async () => {
       hienToast(`Đã thêm ${daTao} phiên bản`)
       closeModal()
     } else {
+      // Sinh SKU tự động cho các dòng để trống
+      bienTheRows.value.forEach((row, i) => {
+        if (!row.maSku) {
+          const prefix = (form.skuPrefix || form.maSanPham || vietTat(form.tenSanPham, 6) || 'SP').toUpperCase()
+          row.maSku = `${prefix}-${String(i + 1).padStart(3, '0')}`
+        }
+      })
       const [dauTien, ...conLai] = bienTheRows.value
 
       buoc = 'tạo sản phẩm chính'
@@ -2489,7 +1339,7 @@ const submitForm = async () => {
         if (!spId && conLai.length) {
           throw new Error(
             'Sản phẩm và phiên bản đầu tiên đã lưu, nhưng không lấy được sanPhamId nên các phiên bản ' +
-            'còn lại chưa tạo được. Mở lại sản phẩm rồi dùng nút “Thêm phiên bản” để bổ sung, ' +
+            'còn lại chưa tạo được. Mở lại sản phẩm rồi dùng nút "Thêm phiên bản" để bổ sung, ' +
             'hoặc sửa SanPhamController.create() cho trả về DTO thay vì entity.'
           )
         }
@@ -2511,23 +1361,16 @@ const submitForm = async () => {
         doiTuong: `${form.maSanPham} · ${daTao} phiên bản`,
         thayDoi: [{ truong: 'Tên sản phẩm', cu: '', moi: form.tenSanPham }]
       })
-      // Không set moLaiChiTiet ở đây — tạo MỚI xong thì đóng về danh sách bình thường,
-      // không tự mở lại cửa sổ chi tiết. openCreate()/saoChepSanPham() đã đặt sẵn giá trị
-      // null cho đúng 2 luồng "tạo sản phẩm mới" này; dòng cũ ở đây từng ghi đè lại bằng
-      // spId khiến sản phẩm vừa tạo luôn tự bật chi tiết, đúng thứ người dùng không muốn.
+      // Đóng cửa sổ chi tiết sau khi tạo mới
       hienToast(`Đã lưu sản phẩm cùng ${daTao} phiên bản`)
       closeModal()
     }
 
     await fetchData()
-    // HangHoa.vue tự tải dữ liệu riêng (fetchData ở trên), KHÔNG đọc từ ProductsStore dùng
-    // chung — nhưng tab "Biến thể" (BienTheTable.vue) và các nơi khác lại đọc từ đó. Không
-    // làm mới ProductsStore ở đây thì các màn kia vẫn thấy dữ liệu cũ cho tới khi F5 (module
-    // JS reset lại từ đầu). Làm mới song song, lỗi ở đây không nên chặn luồng lưu chính.
+    // Đồng bộ dữ liệu vào ProductsStore
     lamMoiKhoDuLieuChung().catch(() => {})
 
-    // Biến thể mới tạo phải hiện ngay ở "Hàng sắp về" bên Kho hàng — InventoryStore cũng là
-    // dữ liệu dùng chung riêng biệt, tách rời fetchData()/ProductsStore ở trên.
+    // Đồng bộ dữ liệu vào InventoryStore
     lamMoiTonKhoDuLieuChung().catch(() => {})
 
     // Mở lại cửa sổ chi tiết để xem ngay kết quả vừa lưu
@@ -2646,7 +1489,7 @@ const submitForm = async () => {
 .hh-caret { font-size: 10px; transition: transform .2s; }
 .hh-caret.is-open { transform: rotate(180deg); }
 
-/* ═══════════ THANH CÔNG CỤ (dinh sticky, tu an khi cuon xuong) ═══════════ */
+/* Thanh công cụ */
 .hh-sticky-head {
   position: sticky; top: 0; z-index: 5;
   transition: transform .25s ease;
@@ -2686,7 +1529,7 @@ const submitForm = async () => {
 }
 .hh-filter.is-open .hh-filter__panel { padding: 14px 16px; }
 
-/* ═══════════ TOOLBAR (nằm trong card, có border-bottom) ═══════════ */
+/* Thanh tác vụ */
 .hh-toolbar {
   display: flex !important;
   align-items: center;
@@ -2782,9 +1625,7 @@ const submitForm = async () => {
   font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
   padding: 11px 12px; white-space: nowrap; border-bottom: none;
 }
-/* border-collapse:collapse tren <table> khong duoc overflow:hidden cua .hh-card bo
-   goc dung cach — nen o dau tien vuot goc tron, trong nhu 1 net ke de len vien card.
-   Bo goc thang vao chinh o th dau/cuoi de nen hong di dung theo duong bo tron. */
+/* Bo góc viền bảng */
 .hh-table thead th:first-child { border-top-left-radius: 13px; }
 .hh-table thead th:last-child { border-top-right-radius: 13px; }
 .hh-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
@@ -2840,12 +1681,7 @@ const submitForm = async () => {
 .hh-pager__size { padding: 5px 8px; border: 1px solid var(--field); border-radius: 8px; font-size: 12.5px; background: #fff; color: var(--ink); }
 
 /* ═══════════ MODAL ═══════════ */
-/* align-items: flex-start (thay vi center) — mep tren cua modal dung im o 1 khoang
-   co dinh cach dinh trang, doi tab (Thong tin/Phien ban/Mo ta) chi lam DAI/NGAN xuong
-   duoi, khong bi tut/nhoi ca hop vao giua moi lan noi dung doi chieu cao.
-   Khong overflow-y o day — de mask tu cuon se giu lai vi tri cuon cu khi chuyen sang
-   tab NGAN hon (vd Mo ta), lam modal nhu bi "cuon mat"/lech khoi khung nhin. Noi dung
-   dai da co .hh-modal__body tu cuon rieng, va .hh-modal da khoa max-height: 94vh. */
+/* Căn lề trên cố định cho modal */
 .hh-modal-mask {
   position: fixed; inset: 0; z-index: 1050;
   background: rgba(31,41,55,.5); display: flex; align-items: flex-start; justify-content: center;
@@ -3156,6 +1992,22 @@ const submitForm = async () => {
 .hh-gallery__add i { font-size: 18px; }
 
 /* ma trận phiên bản */
+/* ma trận phiên thể (bảng mỗi dòng = 1 biến thể) */
+.hh-rows-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: 380px; }
+.hh-rows { width: 100%; border-collapse: collapse; }
+.hh-rows th {
+  position: sticky; top: 0; background: var(--pink-50); color: var(--pink-700); z-index: 1;
+  font-size: 11px; font-weight: 800; text-align: left; padding: 9px 10px; white-space: nowrap;
+  text-transform: uppercase; letter-spacing: .4px; border-bottom: none;
+}
+.hh-rows thead th:first-child { border-top-left-radius: 11px; }
+.hh-rows thead th:last-child { border-top-right-radius: 11px; }
+.hh-rows td { padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
+.hh-rows tr:last-child td { border-bottom: none; }
+.hh-rows__stt { width: 36px; color: var(--muted); }
+.hh-rows__empty { text-align: center; color: var(--muted); padding: 28px; }
+.hh-cell--sel { padding: 6px 8px; font-size: 12.5px; }
+
 .hh-matrix-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: 340px; }
 .hh-matrix { width: 100%; border-collapse: collapse; }
 .hh-matrix th {

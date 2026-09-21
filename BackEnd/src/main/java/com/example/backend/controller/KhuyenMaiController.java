@@ -3,6 +3,7 @@ package com.example.backend.controller;
 import com.example.backend.entity.KhuyenMai;
 import com.example.backend.request.KhuyenMaiRequest;
 import com.example.backend.response.KhuyenMaiResponse;
+import com.example.backend.response.KhuyenMaiSanPhamResponse;
 import com.example.backend.service.KhuyenMaiService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,4 +66,9 @@ public class KhuyenMaiController {
         return ResponseEntity.ok().build();
     }
 
+    // Lấy danh sách sản phẩm áp dụng cho một khuyến mãi
+    @GetMapping("/{id}/san-pham")
+    public List<KhuyenMaiResponse.SanPhamSimpleResponse> getSanPhamApDung(@PathVariable Integer id) {
+        return khuyenMaiService.getSanPhamApDung(id);
+    }
 }

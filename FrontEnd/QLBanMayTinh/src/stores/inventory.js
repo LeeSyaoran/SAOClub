@@ -5,7 +5,7 @@ export const InventoryStore = reactive({ items: [], loading: false, loaded: fals
 
 let inventoryPromise = null;
 
-// Xem resetProducts() ở stores/products.js — cùng lý do reset khi đổi tài khoản cùng tab.
+// Reset dữ liệu store khi đăng xuất hoặc đổi tài khoản
 export const resetInventory = () => {
   inventoryPromise = null;
   InventoryStore.items = [];

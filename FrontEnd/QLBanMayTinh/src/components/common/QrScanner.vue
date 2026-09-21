@@ -146,23 +146,7 @@ import { ref, onUnmounted, onMounted, computed } from 'vue';
 import { Camera, CameraOff } from '@lucide/vue';
 import { t } from '../../i18n/index.js';
 
-/**
- * QrScanner — quet barcode/QR tu camera.
- *
- * Ho tro 3 nguon:
- *   - 'direct'  : camera tich hop (getUserMedia)
- *   - 'usb'     : USB Camera Proxy (MJPEG stream)
- *   - 'custom'  : URL MJPEG tuy chinh
- *
- * Props:
- *   autoClose  — tu dong tat camera sau khi quet thanh cong (default: true)
- *   defaultSource — nguon mac dinh: 'direct' | 'usb' | 'custom'
- *   usbProxyUrl  — URL proxy MJPEG mac dinh (default: 'http://localhost:4747/video')
- *
- * Emits:
- *   scanned(data) — khi quet duoc ma vach
- *   close       — khi camera duoc dong
- */
+/* Quét mã barcode hoặc QR từ camera */
 const props = defineProps({
   autoClose: { type: Boolean, default: true },
   defaultSource: { type: String, default: 'direct' },

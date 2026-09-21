@@ -16,6 +16,8 @@ import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
 import * as DmService from "../services/DmService.js";
 import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../services/ChiTietLinhKienService.js";
 import { refreshReturns } from "../stores/returns.js";
+import { refreshInventory } from "../stores/inventory.js";
+import { refreshProducts } from "../stores/products.js";
 import {
   Package, Truck, ScrollText, Undo2, Shield, Hash, Cpu, MemoryStick,
   Monitor, HardDrive, X, Menu, Moon, Sun,
@@ -23,15 +25,17 @@ import {
 
 // ── Navigation — mac dinh vao thang Kho hang (viec chinh hang ngay cua quan ly kho) ──
 const currentPage = ref("inventory");
-// Sidebar bat/tat duoc o moi kich thuoc man hinh, mac dinh mo tren desktop, dong tren
-// mobile (dong bo AdminPage.vue). ponytail: khong dong bo lai khi resize giua chung.
+// Đóng mở sidebar kho hàng
 const sidebarOpen = ref(window.matchMedia("(min-width: 768px)").matches);
 const navigate = (page) => {
   currentPage.value = page;
   if (window.matchMedia("(max-width: 767.98px)").matches) sidebarOpen.value = false; // chon xong tu dong dong lai tren mobile
-  // ReturnsPanel.vue chỉ tải dữ liệu 1 lần lúc mount — làm mới lại mỗi lần vào tab để
-  // thấy yêu cầu trả hàng khách vừa gửi (xem AdminPage.vue navigate() cùng lý do).
+// Làm mới dữ liệu trả hàng khi chuyển tab
   if (page === "traHang") refreshReturns();
+  if (page === "inventory") {
+    refreshInventory().catch(() => {});
+    refreshProducts().catch(() => {});
+  }
 };
 
 const PAGE_META = {

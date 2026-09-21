@@ -58,8 +58,7 @@ public class GlobalExceptionHandler {
         log.warn("Entity not found: {}", e.getMessage());
         Map<String, String> body = new HashMap<>();
         body.put("code", "NOT_FOUND");
-        // Neu message tu traCuuSerial("Mã X không tồn tại...") -> tra message that
-        // Nguoc lai tra message mac dinh cu
+        // Trả thông báo lỗi cụ thể nếu có
         String msg = e.getMessage();
         if (msg != null && msg.startsWith("Mã ")) {
             body.put("message", msg);

@@ -50,10 +50,7 @@
 </template>
 
 <script setup>
-// Tìm địa chỉ + ghim trên bản đồ, kiểu Shopee — dùng OpenStreetMap Nominatim (miễn phí,
-// không cần API key) cho gợi ý địa chỉ + reverse-geocode, và Leaflet cho bản đồ hiển thị.
-// Nominatim công khai giới hạn ~1 request/giây và khuyến nghị dùng nhẹ — đủ cho 1 người
-// dùng gõ tìm; nếu lượng truy cập lớn hơn cần đổi sang provider trả phí hoặc tự host.
+// Tìm kiếm và định vị địa chỉ giao hàng
 import { ref, watch, nextTick, onBeforeUnmount } from 'vue';
 import { t } from '../../i18n/index.js';
 import { MapPin, X, Loader2 } from '@lucide/vue';
@@ -62,8 +59,7 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Leaflet mặc định trỏ icon marker theo URL tương đối trong CSS — vỡ khi qua bundler
-// (Vite). Trỏ lại icon qua import tĩnh để Vite tự resolve đúng đường dẫn.
+// Cấu hình icon bản đồ Leaflet
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
 
 const props = defineProps({

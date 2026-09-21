@@ -6,8 +6,7 @@ import * as VongQuayService from '../../services/VongQuayService.js';
 import Modal from '../common/Modal.vue';
 import { Triangle, PartyPopper, Clover } from '@lucide/vue';
 
-// points: điểm tích lũy hiện tại của khách — nhận từ AccountPage.vue (đã load sẵn cho
-// badge điểm ở header), không tự fetch profile riêng trong component này.
+// Điểm tích lũy hiện tại của khách hàng
 const props = defineProps({
   points: { type: Number, default: 0 },
 });
@@ -17,8 +16,7 @@ const emit = defineEmits(['spun']);
 const loading = ref(true);
 const loadError = ref('');
 const diemMoiLuot = ref(0);
-// Cố định thứ tự ô sau khi load — không refetch giữa các lượt quay, tránh lệch chỉ số ô
-// so với animate lúc component đã render.
+// Cố định thứ tự ô vòng quay
 const khuyenMaiKhaDung = ref([]);
 const spinning = ref(false);
 const rotation = ref(0);
@@ -33,8 +31,7 @@ const SLICE_COLORS = ['#f43f5e', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#e
 
 const sliceLabel = (index) => {
   if (index === khuyenMaiKhaDung.value.length) {
-    // Ô duy nhất khi không có khuyến mãi nào (không phải "trượt" giữa nhiều lựa chọn thật)
-    // — chữ khác với ô "trượt" thông thường để không gây hiểu lầm là còn cơ hội trúng.
+// Hiển thị khi không có khuyến mãi
     return khuyenMaiKhaDung.value.length === 0 ? t('wheel.noPrizesSlice') : t('wheel.missSlice');
   }
   const km = khuyenMaiKhaDung.value[index];
@@ -44,11 +41,9 @@ const sliceLabel = (index) => {
 // Góc giữa ô i, chuẩn hoá về [0, 360) — dùng để định vị VÀ để quyết định có cần lật chữ.
 const sliceCenterAngle = (i) => (i * anglePerSlice.value + anglePerSlice.value / 2) % 360;
 
-// Ô nằm ở nửa dưới bánh xe (góc 90°-270°) sẽ khiến chữ bị xoay lộn ngược nếu chỉ xoay
-// theo đúng góc định vị — xoay thêm 180° tại chỗ (không đổi vị trí) để chữ luôn đọc được.
+// Tính góc xoay nhãn ô vòng quay
 const sliceLabelTransform = (i) => {
-  // Chỉ 1 ô (không có khuyến mãi nào) = cả vòng tròn — chữ nằm đúng giữa tâm, không dịch
-  // ra rìa như khi chia nhiều ô thật.
+// Căn giữa chữ khi chỉ có 1 ô
   if (sliceCount.value === 1) return '';
   const angle = sliceCenterAngle(i);
   const flip = angle > 90 && angle < 270 ? 180 : 0;
@@ -97,8 +92,7 @@ const onSpin = async () => {
       : khuyenMaiKhaDung.value.findIndex(k => k.khuyenMaiId === data.khuyenMai.khuyenMaiId);
     const slice = anglePerSlice.value;
     const targetAngleInCircle = 360 - (targetIndex * slice + slice / 2);
-    // Quay thêm 5 vòng trọn rồi dừng đúng giữa ô targetIndex — trừ phần dư hiện tại để luôn
-    // quay THEO CHIỀU THUẬN, không giật ngược khi rotation hiện tại lệch pha.
+// Tính góc quay dừng trúng ô kết quả
     rotation.value += 5 * 360 + targetAngleInCircle - (rotation.value % 360);
     lastResult.value = data;
     setTimeout(() => {

@@ -1,13 +1,11 @@
 import { reactive } from "vue";
 
-// Dùng làm event bus: PosPanel gọi bump() khi thay đổi serial,
-// SerialManager watch bump.count để reload. Đồng thời nhận SSE events
-// từ backend để đồng bộ khi POS tab khác thay đổi serial.
+// Quản lý sự kiện cập nhật trạng thái serial realtime
 export const serialEvents = reactive({ count: 0 });
 
 export const bumpSerialEvent = () => { serialEvents.count++; };
 
-// SSE connection for serial events — kết nối 1 lần, dùng chung toàn app
+// Kết nối SSE lắng nghe sự kiện thay đổi serial
 let serialEventSource = null;
 let serialSubscriberCount = 0;
 

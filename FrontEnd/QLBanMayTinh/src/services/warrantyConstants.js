@@ -1,13 +1,4 @@
-// warrantyConstants.js — Hằng số trạng thái phiếu bảo hành + helpers
-// Đồng bộ với backend (PhieuBaoHanh.trangThai).
-//
-// Luồng nghiệp vụ:
-//   cho_xu_ly    — Khách gửi yêu cầu, admin CHƯA tiếp nhận
-//   dang_xu_ly   — Admin tiếp nhận, đang sửa / theo dõi
-//   da_xu_ly     — Hoàn thành, đã trả khách
-//   tu_choi      — Admin từ chối (ngoài hạn / không đủ điều kiện / không phải lỗi BH)
-//   da_huy       — Khách tự hủy yêu cầu (chỉ khi còn ở cho_xu_ly)
-
+// Hằng số và hàm tiện ích cho phiếu bảo hành
 export const WARRANTY_STATUS = {
   CHO_XU_LY:  'cho_xu_ly',
   DANG_XU_LY: 'dang_xu_ly',

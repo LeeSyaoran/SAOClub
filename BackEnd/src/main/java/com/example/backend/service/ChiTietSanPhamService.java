@@ -61,19 +61,12 @@ public class ChiTietSanPhamService {
         this.nhanVienRepository = nhanVienRepository;
     }
 
+    // Lấy danh sách chi tiết sản phẩm và serial
     public List<ChiTietSanPhamResponse> hienThiChiTietSanPham() {
-        // KHÔNG gọi releaseOrphanSerials() ở đây — trước đây đã gây bug:
-        // mỗi khi POS chọn serial (giu_hang) rồi bumpSerialEvent() → SerialManager reload
-        // → GET /api/chi-tiet-san-pham → cleanup chạy → serial chưa có chi_tiet_don_hang
-        // (vì đơn chưa được tạo) bị reset về trong_kho ngay lập tức.
-        // Cleanup đã được chuyển sang @Scheduled 30 phút/lần bên dưới — chỉ dọn serial
-        // thực sự bị kẹt lâu (đóng tab, đơn đã hủy), không đụng đến POS cart đang active.
         return chiTietSanPhamRepository.hienThiChiTietSanPham();
     }
 
-    // Dọn rác serial 'giu_hang' mồ côi — chạy định kỳ 30 phút thay vì mỗi lần load bảng
-    // để tránh reset nhầm serial đang trong giỏ POS chưa tạo đơn.
-    // fixedDelay = 1800000ms = 30 phút — đủ lớn để một phiên POS bình thường kết thúc.
+    // Dọn dẹp định kỳ các serial giữ hàng không thuộc đơn nào
     @Scheduled(fixedDelay = 1800000)
     public void scheduledReleaseOrphanSerials() {
         try {
@@ -167,14 +160,7 @@ public class ChiTietSanPhamService {
         return list;
     }
 
-    // Dọn rác: tìm tất cả serial 'giu_hang' mà KHÔNG liên kết chi_tiet_don_hang nào
-    // (orphan - đơn đã bị xóa/hủy hoặc user đóng tab POS trước khi đơn được tạo), đưa về
-    // 'trong_kho' và ghi lich_su_ton_kho để audit. Tái dùng loai_bien_dong='giu_hang' (vì
-    // schema check constraint đã chấp nhận) thay vì thêm enum mới — phân biệt bằng ghi_chu.
-    // Trả về số serial đã release để ghi log (hoặc trả về client trong tương lai).
-    // @Transactional để đảm bảo nếu 1 dòng lich_su_ton_kho lỗi thì rollback cả lô thay đổi
-    // trạng thái serial — tránh trạng thái nửa vời. Public để có thể gọi riêng nếu cần;
-    // hiện tại được gọi tự động từ hienThiChiTietSanPham() mỗi lần load bảng serial.
+    // Giải phóng serial giữ hàng không thuộc đơn nào về lại kho
     @Transactional
     public int releaseOrphanSerials() {
         List<ChiTietSanPham> orphans = chiTietSanPhamRepository.findOrphanGiuHangSerials();
@@ -293,10 +279,7 @@ public class ChiTietSanPhamService {
         }
     }
 
-    /**
-     * POS barcode scan — tim san pham theo barcode (bien_the) hoac so_serial (chi_tiet_san_pham).
-     * Tra du lieu day du de POS hien thi: thong tin san pham + bien the + serial.
-     */
+    // Quét barcode hoặc serial phục vụ bán hàng tại quầy
     public ResponseEntity<?> scanBarcode(String code) {
         List<ChiTietSanPham> results = chiTietSanPhamRepository
                 .findActiveByBarcodeOrSoSerial(code, code);

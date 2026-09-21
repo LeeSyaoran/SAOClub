@@ -1,6 +1,6 @@
 import { get, put, post, authHeaders } from './api.js';
 
-// post()/put() ở api.js trả Promise<Response> CHƯA parse (khác get()) — tự parse ở đây.
+// Xử lý phản hồi JSON hoặc ném lỗi
 const parseOrThrow = async (res) => {
   if (!res.ok) throw new Error((await res.text().catch(() => '')) || `HTTP ${res.status}`);
   return res.json();

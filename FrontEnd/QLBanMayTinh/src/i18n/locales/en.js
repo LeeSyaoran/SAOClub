@@ -187,6 +187,7 @@ export default {
       outForDeliveryDesc: "Courier is on the way",
       deliveredTitle: "Delivered",
       deliveredDesc: "Please confirm you received it",
+      inStoreDeliveredDesc: "Customer received goods at counter",
     },
   },
   orderChannel: {
@@ -636,6 +637,7 @@ export default {
       dashboard:    { title: "Dashboard",       sub: "System overview" },
       products:     { title: "Products",        sub: "Manage product list" },
       bienThe:      { title: "Variants",        sub: "All variants across every product" },
+      thuocTinh:    { title: "Attributes",      sub: "Manage product attributes" },
       orders:       { title: "Orders",          sub: "Manage orders" },
       customers:    { title: "Customers",       sub: "Manage customers" },
       customerDetail: { title: "Customer Detail", sub: "Info, purchase history, perks" },
@@ -661,6 +663,8 @@ export default {
       ram:               { title: "RAM", sub: "Manage RAM catalog" },
       gpu:               { title: "GPU", sub: "Manage GPU catalog" },
       oCung:             { title: "Storage", sub: "Manage storage catalog" },
+      chat:              { title: "Customer support", sub: "Receive and reply to customers" },
+      aiKienThuc:        { title: "AI Knowledge", sub: "Manage chatbot knowledge base" },
     },
 
     userRole: {
@@ -1377,6 +1381,7 @@ export default {
     productsTabs: {
       sanPham: "Products",
       bienThe: "Variants",
+      thuocTinh: "Attributes",
       cpu: "CPU",
       ram: "RAM",
       gpu: "GPU",

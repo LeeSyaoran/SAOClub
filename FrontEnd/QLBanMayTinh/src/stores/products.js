@@ -1,16 +1,12 @@
 import { reactive } from "vue";
 import * as SanPhamService from "../services/SanPhamService.js";
 
-// ── Products Store — dữ liệu sản phẩm dùng chung nhiều trang (ProductsTable, PosPanel,
-// OrdersTable). fetch-once-cache: gọi ensureProducts() nhiều lần chỉ tải 1 lần, refresh()
-// dùng khi cần tải lại có chủ đích (sau khi thêm/sửa/xóa sản phẩm). ──
+// Store dữ liệu sản phẩm dùng chung
 export const ProductsStore = reactive({ items: [], loading: false, loaded: false });
 
 let productsPromise = null;
 
-// Đăng xuất/đổi tài khoản cùng tab không reload trang — promise nhớ nhớ (ensureX) sẽ giữ mãi
-// dữ liệu của phiên cũ nếu không reset, tài khoản mới vào thấy dữ liệu cũ/lệch cho tới khi
-// tự bấm refresh. Gọi từ resetAllStores() (xem stores/resetAll.js) mỗi lần clearSession().
+// Reset dữ liệu sản phẩm khi đăng xuất hoặc đổi tài khoản
 export const resetProducts = () => {
   productsPromise = null;
   ProductsStore.items = [];

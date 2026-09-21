@@ -1,7 +1,6 @@
 import { reactive } from "vue";
 
-// ── Confirm Store — thay window.confirm() bằng dialog cùng theme app ────────
-// Dùng: if (!(await askConfirm(t('admin.confirm.deleteProduct')))) return;
+// Quản lý trạng thái hộp thoại xác nhận dùng chung
 export const ConfirmState = reactive({ show: false, message: "" });
 
 let resolver = null;

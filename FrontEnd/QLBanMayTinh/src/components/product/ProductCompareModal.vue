@@ -58,8 +58,7 @@ const props = defineProps({
 });
 defineEmits(['update:modelValue', 'remove', 'add-to-cart']);
 
-// Danh sách hàng thông số — value(item) đọc trực tiếp field phẳng từ SanPhamResponse
-// (giống ProductDetail.vue), tái dùng nhãn productDetail.specs.* có sẵn thay vì tạo nhãn mới.
+// Danh sách thông số kỹ thuật so sánh
 const rows = computed(() => [
   { label: t('productCompare.rowPrice'),      value: (i) => formatPrice(i.giaBan) },
   { label: t('productDetail.specs.brand'),    value: (i) => i.tenThuongHieu || '—' },

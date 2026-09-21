@@ -13,10 +13,11 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
 COPY --from=builder /app/target/BackEnd-0.0.1-SNAPSHOT.jar app.jar
-RUN mkdir -p /app/logs /app/uploads && chown -R spring:spring /app
+COPY --from=builder /app/src/main/resources /app/resources
+RUN mkdir -p /app/logs /app/uploads /scripts && chown -R spring:spring /app
 EXPOSE 8080
 ENV SPRING_PROFILES_ACTIVE=docker
-# ponytail: volume mount vào /app/uploads có thể tạo thư mục với owner mới.
-# chmod u+w đủ cho spring user ghi file; chown xử lý trường hợp volume chưa tồn tại.
-ENTRYPOINT ["sh", "-c", "chmod -R u+w /app/uploads 2>/dev/null; exec java -jar app.jar"]
+# Entrypoint cho phép chạy custom commands (migration)
+ENTRYPOINT ["sh", "-c"]
+CMD ["chmod -R u+w /app/uploads 2>/dev/null; exec java -jar app.jar"]
 USER spring

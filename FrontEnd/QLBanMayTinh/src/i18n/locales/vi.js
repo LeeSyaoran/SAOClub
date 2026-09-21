@@ -185,6 +185,7 @@ export default {
       outForDeliveryDesc: "Shipper đang trên đường tới",
       deliveredTitle: "Đã giao hàng",
       deliveredDesc: "Vui lòng xác nhận đã nhận hàng",
+      inStoreDeliveredDesc: "Khách đã nhận hàng tại quầy",
     },
     deliveryTitle: "Thời gian giao hàng",
   },
@@ -721,6 +722,7 @@ export default {
       dashboard:    { title: "Dashboard",              sub: "Tổng quan hệ thống" },
       products:     { title: "Sản phẩm",                sub: "Quản lý danh sách sản phẩm" },
       bienThe:      { title: "Biến thể",                sub: "Toàn bộ biến thể của mọi sản phẩm" },
+      thuocTinh:    { title: "Thuộc tính",              sub: "Quản lý thuộc tính sản phẩm" },
       orders:       { title: "Đơn hàng",                sub: "Quản lý đơn hàng" },
       customers:    { title: "Khách hàng",              sub: "Quản lý khách hàng" },
       customerDetail: { title: "Chi tiết khách hàng", sub: "Thông tin, lịch sử mua hàng, ưu đãi" },
@@ -746,6 +748,8 @@ export default {
       ram:               { title: "RAM", sub: "Quản lý danh mục RAM" },
       gpu:               { title: "GPU", sub: "Quản lý danh mục GPU" },
       oCung:             { title: "Ổ cứng", sub: "Quản lý danh mục ổ cứng" },
+      chat:              { title: "Hỗ trợ khách", sub: "Tiếp nhận & trả lời khách hàng" },
+      aiKienThuc:        { title: "Kiến thức AI", sub: "Quản lý kiến thức chatbot" },
     },
 
     userRole: {
@@ -1463,6 +1467,7 @@ export default {
     productsTabs: {
       sanPham: "Sản phẩm",
       bienThe: "Biến thể",
+      thuocTinh: "Thuộc tính",
       cpu: "CPU",
       ram: "RAM",
       gpu: "GPU",

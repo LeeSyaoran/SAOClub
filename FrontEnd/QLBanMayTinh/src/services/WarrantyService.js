@@ -26,11 +26,7 @@ const fallbackWarrantyProducts = [
   },
 ];
 
-/**
- * Lấy danh sách sản phẩm đã giao của 1 khách hàng, kèm thông tin bảo hành.
- * Endpoint: GET /api/chi-tiet-don-hang/warranty/khach-hang/{khachHangId}
- * Trả về: WarrantyProductResponse[] (tenSanPham, hinhAnh, soSerial, ngayHetBaoHanh, etc.)
- */
+// Lấy danh sách sản phẩm bảo hành theo khách hàng
 export const getWarrantyProductsByKhachHang = async (khachHangId) => {
   try {
     return await get(`/api/chi-tiet-don-hang/warranty/khach-hang/${khachHangId}`);
@@ -42,18 +38,11 @@ export const getWarrantyProductsByKhachHang = async (khachHangId) => {
   }
 };
 
-/**
- * Lấy danh sách sản phẩm đã giao của 1 đơn hàng, kèm thông tin bảo hành.
- * Endpoint: GET /api/chi-tiet-don-hang/warranty/don-hang/{donHangId}
- */
+// Lấy danh sách sản phẩm bảo hành theo đơn hàng
 export const getWarrantyProductsByDonHang = (donHangId) =>
   get(`/api/chi-tiet-don-hang/warranty/don-hang/${donHangId}`);
 
-
-/**
- * Lấy phiếu BH theo khách hàng.
- * Endpoint: GET /api/phieu-bao-hanh/khach-hang/{khachHangId}
- */
+// Lấy danh sách phiếu bảo hành theo khách hàng
 export const getByKhachHang = async (khachHangId) => {
   try {
     const r = await fetch(`/api/phieu-bao-hanh/khach-hang/${khachHangId}`);

@@ -74,18 +74,11 @@ public class BienTheSanPhamService {
         kiemTraTrungBarcode(barcode, null);
 
         BienTheSanPham entity = new BienTheSanPham();
-        // "bienTheId": loai them cho khop update() — client lo gui id len thi save() thanh
-        // UPDATE ban ghi cu chu khong INSERT ban moi.
-        // "ngayTao": cot ngay_tao cua bien_the_san_pham la NOT NULL. Neu request co truong
-        // nay va dang null, copyProperties se ghi null de len va lam ca giao dich do —
-        // dung ly do bien the thu 2 tro di khong luu duoc, trong khi bien the dau tien (di
-        // qua SanPhamService, da va tu truoc) van vao binh thuong.
+        // Sao chép các thuộc tính từ request
         BeanUtils.copyProperties(request, entity,
                 "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode", "ngayTao");
         entity.setBarcode(barcode);
-        // ngayTao nam o BaseEntity (lop cha), khong khai lai o day. Dat theo gia tri hien
-        // co thay vi doc request.getNgayTao() — BienTheSanPhamRequest co the khong co truong
-        // do, doc thang vao se khong bien dich duoc.
+        // Khởi tạo ngày tạo nếu chưa có
         if (entity.getNgayTao() == null) entity.setNgayTao(LocalDateTime.now());
 
         entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));
@@ -95,12 +88,6 @@ public class BienTheSanPhamService {
         entity.setGpu(request.getGpuId() != null ? dmGpuRepository.getReferenceById(request.getGpuId()) : null);
 
         BienTheSanPham saved = bienTheSanPhamRepository.save(entity);
-
-        // Dong ton_kho tuong ung do trigger TRG_TuDongTaoTonKho cua CSDL tu tao (xem cuoi
-        // file QLBanMayTinh.sql). Truoc day cho nay con insert TonKho bang tay -> hai dong
-        // cho cung mot bien_the_id -> dung rang buoc UNIQUE(bien_the_id) cua bang ton_kho
-        // -> rollback ca bien the. Da bo han; dat o tang CSDL de moi duong ghi deu co ton kho.
-
         return saved;
     }
 

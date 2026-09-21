@@ -1,18 +1,11 @@
-// HinhAnhBaoHanhService.js — Upload/xem ảnh/video minh chứng lỗi cho phiếu BH
+// Quản lý hình ảnh và video minh chứng bảo hành
 import { get, post, del } from './api.js';
 
-/**
- * Lấy danh sách ảnh/video của 1 phiếu bảo hành.
- * @returns {Promise<Array<{hinhAnhId, baoHanhId, loai:'image'|'video', url, tenFile, ngayUpload}>>}
- */
+// Lấy danh sách tệp đính kèm của phiếu bảo hành
 export const getByBaoHanh = (baoHanhId) =>
   get(`/api/hinh-anh-bao-hanh/bao-hanh/${baoHanhId}`).catch(() => []);
 
-/**
- * Upload 1 file (ảnh hoặc video) cho phiếu BH.
- * @param {number} baoHanhId
- * @param {File} file
- */
+// Tải lên tệp đính kèm cho phiếu bảo hành
 export const upload = (baoHanhId, file) => {
   const form = new FormData();
   form.append('file', file);
@@ -26,9 +19,7 @@ export const upload = (baoHanhId, file) => {
   });
 };
 
-/**
- * Upload base64 (dùng khi muốn gửi preview ngay trước khi tạo phiếu).
- */
+// Tải lên ảnh dạng base64
 export const uploadBase64 = (baoHanhId, dataUrl, tenFile = 'image.png') => {
   return fetch(`/api/hinh-anh-bao-hanh/bao-hanh/${baoHanhId}/base64`, {
     method: 'POST',

@@ -175,9 +175,7 @@ const recalcSoTienHoan = () => {
     );
 };
 
-// HTML min/max chỉ chặn nút mũi tên spinner, gõ tay vẫn nhập được số ngoài khoảng —
-// kẹp lại đúng [1, soLuongDaMua] mỗi khi đổi, tránh soTienHoan tính sai theo số lượng ảo
-// (backend đã chặn ở ChiTietTraHangService nhưng kẹp ở đây để báo sai ngay lúc nhập).
+// Giới hạn số lượng sản phẩm hoàn trả hợp lệ
 const clampSoLuongTra = (l) => {
   const n = Math.trunc(Number(l.soLuongTra)) || 1;
   l.soLuongTra = Math.min(Math.max(n, 1), l.soLuongDaMua);

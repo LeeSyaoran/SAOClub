@@ -17,6 +17,7 @@ import * as PhieuBaoHanhService from "../services/PhieuBaoHanhService.js";
 import OrderStatusTimeline from "../components/order/OrderStatusTimeline.vue";
 import OrderTrackingLog from "../components/order/OrderTrackingLog.vue";
 import ReturnRequestModal from "../components/order/ReturnRequestModal.vue";
+import CustomerOrderDetailModal from "../components/order/CustomerOrderDetailModal.vue";
 import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
 import LuckyWheelPanel from "../components/account/LuckyWheelPanel.vue";
@@ -184,13 +185,28 @@ const viewProductDetail = (item) => {
   if (product) selectedProductDetail.value = product;
 }
 
-// Mở chi tiết đơn hàng (mặc định chuyển sang tab lịch sử mua hàng)
-const viewOrderDetail = (order) => {
-  activeTab.value = 'history';
-  // có thể mở modal chi tiết ở đây
-  emit('toast', `Đang mở đơn hàng #${order?.maDon || order?.donHangId}`, 'info');
+const selectedOrderDetail = ref(null);
+const viewOrderDetail = async (order) => {
+  selectedOrderDetail.value = order;
+  if (order?.donHangId) {
+    if (!historyByOrder.value[order.donHangId]) {
+      try {
+        const logs = await LichSuDonHangService.getByDonHang(order.donHangId);
+        historyByOrder.value[order.donHangId] = logs || [];
+      } catch {
+        historyByOrder.value[order.donHangId] = [];
+      }
+    }
+    if (!itemsByOrder.value[order.donHangId]) {
+      try {
+        const its = await ChiTietDonHangService.getByDonHang(order.donHangId);
+        itemsByOrder.value[order.donHangId] = its || [];
+      } catch {
+        itemsByOrder.value[order.donHangId] = [];
+      }
+    }
+  }
 };
-;
 
 const buyAgainOrder = (o) => {
   const khongMuaLaiDuoc = [];
@@ -258,6 +274,10 @@ const confirmReceived = async (o) => {
     }
     emit("toast", t("account.confirmReceivedSuccess"), "success");
     await fetchData();
+    if (selectedOrderDetail.value?.donHangId === o.donHangId) {
+      const updated = orders.value.find(ord => ord.donHangId === o.donHangId);
+      if (updated) selectedOrderDetail.value = updated;
+    }
   } finally {
     confirmingOrderId.value = null;
   }
@@ -361,6 +381,14 @@ const buyBackItems = ref([]);
 const getOrderProductsName = (o) => {
   if (o.tenSanPham) return o.tenSanPham;
   if (o.sanPham && o.sanPham.length > 0) return o.sanPham[0].tenSanPham || '';
+  const orderItems = itemsByOrder.value[o.donHangId];
+  if (orderItems && orderItems.length > 0) {
+    const p = productByBienThe(orderItems[0].bienTheId);
+    const name = p?.tenSanPham || orderItems[0].tenSanPham || orderItems[0].maSku;
+    if (name) {
+      return orderItems.length > 1 ? `${name} (+${orderItems.length - 1} sản phẩm khác)` : name;
+    }
+  }
   return 'Đơn hàng';
 };
 
@@ -559,7 +587,7 @@ const handleOutsideClick = (e) => {
                   <div class="overview-card-header">
                     <Receipt :size="18" class="overview-card-icon" />
                     <h3 class="overview-card-title">Đơn hàng gần đây</h3>
-                    <button class="overview-card-link" @click="activeTab = 'overview'">Xem tất cả →</button>
+                    <button class="overview-card-link" @click="activeTab = 'history'">Xem tất cả →</button>
                   </div>
                   <div v-if="ordersLoading" class="overview-loading">
                     <div v-for="i in 2" :key="i" class="skel-row"></div>
@@ -586,7 +614,15 @@ const handleOutsideClick = (e) => {
                         </div>
                       </div>
                       <div class="overview-order-right">
-                        <span class="overview-order-status">{{ orderStatusLabel(o.trangThai) }}</span>
+                        <span
+                          class="overview-order-status"
+                          :style="{
+                            backgroundColor: orderStatusColor(o.trangThaiDonHang || o.trangThai).bg,
+                            color: orderStatusColor(o.trangThaiDonHang || o.trangThai).text
+                          }"
+                        >
+                          {{ orderStatusLabel(o.trangThaiDonHang || o.trangThai) }}
+                        </span>
                         <div class="overview-order-total">Tổng thanh toán: <strong>{{ formatPriceRaw(o.tongThanhToan || o.tongTien) }}</strong></div>
                         <button class="overview-order-detail-btn" @click.stop="viewOrderDetail(o)">
                           Xem chi tiết
@@ -746,8 +782,11 @@ const handleOutsideClick = (e) => {
                             <span class="total-label">Tổng cộng</span>
                             <span class="total-value">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
                           </div>
-                          <div v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)" class="order-actions">
-                            <button class="btn-outline-danger btn-sm" :disabled="o.trangThaiDonHang !== 'awaiting_confirmation' || confirmingOrderId === o.donHangId" @click="confirmReceived(o)">
+                          <div class="order-actions">
+                            <button class="btn-outline-secondary btn-sm" @click="viewOrderDetail(o)">
+                              <Receipt :size="13" /> Chi tiết đơn
+                            </button>
+                            <button v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)" class="btn-outline-danger btn-sm" :disabled="o.trangThaiDonHang !== 'awaiting_confirmation' || confirmingOrderId === o.donHangId" @click="confirmReceived(o)">
                               <CheckCircle2 :size="14" /> Đã nhận hàng
                             </button>
                           </div>
@@ -797,6 +836,7 @@ const handleOutsideClick = (e) => {
                               </div>
                             </div>
                             <div class="detail-actions">
+                              <button class="btn-outline-secondary btn-sm" @click.stop="viewOrderDetail(o)"><Receipt :size="13" /> Chi tiết đơn</button>
                               <button v-if="o.trangThaiDonHang === 'delivered'" class="btn-outline-secondary btn-sm" @click.stop="buyAgainOrder(o)"><RefreshCw :size="13" /> Mua lại</button>
                               <button v-if="canRequestReturn(o)" class="btn-outline-danger btn-sm" @click.stop="returnModalOrder = o"><Undo2 :size="13" /> Đổi trả</button>
                             </div>
@@ -1049,6 +1089,18 @@ const handleOutsideClick = (e) => {
       </div>
     </div>
 
+    <CustomerOrderDetailModal
+      v-if="selectedOrderDetail"
+      :order="selectedOrderDetail"
+      :items="itemsByOrder[selectedOrderDetail.donHangId] || []"
+      :products="products"
+      :history="historyByOrder[selectedOrderDetail.donHangId] || []"
+      @close="selectedOrderDetail = null"
+      @confirm-received="confirmReceived"
+      @buy-again="buyAgainOrder"
+      @request-return="o => { selectedOrderDetail = null; returnModalOrder = o; }"
+    />
+
     <ProductDetail v-if="selectedProductDetail" :key="selectedProductDetail.bienTheId" :product="selectedProductDetail" :products="products" :wishlist-ids="wishlistIdSet" :auth-user="auth.user"
       @close="selectedProductDetail = null"
       @add-to-cart="p => { emit('add-to-cart', p); selectedProductDetail = null; }"
@@ -1067,9 +1119,7 @@ const handleOutsideClick = (e) => {
 </template>
 
 <style scoped>
-/* ═════════════════════════════════════════════════════════════════════════
-   ACCOUNT PAGE - đồng bộ admin theme (hồng-đỏ)
-   ═════════════════════════════════════════════════════════════════════════ */
+/* Quản lý tài khoản */
 .account-shell {
   /* Admin pink palette - đồng bộ với admin-theme.css */
   --pink-50:  #fff5f9;

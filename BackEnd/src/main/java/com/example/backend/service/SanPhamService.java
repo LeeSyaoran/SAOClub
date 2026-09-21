@@ -62,28 +62,21 @@ public class SanPhamService {
                 .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại với id: " + sanPhamId));
     }
 
-    /**
-     * Tạo SanPham + BienTheSanPham đầu tiên trong CÙNG một transaction.
-     * Dòng ton_kho tương ứng do trigger trg_BienThe_TaoTonKho của CSDL tự tạo — đặt ở tầng
-     * CSDL thay vì tầng service để mọi đường ghi (import SQL, màn nhập hàng, code sau này)
-     * đều có dòng tồn kho, không phụ thuộc lập trình viên có nhớ gọi hay không.
-     */
+    // Tạo sản phẩm và biến thể mặc định
     @Transactional
     public SanPhamCreatedResponse createSanPham(SanPhamRequest request) {
         String maSanPham = chuanHoa(request.getMaSanPham());
         kiemTraTrungMaSanPham(maSanPham, null);
 
-        // Barcode giờ thuộc về biến thể, kiểm tra trùng barcode biến thể
+        // Kiểm tra trùng mã vạch biến thể
         String barcodeBienThe = chuanHoa(request.getBarcodeBienThe());
         kiemTraTrungBarcodeBienThe(barcodeBienThe, null);
 
         SanPham sanPham = new SanPham();
-        // Loại bỏ barcode khỏi SanPham vì đã chuyển sang bảng biến thể
         BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham");
         sanPham.setMaSanPham(maSanPham);
         sanPham.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());
-        // hinhAnhList (nếu FE gửi) là nguồn dữ liệu chuẩn cho ảnh đại diện — phần tử đầu
-        // luôn thắng field hinhAnhChinh rời, tránh 2 giá trị lệch nhau.
+        // Lấy ảnh đầu tiên làm ảnh đại diện
         if (request.getHinhAnhList() != null && !request.getHinhAnhList().isEmpty())
             sanPham.setHinhAnhChinh(request.getHinhAnhList().get(0));
 
@@ -94,14 +87,12 @@ public class SanPhamService {
 
         SanPham saved = sanPhamRepository.save(sanPham);
 
-        // Trigger trg_AutoGen_MaSanPham tự gán ma_san_pham khi NULL → refresh để lấy giá trị
         entityManager.refresh(saved);
 
         if (request.getHinhAnhList() != null) luuDanhSachHinhAnh(saved.getSanPhamId(), request.getHinhAnhList());
 
         BienTheSanPham bt = new BienTheSanPham();
-        // Loại trừ ngayTao khỏi BeanUtils: request.ngayTao null sẽ ghi đè null lên cột
-        // ngay_tao NOT NULL của bien_the_san_pham và làm cả giao dịch đổ.
+        // Sao chép thuộc tính cho biến thể
         BeanUtils.copyProperties(request, bt, "bienTheId", "ngayTao");
         bt.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());
         bt.setSanPham(saved);
@@ -209,8 +200,7 @@ public class SanPhamService {
         bt.setGpu(request.getGpuId() != null ? dmGpuRepository.getReferenceById(request.getGpuId()) : null);
     }
 
-    /** Xoá hết gallery cũ rồi ghi lại đúng danh sách mới — đơn giản hơn nhiều so với API
-     *  add/remove/reorder từng ảnh, và ảnh sản phẩm không phải dữ liệu cần audit trail. */
+    // Cập nhật danh sách ảnh gallery của sản phẩm
     private void luuDanhSachHinhAnh(Integer sanPhamId, List<String> duongDanList) {
         sanPhamHinhAnhRepository.deleteBySanPhamId(sanPhamId);
         SanPham ref = sanPhamRepository.getReferenceById(sanPhamId);
@@ -227,20 +217,17 @@ public class SanPhamService {
         sanPhamHinhAnhRepository.saveAll(rows);
     }
 
-    /** Chuỗi rỗng phải về null. */
+    // Chuẩn hóa chuỗi rỗng thành null
     private String chuanHoa(String s) {
         return (s == null || s.isBlank()) ? null : s.trim();
     }
 
-    /**
-     * bien_the_san_pham chỉ nhận active/inactive (CK_bt_trangthai), trong khi san_pham còn
-     * nhận thêm ngung_kinh_doanh. Request dùng chung một trường trangThai nên quy đổi tại đây.
-     */
+    // Quy đổi trạng thái cho biến thể sản phẩm
     private String trangThaiBienThe(String trangThai) {
         return "active".equalsIgnoreCase(trangThai) ? "active" : "inactive";
     }
 
-    /** Báo lỗi rõ ràng trước khi để SQL Server bắn unique violation cho mã sản phẩm. */
+    // Kiểm tra trùng mã sản phẩm
     private void kiemTraTrungMaSanPham(String maSanPham, Integer boQuaId) {
         if (maSanPham != null) {
             boolean trung = boQuaId == null
@@ -248,6 +235,13 @@ public class SanPhamService {
                     : sanPhamRepository.existsByMaSanPhamAndSanPhamIdNot(maSanPham, boQuaId);
             if (trung) throw new IllegalArgumentException("Mã sản phẩm '" + maSanPham + "' đã được dùng");
         }
+    }
+
+    /**
+     * Lấy tất cả sản phẩm cho dropdown chọn (khuyến mãi, etc.)
+     */
+    public List<SanPhamResponse> getDanhSachChon() {
+        return sanPhamRepository.hienThiSanPham(null, null, null, null, Pageable.unpaged()).getContent();
     }
 
     /** Barcode cấp biến thể — bảng bien_the_san_pham riêng, kiểm tra trùng barcode biến thể. */

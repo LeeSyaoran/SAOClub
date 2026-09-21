@@ -87,16 +87,9 @@ public class ChiTietSanPhamController {
         return ResponseEntity.ok(Map.of("unlocked", unlocked));
     }
 
-    // ── Barcode scan — POS fast lookup ──────────────────────────────────────────
-    // Tim san pham theo barcode (bien_the) hoac so_serial (chi_tiet_san_pham)
-    // Tra ve serial object neu tim thay, neu serial da_ban tra ve bien the + thong tin san pham
+    // Tìm sản phẩm theo barcode hoặc số serial
     @GetMapping("/scan/{code}")
     public ResponseEntity<?> scanBarcode(@PathVariable String code) {
         return chiTietSanPhamService.scanBarcode(code);
     }
-
-    // Dọn rác serial 'giu_hang' bị kẹt được gọi TỰ ĐỘNG từ hienThiChiTietSanPham() mỗi lần
-    // frontend load bảng serial — không cần endpoint riêng vì flow là: nhân viên mở tab
-    // Kho hàng → load → backend dọn orphan → hiển thị danh sách đã sạch. An toàn vì query
-    // NOT EXISTS đảm bảo không bao giờ đụng serial đang liên kết đơn thật.
 }

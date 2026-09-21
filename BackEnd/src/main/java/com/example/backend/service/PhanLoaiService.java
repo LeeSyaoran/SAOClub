@@ -9,13 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Phân loại theo mục đích sử dụng (văn phòng, gaming, đồ họa…).
- *
- * Bảng nối san_pham_phan_loai đã có trigger trg_SyncPhanLoaiTags: mỗi lần thêm/xóa dòng
- * nối, trigger tự cập nhật hai cột cache phan_loai_tags / phan_loai_ten trên tất cả biến
- * thể của sản phẩm đó. Vì vậy service này chỉ cần ghi đúng bảng nối, không đụng vào cache.
- */
+// Dịch vụ quản lý phân loại sản phẩm
 @Service
 public class PhanLoaiService {
 
@@ -39,7 +33,7 @@ public class PhanLoaiService {
                 Integer.class, sanPhamId);
     }
 
-    /** Ghi đè toàn bộ danh sách phân loại của một sản phẩm (danh sách rỗng = bỏ hết). */
+    // Cập nhật danh sách phân loại cho sản phẩm
     @Transactional
     public void luuChoSanPham(Integer sanPhamId, List<Integer> phanLoaiIds) {
         jdbc.update("DELETE FROM san_pham_phan_loai WHERE san_pham_id = ?", sanPhamId);

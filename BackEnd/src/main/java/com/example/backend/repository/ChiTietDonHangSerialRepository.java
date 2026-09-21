@@ -20,8 +20,6 @@ public interface ChiTietDonHangSerialRepository extends JpaRepository<ChiTietDon
            "FROM ChiTietDonHangSerial s WHERE s.chiTietDonHang.donHang.id = :donHangId")
     List<ChiTietDonHangSerialResponse> findByDonHangId(@Param("donHangId") Integer donHangId);
 
-    // Check serial đã được link với đơn hàng (đã bán / đang giữ) — dùng khi xóa phiếu nhập
-    // để quyết định có được soft-delete serial đó hay không (serial đã bán phải bảo toàn FK
-    // để không phá lịch sử bảo hành + đối soát đơn hàng).
+    // Kiểm tra serial đã liên kết với đơn hàng nào hay chưa
     boolean existsByChiTietSanPham_ChiTietId(Integer chiTietId);
 }

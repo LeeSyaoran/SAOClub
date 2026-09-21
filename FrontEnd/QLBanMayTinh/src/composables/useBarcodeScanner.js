@@ -1,16 +1,4 @@
-/**
- * useBarcodeScanner — composable quet barcode/QR tu camera.
- *
- * Su dung @zxing/browser BrowserMultiFormatReader, ho tro:
- *   CODE_128, CODE_39, EAN_13, EAN_8, UPC_A, UPC_E,
- *   ITF, CODABAR, QR_CODE, DATA_MATRIX, PDF_417, AZTEC ...
- *
- * Usage:
- *   const scanner = useBarcodeScanner()
- *   scanner.onScan(data => console.log('Scanned:', data))
- *   await scanner.start()
- *   scanner.stop()
- */
+// Quét mã vạch và mã QR từ camera
 import { ref, onUnmounted } from 'vue';
 
 export function useBarcodeScanner() {
@@ -22,7 +10,7 @@ export function useBarcodeScanner() {
   let controls = null;
   let scanCallback = null;
 
-  // Khoi tao BrowserMultiFormatReader 1 lan
+  // Khởi tạo thư viện đọc mã vạch
   const getReader = async () => {
     if (reader) return reader;
     const { BrowserMultiFormatReader } = await import('@zxing/browser');
@@ -30,10 +18,7 @@ export function useBarcodeScanner() {
     return reader;
   };
 
-  /**
-   * Bat camera va bat dau quet.
-   * @param {string|null} deviceId — null = camera mac dinh (thuong la camera sau)
-   */
+  // Bật camera và bắt đầu quét mã
   const start = async (deviceId = null) => {
     error.value = '';
     isScanning.value = false;
@@ -93,9 +78,7 @@ export function useBarcodeScanner() {
     }
   };
 
-  /**
-   * Tat camera.
-   */
+  // Tắt camera và kết thúc quét mã
   const stop = () => {
     try {
       if (controls) {
@@ -106,16 +89,13 @@ export function useBarcodeScanner() {
         reader.reset();
       }
     } catch {
-      // ignore
+      // Bỏ qua lỗi khi tắt camera
     }
     isOpen.value = false;
     isScanning.value = false;
   };
 
-  /**
-   * Dang ky callback khi quet duoc ma.
-   * @param {function} cb — nhan text da quet
-   */
+  // Đăng ký hàm xử lý kết quả quét
   const onScan = (cb) => {
     scanCallback = cb;
   };

@@ -1,8 +1,6 @@
 import { get, post, put, del } from './api.js';
 
-// Backend giờ trả Page<SanPhamResponse> (đã phân trang) thay vì List đầy đủ như trước —
-// xem BackEnd/.../SanPhamController.getAll(). getPage() gọi thẳng, trả nguyên object Page
-// ({content, totalElements, totalPages, number,...}) cho bảng có nút Trước/Sau + filter.
+// Lấy danh sách sản phẩm có phân trang và bộ lọc
 export const getPage = ({ page = 0, size = 20, keyword, danhMucId, thuongHieuId, trangThai } = {}) => {
   const params = new URLSearchParams({ page, size });
   if (keyword) params.set('keyword', keyword);
@@ -12,8 +10,7 @@ export const getPage = ({ page = 0, size = 20, keyword, danhMucId, thuongHieuId,
   return get(`/api/san-pham/hien-thi?${params}`);
 };
 
-// Tương thích các chỗ đang cần "toàn bộ" sản phẩm trong bộ nhớ (dashboard, POS, dropdown
-// biến thể...) — lấy 1 trang lớn rồi trả thẳng mảng .content, không đổi chữ ký hàm cũ.
+// Lấy danh sách tất cả sản phẩm
 export const getAll = () => getPage({ size: 200 }).then((p) => p.content);
 
 export const save = (id, body) =>
@@ -21,10 +18,13 @@ export const save = (id, body) =>
 
 export const remove = (id) => del(`/api/san-pham/delete/${id}`);
 
-// Đã có biến thể nào qua giao dịch chưa — gọi trước khi hiện hộp thoại xóa.
+// Kiểm tra sản phẩm đã có lịch sử giao dịch chưa
 export const hasTransactionHistory = (id) => get(`/api/san-pham/${id}/co-giao-dich`);
 
 export const getLichSu = (id) => get(`/api/san-pham/${id}/lich-su`);
 
-// Gallery nhiều ảnh (ngoài ảnh đại diện hinhAnhChinh) — trang chi tiết khách hàng dùng.
+// Lấy danh sách hình ảnh chi tiết của sản phẩm
 export const getHinhAnh = (id) => get(`/api/san-pham/${id}/hinh-anh`);
+
+// Lấy tất cả sản phẩm cho dropdown chọn (khuyến mãi, etc.)
+export const getDanhSachChon = () => get(`/api/san-pham/danh-sach-chon`);

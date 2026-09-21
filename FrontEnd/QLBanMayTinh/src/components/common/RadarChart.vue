@@ -1,6 +1,5 @@
 <template>
-  <!-- Radar nhiều trục, 1 series — không so sánh 2 kỳ (xem Global Constraints trong
-       plan). Toạ độ mỗi trục chia đều 360°, bắt đầu từ đỉnh (12h). -->
+  <!-- Biểu đồ radar -->
   <svg v-if="data.length" :width="size" :height="size" :viewBox="`0 0 ${size} ${size}`">
     <polygon
       v-for="ring in GRID_RINGS" :key="ring" :points="ringPoints(ring)"

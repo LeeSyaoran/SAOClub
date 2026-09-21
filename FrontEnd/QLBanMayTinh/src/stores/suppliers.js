@@ -5,7 +5,7 @@ export const SuppliersStore = reactive({ items: [], loading: false, loaded: fals
 
 let suppliersPromise = null;
 
-// Xem resetProducts() ở stores/products.js — cùng lý do reset khi đổi tài khoản cùng tab.
+// Reset dữ liệu store khi đăng xuất hoặc đổi tài khoản
 export const resetSuppliers = () => {
   suppliersPromise = null;
   SuppliersStore.items = [];

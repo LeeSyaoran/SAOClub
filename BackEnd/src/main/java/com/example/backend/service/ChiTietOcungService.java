@@ -70,10 +70,7 @@ public class ChiTietOcungService {
         if (!"trong_kho".equals(entity.getTrangThai())) {
             throw new IllegalArgumentException("Chỉ được xóa serial đang ở trạng thái \"Trong kho\" (chưa dùng)");
         }
-        // Ghi lịch sử trước khi xóa — để audit.
-        // bien_the_id trong lich_su_ton_kho là NOT NULL nên bỏ qua ghi lichSu cho chi_tiet_o_cung
-        // (ổ cứng rời không có bienThe, nằm ngoài luồng ton_kho chính). Toast thành công
-        // ở FE đã thông báo cho nhân viên là serial đã xóa.
+        // Xóa bản ghi serial ổ cứng
         chiTietOcungRepository.deleteById(id);
     }
 }

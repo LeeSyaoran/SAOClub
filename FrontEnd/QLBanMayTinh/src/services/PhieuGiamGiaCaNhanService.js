@@ -4,7 +4,7 @@ export const doiThuong = (doiThuongId) => post(`/api/phieu-giam-gia-ca-nhan/doi-
 
 export const getCuaToi = () => get('/api/phieu-giam-gia-ca-nhan/cua-toi');
 
-// Admin tặng voucher trực tiếp cho 1 khách hàng — body: { loai, giaTri, giaTriToiDa, ngayHetHan, donHangToiThieu }
+// Admin tặng voucher trực tiếp cho khách hàng
 export const taoVoucherAdmin = (khachHangId, body) => post(`/api/phieu-giam-gia-ca-nhan/tang/${khachHangId}`, body);
 
 // Admin xem toàn bộ voucher/điểm thưởng của 1 khách hàng

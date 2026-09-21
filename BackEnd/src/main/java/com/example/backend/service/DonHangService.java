@@ -82,6 +82,8 @@ public class DonHangService {
     @Autowired
     private TaiKhoanRepository taiKhoanRepository;
     @Autowired
+    private KhuyenMaiService khuyenMaiService;
+    @Autowired
     private EntityManager entityManager;
 
     public Page<DonHangResponse> hienThiDonHang(Integer khachHangId, Pageable pageable) {
@@ -120,6 +122,22 @@ public class DonHangService {
         if (request.getKhuyenMaiId() != null) {
             KhuyenMai khuyenMai = khuyenMaiRepository.findById(request.getKhuyenMaiId())
                     .orElseThrow(() -> new IllegalArgumentException("Mã khuyến mãi không tồn tại"));
+
+            // Kiểm tra khuyến mãi có áp dụng cho sản phẩm trong đơn hàng không
+            List<Integer> sanPhamIds = request.getSanPhamIds();
+            if (sanPhamIds != null && !sanPhamIds.isEmpty()) {
+                boolean coSanPhamApDung = false;
+                for (Integer spId : sanPhamIds) {
+                    if (khuyenMaiService.kiemTraSanPhamApDung(khuyenMai.getKhuyenMaiId(), spId)) {
+                        coSanPhamApDung = true;
+                        break;
+                    }
+                }
+                if (!coSanPhamApDung) {
+                    throw new IllegalArgumentException("Mã khuyến mãi không áp dụng cho sản phẩm trong đơn hàng");
+                }
+            }
+
             entity.setKhuyenMai(khuyenMai);
             entity.setGiamGia(tinhGiamGiaKhuyenMai(khuyenMai, request.getTongTien()));
         } else if (request.getPhieuGiamGiaCaNhanId() != null) {
@@ -139,9 +157,7 @@ public class DonHangService {
         DonHang saved = donHangRepository.save(entity);
         entityManager.refresh(saved);
 
-        // NOTE: Counter tăng ở trigger trg_KiemTra_KhuyenMai (DB layer).
-        // Không tăng ở đây để tránh double-increment.
-
+        // Lưu thông tin voucher cá nhân nếu có
         if (phieuDangDung != null) {
             phieuDangDung.setDaSuDung(true);
             phieuDangDung.setDonHang(saved);
@@ -152,10 +168,7 @@ public class DonHangService {
         return saved;
     }
 
-    /**
-     * Checkout hoàn chỉnh: tạo đơn + thêm chi tiết trong 1 transaction.
-     * Dùng cho khách vãng lai không đăng nhập.
-     */
+    // Checkout trực tuyến hoàn tất đơn hàng
     @Transactional
     public DonHang checkoutComplete(DonHangRequest orderReq, List<ChiTietDonHangRequest> items) {
         DonHang order = create(orderReq);
@@ -214,7 +227,7 @@ public class DonHangService {
     private static final Map<String, Set<String>> CHUYEN_TRANG_THAI_DON_HANG = Map.of(
             "pending",              Set.of("confirmed", "cancelled"),
             "confirmed",            Set.of("processing", "cancelled"),
-            "processing",           Set.of("shipping", "cancelled"),
+            "processing",           Set.of("out_for_delivery", "shipping", "cancelled"),
             "shipping",             Set.of("out_for_delivery", "cancelled"),
             "out_for_delivery",     Set.of("awaiting_confirmation", "cancelled"),
             "awaiting_confirmation", Set.of("delivered"),
@@ -225,7 +238,7 @@ public class DonHangService {
 
     private void kiemTraChuyenTrangThai(String trangThaiCu, String trangThaiMoi, String kenhBan) {
         if (trangThaiCu == null || trangThaiMoi == null || trangThaiCu.equals(trangThaiMoi)) return;
-        if ("in_store".equals(kenhBan) && "confirmed".equals(trangThaiCu) && "delivered".equals(trangThaiMoi)) return;
+        if ("in_store".equals(kenhBan) && "delivered".equals(trangThaiMoi)) return;
         if (!CHUYEN_TRANG_THAI_DON_HANG.getOrDefault(trangThaiCu, Set.of()).contains(trangThaiMoi))
             throw new IllegalArgumentException(
                     "Không thể chuyển trạng thái đơn hàng từ \"" + trangThaiCu + "\" sang \"" + trangThaiMoi + "\"");
@@ -278,10 +291,7 @@ public class DonHangService {
         sseService.notifyOrderUpdate(id);
     }
 
-    /**
-     * Giao hàng tại quầy (POS). Set trangThai = delivered + ngayGiaoThucTe
-     * rồi kích hoạt bảo hành cho tất cả serial trong đơn.
-     */
+    // Giao hàng và kích hoạt bảo hành tại quầy
     @Transactional
     public DonHang giaoHang(Integer id, LocalDateTime ngayGiaoThucTe) {
         DonHang donHang = getById(id);
@@ -295,10 +305,7 @@ public class DonHangService {
         return saved;
     }
 
-    /**
-     * Kích hoạt bảo hành: duyệt tất cả serial trong đơn, set trangThai = da_ban
-     * để tính ngày hết bảo hành khi tra cứu.
-     */
+    // Kích hoạt bảo hành tự động cho serial trong đơn
     private void kichHoatBaoHanhTuDong(DonHang donHang) {
         List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(donHang.getId());
         for (ChiTietDonHang item : items) {
@@ -562,8 +569,7 @@ public class DonHangService {
         recalculateTongTien(targetId);
     }
 
-    // Auto-cancel pending orders after 30 minutes without payment
-    // Chay moi 5 phut — tim don pending + created > 30 phut truoc
+    // Tự động hủy đơn hàng chờ thanh toán quá hạn
     @Scheduled(fixedDelay = 300000)
     public void autoCancelPendingOrders() {
         try {

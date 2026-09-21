@@ -43,9 +43,7 @@ watch(() => props.modelValue, (open) => {
   else window.removeEventListener('keydown', onKeydown);
 });
 
-// Bẫy focus — trước đây Tab thoát được ra ngoài modal (vào sidebar/nội dung phía sau đang
-// bị che), người dùng bàn phím/màn hình đọc dễ lạc mất vị trí. Focus phần tử focusable đầu
-// tiên khi mở, giữ Tab/Shift+Tab quẩn trong modal, trả focus lại đúng chỗ cũ khi đóng.
+// Giữ focus bên trong modal khi mở
 const dialogEl = ref(null);
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 let elTruocKhiMo = null;
