@@ -582,6 +582,43 @@
                   Ngày tạo và ngày cập nhật do hệ thống tự ghi tại thời điểm bấm Lưu — hiện là {{ dongHo }}.
                 </p>
               </fieldset>
+
+              <fieldset class="hh-block mt-3" :disabled="modalMode === 'variant'">
+                <legend>Thông số chung</legend>
+                <div class="hh-grid">
+                  <label class="hh-field">
+                    <span>Bảo hành (tháng) <b>*</b></span>
+                    <select v-model.number="form.baoHanhThang">
+                      <option v-for="n in [6,12,18,24,36,48,60]" :key="n" :value="n">{{ n }} tháng</option>
+                    </select>
+                    <em v-if="errors.baoHanhThang" class="hh-err">{{ errors.baoHanhThang }}</em>
+                  </label>
+
+                  <label class="hh-field">
+                    <span>Màn hình</span>
+                    <input v-model.trim="form.kichThuocManHinh" placeholder="VD: 15.6 inch FHD 144Hz" />
+                  </label>
+
+                  <label class="hh-field">
+                    <span>Hệ điều hành</span>
+                    <input v-model.trim="form.heDieuHanh" placeholder="VD: Windows 11 Home" />
+                  </label>
+
+                  <label class="hh-field">
+                    <span>Pin</span>
+                    <input v-model.trim="form.pin" placeholder="VD: 52Wh" />
+                  </label>
+
+                  <label class="hh-field">
+                    <span>Trọng lượng (kg)</span>
+                    <input
+                      type="number" step="0.01" min="0"
+                      v-model.number="form.trongLuongKg"
+                      placeholder="VD: 1.7"
+                    />
+                  </label>
+                </div>
+              </fieldset>
             </div>
 
             <!-- ─────────── TAB 2: PHIÊN BẢN ─────────── -->
@@ -1453,9 +1490,11 @@ const suaSanPham = async (sp) => {
     hinhAnhBienThe: v.hinhAnhBienThe,
     _key: v.bienTheId || Date.now() + Math.random()
   }))
-  if (bienTheRows.value.length > 0) {
+  if (bienTheRows.value.length > 0 && !form.value.bienTheId) {
+    // ponytail: chỉ mặc định chọn biến thể đầu khi form chưa có biến thể nào
+    // (tránh ghi đè khi user vừa chọn 1 biến thể trong modal chi tiết rồi bấm Chỉnh sửa)
     suaBienThe(bienTheRows.value[0])
-  } else {
+  } else if (bienTheRows.value.length === 0) {
     form.value.bienTheId = null
     form.value.maSku = ''
     form.value.barcode = ''
@@ -2218,7 +2257,8 @@ const submitForm = async () => {
       const g = danhSachSanPham.value.find((x) => String(x.sanPhamId) === String(moLaiChiTiet.value))
       if (g) {
         moChiTiet(g)
-        tabCT.value = 'lichsu'
+        // ponytail: mở lại đúng tab user vừa sửa (info/bienthe) thay vì ép 'lichsu'
+        tabCT.value = tab.value === 'bienthe' ? 'bienthe' : 'info'
       }
       moLaiChiTiet.value = null
     }

@@ -34,8 +34,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         String[] origins = allowedOrigins.split(",");
         registry.addEndpoint("/ws/chat")
                 .setAllowedOriginPatterns(origins)
-                .addInterceptors(new WebSocketAuthInterceptor())
-                .withSockJS();
+                .addInterceptors(new WebSocketAuthInterceptor());
     }
 
     @Override

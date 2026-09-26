@@ -286,6 +286,14 @@ const detailVariant = computed(() => {
   if (id == null) return null;
   return (ProductsStore.items ?? []).find((p) => p.bienTheId === id) ?? selectedVariant.value;
 });
+// ponytail: thông số chung (màn hình/HĐH/pin/trọng lượng/bảo hành/NCC) lấy từ sản phẩm cha
+const detailParent = computed(() => {
+  const pid = detailVariant.value?.sanPhamId;
+  if (pid == null) return null;
+  return (ProductsStore.items ?? []).find((p) => p.sanPhamId === pid) ?? null;
+});
+// ponytail: đang sửa biến thể đã có (không phải tạo mới) → các field thông số chung read-only
+const isEditingExisting = computed(() => !addVariantMode.value && editingId.value != null);
 
 // ── Modal "Chi tiet san pham" (dung lai ProductDetailModal.vue) — xem CA san pham ─────
 const showDetailModal = ref(false);
@@ -856,16 +864,16 @@ const saveVariant = async () => {
               <dt>{{ tt('admin.variants.margin', 'Biên lợi nhuận') }}</dt><dd>{{ marginOf(detailVariant) }}%</dd>
             </div>
             <div><dt>{{ t('admin.productModal.colorLabel') }}</dt><dd>{{ detailVariant.mauSac || '—' }}</dd></div>
-            <div><dt>{{ t('admin.productModal.warrantyLabel') }}</dt><dd>{{ detailVariant.baoHanhThang ?? '—' }}</dd></div>
+            <div><dt>{{ t('admin.productModal.warrantyLabel') }}</dt><dd>{{ detailParent?.baoHanhThang ?? '—' }}</dd></div>
             <div><dt>{{ t('admin.productModal.cpuLabel') }}</dt><dd>{{ detailVariant.cpu || '—' }}</dd></div>
             <div><dt>{{ t('admin.productModal.ramLabel') }}</dt><dd>{{ detailVariant.ram || '—' }}</dd></div>
             <div><dt>{{ t('admin.productModal.storageLabel') }}</dt><dd>{{ detailVariant.oCung || '—' }}</dd></div>
             <div><dt>{{ t('admin.productModal.gpuLabel') }}</dt><dd>{{ detailVariant.gpu || '—' }}</dd></div>
-            <div><dt><Monitor :size="12" /> {{ t('admin.productModal.screenLabel') }}</dt><dd>{{ detailVariant.kichThuocManHinh || '—' }}</dd></div>
-            <div><dt>{{ t('admin.productModal.osLabel') }}</dt><dd>{{ detailVariant.heDieuHanh || '—' }}</dd></div>
-            <div><dt>{{ t('admin.productModal.batteryLabel') }}</dt><dd>{{ detailVariant.pin || '—' }}</dd></div>
-            <div><dt>{{ t('admin.productModal.weightLabel') }}</dt><dd>{{ detailVariant.trongLuongKg ? detailVariant.trongLuongKg + ' kg' : '—' }}</dd></div>
-            <div><dt>{{ t('admin.productModal.supplierLabel') }}</dt><dd>{{ detailVariant.tenNhaCungCap || '—' }}</dd></div>
+            <div><dt><Monitor :size="12" /> {{ t('admin.productModal.screenLabel') }}</dt><dd>{{ detailParent?.kichThuocManHinh || '—' }}</dd></div>
+            <div><dt>{{ t('admin.productModal.osLabel') }}</dt><dd>{{ detailParent?.heDieuHanh || '—' }}</dd></div>
+            <div><dt>{{ t('admin.productModal.batteryLabel') }}</dt><dd>{{ detailParent?.pin || '—' }}</dd></div>
+            <div><dt>{{ t('admin.productModal.weightLabel') }}</dt><dd>{{ detailParent?.trongLuongKg ? detailParent.trongLuongKg + ' kg' : '—' }}</dd></div>
+            <div><dt>{{ t('admin.productModal.supplierLabel') }}</dt><dd>{{ detailParent?.tenNhaCungCap || '—' }}</dd></div>
           </dl>
         </div>
 

@@ -336,35 +336,34 @@ public class ChatService {
     }
 
     private void broadcastTrangThaiChange(CuocTroChuyen ctc) {
-        Map<String, Object> payload = Map.of(
-                "cuocTroChuyenId", ctc.getId(),
-                "trangThai", ctc.getTrangThai(),
-                "nhanVienPhuTrachId", ctc.getNhanVienPhuTrach() != null ? ctc.getNhanVienPhuTrach().getNhanVienId() : null,
-                "nhanVienPhuTrachTen", ctc.getNhanVienPhuTrach() != null ? ctc.getNhanVienPhuTrach().getHoTen() : null
-        );
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("cuocTroChuyenId", ctc.getId());
+        payload.put("trangThai", ctc.getTrangThai());
+        payload.put("nhanVienPhuTrachId",
+                ctc.getNhanVienPhuTrach() != null ? ctc.getNhanVienPhuTrach().getNhanVienId() : null);
+        payload.put("nhanVienPhuTrachTen",
+                ctc.getNhanVienPhuTrach() != null ? ctc.getNhanVienPhuTrach().getHoTen() : null);
         messagingTemplate.convertAndSend("/topic/chat/" + ctc.getId() + "/status", payload);
         // Notify staff list update
         messagingTemplate.convertAndSend("/topic/staff/conversations", payload);
     }
 
     private void notifyStaffNewMessage(CuocTroChuyen ctc) {
-        Map<String, Object> payload = Map.of(
-                "type", "new_message",
-                "cuocTroChuyenId", ctc.getId(),
-                "hoTenKhach", ctc.getHoTenKhach(),
-                "loaiKhach", ctc.getLoaiKhach()
-        );
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type", "new_message");
+        payload.put("cuocTroChuyenId", ctc.getId());
+        payload.put("hoTenKhach", ctc.getHoTenKhach());
+        payload.put("loaiKhach", ctc.getLoaiKhach());
         messagingTemplate.convertAndSend("/topic/staff/notifications", payload);
     }
 
     private void notifyStaffEscalate(CuocTroChuyen ctc) {
-        Map<String, Object> payload = Map.of(
-                "type", "escalate",
-                "cuocTroChuyenId", ctc.getId(),
-                "hoTenKhach", ctc.getHoTenKhach(),
-                "loaiKhach", ctc.getLoaiKhach(),
-                "soLanEscalate", ctc.getSoLanEscalate()
-        );
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type", "escalate");
+        payload.put("cuocTroChuyenId", ctc.getId());
+        payload.put("hoTenKhach", ctc.getHoTenKhach());
+        payload.put("loaiKhach", ctc.getLoaiKhach());
+        payload.put("soLanEscalate", ctc.getSoLanEscalate());
         messagingTemplate.convertAndSend("/topic/staff/notifications", payload);
     }
 
@@ -404,6 +403,7 @@ public class ChatService {
     private ChatCuocTroChuyenResponse toResponse(CuocTroChuyen ctc) {
         ChatCuocTroChuyenResponse r = new ChatCuocTroChuyenResponse();
         r.setId(ctc.getId());
+        r.setSessionId(ctc.getSessionId());
         r.setLoaiKhach(ctc.getLoaiKhach());
         r.setTrangThai(ctc.getTrangThai());
         r.setSoLanEscalate(ctc.getSoLanEscalate());

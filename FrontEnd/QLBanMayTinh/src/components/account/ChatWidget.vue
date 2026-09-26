@@ -10,6 +10,7 @@ const messages = ref([]);
 const input = ref("");
 const chatBodyRef = ref(null);
 const loading = ref(false);
+const botThinking = ref(false); // hiển thị indicator khi bot đang suy nghĩ
 const sessionId = ref(null);
 const cuocTroChuyenId = ref(null);
 const trangThai = ref("HOI_DAP_AI");
@@ -69,6 +70,7 @@ async function initSession() {
         khachHangId,
         hoTen: auth.user?.hoTen || null,
       });
+      // Backend returns sessionId for anonymous users, numeric id for registered
       sessionId.value = ctc.sessionId || ctc.id?.toString();
       cuocTroChuyenId.value = ctc.id;
       trangThai.value = ctc.trangThai;
@@ -87,7 +89,22 @@ async function initSession() {
       cuocTroChuyenId.value,
       // onMessage
       (msg) => {
-        // Tránh duplicate khi tự gửi
+        if (msg.nguoiGui === "KHACH") {
+          // Tin nhắn của chính khách: cập nhật id của optimistic message thay vì thêm mới
+          const tempMsg = messages.value.find(
+            (m) => String(m.id).startsWith("temp-") && m.noiDung === msg.noiDung
+          );
+          if (tempMsg) {
+            tempMsg.id = msg.id; // gán id thật, giữ nguyên bubble
+          } else if (!messages.value.find((m) => m.id === msg.id)) {
+            messages.value.push(formatMessage(msg));
+            nextTick(() => scrollToBottom());
+          }
+          return;
+        }
+
+        // Tin nhắn từ bot/nhân viên
+        botThinking.value = false; // bot đã trả lời xong
         if (!messages.value.find((m) => m.id === msg.id)) {
           messages.value.push(formatMessage(msg));
           nextTick(() => scrollToBottom());
@@ -131,6 +148,17 @@ function saveSession() {
 async function send() {
   const text = input.value.trim();
   if (!text || loading.value) return;
+
+  // Chưa có phiên chat → thử khởi tạo lại
+  if (!cuocTroChuyenId.value) {
+    console.warn("[Chat] cuocTroChuyenId chưa có, đang khởi tạo session...");
+    await initSession();
+    if (!cuocTroChuyenId.value) {
+      console.error("[Chat] Không thể khởi tạo phiên chat.");
+      return;
+    }
+  }
+
   input.value = "";
 
   // Thêm ngay vào UI (optimistic)
@@ -147,20 +175,36 @@ async function send() {
   nextTick(() => scrollToBottom());
 
   loading.value = true;
+  // Hiện thinking indicator nếu đang ở chế độ AI
+  if (trangThai.value === "HOI_DAP_AI") {
+    botThinking.value = true;
+  }
+
   try {
     const reply = await ChatService.guiTinNhan(cuocTroChuyenId.value, text, sessionId.value);
     trangThai.value = reply.trangThai || trangThai.value;
 
-    // Xóa temp message và thêm real messages (AI reply)
-    messages.value = messages.value.filter((m) => m.id !== tempId);
-    const existing = messages.value.find((m) => m.id === reply.id);
-    if (!existing) {
-      messages.value.push(formatMessage(reply));
-      nextTick(() => scrollToBottom());
+    if (reply.nguoiGui === "KHACH") {
+      // Server trả về xác nhận tin nhắn khách (ví dụ chat với nhân viên)
+      const optMsg = messages.value.find((m) => m.id === tempId || (String(m.id).startsWith("temp-") && m.noiDung === reply.noiDung));
+      if (optMsg) {
+        optMsg.id = reply.id;
+        optMsg.createdAt = reply.createdAt || optMsg.createdAt;
+      } else if (!messages.value.find((m) => m.id === reply.id)) {
+        messages.value.push(formatMessage(reply));
+      }
+    } else {
+      // Server trả về câu trả lời của Bot/AI/Escalate
+      botThinking.value = false;
+      if (!messages.value.find((m) => m.id === reply.id)) {
+        messages.value.push(formatMessage(reply));
+      }
     }
+    nextTick(() => scrollToBottom());
   } catch (e) {
     // Remove optimistic message on error
     messages.value = messages.value.filter((m) => m.id !== tempId);
+    botThinking.value = false;
     console.error("Lỗi gửi tin nhắn:", e);
   } finally {
     loading.value = false;
@@ -245,15 +289,16 @@ function scrollToBottom() {
 watch(open, (v) => {
   if (v) {
     nextTick(() => scrollToBottom());
-    if (!sessionId.value) {
+    // initSession và setupWebSocket đã được gọi trong onMounted
+    // Chỉ cần init lại nếu session bị mất (ví dụ reload trang giữa chừng)
+    if (!cuocTroChuyenId.value) {
       initSession();
     }
-    setupWebSocket();
   }
 });
 
 onMounted(() => {
-  // Khởi tạo session sớm để bot đã reply khi mở chat
+  // Khởi tạo session và kết nối WebSocket một lần duy nhất
   initSession();
   setupWebSocket();
 });
@@ -349,6 +394,20 @@ onUnmounted(() => {
             <div class="chat-popup-bubble" :class="{ 'bubble-bot': m.isBot, 'bubble-staff': m.isStaff }">
               <span class="chat-popup-bubble-text">{{ m.noiDung }}</span>
               <span class="chat-popup-bubble-time">{{ m.time }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bot thinking indicator -->
+        <div v-if="botThinking" class="chat-popup-msg bot thinking-msg">
+          <div class="chat-avatar" style="background: #8b5cf6">🤖</div>
+          <div class="chat-bubble-wrap">
+            <div class="chat-sender-label bot-label">🤖 SAOClub Bot</div>
+            <div class="chat-popup-bubble bubble-bot thinking-bubble">
+              <span class="thinking-dot"></span>
+              <span class="thinking-dot"></span>
+              <span class="thinking-dot"></span>
+              <span class="thinking-text">Đang phân tích...</span>
             </div>
           </div>
         </div>
@@ -560,6 +619,45 @@ onUnmounted(() => {
 }
 .chat-popup-msg.right {
   flex-direction: row-reverse;
+}
+
+/* ─── Bot thinking indicator ─── */
+.thinking-msg {
+  animation: fadeInUp 0.3s ease;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.thinking-bubble {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 14px !important;
+  min-width: 100px;
+}
+.thinking-dot {
+  width: 7px;
+  height: 7px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  animation: thinkBounce 1.2s infinite ease-in-out;
+}
+.thinking-dot:nth-child(1) { animation-delay: 0s; }
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes thinkBounce {
+  0%, 60%, 100% { transform: translateY(0);    opacity: 0.35; }
+  30%            { transform: translateY(-6px); opacity: 1; }
+}
+.thinking-text {
+  font-size: 11px;
+  color: #7c3aed;
+  font-style: italic;
+  margin-left: 2px;
+  white-space: nowrap;
 }
 
 .chat-avatar {

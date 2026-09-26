@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Setter
 public class ChatCuocTroChuyenResponse {
     private Long id;
+    private String sessionId;
     private String loaiKhach;
     private Integer khachHangId;
     private String hoTenKhach;

@@ -17,11 +17,13 @@ const BASE = getBaseUrl();
 
 /** Tạo phiên chat mới */
 export async function taoPhienChat({ sessionId, khachHangId, hoTen }) {
-  const body = {};
-  if (sessionId) body.sessionId = sessionId;
-  if (khachHangId) body.khachHangId = khachHangId;
-  if (hoTen) body.hoTen = hoTen;
-  return post(`${BASE}/chat/tao-phien`, body);
+  const params = new URLSearchParams();
+  if (sessionId) params.set("sessionId", sessionId);
+  if (khachHangId) params.set("khachHangId", khachHangId);
+  if (hoTen) params.set("hoTen", hoTen);
+  const res = await post(`${BASE}/chat/tao-phien?${params.toString()}`, {});
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
 
 /** Lấy phiên chat theo sessionId */

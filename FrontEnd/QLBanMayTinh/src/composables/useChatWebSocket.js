@@ -1,12 +1,18 @@
 // Quản lý kết nối STOMP WebSocket cho tính năng chat
 import { ref, onUnmounted } from "vue";
 
-let socket = null;
-let reconnectTimer = null;
-
 export function useChatWebSocket() {
   const connected = ref(false);
-  const subscriptions = ref([]);
+
+  // Per-instance state (not module-level, so multiple components don't share one socket)
+  let socket = null;
+  let reconnectTimer = null;
+
+  // Saved callbacks + subscribed chat IDs for re-subscription after reconnect
+  let savedOnMessage = null;
+  let savedOnStatusChange = null;
+  let savedOnStaffNotification = null;
+  let subscribedChatIds = []; // [{ chatId, onMessage, onStatusChange }]
 
   const rawUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -25,6 +31,11 @@ export function useChatWebSocket() {
       console.warn("[ChatWS] Already connected");
       return;
     }
+
+    // Save callbacks for reconnect
+    if (onMessage) savedOnMessage = onMessage;
+    if (onStatusChange) savedOnStatusChange = onStatusChange;
+    if (onStaffNotification) savedOnStaffNotification = onStaffNotification;
 
     try {
       socket = new WebSocket(WS_URL);
@@ -50,22 +61,35 @@ export function useChatWebSocket() {
 
       if (command === "CONNECTED") {
         console.log("[ChatWS] STOMP connected, session:", headers["session"]);
+
+        // Re-subscribe to all previously subscribed topics after reconnect
+        for (const sub of subscribedChatIds) {
+          sendSubscribeStomp(`/topic/chat/${sub.chatId}`);
+          sendSubscribeStomp(`/topic/chat/${sub.chatId}/status`);
+        }
       } else if (command === "MESSAGE") {
         const dest = headers["destination"];
-        if (dest && dest.includes("/topic/chat/")) {
+        if (dest && dest.includes("/topic/chat/") && !dest.includes("/status")) {
           try {
             const data = JSON.parse(body);
-            if (onMessage) onMessage(data);
+            // Route to the correct subscriber's callback
+            const chatId = dest.replace("/topic/chat/", "");
+            const sub = subscribedChatIds.find((s) => String(s.chatId) === chatId);
+            if (sub && sub.onMessage) sub.onMessage(data);
+            else if (savedOnMessage) savedOnMessage(data);
           } catch {}
         } else if (dest && dest.includes("/status")) {
           try {
             const data = JSON.parse(body);
-            if (onStatusChange) onStatusChange(data);
+            const chatIdStr = dest.replace("/topic/chat/", "").replace("/status", "");
+            const sub = subscribedChatIds.find((s) => String(s.chatId) === chatIdStr);
+            if (sub && sub.onStatusChange) sub.onStatusChange(data);
+            else if (savedOnStatusChange) savedOnStatusChange(data);
           } catch {}
         } else if (dest === "/topic/staff/notifications") {
           try {
             const data = JSON.parse(body);
-            if (onStaffNotification) onStaffNotification(data);
+            if (savedOnStaffNotification) savedOnStaffNotification(data);
           } catch {}
         }
       }
@@ -121,43 +145,35 @@ export function useChatWebSocket() {
     return { command, headers, body };
   }
 
-  function subscribeChat(chatId, onMessage, onStatusChange) {
-    const sub1 = sendSubscribe(`/topic/chat/${chatId}`);
-    const sub2 = sendSubscribe(`/topic/chat/${chatId}/status`);
+  function sendSubscribeStomp(destination) {
+    const subId = "sub-" + Math.random().toString(36).substr(2, 9);
+    sendFrame("SUBSCRIBE", { id: subId, destination });
+    return subId;
+  }
 
-    // Store subscription info for potential unsubscribe
-    subscriptions.value.push({ id: chatId, sub1, sub2 });
+  function subscribeChat(chatId, onMessage, onStatusChange) {
+    // Track subscription for reconnect
+    const existing = subscribedChatIds.find((s) => s.chatId === chatId);
+    if (!existing) {
+      subscribedChatIds.push({ chatId, onMessage, onStatusChange });
+    }
+
+    const sub1 = sendSubscribeStomp(`/topic/chat/${chatId}`);
+    const sub2 = sendSubscribeStomp(`/topic/chat/${chatId}/status`);
     return { sub1, sub2 };
   }
 
-  function sendSubscribe(destination) {
-    const subId = "sub-" + Math.random().toString(36).substr(2, 9);
-    sendFrame("SUBSCRIBE", {
-      id: subId,
-      destination,
-    });
-    return subId;
-  }
-
   function subscribeStaffNotifications(onNotification) {
-    const subId = sendSubscribe("/topic/staff/notifications");
-    subscriptions.value.push({ id: "staff-notif", subId });
-    return subId;
+    savedOnStaffNotification = onNotification;
+    return sendSubscribeStomp("/topic/staff/notifications");
   }
 
   function subscribeConversationsList(onUpdate) {
-    const subId = sendSubscribe("/topic/staff/conversations");
-    subscriptions.value.push({ id: "conversations", subId });
-    return subId;
+    return sendSubscribeStomp("/topic/staff/conversations");
   }
 
   function unsubscribeAll() {
-    for (const sub of subscriptions.value) {
-      try {
-        sendFrame("UNSUBSCRIBE", { id: sub.sub1 || sub.id });
-      } catch {}
-    }
-    subscriptions.value = [];
+    subscribedChatIds = [];
   }
 
   function disconnect() {
@@ -174,7 +190,7 @@ export function useChatWebSocket() {
     clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(() => {
       console.log("[ChatWS] Attempting reconnect...");
-      connect(() => {}, () => {}, () => {});
+      connect(); // reuses saved callbacks
     }, 5000);
   }
 
@@ -192,3 +208,4 @@ export function useChatWebSocket() {
     unsubscribeAll,
   };
 }
+
