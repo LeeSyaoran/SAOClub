@@ -66,7 +66,7 @@ const props = defineProps({
   modelValue:  { type: String, default: '' },
   placeholder: { type: String, default: '' },
 });
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'select-coords']);
 
 const query = ref(props.modelValue);
 watch(() => props.modelValue, (v) => { if (v !== query.value) query.value = v; });
@@ -123,6 +123,7 @@ const initMap = async (lat, lon) => {
 // Kéo ghim xong -> reverse-geocode tọa độ mới thành địa chỉ, tự cập nhật lại ô nhập.
 const onMarkerDragEnd = async () => {
   const { lat, lng } = marker.getLatLng();
+  emit('select-coords', { lat, lon: lng });
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
     const res = await fetch(url);
@@ -131,17 +132,21 @@ const onMarkerDragEnd = async () => {
       if (data.display_name) {
         query.value = data.display_name;
         emit('update:modelValue', data.display_name);
+        emit('select-coords', { lat, lon: lng, address: data.display_name });
       }
     }
   } catch { /* giữ nguyên địa chỉ cũ nếu reverse-geocode lỗi */ }
 };
 
 const selectSuggestion = async (s) => {
+  const lat = Number(s.lat);
+  const lon = Number(s.lon);
   query.value = s.display_name;
   emit('update:modelValue', s.display_name);
+  emit('select-coords', { lat, lon, address: s.display_name });
   showSuggestions.value = false;
   suggestions.value = [];
-  await initMap(Number(s.lat), Number(s.lon));
+  await initMap(lat, lon);
 };
 
 const clearQuery = () => {

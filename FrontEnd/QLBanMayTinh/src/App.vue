@@ -436,7 +436,8 @@ onBeforeUnmount(() => {
         @add-to-cart="addToCart"
         @buy-again-unavailable="onBuyAgainUnavailable"
         @toast="(msg, type) => showToast(msg, type)"
-        @go-home="() => { onLogout(); router.push('/'); }"
+        @go-home="() => router.push('/')"
+        @logout="onLogout"
       />
     </router-view>
 

@@ -55,8 +55,18 @@ export const get = async (url) => {
 export const post = (url, body) =>
   fetch(url, { method: 'POST', headers: headers(), body: JSON.stringify(body) }).then(kiemTraHetPhien);
 
-export const put = (url, body) =>
-  fetch(url, { method: 'PUT', headers: headers(), body: JSON.stringify(body) }).then(kiemTraHetPhien);
+export const put = (url, body) => {
+  console.log('[DEBUG api.put] calling fetch PUT', url)
+  return fetch(url, { method: 'PUT', headers: headers(), body: JSON.stringify(body) })
+    .then(r => {
+      console.log('[DEBUG api.put] fetch resolved', url, 'status=', r.status, r.statusText)
+      return kiemTraHetPhien(r)
+    })
+    .then(r => {
+      console.log('[DEBUG api.put] after kiemTraHetPhien', url, 'ok=', r?.ok, 'status=', r?.status)
+      return r
+    })
+};
 
 export const patch = (url, body) =>
   fetch(url, { method: 'PATCH', headers: headers(), body: JSON.stringify(body) }).then(kiemTraHetPhien);

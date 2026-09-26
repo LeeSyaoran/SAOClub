@@ -3,7 +3,11 @@ import { ref, reactive, computed, onMounted, watch } from "vue";
 import { Search } from "@lucide/vue";
 import { Filter, X, ChevronDown, ChevronUp } from '@lucide/vue';
 import { t } from "../../i18n/index.js";
-import { orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon, paymentMethodLabel, paymentMethodIcon, channelLabel, channelColor } from "../../utils/orderStatus.js";
+import {
+  orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon,
+  paymentMethodLabel, paymentMethodIcon, channelLabel, channelColor,
+  isQrPayment, QR_TIMELINE_STEPS, isQrStepReached, isQrStepDone, isQrStepCurrent, getQrEffectiveStatus
+} from "../../utils/orderStatus.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatPrice, formatDate, formatDateTime } from "../../utils/adminFormat.js";
 import { authHeaders } from "../../services/api.js";
@@ -20,7 +24,7 @@ import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { CheckCircle2, Check, Package, Truck, Bike, Inbox, Laptop, User, Printer, Phone, Mail, MapPin } from '@lucide/vue';
+import { CheckCircle2, Check, Package, Truck, Bike, Inbox, Laptop, User, Printer, Phone, Mail, MapPin, QrCode, ShieldCheck, Clock, FileText } from '@lucide/vue';
 import InvoiceModal from "./InvoiceModal.vue";
 
 // Nhận order ID để navigate từ ngoài (CustomerDetailModal tab đơn hàng → "Xem chi tiết")
@@ -359,37 +363,7 @@ const removeItemFromOrder = async (chiTietId) => {
   await refreshOrderDetail();
 };
 
-// ── Gop don hang ─────────────────────────────────────────────────────────────
-const mergeLoading = ref(false);
 
-// Danh sách đơn hàng có thể gộp
-const mergeCandidates = computed(() => {
-  if (!orderDetailData.value) return [];
-  const curDate = orderDetailData.value.ngayDat?.slice(0, 10);
-  return (OrdersStore.items ?? []).filter(o =>
-    o.khachHangId === orderDetailData.value.khachHangId &&
-    o.donHangId   !== orderDetailData.value.donHangId &&
-    o.ngayDat?.slice(0, 10) === curDate &&
-    o.trangThaiDonHang !== 'pending'
-  );
-});
-
-// Gộp các đơn hàng hợp lệ vào đơn hiện tại
-const autoMergeOrders = async () => {
-  if (mergeCandidates.value.length === 0) return;
-  if (!(await askConfirm(t('admin.confirm.mergeOrders', { count: mergeCandidates.value.length, id: orderDetailData.value.donHangId })))) return;
-  mergeLoading.value = true;
-  try {
-    const res = await DonHangService.merge(
-      orderDetailData.value.donHangId,
-      mergeCandidates.value.map(o => o.donHangId)
-    );
-    if (!res.ok) { showToast(t('admin.errors.mergeFailed', { status: res.status, text: await res.text() })); return; }
-    await refreshOrderDetail();
-  } finally {
-    mergeLoading.value = false;
-  }
-};
 
 // Modal xem chi tiết biến thể sản phẩm
 const showDetailModal = ref(false);
@@ -513,7 +487,7 @@ const getLinearStatusIndex = (status) => {
   return LINEAR_STATUS_ORDER.indexOf(status);
 };
 
-// Timeline đơn hàng tại quầy
+// Timeline đơn hàng: Hỗ trợ 8 bước dành riêng cho đơn thanh toán qua mã QR
 const orderTimelineSteps = computed(() => {
   if (orderDetailData.value?.kenhBan === 'in_store') {
     return [
@@ -524,6 +498,9 @@ const orderTimelineSteps = computed(() => {
         icon: CheckCircle2,
       },
     ];
+  }
+  if (isQrPayment(orderDetailData.value)) {
+    return QR_TIMELINE_STEPS;
   }
   return [
     { id: 'pending',                title: orderStatusLabel('pending'),                desc: t('orderStatus.timeline.placedDesc'),    icon: CheckCircle2 },
@@ -540,6 +517,9 @@ const isStepReached = (order, stepId) => {
   if (order?.kenhBan === 'in_store') {
     return !['cancelled', 'returned'].includes(order.trangThaiDonHang);
   }
+  if (isQrPayment(order)) {
+    return isQrStepReached(order, stepId);
+  }
   const cur = getLinearStatusIndex(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return cur !== -1 && idx !== -1 && idx <= cur;
@@ -550,43 +530,125 @@ const isStepDoneById = (order, stepId) => {
   if (order?.kenhBan === 'in_store') {
     return !['cancelled', 'returned'].includes(order.trangThaiDonHang);
   }
+  if (isQrPayment(order)) {
+    return isQrStepDone(order, stepId);
+  }
   const cur = getLinearStatusIndex(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return cur !== -1 && idx !== -1 && idx <= cur;
+};
+
+// Kiểm tra bước hiện tại
+const isStepCurrentById = (order, stepId) => {
+  if (order?.kenhBan === 'in_store') return stepId === 'delivered';
+  if (isQrPayment(order)) {
+    return isQrStepCurrent(order, stepId);
+  }
+  const curStatus = order?.trangThaiDonHang === 'shipping' ? 'processing' : order?.trangThaiDonHang;
+  return curStatus === stepId;
 };
 
 // Bấm được khi step đó nằm sau trạng thái hiện tại (chuyển tiến), HOẶC chính là bước hiện tại
 const canJumpToStep = (order, stepId) => {
   if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
   if (order?.kenhBan === 'in_store') return false;
+  if (isQrPayment(order)) {
+    if (stepId === 'thanh_toan' && order.trangThaiThanhToan !== 'paid') return true;
+    if (stepId === 'cho_xu_ly') return true;
+    if (stepId === 'da_len_don') return true;
+    if (stepId === 'dang_dong_goi') return true;
+    if (stepId === 'dang_giao_hang') return true;
+    if (stepId === 'da_giao_cho_xac_nhan') return true;
+    if (stepId === 'da_giao') return true;
+    return false;
+  }
   const cur = getLinearStatusIndex(order.trangThaiDonHang);
   const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
   return idx >= cur;
 };
 
-// Chuyển trạng thái đơn hàng theo bước đã chọn
+// Admin duyệt thanh toán qua mã QR cho đơn hàng
+const confirmingPayment = ref(false);
+const adminConfirmQrPayment = async (order) => {
+  if (!order) return;
+  confirmingPayment.value = true;
+  try {
+    await ThanhToanService.confirmPayment(order.donHangId, {
+      soTien: order.thanhTien ?? order.tongTien,
+      phuongThuc: 'chuyen_khoan',
+      maGiaoDich: `ADMIN_QR_${Date.now()}`
+    });
+    showToast('Đã duyệt thanh toán qua mã QR thành công!', 'success');
+    await refreshOrders();
+    const updated = OrdersStore.items.find(o => o.donHangId === order.donHangId);
+    if (updated) {
+      orderDetailData.value = updated;
+    }
+  } catch (e) {
+    showToast('Lỗi khi duyệt thanh toán: ' + (e.message || e), 'error');
+  } finally {
+    confirmingPayment.value = false;
+  }
+};
+
+// Chuyển trạng thái đơn hàng theo bước đã chọn (Hỗ trợ cả 8 bước QR)
 const jumpToStatus = async (order, stepId) => {
-  if (order.trangThaiDonHang === stepId) return;
+  let targetStatus = stepId;
+
+  if (isQrPayment(order)) {
+    if (stepId === 'thanh_toan') {
+      if (order.trangThaiThanhToan !== 'paid') {
+        await adminConfirmQrPayment(order);
+      }
+      return;
+    }
+    if (stepId === 'cho_xu_ly') {
+      if (order.trangThaiThanhToan !== 'paid') {
+        await adminConfirmQrPayment(order);
+      }
+      return;
+    }
+    if (stepId === 'da_len_don') {
+      if (order.trangThaiThanhToan !== 'paid') {
+        await adminConfirmQrPayment(order);
+      }
+      if (order.kenhBan === 'online' && order.trangThaiDonHang === 'pending') {
+        await openXacNhanSerialModal(order);
+        return;
+      }
+      targetStatus = 'confirmed';
+    } else if (stepId === 'dang_dong_goi') {
+      targetStatus = 'processing';
+    } else if (stepId === 'dang_giao_hang') {
+      targetStatus = 'out_for_delivery';
+    } else if (stepId === 'da_giao_cho_xac_nhan') {
+      targetStatus = 'awaiting_confirmation';
+    } else if (stepId === 'da_giao') {
+      targetStatus = 'delivered';
+    }
+  }
+
+  if (order.trangThaiDonHang === targetStatus) return;
   if (!canJumpToStep(order, stepId)) return;
   // Bước cần nhập thêm mã vận đơn: mở modal nếu chưa có mã
-  if (stepId === 'out_for_delivery' && !order.maVanDon) {
+  if (targetStatus === 'out_for_delivery' && !order.maVanDon) {
     openOrderStatus(order);
     orderStatusForm.trangThaiDonHang = 'out_for_delivery';
     return;
   }
-  // Đơn online pending -> confirmed: mở modal chọn serial (giống advanceOrderStatus)
-  if (stepId === 'confirmed' && order.kenhBan === 'online') {
+  // Đơn online pending -> confirmed: mở modal chọn serial
+  if (targetStatus === 'confirmed' && order.kenhBan === 'online') {
     await openXacNhanSerialModal(order);
     return;
   }
   // Cập nhật thanh toán và ngày giao hàng thực tế
   const body = buildOrderUpdateBody(order, {
-    trangThaiDonHang: stepId,
-    trangThaiThanhToan: stepId === 'awaiting_confirmation' && order.trangThaiThanhToan === 'unpaid'
+    trangThaiDonHang: targetStatus,
+    trangThaiThanhToan: (targetStatus === 'awaiting_confirmation' || targetStatus === 'delivered') && order.trangThaiThanhToan === 'unpaid'
       ? 'paid'
       : order.trangThaiThanhToan,
     ngayGiaoDuKien: order.ngayGiaoDuKien,
-    ngayGiaoThucTe: (stepId === 'awaiting_confirmation' || stepId === 'delivered') && !order.ngayGiaoThucTe
+    ngayGiaoThucTe: (targetStatus === 'awaiting_confirmation' || targetStatus === 'delivered') && !order.ngayGiaoThucTe
       ? nowLocalIso()
       : order.ngayGiaoThucTe,
     maVanDon: order.maVanDon,
@@ -837,7 +899,10 @@ const confirmXacNhanSerial = async () => {
               <td>{{ customerName(o.khachHangId) }}</td>
               <td>{{ formatPrice(o.thanhTien) }}</td>
               <td>
-                <span class="alt-tag" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                <span v-if="isQrPayment(o)" class="alt-tag" :style="{ background: getQrEffectiveStatus(o).color.bg, color: getQrEffectiveStatus(o).color.text, border: o.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none', fontWeight: '600' }">
+                  <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="13" /> {{ getQrEffectiveStatus(o).label }}
+                </span>
+                <span v-else class="alt-tag" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
                   <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="13" /> {{ orderStatusLabel(o.trangThaiDonHang) }}
                 </span>
               </td>
@@ -860,7 +925,19 @@ const confirmXacNhanSerial = async () => {
                 <span v-else class="text-secondary">—</span>
               </td>
               <td>
-                <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
+                <div class="d-flex align-items-center gap-1.5">
+                  <button
+                    v-if="isQrPayment(o) && o.trangThaiThanhToan !== 'paid'"
+                    class="alt-btn"
+                    style="background:#16a34a; color:#fff; border:none; padding:4px 9px; font-size:0.75rem; border-radius:6px; font-weight:600; display:inline-flex; align-items:center; gap:3px; box-shadow:0 1px 3px rgba(22,163,74,0.3); white-space:nowrap;"
+                    title="Duyệt thanh toán QR cho đơn này"
+                    :disabled="confirmingPayment"
+                    @click.stop="adminConfirmQrPayment(o)"
+                  >
+                    <CheckCircle2 :size="12" /> Duyệt QR
+                  </button>
+                  <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
+                </div>
               </td>
             </tr>
             <tr v-if="filteredOrders.length===0"><td colspan="9" class="alt-empty">{{ t('admin.orders.empty') }}</td></tr>
@@ -1127,23 +1204,7 @@ const confirmXacNhanSerial = async () => {
               <span class="text-warning" style="font-size:1rem;">{{ formatPrice(orderDetailData.thanhTien) }}</span>
             </div>
 
-            <!-- Canh bao gop don: chi 1 nut, tu dong gop tat ca don cung ngay -->
-            <div
-              v-if="mergeCandidates.length > 0" class="mt-2 pt-2 d-flex align-items-center justify-content-between gap-2"
-              style="border-top:1px solid var(--bg-input);background:#1a1500;border-radius:6px;padding:8px 12px;"
-            >
-              <span style="font-size:0.78rem;color:#fbbf24;">
-                {{ t('admin.orderDetailModal.mergeBannerText', { count: mergeCandidates.length }) }}
-                <span class="text-secondary ms-1">(#{{ mergeCandidates.map(o => o.donHangId).join(', #') }})</span>
-              </span>
-              <button
-                class="btn btn-sm btn-warning flex-shrink-0" style="font-size:0.78rem;padding:3px 10px;"
-                :disabled="mergeLoading"
-                @click="autoMergeOrders"
-              >
-                {{ mergeLoading ? t('admin.orderDetailModal.merging') : t('admin.orderDetailModal.mergeAll') }}
-              </button>
-            </div>
+
           </div>
         </div>
 
@@ -1155,16 +1216,47 @@ const confirmXacNhanSerial = async () => {
               <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
                 {{ t('admin.orderDetailModal.orderStatus') }}
               </div>
-              <span class="alt-tag d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang).text }">
+              <span v-if="isQrPayment(orderDetailData)" class="alt-tag d-inline-flex align-items-center gap-1" :style="{ background: getQrEffectiveStatus(orderDetailData).color.bg, color: getQrEffectiveStatus(orderDetailData).color.text, border: orderDetailData.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none', fontWeight: '600' }">
+                <component :is="orderStatusIcon(orderDetailData.trangThaiDonHang)" :size="13" />
+                {{ getQrEffectiveStatus(orderDetailData).label }}
+              </span>
+              <span v-else class="alt-tag d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang).text }">
                 <component :is="orderStatusIcon(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang)" :size="13" />
                 {{ orderStatusLabel(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang) }}
               </span>
+
+              <!-- Nút Duyệt thanh toán qua mã QR dành riêng cho Admin -->
+              <div
+                v-if="isQrPayment(orderDetailData) && orderDetailData.trangThaiThanhToan !== 'paid'"
+                class="p-2.5 rounded-3 mt-2"
+                style="background:#fff7ed; border:1px solid #fed7aa;"
+              >
+                <div class="fw-bold d-flex align-items-center gap-1.5 mb-1" style="font-size:0.78rem; color:#ea580c;">
+                  <QrCode :size="15" /> Duyệt thanh toán VietQR
+                </div>
+                <div class="text-secondary small mb-2" style="font-size:0.72rem; line-height:1.4;">
+                  Khách chọn chuyển khoản QR (Timo: 0338861232). Khi thấy tiền vào tài khoản, nhấn duyệt:
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-success fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                  style="font-size:0.8rem; padding:6px 12px; background:#16a34a; border:none;"
+                  :disabled="confirmingPayment"
+                  @click="adminConfirmQrPayment(orderDetailData)"
+                >
+                  <span v-if="confirmingPayment" class="spinner-border spinner-border-sm me-1"></span>
+                  <CheckCircle2 v-else :size="14" />
+                  <span>{{ confirmingPayment ? 'Đang duyệt...' : 'Duyệt thanh toán QR' }}</span>
+                </button>
+              </div>
             </div>
 
-            <!-- Timeline các bước xử lý đơn hàng -->
+            <!-- Timeline các bước xử lý đơn hàng (8 bước dành cho QR) -->
             <div>
-              <div class="text-secondary fw-bold mb-2" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;">
-                {{ t('orderStatus.timeline.title') }}
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.06em;">
+                  {{ isQrPayment(orderDetailData) ? 'TIẾN TRÌNH THANH TOÁN QR' : t('orderStatus.timeline.title') }}
+                </div>
               </div>
               <div class="d-flex flex-column gap-0" style="position:relative;">
                 <div
@@ -1196,8 +1288,8 @@ const confirmXacNhanSerial = async () => {
                   <div class="flex-grow-1 pb-3" style="padding-top:4px;">
                     <div
                       class="fw-semibold" style="font-size:0.85rem; line-height:1.3;"
-                      :style="(orderDetailData.trangThaiDonHang === step.id || orderDetailData.kenhBan === 'in_store')
-                        ? 'color:var(--accent-fg);'
+                      :style="isStepCurrentById(orderDetailData, step.id)
+                        ? 'color:var(--accent-fg); font-weight:700;'
                         : isStepReached(orderDetailData, step.id) ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'"
                     >
                       {{ step.title }}
@@ -1209,9 +1301,74 @@ const confirmXacNhanSerial = async () => {
                 </div>
               </div>
 
-              <!-- Trường hợp đơn ở trạng thái cuối (cancelled/returned/delivered) - không có step nào để bấm. -->
+              <!-- Nút chuyển bước tiếp theo nhanh dành riêng cho đơn hàng QR (8 bước) -->
+              <div v-if="isQrPayment(orderDetailData) && !['cancelled','returned','delivered'].includes(orderDetailData.trangThaiDonHang)" class="mt-3">
+                <button
+                  v-if="orderDetailData.trangThaiThanhToan !== 'paid'"
+                  type="button"
+                  class="btn btn-sm btn-success fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                  style="font-size:0.8rem; padding:7px 12px; background:#16a34a; border:none;"
+                  :disabled="confirmingPayment"
+                  @click="adminConfirmQrPayment(orderDetailData)"
+                >
+                  <CheckCircle2 :size="14" />
+                  <span>{{ confirmingPayment ? 'Đang duyệt...' : 'Duyệt thanh toán QR (➔ Chờ xử lý)' }}</span>
+                </button>
+                <button
+                  v-else-if="orderDetailData.trangThaiDonHang === 'pending'"
+                  type="button"
+                  class="btn btn-sm btn-primary fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                  style="font-size:0.8rem; padding:7px 12px; background:#2563eb; border:none;"
+                  @click="jumpToStatus(orderDetailData, 'da_len_don')"
+                >
+                  <FileText :size="14" />
+                  <span>Xác nhận & Lên đơn (➔ Đã lên đơn)</span>
+                </button>
+                <button
+                  v-else-if="orderDetailData.trangThaiDonHang === 'confirmed'"
+                  type="button"
+                  class="btn btn-sm text-white fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                  style="font-size:0.8rem; padding:7px 12px; background:#9333ea; border:none;"
+                  @click="jumpToStatus(orderDetailData, 'dang_dong_goi')"
+                >
+                  <Package :size="14" />
+                  <span>Chuyển sang Đang đóng gói</span>
+                </button>
+                <button
+                  v-else-if="orderDetailData.trangThaiDonHang === 'processing' || orderDetailData.trangThaiDonHang === 'shipping'"
+                  type="button"
+                  class="btn btn-sm btn-warning text-dark fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                  style="font-size:0.8rem; padding:7px 12px; background:#f59e0b; border:none;"
+                  @click="jumpToStatus(orderDetailData, 'dang_giao_hang')"
+                >
+                  <Bike :size="14" />
+                  <span>Giao cho bên vận chuyển (➔ Đang giao hàng)</span>
+                </button>
+                <button
+                  v-else-if="orderDetailData.trangThaiDonHang === 'out_for_delivery'"
+                  type="button"
+                  class="btn btn-sm text-white fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                  style="font-size:0.8rem; padding:7px 12px; background:#0d9488; border:none;"
+                  @click="jumpToStatus(orderDetailData, 'da_giao_cho_xac_nhan')"
+                >
+                  <Inbox :size="14" />
+                  <span>Cập nhật Đã giao - Chờ xác nhận</span>
+                </button>
+                <button
+                  v-else-if="orderDetailData.trangThaiDonHang === 'awaiting_confirmation'"
+                  type="button"
+                  class="btn btn-sm btn-success fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                  style="font-size:0.8rem; padding:7px 12px; background:#16a34a; border:none;"
+                  @click="jumpToStatus(orderDetailData, 'da_giao')"
+                >
+                  <CheckCircle2 :size="14" />
+                  <span>Hoàn tất đơn hàng (➔ Đã giao)</span>
+                </button>
+              </div>
+
+              <!-- Trường hợp đơn không phải QR ở trạng thái cuối (cancelled/returned/delivered) -->
               <div
-                v-if="!NEXT_ORDER_STATUS[orderDetailData.trangThaiDonHang] && !['cancelled','returned','delivered'].includes(orderDetailData.trangThaiDonHang)"
+                v-else-if="!isQrPayment(orderDetailData) && !NEXT_ORDER_STATUS[orderDetailData.trangThaiDonHang] && !['cancelled','returned','delivered'].includes(orderDetailData.trangThaiDonHang)"
                 class="small text-secondary mt-3 text-center py-2 rounded-2" style="background:var(--bg-input);"
               >
                 {{ t('admin.orderDetailModal.noNextStep') }}

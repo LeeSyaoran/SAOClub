@@ -71,4 +71,10 @@ public class DonHangRequest {
 
     // Danh sách sanPhamId trong đơn hàng để kiểm tra khuyến mãi theo sản phẩm
     private List<Integer> sanPhamIds;
+
+    /** Idempotency key từ frontend (UUID) — ngăn tạo đơn trùng khi retry */
+    private String idempotencyKey;
+
+    /** Phương thức thanh toán khách chọn: tien_mat | qr | visa */
+    private String phuongThucThanhToan;
 }

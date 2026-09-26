@@ -59,6 +59,16 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
 
     List<BienTheSanPham> findBySanPham_SanPhamId(Integer sanPhamId);
 
+    @Query("""
+    SELECT bt FROM BienTheSanPham bt
+    LEFT JOIN FETCH bt.cpu
+    LEFT JOIN FETCH bt.ram
+    LEFT JOIN FETCH bt.oCung
+    LEFT JOIN FETCH bt.gpu
+    WHERE bt.sanPham.sanPhamId = :sanPhamId
+    """)
+    List<BienTheSanPham> findChiTietTheoSanPham(@Param("sanPhamId") Integer sanPhamId);
+
     // Kiểm tra trùng barcode TRƯỚC khi insert/update
     boolean existsByBarcode(String barcode);
 

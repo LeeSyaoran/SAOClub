@@ -235,7 +235,7 @@
           <nav class="hh-tabs">
             <button class="hh-tab" :class="{ 'is-on': tabCT === 'info' }" @click="tabCT = 'info'">Thông tin</button>
             <button class="hh-tab" :class="{ 'is-on': tabCT === 'bienthe' }" @click="tabCT = 'bienthe'">
-              Biến thể <span class="hh-chip">{{ chiTiet.variants.length }}</span>
+              Biến thể <span class="hh-chip">{{ chiTiet?.variants?.length ?? 0 }}</span>
             </button>
             <button class="hh-tab" :class="{ 'is-on': tabCT === 'lichsu' }" @click="tabCT = 'lichsu'">
               Lịch sử thay đổi <span v-if="lichSuHienTai.length" class="hh-chip">{{ lichSuHienTai.length }}</span>
@@ -267,14 +267,13 @@
 
                   <dl class="hh-ct-grid">
                     <div class="hh-ct-item"><dt>Mã sản phẩm</dt><dd>{{ chiTiet.maSanPham }}</dd></div>
-                    <div class="hh-ct-item"><dt>Số phiên bản</dt><dd>{{ chiTiet.variants.length }}</dd></div>
+                    <div class="hh-ct-item"><dt>Số phiên bản</dt><dd>{{ chiTiet?.variants?.length ?? 0 }}</dd></div>
                     <div class="hh-ct-item"><dt>Khách đặt</dt><dd>{{ chiTiet.khachDat }}</dd></div>
-                    <div class="hh-ct-item"><dt>Giá vốn</dt><dd>{{ chiTiet.khoangGiaVon }} ₫</dd></div>
-                    <div class="hh-ct-item"><dt>Giá bán</dt><dd class="hh-ct-item__manh">{{ chiTiet.khoangGia }} ₫</dd></div>
+                    <div class="hh-ct-item"><dt>Giá bán</dt><dd class="hh-ct-item__manh">{{ chiTiet.khoangGia ? chiTiet.khoangGia + ' ₫' : 'Liên hệ' }}</dd></div>
                     <div class="hh-ct-item"><dt>Thương hiệu</dt><dd>{{ chiTiet.tenThuongHieu || 'Chưa có' }}</dd></div>
                     <div class="hh-ct-item"><dt>Nhà cung cấp</dt><dd>{{ chiTiet.tenNhaCungCap || 'Chưa có' }}</dd></div>
                     <div class="hh-ct-item"><dt>Danh mục</dt><dd>{{ chiTiet.tenDanhMuc || 'Chưa có' }}</dd></div>
-                    <div class="hh-ct-item"><dt>Bảo hành</dt><dd>{{ chiTiet.baoHanh }}</dd></div>
+                    <div class="hh-ct-item"><dt>Bảo hành</dt><dd>{{ chiTiet.baoHanhThang ? chiTiet.baoHanhThang + ' tháng' : 'Chưa có' }}</dd></div>
                     <div class="hh-ct-item"><dt>Ngày tạo</dt><dd>{{ formatDate(chiTiet.ngayTao) }}</dd></div>
                     <div class="hh-ct-item"><dt>Ngày cập nhật</dt><dd>{{ formatDate(chiTiet.ngayCapNhat) }}</dd></div>
                   </dl>
@@ -284,10 +283,10 @@
               <section class="hh-ct-block">
                 <h3>Thông số chung</h3>
                 <dl class="hh-ct-grid">
-                  <div class="hh-ct-item"><dt>Màn hình</dt><dd>{{ chiTiet.thongSo.kichThuocManHinh || 'Chưa có' }}</dd></div>
-                  <div class="hh-ct-item"><dt>Hệ điều hành</dt><dd>{{ chiTiet.thongSo.heDieuHanh || 'Chưa có' }}</dd></div>
-                  <div class="hh-ct-item"><dt>Pin</dt><dd>{{ chiTiet.thongSo.pin || 'Chưa có' }}</dd></div>
-                  <div class="hh-ct-item"><dt>Trọng lượng</dt><dd>{{ chiTiet.thongSo.trongLuongKg ? chiTiet.thongSo.trongLuongKg + ' kg' : 'Chưa có' }}</dd></div>
+                  <div class="hh-ct-item"><dt>Màn hình</dt><dd>{{ chiTiet.kichThuocManHinh || 'Chưa có' }}</dd></div>
+                  <div class="hh-ct-item"><dt>Hệ điều hành</dt><dd>{{ chiTiet.heDieuHanh || 'Chưa có' }}</dd></div>
+                  <div class="hh-ct-item"><dt>Pin</dt><dd>{{ chiTiet.pin || 'Chưa có' }}</dd></div>
+                  <div class="hh-ct-item"><dt>Trọng lượng</dt><dd>{{ chiTiet.trongLuongKg ? chiTiet.trongLuongKg + ' kg' : 'Chưa có' }}</dd></div>
                 </dl>
               </section>
 
@@ -319,7 +318,7 @@
                   </thead>
                   <tbody>
                     <tr
-                      v-for="v in chiTiet.variants" :key="v.bienTheId"
+                      v-for="v in (chiTiet?.variants ?? [])" :key="v.bienTheId"
                       class="hh-vt__row" :class="{ 'is-on': String(v.bienTheId) === String(bienTheChonId) }"
                       @click="bienTheChonId = v.bienTheId"
                     >
@@ -355,10 +354,18 @@
                         </div>
                         <span v-else class="hh-muted">{{ moTaBienThe(v) || 'Phiên bản tiêu chuẩn' }}</span>
                       </td>
-                      <td class="ta-r hh-muted">{{ formatNumber(v.giaVon) }}</td>
+                      <td class="ta-r hh-muted">{{ formatNumber(v.giaNhap) }}</td>
                       <td class="ta-r hh-vt__gia">{{ formatNumber(v.giaBan) }}</td>
                       <td>
                         <span class="hh-tag" :class="tagClass(v.trangThai)">{{ nhanTrangThai(v.trangThai) }}</span>
+                      </td>
+                    </tr>
+                    <tr v-if="!chiTiet?.variants?.length" class="hh-vt__empty">
+                      <td colspan="6">
+                        <div class="hh-empty">
+                          <Layers :size="14" />
+                          <p>Sản phẩm này chưa có biến thể nào. Bấm <strong>“Thêm phiên bản”</strong> ở thanh dưới cùng để tạo phiên bản đầu tiên.</p>
+                        </div>
                       </td>
                     </tr>
                   </tbody>
@@ -374,22 +381,25 @@
               </div>
               <ol v-else-if="lichSuHienTai.length" class="hh-ls">
                 <li v-for="(m, i) in lichSuHienTai" :key="i" class="hh-ls__item">
-                  <span class="hh-ls__dot" :class="'is-' + m.loai"></span>
+                  <span
+                    class="hh-ls__dot"
+                    :class="{ 'is-them': m.doiTuong === 'bien_the', 'is-tao': m.doiTuong === 'san_pham' && m.giaTriCu === null }"
+                  ></span>
                   <div class="hh-ls__body">
                     <div class="hh-ls__head">
-                      <strong>{{ m.hanhDong }}</strong>
+                      <strong>{{ tenHanhDong(m) }}</strong>
                       <span class="hh-muted">{{ formatDate(m.thoiGian) }}</span>
                     </div>
-                    <div v-if="m.doiTuong" class="hh-ls__target">{{ m.doiTuong }}</div>
-                    <ul v-if="m.thayDoi && m.thayDoi.length" class="hh-ls__changes">
-                      <li v-for="(t, j) in m.thayDoi" :key="j">
-                        <span class="hh-ls__field">{{ t.truong }}</span>
-                        <em>{{ t.cu || '—' }}</em>
+                    <div v-if="m.maSku" class="hh-ls__target">Phiên bản {{ m.maSku }}</div>
+                    <ul class="hh-ls__changes">
+                      <li>
+                        <span class="hh-ls__field">{{ m.tenTruong }}</span>
+                        <em>{{ m.giaTriCu || '—' }}</em>
                         <ArrowRight :size="14" />
-                        <b>{{ t.moi || '—' }}</b>
+                        <b>{{ m.giaTriMoi || '—' }}</b>
                       </li>
                     </ul>
-                    <div class="hh-ls__by">Người thực hiện: {{ m.nguoiDung }}</div>
+                    <div class="hh-ls__by">Người thực hiện: {{ m.tenNhanVien || '—' }}</div>
                   </div>
                 </li>
               </ol>
@@ -424,16 +434,13 @@
                 <button class="hh-btn hh-btn--soft" :disabled="!bienTheDangChon || dangSaoChepBienThe" @click="saoChepBienThe(bienTheDangChon)">
                   <Copy :size="14" /> {{ dangSaoChepBienThe ? 'Đang sao chép…' : 'Sao chép' }}
                 </button>
-                <button class="hh-btn hh-btn--primary" :disabled="!bienTheDangChon" @click="suaBienThe(bienTheDangChon)">
+                <button class="hh-btn hh-btn--primary" :disabled="!bienTheDangChon" @click="suaBienTheTuChiTiet(bienTheDangChon)">
                   <Pencil :size="14" /> Chỉnh sửa
                 </button>
               </template>
 
               <template v-else>
-                <span class="hh-foot-hint">Nhật ký ghi lại mỗi lần lưu thành công trên máy này.</span>
-                <button class="hh-btn hh-btn--ghost" :disabled="!lichSuHienTai.length" @click="xoaLichSu">
-                  <Eraser :size="14" /> Xóa nhật ký
-                </button>
+                <span class="hh-foot-hint">Nhật ký thay đổi được hệ thống ghi tự động mỗi lần lưu sản phẩm hoặc phiên bản.</span>
               </template>
             </div>
           </footer>
@@ -905,7 +912,7 @@ import { ThuocTinhService } from '@/services/ThuocTinhService.js'
 import * as bienTheApi from '@/services/bienTheSanPhamService.js'
 import * as sanPhamApi from '@/services/sanPhamService.js'
 import { getLichSu } from '@/services/SanPhamService.js'
-import { Cpu, MemoryStick, HardDrive, Palette, Monitor, Barcode, Search, X, Filter, ChevronDown, Plus, Download, RefreshCw, ChevronLeft, ChevronRight, Inbox, Hand, Edit, Pencil, Trash2, Copy, History, Star, BarChart2, Loader2, Save, ExternalLink, Clock, ArrowRight, Eraser, ShoppingBag, Phone, Mail, MapPin, Building2, Tag, Briefcase, FileText, Settings, ToggleLeft, User, IdCard, Headphones, Send, AlertCircle, Info, Link, ListOrdered, ListIcon, MousePointer2, Laptop, DollarSign, Coins, Activity, Calendar, CalendarCheck, Hash } from '@lucide/vue'
+import { Cpu, MemoryStick, HardDrive, Palette, Monitor, Barcode, Search, X, Filter, ChevronDown, Plus, Download, RefreshCw, ChevronLeft, ChevronRight, Inbox, Hand, Edit, Pencil, Trash2, Copy, History, Star, BarChart2, Loader2, Save, ExternalLink, Clock, ArrowRight, Eraser, ShoppingBag, Phone, Mail, MapPin, Building2, Tag, Briefcase, FileText, Settings, ToggleLeft, User, IdCard, Headphones, Send, AlertCircle, Info, Link, ListOrdered, ListIcon, MousePointer2, Laptop, DollarSign, Coins, Activity, Calendar, CalendarCheck, Hash, Layers } from '@lucide/vue'
 import JsBarcode from 'jsbarcode'
 
 // Gọi hàm API tương ứng của service
@@ -924,6 +931,7 @@ const goiTao = (api, payload, tenApi) => {
 
 const goiSua = (api, id, payload, tenApi) => {
   const fn = timHam(api, 'update', 'put', 'edit', 'save')
+  console.log('[DEBUG goiSua] api keys:', Object.keys(api || {}), 'fn found:', typeof fn, 'fn.length:', fn?.length)
   if (fn) return fn.length >= 2 ? fn(id, payload) : fn(payload)
   throw new Error(`${tenApi} không có hàm cập nhật (update / save)`)
 }
@@ -1005,7 +1013,12 @@ const loadThuocTinh = async () => {
     console.warn('Không load được thuộc tính từ API, dùng mặc định', e)
   }
 }
-onMounted(loadThuocTinh)
+onMounted(async () => {
+  dongHo.value = bayGio()
+  await fetchMasterData()
+  await fetchData()
+  loadThuocTinh()
+})
 
 const MAN_HINH_GOI_Y = computed(() => thuocTinhDong.value.man_hinh?.values || ['15.6" FHD 60Hz', '15.6" FHD 144Hz', '15.6" QHD 240Hz', '16" 2.5K 120Hz', '16" FHD 165Hz', '16" WQXGA 165Hz', '16" 2.8K OLED 120Hz'])
 const PIN_GOI_Y = computed(() => thuocTinhDong.value.pin?.values || ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh', '86Wh', '90Wh'])
@@ -1056,7 +1069,229 @@ const sinhBarcode = (daDung = new Set()) => {
   return ''
 }
 
+// Lấy mốc thời gian hiện tại
+const bayGio = () => {
+  const d = new Date()
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
+
 /* ─── Trạng thái màn hình ─── */
+// Computed: nhóm sản phẩm đã lọc — dùng arrow function để Vue track tốt hơn
+const groupsDaLoc = computed(() => {
+  // Ép reactive access bằng IIFE để đảm bảo Vue track tất cả filter properties
+  return (() => {
+    let ds = [...danhSachSanPham.value]
+    // Search keyword
+    if (searchKeyword.value) {
+      const kw = khongDau(searchKeyword.value)
+      ds = ds.filter(p =>
+        khongDau(p.maSanPham).includes(kw) ||
+        khongDau(p.tenSanPham).includes(kw) ||
+        (p.variants || []).some(v =>
+          khongDau(v.maSku || '').includes(kw) ||
+          khongDau(v.barcode || '').includes(kw)
+        )
+      )
+    }
+    // Filter: trạng thái
+    const fTrangThai = filters.trangThai
+    if (fTrangThai) ds = ds.filter(p => p.trangThai === fTrangThai)
+    // Filter: thương hiệu
+    const fThuongHieu = filters.thuongHieuId
+    if (fThuongHieu) ds = ds.filter(p => String(idOf(p, 'thuongHieuId')) === String(fThuongHieu))
+    // Filter: nhà cung cấp
+    const fNCC = filters.nhaCungCapId
+    if (fNCC) ds = ds.filter(p => String(idOf(p, 'nhaCungCapId')) === String(fNCC))
+    // Filter: phân loại
+    const fPhanLoai = filters.phanLoai
+    if (fPhanLoai) ds = ds.filter(p => (p.phanLoai || []).includes(fPhanLoai))
+    // Filter: CPU
+    const fCpu = filters.cpuId
+    if (fCpu) ds = ds.filter(p => (p.variants || []).some(v => String(idOf(v, 'cpuId')) === String(fCpu)))
+    // Filter: RAM
+    const fRam = filters.ramId
+    if (fRam) ds = ds.filter(p => (p.variants || []).some(v => String(idOf(v, 'ramId')) === String(fRam)))
+    // Filter: màu sắc
+    const fMauSac = filters.mauSac
+    if (fMauSac) ds = ds.filter(p => (p.variants || []).some(v => v.mauSac === fMauSac))
+    // Filter: giá
+    const fGiaTu = filters.giaTu
+    if (fGiaTu) ds = ds.filter(p => (p.giaBanMin || 0) >= Number(fGiaTu))
+    const fGiaDen = filters.giaDen
+    if (fGiaDen) ds = ds.filter(p => (p.giaBanMax || Infinity) <= Number(fGiaDen))
+    // Sort
+    if (sortKey.value === 'name_asc') ds.sort((a, b) => a.tenSanPham.localeCompare(b.tenSanPham))
+    if (sortKey.value === 'name_desc') ds.sort((a, b) => b.tenSanPham.localeCompare(a.tenSanPham))
+    if (sortKey.value === 'stt_asc') ds.sort((a, b) => (a.sanPhamId || 0) - (b.sanPhamId || 0))
+    if (sortKey.value === 'stt_desc') ds.sort((a, b) => (b.sanPhamId || 0) - (a.sanPhamId || 0))
+    return ds
+  })()
+})
+
+// Computed: tất cả biến thể đã lọc
+const bienTheDaLoc = computed(() => {
+  return groupsDaLoc.value.flatMap(g => (g.variants || []).map(v => ({ ...v, sanPhamId: g.sanPhamId, tenSanPham: g.tenSanPham })))
+})
+
+// Ref: biến thể "chuẩn" dùng để lấy existing values khi load thuộc tính
+const bienTheChuan = computed(() => bienThe.value.length ? bienThe.value : bienTheDaLoc.value)
+
+// Computed: phân trang
+const pagedGroups = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return groupsDaLoc.value.slice(start, start + pageSize.value)
+})
+const totalPages = computed(() => Math.ceil(groupsDaLoc.value.length / pageSize.value) || 1)
+const coBoLoc = computed(() => {
+  const f = filters
+  return !!(f.trangThai || f.thuongHieuId || f.nhaCungCapId || f.phanLoai || f.cpuId || f.ramId || f.mauSac || f.giaTu || f.giaDen)
+})
+const soBoLocDangDung = computed(() => {
+  const f = filters
+  let n = 0
+  if (f.trangThai) n++
+  if (f.thuongHieuId) n++
+  if (f.nhaCungCapId) n++
+  if (f.phanLoai) n++
+  if (f.cpuId) n++
+  if (f.ramId) n++
+  if (f.mauSac) n++
+  if (f.giaTu) n++
+  if (f.giaDen) n++
+  return n
+})
+
+// Phân loại options
+const phanLoaiOptions = computed(() => {
+  const fromApi = danhSachPhanLoai.value || []
+  if (fromApi.length) return fromApi
+  return PHAN_LOAI_DU_PHONG
+})
+
+// Màu sắc options
+const danhSachMauSac = computed(() => MAU_SAC_GOI_Y.value || [])
+const optMauSac = computed(() => ({ value: MAU_SAC_GOI_Y.value || [] }))
+const optMauSacSelect = computed(() => (MAU_SAC_GOI_Y.value || []).map(v => ({ label: v, value: v })))
+
+// Thuộc tính select options
+const optManHinhSelect = computed(() => MAN_HINH_GOI_Y.value.map(v => ({ label: v, value: v })))
+const optPinSelect = computed(() => PIN_GOI_Y.value.map(v => ({ label: v, value: v })))
+const optHeDieuHanhSelect = computed(() => HDH_GOI_Y.value.map(v => ({ label: v, value: v })))
+const optTrongLuongSelect = computed(() => TRONG_LUONG_GOI_Y.map(v => ({ label: v + ' kg', value: v })))
+const optBaoHanhSelect = computed(() => BAO_HANH_GOI_Y.map(v => ({ label: v + ' tháng', value: v })))
+
+// CPU/RAM/GPU select options
+const cpuOptionsSel = computed(() => (danhSachCpu.value || []).map(c => ({ label: c.tenCpu, value: idOf(c, 'cpuId') })))
+const ramOptionsSel = computed(() => (danhSachRam.value || []).map(r => ({ label: r.dungLuong || r.tenRam, value: idOf(r, 'ramId') })))
+const oCungOptionsSel = computed(() => (danhSachOCung.value || []).map(o => ({ label: tenOCung(o), value: idOf(o, 'oCungId') })))
+const gpuOptionsSel = computed(() => (danhSachGpu.value || []).map(g => ({ label: g.tenGpu, value: idOf(g, 'gpuId') })))
+
+// Reverse lookup: tên -> id (vì API trả tên, form cần id)
+const cpuIdByName = computed(() => {
+  const m = {}
+  for (const c of (danhSachCpu.value || [])) {
+    const id = idOf(c, 'cpuId')
+    if (id != null) m[c.tenCpu?.trim()] = id
+  }
+  return m
+})
+const ramIdByName = computed(() => {
+  const m = {}
+  for (const r of (danhSachRam.value || [])) {
+    const id = idOf(r, 'ramId')
+    if (id != null) m[(r.dungLuong || r.tenRam)?.trim()] = id
+  }
+  return m
+})
+const oCungIdByName = computed(() => {
+  const m = {}
+  for (const o of (danhSachOCung.value || [])) {
+    const id = idOf(o, 'oCungId')
+    if (id != null) m[tenOCung(o)?.trim()] = id
+  }
+  return m
+})
+const gpuIdByName = computed(() => {
+  const m = {}
+  for (const g of (danhSachGpu.value || [])) {
+    const id = idOf(g, 'gpuId')
+    if (id != null) m[g.tenGpu?.trim()] = id
+  }
+  return m
+})
+
+const isSaving = ref(false)
+const saveError = ref('')
+const dongHo = ref(bayGio())
+
+// Modal chi tiết
+const showDetail = ref(false)
+const chiTiet = ref(null)
+const tabCT = ref('info')
+const bienTheChonId = ref(null)
+const bienTheDangChon = computed(() => chiTiet.value?.variants?.find(v => String(v.bienTheId) === String(bienTheChonId.value)))
+const lichSuHienTai = ref([])
+const nhatKyLoading = ref(false)
+const moLaiChiTiet = ref(null)
+
+// Modal form
+const showModal = ref(false)
+const modalMode = ref('create') // 'create' | 'edit' | 'variant'
+const tieuDeModal = ref('')
+const tab = ref('info')
+const tabs = [
+  { key: 'info', label: 'Thông tin' },
+  { key: 'bienthe', label: 'Phiên bản' },
+  { key: 'mota', label: 'Mô tả' }
+]
+const soPhienBan = computed(() => bienTheRows.value.length || (chiTiet.value?.variants?.length || 0))
+
+// Form data
+const form = ref({
+  sanPhamId: null, maSanPham: '', tenSanPham: '',
+  thuongHieuId: '', danhMucId: '', nhaCungCapId: '',
+  loaiSanPham: 'LAPTOP', trangThaiSanPham: 'active',
+  phanLoaiIds: [], phanLoaiTags: null, phanLoaiTen: null,
+  hinhAnhList: [], moTa: '',
+  baoHanhThang: 12, kichThuocManHinh: '', pin: '', heDieuHanh: '', trongLuongKg: '',
+  skuPrefix: '',
+  // bien the single edit
+  bienTheId: null, maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
+  giaNhap: 0, giaBan: 0, hinhAnhBienThe: null
+})
+
+const bienTheRows = ref([])
+const errors = ref({})
+const barcodeDaDung = ref(new Set())
+
+// Ảnh
+const anhSanPham = ref([])
+const anhDangXem = ref('')
+const dangTaiAnh = ref(false)
+const ghiChuAnh = ref('Ảnh đầu tiên là ảnh chính. Kéo thả để đổi thứ tự.')
+
+// Nhật ký
+const banGoc = ref(null)
+const moTaEl = ref(null)
+
+// Export
+const showExportModal = ref(false)
+const exportSearch = ref('')
+const exportGroups = computed(() => {
+  let ds = groupsDaLoc.value
+  if (exportSearch.value) {
+    const kw = khongDau(exportSearch.value)
+    ds = ds.filter(g =>
+      khongDau(g.tenSanPham).includes(kw) ||
+      khongDau(g.maSanPham).includes(kw) ||
+      (g.variants || []).some(v => khongDau(v.maSku || '').includes(kw))
+    )
+  }
+  return ds
+})
+const allChecked = computed(() => bienTheDaLoc.value.length > 0 && selectedIds.value.length === bienTheDaLoc.value.length)
+
 const isLoading = ref(false)
 const loadError = ref('')
 const toast = ref('')
@@ -1090,7 +1325,581 @@ const hienToast = (msg) => {
   setTimeout(() => (toast.value = ''), 3000)
 }
 
+/* ════════════ HÀM THAO TÁC ════════════ */
+const resetFilters = () => {
+  filters.trangThai = ''
+  filters.thuongHieuId = ''
+  filters.nhaCungCapId = ''
+  filters.phanLoai = ''
+  filters.cpuId = ''
+  filters.ramId = ''
+  filters.mauSac = ''
+  filters.giaTu = ''
+  filters.giaDen = ''
+  searchKeyword.value = ''
+  page.value = 1
+}
+
+const openCreate = () => {
+  modalMode.value = 'create'
+  tieuDeModal.value = 'Tạo sản phẩm mới'
+  tab.value = 'info'
+  resetForm()
+  showModal.value = true
+}
+
+const resetForm = () => {
+  form.value = {
+    sanPhamId: null, maSanPham: '', tenSanPham: '',
+    thuongHieuId: '', danhMucId: '', nhaCungCapId: '',
+    loaiSanPham: 'LAPTOP', trangThaiSanPham: 'active',
+    phanLoaiIds: [], phanLoaiTags: null, phanLoaiTen: null,
+    hinhAnhList: [], moTa: '',
+    baoHanhThang: 12, kichThuocManHinh: '', pin: '', heDieuHanh: '', trongLuongKg: '',
+    skuPrefix: '',
+    bienTheId: null, maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
+    giaNhap: 0, giaBan: 0, hinhAnhBienThe: null
+  }
+  bienTheRows.value = [taoDongBienThe()]
+  errors.value = {}
+  saveError.value = ''
+  moTaEl.value = null
+  setTimeout(() => { if (moTaEl.value) moTaEl.value.innerHTML = '' }, 50)
+}
+
+const taoDongBienThe = () => ({
+  _key: Date.now() + Math.random(), bienTheId: null,
+  maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
+  giaNhap: 0, giaBan: 0
+})
+
+const moChiTiet = async (group) => {
+  chiTiet.value = null
+  showDetail.value = true
+  tabCT.value = 'info'
+  bienTheChonId.value = null
+  lichSuHienTai.value = []
+  try {
+    const spRes = await get(`/api/san-pham/${group.sanPhamId}`)
+    chiTiet.value = spRes.data || spRes
+    // Load images
+    anhSanPham.value = []
+    if (chiTiet.value.hinhAnhChinh) anhSanPham.value.push(chiTiet.value.hinhAnhChinh)
+    if (chiTiet.value.hinhAnhList) {
+      for (const url of chiTiet.value.hinhAnhList) if (!anhSanPham.value.includes(url)) anhSanPham.value.push(url)
+    }
+    if (!anhSanPham.value.length) anhSanPham.value.push(ANH_MAC_DINH)
+    anhDangXem.value = anhSanPham.value[0]
+    // Load history
+    nhatKyLoading.value = true
+    const ls = await getLichSu(group.sanPhamId)
+    lichSuHienTai.value = Array.isArray(ls) ? ls : (ls?.content || [])
+  } catch (e) {
+    console.error('[HangHoa] loi mo chi tiet', e)
+  } finally {
+    nhatKyLoading.value = false
+  }
+}
+
+const dongChiTiet = () => { showDetail.value = false; chiTiet.value = null }
+
+const openExportModal = () => { selectedIds.value = []; showExportModal.value = true }
+
+const suaSanPham = async (sp) => {
+  modalMode.value = 'edit'
+  tieuDeModal.value = 'Sửa sản phẩm'
+  tab.value = 'info'
+
+  // Luôn fetch fresh data từ API để tránh stale cache
+  let data
+  try {
+    const res = await get(`/api/san-pham/${sp.sanPhamId}`)
+    data = res.data || res
+  } catch (e) {
+    console.error('[HangHoa] suaSanPham fetch error:', e)
+    return
+  }
+
+  // Fill form từ API response (data mới nhất từ DB)
+  form.value.sanPhamId = data.sanPhamId
+  form.value.maSanPham = data.maSanPham
+  form.value.tenSanPham = data.tenSanPham
+  form.value.thuongHieuId = data.thuongHieuId
+  form.value.danhMucId = data.danhMucId
+  form.value.nhaCungCapId = data.nhaCungCapId
+  form.value.loaiSanPham = data.loaiSanPham || 'LAPTOP'
+  form.value.trangThaiSanPham = data.trangThai || 'active'
+  form.value.hinhAnhList = data.hinhAnhList || (data.hinhAnhChinh ? [data.hinhAnhChinh] : [])
+  form.value.moTa = data.moTa || ''
+  form.value.phanLoaiIds = data.phanLoaiIds || []
+  form.value.baoHanhThang = data.baoHanhThang ?? 12
+  form.value.kichThuocManHinh = data.kichThuocManHinh || ''
+  form.value.pin = data.pin || ''
+  form.value.heDieuHanh = data.heDieuHanh || ''
+  form.value.trongLuongKg = data.trongLuongKg != null ? data.trongLuongKg : ''
+
+  // Bien the — response trả cpu/ram/oCung/gpu là string (tên), cần reverse lookup sang id
+  bienTheRows.value = (data.variants || []).map(v => ({
+    bienTheId: v.bienTheId,
+    maSku: v.maSku,
+    barcode: v.barcode,
+    mauSac: v.mauSac,
+    cpuId: v.cpu ? cpuIdByName.value[v.cpu.trim()] : null,
+    ramId: v.ram ? ramIdByName.value[v.ram.trim()] : null,
+    oCungId: v.oCung ? oCungIdByName.value[v.oCung.trim()] : null,
+    gpuId: v.gpu ? gpuIdByName.value[v.gpu.trim()] : null,
+    giaNhap: v.giaNhap,
+    giaBan: v.giaBan,
+    hinhAnhBienThe: v.hinhAnhBienThe,
+    _key: v.bienTheId || Date.now() + Math.random()
+  }))
+  if (bienTheRows.value.length > 0) {
+    suaBienThe(bienTheRows.value[0])
+  } else {
+    form.value.bienTheId = null
+    form.value.maSku = ''
+    form.value.barcode = ''
+    form.value.mauSac = ''
+    form.value.cpuId = ''
+    form.value.ramId = ''
+    form.value.oCungId = ''
+    form.value.gpuId = ''
+    form.value.giaNhap = 0
+    form.value.giaBan = 0
+    form.value.hinhAnhBienThe = null
+  }
+  banGoc.value = anhChupForm()
+  errors.value = {}
+  saveError.value = ''
+  showModal.value = true
+  moLaiChiTiet.value = data.sanPhamId
+  // Set moTa editor
+  setTimeout(() => { if (moTaEl.value) moTaEl.value.innerHTML = data.moTa || '' }, 50)
+}
+
+const suaBienThe = (v) => {
+  if (!v) return
+  form.value.bienTheId = v.bienTheId
+  form.value.maSku = v.maSku || ''
+  form.value.barcode = v.barcode || ''
+  form.value.mauSac = v.mauSac || ''
+  form.value.cpuId = idOf(v, 'cpuId') ?? cpuIdByName.value[v.cpu?.trim()]
+  form.value.ramId = idOf(v, 'ramId') ?? ramIdByName.value[(v.ram || '')?.trim()]
+  form.value.oCungId = idOf(v, 'oCungId') ?? oCungIdByName.value[(v.oCung || '')?.trim()]
+  form.value.gpuId = idOf(v, 'gpuId') ?? gpuIdByName.value[v.gpu?.trim()]
+  form.value.giaNhap = v.giaNhap || 0
+  form.value.giaBan = v.giaBan || 0
+  form.value.hinhAnhBienThe = v.hinhAnhBienThe || null
+}
+
+const chonBienTheDeSua = (v) => {
+  if (form.value.bienTheId) {
+    const prevIdx = bienTheRows.value.findIndex(r => String(r.bienTheId) === String(form.value.bienTheId))
+    if (prevIdx !== -1) {
+      bienTheRows.value[prevIdx] = {
+        ...bienTheRows.value[prevIdx],
+        maSku: form.value.maSku,
+        barcode: form.value.barcode,
+        mauSac: form.value.mauSac,
+        cpuId: form.value.cpuId,
+        ramId: form.value.ramId,
+        oCungId: form.value.oCungId,
+        gpuId: form.value.gpuId,
+        giaNhap: form.value.giaNhap,
+        giaBan: form.value.giaBan,
+        hinhAnhBienThe: form.value.hinhAnhBienThe
+      }
+    }
+  }
+  suaBienThe(v)
+}
+
+const suaBienTheTuChiTiet = (v) => {
+  if (!chiTiet.value || !v) return
+  suaSanPham(chiTiet.value)
+  tab.value = 'bienthe'
+  suaBienThe(v)
+}
+
+const themPhienBan = (sp) => {
+  modalMode.value = 'variant'
+  tieuDeModal.value = 'Thêm phiên bản'
+  tab.value = 'bienthe'
+  form.value.sanPhamId = sp.sanPhamId
+  form.value.maSanPham = sp.maSanPham
+  form.value.tenSanPham = sp.tenSanPham || ''
+  form.value.thuongHieuId = idOf(sp, 'thuongHieuId')
+  form.value.danhMucId = idOf(sp, 'danhMucId')
+  form.value.nhaCungCapId = idOf(sp, 'nhaCungCapId')
+  form.value.loaiSanPham = sp.loaiSanPham || 'LAPTOP'
+  form.value.trangThaiSanPham = sp.trangThai || 'active'
+  form.value.hinhAnhList = sp.hinhAnhList || (sp.hinhAnhChinh ? [sp.hinhAnhChinh] : [])
+  form.value.moTa = sp.moTa || ''
+  form.value.phanLoaiIds = sp.phanLoai || []
+  form.value.baoHanhThang = sp.baoHanhThang ?? 12
+  form.value.kichThuocManHinh = sp.kichThuocManHinh || ''
+  form.value.pin = sp.pin || ''
+  form.value.heDieuHanh = sp.heDieuHanh || ''
+  form.value.trongLuongKg = sp.trongLuongKg != null ? sp.trongLuongKg : ''
+  bienTheRows.value = [taoDongBienThe()]
+  errors.value = {}
+  saveError.value = ''
+  showModal.value = true
+}
+
+const saoChepSanPham = (sp) => {
+  modalMode.value = 'create'
+  tieuDeModal.value = 'Sao chép sản phẩm'
+  tab.value = 'info'
+  form.value = {
+    sanPhamId: null, maSanPham: '', tenSanPham: sp.tenSanPham + ' (Copy)',
+    thuongHieuId: idOf(sp, 'thuongHieuId'), danhMucId: idOf(sp, 'danhMucId'),
+    nhaCungCapId: idOf(sp, 'nhaCungCapId'),
+    loaiSanPham: sp.loaiSanPham || 'LAPTOP', trangThaiSanPham: 'active',
+    phanLoaiIds: sp.phanLoai || [], phanLoaiTags: null, phanLoaiTen: null,
+    hinhAnhList: [...(sp.hinhAnhList || [])],
+    moTa: sp.moTa || '', baoHanhThang: 12, kichThuocManHinh: '', pin: '', heDieuHanh: '', trongLuongKg: '', skuPrefix: '',
+    bienTheId: null, maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
+    giaNhap: 0, giaBan: 0, hinhAnhBienThe: null
+  }
+  bienTheRows.value = (sp.variants || []).map(v => ({
+    ...v, _key: Date.now() + Math.random(), bienTheId: null,
+    cpuId: idOf(v, 'cpuId'), ramId: idOf(v, 'ramId'),
+    oCungId: idOf(v, 'oCungId'), gpuId: idOf(v, 'gpuId')
+  }))
+  errors.value = {}
+  saveError.value = ''
+  showModal.value = true
+}
+
+const dangSaoChepBienThe = ref(false)
+const saoChepBienThe = async (v) => {
+  if (!v) return
+  dangSaoChepBienThe.value = true
+  try {
+    const payload = { ...payloadBienThe(chiTiet.value.sanPhamId, { ...v, _key: Date.now(), bienTheId: null, maSku: '' }) }
+    payload.maSku = v.maSku + '-copy'
+    const res = await apiTaoBienThe(payload)
+    if (res.ok) {
+      hienToast('Đã sao chép phiên bản')
+      await fetchData()
+      if (chiTiet.value) moChiTiet({ sanPhamId: chiTiet.value.sanPhamId })
+    }
+  } catch (e) {
+    hienToast('Lỗi: ' + thongBaoLoi(e))
+  } finally {
+    dangSaoChepBienThe.value = false
+  }
+}
+
+const inTemMa = (v) => {
+  if (!v) return
+  const w = window.open('', '_blank')
+  if (!w) return
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  try {
+    JsBarcode(svg, v.barcode || v.maSku, { format: 'EAN13', displayValue: true, fontSize: 14, margin: 10 })
+    w.document.write(`<html><head><title>Tem mã: ${v.maSku}</title></head><body style="text-align:center;padding:20px;font-family:sans-serif">${svg.outerHTML}<p style="margin-top:10px">${v.maSku}</p></body></html>`)
+    w.document.close()
+    setTimeout(() => w.print(), 300)
+  } catch (e) {
+    w.document.write(`<p>Không tạo được mã vạch: ${e.message}</p>`)
+    w.document.close()
+  }
+}
+
+// Validate form
+const validate = () => {
+  errors.value = {}
+  if (!form.value.tenSanPham) errors.value.tenSanPham = 'Tên sản phẩm bắt buộc'
+  if (!form.value.thuongHieuId) errors.value.thuongHieuId = 'Chọn thương hiệu'
+  if (!form.value.danhMucId) errors.value.danhMucId = 'Chọn danh mục'
+  if (!form.value.baoHanhThang) errors.value.baoHanhThang = 'Chọn thời gian bảo hành'
+
+  // Validate bien the
+  if (modalMode.value === 'edit') {
+    if (form.value.bienTheId) {
+      if (!form.value.maSku?.trim()) errors.value.maSku = 'Mã SKU bắt buộc'
+      if (form.value.giaBan === '' || form.value.giaBan == null) errors.value.giaBan = 'Giá bán bắt buộc'
+      if (form.value.giaNhap === '' || form.value.giaNhap == null) errors.value.giaNhap = 'Giá nhập bắt buộc'
+      if (Number(form.value.giaBan) < 0) errors.value.giaBan = 'Giá bán không được âm'
+      if (Number(form.value.giaNhap) < 0) errors.value.giaNhap = 'Giá nhập không được âm'
+    }
+  } else {
+    if (bienTheRows.value.length === 0) {
+      errors.value.bienThe = 'Phải có ít nhất 1 phiên bản'
+    }
+    for (const row of bienTheRows.value) {
+      if (!row.giaBan && row.giaBan !== 0) errors.value.giaBan = 'Giá bán bắt buộc'
+      break
+    }
+  }
+  return Object.keys(errors.value).length === 0
+}
+
+const closeModal = (keepDetail = false) => {
+  showModal.value = false
+  form.value.sanPhamId = null
+  bienTheRows.value = []
+  errors.value = {}
+  saveError.value = ''
+  // Chỉ reset moLaiChiTiet khi không giữ lại (tức là đóng hẳn, không phải sau khi lưu)
+  if (!keepDetail) {
+    moLaiChiTiet.value = null
+  }
+}
+
+const themDong = () => bienTheRows.value.push(taoDongBienThe())
+const xoaDong = (key) => { bienTheRows.value = bienTheRows.value.filter(r => r._key !== key) }
+
+// Toggle phan loai
+const togglePhanLoai = (id) => {
+  const idx = form.value.phanLoaiIds.indexOf(id)
+  if (idx === -1) form.value.phanLoaiIds.push(id)
+  else form.value.phanLoaiIds.splice(idx, 1)
+}
+const tenPhanLoai = (id) => phanLoaiOptions.value.find(p => p.phanLoaiId == id)?.tenPhanLoai || ''
+const tenTheoMaPhanLoai = (ma) => phanLoaiOptions.value.find(p => p.maPhanLoai === ma)?.tenPhanLoai || ma
+
+// Ảnh
+const chonAnhSanPham = async (e) => {
+  const files = Array.from(e.target.files || [])
+  if (!files.length) return
+  dangTaiAnh.value = true
+  try {
+    for (const file of files) {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd })
+      if (res.ok) {
+        const data = await res.json()
+        const url = data.url || data.path || data.filename || (THU_MUC_ANH + data.name)
+        if (!form.value.hinhAnhList.includes(url)) form.value.hinhAnhList.push(url)
+      }
+    }
+  } catch (e) {
+    console.error('[HangHoa] loi tai anh', e)
+  } finally {
+    dangTaiAnh.value = false
+    e.target.value = ''
+  }
+}
+const datLamAnhChinh = (i) => {
+  const url = form.value.hinhAnhList.splice(i, 1)[0]
+  form.value.hinhAnhList.unshift(url)
+}
+const xoaAnhTaiViTri = (i) => form.value.hinhAnhList.splice(i, 1)
+const themAnhTuUrl = (e) => {
+  const url = e.target.value.trim()
+  if (url && !form.value.hinhAnhList.includes(url)) form.value.hinhAnhList.push(url)
+  e.target.value = ''
+}
+
+// Bien the helper
+const coThongSoBienThe = (v) => v?.mauSac || layCpu(v) || layRam(v) || layOCung(v) || layGpu(v)
+const layCpu = (v) => danhSachCpu.value.find(c => idOf(c, 'cpuId') == v?.cpuId)?.tenCpu || ''
+const layRam = (v) => danhSachRam.value.find(r => idOf(r, 'ramId') == v?.ramId)?.dungLuong || ''
+const layOCung = (v) => {
+  const o = danhSachOCung.value.find(o => idOf(o, 'oCungId') == v?.oCungId)
+  return o ? tenOCung(o) : ''
+}
+const layGpu = (v) => danhSachGpu.value.find(g => idOf(g, 'gpuId') == v?.gpuId)?.tenGpu || ''
+const moTaBienThe = (v) => [layCpu(v), layRam(v), layOCung(v), v?.mauSac].filter(Boolean).join(' · ')
+
+// Rich text
+const dinhDang = (cmd) => {
+  if (!moTaEl.value) return
+  moTaEl.value.focus()
+  document.execCommand(cmd, false, null)
+}
+const chenLink = () => {
+  const url = prompt('Nhập URL:')
+  if (url) dinhDang('createLink', url)
+}
+
+// Barcode
+const renderBarcode = (el, code) => {
+  if (!el || !code) return
+  try { JsBarcode(el, code, { format: 'EAN13', displayValue: false, margin: 2 }) } catch (e) {}
+}
+
+// Nhat ky: backend đã tự ghi log qua LichSuThayDoiSanPhamService khi SanPhamService.updateSanPham
+// nên FE chỉ cần đọc, không cần ghi/xóa.
+// Giữ stub ghiNhatKy() để các chỗ gọi cũ không phải sửa; nó không gọi API nào cả.
+const ghiNhatKy = async () => {}
+
+// Bản đồ tên trường backend -> tiếng Việt hiển thị
+const TEN_TRUONG_LABEL = {
+  tenSanPham: 'Tên sản phẩm',
+  thuongHieuId: 'Thương hiệu',
+  danhMucId: 'Danh mục',
+  nhaCungCapId: 'Nhà cung cấp',
+  loaiSanPham: 'Loại sản phẩm',
+  moTa: 'Mô tả',
+  hinhAnhChinh: 'Ảnh đại diện',
+  trangThai: 'Trạng thái',
+  giaNhap: 'Giá nhập',
+  giaBan: 'Giá bán',
+  barcode: 'Barcode',
+}
+
+// Sinh câu mô tả hành động dựa trên đối tượng + trường thay đổi
+const tenHanhDong = (m) => {
+  if (!m) return '—'
+  const doiTuong = m.doiTuong === 'bien_the' ? 'phiên bản' : 'sản phẩm'
+  const truong = TEN_TRUONG_LABEL[m.tenTruong] || m.tenTruong || 'trường'
+  // Tạo sản phẩm: giaTriCu rỗng/null
+  const isCreate = m.doiTuong === 'san_pham' && (m.giaTriCu === null || m.giaTriCu === '')
+  if (isCreate) return `Tạo ${doiTuong} - ${truong}`
+  return `Cập nhật ${doiTuong} - ${truong}`
+}
+
+// Compare form snapshot
+const anhChupForm = () => ({ ...form.value })
+const soSanhAnhChup = (a, b) => {
+  if (!a || !b) return []
+  const changes = []
+  const fields = ['tenSanPham', 'moTa', 'trangThaiSanPham']
+  for (const f of fields) {
+    if (String(a[f] || '') !== String(b[f] || '')) {
+      changes.push({ truong: f, cu: a[f], moi: b[f] })
+    }
+  }
+  return changes
+}
+
+// Export
+const exportCsv = () => {
+  const rows = bienTheDaLoc.value.filter(v => selectedIds.value.includes(v.bienTheId))
+  if (!rows.length) return
+  const csv = [
+    ['Mã SP', 'Tên SP', 'SKU', 'Mã vạch', 'Màu sắc', 'CPU', 'RAM', 'Ổ cứng', 'Giá nhập', 'Giá bán', 'Trạng thái'].join(','),
+    ...rows.map(v => [v.maSanPham, v.tenSanPham, v.maSku, v.barcode, v.mauSac, layCpu(v), layRam(v), layOCung(v), v.giaNhap, v.giaBan, v.trangThai].map(x => `"${x || ''}"`).join(','))
+  ].join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = 'hang_hoa.csv'
+  a.click()
+  URL.revokeObjectURL(a.href)
+  hienToast(`Đã xuất ${rows.length} dòng`)
+  showExportModal.value = false
+}
+
+const isGroupChecked = (group) => {
+  const vIds = (group.variants || []).map(v => v.bienTheId)
+  return vIds.length > 0 && vIds.every(id => selectedIds.value.includes(id))
+}
+
+const toggleGroupCheck = (group) => {
+  const vIds = (group.variants || []).map(v => v.bienTheId)
+  const allOn = vIds.every(id => selectedIds.value.includes(id))
+  if (allOn) selectedIds.value = selectedIds.value.filter(id => !vIds.includes(id))
+  else selectedIds.value = [...new Set([...selectedIds.value, ...vIds])]
+}
+
+const toggleVariantCheck = (id) => {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx === -1) selectedIds.value.push(id)
+  else selectedIds.value.splice(idx, 1)
+}
+
+const toggleAll = (e) => {
+  if (e.target.checked) selectedIds.value = bienTheDaLoc.value.map(v => v.bienTheId)
+  else selectedIds.value = []
+}
+
+const setIndeterminate = (el, group) => {
+  if (!el) return
+  const vIds = (group.variants || []).map(v => v.bienTheId)
+  const checked = vIds.filter(id => selectedIds.value.includes(id)).length
+  el.indeterminate = checked > 0 && checked < vIds.length
+}
+
+// formHopLe
+const formHopLe = computed(() => {
+  if (!form.value.tenSanPham) return false
+  if (!form.value.thuongHieuId) return false
+  if (!form.value.danhMucId) return false
+  if (!form.value.baoHanhThang) return false
+  if (modalMode.value !== 'edit' && bienTheRows.value.length === 0) return false
+  return true
+})
+
 /* ════════════ TẢI DỮ LIỆU ════════════ */
+const fetchData = async () => {
+  isLoading.value = true
+  loadError.value = ''
+  try {
+    // Lấy sản phẩm và biến thể
+    const [spRes, btRes] = await Promise.all([
+      get('/api/san-pham/hien-thi?size=500'),
+      get('/api/bien-the-san-pham/staff')
+    ])
+    // Xử lý response
+    const spRaw = Array.isArray(spRes) ? spRes : (spRes?.content || [])
+    bienThe.value = Array.isArray(btRes) ? btRes : []
+
+    // Gộp nhóm theo sanPhamId: backend /api/san-pham/hien-thi trả 1 dòng / biến thể
+    // (vì JOIN BienTheSanPham), nên cần dedup để bảng chỉ hiển thị mỗi sản phẩm 1 dòng.
+    const seen = new Map()
+    for (const row of spRaw) {
+      const id = row.sanPhamId
+      if (id == null) continue
+      if (!seen.has(id)) {
+        // Giữ nguyên dòng đầu tiên làm đại diện sản phẩm (mang thông tin chung)
+        seen.set(id, { ...row, _mauSacSet: row.mauSac ? new Set([row.mauSac]) : null })
+      } else {
+        const existed = seen.get(id)
+        // Gom màu sắc từ các biến thể
+        if (row.mauSac) {
+          existed._mauSacSet = existed._mauSacSet || new Set()
+          existed._mauSacSet.add(row.mauSac)
+        }
+      }
+    }
+    danhSachSanPham.value = Array.from(seen.values()).map((sp) => {
+      sp.mauSacList = sp._mauSacSet ? Array.from(sp._mauSacSet) : []
+      return sp
+    })
+
+    // Merge variants vào groups
+    const btMap = {}
+    for (const bt of bienThe.value) {
+      const spId = bt.sanPhamId
+      if (!btMap[spId]) btMap[spId] = []
+      btMap[spId].push(bt)
+    }
+    for (const sp of danhSachSanPham.value) {
+      sp.variants = btMap[sp.sanPhamId] || []
+      // Tính khoang gia
+      const gias = sp.variants.map(v => v.giaBan).filter(Boolean)
+      if (gias.length) {
+        sp.giaBanMin = Math.min(...gias)
+        sp.giaBanMax = Math.max(...gias)
+        if (sp.giaBanMin === sp.giaBanMax) sp.khoangGia = formatNumber(sp.giaBanMin)
+        else sp.khoangGia = `${formatNumber(sp.giaBanMin)} – ${formatNumber(sp.giaBanMax)}`
+      }
+      const giaVons = sp.variants.map(v => v.giaNhap).filter(Boolean)
+      if (giaVons.length) {
+        const gvMin = Math.min(...giaVons), gvMax = Math.max(...giaVons)
+        if (gvMin === gvMax) sp.khoangGiaVon = formatNumber(gvMin)
+        else sp.khoangGiaVon = `${formatNumber(gvMin)} – ${formatNumber(gvMax)}`
+      }
+      // Lay mau sac
+      sp.mauSacList = [...new Set(sp.variants.map(v => v.mauSac).filter(Boolean))]
+      // Lay hinh anh
+      sp.hinhAnh = sp.hinhAnhChinh || (sp.variants[0]?.hinhAnhBienThe) || ANH_MAC_DINH
+    }
+    page.value = 1
+  } catch (e) {
+    console.error('[HangHoa] fetchData error:', e)
+    loadError.value = 'Tải danh sách thất bại: ' + thongBaoLoi(e)
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const fetchMasterData = async () => {
   const an = (p) => p.then((r) => r ?? []).catch(() => [])
   const [th, dm, ncc, cpu, ram, oc, gpu, pl] = await Promise.all([
@@ -1109,37 +1918,30 @@ const fetchMasterData = async () => {
 
 // Gom nhóm danh sách biến thể theo sản phẩm
 
-// Lấy mốc thời gian hiện tại
-const bayGio = () => {
-  const d = new Date()
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
-}
-
 // Chuẩn bị thuộc tính chung của sản phẩm
 const phanChungBienThe = () => ({
-  baoHanhThang: Number(form.baoHanhThang || 0),
-  kichThuocManHinh: form.kichThuocManHinh || null,
-  heDieuHanh: form.heDieuHanh || null,
-  pin: form.pin || null,
-  trongLuongKg: soHoacNull(form.trongLuongKg),
-  phanLoaiTags: form.phanLoaiTags || null,
-  phanLoaiTen: form.phanLoaiTen || null,
-  trangThai: form.trangThaiSanPham
+  baoHanhThang: Number(form.value.baoHanhThang || 0),
+  kichThuocManHinh: form.value.kichThuocManHinh || null,
+  heDieuHanh: form.value.heDieuHanh || null,
+  pin: form.value.pin || null,
+  trongLuongKg: soHoacNull(form.value.trongLuongKg),
+  phanLoaiTags: form.value.phanLoaiTags || null,
+  phanLoaiTen: form.value.phanLoaiTen || null,
+  trangThai: form.value.trangThaiSanPham
 })
 
 // Dữ liệu tạo sản phẩm và biến thể chính
 const payloadSanPham = (row) => ({
-  ...(form.sanPhamId ? { sanPhamId: Number(form.sanPhamId) } : {}),
-  maSanPham: form.maSanPham || null,
-  tenSanPham: form.tenSanPham,
-  thuongHieuId: soHoacNull(form.thuongHieuId),
-  danhMucId: soHoacNull(form.danhMucId),
-  nhaCungCapId: soHoacNull(form.nhaCungCapId),
-  loaiSanPham: form.loaiSanPham,
-  moTa: form.moTa || null,
-  hinhAnhChinh: form.hinhAnhList[0] || null,
-  hinhAnhList: form.hinhAnhList.length ? form.hinhAnhList : null,
+  ...(form.value.sanPhamId ? { sanPhamId: Number(form.value.sanPhamId) } : {}),
+  maSanPham: form.value.maSanPham || null,
+  tenSanPham: form.value.tenSanPham,
+  thuongHieuId: soHoacNull(form.value.thuongHieuId),
+  danhMucId: soHoacNull(form.value.danhMucId),
+  nhaCungCapId: soHoacNull(form.value.nhaCungCapId),
+  loaiSanPham: form.value.loaiSanPham,
+  moTa: form.value.moTa || null,
+  hinhAnhChinh: form.value.hinhAnhList?.[0] || null,
+  hinhAnhList: form.value.hinhAnhList?.length ? form.value.hinhAnhList : null,
   ngayTao: bayGio(),
   ...phanChungBienThe(),
   ...(row
@@ -1156,7 +1958,7 @@ const payloadSanPham = (row) => ({
         ramId: soHoacNull(row.ramId),
         oCungId: soHoacNull(row.oCungId),
         gpuId: soHoacNull(row.gpuId),
-        hinhAnhBienThe: row.hinhAnhBienThe || form.hinhAnhBienThe || null
+        hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null
       }
     : {})
 })
@@ -1173,7 +1975,7 @@ const payloadBienThe = (sanPhamId, row) => ({
   ramId: soHoacNull(row.ramId),
   oCungId: soHoacNull(row.oCungId),
   gpuId: soHoacNull(row.gpuId),
-  hinhAnhBienThe: row.hinhAnhBienThe || form.hinhAnhBienThe || null,
+  hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null,
   ...phanChungBienThe()
 })
 
@@ -1181,13 +1983,13 @@ const layId = (res, key) => res?.[key] ?? res?.id ?? res?.data?.[key] ?? res?.da
 
 // Tìm lại ID sản phẩm vừa tạo
 const timIdVuaTao = async () => {
-  for (const kw of [form.maSanPham, form.tenSanPham]) {
+  for (const kw of [form.value.maSanPham, form.value.tenSanPham]) {
     if (!kw) continue
     try {
       const rows = toArray(await sanPhamApi.getPage({ page: 0, size: 50, keyword: kw }))
       const khop =
-        rows.find((r) => r.maSanPham && r.maSanPham === form.maSanPham) ||
-        rows.find((r) => r.tenSanPham === form.tenSanPham)
+        rows.find((r) => r.maSanPham && r.maSanPham === form.value.maSanPham) ||
+        rows.find((r) => r.tenSanPham === form.value.tenSanPham)
       if (khop) return idOf(khop, 'sanPhamId')
     } catch (e) {
       console.warn('[Hàng hóa] không tra lại được sanPhamId:', e)
@@ -1229,7 +2031,7 @@ const goiYSua = (msg) => {
 const luuPhanLoai = async (sanPhamId) => {
   if (!sanPhamId) return
   try {
-    await put(`/api/phan-loai/san-pham/${sanPhamId}`, form.phanLoaiIds.map(Number))
+    await put(`/api/phan-loai/san-pham/${sanPhamId}`, (form.value.phanLoaiIds || []).map(Number))
   } catch (e) {
     console.warn('[Hàng hóa] không lưu được phân loại:', e?.response?.data ?? e)
   }
@@ -1238,9 +2040,11 @@ const luuPhanLoai = async (sanPhamId) => {
 // Lưu thông tin sản phẩm và các biến thể
 const submitForm = async () => {
   saveError.value = ''
+  console.log('[DEBUG submitForm] mode=', modalMode.value, 'formHopLe=', formHopLe.value, 'sanPhamId=', form.value.sanPhamId, 'bienTheId=', form.value.bienTheId, 'nhaCungCapId=', form.value.nhaCungCapId)
   if (!validate()) {
+    console.log('[DEBUG submitForm] validate fail', errors.value)
     saveError.value = 'Vui lòng sửa các ô được đánh dấu.'
-    tab.value = errors.bienThe || errors.maSku || errors.barcode || errors.giaBan || errors.giaNhap ? 'bienthe' : 'info'
+    tab.value = errors.value.bienThe || errors.value.maSku || errors.value.barcode || errors.value.giaBan || errors.value.giaNhap ? 'bienthe' : 'info'
     return
   }
 
@@ -1251,89 +2055,130 @@ const submitForm = async () => {
   try {
     if (modalMode.value === 'edit') {
       buoc = 'cập nhật sản phẩm'
-      await apiSuaSanPham(form.sanPhamId, payloadSanPham({
-        bienTheId: form.bienTheId,
-        maSku: form.maSku,
-        barcode: form.barcode,
-        mauSac: form.mauSac,
-        cpuId: form.cpuId,
-        ramId: form.ramId,
-        oCungId: form.oCungId,
-        gpuId: form.gpuId,
-        giaNhap: form.giaNhap,
-        giaBan: form.giaBan,
-        hinhAnhBienThe: form.hinhAnhBienThe
-      }))
-      await luuPhanLoai(form.sanPhamId)
+      const rowBienThe = form.value.bienTheId
+        ? {
+            bienTheId: form.value.bienTheId,
+            maSku: form.value.maSku,
+            barcode: form.value.barcode,
+            mauSac: form.value.mauSac,
+            cpuId: form.value.cpuId,
+            ramId: form.value.ramId,
+            oCungId: form.value.oCungId,
+            gpuId: form.value.gpuId,
+            giaNhap: form.value.giaNhap,
+            giaBan: form.value.giaBan,
+            hinhAnhBienThe: form.value.hinhAnhBienThe
+          }
+        : (bienTheRows.value[0] || {})
+
+      const payload = payloadSanPham(rowBienThe)
+      console.log('[DEBUG submitForm] PUT payload', JSON.stringify(payload, null, 2))
+      let resSp
+      try {
+        resSp = await apiSuaSanPham(form.value.sanPhamId, payload)
+        console.log('[DEBUG submitForm] PUT response ok=', resSp?.ok, 'status=', resSp?.status, 'body type=', typeof resSp?.json, typeof resSp?.text)
+      } catch(e) {
+        console.error('[DEBUG submitForm] PUT error:', e)
+        throw e
+      }
+      console.log('[DEBUG submitForm] after check')
+      if (resSp && typeof resSp.ok === 'boolean' && !resSp.ok) {
+        const errText = await resSp.text().catch(() => '')
+        let msg = errText
+        try {
+          const json = JSON.parse(errText)
+          msg = json.message || json.error || json.detail || (Array.isArray(json.errors) ? json.errors.map(x => x.defaultMessage || x.message).join('; ') : '') || errText
+        } catch {}
+        throw new Error(`HTTP ${resSp.status}: ${msg || resSp.statusText}`)
+      }
+      console.log('[DEBUG submitForm] Saving to DB, calling luuPhanLoai')
+      await luuPhanLoai(form.value.sanPhamId)
+      console.log('[DEBUG submitForm] luuPhanLoai done')
 
       // Cập nhật lại bienTheRows sau khi lưu
-      const idx = bienTheRows.value.findIndex(r => String(r.bienTheId) === String(form.bienTheId))
+      const idx = bienTheRows.value.findIndex(r => String(r.bienTheId) === String(form.value.bienTheId))
       if (idx !== -1) {
         bienTheRows.value[idx] = {
           ...bienTheRows.value[idx],
-          maSku: form.maSku,
-          barcode: form.barcode,
-          mauSac: form.mauSac,
-          cpuId: form.cpuId,
-          ramId: form.ramId,
-          oCungId: form.oCungId,
-          gpuId: form.gpuId,
-          giaNhap: form.giaNhap,
-          giaBan: form.giaBan,
-          hinhAnhBienThe: form.hinhAnhBienThe
+          maSku: form.value.maSku,
+          barcode: form.value.barcode,
+          mauSac: form.value.mauSac,
+          cpuId: form.value.cpuId,
+          ramId: form.value.ramId,
+          oCungId: form.value.oCungId,
+          gpuId: form.value.gpuId,
+          giaNhap: form.value.giaNhap,
+          giaBan: form.value.giaBan,
+          hinhAnhBienThe: form.value.hinhAnhBienThe
         }
       }
 
-      const thayDoi = soSanhAnhChup(banGoc, anhChupForm())
-      ghiNhatKy(form.sanPhamId, {
+      const thayDoi = soSanhAnhChup(banGoc.value, anhChupForm())
+      ghiNhatKy(form.value.sanPhamId, {
         loai: 'sua',
         hanhDong: thayDoi.length ? 'Cập nhật sản phẩm' : 'Lưu lại (không đổi nội dung)',
-        doiTuong: `Phiên bản ${form.maSku}`,
+        doiTuong: `Phiên bản ${form.value.maSku || (rowBienThe && rowBienThe.maSku) || ''}`,
         thayDoi
       })
+      console.log('[DEBUG submitForm] Calling hienToast and closeModal')
       hienToast('Đã lưu thay đổi')
+      // Giữ moLaiChiTiet để fetchData xong rồi mở lại chi tiết
+      const sanPhamIdVuaLuu = moLaiChiTiet.value
       closeModal()
+      // Sau khi fetch data thành công, mở lại chi tiết
+      moLaiChiTiet.value = sanPhamIdVuaLuu
     } else if (modalMode.value === 'variant') {
       // Sinh SKU tự động cho các dòng để trống
       bienTheRows.value.forEach((row, i) => {
         if (!row.maSku) {
-          const prefix = (form.skuPrefix || form.maSanPham || vietTat(form.tenSanPham, 6) || 'SP').toUpperCase()
+          const prefix = (form.value.skuPrefix || form.value.maSanPham || vietTat(form.value.tenSanPham, 6) || 'SP').toUpperCase()
           row.maSku = `${prefix}-${String(i + 1).padStart(3, '0')}`
         }
       })
       const dsSku = []
       for (const row of bienTheRows.value) {
         buoc = `thêm phiên bản ${row.maSku}`
-        const resBt = await apiTaoBienThe(payloadBienThe(form.sanPhamId, row))
+        const resBt = await apiTaoBienThe(payloadBienThe(form.value.sanPhamId, row))
         if (!resBt.ok) {
           throw new Error(`HTTP ${resBt.status}: ${await resBt.text().catch(() => resBt.statusText)}`)
         }
         dsSku.push(row.maSku)
         daTao++
       }
-      ghiNhatKy(form.sanPhamId, {
+      ghiNhatKy(form.value.sanPhamId, {
         loai: 'them',
         hanhDong: `Thêm ${daTao} phiên bản`,
         doiTuong: dsSku.join(', ')
       })
       hienToast(`Đã thêm ${daTao} phiên bản`)
       closeModal()
+      moLaiChiTiet.value = null // Đảm bảo reset cho variant mode
     } else {
       // Sinh SKU tự động cho các dòng để trống
       bienTheRows.value.forEach((row, i) => {
         if (!row.maSku) {
-          const prefix = (form.skuPrefix || form.maSanPham || vietTat(form.tenSanPham, 6) || 'SP').toUpperCase()
+          const prefix = (form.value.skuPrefix || form.value.maSanPham || vietTat(form.value.tenSanPham, 6) || 'SP').toUpperCase()
           row.maSku = `${prefix}-${String(i + 1).padStart(3, '0')}`
         }
       })
       const [dauTien, ...conLai] = bienTheRows.value
 
       buoc = 'tạo sản phẩm chính'
-      const spMoi = await apiTaoSanPham(payloadSanPham(dauTien))
+      const resSp = await apiTaoSanPham(payloadSanPham(dauTien))
+      if (resSp && typeof resSp.ok === 'boolean' && !resSp.ok) {
+        const errText = await resSp.text().catch(() => '')
+        let msg = errText
+        try {
+          const json = JSON.parse(errText)
+          msg = json.message || json.error || json.detail || (Array.isArray(json.errors) ? json.errors.map(x => x.defaultMessage || x.message).join('; ') : '') || errText
+        } catch {}
+        throw new Error(`HTTP ${resSp.status}: ${msg || resSp.statusText}`)
+      }
+      const spMoi = resSp && typeof resSp.json === 'function' ? await resSp.json() : resSp
       daTao = 1
 
       let spId = layId(spMoi, 'sanPhamId')
-      if (!spId && (conLai.length || form.phanLoaiIds.length)) {
+      if (!spId && (conLai.length || form.value.phanLoaiIds.length)) {
         buoc = 'tra lại mã sản phẩm vừa tạo'
         spId = await timIdVuaTao()
         if (!spId && conLai.length) {
@@ -1358,8 +2203,8 @@ const submitForm = async () => {
       ghiNhatKy(spId, {
         loai: 'tao',
         hanhDong: 'Tạo sản phẩm mới',
-        doiTuong: `${form.maSanPham} · ${daTao} phiên bản`,
-        thayDoi: [{ truong: 'Tên sản phẩm', cu: '', moi: form.tenSanPham }]
+        doiTuong: `${form.value.maSanPham} · ${daTao} phiên bản`,
+        thayDoi: [{ truong: 'Tên sản phẩm', cu: '', moi: form.value.tenSanPham }]
       })
       // Đóng cửa sổ chi tiết sau khi tạo mới
       hienToast(`Đã lưu sản phẩm cùng ${daTao} phiên bản`)
@@ -1367,21 +2212,22 @@ const submitForm = async () => {
     }
 
     await fetchData()
-    // Đồng bộ dữ liệu vào ProductsStore
-    lamMoiKhoDuLieuChung().catch(() => {})
-
-    // Đồng bộ dữ liệu vào InventoryStore
-    lamMoiTonKhoDuLieuChung().catch(() => {})
 
     // Mở lại cửa sổ chi tiết để xem ngay kết quả vừa lưu
     if (moLaiChiTiet.value) {
-      const g = groups.value.find((x) => String(x.sanPhamId) === String(moLaiChiTiet.value))
+      const g = danhSachSanPham.value.find((x) => String(x.sanPhamId) === String(moLaiChiTiet.value))
       if (g) {
         moChiTiet(g)
         tabCT.value = 'lichsu'
       }
       moLaiChiTiet.value = null
     }
+
+    // Đồng bộ dữ liệu vào ProductsStore
+    lamMoiKhoDuLieuChung().catch(() => {})
+
+    // Đồng bộ dữ liệu vào InventoryStore
+    lamMoiTonKhoDuLieuChung().catch(() => {})
   } catch (e) {
     console.error(`[Hàng hóa] lỗi ở bước "${buoc}":`, e?.response?.data ?? e)
     const chiTietLoi = thongBaoLoi(e)

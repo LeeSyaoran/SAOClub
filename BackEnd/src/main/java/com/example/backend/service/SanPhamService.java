@@ -7,7 +7,10 @@ import com.example.backend.entity.SanPhamHinhAnh;
 import com.example.backend.repository.*;
 import com.example.backend.request.SanPhamRequest;
 import com.example.backend.response.SanPhamCreatedResponse;
+import com.example.backend.response.SanPhamChiTietResponse;
 import com.example.backend.response.SanPhamResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -24,6 +27,8 @@ import java.util.List;
 
 @Service
 public class SanPhamService {
+
+    private static final Logger log = LoggerFactory.getLogger(SanPhamService.class);
 
     @Autowired
     private SanPhamRepository sanPhamRepository;
@@ -60,6 +65,89 @@ public class SanPhamService {
     public SanPham getSanPhamById(Integer sanPhamId) {
         return sanPhamRepository.findById(sanPhamId)
                 .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại với id: " + sanPhamId));
+    }
+
+    @Transactional(readOnly = true)
+    public SanPhamChiTietResponse getSanPhamChiTiet(Integer sanPhamId) {
+        SanPham sp = sanPhamRepository.findById(sanPhamId)
+                .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại với id: " + sanPhamId));
+
+        List<BienTheSanPham> bienTheList = bienTheSanPhamRepository.findChiTietTheoSanPham(sanPhamId);
+        List<String> hinhAnhList = sanPhamHinhAnhRepository.layDuongDanTheoSanPham(sanPhamId);
+
+        // Tính khoảng giá
+        BigDecimal giaBanMin = null, giaBanMax = null;
+        for (BienTheSanPham bt : bienTheList) {
+            if (bt.getGiaBan() != null) {
+                if (giaBanMin == null || bt.getGiaBan().compareTo(giaBanMin) < 0) giaBanMin = bt.getGiaBan();
+                if (giaBanMax == null || bt.getGiaBan().compareTo(giaBanMax) > 0) giaBanMax = bt.getGiaBan();
+            }
+        }
+
+        // Lấy thông số chung từ biến thể đầu tiên
+        BienTheSanPham btDau = bienTheList.isEmpty() ? null : bienTheList.get(0);
+
+        // Map biến thể
+        List<SanPhamChiTietResponse.BienTheChiTietResponse> variants = bienTheList.stream()
+                .map(bt -> new SanPhamChiTietResponse.BienTheChiTietResponse(
+                        bt.getBienTheId(),
+                        bt.getMaSku(),
+                        bt.getBarcode(),
+                        bt.getMauSac(),
+                        bt.getCpu() != null ? bt.getCpu().getTenCpu() : null,
+                        bt.getRam() != null ? bt.getRam().getDungLuong() : null,
+                        bt.getOCung() != null ? bt.getOCung().getLoaiOcung() : null,
+                        bt.getGpu() != null ? bt.getGpu().getTenGpu() : null,
+                        bt.getGiaNhap(),
+                        bt.getGiaBan(),
+                        bt.getTrangThai(),
+                        null // soLuongTon cần thêm query từ ton_kho
+                ))
+                .toList();
+
+        // Tạo response
+        SanPhamChiTietResponse resp = new SanPhamChiTietResponse();
+        resp.setSanPhamId(sp.getSanPhamId());
+        resp.setMaSanPham(sp.getMaSanPham());
+        resp.setTenSanPham(sp.getTenSanPham());
+        resp.setThuongHieuId(sp.getThuongHieu() != null ? sp.getThuongHieu().getThuongHieuId() : null);
+        resp.setTenThuongHieu(sp.getThuongHieu() != null ? sp.getThuongHieu().getTenThuongHieu() : null);
+        resp.setDanhMucId(sp.getDanhMuc() != null ? sp.getDanhMuc().getId() : null);
+        resp.setTenDanhMuc(sp.getDanhMuc() != null ? sp.getDanhMuc().getTenDanhMuc() : null);
+        resp.setNhaCungCapId(sp.getNhaCungCap() != null ? sp.getNhaCungCap().getNhaCungCapId() : null);
+        resp.setTenNhaCungCap(sp.getNhaCungCap() != null ? sp.getNhaCungCap().getTenNhaCungCap() : null);
+        resp.setLoaiSanPham(sp.getLoaiSanPham());
+        resp.setMoTa(sp.getMoTa());
+        resp.setHinhAnhChinh(sp.getHinhAnhChinh());
+        resp.setHinhAnhList(hinhAnhList);
+        resp.setTrangThai(btDau != null ? btDau.getTrangThai() : null);
+        resp.setNgayTao(sp.getNgayTao());
+        resp.setNgayCapNhat(sp.getNgayCapNhat());
+        resp.setKhachDat(null); // Có thể tính sau nếu cần
+
+        // Thông số chung
+        if (btDau != null) {
+            resp.setKichThuocManHinh(btDau.getKichThuocManHinh());
+            resp.setHeDieuHanh(btDau.getHeDieuHanh());
+            resp.setPin(btDau.getPin());
+            resp.setTrongLuongKg(btDau.getTrongLuongKg());
+            resp.setBaoHanhThang(btDau.getBaoHanhThang());
+            resp.setPhanLoaiTags(btDau.getPhanLoaiTags());
+            resp.setPhanLoaiTen(btDau.getPhanLoaiTen());
+        }
+
+        // Khoảng giá
+        if (giaBanMin != null && giaBanMax != null) {
+            if (giaBanMin.equals(giaBanMax)) {
+                resp.setKhoangGia(giaBanMin.toString());
+            } else {
+                resp.setKhoangGia(giaBanMin + " – " + giaBanMax);
+            }
+        }
+
+        resp.setVariants(variants);
+
+        return resp;
     }
 
     // Tạo sản phẩm và biến thể mặc định
@@ -101,6 +189,7 @@ public class SanPhamService {
         ganLinhKien(bt, request);
 
         BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
+        entityManager.flush(); // ponytail: ensure bien_the ID is generated before returning response
 
         return new SanPhamCreatedResponse(saved.getSanPhamId(), saved.getMaSanPham(),
                 savedBt.getBarcode(), savedBt.getBienTheId(), savedBt.getMaSku());
@@ -108,8 +197,13 @@ public class SanPhamService {
 
     @Transactional
     public void updateSanPham(Integer sanPhamId, SanPhamRequest request) {
+        log.info("[DEBUG updateSanPham] sanPhamId={}, nhaCungCapId={}, thuongHieuId={}, danhMucId={}",
+                sanPhamId, request.getNhaCungCapId(), request.getThuongHieuId(), request.getDanhMucId());
         SanPham sanPham = sanPhamRepository.findById(sanPhamId)
                 .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại với id: " + sanPhamId));
+        log.info("[DEBUG updateSanPham] DB nhaCungCapId={}, tenNhaCungCap={}",
+                sanPham.getNhaCungCap() != null ? sanPham.getNhaCungCap().getNhaCungCapId() : "null",
+                sanPham.getNhaCungCap() != null ? sanPham.getNhaCungCap().getTenNhaCungCap() : "null");
 
         String oldTenSanPham = sanPham.getTenSanPham();
         Integer oldThuongHieuId = sanPham.getThuongHieu() != null ? sanPham.getThuongHieu().getThuongHieuId() : null;
@@ -134,7 +228,11 @@ public class SanPhamService {
         sanPham.setNhaCungCap(request.getNhaCungCapId() != null
                 ? nhaCungCapRepository.getReferenceById(request.getNhaCungCapId()) : null);
 
+        log.info("[DEBUG updateSanPham] BEFORE save: nhaCungCap will be set to nhaCungCapId={}, entity.tenSanPham={}",
+                request.getNhaCungCapId(), sanPham.getTenSanPham());
         sanPhamRepository.save(sanPham);
+        entityManager.flush(); // ponytail: ensure JPA dirty-check is flushed to DB immediately
+        log.info("[DEBUG updateSanPham] AFTER flush: nhaCungCapId={}", sanPham.getNhaCungCap() != null ? sanPham.getNhaCungCap().getNhaCungCapId() : "null");
         if (request.getHinhAnhList() != null) luuDanhSachHinhAnh(sanPhamId, request.getHinhAnhList());
 
         NhanVien nguoiSua = lichSuThayDoiSanPhamService.nguoiSuaHienTai();
@@ -166,6 +264,7 @@ public class SanPhamService {
             ganLinhKien(bt, request);
 
             BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
+            entityManager.flush(); // ponytail: ensure bien_the update is flushed to DB immediately
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "giaNhap", oldGiaNhapBienThe, savedBt.getGiaNhap(), nguoiSua);
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "giaBan", oldGiaBanBienThe, savedBt.getGiaBan(), nguoiSua);
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "barcode", oldBarcodeBienThe, savedBt.getBarcode(), nguoiSua);

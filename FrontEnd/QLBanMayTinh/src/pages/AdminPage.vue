@@ -65,7 +65,7 @@ import {
   MessageCircle, Brain, SlidersHorizontal,
 } from '@lucide/vue';
 
-defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome', 'toast']);
+defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome', 'toast', 'logout']);
 
 // ── Chat ref cho notification badge ─────────────────────────────────────────
 const chatPanelRef = ref(null);
@@ -592,7 +592,6 @@ const fetchAll = async () => {
     ensureStaff(),
     ensureChucVuList(),
   ]);
-  await autoMergeAllDuplicates();
 };
 
 // Danh sách chức vụ nhân viên
@@ -603,33 +602,6 @@ const ensureChucVuList = () => {
     chucVuList.value = list;
   });
   return chucVuListPromise;
-};
-
-// Tự động gộp các đơn hàng trùng
-let isMerging = false;
-const autoMergeAllDuplicates = async () => {
-  if (isMerging) return;
-  isMerging = true;
-  try {
-    const groups = {};
-    for (const o of orders.value) {
-      if (o.trangThaiDonHang === 'pending') continue;
-      const key = `${o.khachHangId}_${o.ngayDat?.slice(0, 10)}`;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(o);
-    }
-    const toMerge = Object.values(groups).filter(g => g.length > 1);
-    if (toMerge.length === 0) return;
-    for (const group of toMerge) {
-      group.sort((a, b) => a.donHangId - b.donHangId);
-      const targetId = group[0].donHangId;
-      const sourceIds = group.slice(1).map(o => o.donHangId);
-      await DonHangService.merge(targetId, sourceIds).catch((e) => console.error('Gộp đơn trùng lỗi:', e));
-    }
-    await refreshOrders();
-  } finally {
-    isMerging = false;
-  }
 };
 
 // ── Products: gộp theo sanPhamId cho bảng ─────────────────────────────────────
@@ -806,7 +778,7 @@ onMounted(async () => {
   }
 
   connectOrderEvents(AuthStore.user?.token, {
-    onNewOrder: () => { autoMergeAllDuplicates(); fetchProductSales(); },
+    onNewOrder: () => { fetchProductSales(); },
   });
   connectSerialEvents(AuthStore.user?.token);
 });
@@ -1041,6 +1013,7 @@ onUnmounted(() => {
           @update:week-chart-anchor="weekChartAnchor = $event"
           @reset-to-current-week="resetToCurrentWeek"
           @back-to-today="statusChartDate = toDateInputValue(new Date())"
+          @navigate="navigate"
         />
 
         <!-- ── San pham ── -->

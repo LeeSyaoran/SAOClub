@@ -14,6 +14,7 @@ Database/backups/*.log
 !Database/backups/.gitkeep
 .aider*
 
+
 ### AI Models & Local Junk ###
 ollama-models/
 nul

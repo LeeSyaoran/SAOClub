@@ -89,4 +89,13 @@ public class DonHang extends BaseEntity {
 
     @Column(name = "ma_van_don", length = 50)
     private String maVanDon;
+
+    /** Phương thức thanh toán khách chọn: tien_mat | qr | visa */
+    @Column(name = "phuong_thuc_thanh_toan", length = 30)
+    private String phuongThucThanhToan;
+
+    /** Idempotency key từ frontend — ngăn tạo đơn trùng khi retry */
+    @Column(name = "idempotency_key", length = 64, unique = true)
+    private String idempotencyKey;
 }
+

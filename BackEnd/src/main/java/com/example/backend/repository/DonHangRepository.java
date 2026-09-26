@@ -17,6 +17,9 @@ import java.util.List;
 @Repository
 public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
 
+    /** Tìm đơn hàng theo idempotency key — chống tạo đơn trùng */
+    java.util.Optional<DonHang> findByIdempotencyKey(String idempotencyKey);
+
     @Query(value = """
     SELECT new com.example.backend.response.DonHangResponse(
         d.id, d.maDonHang,
@@ -27,7 +30,7 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
         COALESCE(d.nguoiNhan, kh.hoTen), COALESCE(d.sdtNguoiNhan, kh.soDienThoai),
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
-        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon,
+        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon, d.phuongThucThanhToan,
         kh.hoTen, kh.soDienThoai, kh.diaChi
     )
     FROM DonHang d
@@ -60,6 +63,11 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     @Query("SELECT d FROM DonHang d WHERE d.trangThaiDonHang = 'pending' AND d.ngayDat < :cutoff")
     List<DonHang> findPendingOrdersOlderThan(@Param("cutoff") LocalDateTime cutoff);
 
+    /** Reconciliation: đơn đã giao nhưng chưa được đánh dấu thanh toán */
+    @Query("SELECT d FROM DonHang d WHERE d.trangThaiDonHang = 'delivered' AND d.trangThaiThanhToan = 'unpaid' AND d.ngayGiaoThucTe < :cutoff")
+    List<DonHang> findDeliveredUnpaid(@Param("cutoff") LocalDateTime cutoff);
+
+
     // Đơn hàng gần nhất của một khách hàng
     @Query("""
     SELECT new com.example.backend.response.DonHangResponse(
@@ -71,7 +79,7 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
         COALESCE(d.nguoiNhan, kh.hoTen), COALESCE(d.sdtNguoiNhan, kh.soDienThoai),
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
-        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon,
+        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon, d.phuongThucThanhToan,
         kh.hoTen, kh.soDienThoai, kh.diaChi
     )
     FROM DonHang d
@@ -95,7 +103,7 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
         COALESCE(d.nguoiNhan, kh.hoTen), COALESCE(d.sdtNguoiNhan, kh.soDienThoai),
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
-        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon,
+        d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon, d.phuongThucThanhToan,
         kh.hoTen, kh.soDienThoai, kh.diaChi
     )
     FROM DonHang d

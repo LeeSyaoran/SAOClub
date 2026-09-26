@@ -1,8 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import { AuthStore, setSession } from "../stores/index.js";
 import { I18nStore, t } from "../i18n/index.js";
-import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
+import { orderStatusLabel, orderStatusColor, orderStatusIcon, isQrPayment, getQrEffectiveStatus } from "../utils/orderStatus.js";
 import { formatPrice as formatPriceRaw } from "../utils/formatPrice.js";
 import * as DonHangService from "../services/DonHangService.js";
 import * as ChiTietDonHangService from "../services/ChiTietDonHangService.js";
@@ -69,9 +70,25 @@ import {Clock,
   BadgeCheck,
   ShieldCheck,
   Phone,
-  MessageCircle} from '@lucide/vue';
+  MessageCircle,
+  Pencil,
+  Copy,
+  Check,
+  Trophy,
+  Zap,
+  ExternalLink} from '@lucide/vue';
 
-const emit = defineEmits(["go-home", "add-to-cart", "buy-again-unavailable", "toast"]);
+const emit = defineEmits(["go-home", "logout", "add-to-cart", "buy-again-unavailable", "toast"]);
+const router = useRouter();
+
+const goHome = () => {
+  emit("go-home");
+  router.push("/");
+};
+
+const handleLogout = () => {
+  emit("logout");
+};
 
 const auth = AuthStore;
 const activeTab = ref('overview'); // Default to overview (no separate 'account' tab)
@@ -124,7 +141,7 @@ const SIDEBAR_MENU = computed(() => [
   { id: 'history',   icon: History,     label: 'Lịch sử mua hàng',     desc: 'Đơn hàng đang xử lý và đã hoàn tất' },
   { id: 'warranty',  icon: Shield,      label: 'Bảo hành & Phiếu BH',  desc: 'Gửi yêu cầu và tra cứu', subTabs: 2 },
   { id: 'rewards',   icon: Gift,        label: 'Điểm thưởng & Voucher', desc: 'Đổi quà và theo dõi ưu đãi' },
-  { id: 'settings',  icon: Settings,    label: 'Tài khoản & Hỗ trợ',   desc: 'Thông tin cá nhân, địa chỉ, CSKH' },
+  { id: 'settings',  icon: Settings,    label: 'Tài khoản & Hỗ trợ',   desc: 'Thông tin cá nhân & CSKH' },
 ]);
 
 const HISTORY_TABS = computed(() => [
@@ -188,24 +205,38 @@ const viewProductDetail = (item) => {
 const selectedOrderDetail = ref(null);
 const viewOrderDetail = async (order) => {
   selectedOrderDetail.value = order;
-  if (order?.donHangId) {
-    if (!historyByOrder.value[order.donHangId]) {
+  const oId = order?.donHangId || order?.id;
+  if (oId) {
+    if (!historyByOrder.value[oId]) {
       try {
-        const logs = await LichSuDonHangService.getByDonHang(order.donHangId);
-        historyByOrder.value[order.donHangId] = logs || [];
+        const logs = await LichSuDonHangService.getByDonHang(oId);
+        historyByOrder.value[oId] = logs || [];
       } catch {
-        historyByOrder.value[order.donHangId] = [];
+        historyByOrder.value[oId] = [];
       }
     }
-    if (!itemsByOrder.value[order.donHangId]) {
+    if (!itemsByOrder.value[oId]) {
       try {
-        const its = await ChiTietDonHangService.getByDonHang(order.donHangId);
-        itemsByOrder.value[order.donHangId] = its || [];
+        const its = await ChiTietDonHangService.getByDonHang(oId);
+        itemsByOrder.value[oId] = its || [];
       } catch {
-        itemsByOrder.value[order.donHangId] = [];
+        itemsByOrder.value[oId] = [];
       }
     }
   }
+};
+
+const handleOrderUpdated = (updatedOrder) => {
+  if (!updatedOrder) return;
+  const oId = updatedOrder.donHangId || updatedOrder.id;
+  if (selectedOrderDetail.value && (selectedOrderDetail.value.donHangId === oId || selectedOrderDetail.value.id === oId)) {
+    selectedOrderDetail.value = { ...selectedOrderDetail.value, ...updatedOrder };
+  }
+  const idx = orders.value.findIndex(o => (o.donHangId === oId || o.id === oId));
+  if (idx !== -1) {
+    orders.value[idx] = { ...orders.value[idx], ...updatedOrder };
+  }
+  fetchData();
 };
 
 const buyAgainOrder = (o) => {
@@ -344,10 +375,110 @@ const profileError   = ref("");
 const profileSuccess = ref("");
 const profileForm = ref({ hoTen: "", soDienThoai: "", email: "", diaChi: "" });
 
-const rewards       = ref([]);
-const myVouchers     = ref([]);
-const redeemingId    = ref(null);
-const redeemError    = ref("");
+// Rewards & Vouchers State
+const rewards         = ref([]);
+const myVouchers       = ref([]);
+const redeemingId      = ref(null);
+const redeemError      = ref("");
+const voucherFilter    = ref("all"); // 'all' | 'active' | 'used' | 'expired'
+const copiedCode       = ref(null);
+
+const isVoucherExpired = (v) => {
+  if (!v || !v.ngayHetHan) return false;
+  return new Date(v.ngayHetHan) < new Date();
+};
+
+const isVoucherActive = (v) => {
+  if (!v) return false;
+  return !v.daSuDung && !isVoucherExpired(v);
+};
+
+const activeVouchersCount = computed(() => myVouchers.value.filter(isVoucherActive).length);
+const usedVouchersCount   = computed(() => myVouchers.value.filter(v => v.daSuDung).length);
+const expiredVouchersCount = computed(() => myVouchers.value.filter(v => !v.daSuDung && isVoucherExpired(v)).length);
+
+const filteredVouchers = computed(() => {
+  if (voucherFilter.value === 'active') return myVouchers.value.filter(isVoucherActive);
+  if (voucherFilter.value === 'used') return myVouchers.value.filter(v => v.daSuDung);
+  if (voucherFilter.value === 'expired') return myVouchers.value.filter(v => !v.daSuDung && isVoucherExpired(v));
+  return myVouchers.value;
+});
+
+const activeRewardsCount = computed(() => rewards.value.filter(r => r.trangThai === 'active').length);
+
+const currentTier = computed(() => {
+  const pts = profile.value?.diemTichLuy || 0;
+  if (pts >= 5000) {
+    return { name: 'Kim Cương', color: '#06b6d4', badgeClass: 'tier-diamond', next: null, target: 5000, progress: 100, needed: 0 };
+  }
+  if (pts >= 2000) {
+    return { name: 'Vàng', color: '#f59e0b', badgeClass: 'tier-gold', next: 'Kim Cương', target: 5000, progress: Math.min(100, Math.round(((pts - 2000) / 3000) * 100)), needed: 5000 - pts };
+  }
+  if (pts >= 500) {
+    return { name: 'Bạc', color: '#94a3b8', badgeClass: 'tier-silver', next: 'Vàng', target: 2000, progress: Math.min(100, Math.round(((pts - 500) / 1500) * 100)), needed: 2000 - pts };
+  }
+  return { name: 'Đồng', color: '#cd7f32', badgeClass: 'tier-bronze', next: 'Bạc', target: 500, progress: Math.min(100, Math.round((pts / 500) * 100)), needed: 500 - pts };
+});
+
+const rewardsSubTab = ref('my-vouchers');
+const rewardsSubTabs = computed(() => [
+  { id: 'my-vouchers', icon: Ticket, label: 'Voucher của tôi', badge: activeVouchersCount.value || null },
+  { id: 'redeem',      icon: Gift,   label: 'Đổi điểm thưởng', badge: activeRewardsCount.value ? `${activeRewardsCount.value} quà` : null },
+  { id: 'wheel',       icon: Sparkles, label: 'Vòng quay may mắn' },
+]);
+
+const copyVoucherCode = async (code) => {
+  if (!code) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    copiedCode.value = code;
+    emit('toast', `Đã sao chép mã voucher ${code}`, 'success');
+    setTimeout(() => {
+      if (copiedCode.value === code) copiedCode.value = null;
+    }, 2000);
+  } catch {
+    emit('toast', 'Không thể sao chép mã voucher', 'error');
+  }
+};
+
+const useVoucherNow = async (v) => {
+  if (!v || !v.maPhieu) return;
+  await copyVoucherCode(v.maPhieu);
+  emit('toast', `Mã ${v.maPhieu} đã được sao chép! Hãy áp dụng khi thanh toán nhé.`, 'info');
+  setTimeout(() => {
+    goHome();
+  }, 350);
+};
+
+const formatVoucherDate = (d) => {
+  if (!d) return 'Vô thời hạn';
+  try {
+    const dt = new Date(d);
+    return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
+  } catch {
+    return d;
+  }
+};
+
+const formatVoucherTitle = (v) => {
+  if (!v) return '';
+  if (v.loai === 'percent' || v.loaiGiam === 'phan_tram') {
+    let text = `Giảm ${v.giaTri}%`;
+    if (v.giaTriToiDa && Number(v.giaTriToiDa) > 0) {
+      text += ` (Tối đa ${formatPriceRaw(v.giaTriToiDa)})`;
+    }
+    return text;
+  }
+  return `Giảm ${formatPriceRaw(v.giaTri)}`;
+};
+
+const formatVoucherValue = (v) => {
+  if (!v) return '';
+  if (v.loai === 'percent' || v.loaiGiam === 'phan_tram') {
+    return `${v.giaTri}%`;
+  }
+  return formatPriceRaw(v.giaTri);
+};
 
 // Warranty claim count for sub-tab badge
 const fetchWarrantyClaims = async () => {
@@ -359,19 +490,15 @@ const fetchWarrantyClaims = async () => {
   }
 };
 
-// Vouchers (for overview + rewards)
-const vouchers = ref([]);
-const voucherCount = computed(() => vouchers.value.length);
-const formatVoucher = (v) => {
-  if (!v) return '';
-  if (v.loaiGiam === 'phan_tram') return `Giảm ${v.giaTri}%`;
-  return `Giảm ${formatPriceRaw(v.giaTri)}`;
-};
+// Vouchers (backward compatibility with overview)
+const vouchers = myVouchers;
+const voucherCount = computed(() => activeVouchersCount.value);
+const formatVoucher = (v) => formatVoucherTitle(v);
 const loadVouchers = async () => {
   try {
-    vouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi();
+    myVouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi();
   } catch (err) {
-    vouchers.value = [];
+    myVouchers.value = [];
   }
 };
 
@@ -418,14 +545,60 @@ const redeemReward = async (r) => {
   redeemingId.value = r.doiThuongId;
   try {
     const res = await PhieuGiamGiaCaNhanService.doiThuong(r.doiThuongId);
-    if (!res.ok) { redeemError.value = await res.text().catch(() => res.statusText); return; }
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      try {
+        const j = JSON.parse(errText);
+        redeemError.value = j.message || errText;
+      } catch {
+        redeemError.value = errText;
+      }
+      return;
+    }
     myVouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi().catch(() => []);
     await fetchProfile();
+    emit('toast', `Đổi thành công mã giảm giá ${r.ten}!`, 'success');
+    rewardsSubTab.value = 'my-vouchers';
+    voucherFilter.value = 'active';
   } catch (e) {
     redeemError.value = e.message || t("account.rewards.redeemError");
   } finally {
     redeemingId.value = null;
   }
+};
+
+const onSpunWheel = async () => {
+  await fetchProfile();
+  myVouchers.value = await PhieuGiamGiaCaNhanService.getCuaToi().catch(() => []);
+};
+
+const isEditingProfile = ref(false);
+
+const startEditProfile = () => {
+  profileError.value = "";
+  profileSuccess.value = "";
+  if (profile.value) {
+    profileForm.value = {
+      hoTen:       profile.value.hoTen ?? "",
+      soDienThoai: profile.value.soDienThoai ?? "",
+      email:       profile.value.email ?? "",
+      diaChi:      profile.value.diaChi ?? "",
+    };
+  }
+  isEditingProfile.value = true;
+};
+
+const cancelEditProfile = () => {
+  if (profile.value) {
+    profileForm.value = {
+      hoTen:       profile.value.hoTen ?? "",
+      soDienThoai: profile.value.soDienThoai ?? "",
+      email:       profile.value.email ?? "",
+      diaChi:      profile.value.diaChi ?? "",
+    };
+  }
+  profileError.value = "";
+  isEditingProfile.value = false;
 };
 
 const saveProfile = async () => {
@@ -446,6 +619,7 @@ const saveProfile = async () => {
     profile.value = body;
     profileSuccess.value = t("account.settings.saveSuccess");
     setSession({ ...auth.user, hoTen: body.hoTen, email: body.email, soDienThoai: body.soDienThoai });
+    isEditingProfile.value = false;
   } catch (e) {
     profileError.value = e.message || t("account.settings.saveErrorPrefix");
   } finally {
@@ -454,22 +628,7 @@ const saveProfile = async () => {
 };
 
 const handleSidebarMenu = (item) => {
-  if (item.id === 'overview') {
-    activeTab.value = 'overview';
-    sidebarOpen.value = false;
-    return;
-  }
-  if (['wishlist', 'wheel', 'settings', 'warranty'].includes(item.id)) {
-    activeTab.value = item.id;
-    sidebarOpen.value = false;
-    return;
-  }
-  if (item.id === 'history') {
-    activeTab.value = 'history';
-    sidebarOpen.value = false;
-    return;
-  }
-  emit('toast', `Mở: ${item.label}`, 'info');
+  activeTab.value = item.id;
   sidebarOpen.value = false;
 };
 
@@ -510,10 +669,10 @@ const handleOutsideClick = (e) => {
             <button class="mobile-menu-btn d-lg-none" @click.stop="sidebarOpen = !sidebarOpen">
               <Menu :size="18" />
             </button>
-            <button class="btn-back" @click="emit('go-home')" title="Về trang chủ">
+            <button class="btn-back" @click="goHome" title="Về trang chủ">
               <ArrowLeft :size="16" />
             </button>
-            <div class="brand-text">SAOClub</div>
+            <div class="brand-text" style="cursor:pointer;" @click="goHome" title="Về trang chủ">SAOClub</div>
 
             <div class="header-stats-compact d-none d-md-flex">
               <div class="stat-chip">
@@ -568,7 +727,7 @@ const handleOutsideClick = (e) => {
               </button>
             </div>
             <div class="sidebar-footer">
-              <button class="sidebar-item sidebar-item--logout" @click="emit('go-home')">
+              <button class="sidebar-item sidebar-item--logout" @click="handleLogout">
                 <div class="sidebar-item-icon"><LogOut :size="18" /></div>
                 <span class="sidebar-item-label">Đăng xuất</span>
               </button>
@@ -616,12 +775,16 @@ const handleOutsideClick = (e) => {
                       <div class="overview-order-right">
                         <span
                           class="overview-order-status"
-                          :style="{
-                            backgroundColor: orderStatusColor(o.trangThaiDonHang || o.trangThai).bg,
-                            color: orderStatusColor(o.trangThaiDonHang || o.trangThai).text
-                          }"
+                          :style="isQrPayment(o)
+                            ? { backgroundColor: getQrEffectiveStatus(o).color.bg, color: getQrEffectiveStatus(o).color.text, border: o.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none', fontWeight: '700' }
+                            : o.trangThaiThanhToan === 'unpaid'
+                              ? { backgroundColor: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa', fontWeight: '700' }
+                              : {
+                                  backgroundColor: orderStatusColor(o.trangThaiDonHang || o.trangThai).bg,
+                                  color: orderStatusColor(o.trangThaiDonHang || o.trangThai).text
+                                }"
                         >
-                          {{ orderStatusLabel(o.trangThaiDonHang || o.trangThai) }}
+                          {{ isQrPayment(o) ? getQrEffectiveStatus(o).label : (o.trangThaiThanhToan === 'unpaid' ? 'Chờ thanh toán' : orderStatusLabel(o.trangThaiDonHang || o.trangThai)) }}
                         </span>
                         <div class="overview-order-total">Tổng thanh toán: <strong>{{ formatPriceRaw(o.tongThanhToan || o.tongTien) }}</strong></div>
                         <button class="overview-order-detail-btn" @click.stop="viewOrderDetail(o)">
@@ -689,13 +852,13 @@ const handleOutsideClick = (e) => {
                   <div v-else-if="wishlistItems.length === 0" class="overview-empty">
                     <Heart :size="32" class="overview-empty-icon" />
                     <span>Bạn chưa thích sản phẩm nào</span>
-                    <button class="overview-empty-link" @click="$emit('go-home')">Khám phá ngay →</button>
+                    <button class="overview-empty-link" @click="goHome">Khám phá ngay →</button>
                   </div>
                   <div v-else class="overview-wishlist-grid">
                     <div
                       v-for="w in wishlistItems.slice(0, 4)" :key="w.bienTheId"
                       class="overview-wishlist-card"
-                      @click="$emit('go-home')"
+                      @click="goHome"
                     >
                       <div class="overview-wishlist-thumb">
                         <img v-if="w.hinhAnh" :src="w.hinhAnh" />
@@ -743,7 +906,7 @@ const handleOutsideClick = (e) => {
                       <div class="empty-icon-wrap"><Package :size="48" /></div>
                       <div class="empty-title">Chưa có đơn hàng nào</div>
                       <div class="empty-text">Hãy tiếp tục mua sắm để tích lũy điểm thưởng nhé!</div>
-                      <button class="btn-primary mt-4" @click="emit('go-home')">
+                      <button class="btn-primary mt-4" @click="goHome">
                         <ShoppingBag :size="14" /> Bắt đầu mua sắm
                       </button>
                     </div>
@@ -757,12 +920,17 @@ const handleOutsideClick = (e) => {
                             </div>
                             <div class="order-date">{{ formatDate(o.ngayDat) }}</div>
                           </div>
-                          <span class="status-pill" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                          <span
+                            class="status-pill"
+                            :style="isQrPayment(o)
+                              ? { background: getQrEffectiveStatus(o).color.bg, color: getQrEffectiveStatus(o).color.text, border: o.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none' }
+                              : { background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }"
+                          >
                             <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="12" />
-                            {{ orderStatusLabel(o.trangThaiDonHang) }}
+                            {{ isQrPayment(o) ? getQrEffectiveStatus(o).label : orderStatusLabel(o.trangThaiDonHang) }}
                           </span>
                         </div>
-                        <div class="order-timeline"><OrderStatusTimeline :status="o.trangThaiDonHang" :kenh-ban="o.kenhBan" /></div>
+                        <div class="order-timeline"><OrderStatusTimeline :status="o.trangThaiDonHang" :kenh-ban="o.kenhBan" :order="o" /></div>
                         <div class="order-products">
                           <div v-for="item in (itemsByOrder[o.donHangId] || []).slice(0, 2)" :key="item.id" class="order-product-mini" @click="viewProductDetail(item)">
                             <div class="product-thumb">
@@ -812,9 +980,14 @@ const handleOutsideClick = (e) => {
                             <div class="order-date">{{ formatDate(o.ngayDat) }} · {{ (itemsByOrder[o.donHangId] || []).length }} sp</div>
                           </div>
                           <div class="compact-right">
-                            <span class="status-pill" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                            <span
+                              class="status-pill"
+                              :style="isQrPayment(o)
+                                ? { background: getQrEffectiveStatus(o).color.bg, color: getQrEffectiveStatus(o).color.text, border: o.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none' }
+                                : { background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }"
+                            >
                               <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="12" />
-                              {{ orderStatusLabel(o.trangThaiDonHang) }}
+                              {{ isQrPayment(o) ? getQrEffectiveStatus(o).label : orderStatusLabel(o.trangThaiDonHang) }}
                             </span>
                             <span class="compact-total">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
                           </div>
@@ -893,48 +1066,328 @@ const handleOutsideClick = (e) => {
 
               <!-- ══════════════ TAB: ĐIỂM THƯỞNG & VOUCHER ══════════════ -->
               <div v-else-if="activeTab === 'rewards'" class="panel-section">
+                <!-- Panel Header -->
                 <div class="panel-header">
                   <div class="panel-header-content">
                     <Gift :size="22" class="panel-header-icon" />
                     <div>
                       <div class="panel-title">Điểm thưởng & Voucher</div>
-                      <div class="panel-subtitle">{{ profile?.diemTichLuy ?? 0 }} điểm tích lũy</div>
+                      <div class="panel-subtitle">Tích lũy điểm khi mua sắm, quản lý voucher cá nhân và đổi quà ưu đãi</div>
                     </div>
                   </div>
                 </div>
 
+                <!-- Loyalty Hero Card (Thẻ Điểm Thưởng & Hạng Thành Viên) -->
+                <div class="loyalty-hero-card">
+                  <div class="loyalty-hero-pattern"></div>
+                  <div class="loyalty-hero-body">
+                    <div class="loyalty-hero-main">
+                      <div class="loyalty-tier-badge" :class="currentTier.badgeClass">
+                        <Trophy :size="14" />
+                        <span>Hạng {{ currentTier.name }}</span>
+                      </div>
+                      <div class="loyalty-pts-row">
+                        <span class="loyalty-pts-val">{{ (profile?.diemTichLuy ?? 0).toLocaleString('vi-VN') }}</span>
+                        <span class="loyalty-pts-unit">điểm tích lũy</span>
+                      </div>
+
+                      <div v-if="currentTier.next" class="loyalty-progress-box">
+                        <div class="d-flex justify-content-between align-items-center mb-1 text-xs">
+                          <span>Tiến độ lên hạng <strong>{{ currentTier.next }}</strong></span>
+                          <span>Cần thêm <strong>{{ currentTier.needed.toLocaleString('vi-VN') }}</strong> điểm</span>
+                        </div>
+                        <div class="loyalty-progress-track">
+                          <div class="loyalty-progress-fill" :style="{ width: currentTier.progress + '%' }"></div>
+                        </div>
+                      </div>
+                      <div v-else class="loyalty-max-tier-note">
+                        <Award :size="14" />
+                        <span>Bạn đã đạt hạng thành viên cao nhất với đặc quyền VIP!</span>
+                      </div>
+
+                      <div class="loyalty-tip">
+                        <Zap :size="13" class="text-amber" />
+                        <span>Nhận 1 điểm với mỗi 1.000đ khi thanh toán đơn hàng thành công tại SAOClub.</span>
+                      </div>
+                    </div>
+
+                    <div class="loyalty-hero-stats">
+                      <div class="loyalty-stat-card" role="button" @click="rewardsSubTab = 'my-vouchers'">
+                        <div class="loyalty-stat-icon loyalty-stat-icon--voucher">
+                          <Ticket :size="20" />
+                        </div>
+                        <div class="loyalty-stat-info">
+                          <div class="loyalty-stat-num">{{ activeVouchersCount }}</div>
+                          <div class="loyalty-stat-lbl">Voucher khả dụng</div>
+                        </div>
+                      </div>
+
+                      <div class="loyalty-stat-card" role="button" @click="rewardsSubTab = 'wheel'">
+                        <div class="loyalty-stat-icon loyalty-stat-icon--wheel">
+                          <Sparkles :size="20" />
+                        </div>
+                        <div class="loyalty-stat-info">
+                          <div class="loyalty-stat-num">{{ Math.floor((profile?.diemTichLuy ?? 0) / 50) }}</div>
+                          <div class="loyalty-stat-lbl">Lượt quay có thể đổi</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sub-tabs Navigation -->
+                <div class="sub-tabs">
+                  <button
+                    v-for="t in rewardsSubTabs" :key="t.id"
+                    class="sub-tab"
+                    :class="{ 'is-active': rewardsSubTab === t.id }"
+                    @click="rewardsSubTab = t.id"
+                  >
+                    <component :is="t.icon" :size="14" />
+                    {{ t.label }}
+                    <span v-if="t.badge" class="sub-tab-badge">{{ t.badge }}</span>
+                  </button>
+                </div>
+
                 <div class="panel-content">
-                  <!-- Vouchers -->
-                  <div class="rewards-card">
-                    <div class="rewards-card-title">
-                      <Ticket :size="16" />
-                      Voucher của bạn
-                      <span v-if="voucherCount > 0" class="count-pill">{{ voucherCount }}</span>
+                  <!-- ════════════ Sub-tab 1: Voucher của tôi ════════════ -->
+                  <div v-if="rewardsSubTab === 'my-vouchers'" class="tab-pane-rewards">
+                    <!-- Filter Pills -->
+                    <div class="voucher-filter-bar">
+                      <button
+                        type="button"
+                        class="voucher-filter-btn"
+                        :class="{ 'is-active': voucherFilter === 'all' }"
+                        @click="voucherFilter = 'all'"
+                      >
+                        Tất cả ({{ myVouchers.length }})
+                      </button>
+                      <button
+                        type="button"
+                        class="voucher-filter-btn"
+                        :class="{ 'is-active': voucherFilter === 'active' }"
+                        @click="voucherFilter = 'active'"
+                      >
+                        Còn hiệu lực ({{ activeVouchersCount }})
+                      </button>
+                      <button
+                        type="button"
+                        class="voucher-filter-btn"
+                        :class="{ 'is-active': voucherFilter === 'used' }"
+                        @click="voucherFilter = 'used'"
+                      >
+                        Đã sử dụng ({{ usedVouchersCount }})
+                      </button>
+                      <button
+                        type="button"
+                        class="voucher-filter-btn"
+                        :class="{ 'is-active': voucherFilter === 'expired' }"
+                        @click="voucherFilter = 'expired'"
+                      >
+                        Hết hạn ({{ expiredVouchersCount }})
+                      </button>
                     </div>
-                    <div v-if="voucherCount === 0" class="rewards-empty">
-                      <Ticket :size="36" class="rewards-empty-icon" />
-                      <p>Bạn chưa đổi voucher nào.</p>
-                      <small>Mỗi lượt quay tốn 50 điểm. Hãy tích lũy điểm để đổi voucher nhé!</small>
+
+                    <!-- Empty State -->
+                    <div v-if="filteredVouchers.length === 0" class="rewards-empty-box">
+                      <div class="rewards-empty-icon-wrap">
+                        <Ticket :size="40" />
+                      </div>
+                      <h4 class="rewards-empty-title">Chưa có voucher nào trong mục này</h4>
+                      <p class="rewards-empty-desc">
+                        Hãy dùng điểm tích lũy để đổi các phiếu giảm giá giá trị cao hoặc tham gia vòng quay may mắn!
+                      </p>
+                      <div class="d-flex gap-2 justify-content-center flex-wrap mt-3">
+                        <button class="btn-reward-cta btn-reward-cta--solid" @click="rewardsSubTab = 'redeem'">
+                          <Gift :size="14" />
+                          <span>Đổi điểm lấy quà</span>
+                        </button>
+                        <button class="btn-reward-cta btn-reward-cta--outline" @click="rewardsSubTab = 'wheel'">
+                          <Sparkles :size="14" />
+                          <span>Quay thưởng</span>
+                        </button>
+                      </div>
                     </div>
-                    <div v-else class="rewards-voucher-list">
-                      <div v-for="v in vouchers.slice(0, 5)" :key="v.id" class="rewards-voucher-item">
-                        <div class="voucher-discount">{{ formatVoucher(v) }}</div>
-                        <div class="voucher-info">
-                          <div class="voucher-code">{{ v.maCode }}</div>
-                          <div class="voucher-condition" v-if="v.dieuKienDonToiThieu">Đơn tối thiểu: {{ formatPriceRaw(v.dieuKienDonToiThieu) }}</div>
-                          <div class="voucher-expiry">HSD: {{ formatDate(v.ngayHetHan) }}</div>
+
+                    <!-- Voucher Cards Grid -->
+                    <div v-else class="my-voucher-grid">
+                      <div
+                        v-for="v in filteredVouchers"
+                        :key="v.phieuId || v.maPhieu"
+                        class="my-voucher-ticket"
+                        :class="{ 'ticket--disabled': !isVoucherActive(v) }"
+                      >
+                        <!-- Ticket Left: Discount Value & Cutout -->
+                        <div class="ticket-left">
+                          <div class="ticket-discount-val">{{ formatVoucherValue(v) }}</div>
+                          <div class="ticket-discount-tag">GIẢM GIÁ</div>
+                          <div class="ticket-notch ticket-notch--top"></div>
+                          <div class="ticket-notch ticket-notch--bottom"></div>
+                        </div>
+
+                        <!-- Ticket Center: Details -->
+                        <div class="ticket-center">
+                          <div class="ticket-badge-row">
+                            <span v-if="v.nguon" class="ticket-source-badge">{{ v.nguon }}</span>
+                            <span v-if="isVoucherActive(v)" class="ticket-status-pill ticket-status-pill--active">
+                              Còn hiệu lực
+                            </span>
+                            <span v-else-if="v.daSuDung" class="ticket-status-pill ticket-status-pill--used">
+                              Đã sử dụng
+                            </span>
+                            <span v-else class="ticket-status-pill ticket-status-pill--expired">
+                              Hết hạn
+                            </span>
+                          </div>
+
+                          <div class="ticket-title">{{ formatVoucherTitle(v) }}</div>
+
+                          <div class="ticket-rules">
+                            <div class="ticket-rule-item">
+                              <span>Đơn tối thiểu:</span>
+                              <strong>{{ v.donHangToiThieu && Number(v.donHangToiThieu) > 0 ? formatPriceRaw(v.donHangToiThieu) : 'Không giới hạn' }}</strong>
+                            </div>
+                            <div class="ticket-rule-item">
+                              <span>Hạn sử dụng:</span>
+                              <strong>{{ formatVoucherDate(v.ngayHetHan) }}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Ticket Right: Code & Action -->
+                        <div class="ticket-right">
+                          <div class="ticket-code-tag" :title="'Mã: ' + v.maPhieu">
+                            {{ v.maPhieu }}
+                          </div>
+
+                          <div v-if="isVoucherActive(v)" class="ticket-actions">
+                            <button
+                              type="button"
+                              class="btn-ticket-copy"
+                              :class="{ 'is-copied': copiedCode === v.maPhieu }"
+                              @click="copyVoucherCode(v.maPhieu)"
+                              title="Sao chép mã"
+                            >
+                              <Check v-if="copiedCode === v.maPhieu" :size="13" />
+                              <Copy v-else :size="13" />
+                              <span>{{ copiedCode === v.maPhieu ? 'Đã chép' : 'Sao chép' }}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              class="btn-ticket-use"
+                              @click="useVoucherNow(v)"
+                              title="Sao chép và đi tới cửa hàng"
+                            >
+                              <span>Dùng ngay</span>
+                              <ChevronRight :size="13" />
+                            </button>
+                          </div>
+
+                          <div v-else class="ticket-inactive-msg">
+                            {{ v.daSuDung ? 'Đã dùng' : 'Hết hạn' }}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Lucky Wheel -->
-                  <div class="rewards-card rewards-card--wheel">
-                    <div class="rewards-card-title">
-                      <Sparkles :size="16" />
-                      Vòng quay may mắn
+                  <!-- ════════════ Sub-tab 2: Đổi điểm thưởng ════════════ -->
+                  <div v-else-if="rewardsSubTab === 'redeem'" class="tab-pane-rewards">
+                    <div class="redeem-intro-bar">
+                      <div class="d-flex align-items-center gap-2">
+                        <Gift :size="18" class="text-pink-500" />
+                        <div>
+                          <div class="fw-bold text-sm">Kho quà tặng đổi điểm</div>
+                          <div class="text-xs text-secondary">
+                            Đổi điểm thưởng lấy phiếu giảm giá áp dụng trực tiếp vào đơn hàng.
+                          </div>
+                        </div>
+                      </div>
+                      <div class="redeem-pts-indicator">
+                        <span class="text-xs text-secondary">Điểm của bạn:</span>
+                        <strong class="text-pink-600">{{ (profile?.diemTichLuy ?? 0).toLocaleString('vi-VN') }} điểm</strong>
+                      </div>
                     </div>
-                    <LuckyWheelPanel :points="profile?.diemTichLuy ?? 0" @spun="fetchProfile" />
+
+                    <!-- Error Alert -->
+                    <div v-if="redeemError" class="alert alert-danger d-flex align-items-center justify-content-between p-2.5 rounded-3 mb-3 text-sm">
+                      <div class="d-flex align-items-center gap-2">
+                        <AlertTriangle :size="16" />
+                        <span>{{ redeemError }}</span>
+                      </div>
+                      <button type="button" class="btn-close btn-close-sm" @click="redeemError = ''"></button>
+                    </div>
+
+                    <!-- Redeem Grid -->
+                    <div v-if="rewards.length === 0" class="rewards-empty-box">
+                      <Gift :size="40" class="text-muted mb-2" />
+                      <h4 class="rewards-empty-title">Hiện chưa có phần thưởng nào để đổi</h4>
+                      <p class="rewards-empty-desc">Các quà tặng và voucher giảm giá sẽ sớm được cập nhật!</p>
+                    </div>
+
+                    <div v-else class="redeem-grid">
+                      <div
+                        v-for="r in rewards.filter(item => item.trangThai === 'active')"
+                        :key="r.doiThuongId"
+                        class="redeem-card"
+                        :class="{ 'redeem-card--affordable': (profile?.diemTichLuy ?? 0) >= r.diemCan }"
+                      >
+                        <div class="redeem-card-badge">
+                          <span class="redeem-val">{{ r.loai === 'percent' ? r.giaTri + '%' : formatPriceRaw(r.giaTri) }}</span>
+                          <span class="redeem-sub">GIẢM</span>
+                        </div>
+
+                        <div class="redeem-card-body">
+                          <div class="redeem-card-title">{{ r.ten }}</div>
+                          <div class="redeem-card-desc">{{ r.moTa || 'Áp dụng cho mọi đơn hàng tại SAOClub' }}</div>
+                          <div v-if="r.giaTriToiDa && Number(r.giaTriToiDa) > 0" class="redeem-card-max">
+                            Giảm tối đa: <strong>{{ formatPriceRaw(r.giaTriToiDa) }}</strong>
+                          </div>
+                        </div>
+
+                        <div class="redeem-card-footer">
+                          <div class="redeem-cost">
+                            <Star :size="14" class="text-amber fill-amber" />
+                            <strong>{{ r.diemCan.toLocaleString('vi-VN') }}</strong>
+                            <span>điểm</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            class="btn-redeem"
+                            :class="{ 'btn-redeem--active': (profile?.diemTichLuy ?? 0) >= r.diemCan }"
+                            :disabled="(profile?.diemTichLuy ?? 0) < r.diemCan || redeemingId === r.doiThuongId"
+                            @click="redeemReward(r)"
+                          >
+                            <Loader2 v-if="redeemingId === r.doiThuongId" :size="14" class="spin" />
+                            <template v-else-if="(profile?.diemTichLuy ?? 0) >= r.diemCan">
+                              <span>Đổi ngay</span>
+                            </template>
+                            <template v-else>
+                              <span>Thiếu {{ (r.diemCan - (profile?.diemTichLuy ?? 0)).toLocaleString('vi-VN') }} điểm</span>
+                            </template>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- ════════════ Sub-tab 3: Vòng quay may mắn ════════════ -->
+                  <div v-else-if="rewardsSubTab === 'wheel'" class="tab-pane-rewards">
+                    <div class="wheel-panel-container">
+                      <div class="wheel-panel-intro">
+                        <Sparkles :size="20" class="text-pink-500" />
+                        <div>
+                          <div class="fw-bold text-sm">Vòng quay may mắn SAOClub</div>
+                          <div class="text-xs text-secondary">
+                            Mỗi lượt quay tốn 50 điểm tích lũy. Cơ hội nhận được các phiếu giảm giá siêu hấp dẫn!
+                          </div>
+                        </div>
+                      </div>
+
+                      <LuckyWheelPanel :points="profile?.diemTichLuy ?? 0" @spun="onSpunWheel" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -946,34 +1399,132 @@ const handleOutsideClick = (e) => {
                     <Settings :size="22" class="panel-header-icon" />
                     <div>
                       <div class="panel-title">Tài khoản & Hỗ trợ</div>
-                      <div class="panel-subtitle">Thông tin cá nhân, sổ địa chỉ, CSKH</div>
+                      <div class="panel-subtitle">Thông tin cá nhân & Chăm sóc khách hàng</div>
                     </div>
                   </div>
                 </div>
 
                 <div class="panel-content">
-                  <!-- Settings: profile (giữ code cũ nguyên) -->
+                  <!-- Settings: profile -->
                   <div class="settings-section">
                     <div class="settings-section-header">
-                      <User :size="16" />
-                      Thông tin cá nhân
+                      <div class="d-flex align-items-center gap-2">
+                        <User :size="16" />
+                        <span>Thông tin cá nhân</span>
+                      </div>
+                      <button
+                        v-if="!isEditingProfile && !profileLoading"
+                        type="button"
+                        class="btn-edit-profile d-inline-flex align-items-center gap-1.5 px-3 py-1 rounded-pill"
+                        @click="startEditProfile"
+                      >
+                        <Pencil :size="13" />
+                        <span>Chỉnh sửa</span>
+                      </button>
                     </div>
-                    <!-- (giữ nguyên profile form hiện có - chỉ giữ form, không hiện panel-header) -->
-                    <!-- TODO: dùng lại template settings cũ -->
+
+                    <div v-if="profileLoading" class="loading-state py-3">
+                      <div v-for="i in 4" :key="i" class="mb-2"><Skeleton width="100%" height="42px" radius="10px" /></div>
+                    </div>
+
+                    <!-- Chế độ chỉ xem (View-only) -->
+                    <div v-else-if="!isEditingProfile" class="profile-view-wrap py-1">
+                      <div class="profile-view-grid">
+                        <div class="profile-view-item">
+                          <div class="profile-view-label">
+                            <User :size="12" />
+                            <span>Họ và tên</span>
+                          </div>
+                          <div class="profile-view-value fw-semibold">
+                            {{ profileForm.hoTen || 'Chưa cập nhật' }}
+                          </div>
+                        </div>
+
+                        <div class="profile-view-item">
+                          <div class="profile-view-label">
+                            <Smartphone :size="12" />
+                            <span>Số điện thoại</span>
+                          </div>
+                          <div class="profile-view-value fw-semibold">
+                            {{ profileForm.soDienThoai || 'Chưa cập nhật' }}
+                          </div>
+                        </div>
+
+                        <div class="profile-view-item">
+                          <div class="profile-view-label">
+                            <Mail :size="12" />
+                            <span>Email</span>
+                          </div>
+                          <div class="profile-view-value fw-semibold">
+                            {{ profileForm.email || 'Chưa cập nhật' }}
+                          </div>
+                        </div>
+
+                        <div class="profile-view-item">
+                          <div class="profile-view-label">
+                            <MapPin :size="12" />
+                            <span>Địa chỉ</span>
+                          </div>
+                          <div class="profile-view-value fw-semibold">
+                            {{ profileForm.diaChi || 'Chưa cập nhật' }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Chế độ chỉnh sửa (Edit mode) -->
+                    <form v-else class="profile-form px-0 py-1" @submit.prevent="saveProfile">
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label class="form-label">Họ và tên</label>
+                          <div class="input-with-icon">
+                            <User :size="14" class="input-icon" />
+                            <input v-model="profileForm.hoTen" type="text" required class="form-input" placeholder="Họ và tên..." />
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label">Số điện thoại</label>
+                          <div class="input-with-icon">
+                            <Smartphone :size="14" class="input-icon" />
+                            <input v-model="profileForm.soDienThoai" type="tel" required class="form-input" placeholder="Số điện thoại..." />
+                          </div>
+                        </div>
+                      </div>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label class="form-label">Email</label>
+                          <div class="input-with-icon">
+                            <Mail :size="14" class="input-icon" />
+                            <input v-model="profileForm.email" type="email" required class="form-input" placeholder="Email..." />
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label">Địa chỉ</label>
+                          <div class="input-with-icon">
+                            <MapPin :size="14" class="input-icon" />
+                            <input v-model="profileForm.diaChi" type="text" required class="form-input" placeholder="Địa chỉ giao hàng..." />
+                          </div>
+                        </div>
+                      </div>
+                      <div v-if="profileError" class="alert-banner alert-banner--danger mb-3">
+                        <AlertTriangle :size="14" /> {{ profileError }}
+                      </div>
+                      <div v-if="profileSuccess" class="alert-banner alert-banner--success mb-3">
+                        <CheckCircle2 :size="14" /> {{ profileSuccess }}
+                      </div>
+                      <div class="form-actions d-flex align-items-center justify-content-end gap-2">
+                        <button type="button" class="btn-outline-secondary" @click="cancelEditProfile">
+                          Hủy
+                        </button>
+                        <button type="submit" class="btn-primary" :disabled="profileSaving">
+                          <Loader2 v-if="profileSaving" :size="14" class="spin" />
+                          <Save v-else :size="14" />
+                          {{ profileSaving ? 'Đang lưu...' : 'Lưu thay đổi' }}
+                        </button>
+                      </div>
+                    </form>
                   </div>
 
-                  <!-- Address book -->
-                  <div class="settings-section">
-                    <div class="settings-section-header">
-                      <MapPin :size="16" />
-                      Sổ địa chỉ
-                    </div>
-                    <div class="settings-section-empty">
-                      <MapPin :size="28" class="overview-empty-icon" />
-                      <span>Bạn chưa lưu địa chỉ nào</span>
-                      <button class="overview-empty-link">Thêm địa chỉ →</button>
-                    </div>
-                  </div>
 
                   <!-- Support -->
                   <div class="settings-section">
@@ -996,14 +1547,14 @@ const handleOutsideClick = (e) => {
                           <span>cskh@saoclub.vn</span>
                         </div>
                       </a>
-                      <button class="support-item">
+                      <button type="button" class="support-item">
                         <MessageCircle :size="20" />
                         <div>
                           <strong>Live chat</strong>
                           <span>Phản hồi trong 5 phút</span>
                         </div>
                       </button>
-                      <button class="support-item">
+                      <button type="button" class="support-item">
                         <HelpCircle :size="20" />
                         <div>
                           <strong>FAQ</strong>
@@ -1011,74 +1562,6 @@ const handleOutsideClick = (e) => {
                         </div>
                       </button>
                     </div>
-                  </div>
-
-                  <div class="settings-card">
-                    <div class="settings-card-header">
-                      <div class="settings-card-icon settings-card-icon--purple"><Tag :size="18" /></div>
-                      <div class="settings-card-title">
-                        <div class="settings-card-name">Mã giảm giá của tôi</div>
-                        <div class="settings-card-desc">{{ myVouchers.length }} mã</div>
-                      </div>
-                    </div>
-                    <div class="vouchers-list">
-                      <div v-for="v in myVouchers" :key="v.phieuId" class="voucher-item">
-                        <div>
-                          <div class="voucher-code">{{ v.maPhieu }}</div>
-                          <div class="voucher-meta">
-                            <span v-if="v.ngayHetHan">Hết hạn: {{ formatDate(v.ngayHetHan) }}</span>
-                            <span v-if="v.donHangToiThieu">Đơn tối thiểu: {{ formatPrice(v.donHangToiThieu) }}</span>
-                          </div>
-                        </div>
-                        <span class="status-pill status-pill--sm" :style="v.daSuDung ? { background: 'var(--gray-100)', color: 'var(--gray-500)' } : { background: 'var(--success-light)', color: 'var(--success)' }">
-                          {{ v.daSuDung ? 'Đã dùng' : 'Còn hiệu lực' }}
-                        </span>
-                      </div>
-                      <div v-if="myVouchers.length === 0" class="no-items">Bạn chưa có mã giảm giá nào</div>
-                    </div>
-                  </div>
-
-                  <div class="settings-card">
-                    <div class="settings-card-header">
-                      <div class="settings-card-icon settings-card-icon--blue"><User :size="18" /></div>
-                      <div class="settings-card-title">
-                        <div class="settings-card-name">Thông tin cá nhân</div>
-                        <div class="settings-card-desc">Cập nhật thông tin tài khoản</div>
-                      </div>
-                    </div>
-                    <div v-if="profileLoading" class="loading-state">
-                      <div v-for="i in 4" :key="i"><Skeleton width="100%" height="42px" radius="10px" /></div>
-                    </div>
-                    <form v-else class="profile-form" @submit.prevent="saveProfile">
-                      <div class="form-row">
-                        <div class="form-group">
-                          <label class="form-label">Họ và tên</label>
-                          <div class="input-with-icon"><User :size="14" class="input-icon" /><input v-model="profileForm.hoTen" type="text" required class="form-input" /></div>
-                        </div>
-                        <div class="form-group">
-                          <label class="form-label">Số điện thoại</label>
-                          <div class="input-with-icon"><Smartphone :size="14" class="input-icon" /><input v-model="profileForm.soDienThoai" type="tel" required class="form-input" /></div>
-                        </div>
-                      </div>
-                      <div class="form-row">
-                        <div class="form-group">
-                          <label class="form-label">Email</label>
-                          <div class="input-with-icon"><Mail :size="14" class="input-icon" /><input v-model="profileForm.email" type="email" required class="form-input" /></div>
-                        </div>
-                        <div class="form-group">
-                          <label class="form-label">Địa chỉ</label>
-                          <div class="input-with-icon"><MapPin :size="14" class="input-icon" /><input v-model="profileForm.diaChi" type="text" required class="form-input" /></div>
-                        </div>
-                      </div>
-                      <div v-if="profileError" class="alert-banner alert-banner--danger"><AlertTriangle :size="14" /> {{ profileError }}</div>
-                      <div v-if="profileSuccess" class="alert-banner alert-banner--success"><CheckCircle2 :size="14" /> {{ profileSuccess }}</div>
-                      <div class="form-actions">
-                        <button type="submit" class="btn-primary" :disabled="profileSaving">
-                          <Loader2 v-if="profileSaving" :size="14" class="spin" /><Save v-else :size="14" />
-                          {{ profileSaving ? 'Đang lưu...' : 'Lưu thay đổi' }}
-                        </button>
-                      </div>
-                    </form>
                   </div>
                 </div>
               </div>
@@ -1092,13 +1575,14 @@ const handleOutsideClick = (e) => {
     <CustomerOrderDetailModal
       v-if="selectedOrderDetail"
       :order="selectedOrderDetail"
-      :items="itemsByOrder[selectedOrderDetail.donHangId] || []"
+      :items="itemsByOrder[selectedOrderDetail.donHangId || selectedOrderDetail.id] || []"
       :products="products"
-      :history="historyByOrder[selectedOrderDetail.donHangId] || []"
+      :history="historyByOrder[selectedOrderDetail.donHangId || selectedOrderDetail.id] || []"
       @close="selectedOrderDetail = null"
       @confirm-received="confirmReceived"
       @buy-again="buyAgainOrder"
       @request-return="o => { selectedOrderDetail = null; returnModalOrder = o; }"
+      @order-updated="handleOrderUpdated"
     />
 
     <ProductDetail v-if="selectedProductDetail" :key="selectedProductDetail.bienTheId" :product="selectedProductDetail" :products="products" :wishlist-ids="wishlistIdSet" :auth-user="auth.user"
@@ -1648,64 +2132,641 @@ const handleOutsideClick = (e) => {
   font-weight: 700;
 }
 
-/* Rewards tab */
-.rewards-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 14px;
+/* ══════════════════════════════════════════════════════════
+   REWARDS & VOUCHERS MODERN STYLING
+══════════════════════════════════════════════════════════ */
+
+/* Loyalty Hero Card */
+.loyalty-hero-card {
+  position: relative;
+  background: linear-gradient(135deg, #1e1b4b 0%, #2e1065 45%, #701a75 100%);
+  border-radius: 16px;
+  color: white;
+  padding: 22px 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 10px 25px -5px rgba(112, 26, 117, 0.35), 0 8px 10px -6px rgba(30, 27, 75, 0.3);
+  overflow: hidden;
 }
-.rewards-card--wheel { padding: 14px; }
-.rewards-card-title {
+.loyalty-hero-pattern {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.22) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.loyalty-hero-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+@media (min-width: 768px) {
+  .loyalty-hero-body {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+.loyalty-hero-main {
+  flex: 1;
+  max-width: 540px;
+}
+.loyalty-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+}
+.loyalty-tier-badge.tier-bronze  { color: #fed7aa; background: rgba(217, 119, 6, 0.25); border: 1px solid rgba(217, 119, 6, 0.4); }
+.loyalty-tier-badge.tier-silver  { color: #e2e8f0; background: rgba(148, 163, 184, 0.25); border: 1px solid rgba(148, 163, 184, 0.4); }
+.loyalty-tier-badge.tier-gold    { color: #fde047; background: rgba(245, 158, 11, 0.28); border: 1px solid rgba(245, 158, 11, 0.5); }
+.loyalty-tier-badge.tier-diamond { color: #67e8f9; background: rgba(6, 182, 212, 0.28); border: 1px solid rgba(6, 182, 212, 0.5); }
+
+.loyalty-pts-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.loyalty-pts-val {
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  background: linear-gradient(180deg, #ffffff 30%, #fbcfe8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.loyalty-pts-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fbcfe8;
+}
+
+.loyalty-progress-box {
+  margin: 10px 0 12px;
+}
+.loyalty-progress-box .text-xs {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.loyalty-progress-track {
+  width: 100%;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.loyalty-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ec4899, #f59e0b);
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+.loyalty-max-tier-note {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 12px;
+  color: #fde047;
+  margin: 8px 0;
+}
+.loyalty-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 4px;
+}
+.loyalty-tip .text-amber { color: #f59e0b; }
+
+.loyalty-hero-stats {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+@media (max-width: 576px) {
+  .loyalty-hero-stats {
+    flex-direction: column;
+    width: 100%;
+  }
+}
+.loyalty-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.loyalty-stat-card:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.loyalty-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.loyalty-stat-icon--voucher {
+  background: rgba(236, 72, 153, 0.25);
+  color: #f472b6;
+}
+.loyalty-stat-icon--wheel {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+}
+.loyalty-stat-num {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: white;
+}
+.loyalty-stat-lbl {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Voucher Filter Bar */
+.voucher-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.voucher-filter-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.voucher-filter-btn:hover {
+  border-color: var(--pink-300);
+  color: var(--pink-600);
+}
+.voucher-filter-btn.is-active {
+  background: var(--pink-500);
+  border-color: var(--pink-500);
+  color: white;
+  box-shadow: 0 2px 6px rgba(219, 39, 119, 0.3);
+}
+
+/* Empty State Box */
+.rewards-empty-box {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+  padding: 40px 20px;
+  text-align: center;
+}
+.rewards-empty-icon-wrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--pink-50);
+  color: var(--pink-500);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.rewards-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.rewards-empty-desc {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  max-width: 420px;
+  margin: 0 auto;
+}
+.btn-reward-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-reward-cta--solid {
+  background: var(--pink-500);
+  color: white;
+  border: 1px solid var(--pink-500);
+}
+.btn-reward-cta--solid:hover {
+  background: var(--pink-600);
+}
+.btn-reward-cta--outline {
+  background: transparent;
+  color: var(--pink-600);
+  border: 1px solid var(--pink-300);
+}
+.btn-reward-cta--outline:hover {
+  background: var(--pink-50);
+}
+
+/* Voucher Ticket Grid & Cards */
+.my-voucher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 14px;
+}
+@media (max-width: 480px) {
+  .my-voucher-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.my-voucher-ticket {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--sh-1);
+  transition: all 0.2s ease;
+}
+.my-voucher-ticket:hover:not(.ticket--disabled) {
+  transform: translateY(-2px);
+  border-color: var(--pink-300);
+  box-shadow: var(--sh-2);
+}
+.my-voucher-ticket.ticket--disabled {
+  opacity: 0.65;
+  filter: grayscale(0.5);
+  background: var(--gray-50);
+}
+
+/* Ticket Left */
+.ticket-left {
+  width: 95px;
+  min-width: 95px;
+  background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-600) 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 6px;
+  position: relative;
+  text-align: center;
+  border-right: 1px dashed rgba(255, 255, 255, 0.4);
+}
+.ticket--disabled .ticket-left {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+}
+.ticket-discount-val {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.1;
+  word-break: break-word;
+}
+.ticket-discount-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+  margin-top: 4px;
+}
+.ticket-notch {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--bg-page);
+  border-radius: 50%;
+  right: -7px;
+  z-index: 2;
+}
+.ticket-notch--top { top: -7px; }
+.ticket-notch--bottom { bottom: -7px; }
+
+/* Ticket Center */
+.ticket-center {
+  flex: 1;
+  padding: 12px 14px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.ticket-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.ticket-source-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--pink-600);
+  background: var(--pink-50);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.ticket-status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+}
+.ticket-status-pill--active {
+  background: #ecfdf5;
+  color: #059669;
+}
+.ticket-status-pill--used {
+  background: var(--gray-100);
+  color: var(--gray-500);
+}
+.ticket-status-pill--expired {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.ticket-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+.ticket-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.ticket-rule-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ticket-rule-item strong {
+  color: var(--text-primary);
+}
+
+/* Ticket Right */
+.ticket-right {
+  width: 125px;
+  min-width: 125px;
+  border-left: 1px dashed var(--border);
+  background: var(--pink-50);
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.ticket--disabled .ticket-right {
+  background: var(--gray-100);
+}
+.ticket-code-tag {
+  font-family: 'SF Mono', 'Fira Code', Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pink-700);
+  background: white;
+  border: 1px dashed var(--pink-300);
+  padding: 3px 6px;
+  border-radius: 6px;
+  max-width: 105px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ticket--disabled .ticket-code-tag {
+  color: var(--gray-500);
+  border-color: var(--gray-300);
+}
+.ticket-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+.btn-ticket-copy, .btn-ticket-use {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-ticket-copy {
+  background: white;
+  color: var(--pink-600);
+  border: 1px solid var(--pink-200);
+}
+.btn-ticket-copy:hover {
+  background: var(--pink-100);
+  border-color: var(--pink-400);
+}
+.btn-ticket-copy.is-copied {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+.btn-ticket-use {
+  background: var(--pink-500);
+  color: white;
+  border: none;
+}
+.btn-ticket-use:hover {
+  background: var(--pink-600);
+}
+.ticket-inactive-msg {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ════════════ Sub-tab 2: Đổi điểm thưởng ════════════ */
+.redeem-intro-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--pink-50);
+  border: 1px solid var(--pink-200);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 576px) {
+  .redeem-intro-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+.redeem-pts-indicator {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--pink-200);
+}
+
+.redeem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.redeem-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  box-shadow: var(--sh-1);
+  position: relative;
+}
+.redeem-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--pink-300);
+  box-shadow: var(--sh-2);
+}
+.redeem-card--affordable {
+  border-color: var(--pink-300);
+}
+.redeem-card-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  background: var(--pink-500);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 8px;
+  width: fit-content;
+  margin-bottom: 10px;
+}
+.redeem-card-badge .redeem-val {
+  font-size: 15px;
+  font-weight: 800;
+}
+.redeem-card-badge .redeem-sub {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+.redeem-card-title {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.redeem-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.redeem-card-max {
+  font-size: 11px;
+  color: var(--text-muted);
   margin-bottom: 12px;
 }
-.rewards-card-title :first-child { color: var(--pink-500); }
-.rewards-empty {
-  text-align: center;
-  padding: 30px 16px;
-  color: var(--text-secondary);
-}
-.rewards-empty-icon { color: var(--text-muted); margin-bottom: 8px; }
-.rewards-empty p { font-size: 13px; font-weight: 600; margin: 4px 0; }
-.rewards-empty small { font-size: 11.5px; color: var(--text-muted); }
-
-.rewards-voucher-list { display: flex; flex-direction: column; gap: 8px; }
-.rewards-voucher-item {
+.redeem-card-footer {
   display: flex;
-  gap: 12px;
   align-items: center;
-  padding: 10px 12px;
-  background: linear-gradient(135deg, var(--pink-50) 0%, transparent 100%);
-  border: 1px dashed var(--pink-300, #fbcfe8);
-  border-radius: 10px;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  margin-top: 8px;
 }
-.voucher-discount {
-  background: var(--pink-500);
-  color: white;
-  padding: 10px 14px;
-  border-radius: 8px;
+.redeem-cost {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.voucher-info { flex: 1; }
-.voucher-code {
-  font-family: 'SF Mono', monospace;
-  font-size: 13px;
-  font-weight: 700;
   color: var(--text-primary);
 }
-.voucher-condition, .voucher-expiry {
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  margin-top: 2px;
+.redeem-cost .fill-amber { fill: #f59e0b; color: #f59e0b; }
+.btn-redeem {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: var(--gray-200);
+  color: var(--gray-600);
+  transition: all 0.15s ease;
+}
+.btn-redeem--active {
+  background: var(--pink-500);
+  color: white;
+}
+.btn-redeem--active:hover:not(:disabled) {
+  background: var(--pink-600);
+}
+.btn-redeem:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* ════════════ Sub-tab 3: Vòng quay may mắn ════════════ */
+.wheel-panel-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+.wheel-panel-intro {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--pink-50);
+  border: 1px solid var(--pink-200);
+  border-radius: 10px;
+  margin-bottom: 16px;
 }
 
 /* Settings sections */
@@ -1719,7 +2780,8 @@ const handleOutsideClick = (e) => {
 .settings-section-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 13.5px;
   font-weight: 700;
   color: var(--text-primary);
@@ -1727,7 +2789,55 @@ const handleOutsideClick = (e) => {
   padding-bottom: 10px;
   border-bottom: 1px dashed var(--border);
 }
-.settings-section-header :first-child { color: var(--pink-500); }
+.settings-section-header svg { color: var(--pink-500); }
+
+.btn-edit-profile {
+  background: var(--pink-50);
+  color: var(--pink-600);
+  border: 1px solid var(--pink-200);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-edit-profile:hover {
+  background: var(--pink-100);
+  border-color: var(--pink-400);
+  transform: translateY(-1px);
+}
+
+.profile-view-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 4px 0;
+}
+.profile-view-item {
+  background: var(--gray-50);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.profile-view-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.profile-view-label svg { color: var(--text-secondary); }
+.profile-view-value {
+  font-size: 13.5px;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+@media (max-width: 575.98px) {
+  .profile-view-grid { grid-template-columns: 1fr; }
+}
 .settings-section-empty {
   text-align: center;
   padding: 20px 12px;

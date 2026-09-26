@@ -3,6 +3,7 @@ package com.example.backend.controller;
 import com.example.backend.entity.SanPham;
 import com.example.backend.request.SanPhamRequest;
 import com.example.backend.response.SanPhamCreatedResponse;
+import com.example.backend.response.SanPhamChiTietResponse;
 import com.example.backend.response.SanPhamResponse;
 import com.example.backend.response.LichSuThayDoiSanPhamResponse;
 import com.example.backend.service.SanPhamService;
@@ -39,10 +40,10 @@ public class SanPhamController {
         return sanPhamService.hienThiSanPham(keyword, danhMucId, thuongHieuId, trangThai, PageRequest.of(page, size));
     }
 
-    // Lấy thông tin chi tiết sản phẩm theo ID
+    // Lấy thông tin chi tiết sản phẩm theo ID (DTO đầy đủ cho admin)
     @GetMapping("/{id}")
-    public SanPham getById(@PathVariable Integer id) {
-        return sanPhamService.getSanPhamById(id);
+    public SanPhamChiTietResponse getById(@PathVariable Integer id) {
+        return sanPhamService.getSanPhamChiTiet(id);
     }
 
     // Tạo mới sản phẩm kèm biến thể mặc định

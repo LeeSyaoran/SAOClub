@@ -83,6 +83,9 @@ public class DonHangController {
         req.setTrangThaiThanhToan((String) body.getOrDefault("trangThaiThanhToan", "unpaid"));
         req.setKenhBan("online");
         req.setGhiChu((String) body.get("ghiChu"));
+        // Idempotency & payment method
+        req.setIdempotencyKey((String) body.get("idempotencyKey"));
+        req.setPhuongThucThanhToan((String) body.get("phuongThucThanhToan"));
         return req;
     }
 

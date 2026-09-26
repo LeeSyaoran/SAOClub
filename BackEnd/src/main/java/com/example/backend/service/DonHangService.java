@@ -104,6 +104,16 @@ public class DonHangService {
 
     @Transactional
     public DonHang create(DonHangRequest request) {
+        // ── IDEMPOTENCY CHECK: Nếu key đã tồn tại, trả lại đơn cũ thay vì tạo mới ──
+        if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
+            var existing = donHangRepository.findByIdempotencyKey(request.getIdempotencyKey());
+            if (existing.isPresent()) {
+                log.info("[Idempotency] Đơn hàng đã tồn tại với key={}, trả về đơn #{}",
+                        request.getIdempotencyKey(), existing.get().getId());
+                return existing.get();
+            }
+        }
+
         DonHang entity = new DonHang();
         BeanUtils.copyProperties(request, entity,
                 "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId", "giamGia");
@@ -114,6 +124,12 @@ public class DonHangService {
             entity.setNhanVien(nhanVienRepository.getReferenceById(request.getNhanVienId()));
         if (request.getDiaChiGiaoHangId() != null)
             entity.setDiaChiGiaoHang(diaChiGiaoHangRepository.getReferenceById(request.getDiaChiGiaoHangId()));
+
+        // Ghi lại phương thức thanh toán & idempotency key
+        if (request.getPhuongThucThanhToan() != null)
+            entity.setPhuongThucThanhToan(request.getPhuongThucThanhToan());
+        if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank())
+            entity.setIdempotencyKey(request.getIdempotencyKey());
 
         if (request.getKhuyenMaiId() != null && request.getPhieuGiamGiaCaNhanId() != null)
             throw new IllegalArgumentException("Không thể dùng đồng thời mã khuyến mãi và voucher cá nhân");
@@ -623,5 +639,57 @@ public class DonHangService {
                 LocalDateTime.now().minusMonths(6),
                 LocalDateTime.now(),
                 PageRequest.of(0, limit));
+    }
+
+    // ── RECONCILIATION: Đối soát đơn hàng đã giao nhưng chưa được đánh dấu thanh toán ──
+
+    /**
+     * Chạy mỗi ngày lúc 23:00 — phát hiện đơn đã delivered nhưng trangThaiThanhToan vẫn 'unpaid'.
+     * Với COD: tự động đánh dấu là 'paid' (giao hàng xong = thu tiền xong).
+     * Với QR/Visa: ghi cảnh báo vào log để kế toán kiểm tra thủ công.
+     */
+    @Scheduled(cron = "0 0 23 * * *")
+    @Transactional
+    public void dailyReconciliation() {
+        try {
+            LocalDateTime cutoff = LocalDateTime.now().minusHours(2);
+            List<DonHang> deliveredUnpaid = donHangRepository
+                    .findDeliveredUnpaid(cutoff);
+
+            int autoPaid = 0;
+            int warnings = 0;
+
+            for (DonHang order : deliveredUnpaid) {
+                String method = order.getPhuongThucThanhToan();
+                boolean isCod = method == null || "tien_mat".equals(method);
+
+                if (isCod) {
+                    // COD — giao hàng xong → mặc định đã thu tiền
+                    order.setTrangThaiThanhToan("paid");
+                    donHangRepository.save(order);
+
+                    // Tạo bản ghi ThanhToan
+                    ThanhToan tt = new ThanhToan();
+                    tt.setDonHang(order);
+                    tt.setNgayThanhToan(LocalDateTime.now());
+                    tt.setPhuongThucThanhToan("tien_mat");
+                    tt.setSoTien(order.getThanhTien());
+                    tt.setTrangThai("paid");
+                    tt.setGhiChu("[Reconcile] Tự động ghi nhận COD khi giao hàng thành công");
+                    thanhToanRepository.save(tt);
+                    autoPaid++;
+                } else {
+                    // QR / Visa — cần kiểm tra thủ công
+                    log.warn("[Reconcile] Đơn #{} ({}) đã delivered nhưng chưa paid — phương thức: {}",
+                            order.getId(), order.getMaDonHang(), method);
+                    warnings++;
+                }
+            }
+
+            log.info("[Reconcile] Hoàn tất: tự xử lý {} đơn COD, cảnh báo {} đơn QR/Visa cần kiểm tra",
+                    autoPaid, warnings);
+        } catch (Exception ex) {
+            log.warn("[Reconcile] Lỗi khi chạy đối soát: {}", ex.getMessage());
+        }
     }
 }

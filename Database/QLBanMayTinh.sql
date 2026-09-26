@@ -570,6 +570,9 @@ BEGIN
         kenh_ban  NVARCHAR(50)  NULL
             CONSTRAINT CK_dh_kenhban CHECK (kenh_ban IN (N'online', N'in_store', N'phone', N'social_media') OR kenh_ban IS NULL),
         ghi_chu   NVARCHAR(500) NULL,
+        ma_van_don           VARCHAR(50)   NULL,
+        phuong_thuc_thanh_toan NVARCHAR(30) NULL,
+        idempotency_key      VARCHAR(64)   NULL,
 
         CONSTRAINT FK_dh_khach_hang        FOREIGN KEY (khach_hang_id)        REFERENCES khach_hang(khach_hang_id),
         CONSTRAINT FK_dh_nhan_vien         FOREIGN KEY (nhan_vien_id)         REFERENCES nhan_vien(nhan_vien_id),
