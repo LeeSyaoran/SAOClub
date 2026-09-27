@@ -1,11 +1,15 @@
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    init: true
+    stop_grace_period: 15s
     env_file: .env
     environment:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "${DB_PASSWORD}"
       MSSQL_PID: Express
+      MSSQL_MEMORY_LIMIT_MB: "2048"
+    mem_limit: 2g
     ports:
       - "1433:1433"
     volumes:
@@ -22,6 +26,9 @@ services:
   # ─── Ollama AI ────────────────────────────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest
+    init: true
+    stop_grace_period: 10s
+    mem_limit: 4g
     ports:
       - "11434:11434"
     volumes:
@@ -34,6 +41,13 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    entrypoint: >
+      sh -c "
+        ollama serve &
+        pid=\$$!
+        (sleep 3 && until ollama list >/dev/null 2>&1; do sleep 1; done && (ollama list | grep -q 'llama3.2' || ollama pull llama3.2)) &
+        wait \$$pid
+      "
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 10s
@@ -42,32 +56,17 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # Tự động pull model llama3.2 khi lần đầu chạy
-  ollama-init:
-    image: ollama/ollama:latest
-    depends_on:
-      ollama:
-        condition: service_healthy
-    volumes:
-      - ollama-data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=http://ollama:11434
-    entrypoint: >
-      sh -c "
-        echo '>>> Checking model llama3.2...' &&
-        ollama list | grep -q 'llama3.2' &&
-        echo '>>> Model llama3.2 already exists, skipping pull.' ||
-        (echo '>>> Pulling model llama3.2...' && ollama pull llama3.2 && echo '>>> Done.')
-      "
-    restart: "no"
-
   # ─── Backend ─────────────────────────────────────────────────────────────────
   backend:
     build: ./BackEnd
+    init: true
+    stop_grace_period: 10s
+    mem_limit: 1536m
     ports:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx768m"
       DB_HOST: sqlserver
       DB_PORT: 1433
       DB_NAME: QLBanMayTinh
@@ -90,6 +89,9 @@ services:
   # ─── Frontend ────────────────────────────────────────────────────────────────
   frontend:
     image: node:20-alpine
+    init: true
+    stop_grace_period: 5s
+    mem_limit: 1024m
     working_dir: /app
     environment:
       VITE_API_PROXY_TARGET: "http://backend:8080"
@@ -98,7 +100,7 @@ services:
       - ./FrontEnd/QLBanMayTinh:/app
     ports:
       - "5173:5173"
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: sh -c "npm install && exec npm run dev -- --host 0.0.0.0"
     depends_on:
       - backend
 

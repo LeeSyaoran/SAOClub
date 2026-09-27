@@ -59,13 +59,30 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     """)
     List<RevenueByDayResponse> doanhThuTheoNgay(@Param("tuNgay") LocalDateTime tuNgay, @Param("denNgay") LocalDateTime denNgay);
 
-    // Tìm đơn hàng pending quá hạn
-    @Query("SELECT d FROM DonHang d WHERE d.trangThaiDonHang = 'pending' AND d.ngayDat < :cutoff")
+    // Tìm đơn hàng pending quá hạn VÀ chưa thanh toán (đơn QR đã paid dù vẫn ở pending thì không huỷ — đợi admin duyệt)
+    @Query("SELECT d FROM DonHang d WHERE d.trangThaiDonHang = 'pending' AND d.trangThaiThanhToan = 'unpaid' AND d.ngayDat < :cutoff")
     List<DonHang> findPendingOrdersOlderThan(@Param("cutoff") LocalDateTime cutoff);
 
     /** Reconciliation: đơn đã giao nhưng chưa được đánh dấu thanh toán */
     @Query("SELECT d FROM DonHang d WHERE d.trangThaiDonHang = 'delivered' AND d.trangThaiThanhToan = 'unpaid' AND d.ngayGiaoThucTe < :cutoff")
     List<DonHang> findDeliveredUnpaid(@Param("cutoff") LocalDateTime cutoff);
+
+    /**
+     * Tìm đơn online có serial đang bị lock quá :cutoff phút.
+     * Chỉ đơn chưa hoàn tất (không phải delivered/cancelled/returned)
+     * và chưa thanh toán — coi như khách đã bỏ giỏ.
+     */
+    @Query(value = """
+        SELECT DISTINCT d.* FROM don_hang d
+        JOIN chi_tiet_don_hang ctdh ON ctdh.don_hang_id = d.don_hang_id
+        JOIN chi_tiet_don_hang_serial ctdhs ON ctdhs.chi_tiet_don_hang_id = ctdh.chi_tiet_don_hang_id
+        JOIN chi_tiet_san_pham ct ON ct.chi_tiet_id = ctdhs.chi_tiet_id
+        WHERE d.kenh_ban = 'online'
+          AND d.trang_thai_don_hang NOT IN ('delivered', 'cancelled', 'returned')
+          AND ct.locked_at IS NOT NULL
+          AND ct.locked_at < :cutoff
+        """, nativeQuery = true)
+    List<DonHang> findOnlineOrdersWithExpiredHeldSerials(@Param("cutoff") LocalDateTime cutoff);
 
 
     // Đơn hàng gần nhất của một khách hàng

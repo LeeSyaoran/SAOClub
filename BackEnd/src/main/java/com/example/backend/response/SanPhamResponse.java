@@ -29,8 +29,21 @@ public class SanPhamResponse {
     private String barcode;        // Barcode chính thức của biến thể (thay thế cho barcode sản phẩm cha cũ)
     private String cpu;
     private String ram;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("oCung")
     private String oCung;
+
     private String gpu;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("ocung")
+    public String getOcungAlias() {
+        return oCung;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("ocung")
+    public void setOcungAlias(String val) {
+        if (this.oCung == null) this.oCung = val;
+    }
     private String kichThuocManHinh;
     private String heDieuHanh;
     private String pin;

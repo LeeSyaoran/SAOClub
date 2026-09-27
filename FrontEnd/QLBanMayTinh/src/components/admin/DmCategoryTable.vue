@@ -43,7 +43,8 @@ const load = async () => {
 };
 onMounted(load);
 
-const serialsOf = (item) => serials.value.filter((s) => s[props.serialFieldName] === item[props.idField]);
+const getItemId = (item) => item?.[props.idField] ?? item?.ocungId ?? item?.oCungId ?? item?.id;
+const serialsOf = (item) => serials.value.filter((s) => (s[props.serialFieldName] ?? s.ocungId ?? s.oCungId) === getItemId(item));
 const stockCountOf = (item) => serialsOf(item).filter((s) => s.trangThai === "trong_kho").length;
 
 // ── Search ────────────────────────────────────────────────────────────────
@@ -294,7 +295,7 @@ const openAdd = () => {
   showModal.value = true;
 };
 const openEdit = (item) => {
-  editingId.value = item[props.idField];
+  editingId.value = getItemId(item);
   formValue.value = { ...item };
   formError.value = "";
   newSerials.value = [""];
@@ -334,10 +335,11 @@ const saveItem = async () => {
     }
     if (!editingId.value) {
       const created = await res.json();
-      const newId = created[props.idField];
+      const newId = getItemId(created);
       for (const soSerial of serialList) {
         const sres = await props.serialService.create({
           [props.serialFieldName]: newId,
+          ...(props.serialFieldName === "oCungId" ? { ocungId: newId } : {}),
           soSerial,
           trangThai: "trong_kho",
           ngayNhapKho: nowLocalIso(),
@@ -460,7 +462,7 @@ const openSerials = (item) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(item, idx) in pagedRows" :key="item[idField]">
+          <tr v-for="(item, idx) in pagedRows" :key="getItemId(item)">
             <td class="dm-stt text-center">{{ currentPage * pageSize + idx + 1 }}</td>
             <td class="text-center">
               <div class="mx-auto" style="width: 40px; height: 40px; border-radius: 6px; overflow: hidden; background: var(--bg-input); display: flex; align-items: center; justify-content: center;">

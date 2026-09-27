@@ -133,6 +133,14 @@ watch(
         emit("update:modelValue", false);
         return;
       }
+      // Khớp ID cấu hình nếu base chỉ có tên hiển thị từ SanPhamResponse
+      const resolvedCpuId = base.cpuId ?? cpuList.value.find((c) => (c.tenCpu ?? "").trim().toLowerCase() === (base.cpu ?? "").trim().toLowerCase())?.cpuId ?? null;
+      const resolvedRamId = base.ramId ?? ramList.value.find((r) => (r.dungLuong ?? "").trim().toLowerCase() === (base.ram ?? "").trim().toLowerCase())?.ramId ?? null;
+      const ocName = (base.oCung ?? base.ocung ?? "").trim().toLowerCase();
+      const matchedOc = oCungList.value.find((o) => (o.loaiOcung ?? o.loaiOCung ?? o.LoaiOcung ?? "").trim().toLowerCase() === ocName);
+      const resolvedOcungId = base.oCungId ?? base.ocungId ?? (matchedOc?.oCungId ?? matchedOc?.ocungId ?? matchedOc?.id ?? null);
+      const resolvedGpuId = base.gpuId ?? gpuList.value.find((g) => (g.tenGpu ?? "").trim().toLowerCase() === (base.gpu ?? "").trim().toLowerCase())?.gpuId ?? null;
+
       Object.assign(form, {
         bienTheId: null,
         tenSanPham: base.tenSanPham || "",
@@ -141,10 +149,10 @@ watch(
         nhaCungCapId: base.nhaCungCapId,
         loaiSanPham: base.loaiSanPham || "",
         maSku: base.maSku || "",
-        cpuId: base.cpuId,
-        ramId: base.ramId,
-        oCungId: base.oCungId,
-        gpuId: base.gpuId,
+        cpuId: resolvedCpuId,
+        ramId: resolvedRamId,
+        oCungId: resolvedOcungId,
+        gpuId: resolvedGpuId,
         kichThuocManHinh: base.kichThuocManHinh || "",
         heDieuHanh: base.heDieuHanh || "",
         pin: base.pin || "",
@@ -210,6 +218,7 @@ const save = async () => {
       cpuId: form.cpuId ? Number(form.cpuId) : null,
       ramId: form.ramId ? Number(form.ramId) : null,
       oCungId: form.oCungId ? Number(form.oCungId) : null,
+      ocungId: form.oCungId ? Number(form.oCungId) : null,
       gpuId: form.gpuId ? Number(form.gpuId) : null,
       giaBan: Number(form.giaBan),
       giaNhap: Number(form.giaNhap),
@@ -513,7 +522,6 @@ const save = async () => {
               }}</label>
               <select
                 v-model="form.cpuId"
-                :disabled="(mode === 'edit')"
                 class="form-select form-select-sm"
                 style="
                   background: var(--bg-input);
@@ -535,7 +543,6 @@ const save = async () => {
               }}</label>
               <select
                 v-model="form.gpuId"
-                :disabled="(mode === 'edit')"
                 class="form-select form-select-sm"
                 style="
                   background: var(--bg-input);
@@ -557,7 +564,6 @@ const save = async () => {
               }}</label>
               <select
                 v-model="form.ramId"
-                :disabled="(mode === 'edit')"
                 class="form-select form-select-sm"
                 style="
                   background: var(--bg-input);
@@ -579,7 +585,6 @@ const save = async () => {
               }}</label>
               <select
                 v-model="form.oCungId"
-                :disabled="(mode === 'edit')"
                 class="form-select form-select-sm"
                 style="
                   background: var(--bg-input);
@@ -592,10 +597,10 @@ const save = async () => {
                 </option>
                 <option
                   v-for="o in oCungList"
-                  :key="o.oCungId"
-                  :value="o.oCungId"
+                  :key="o.oCungId ?? o.ocungId ?? o.id"
+                  :value="o.oCungId ?? o.ocungId ?? o.id"
                 >
-                  {{ o.loaiOcung }}
+                  {{ o.loaiOcung ?? o.loaiOCung ?? o.LoaiOcung }}
                 </option>
               </select>
             </div>
@@ -605,7 +610,6 @@ const save = async () => {
               }}</label>
               <input
                 v-model="form.kichThuocManHinh"
-                :disabled="(mode === 'edit')"
                 class="form-control form-control-sm"
                 style="
                   background: var(--bg-input);
@@ -621,7 +625,6 @@ const save = async () => {
               }}</label>
               <input
                 v-model="form.heDieuHanh"
-                :disabled="(mode === 'edit')"
                 class="form-control form-control-sm"
                 style="
                   background: var(--bg-input);
@@ -637,7 +640,6 @@ const save = async () => {
               }}</label>
               <input
                 v-model="form.pin"
-                :disabled="(mode === 'edit')"
                 class="form-control form-control-sm"
                 style="
                   background: var(--bg-input);
@@ -655,7 +657,6 @@ const save = async () => {
                 v-model="form.trongLuongKg"
                 type="number"
                 step="0.1"
-                :disabled="(mode === 'edit')"
                 class="form-control form-control-sm"
                 style="
                   background: var(--bg-input);

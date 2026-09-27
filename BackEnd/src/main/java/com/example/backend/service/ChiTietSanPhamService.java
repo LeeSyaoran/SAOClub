@@ -13,6 +13,7 @@ import com.example.backend.request.ChiTietSanPhamRequest;
 import com.example.backend.request.SerialLockRequest;
 import com.example.backend.request.SerialUnlockRequest;
 import com.example.backend.response.ChiTietSanPhamResponse;
+import com.example.backend.response.ChiTietSanPhamWithOrderResponse;
 import com.example.backend.response.SerialLockResponse;
 import com.example.backend.response.WarrantyStatusResponse;
 import org.slf4j.Logger;
@@ -259,6 +260,24 @@ public class ChiTietSanPhamService {
             }
         }
         return unlocked;
+    }
+
+    // Lay danh sach serial dang bi lock (dang duoc giu boi ai do)
+    @Transactional(readOnly = true)
+    public List<ChiTietSanPhamResponse> getLockedSerials() {
+        return chiTietSanPhamRepository.findLockedSerials();
+    }
+
+    /**
+     * Lay danh sach serial dang bi giu (POS lock 5 phut + online giu_hang) kèm thong tin don hang.
+     * Dùng cho PosPanel panel "Serial bi khoa".
+     */
+    @Transactional(readOnly = true)
+    public List<ChiTietSanPhamWithOrderResponse> getHeldSerialsWithOrder() {
+        List<ChiTietSanPhamWithOrderResponse> result = new ArrayList<>();
+        result.addAll(chiTietSanPhamRepository.findHeldSerialsWithOrder());
+        result.addAll(chiTietSanPhamRepository.findPosLockedSerials());
+        return result;
     }
 
     // Scheduled: giai phong lock da het han (chay moi 1 phut)

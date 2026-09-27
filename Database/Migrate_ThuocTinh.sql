@@ -17,7 +17,7 @@ BEGIN
         bat_buoc        BIT            NOT NULL DEFAULT 0,  -- Thuộc tính bắt buộc
         thu_tu_hien_thi INT            NOT NULL DEFAULT 0, -- Thứ tự hiển thị trong form
         trang_thai      NVARCHAR(20)   NOT NULL DEFAULT N'active'
-            CONSTRAINT CK_tt_trangthai CHECK (trang_thai IN (N'active', N'inactive')),
+            CONSTRAINT CK_thuoctinh_trangthai CHECK (trang_thai IN (N'active', N'inactive')),
         ngay_tao        DATETIME       NOT NULL DEFAULT GETDATE()
     );
 END

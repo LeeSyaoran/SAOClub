@@ -20,3 +20,6 @@ export const remove = (id) => del(`/api/chi-tiet-san-pham/delete/${id}`);
 
 // Lấy danh sách serial đã bán còn thời hạn bảo hành
 export const getUnderWarranty = () => get('/api/chi-tiet-san-pham/con-bao-hanh');
+
+// Lấy danh sách serial đang được giữ hoặc đang lên đơn kèm thông tin đơn hàng
+export const getHeldWithOrder = () => get('/api/chi-tiet-san-pham/held-with-order');

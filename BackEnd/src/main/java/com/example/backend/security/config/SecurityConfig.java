@@ -86,6 +86,10 @@ public class SecurityConfig {
                 // SSE events — browser establishes connection before auth completes
                 .requestMatchers("/api/don-hang/events").permitAll()
 
+                // Thanh toán & xác nhận thanh toán (hỗ trợ cả khách hàng online, webhook và admin)
+                .requestMatchers("/api/payment/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/thanh-toan/don-hang/**").permitAll()
+
                 .requestMatchers(HttpMethod.GET, "/api/cai-dat").permitAll()
                 .requestMatchers("/images/**").permitAll()
                 .requestMatchers("/error").permitAll()

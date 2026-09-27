@@ -393,10 +393,10 @@
                     <div v-if="m.maSku" class="hh-ls__target">Phiên bản {{ m.maSku }}</div>
                     <ul class="hh-ls__changes">
                       <li>
-                        <span class="hh-ls__field">{{ m.tenTruong }}</span>
-                        <em>{{ m.giaTriCu || '—' }}</em>
+                        <span class="hh-ls__field">{{ TEN_TRUONG_LABEL[m.tenTruong] || m.tenTruong }}</span>
+                        <em>{{ formatGiaTriLichSu(m.tenTruong, m.giaTriCu) }}</em>
                         <ArrowRight :size="14" />
-                        <b>{{ m.giaTriMoi || '—' }}</b>
+                        <b>{{ formatGiaTriLichSu(m.tenTruong, m.giaTriMoi) }}</b>
                       </li>
                     </ul>
                     <div class="hh-ls__by">Người thực hiện: {{ m.tenNhanVien || '—' }}</div>
@@ -1069,7 +1069,10 @@ const TOI_DA_BIEN_THE = 60
 const toArray = (res) => (Array.isArray(res) ? res : (res?.content ?? res?.data?.content ?? res?.data ?? []))
 
 const idOf = (obj, ...keys) => {
-  for (const k of [...keys, 'id']) if (obj?.[k] != null) return obj[k]
+  const allKeys = [...keys];
+  if (keys.includes('oCungId') && !keys.includes('ocungId')) allKeys.push('ocungId');
+  if (keys.includes('ocungId') && !keys.includes('oCungId')) allKeys.push('oCungId');
+  for (const k of [...allKeys, 'id']) if (obj?.[k] != null) return obj[k]
   return null
 }
 const soHoacNull = (v) => (v === '' || v === null || v === undefined ? null : Number(v))
@@ -1310,6 +1313,7 @@ const ghiChuAnh = ref('Ảnh đầu tiên là ảnh chính. Kéo thả để đ�
 
 // Nhật ký
 const banGoc = ref(null)
+const banGocBienThe = ref([])
 const moTaEl = ref(null)
 
 // Export
@@ -1446,6 +1450,7 @@ const suaSanPham = async (sp) => {
   modalMode.value = 'edit'
   tieuDeModal.value = 'Sửa sản phẩm'
   tab.value = 'info'
+  form.value.bienTheId = null
 
   // Luôn fetch fresh data từ API để tránh stale cache
   let data
@@ -1475,21 +1480,23 @@ const suaSanPham = async (sp) => {
   form.value.heDieuHanh = data.heDieuHanh || ''
   form.value.trongLuongKg = data.trongLuongKg != null ? data.trongLuongKg : ''
 
-  // Bien the — response trả cpu/ram/oCung/gpu là string (tên), cần reverse lookup sang id
+  // Bien the — ưu tiên lấy trực tiếp ID từ backend response nếu có, fallback reverse lookup theo tên
   bienTheRows.value = (data.variants || []).map(v => ({
     bienTheId: v.bienTheId,
     maSku: v.maSku,
     barcode: v.barcode,
     mauSac: v.mauSac,
-    cpuId: v.cpu ? cpuIdByName.value[v.cpu.trim()] : null,
-    ramId: v.ram ? ramIdByName.value[v.ram.trim()] : null,
-    oCungId: v.oCung ? oCungIdByName.value[v.oCung.trim()] : null,
-    gpuId: v.gpu ? gpuIdByName.value[v.gpu.trim()] : null,
+    cpuId: v.cpuId ?? idOf(v, 'cpuId') ?? (v.cpu ? cpuIdByName.value[v.cpu.trim()] : null),
+    ramId: v.ramId ?? idOf(v, 'ramId') ?? (v.ram ? ramIdByName.value[v.ram.trim()] : null),
+    oCungId: v.oCungId ?? v.ocungId ?? idOf(v, 'oCungId') ?? (v.oCung ? oCungIdByName.value[v.oCung.trim()] : null),
+    gpuId: v.gpuId ?? idOf(v, 'gpuId') ?? (v.gpu ? gpuIdByName.value[v.gpu.trim()] : null),
     giaNhap: v.giaNhap,
     giaBan: v.giaBan,
     hinhAnhBienThe: v.hinhAnhBienThe,
     _key: v.bienTheId || Date.now() + Math.random()
   }))
+  banGocBienThe.value = JSON.parse(JSON.stringify(bienTheRows.value))
+
   if (bienTheRows.value.length > 0 && !form.value.bienTheId) {
     // ponytail: chỉ mặc định chọn biến thể đầu khi form chưa có biến thể nào
     // (tránh ghi đè khi user vừa chọn 1 biến thể trong modal chi tiết rồi bấm Chỉnh sửa)
@@ -1522,10 +1529,10 @@ const suaBienThe = (v) => {
   form.value.maSku = v.maSku || ''
   form.value.barcode = v.barcode || ''
   form.value.mauSac = v.mauSac || ''
-  form.value.cpuId = idOf(v, 'cpuId') ?? cpuIdByName.value[v.cpu?.trim()]
-  form.value.ramId = idOf(v, 'ramId') ?? ramIdByName.value[(v.ram || '')?.trim()]
-  form.value.oCungId = idOf(v, 'oCungId') ?? oCungIdByName.value[(v.oCung || '')?.trim()]
-  form.value.gpuId = idOf(v, 'gpuId') ?? gpuIdByName.value[v.gpu?.trim()]
+  form.value.cpuId = v.cpuId ?? idOf(v, 'cpuId') ?? (v.cpu ? cpuIdByName.value[v.cpu?.trim()] : '') ?? ''
+  form.value.ramId = v.ramId ?? idOf(v, 'ramId') ?? (v.ram ? ramIdByName.value[(v.ram || '')?.trim()] : '') ?? ''
+  form.value.oCungId = v.oCungId ?? v.ocungId ?? idOf(v, 'oCungId') ?? (v.oCung ? oCungIdByName.value[(v.oCung || '')?.trim()] : '') ?? ''
+  form.value.gpuId = v.gpuId ?? idOf(v, 'gpuId') ?? (v.gpu ? gpuIdByName.value[v.gpu?.trim()] : '') ?? ''
   form.value.giaNhap = v.giaNhap || 0
   form.value.giaBan = v.giaBan || 0
   form.value.hinhAnhBienThe = v.hinhAnhBienThe || null
@@ -1553,11 +1560,12 @@ const chonBienTheDeSua = (v) => {
   suaBienThe(v)
 }
 
-const suaBienTheTuChiTiet = (v) => {
+const suaBienTheTuChiTiet = async (v) => {
   if (!chiTiet.value || !v) return
-  suaSanPham(chiTiet.value)
+  await suaSanPham(chiTiet.value)
   tab.value = 'bienthe'
-  suaBienThe(v)
+  const freshV = bienTheRows.value.find(r => String(r.bienTheId) === String(v.bienTheId)) || v
+  suaBienThe(freshV)
 }
 
 const themPhienBan = (sp) => {
@@ -1574,7 +1582,7 @@ const themPhienBan = (sp) => {
   form.value.trangThaiSanPham = sp.trangThai || 'active'
   form.value.hinhAnhList = sp.hinhAnhList || (sp.hinhAnhChinh ? [sp.hinhAnhChinh] : [])
   form.value.moTa = sp.moTa || ''
-  form.value.phanLoaiIds = sp.phanLoai || []
+  form.value.phanLoaiIds = sp.phanLoaiIds || sp.phanLoai || []
   form.value.baoHanhThang = sp.baoHanhThang ?? 12
   form.value.kichThuocManHinh = sp.kichThuocManHinh || ''
   form.value.pin = sp.pin || ''
@@ -1595,7 +1603,7 @@ const saoChepSanPham = (sp) => {
     thuongHieuId: idOf(sp, 'thuongHieuId'), danhMucId: idOf(sp, 'danhMucId'),
     nhaCungCapId: idOf(sp, 'nhaCungCapId'),
     loaiSanPham: sp.loaiSanPham || 'LAPTOP', trangThaiSanPham: 'active',
-    phanLoaiIds: sp.phanLoai || [], phanLoaiTags: null, phanLoaiTen: null,
+    phanLoaiIds: sp.phanLoaiIds || sp.phanLoai || [], phanLoaiTags: null, phanLoaiTen: null,
     hinhAnhList: [...(sp.hinhAnhList || [])],
     moTa: sp.moTa || '', baoHanhThang: 12, kichThuocManHinh: '', pin: '', heDieuHanh: '', trongLuongKg: '', skuPrefix: '',
     bienTheId: null, maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
@@ -1603,8 +1611,8 @@ const saoChepSanPham = (sp) => {
   }
   bienTheRows.value = (sp.variants || []).map(v => ({
     ...v, _key: Date.now() + Math.random(), bienTheId: null,
-    cpuId: idOf(v, 'cpuId'), ramId: idOf(v, 'ramId'),
-    oCungId: idOf(v, 'oCungId'), gpuId: idOf(v, 'gpuId')
+    cpuId: v.cpuId ?? idOf(v, 'cpuId'), ramId: v.ramId ?? idOf(v, 'ramId'),
+    oCungId: v.oCungId ?? v.ocungId ?? idOf(v, 'oCungId'), gpuId: v.gpuId ?? idOf(v, 'gpuId')
   }))
   errors.value = {}
   saveError.value = ''
@@ -1739,8 +1747,9 @@ const coThongSoBienThe = (v) => v?.mauSac || layCpu(v) || layRam(v) || layOCung(
 const layCpu = (v) => danhSachCpu.value.find(c => idOf(c, 'cpuId') == v?.cpuId)?.tenCpu || ''
 const layRam = (v) => danhSachRam.value.find(r => idOf(r, 'ramId') == v?.ramId)?.dungLuong || ''
 const layOCung = (v) => {
-  const o = danhSachOCung.value.find(o => idOf(o, 'oCungId') == v?.oCungId)
-  return o ? tenOCung(o) : ''
+  const vId = v?.oCungId ?? v?.ocungId
+  const o = danhSachOCung.value.find(o => idOf(o, 'oCungId') == vId)
+  return o ? tenOCung(o) : (v?.oCung || v?.ocung || '')
 }
 const layGpu = (v) => danhSachGpu.value.find(g => idOf(g, 'gpuId') == v?.gpuId)?.tenGpu || ''
 const moTaBienThe = (v) => [layCpu(v), layRam(v), layOCung(v), v?.mauSac].filter(Boolean).join(' · ')
@@ -1779,7 +1788,58 @@ const TEN_TRUONG_LABEL = {
   trangThai: 'Trạng thái',
   giaNhap: 'Giá nhập',
   giaBan: 'Giá bán',
-  barcode: 'Barcode',
+  barcode: 'Mã vạch',
+  maSku: 'Mã SKU',
+  mauSac: 'Màu sắc',
+  cpuId: 'CPU',
+  ramId: 'RAM',
+  oCungId: 'Ổ cứng',
+  ocungId: 'Ổ cứng',
+  gpuId: 'Card đồ họa (GPU)',
+  kichThuocManHinh: 'Màn hình',
+  heDieuHanh: 'Hệ điều hành',
+  pin: 'Pin',
+  trongLuongKg: 'Trọng lượng (kg)',
+  baoHanhThang: 'Bảo hành (tháng)',
+  hinhAnhBienThe: 'Ảnh phiên bản'
+}
+
+// Định dạng giá trị hiển thị trong lịch sử
+const formatGiaTriLichSu = (tenTruong, val) => {
+  if (val === null || val === undefined || val === '') return '—'
+  if (tenTruong === 'giaBan' || tenTruong === 'giaNhap') return formatNumber(val) + ' ₫'
+  if (tenTruong === 'oCungId' || tenTruong === 'ocungId') {
+    const o = (danhSachOCung.value || []).find(x => String(idOf(x, 'oCungId')) === String(val))
+    return o ? tenOCung(o) : val
+  }
+  if (tenTruong === 'cpuId') {
+    const c = (danhSachCpu.value || []).find(x => String(idOf(x, 'cpuId')) === String(val))
+    return c ? (c.tenCpu || val) : val
+  }
+  if (tenTruong === 'ramId') {
+    const r = (danhSachRam.value || []).find(x => String(idOf(x, 'ramId')) === String(val))
+    return r ? (r.dungLuong || r.tenRam || val) : val
+  }
+  if (tenTruong === 'gpuId') {
+    const g = (danhSachGpu.value || []).find(x => String(idOf(x, 'gpuId')) === String(val))
+    return g ? (g.tenGpu || val) : val
+  }
+  if (tenTruong === 'thuongHieuId') {
+    const th = (danhSachThuongHieu.value || []).find(x => String(idOf(x, 'thuongHieuId')) === String(val))
+    return th ? (th.tenThuongHieu || val) : val
+  }
+  if (tenTruong === 'danhMucId') {
+    const dm = (danhSachDanhMuc.value || []).find(x => String(idOf(x, 'danhMucId')) === String(val))
+    return dm ? (dm.tenDanhMuc || val) : val
+  }
+  if (tenTruong === 'nhaCungCapId') {
+    const ncc = (danhSachNhaCungCap.value || []).find(x => String(idOf(x, 'nhaCungCapId')) === String(val))
+    return ncc ? (ncc.tenNhaCungCap || val) : val
+  }
+  if (tenTruong === 'trongLuongKg') return `${val} kg`
+  if (tenTruong === 'baoHanhThang') return `${val} tháng`
+  if (tenTruong === 'trangThai') return nhanTrangThai(val)
+  return val
 }
 
 // Sinh câu mô tả hành động dựa trên đối tượng + trường thay đổi
@@ -1995,7 +2055,8 @@ const payloadSanPham = (row) => ({
         mauSac: row.mauSac || null,
         cpuId: soHoacNull(row.cpuId),
         ramId: soHoacNull(row.ramId),
-        oCungId: soHoacNull(row.oCungId),
+        oCungId: soHoacNull(row.oCungId ?? row.ocungId),
+        ocungId: soHoacNull(row.oCungId ?? row.ocungId),
         gpuId: soHoacNull(row.gpuId),
         hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null
       }
@@ -2012,10 +2073,12 @@ const payloadBienThe = (sanPhamId, row) => ({
   mauSac: row.mauSac || null,
   cpuId: soHoacNull(row.cpuId),
   ramId: soHoacNull(row.ramId),
-  oCungId: soHoacNull(row.oCungId),
+  oCungId: soHoacNull(row.oCungId ?? row.ocungId),
+  ocungId: soHoacNull(row.oCungId ?? row.ocungId),
   gpuId: soHoacNull(row.gpuId),
   hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null,
-  ...phanChungBienThe()
+  ...phanChungBienThe(),
+  trangThai: row.trangThai || form.value.trangThaiSanPham || 'active'
 })
 
 const layId = (res, key) => res?.[key] ?? res?.id ?? res?.data?.[key] ?? res?.data?.id ?? null
@@ -2094,6 +2157,26 @@ const submitForm = async () => {
   try {
     if (modalMode.value === 'edit') {
       buoc = 'cập nhật sản phẩm'
+      // Đồng bộ biến thể đang chỉnh sửa trên form vào bienTheRows
+      if (form.value.bienTheId) {
+        const curIdx = bienTheRows.value.findIndex(r => String(r.bienTheId) === String(form.value.bienTheId))
+        if (curIdx !== -1) {
+          bienTheRows.value[curIdx] = {
+            ...bienTheRows.value[curIdx],
+            maSku: form.value.maSku,
+            barcode: form.value.barcode,
+            mauSac: form.value.mauSac,
+            cpuId: form.value.cpuId,
+            ramId: form.value.ramId,
+            oCungId: form.value.oCungId,
+            gpuId: form.value.gpuId,
+            giaNhap: form.value.giaNhap,
+            giaBan: form.value.giaBan,
+            hinhAnhBienThe: form.value.hinhAnhBienThe
+          }
+        }
+      }
+
       const rowBienThe = form.value.bienTheId
         ? {
             bienTheId: form.value.bienTheId,
@@ -2130,6 +2213,34 @@ const submitForm = async () => {
         } catch {}
         throw new Error(`HTTP ${resSp.status}: ${msg || resSp.statusText}`)
       }
+
+      // Cập nhật các biến thể còn lại trong danh sách nếu thực sự có thay đổi
+      for (const row of bienTheRows.value) {
+        if (row.bienTheId && String(row.bienTheId) !== String(rowBienThe.bienTheId)) {
+          const goc = banGocBienThe.value?.find(g => String(g.bienTheId) === String(row.bienTheId))
+          const coThayDoi = !goc ||
+            String(row.maSku || '') !== String(goc.maSku || '') ||
+            String(row.barcode || '') !== String(goc.barcode || '') ||
+            String(row.mauSac || '') !== String(goc.mauSac || '') ||
+            String(row.cpuId ?? '') !== String(goc.cpuId ?? '') ||
+            String(row.ramId ?? '') !== String(goc.ramId ?? '') ||
+            String(row.oCungId ?? '') !== String(goc.oCungId ?? '') ||
+            String(row.gpuId ?? '') !== String(goc.gpuId ?? '') ||
+            Number(row.giaNhap || 0) !== Number(goc.giaNhap || 0) ||
+            Number(row.giaBan || 0) !== Number(goc.giaBan || 0) ||
+            String(form.value.baoHanhThang || '') !== String(banGoc.value?.baoHanhThang || '') ||
+            String(form.value.kichThuocManHinh || '') !== String(banGoc.value?.kichThuocManHinh || '') ||
+            String(form.value.pin || '') !== String(banGoc.value?.pin || '') ||
+            String(form.value.heDieuHanh || '') !== String(banGoc.value?.heDieuHanh || '') ||
+            String(form.value.trongLuongKg || '') !== String(banGoc.value?.trongLuongKg || '')
+
+          if (coThayDoi) {
+            buoc = `cập nhật phiên bản ${row.maSku || ''}`
+            await bienTheApi.update(row.bienTheId, payloadBienThe(form.value.sanPhamId, row))
+          }
+        }
+      }
+
       console.log('[DEBUG submitForm] Saving to DB, calling luuPhanLoai')
       await luuPhanLoai(form.value.sanPhamId)
       console.log('[DEBUG submitForm] luuPhanLoai done')

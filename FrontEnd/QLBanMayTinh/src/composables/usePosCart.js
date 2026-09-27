@@ -1,12 +1,13 @@
 // usePosCart — cart state + serial-aware mutations
 import { ref, computed, watch } from "vue";
-import { syncPosCart } from "../stores/posCart.js";
+import { posCartItems, syncPosCart } from "../stores/posCart.js";
+import { AuthStore } from "../stores/index.js";
 import { bumpSerialEvent } from "../stores/serialEvents.js";
 import * as ChiTietSanPhamService from "../services/ChiTietSanPhamService.js";
 import { refreshProducts } from "../stores/products.js";
 import { refreshInventory } from "../stores/inventory.js";
 
-const cart = ref([]);
+const cart = ref([...posCartItems.value]);
 watch(cart, (v) => syncPosCart(v), { deep: true });
 
 export function usePosCart() {
@@ -45,11 +46,7 @@ export function usePosCart() {
     bumpSerialEvent();
   };
 
-  const upsertItem = async (item, swapChiTietId = null) => {
-    const oldItem = swapChiTietId != null
-      ? cart.value.find((i) => i.chiTietId === swapChiTietId)
-      : null;
-
+  const upsertItem = (item, swapChiTietId = null) => {
     if (swapChiTietId != null) {
       cart.value = cart.value.map((i) =>
         i.chiTietId === swapChiTietId ? item : i
@@ -57,31 +54,24 @@ export function usePosCart() {
     } else {
       cart.value = [...cart.value, item];
     }
-
-    await setSerialTrangThai(item, "giu_hang");
-    if (oldItem) await setSerialTrangThai(oldItem, "trong_kho");
   };
 
-  const addMany = async (items) => {
+  const addMany = (items) => {
     cart.value = [...cart.value, ...items];
-    await Promise.all(items.map((item) => setSerialTrangThai(item, "giu_hang")));
   };
 
-  const decrementGroup = async (g) => {
+  const decrementGroup = (g) => {
     if (!g.items.length) return;
     const lastItem = g.items[g.items.length - 1];
     cart.value = cart.value.filter((i) => i.chiTietId !== lastItem.chiTietId);
-    await setSerialTrangThai(lastItem, "trong_kho");
   };
 
-  const removeGroup = async (g) => {
+  const removeGroup = (g) => {
     const ids = new Set(g.items.map((i) => i.chiTietId));
     cart.value = cart.value.filter((i) => !ids.has(i.chiTietId));
-    await Promise.all(g.items.map((i) => setSerialTrangThai(i, "trong_kho")));
   };
 
-  const releaseAll = async () => {
-    await Promise.all(cart.value.map((item) => setSerialTrangThai(item, "trong_kho")));
+  const releaseAll = () => {
     cart.value = [];
   };
 
@@ -98,8 +88,11 @@ export function usePosCart() {
     mauSac: product.mauSac ?? null,
     chiTietId: serial.chiTietId,
     soSerial: serial.soSerial,
+    trangThai: serial.trangThai || 'trong_kho',
     ngayNhapKho: serial.ngayNhapKho,
     soLuong: 1,
+    performerRole: AuthStore.user?.role === 'admin' ? 'Admin' : 'Nhân viên',
+    performerName: AuthStore.user?.hoTen || AuthStore.user?.username || '',
   });
 
   return {

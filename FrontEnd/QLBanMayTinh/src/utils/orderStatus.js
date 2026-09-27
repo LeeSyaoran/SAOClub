@@ -78,52 +78,147 @@ export const paymentMethodIcon = (m) => {
 };
 
 // ══════════════════════════════════════════════════════════════════════════
-// TIẾN TRÌNH ĐẶC THÙ CHO ĐƠN HÀNG THANH TOÁN QUA MÃ QR (8 BƯỚC)
-// Quy trình: Tạo đơn -> Thanh toán -> Chờ xử lý -> Đã lên đơn ->
-//            Đang đóng gói -> Đang giao hàng -> Đã giao - chờ xác nhận -> Đã giao
+// TIẾN TRÌNH CHO ĐƠN HÀNG THANH TOÁN SAU (COD) - 5 BƯỚC:
+// Chờ xác nhận -> Đã lên đơn -> Đang đóng gói -> Đang giao hàng -> Đã giao
+// ══════════════════════════════════════════════════════════════════════════
+
+export const COD_TIMELINE_STEPS = [
+  { id: 'pending',          title: 'Chờ xác nhận',  desc: 'Đơn hàng đang chờ shop xác nhận',       icon: Clock },
+  { id: 'confirmed',        title: 'Đã lên đơn',    desc: 'Đơn hàng đã được duyệt và lên đơn',     icon: FileText },
+  { id: 'processing',       title: 'Đang đóng gói', desc: 'Kho đang chuẩn bị và đóng gói sản phẩm', icon: Package },
+  { id: 'out_for_delivery', title: 'Đang giao hàng', desc: 'Shipper đang trên đường giao hàng',      icon: Bike },
+  { id: 'delivered',        title: 'Đã giao',       desc: 'Đơn hàng đã hoàn tất thành công',       icon: CheckCircle2 },
+];
+
+export const COD_LINEAR_STATUS_ORDER = ['pending', 'confirmed', 'processing', 'out_for_delivery', 'delivered'];
+
+export const getCodLinearStatusIndex = (status) => {
+  if (status === 'shipping') return COD_LINEAR_STATUS_ORDER.indexOf('processing');
+  if (status === 'awaiting_confirmation') return COD_LINEAR_STATUS_ORDER.indexOf('out_for_delivery');
+  return COD_LINEAR_STATUS_ORDER.indexOf(status);
+};
+
+export const isCodStepReached = (order, stepId) => {
+  if (!order) return false;
+  if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
+  const cur = getCodLinearStatusIndex(order.trangThaiDonHang);
+  const idx = COD_LINEAR_STATUS_ORDER.indexOf(stepId);
+  return cur !== -1 && idx !== -1 && idx <= cur;
+};
+
+export const isCodStepDone = (order, stepId) => {
+  if (!order) return false;
+  if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
+  const cur = getCodLinearStatusIndex(order.trangThaiDonHang);
+  const idx = COD_LINEAR_STATUS_ORDER.indexOf(stepId);
+  if (cur === -1 || idx === -1) return false;
+  if (order.trangThaiDonHang === 'delivered') return true;
+  if (order.trangThaiDonHang === 'pending') return false;
+  return idx <= cur;
+};
+
+export const isCodStepNext = (order, stepId) => {
+  if (!order) return false;
+  if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
+  if (order.trangThaiDonHang === 'delivered') return false;
+  const cur = getCodLinearStatusIndex(order.trangThaiDonHang);
+  const idx = COD_LINEAR_STATUS_ORDER.indexOf(stepId);
+  if (cur === -1 || idx === -1) return false;
+  if (order.trangThaiDonHang === 'pending') {
+    return stepId === 'pending';
+  }
+  return idx === cur + 1;
+};
+
+export const isCodStepCurrent = (order, stepId) => {
+  return isCodStepNext(order, stepId);
+};
+
+export const getCodEffectiveStatus = (order) => {
+  if (!order) return { label: 'Chờ xác nhận', color: { bg: 'rgba(148,163,184,0.15)', text: '#94a3b8' } };
+  if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) {
+    return {
+      label: orderStatusLabel(order.trangThaiDonHang),
+      color: orderStatusColor(order.trangThaiDonHang)
+    };
+  }
+  if (order.kenhBan === 'in_store') {
+    return { label: 'Đã giao', color: { bg: 'rgba(34,197,94,0.15)', text: '#16a34a' } };
+  }
+  if (order.trangThaiDonHang === 'pending') {
+    return { label: 'Chờ xác nhận', color: { bg: 'rgba(148,163,184,0.15)', text: '#94a3b8' } };
+  }
+  if (order.trangThaiDonHang === 'confirmed') {
+    return { label: 'Đã lên đơn', color: { bg: 'rgba(59,130,246,0.15)', text: '#2563eb' } };
+  }
+  if (order.trangThaiDonHang === 'processing' || order.trangThaiDonHang === 'shipping') {
+    return { label: 'Đang đóng gói', color: { bg: 'rgba(168,85,247,0.15)', text: '#9333ea' } };
+  }
+  if (order.trangThaiDonHang === 'out_for_delivery' || order.trangThaiDonHang === 'awaiting_confirmation') {
+    return { label: 'Đang giao hàng', color: { bg: 'rgba(56,189,248,0.15)', text: '#0284c7' } };
+  }
+  if (order.trangThaiDonHang === 'delivered') {
+    return { label: 'Đã giao', color: { bg: 'rgba(34,197,94,0.15)', text: '#16a34a' } };
+  }
+  return {
+    label: orderStatusLabel(order.trangThaiDonHang),
+    color: orderStatusColor(order.trangThaiDonHang)
+  };
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// TIẾN TRÌNH CHO ĐƠN HÀNG THANH TOÁN TRƯỚC BẰNG QR (7 BƯỚC):
+// Tạo đơn -> Chờ thanh toán -> Chờ xử lý -> Đã lên đơn ->
+// Đang đóng gói -> Đang giao hàng -> Đã giao
 // ══════════════════════════════════════════════════════════════════════════
 
 export const isQrPayment = (order) => {
   if (!order) return false;
   const p = (order.phuongThucThanhToan || order.phuongThuc || '').toLowerCase().trim();
-  if (p === 'qr' || p === 'bank_transfer' || p === 'chuyen_khoan' || p === 'vietqr') return true;
-  // Đơn hàng online mà chưa thanh toán hoặc không phải là COD/tiền mặt thì đều áp dụng tiến trình thanh toán QR
-  if (order.kenhBan === 'online' && !['tien_mat', 'cod'].includes(p)) {
+  // Nếu rõ ràng là QR hoặc chuyển khoản ngân hàng
+  if (['qr', 'bank_transfer', 'chuyen_khoan', 'vietqr'].includes(p)) return true;
+  // Nếu là tiền mặt / COD thì chắc chắn là phương thức thanh toán sau (COD)
+  if (['tien_mat', 'cod', 'tiền mặt', 'tien mat'].includes(p)) return false;
+  // Kiểm tra nếu có danh sách thanh toán chứa chuyển khoản / QR
+  if (Array.isArray(order.thanhToans) && order.thanhToans.some(t => {
+    const tp = (t.phuongThucThanhToan || t.phuongThuc || '').toLowerCase().trim();
+    return ['qr', 'bank_transfer', 'chuyen_khoan', 'vietqr'].includes(tp);
+  })) {
     return true;
   }
   return false;
 };
 
 export const QR_TIMELINE_STEPS = [
-  { id: 'tao_don',               title: 'Tạo đơn',                desc: 'Đơn hàng đã được tạo thành công',           icon: FileCheck },
-  { id: 'thanh_toan',            title: 'Thanh toán',             desc: 'Chờ khách quét QR / Admin duyệt thanh toán', icon: CreditCard },
-  { id: 'cho_xu_ly',             title: 'Chờ xử lý',              desc: 'Đã nhận tiền, chờ nhân viên kiểm tra',     icon: Clock },
-  { id: 'da_len_don',            title: 'Đã lên đơn',             desc: 'Đơn hàng đã được duyệt và lên đơn',        icon: FileText },
-  { id: 'dang_dong_goi',         title: 'Đang đóng gói',          desc: 'Kho đang chuẩn bị và đóng gói sản phẩm',    icon: Package },
-  { id: 'dang_giao_hang',        title: 'Đang giao hàng',         desc: 'Shipper đang trên đường giao hàng',         icon: Bike },
-  { id: 'da_giao_cho_xac_nhan',  title: 'Đã giao - chờ xác nhận', desc: 'Đã giao tới nơi, chờ khách nhận hàng',    icon: Inbox },
-  { id: 'da_giao',               title: 'Đã giao',                desc: 'Đơn hàng đã hoàn tất thành công',          icon: CheckCircle2 },
+  { id: 'tao_don',        title: 'Tạo đơn',        desc: 'Đơn hàng đã được tạo thành công',           icon: FileCheck },
+  { id: 'cho_thanh_toan', title: 'Chờ thanh toán', desc: 'Chờ khách quét QR / Admin duyệt thanh toán', icon: CreditCard },
+  { id: 'cho_xu_ly',      title: 'Chờ xử lý',      desc: 'Đã nhận tiền, chờ nhân viên kiểm tra',     icon: Clock },
+  { id: 'da_len_don',     title: 'Đã lên đơn',     desc: 'Đơn hàng đã được duyệt và lên đơn',        icon: FileText },
+  { id: 'dang_dong_goi',  title: 'Đang đóng gói',  desc: 'Kho đang chuẩn bị và đóng gói sản phẩm',    icon: Package },
+  { id: 'dang_giao_hang', title: 'Đang giao hàng', desc: 'Shipper đang trên đường giao hàng',         icon: Bike },
+  { id: 'da_giao',        title: 'Đã giao',        desc: 'Đơn hàng đã hoàn tất thành công',          icon: CheckCircle2 },
 ];
 
 export const isQrStepReached = (order, stepId) => {
   if (!order) return false;
   if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
   if (stepId === 'tao_don') return true;
-  if (stepId === 'thanh_toan') return true;
+  if (stepId === 'cho_thanh_toan' || stepId === 'thanh_toan') return true;
 
   const isPaid = order.trangThaiThanhToan === 'paid';
   if (!isPaid) return false;
 
   if (stepId === 'cho_xu_ly') return isPaid;
 
-  const orderStatuses = ['confirmed', 'processing', 'out_for_delivery', 'awaiting_confirmation', 'delivered'];
-  const curIdx = orderStatuses.indexOf(order.trangThaiDonHang === 'shipping' ? 'processing' : order.trangThaiDonHang);
+  const normalized = order.trangThaiDonHang === 'shipping' ? 'processing' : order.trangThaiDonHang === 'awaiting_confirmation' ? 'out_for_delivery' : order.trangThaiDonHang;
+  const orderStatuses = ['confirmed', 'processing', 'out_for_delivery', 'delivered'];
+  const curIdx = orderStatuses.indexOf(normalized);
+  if (curIdx === -1) return false;
 
   if (stepId === 'da_len_don') return curIdx >= 0;
   if (stepId === 'dang_dong_goi') return curIdx >= 1;
   if (stepId === 'dang_giao_hang') return curIdx >= 2;
-  if (stepId === 'da_giao_cho_xac_nhan') return curIdx >= 3;
-  if (stepId === 'da_giao') return curIdx >= 4;
+  if (stepId === 'da_giao') return curIdx >= 3;
 
   return false;
 };
@@ -132,40 +227,67 @@ export const isQrStepDone = (order, stepId) => {
   if (!order) return false;
   if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
   if (stepId === 'tao_don') return true;
-  if (stepId === 'thanh_toan') return order.trangThaiThanhToan === 'paid';
+  // 'Chờ thanh toán' chỉ được tích xanh khi đã thanh toán thực sự
+  if (stepId === 'cho_thanh_toan' || stepId === 'thanh_toan') {
+    return order.trangThaiThanhToan === 'paid';
+  }
 
   const isPaid = order.trangThaiThanhToan === 'paid';
   if (!isPaid) return false;
 
-  const orderStatuses = ['confirmed', 'processing', 'out_for_delivery', 'awaiting_confirmation', 'delivered'];
-  const curIdx = orderStatuses.indexOf(order.trangThaiDonHang === 'shipping' ? 'processing' : order.trangThaiDonHang);
+  // 'Chờ xử lý' chỉ done khi admin đã xử lý (order đã rời khỏi trạng thái pending)
+  if (stepId === 'cho_xu_ly') return isPaid && order.trangThaiDonHang !== 'pending';
 
-  if (stepId === 'cho_xu_ly') return curIdx >= 0;
-  if (stepId === 'da_len_don') return curIdx >= 1;
-  if (stepId === 'dang_dong_goi') return curIdx >= 2;
-  if (stepId === 'dang_giao_hang') return curIdx >= 3;
-  if (stepId === 'da_giao_cho_xac_nhan') return curIdx >= 4;
-  if (stepId === 'da_giao') return curIdx >= 4;
+  const normalized = order.trangThaiDonHang === 'shipping' ? 'processing' : order.trangThaiDonHang === 'awaiting_confirmation' ? 'out_for_delivery' : order.trangThaiDonHang;
+  const orderStatuses = ['confirmed', 'processing', 'out_for_delivery', 'delivered'];
+  const curIdx = orderStatuses.indexOf(normalized);
+  if (curIdx === -1) return false;
+
+  // Khi đã giao hàng thành công (delivered): tất cả các bước đều hoàn tất
+  if (normalized === 'delivered') return true;
+
+  // Trạng thái nào xong sẽ tích (checked):
+  if (stepId === 'da_len_don') return curIdx >= 0;
+  if (stepId === 'dang_dong_goi') return curIdx >= 1;
+  if (stepId === 'dang_giao_hang') return curIdx >= 2;
+  if (stepId === 'da_giao') return curIdx >= 3;
 
   return false;
 };
 
-export const isQrStepCurrent = (order, stepId) => {
+export const isQrStepNext = (order, stepId) => {
   if (!order) return false;
   if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
+  if (order.trangThaiDonHang === 'delivered') return false;
 
-  if (stepId === 'thanh_toan') return order.trangThaiThanhToan !== 'paid';
+  // Khi chưa thanh toán: bước sáng lên là 'cho_thanh_toan' (khách cần quét QR)
+  if (order.trangThaiThanhToan !== 'paid') {
+    return stepId === 'cho_thanh_toan';
+  }
 
-  if (order.trangThaiThanhToan !== 'paid') return false;
-
-  if (stepId === 'cho_xu_ly') return order.trangThaiDonHang === 'pending';
-  if (stepId === 'da_len_don') return order.trangThaiDonHang === 'confirmed';
-  if (stepId === 'dang_dong_goi') return order.trangThaiDonHang === 'processing';
-  if (stepId === 'dang_giao_hang') return order.trangThaiDonHang === 'out_for_delivery' || order.trangThaiDonHang === 'shipping';
-  if (stepId === 'da_giao_cho_xac_nhan') return order.trangThaiDonHang === 'awaiting_confirmation';
-  if (stepId === 'da_giao') return order.trangThaiDonHang === 'delivered';
-
+  // Đã thanh toán — bước tiếp theo cần thực hiện sẽ sáng (glowing):
+  // 1. Chờ xử lý: admin cần kiểm tra đơn hàng
+  if (order.trangThaiDonHang === 'pending') {
+    return stepId === 'cho_xu_ly';
+  }
+  // 2. Khi đơn đã ở trạng thái confirmed (Đã lên đơn): bước tiếp theo là Đang đóng gói
+  if (order.trangThaiDonHang === 'confirmed') {
+    return stepId === 'dang_dong_goi';
+  }
+  // 3. Khi đơn đã ở trạng thái processing (Đang đóng gói): bước tiếp theo là Đang giao hàng
+  if (order.trangThaiDonHang === 'processing' || order.trangThaiDonHang === 'shipping') {
+    return stepId === 'dang_giao_hang';
+  }
+  // 4. Khi đơn đã ở trạng thái out_for_delivery (Đang giao hàng): bước tiếp theo là Đã giao
+  if (order.trangThaiDonHang === 'out_for_delivery' || order.trangThaiDonHang === 'awaiting_confirmation') {
+    return stepId === 'da_giao';
+  }
   return false;
+};
+
+
+export const isQrStepCurrent = (order, stepId) => {
+  return isQrStepNext(order, stepId);
 };
 
 export const getQrEffectiveStatus = (order) => {
@@ -188,11 +310,8 @@ export const getQrEffectiveStatus = (order) => {
   if (order.trangThaiDonHang === 'processing' || order.trangThaiDonHang === 'shipping') {
     return { label: 'Đang đóng gói', color: { bg: 'rgba(168,85,247,0.15)', text: '#9333ea' } };
   }
-  if (order.trangThaiDonHang === 'out_for_delivery') {
+  if (order.trangThaiDonHang === 'out_for_delivery' || order.trangThaiDonHang === 'awaiting_confirmation') {
     return { label: 'Đang giao hàng', color: { bg: 'rgba(56,189,248,0.15)', text: '#0284c7' } };
-  }
-  if (order.trangThaiDonHang === 'awaiting_confirmation') {
-    return { label: 'Đã giao - chờ xác nhận', color: { bg: 'rgba(45,212,191,0.15)', text: '#0d9488' } };
   }
   if (order.trangThaiDonHang === 'delivered') {
     return { label: 'Đã giao', color: { bg: 'rgba(34,197,94,0.15)', text: '#16a34a' } };

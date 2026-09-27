@@ -33,6 +33,12 @@ public class PhanLoaiService {
                 Integer.class, sanPhamId);
     }
 
+    public List<String> maCuaSanPham(Integer sanPhamId) {
+        return jdbc.queryForList(
+                "SELECT p.ma_phan_loai FROM phan_loai p INNER JOIN san_pham_phan_loai sp ON p.phan_loai_id = sp.phan_loai_id WHERE sp.san_pham_id = ? ORDER BY p.thu_tu, p.phan_loai_id",
+                String.class, sanPhamId);
+    }
+
     // Cập nhật danh sách phân loại cho sản phẩm
     @Transactional
     public void luuChoSanPham(Integer sanPhamId, List<Integer> phanLoaiIds) {

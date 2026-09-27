@@ -1,5 +1,8 @@
 <script setup>
-defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
+defineOptions({
+  inheritAttrs: false,
+});
+defineEmits(['addToCart', 'add-to-cart', 'buyAgainUnavailable', 'buy-again-unavailable', 'goHome', 'go-home', 'toast', 'logout']);
 import { usePageMeta } from "@/composables/usePageMeta.js";
 import { Search, ArrowLeft } from '@lucide/vue';
 usePageMeta("404 - Không tìm thấy trang", "Trang bạn tìm kiếm không tồn tại.");

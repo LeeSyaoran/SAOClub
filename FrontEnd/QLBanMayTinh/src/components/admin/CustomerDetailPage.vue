@@ -22,6 +22,8 @@ const customer = computed(() =>
   (CustomersStore.items ?? []).find((c) => c.khachHangId === props.customerId) ?? null,
 );
 
+const isBusiness = computed(() => customer.value?.loaiKhach === "doanh_nghiep");
+
 const customerOrders = computed(() =>
   (OrdersStore.items ?? [])
     .filter((o) => o.khachHangId === props.customerId)
@@ -119,11 +121,11 @@ const showGiftVoucherModal = ref(false);
           <img class="customer-avatar" :src="customer.avatarUrl || customer.hinhAnh || '/images/Gemini_Generated_Image_kbekzokbekzokbek.png'" :alt="customer.hoTen" />
         </div>
         <div>
-          <div class="customer-detail-name">{{ customer.hoTen }}</div>
+          <div class="customer-detail-name">{{ isBusiness ? (customer.tenCongTy || customer.hoTen) : customer.hoTen }}</div>
           <div class="customer-detail-contact">{{ customer.soDienThoai }} · {{ customer.email || '—' }}</div>
           <div class="customer-detail-tags">
             <span class="badge" :class="customer.trangThai==='active'?'bg-success':'bg-secondary'">{{ statusLabel(customer.trangThai) }}</span>
-            <span class="badge bg-light text-dark ms-2">{{ customer.loaiKhach || 'ca_nhan' }}</span>
+            <span class="badge bg-light text-dark ms-2">{{ isBusiness ? 'Doanh nghiệp' : 'Cá nhân' }}</span>
           </div>
         </div>
       </div>
@@ -165,15 +167,24 @@ const showGiftVoucherModal = ref(false);
 
       <div class="customer-detail-content-grid">
         <section class="customer-slab customer-slab-left">
-          <div class="customer-slab-title">Thông tin cá nhân</div>
+          <div class="customer-slab-title">{{ isBusiness ? 'Thông tin doanh nghiệp' : 'Thông tin cá nhân' }}</div>
           <div class="customer-facts">
-            <div class="fact-row"><span class="fact-label">Họ tên</span><span class="fact-value">{{ customer.hoTen }}</span></div>
-            <div class="fact-row"><span class="fact-label">Số điện thoại</span><span class="fact-value">{{ customer.soDienThoai }}</span></div>
-            <div class="fact-row"><span class="fact-label">Email</span><span class="fact-value">{{ customer.email || '—' }}</span></div>
-            <div class="fact-row"><span class="fact-label">Địa chỉ</span><span class="fact-value">{{ customer.diaChi || '—' }}</span></div>
-            <div class="fact-row"><span class="fact-label">Loại khách</span><span class="fact-value">{{ customer.loaiKhach || 'ca_nhan' }}</span></div>
-            <div class="fact-row"><span class="fact-label">Công ty</span><span class="fact-value">{{ customer.tenCongTy || '—' }}</span></div>
-            <div class="fact-row"><span class="fact-label">Mã số thuế</span><span class="fact-value">{{ customer.maSoThue || '—' }}</span></div>
+            <template v-if="isBusiness">
+              <div class="fact-row"><span class="fact-label">Tên công ty</span><span class="fact-value">{{ customer.tenCongTy || customer.hoTen }}</span></div>
+              <div class="fact-row"><span class="fact-label">Mã số thuế</span><span class="fact-value">{{ customer.maSoThue || '—' }}</span></div>
+              <div class="fact-row"><span class="fact-label">Người đại diện</span><span class="fact-value">{{ customer.hoTen || '—' }}</span></div>
+              <div class="fact-row"><span class="fact-label">Số điện thoại</span><span class="fact-value">{{ customer.soDienThoai }}</span></div>
+              <div class="fact-row"><span class="fact-label">Email</span><span class="fact-value">{{ customer.email || '—' }}</span></div>
+              <div class="fact-row"><span class="fact-label">Địa chỉ trụ sở</span><span class="fact-value">{{ customer.diaChi || '—' }}</span></div>
+              <div class="fact-row"><span class="fact-label">Loại khách</span><span class="fact-value">Doanh nghiệp</span></div>
+            </template>
+            <template v-else>
+              <div class="fact-row"><span class="fact-label">Họ tên</span><span class="fact-value">{{ customer.hoTen }}</span></div>
+              <div class="fact-row"><span class="fact-label">Số điện thoại</span><span class="fact-value">{{ customer.soDienThoai }}</span></div>
+              <div class="fact-row"><span class="fact-label">Email</span><span class="fact-value">{{ customer.email || '—' }}</span></div>
+              <div class="fact-row"><span class="fact-label">Địa chỉ</span><span class="fact-value">{{ customer.diaChi || '—' }}</span></div>
+              <div class="fact-row"><span class="fact-label">Loại khách</span><span class="fact-value">Cá nhân</span></div>
+            </template>
           </div>
         </section>
 

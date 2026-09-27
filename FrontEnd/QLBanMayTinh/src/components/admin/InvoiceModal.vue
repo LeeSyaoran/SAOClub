@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { formatPrice, formatDateTime } from "../../utils/adminFormat.js";
 import { paymentMethodLabel } from "../../utils/orderStatus.js";
@@ -125,7 +125,7 @@ const kenhBanLabel = (k) => k === 'in_store' ? 'Tại quầy' : 'Online';
 const printInvoice = () => {
   const o = props.order, c = kh.value, now = new Date().toLocaleString("vi-VN");
   const rows = items.value.map((item,i) => {
-    const vl = variantLine(item), sn = item.soSerial ?? item.serialNumber ?? "";
+    const vl = variantLine(item), sn = (props.order?.trangThaiDonHang === 'pending') ? 'Chưa chốt' : (item.soSerial ?? item.serialNumber ?? "");
     const pname = productName(item);
     return `<tr>
       <td style="text-align:center;border:1px solid #ccc;">${i+1}</td>
@@ -271,7 +271,7 @@ ${tongDiem.value!==null?`<div class="pr" style="color:#555;margin-top:2px;font-w
                     <div class="inv-pname">{{ productName(item) }}</div>
                     <div v-if="variantLine(item)" class="inv-pvar">{{ variantLine(item) }}</div>
                     <div v-if="skuLine(item)" class="inv-pser">Mã hàng: <strong>{{ skuLine(item) }}</strong></div>
-                    <div class="inv-pser">Số serial: <strong>{{ item.soSerial ?? item.serialNumber ?? '—' }}</strong></div>
+                    <div class="inv-pser">Số serial: <strong>{{ props.order?.trangThaiDonHang === 'pending' ? 'Chưa chốt' : (item.soSerial ?? item.serialNumber ?? '—') }}</strong></div>
                   </td>
                   <td class="tc">Cái</td>
                   <td class="tc">1</td>

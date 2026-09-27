@@ -1,12 +1,13 @@
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from "vue";
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from "vue";
 import { Search } from "@lucide/vue";
 import { Filter, X, ChevronDown, ChevronUp } from '@lucide/vue';
 import { t } from "../../i18n/index.js";
 import {
   orderStatusLabel, orderStatusColor, orderStatusIcon, paymentStatusLabel, paymentStatusColor, paymentStatusIcon,
   paymentMethodLabel, paymentMethodIcon, channelLabel, channelColor,
-  isQrPayment, QR_TIMELINE_STEPS, isQrStepReached, isQrStepDone, isQrStepCurrent, getQrEffectiveStatus
+  isQrPayment, QR_TIMELINE_STEPS, isQrStepReached, isQrStepDone, isQrStepCurrent, isQrStepNext, getQrEffectiveStatus,
+  COD_TIMELINE_STEPS, isCodStepReached, isCodStepDone, isCodStepCurrent, isCodStepNext, getCodEffectiveStatus, getCodLinearStatusIndex, COD_LINEAR_STATUS_ORDER
 } from "../../utils/orderStatus.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatPrice, formatDate, formatDateTime } from "../../utils/adminFormat.js";
@@ -21,6 +22,7 @@ import * as ThanhToanService from "../../services/ThanhToanService.js";
 import { OrdersStore, ensureOrders, refreshOrders } from "../../stores/orders.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
+import { AuthStore } from "../../stores/index.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
@@ -34,6 +36,26 @@ const props = defineProps({
 const emit = defineEmits(["order-detail-opened"]);
 
 onMounted(() => { ensureOrders(); ensureCustomers(); ensureProducts(); });
+
+// SSE realtime: khi có đơn cập nhật và modal đang mở → refresh modal ngay (không cần reload)
+let orderDetailEventSource = null;
+const setupOrderDetailSse = () => {
+  if (orderDetailEventSource) return;
+  orderDetailEventSource = new EventSource('/api/don-hang/events');
+  orderDetailEventSource.addEventListener('order-updated', async () => {
+    await refreshOrders();
+    const openedId = orderDetailData.value?.donHangId;
+    if (!openedId) return;
+    // refreshOrderDetail() chỉ chạy nếu modal đang hiển thị (data đã set)
+    const fresh = (OrdersStore.items ?? []).find(o => o.donHangId === openedId);
+    if (fresh) orderDetailData.value = fresh;
+  });
+};
+const teardownOrderDetailSse = () => {
+  if (orderDetailEventSource) { orderDetailEventSource.close(); orderDetailEventSource = null; }
+};
+onMounted(setupOrderDetailSse);
+onUnmounted(teardownOrderDetailSse);
 
 // Khi navigateToOrderId được set từ bên ngoài → mở modal chi tiết đơn đó
 watch(() => props.navigateToOrderId, (id) => {
@@ -387,29 +409,6 @@ const openVariantDetail = (bienTheId) => {
 
 // ── Order status helpers (dùng chung — xem src/utils/orderStatus.js) ──────────
 
-// Cập nhật trạng thái đơn hàng
-const showOrderModal = ref(false);
-const editingOrder = ref(null);
-const orderStatusError = ref("");
-const orderStatusSaving = ref(false);
-const orderStatusForm = reactive({
-  trangThaiDonHang: "",
-  trangThaiThanhToan: "",
-  ngayGiaoDuKien: "", // Ngày dự kiến giao hàng
-  ngayGiaoThucTe: "", // Ngày khách nhận hàng thực tế
-  maVanDon: "",        // Mã vận đơn — nhân viên/admin nhập tay khi chuyển sang "Đang giao"
-});
-
-const openOrderStatus = (o) => {
-  editingOrder.value = o;
-  orderStatusForm.trangThaiDonHang = o.trangThaiDonHang ?? "";
-  orderStatusForm.trangThaiThanhToan = o.trangThaiThanhToan ?? "";
-  orderStatusForm.ngayGiaoDuKien = o.ngayGiaoDuKien?.slice(0, 16) ?? "";
-  orderStatusForm.ngayGiaoThucTe = o.ngayGiaoThucTe?.slice(0, 16) ?? "";
-  orderStatusForm.maVanDon = o.maVanDon ?? "";
-  orderStatusError.value = "";
-  showOrderModal.value = true;
-};
 // Tạo dữ liệu cập nhật trạng thái đơn hàng
 const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGiaoDuKien, ngayGiaoThucTe, maVanDon }) => ({
   khachHangId: o.khachHangId,
@@ -434,60 +433,26 @@ const buildOrderUpdateBody = (o, { trangThaiDonHang, trangThaiThanhToan, ngayGia
   kenhBan: o.kenhBan ?? null,
   ghiChu: o.ghiChu ?? null,
   maVanDon: maVanDon || null,
+  phuongThucThanhToan: o.phuongThucThanhToan || o.phuongThuc || null,
+  idempotencyKey: o.idempotencyKey ?? null,
 });
 
-const saveOrderStatus = async () => {
-  orderStatusError.value = "";
-  if (orderStatusSaving.value) return;
-  orderStatusSaving.value = true;
-  try {
-    const o = editingOrder.value;
-    const body = buildOrderUpdateBody(o, {
-      trangThaiDonHang: orderStatusForm.trangThaiDonHang,
-      trangThaiThanhToan: orderStatusForm.trangThaiThanhToan,
-      ngayGiaoDuKien: orderStatusForm.ngayGiaoDuKien,
-      ngayGiaoThucTe: orderStatusForm.ngayGiaoThucTe,
-      maVanDon: orderStatusForm.maVanDon,
-    });
-    const res = await DonHangService.update(o.donHangId, body);
-    if (!res.ok) {
-      orderStatusError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
-      return;
-    }
-    showOrderModal.value = false;
-    await refreshOrders();
-  } catch (e) {
-    orderStatusError.value = e.message;
-  } finally {
-    orderStatusSaving.value = false;
-  }
-};
 
 // Trạng thái đơn hàng kế tiếp
 const NEXT_ORDER_STATUS = {
   pending: 'confirmed', confirmed: 'processing', processing: 'out_for_delivery',
-  shipping: 'out_for_delivery', out_for_delivery: 'awaiting_confirmation',
+  shipping: 'out_for_delivery', out_for_delivery: 'delivered', awaiting_confirmation: 'delivered',
 };
 const NEXT_ORDER_STATUS_LABEL = {
   pending:          { icon: CheckCircle2, key: 'admin.orders.nextConfirm' },
   confirmed:        { icon: Package, key: 'admin.orders.nextPack' },
   processing:       { icon: Bike, key: 'admin.orders.nextOutForDelivery' },
   shipping:         { icon: Bike, key: 'admin.orders.nextOutForDelivery' },
-  out_for_delivery: { icon: Inbox, key: 'admin.orders.nextDelivered' },
+  out_for_delivery: { icon: CheckCircle2, key: 'admin.orders.nextDelivered' },
+  awaiting_confirmation: { icon: CheckCircle2, key: 'admin.orders.nextDelivered' },
 };
 
-// Danh sách trạng thái theo quy trình đơn hàng
-const LINEAR_STATUS_ORDER = [
-  'pending', 'confirmed', 'processing',
-  'out_for_delivery', 'awaiting_confirmation', 'delivered',
-];
-
-const getLinearStatusIndex = (status) => {
-  if (status === 'shipping') return LINEAR_STATUS_ORDER.indexOf('processing');
-  return LINEAR_STATUS_ORDER.indexOf(status);
-};
-
-// Timeline đơn hàng: Hỗ trợ 8 bước dành riêng cho đơn thanh toán qua mã QR
+// Timeline đơn hàng: Phân biệt rõ đơn Thanh toán sau (5 bước) và Thanh toán QR (7 bước)
 const orderTimelineSteps = computed(() => {
   if (orderDetailData.value?.kenhBan === 'in_store') {
     return [
@@ -502,14 +467,7 @@ const orderTimelineSteps = computed(() => {
   if (isQrPayment(orderDetailData.value)) {
     return QR_TIMELINE_STEPS;
   }
-  return [
-    { id: 'pending',                title: orderStatusLabel('pending'),                desc: t('orderStatus.timeline.placedDesc'),    icon: CheckCircle2 },
-    { id: 'confirmed',              title: orderStatusLabel('confirmed'),              desc: t('orderStatus.timeline.confirmedDesc'), icon: CheckCircle2 },
-    { id: 'processing',             title: orderStatusLabel('processing'),             desc: t('orderStatus.timeline.packingDesc'),   icon: Package },
-    { id: 'out_for_delivery',       title: orderStatusLabel('out_for_delivery'),       desc: t('orderStatus.timeline.outForDeliveryDesc'), icon: Bike },
-    { id: 'awaiting_confirmation',  title: orderStatusLabel('awaiting_confirmation'),  desc: t('orderStatus.timeline.deliveredDesc'),  icon: Inbox },
-    { id: 'delivered',              title: orderStatusLabel('delivered'),              desc: t('orderStatus.timeline.deliveredDesc'),  icon: CheckCircle2 },
-  ];
+  return COD_TIMELINE_STEPS;
 });
 
 // Kiểm tra trạng thái đã qua trên timeline
@@ -520,9 +478,7 @@ const isStepReached = (order, stepId) => {
   if (isQrPayment(order)) {
     return isQrStepReached(order, stepId);
   }
-  const cur = getLinearStatusIndex(order.trangThaiDonHang);
-  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
-  return cur !== -1 && idx !== -1 && idx <= cur;
+  return isCodStepReached(order, stepId);
 };
 
 // Kiểm tra bước đã hoàn tất trên timeline
@@ -533,9 +489,7 @@ const isStepDoneById = (order, stepId) => {
   if (isQrPayment(order)) {
     return isQrStepDone(order, stepId);
   }
-  const cur = getLinearStatusIndex(order.trangThaiDonHang);
-  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
-  return cur !== -1 && idx !== -1 && idx <= cur;
+  return isCodStepDone(order, stepId);
 };
 
 // Kiểm tra bước hiện tại
@@ -544,27 +498,124 @@ const isStepCurrentById = (order, stepId) => {
   if (isQrPayment(order)) {
     return isQrStepCurrent(order, stepId);
   }
-  const curStatus = order?.trangThaiDonHang === 'shipping' ? 'processing' : order?.trangThaiDonHang;
-  return curStatus === stepId;
+  return isCodStepCurrent(order, stepId);
 };
 
-// Bấm được khi step đó nằm sau trạng thái hiện tại (chuyển tiến), HOẶC chính là bước hiện tại
-const canJumpToStep = (order, stepId) => {
-  if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
+// Kiểm tra bước kế tiếp đang chuẩn bị thực hiện (để sáng lên)
+const isStepNextById = (order, stepId) => {
   if (order?.kenhBan === 'in_store') return false;
   if (isQrPayment(order)) {
-    if (stepId === 'thanh_toan' && order.trangThaiThanhToan !== 'paid') return true;
-    if (stepId === 'cho_xu_ly') return true;
-    if (stepId === 'da_len_don') return true;
-    if (stepId === 'dang_dong_goi') return true;
-    if (stepId === 'dang_giao_hang') return true;
-    if (stepId === 'da_giao_cho_xac_nhan') return true;
-    if (stepId === 'da_giao') return true;
+    return isQrStepNext(order, stepId);
+  }
+  return isCodStepNext(order, stepId);
+};
+
+// Kiểm tra bước đã được đến (reached) — dùng để hiển thị màu cam "đang chờ" khi chưa done
+const isStepReachedById = (order, stepId) => {
+  if (!order) return false;
+  if (order?.kenhBan === 'in_store') return !['cancelled', 'returned'].includes(order.trangThaiDonHang);
+  if (isQrPayment(order)) return isQrStepReached(order, stepId);
+  return isCodStepReached(order, stepId);
+};
+
+
+// Lấy ID của bước kế tiếp cần thực hiện
+const getNextStepId = (order) => {
+  if (!order) return null;
+  if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return null;
+  if (order?.kenhBan === 'in_store') return null;
+
+  if (isQrPayment(order)) {
+    if (order.trangThaiThanhToan !== 'paid') {
+      return 'cho_thanh_toan';
+    }
+    const cur = order.trangThaiDonHang;
+    if (cur === 'pending') return 'cho_xu_ly';
+    if (cur === 'confirmed') return 'dang_dong_goi';
+    if (cur === 'processing' || cur === 'shipping') return 'dang_giao_hang';
+    if (cur === 'out_for_delivery' || cur === 'awaiting_confirmation') return 'da_giao';
+    return null;
+  }
+
+  const cur = order.trangThaiDonHang;
+  if (cur === 'pending') return 'pending';
+  if (cur === 'confirmed') return 'processing';
+  if (cur === 'processing' || cur === 'shipping') return 'out_for_delivery';
+  if (cur === 'out_for_delivery' || cur === 'awaiting_confirmation') return 'delivered';
+  return null;
+};
+
+// Bấm được khi step đó là bước hợp lệ tiếp theo
+const canJumpToStep = (order, stepId) => {
+  if (!order) return false;
+  if (['cancelled', 'returned'].includes(order.trangThaiDonHang)) return false;
+  if (order?.kenhBan === 'in_store') return false;
+
+  const nextStep = getNextStepId(order);
+  if (!nextStep && order.trangThaiDonHang !== 'confirmed') return false;
+
+  if (isQrPayment(order)) {
+    // Khi chưa thanh toán: không cho nhấn bất kỳ bước nào (phải chờ khách thanh toán thực sự)
+    if (order.trangThaiThanhToan !== 'paid') return false;
+
+    // Cho phép bấm 'da_len_don' nếu đang confirmed để xem/đổi serial
+    if (order.trangThaiDonHang === 'confirmed' && stepId === 'da_len_don') return true;
+
+    // Không cho bấm lùi lại các bước đã hoàn tất
+    if (isStepDoneById(order, stepId)) return false;
+
+    // Nhảy từng bước một:
+    // 1. Khi đang pending: bấm 'cho_xu_ly' hoặc 'da_len_don' để duyệt và lên đơn (chọn serial)
+    if (order.trangThaiDonHang === 'pending') {
+      return stepId === 'cho_xu_ly' || stepId === 'da_len_don';
+    }
+
+    // 2. Khi đang confirmed:
+    // - Bấm 'dang_dong_goi' để chuyển sang bước Đang đóng gói (processing)
+    if (order.trangThaiDonHang === 'confirmed') {
+      return stepId === 'dang_dong_goi';
+    }
+
+    // 3. Khi đang processing/shipping: bấm 'dang_giao_hang' để chuyển sang giao hàng
+    if (order.trangThaiDonHang === 'processing' || order.trangThaiDonHang === 'shipping') {
+      return stepId === 'dang_giao_hang';
+    }
+
+    // 4. Khi đang out_for_delivery/awaiting_confirmation: bấm 'da_giao' để hoàn tất đơn hàng
+    if (order.trangThaiDonHang === 'out_for_delivery' || order.trangThaiDonHang === 'awaiting_confirmation') {
+      return stepId === 'da_giao';
+    }
+
     return false;
   }
-  const cur = getLinearStatusIndex(order.trangThaiDonHang);
-  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
-  return idx >= cur;
+
+  // Đơn thanh toán sau (COD)
+  // Cho phép bấm 'confirmed' nếu đang confirmed để xem/đổi serial
+  if (order.trangThaiDonHang === 'confirmed' && stepId === 'confirmed') return true;
+  if (isStepDoneById(order, stepId)) return false;
+  if (stepId === nextStep) return true;
+  return false;
+};
+
+const getStepActionTitle = (order, stepId) => {
+  if (!order || !canJumpToStep(order, stepId)) return '';
+  if (isQrPayment(order)) {
+    if (stepId === 'cho_xu_ly') return 'Xác nhận đơn hàng';
+    if (stepId === 'da_len_don') {
+      return order.trangThaiDonHang === 'confirmed' ? 'Xem / Đổi số serial' : 'Xác nhận lên đơn';
+    }
+    if (stepId === 'dang_dong_goi') return 'Chuyển sang "Đang đóng gói"';
+    if (stepId === 'dang_giao_hang') return 'Chuyển sang "Đang giao hàng"';
+    if (stepId === 'da_giao') return 'Xác nhận "Đã giao"';
+  } else {
+    if (stepId === 'confirmed') {
+      return order.trangThaiDonHang === 'confirmed' ? 'Xem / Đổi số serial' : 'Xác nhận đơn hàng';
+    }
+    if (stepId === 'processing') return 'Chuyển sang "Đang đóng gói"';
+    if (stepId === 'out_for_delivery') return 'Chuyển sang "Đang giao hàng"';
+    if (stepId === 'delivered') return 'Xác nhận "Đã giao"';
+  }
+  return 'Chuyển trạng thái';
 };
 
 // Admin duyệt thanh toán qua mã QR cho đơn hàng
@@ -591,56 +642,65 @@ const adminConfirmQrPayment = async (order) => {
   }
 };
 
-// Chuyển trạng thái đơn hàng theo bước đã chọn (Hỗ trợ cả 8 bước QR)
+// Chuyển trạng thái đơn hàng theo bước đã chọn (Hỗ trợ cả 7 bước QR và 5 bước COD)
 const jumpToStatus = async (order, stepId) => {
   let targetStatus = stepId;
 
   if (isQrPayment(order)) {
-    if (stepId === 'thanh_toan') {
-      if (order.trangThaiThanhToan !== 'paid') {
-        await adminConfirmQrPayment(order);
-      }
+    // Khi chưa thanh toán: không xử lý gì (phải chờ webhook thanh toán thực sự)
+    if (order.trangThaiThanhToan !== 'paid') return;
+    // Đã thanh toán, bỏ qua các bước đầu
+    if (stepId === 'tao_don' || stepId === 'cho_thanh_toan' || stepId === 'thanh_toan') {
       return;
     }
-    if (stepId === 'cho_xu_ly') {
-      if (order.trangThaiThanhToan !== 'paid') {
-        await adminConfirmQrPayment(order);
+    // 1. Khi đang ở confirmed và bấm lại 'da_len_don':
+    // Mở modal xem / đổi serial cho đơn online
+    if (stepId === 'da_len_don' && order.trangThaiDonHang === 'confirmed') {
+      if (order.kenhBan !== 'in_store') {
+        await openXacNhanSerialModal(order);
+        return;
       }
-      return;
     }
-    if (stepId === 'da_len_don') {
-      if (order.trangThaiThanhToan !== 'paid') {
-        await adminConfirmQrPayment(order);
-      }
-      if (order.kenhBan === 'online' && order.trangThaiDonHang === 'pending') {
+    // 2. Khi đang pending bấm 'cho_xu_ly' hoặc 'da_len_don':
+    // Xác nhận đơn hàng, chuyển trạng thái sang confirmed (Đã lên đơn)
+    if (order.trangThaiDonHang === 'pending' && (stepId === 'cho_xu_ly' || stepId === 'da_len_don')) {
+      targetStatus = 'confirmed';
+    }
+    // 3. Khi bấm 'dang_dong_goi' -> chuyển sang processing (Đang đóng gói)
+    else if (stepId === 'dang_dong_goi') {
+      targetStatus = 'processing';
+    }
+    // 4. Khi bấm 'dang_giao_hang' -> chuyển sang out_for_delivery (Đang giao hàng)
+    else if (stepId === 'dang_giao_hang') {
+      targetStatus = 'out_for_delivery';
+    }
+    // 5. Khi bấm 'da_giao' -> chuyển sang delivered (Đã giao)
+    else if (stepId === 'da_giao') {
+      targetStatus = 'delivered';
+    }
+  } else {
+    // Đơn COD (thanh toán sau)
+    if (stepId === 'pending') {
+      targetStatus = 'confirmed';
+    } else if (stepId === 'confirmed') {
+      // Khi đang ở confirmed, bấm lại confirmed để xem/đổi serial
+      if (order.trangThaiDonHang === 'confirmed' && order.kenhBan !== 'in_store') {
         await openXacNhanSerialModal(order);
         return;
       }
       targetStatus = 'confirmed';
-    } else if (stepId === 'dang_dong_goi') {
+    } else if (stepId === 'processing') {
       targetStatus = 'processing';
-    } else if (stepId === 'dang_giao_hang') {
+    } else if (stepId === 'out_for_delivery') {
       targetStatus = 'out_for_delivery';
-    } else if (stepId === 'da_giao_cho_xac_nhan') {
-      targetStatus = 'awaiting_confirmation';
-    } else if (stepId === 'da_giao') {
+    } else if (stepId === 'delivered') {
       targetStatus = 'delivered';
     }
   }
 
   if (order.trangThaiDonHang === targetStatus) return;
   if (!canJumpToStep(order, stepId)) return;
-  // Bước cần nhập thêm mã vận đơn: mở modal nếu chưa có mã
-  if (targetStatus === 'out_for_delivery' && !order.maVanDon) {
-    openOrderStatus(order);
-    orderStatusForm.trangThaiDonHang = 'out_for_delivery';
-    return;
-  }
-  // Đơn online pending -> confirmed: mở modal chọn serial
-  if (targetStatus === 'confirmed' && order.kenhBan === 'online') {
-    await openXacNhanSerialModal(order);
-    return;
-  }
+
   // Cập nhật thanh toán và ngày giao hàng thực tế
   const body = buildOrderUpdateBody(order, {
     trangThaiDonHang: targetStatus,
@@ -663,17 +723,6 @@ const jumpToStatus = async (order, stepId) => {
 const advanceOrderStatus = async (o) => {
   const next = NEXT_ORDER_STATUS[o.trangThaiDonHang];
   if (!next) return;
-  // Đơn online chuyển sang "confirmed" (xác nhận) phải chọn serial trước
-  if (next === 'confirmed' && o.kenhBan === 'online') {
-    await openXacNhanSerialModal(o);
-    return;
-  }
-  // Chuyển sang "Đang giao hàng": mở modal nhập mã vận đơn nếu chưa có
-  if (next === 'out_for_delivery' && !o.maVanDon) {
-    openOrderStatus(o);
-    orderStatusForm.trangThaiDonHang = 'out_for_delivery';
-    return;
-  }
   const body = buildOrderUpdateBody(o, {
     trangThaiDonHang: next,
     trangThaiThanhToan: next === 'awaiting_confirmation' && o.trangThaiThanhToan === 'unpaid'
@@ -752,6 +801,7 @@ const confirmXacNhanSerial = async () => {
   xacNhanLoading.value = true;
   try {
     const res = await DonHangService.xacNhan(xacNhanOrder.value.donHangId, {
+      nhanVienId: AuthStore.user?.id || AuthStore.user?.nhanVienId,
       lines: xacNhanLines.value.map((l) => ({
         chiTietDonHangId: l.id,
         serialIds: [...l.chosenSerialIds],
@@ -762,7 +812,12 @@ const confirmXacNhanSerial = async () => {
       return;
     }
     showXacNhanSerialModal.value = false;
+    showToast(xacNhanOrder.value?.trangThaiDonHang === 'confirmed' ? 'Đã cập nhật số serial thành công!' : 'Đã xác nhận đơn hàng và gán serial thành công!', 'success');
     await refreshOrders();
+    const updated = (OrdersStore.items ?? []).find(o => o.donHangId === xacNhanOrder.value?.donHangId);
+    if (updated) {
+      orderDetailData.value = updated;
+    }
   } catch (e) {
     xacNhanError.value = e.message;
   } finally {
@@ -926,16 +981,6 @@ const confirmXacNhanSerial = async () => {
               </td>
               <td>
                 <div class="d-flex align-items-center gap-1.5">
-                  <button
-                    v-if="isQrPayment(o) && o.trangThaiThanhToan !== 'paid'"
-                    class="alt-btn"
-                    style="background:#16a34a; color:#fff; border:none; padding:4px 9px; font-size:0.75rem; border-radius:6px; font-weight:600; display:inline-flex; align-items:center; gap:3px; box-shadow:0 1px 3px rgba(22,163,74,0.3); white-space:nowrap;"
-                    title="Duyệt thanh toán QR cho đơn này"
-                    :disabled="confirmingPayment"
-                    @click.stop="adminConfirmQrPayment(o)"
-                  >
-                    <CheckCircle2 :size="12" /> Duyệt QR
-                  </button>
                   <button class="alt-btn alt-btn--ghost" style="padding:4px 12px;" @click="openOrderDetail(o)">{{ t('admin.orders.detail') }}</button>
                 </div>
               </td>
@@ -1160,7 +1205,8 @@ const confirmXacNhanSerial = async () => {
                   </div>
                   <div class="d-flex align-items-center gap-2 mt-1" style="font-size:0.72rem; color:var(--text-muted); flex-wrap:wrap;">
                     <span v-if="item.maSku">SKU: <code style="color:var(--text-secondary);">{{ item.maSku }}</code></span>
-                    <span v-if="item.soSerial">· Serial: <strong style="color:var(--accent-fg); font-family:monospace;">{{ item.soSerial }}</strong></span>
+                    <span v-if="orderDetailData?.trangThaiDonHang !== 'pending' && item.soSerial">· Serial: <strong style="color:var(--accent-fg); font-family:monospace;">{{ item.soSerial }}</strong></span>
+                    <span v-else-if="orderDetailData?.trangThaiDonHang === 'pending'" class="text-secondary fst-italic" style="font-size:0.7rem;">· (Chưa chọn serial)</span>
                   </div>
                 </div>
 
@@ -1172,14 +1218,24 @@ const confirmXacNhanSerial = async () => {
                   <div class="text-secondary" style="font-size:0.74rem;">
                     {{ formatPrice(item.donGia) }} × {{ item.soLuong || 1 }}
                   </div>
-                  <button
-                    v-if="productByBienThe(item.bienTheId)"
-                    class="btn btn-sm btn-outline-secondary mt-1 py-0 px-2"
-                    style="font-size:0.68rem; border-radius:4px;"
-                    @click="openVariantDetail(item.bienTheId)"
-                  >
-                    {{ t('admin.orderDetailModal.detail') }}
-                  </button>
+                  <div class="d-flex gap-1 mt-1">
+                    <button
+                      v-if="['pending', 'confirmed'].includes(orderDetailData?.trangThaiDonHang) && orderDetailData?.kenhBan !== 'in_store'"
+                      class="btn btn-sm btn-outline-warning py-0 px-2"
+                      style="font-size:0.68rem; border-radius:4px;"
+                      @click="openXacNhanSerialModal(orderDetailData)"
+                    >
+                      Đổi serial
+                    </button>
+                    <button
+                      v-if="productByBienThe(item.bienTheId)"
+                      class="btn btn-sm btn-outline-secondary py-0 px-2"
+                      style="font-size:0.68rem; border-radius:4px;"
+                      @click="openVariantDetail(item.bienTheId)"
+                    >
+                      {{ t('admin.orderDetailModal.detail') }}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1220,77 +1276,68 @@ const confirmXacNhanSerial = async () => {
                 <component :is="orderStatusIcon(orderDetailData.trangThaiDonHang)" :size="13" />
                 {{ getQrEffectiveStatus(orderDetailData).label }}
               </span>
-              <span v-else class="alt-tag d-inline-flex align-items-center gap-1" :style="{ background: orderStatusColor(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang).bg, color: orderStatusColor(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang).text }">
-                <component :is="orderStatusIcon(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang)" :size="13" />
-                {{ orderStatusLabel(orderDetailData.kenhBan === 'in_store' && !['cancelled','returned'].includes(orderDetailData.trangThaiDonHang) ? 'delivered' : orderDetailData.trangThaiDonHang) }}
+              <span v-else class="alt-tag d-inline-flex align-items-center gap-1" :style="{ background: getCodEffectiveStatus(orderDetailData).color.bg, color: getCodEffectiveStatus(orderDetailData).color.text, fontWeight: '600' }">
+                <component :is="orderStatusIcon(orderDetailData.trangThaiDonHang)" :size="13" />
+                {{ getCodEffectiveStatus(orderDetailData).label }}
               </span>
 
-              <!-- Nút Duyệt thanh toán qua mã QR dành riêng cho Admin -->
-              <div
-                v-if="isQrPayment(orderDetailData) && orderDetailData.trangThaiThanhToan !== 'paid'"
-                class="p-2.5 rounded-3 mt-2"
-                style="background:#fff7ed; border:1px solid #fed7aa;"
-              >
-                <div class="fw-bold d-flex align-items-center gap-1.5 mb-1" style="font-size:0.78rem; color:#ea580c;">
-                  <QrCode :size="15" /> Duyệt thanh toán VietQR
-                </div>
-                <div class="text-secondary small mb-2" style="font-size:0.72rem; line-height:1.4;">
-                  Khách chọn chuyển khoản QR (Timo: 0338861232). Khi thấy tiền vào tài khoản, nhấn duyệt:
-                </div>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-success fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
-                  style="font-size:0.8rem; padding:6px 12px; background:#16a34a; border:none;"
-                  :disabled="confirmingPayment"
-                  @click="adminConfirmQrPayment(orderDetailData)"
-                >
-                  <span v-if="confirmingPayment" class="spinner-border spinner-border-sm me-1"></span>
-                  <CheckCircle2 v-else :size="14" />
-                  <span>{{ confirmingPayment ? 'Đang duyệt...' : 'Duyệt thanh toán QR' }}</span>
-                </button>
-              </div>
             </div>
 
-            <!-- Timeline các bước xử lý đơn hàng (8 bước dành cho QR) -->
+            <!-- Timeline các bước xử lý đơn hàng (5 bước COD / 7 bước QR) -->
             <div>
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.06em;">
-                  {{ isQrPayment(orderDetailData) ? 'TIẾN TRÌNH THANH TOÁN QR' : t('orderStatus.timeline.title') }}
+                  {{ isQrPayment(orderDetailData) ? 'TIẾN TRÌNH THANH TOÁN QR' : 'TIẾN TRÌNH THANH TOÁN SAU' }}
                 </div>
               </div>
               <div class="d-flex flex-column gap-0" style="position:relative;">
                 <div
                   v-for="(step, index) in orderTimelineSteps" :key="step.id"
-                  class="d-flex align-items-start gap-3" style="position:relative;"
+                  class="d-flex align-items-start gap-3 position-relative"
+                  :style="canJumpToStep(orderDetailData, step.id) ? 'cursor:pointer;' : ''"
+                  @click="canJumpToStep(orderDetailData, step.id) && !confirmingPayment && jumpToStatus(orderDetailData, step.id)"
                 >
-                  <div class="d-flex flex-column align-items-center" style="width:32px; flex-shrink:0; position:relative;">
+                  <!-- Đường kẻ dọc liền mạch tuyệt đối giữa các bước -->
+                  <div
+                    v-if="index < orderTimelineSteps.length - 1"
+                    style="position:absolute; left:15px; top:30px; bottom:-2px; width:2px; z-index:0;"
+                    :style="isStepDoneById(orderDetailData, orderTimelineSteps[index+1].id) || isStepNextById(orderDetailData, orderTimelineSteps[index+1].id)
+                      ? 'background:var(--accent);'
+                      : 'background:var(--border-color-strong); opacity:0.35;'"
+                  ></div>
+
+                  <div class="d-flex flex-column align-items-center" style="width:32px; flex-shrink:0; position:relative; z-index:1;">
                     <button
                       type="button"
                       class="rounded-circle d-flex align-items-center justify-content-center position-relative p-0"
-                      style="width:32px; height:32px; border:none;"
-                      :disabled="!canJumpToStep(orderDetailData, step.id)"
-                      :title="canJumpToStep(orderDetailData, step.id) ? `Chuyển sang &quot;${step.title}&quot;` : ''"
-                      :style="isStepReached(orderDetailData, step.id)
-                        ? isStepDoneById(orderDetailData, step.id)
-                          ? 'background:var(--accent); border:2px solid var(--accent); cursor:default;'
-                          : 'background:var(--bg-hover); border:2px solid var(--accent); box-shadow:0 0 0 4px rgba(244,63,94,0.18); cursor:pointer;'
-                        : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong); cursor:pointer;'"
-                      @click="jumpToStatus(orderDetailData, step.id)"
+                      style="width:32px; height:32px; border:none; z-index:1;"
+                      :disabled="!canJumpToStep(orderDetailData, step.id) || confirmingPayment"
+                      :title="getStepActionTitle(orderDetailData, step.id)"
+                      :style="isStepDoneById(orderDetailData, step.id)
+                        ? (canJumpToStep(orderDetailData, step.id) ? 'background:var(--accent); border:2px solid var(--accent); cursor:pointer;' : 'background:var(--accent); border:2px solid var(--accent); cursor:default;')
+                        : isStepNextById(orderDetailData, step.id)
+                          ? 'background:var(--bg-hover); border:2.5px solid var(--accent); box-shadow:0 0 0 4px rgba(244,63,94,0.18); cursor:pointer;'
+                          : (isStepReachedById(orderDetailData, step.id) && !isStepDoneById(orderDetailData, step.id) && !isStepNextById(orderDetailData, step.id))
+                            ? 'background:rgba(251,146,60,0.12); border:2px solid #fb923c; cursor:not-allowed;'
+                            : (canJumpToStep(orderDetailData, step.id) ? 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong); cursor:pointer;' : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong); cursor:not-allowed; opacity:0.4;')"
+                      @click.stop="canJumpToStep(orderDetailData, step.id) && !confirmingPayment && jumpToStatus(orderDetailData, step.id)"
                     >
                       <Check v-if="isStepDoneById(orderDetailData, step.id)" :size="14" color="white" />
-                      <component v-else :is="step.icon" :size="14" :style="{ opacity: canJumpToStep(orderDetailData, step.id) ? 1 : 0.35 }" />
+                      <span v-else-if="confirmingPayment && step.id === 'cho_xu_ly'" class="spinner-border spinner-border-sm text-danger" style="width:14px; height:14px; border-width:2px;"></span>
+                      <component v-else :is="step.icon" :size="14" :style="{
+                        opacity: (isStepNextById(orderDetailData, step.id) || (isStepReachedById(orderDetailData, step.id) && !isStepDoneById(orderDetailData, step.id) && !isStepNextById(orderDetailData, step.id))) ? 1 : 0.35,
+                        color: isStepNextById(orderDetailData, step.id) ? 'var(--accent-fg)' : (isStepReachedById(orderDetailData, step.id) && !isStepDoneById(orderDetailData, step.id)) ? '#fb923c' : 'inherit'
+                      }" />
                     </button>
-                    <div
-                      v-if="index < orderTimelineSteps.length - 1" style="width:2px; flex-grow:1; min-height:18px; margin-top:4px;"
-                      :style="isStepReached(orderDetailData, orderTimelineSteps[index+1].id) ? 'background:var(--accent);' : 'background:var(--border-color-strong); opacity:0.4;'"
-                    ></div>
                   </div>
-                  <div class="flex-grow-1 pb-3" style="padding-top:4px;">
+                  <div class="flex-grow-1 pb-3" style="padding-top:4px; position:relative; z-index:1;">
                     <div
                       class="fw-semibold" style="font-size:0.85rem; line-height:1.3;"
-                      :style="isStepCurrentById(orderDetailData, step.id)
+                      :style="isStepNextById(orderDetailData, step.id)
                         ? 'color:var(--accent-fg); font-weight:700;'
-                        : isStepReached(orderDetailData, step.id) ? 'color:var(--text-primary);' : 'color:var(--text-secondary);'"
+                        : isStepDoneById(orderDetailData, step.id) ? 'color:var(--text-primary);'
+                        : (isStepReachedById(orderDetailData, step.id) && !isStepDoneById(orderDetailData, step.id) && !isStepNextById(orderDetailData, step.id)) ? 'color:#fb923c;'
+                        : 'color:var(--text-secondary);'"
                     >
                       {{ step.title }}
                     </div>
@@ -1299,79 +1346,6 @@ const confirmXacNhanSerial = async () => {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <!-- Nút chuyển bước tiếp theo nhanh dành riêng cho đơn hàng QR (8 bước) -->
-              <div v-if="isQrPayment(orderDetailData) && !['cancelled','returned','delivered'].includes(orderDetailData.trangThaiDonHang)" class="mt-3">
-                <button
-                  v-if="orderDetailData.trangThaiThanhToan !== 'paid'"
-                  type="button"
-                  class="btn btn-sm btn-success fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
-                  style="font-size:0.8rem; padding:7px 12px; background:#16a34a; border:none;"
-                  :disabled="confirmingPayment"
-                  @click="adminConfirmQrPayment(orderDetailData)"
-                >
-                  <CheckCircle2 :size="14" />
-                  <span>{{ confirmingPayment ? 'Đang duyệt...' : 'Duyệt thanh toán QR (➔ Chờ xử lý)' }}</span>
-                </button>
-                <button
-                  v-else-if="orderDetailData.trangThaiDonHang === 'pending'"
-                  type="button"
-                  class="btn btn-sm btn-primary fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
-                  style="font-size:0.8rem; padding:7px 12px; background:#2563eb; border:none;"
-                  @click="jumpToStatus(orderDetailData, 'da_len_don')"
-                >
-                  <FileText :size="14" />
-                  <span>Xác nhận & Lên đơn (➔ Đã lên đơn)</span>
-                </button>
-                <button
-                  v-else-if="orderDetailData.trangThaiDonHang === 'confirmed'"
-                  type="button"
-                  class="btn btn-sm text-white fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
-                  style="font-size:0.8rem; padding:7px 12px; background:#9333ea; border:none;"
-                  @click="jumpToStatus(orderDetailData, 'dang_dong_goi')"
-                >
-                  <Package :size="14" />
-                  <span>Chuyển sang Đang đóng gói</span>
-                </button>
-                <button
-                  v-else-if="orderDetailData.trangThaiDonHang === 'processing' || orderDetailData.trangThaiDonHang === 'shipping'"
-                  type="button"
-                  class="btn btn-sm btn-warning text-dark fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
-                  style="font-size:0.8rem; padding:7px 12px; background:#f59e0b; border:none;"
-                  @click="jumpToStatus(orderDetailData, 'dang_giao_hang')"
-                >
-                  <Bike :size="14" />
-                  <span>Giao cho bên vận chuyển (➔ Đang giao hàng)</span>
-                </button>
-                <button
-                  v-else-if="orderDetailData.trangThaiDonHang === 'out_for_delivery'"
-                  type="button"
-                  class="btn btn-sm text-white fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
-                  style="font-size:0.8rem; padding:7px 12px; background:#0d9488; border:none;"
-                  @click="jumpToStatus(orderDetailData, 'da_giao_cho_xac_nhan')"
-                >
-                  <Inbox :size="14" />
-                  <span>Cập nhật Đã giao - Chờ xác nhận</span>
-                </button>
-                <button
-                  v-else-if="orderDetailData.trangThaiDonHang === 'awaiting_confirmation'"
-                  type="button"
-                  class="btn btn-sm btn-success fw-bold w-100 d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
-                  style="font-size:0.8rem; padding:7px 12px; background:#16a34a; border:none;"
-                  @click="jumpToStatus(orderDetailData, 'da_giao')"
-                >
-                  <CheckCircle2 :size="14" />
-                  <span>Hoàn tất đơn hàng (➔ Đã giao)</span>
-                </button>
-              </div>
-
-              <!-- Trường hợp đơn không phải QR ở trạng thái cuối (cancelled/returned/delivered) -->
-              <div
-                v-else-if="!isQrPayment(orderDetailData) && !NEXT_ORDER_STATUS[orderDetailData.trangThaiDonHang] && !['cancelled','returned','delivered'].includes(orderDetailData.trangThaiDonHang)"
-                class="small text-secondary mt-3 text-center py-2 rounded-2" style="background:var(--bg-input);"
-              >
-                {{ t('admin.orderDetailModal.noNextStep') }}
               </div>
             </div>
 
@@ -1465,34 +1439,13 @@ const confirmXacNhanSerial = async () => {
     </div>
   </div>
 
-  <!-- ══ MODAL NHẬP MÃ VẬN ĐƠN (chỉ dùng khi chuyển sang 'shipping' từ timeline-click) ══ -->
-  <div v-if="showOrderModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1000;" @click.self="showOrderModal=false">
-    <div class="rounded-4 d-flex flex-column" style="background:var(--bg-card);border:1px solid var(--border-color-strong);width:460px;max-width:95vw;">
-      <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary fw-bold">
-        <span>{{ t('admin.orderStatusModal.trackingCodeTitle') }}</span>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showOrderModal=false"></button>
-      </div>
-      <div class="p-4">
-        <div v-if="orderStatusError" class="alert alert-danger small py-2 mb-3">{{ orderStatusError }}</div>
-        <div v-if="editingOrder" class="small p-2 rounded-2 mb-3 text-secondary" style="background:var(--bg-hover);">
-          {{ t('admin.orderStatusModal.orderPrefix') }}{{ editingOrder.donHangId }} — {{ t('admin.orderStatusModal.customerLabel') }} <strong>{{ customerName(editingOrder.khachHangId) }}</strong>
-        </div>
-        <label class="form-label small text-secondary">{{ t('admin.orderStatusModal.trackingCodeLabel') }}</label>
-        <input v-model="orderStatusForm.maVanDon" type="text" class="form-control form-control-sm" :placeholder="t('admin.orderStatusModal.trackingCodePlaceholder')" style="background:var(--bg-input); color:var(--text-primary); border-color:var(--border-color-strong)" />
-      </div>
-      <div class="d-flex justify-content-end gap-2 p-3 border-top border-secondary">
-        <button class="btn btn-sm btn-outline-secondary" @click="showOrderModal=false">{{ t('admin.orderStatusModal.cancel') }}</button>
-        <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="orderStatusSaving" @click="saveOrderStatus">{{ t('admin.orderStatusModal.save') }}</button>
-      </div>
-    </div>
-  </div>
 
   <!-- ══ MODAL CHỌN SERIAL TRƯỚC KHI XÁC NHẬN ══ -->
   <div v-if="showXacNhanSerialModal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:var(--bg-overlay);z-index:1070;" @click.self="showXacNhanSerialModal=false">
     <div class="rounded-3 p-3" style="background:var(--bg-card);width:520px;max-height:85vh;overflow-y:auto;">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-          <div class="fw-bold" style="color:var(--text-heading);">{{ t('admin.packModal.title') }}</div>
+          <div class="fw-bold" style="color:var(--text-heading);">{{ xacNhanOrder?.trangThaiDonHang === 'confirmed' ? 'Cập nhật số serial' : t('admin.packModal.title') }}</div>
           <div class="text-secondary" style="font-size:0.75rem;">{{ xacNhanOrder?.maDonHang }}</div>
         </div>
         <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showXacNhanSerialModal=false"></button>
@@ -1523,7 +1476,7 @@ const confirmXacNhanSerial = async () => {
 
       <div class="d-flex justify-content-end gap-2 mt-3">
         <button class="btn btn-sm btn-outline-secondary" @click="showXacNhanSerialModal=false">{{ t('admin.packModal.cancel') }}</button>
-        <button class="btn btn-sm btn-success" :disabled="!xacNhanAllLinesComplete || xacNhanLoading" @click="confirmXacNhanSerial">{{ t('admin.packModal.confirm') }}</button>
+        <button class="btn btn-sm btn-success" :disabled="!xacNhanAllLinesComplete || xacNhanLoading" @click="confirmXacNhanSerial">{{ xacNhanOrder?.trangThaiDonHang === 'confirmed' ? 'Lưu thay đổi serial' : t('admin.packModal.confirm') }}</button>
       </div>
     </div>
   </div>

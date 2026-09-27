@@ -21,22 +21,23 @@ public class KhachHangRequest {
     @Email(message = "Email không hợp lệ")
     private String email;
 
-    @NotBlank(message = "�ịa chỉ không được để trống")
+    @NotBlank(message = "Địa chỉ không được để trống")
     private String diaChi;
 
-    @NotBlank(message = "Loại khách không được để trống")
     private String loaiKhach;
 
     private String tenCongTy;
 
     private String maSoThue;
 
-    @NotNull(message = "Điểm tích lũy không được để trống")
     @PositiveOrZero(message = "Điểm tích lũy phải lớn hơn hoặc bằng 0")
     private Integer diemTichLuy;
 
-    @NotBlank(message = "Trạng thái không được để trống")
     private String trangThai;
 
     private String hinhAnh;
+
+    public void setEmail(String email) {
+        this.email = (email != null && email.trim().isEmpty()) ? null : email;
+    }
 }

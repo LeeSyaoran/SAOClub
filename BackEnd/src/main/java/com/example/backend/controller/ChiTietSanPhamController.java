@@ -5,6 +5,7 @@ import com.example.backend.request.ChiTietSanPhamRequest;
 import com.example.backend.request.SerialLockRequest;
 import com.example.backend.request.SerialUnlockRequest;
 import com.example.backend.response.ChiTietSanPhamResponse;
+import com.example.backend.response.ChiTietSanPhamWithOrderResponse;
 import com.example.backend.response.SerialLockResponse;
 import com.example.backend.response.WarrantyStatusResponse;
 import com.example.backend.service.ChiTietSanPhamService;
@@ -71,6 +72,18 @@ public class ChiTietSanPhamController {
     }
 
     // ========== SERIAL LOCKING ==========
+
+    // Danh sach serial dang bi lock (duoc giu boi nhan vien/khach)
+    @GetMapping("/locked")
+    public List<ChiTietSanPhamResponse> getLockedSerials() {
+        return chiTietSanPhamService.getLockedSerials();
+    }
+
+    // Danh sach serial bi giu kèm thông tin đơn hàng online (dùng cho PosPanel panel "Serial bi khoa")
+    @GetMapping("/held-with-order")
+    public List<ChiTietSanPhamWithOrderResponse> getHeldSerialsWithOrder() {
+        return chiTietSanPhamService.getHeldSerialsWithOrder();
+    }
 
     @PostMapping("/lock")
     public ResponseEntity<SerialLockResponse> lockSerials(@Valid @RequestBody SerialLockRequest request) {

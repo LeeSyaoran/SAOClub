@@ -36,7 +36,6 @@ public class SanPhamRequest {
     @NotBlank(message = "Loại sản phẩm không được để trống")
     private String loaiSanPham;
 
-    @NotBlank(message = "Mã SKU không được để trống")
     private String maSku;
 
     // Barcode chuẩn thuộc về BIẾN THỂ (vì sản phẩm cha không dùng barcode nữa)
@@ -45,8 +44,16 @@ public class SanPhamRequest {
 
     private Integer cpuId;
     private Integer ramId;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("oCungId")
     private Integer oCungId;
+
     private Integer gpuId;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("ocungId")
+    public void setOcungIdAlias(Integer id) {
+        if (this.oCungId == null) this.oCungId = id;
+    }
 
     private String kichThuocManHinh;
     private String heDieuHanh;
@@ -57,15 +64,12 @@ public class SanPhamRequest {
 
     private String mauSac;
 
-    @NotNull(message = "Giá bán không được để trống")
     @PositiveOrZero(message = "Giá bán phải lớn hơn hoặc bằng 0")
     private BigDecimal giaBan;
 
-    @NotNull(message = "Giá nhập không được để trống")
     @PositiveOrZero(message = "Giá nhập phải lớn hơn hoặc bằng 0")
     private BigDecimal giaNhap;
 
-    @NotNull(message = "Bảo hành tháng không được để trống")
     @PositiveOrZero(message = "Bảo hành tháng phải lớn hơn hoặc bằng 0")
     private Integer baoHanhThang;
 

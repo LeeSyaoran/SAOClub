@@ -184,7 +184,9 @@ const handleGoogleLogin = async () => {
     const result = await signInWithGoogle();
     emit('social-success', result);
   } catch (err) {
-    error.value = 'Đăng nhập Google thất bại. Vui lòng thử lại.';
+    if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+      error.value = 'Đăng nhập Google thất bại. Vui lòng thử lại.';
+    }
     loadingSocial.value = false;
     socialLoading.value = '';
   }
@@ -199,7 +201,9 @@ const handleFacebookLogin = async () => {
     const result = await signInWithFacebook();
     emit('social-success', result);
   } catch (err) {
-    error.value = 'Đăng nhập Facebook thất bại. Vui lòng thử lại.';
+    if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+      error.value = 'Đăng nhập Facebook thất bại. Vui lòng thử lại.';
+    }
     loadingSocial.value = false;
     socialLoading.value = '';
   }

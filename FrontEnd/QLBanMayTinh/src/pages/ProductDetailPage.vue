@@ -748,7 +748,19 @@ import {
 const route = useRoute();
 const router = useRouter();
 
-defineEmits(["add-to-cart", "toggle-wishlist", "open-product"]);
+defineOptions({
+  inheritAttrs: false,
+});
+
+defineEmits([
+  "add-to-cart", "addToCart",
+  "buy-again-unavailable", "buyAgainUnavailable",
+  "go-home", "goHome",
+  "toast",
+  "logout",
+  "toggle-wishlist",
+  "open-product",
+]);
 
 const {
   products,

@@ -1,9 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { AuthStore, setSession } from "../stores/index.js";
 import { I18nStore, t } from "../i18n/index.js";
-import { orderStatusLabel, orderStatusColor, orderStatusIcon, isQrPayment, getQrEffectiveStatus } from "../utils/orderStatus.js";
+import { orderStatusLabel, orderStatusColor, orderStatusIcon, isQrPayment, getQrEffectiveStatus, getCodEffectiveStatus } from "../utils/orderStatus.js";
 import { formatPrice as formatPriceRaw } from "../utils/formatPrice.js";
 import * as DonHangService from "../services/DonHangService.js";
 import * as ChiTietDonHangService from "../services/ChiTietDonHangService.js";
@@ -76,8 +76,13 @@ import {Clock,
   Check,
   Trophy,
   Zap,
-  ExternalLink} from '@lucide/vue';
+  ExternalLink,
+  QrCode,
+  Banknote} from '@lucide/vue';
 
+defineOptions({
+  inheritAttrs: false,
+});
 const emit = defineEmits(["go-home", "logout", "add-to-cart", "buy-again-unavailable", "toast"]);
 const router = useRouter();
 
@@ -618,7 +623,7 @@ const saveProfile = async () => {
     if (!res.ok) throw new Error(`${t("account.settings.saveErrorPrefix")} ${res.status} ${await res.text()}`);
     profile.value = body;
     profileSuccess.value = t("account.settings.saveSuccess");
-    setSession({ ...auth.user, hoTen: body.hoTen, email: body.email, soDienThoai: body.soDienThoai });
+    setSession({ ...auth.user, hoTen: body.hoTen, email: body.email, soDienThoai: body.soDienThoai, diaChi: body.diaChi });
     isEditingProfile.value = false;
   } catch (e) {
     profileError.value = e.message || t("account.settings.saveErrorPrefix");
@@ -626,6 +631,28 @@ const saveProfile = async () => {
     profileSaving.value = false;
   }
 };
+
+watch(activeTab, (tab) => {
+  if (tab === 'settings') {
+    fetchProfile();
+  }
+});
+
+watch(
+  () => auth.user,
+  (newUser) => {
+    if (newUser) {
+      if (profileForm.value) {
+        if (newUser.hoTen) profileForm.value.hoTen = newUser.hoTen;
+        if (newUser.soDienThoai) profileForm.value.soDienThoai = newUser.soDienThoai;
+        if (newUser.email) profileForm.value.email = newUser.email;
+        if (newUser.diaChi) profileForm.value.diaChi = newUser.diaChi;
+      }
+      fetchProfile();
+    }
+  },
+  { deep: true }
+);
 
 const handleSidebarMenu = (item) => {
   activeTab.value = item.id;
@@ -777,14 +804,9 @@ const handleOutsideClick = (e) => {
                           class="overview-order-status"
                           :style="isQrPayment(o)
                             ? { backgroundColor: getQrEffectiveStatus(o).color.bg, color: getQrEffectiveStatus(o).color.text, border: o.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none', fontWeight: '700' }
-                            : o.trangThaiThanhToan === 'unpaid'
-                              ? { backgroundColor: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa', fontWeight: '700' }
-                              : {
-                                  backgroundColor: orderStatusColor(o.trangThaiDonHang || o.trangThai).bg,
-                                  color: orderStatusColor(o.trangThaiDonHang || o.trangThai).text
-                                }"
+                            : { backgroundColor: getCodEffectiveStatus(o).color.bg, color: getCodEffectiveStatus(o).color.text, fontWeight: '700' }"
                         >
-                          {{ isQrPayment(o) ? getQrEffectiveStatus(o).label : (o.trangThaiThanhToan === 'unpaid' ? 'Chờ thanh toán' : orderStatusLabel(o.trangThaiDonHang || o.trangThai)) }}
+                          {{ isQrPayment(o) ? getQrEffectiveStatus(o).label : getCodEffectiveStatus(o).label }}
                         </span>
                         <div class="overview-order-total">Tổng thanh toán: <strong>{{ formatPriceRaw(o.tongThanhToan || o.tongTien) }}</strong></div>
                         <button class="overview-order-detail-btn" @click.stop="viewOrderDetail(o)">
@@ -917,6 +939,20 @@ const handleOutsideClick = (e) => {
                             <div class="order-code">
                               <span class="order-code-label">Mã đơn</span>
                               <span class="order-code-value">{{ o.maDon || o.donHangId }}</span>
+                              <span
+                                v-if="isQrPayment(o)"
+                                class="badge d-inline-flex align-items-center gap-1 ms-1.5"
+                                style="background:#fff7ed; color:#ea580c; border:1px solid #fed7aa; font-size:0.68rem; font-weight:600; padding:2px 6px; border-radius:6px;"
+                              >
+                                <QrCode :size="10" /> VietQR
+                              </span>
+                              <span
+                                v-else
+                                class="badge d-inline-flex align-items-center gap-1 ms-1.5"
+                                style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.68rem; font-weight:600; padding:2px 6px; border-radius:6px;"
+                              >
+                                <Banknote :size="10" /> COD
+                              </span>
                             </div>
                             <div class="order-date">{{ formatDate(o.ngayDat) }}</div>
                           </div>
@@ -924,10 +960,10 @@ const handleOutsideClick = (e) => {
                             class="status-pill"
                             :style="isQrPayment(o)
                               ? { background: getQrEffectiveStatus(o).color.bg, color: getQrEffectiveStatus(o).color.text, border: o.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none' }
-                              : { background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }"
+                              : { background: getCodEffectiveStatus(o).color.bg, color: getCodEffectiveStatus(o).color.text }"
                           >
                             <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="12" />
-                            {{ isQrPayment(o) ? getQrEffectiveStatus(o).label : orderStatusLabel(o.trangThaiDonHang) }}
+                            {{ isQrPayment(o) ? getQrEffectiveStatus(o).label : getCodEffectiveStatus(o).label }}
                           </span>
                         </div>
                         <div class="order-timeline"><OrderStatusTimeline :status="o.trangThaiDonHang" :kenh-ban="o.kenhBan" :order="o" /></div>
@@ -951,6 +987,14 @@ const handleOutsideClick = (e) => {
                             <span class="total-value">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
                           </div>
                           <div class="order-actions">
+                            <button
+                              v-if="isQrPayment(o) && o.trangThaiThanhToan !== 'paid'"
+                              class="btn btn-warning btn-sm text-white fw-bold d-inline-flex align-items-center gap-1"
+                              style="background:linear-gradient(135deg, #ea580c 0%, #f97316 100%); border:none; padding:5px 12px; border-radius:20px; font-size:0.78rem;"
+                              @click="viewOrderDetail(o)"
+                            >
+                              <CreditCard :size="12" /> Thanh toán QR
+                            </button>
                             <button class="btn-outline-secondary btn-sm" @click="viewOrderDetail(o)">
                               <Receipt :size="13" /> Chi tiết đơn
                             </button>
@@ -976,6 +1020,20 @@ const handleOutsideClick = (e) => {
                             <div class="order-code">
                               <span class="order-code-label">Mã đơn</span>
                               <span class="order-code-value">{{ o.maDon || o.donHangId }}</span>
+                              <span
+                                v-if="isQrPayment(o)"
+                                class="badge d-inline-flex align-items-center gap-1 ms-1.5"
+                                style="background:#fff7ed; color:#ea580c; border:1px solid #fed7aa; font-size:0.65rem; font-weight:600; padding:1px 5px; border-radius:4px;"
+                              >
+                                VietQR
+                              </span>
+                              <span
+                                v-else
+                                class="badge d-inline-flex align-items-center gap-1 ms-1.5"
+                                style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.65rem; font-weight:600; padding:1px 5px; border-radius:4px;"
+                              >
+                                COD
+                              </span>
                             </div>
                             <div class="order-date">{{ formatDate(o.ngayDat) }} · {{ (itemsByOrder[o.donHangId] || []).length }} sp</div>
                           </div>
@@ -984,10 +1042,10 @@ const handleOutsideClick = (e) => {
                               class="status-pill"
                               :style="isQrPayment(o)
                                 ? { background: getQrEffectiveStatus(o).color.bg, color: getQrEffectiveStatus(o).color.text, border: o.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none' }
-                                : { background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }"
+                                : { background: getCodEffectiveStatus(o).color.bg, color: getCodEffectiveStatus(o).color.text }"
                             >
                               <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="12" />
-                              {{ isQrPayment(o) ? getQrEffectiveStatus(o).label : orderStatusLabel(o.trangThaiDonHang) }}
+                              {{ isQrPayment(o) ? getQrEffectiveStatus(o).label : getCodEffectiveStatus(o).label }}
                             </span>
                             <span class="compact-total">{{ formatPrice(o.thanhTien ?? o.tongTien) }}</span>
                           </div>
@@ -1436,7 +1494,7 @@ const handleOutsideClick = (e) => {
                             <span>Họ và tên</span>
                           </div>
                           <div class="profile-view-value fw-semibold">
-                            {{ profileForm.hoTen || 'Chưa cập nhật' }}
+                            {{ profileForm.hoTen || auth.user?.hoTen || 'Chưa cập nhật' }}
                           </div>
                         </div>
 
@@ -1446,7 +1504,7 @@ const handleOutsideClick = (e) => {
                             <span>Số điện thoại</span>
                           </div>
                           <div class="profile-view-value fw-semibold">
-                            {{ profileForm.soDienThoai || 'Chưa cập nhật' }}
+                            {{ profileForm.soDienThoai || auth.user?.soDienThoai || 'Chưa cập nhật' }}
                           </div>
                         </div>
 
@@ -1456,7 +1514,7 @@ const handleOutsideClick = (e) => {
                             <span>Email</span>
                           </div>
                           <div class="profile-view-value fw-semibold">
-                            {{ profileForm.email || 'Chưa cập nhật' }}
+                            {{ profileForm.email || auth.user?.email || 'Chưa cập nhật' }}
                           </div>
                         </div>
 
@@ -1466,7 +1524,7 @@ const handleOutsideClick = (e) => {
                             <span>Địa chỉ</span>
                           </div>
                           <div class="profile-view-value fw-semibold">
-                            {{ profileForm.diaChi || 'Chưa cập nhật' }}
+                            {{ profileForm.diaChi || auth.user?.diaChi || 'Chưa cập nhật' }}
                           </div>
                         </div>
                       </div>

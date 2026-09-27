@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -31,9 +32,18 @@ public class LichSuThayDoiSanPhamService {
 
     public void ghiNeuThayDoi(Integer sanPhamId, Integer bienTheId, String doiTuong,
                                String tenTruong, Object giaTriCu, Object giaTriMoi, NhanVien nguoiSua) {
-        String cu = giaTriCu == null ? null : String.valueOf(giaTriCu);
-        String moi = giaTriMoi == null ? null : String.valueOf(giaTriMoi);
+        String cu = giaTriCu == null ? null : String.valueOf(giaTriCu).trim();
+        String moi = giaTriMoi == null ? null : String.valueOf(giaTriMoi).trim();
         if (Objects.equals(cu, moi)) return;
+
+        // So sánh số học nếu cả hai đều là số (tránh log 1.70 -> 1.7 hoặc 28990000.00 -> 28990000)
+        if (cu != null && moi != null) {
+            try {
+                BigDecimal bCu = new BigDecimal(cu);
+                BigDecimal bMoi = new BigDecimal(moi);
+                if (bCu.compareTo(bMoi) == 0) return;
+            } catch (NumberFormatException ignored) {}
+        }
 
         LichSuThayDoiSanPham log = new LichSuThayDoiSanPham();
         log.setSanPham(sanPhamRepository.getReferenceById(sanPhamId));

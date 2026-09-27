@@ -163,7 +163,7 @@ export default {
 
   orderStatus: {
     pending: "Chờ xác nhận",
-    confirmed: "Đã xác nhận",
+    confirmed: "Đã lên đơn",
     processing: "Đang đóng gói",
     shipping: "Đang vận chuyển",
     out_for_delivery: "Đang giao hàng",
@@ -1289,7 +1289,7 @@ export default {
       edit: "Sửa",
       view: "Xem",
       empty: "Chưa có phiếu trả hàng",
-      searchPlaceholder: "Tìm mã phiếu, khách hàng...",
+      searchPlaceholder: "Tìm mã phiếu, mã đơn, khách hàng...",
     },
 
     returnStatus: {
@@ -1307,10 +1307,10 @@ export default {
       titleAdd: "Tạo phiếu trả hàng",
       titleEdit: "Chi tiết phiếu trả hàng",
       orderLabel: "Đơn hàng *",
-      orderSearchPlaceholder: "Tìm theo mã đơn, tên khách, SĐT...",
+      orderSearchPlaceholder: "Tìm theo mã đơn",
       orderSearchEmpty: "Không tìm thấy đơn hàng",
       changeOrder: "Đổi đơn hàng",
-      staffLabel: "Nhân viên xử lý",
+      staffLabel: "Người xử lý",
       reasonLabel: "Lý do trả hàng *",
       dateLabel: "Ngày trả",
       statusLabel: "Trạng thái",

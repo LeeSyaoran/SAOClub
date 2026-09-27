@@ -1,4 +1,8 @@
 <script setup>
+defineOptions({
+  inheritAttrs: false,
+});
+defineEmits(['addToCart', 'add-to-cart', 'buyAgainUnavailable', 'buy-again-unavailable', 'goHome', 'go-home', 'toast', 'logout']);
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Building2, User, Calendar, Printer, ArrowLeft, Hash, X, Check } from "@lucide/vue";

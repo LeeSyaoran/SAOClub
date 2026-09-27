@@ -11,15 +11,17 @@
       <!-- Header -->
       <div
         class="d-flex justify-content-between align-items-center px-4 py-3"
-        style="border-bottom:1px solid var(--border, #f1f5f9); background:linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);"
+        style="border-bottom:1px solid var(--border, #f1f5f9);"
+        :style="isQrPayment(order) ? 'background:linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);' : 'background:linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);'"
       >
         <div class="d-flex align-items-center gap-2.5">
           <div
             class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-            style="width:38px; height:38px; background:linear-gradient(135deg, #ea580c 0%, #f97316 100%); color:#fff;"
+            style="width:38px; height:38px;"
+            :style="isQrPayment(order) ? 'background:linear-gradient(135deg, #ea580c 0%, #f97316 100%); color:#fff;' : 'background:linear-gradient(135deg, #475569 0%, #64748b 100%); color:#fff;'"
           >
             <QrCode v-if="isQrPayment(order)" :size="20" />
-            <Package v-else :size="20" />
+            <Banknote v-else :size="20" />
           </div>
           <div>
             <div class="d-flex align-items-center gap-2">
@@ -33,6 +35,21 @@
               >
                 {{ channelLabel(order.kenhBan) }}
               </span>
+              <!-- Badge phân biệt phương thức thanh toán -->
+              <span
+                v-if="isQrPayment(order)"
+                class="badge d-inline-flex align-items-center gap-1"
+                style="background:#fff7ed; color:#ea580c; border:1px solid #fed7aa; font-size:0.72rem; font-weight:600;"
+              >
+                <QrCode :size="11" /> VietQR
+              </span>
+              <span
+                v-else
+                class="badge d-inline-flex align-items-center gap-1"
+                style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.72rem; font-weight:600;"
+              >
+                <Banknote :size="11" /> COD
+              </span>
             </div>
             <div class="text-secondary small mt-0.5" style="font-size:0.78rem;">
               {{ formatPendingTime(order?.ngayDat) }} · {{ displayItems.length }} sản phẩm
@@ -41,11 +58,15 @@
         </div>
 
         <div class="d-flex align-items-center gap-2">
-          <!-- Status pill (ẩn khi là Chờ thanh toán QR hoặc đơn QR) -->
+          <!-- Status pill: Luôn hiển thị cho cả đơn COD và QR -->
           <span
-            v-if="effectiveStatusLabel !== 'Chờ thanh toán QR' && !isQrPayment(order)"
             class="badge d-inline-flex align-items-center gap-1.5 px-3 py-1.5 rounded-pill fw-bold"
-            :style="{ background: effectiveStatusStyle.bg, color: effectiveStatusStyle.text, border: order.trangThaiThanhToan === 'unpaid' ? '1.5px solid #fed7aa' : 'none', fontSize: '0.8rem' }"
+            :style="{
+              background: effectiveStatusStyle.bg,
+              color: effectiveStatusStyle.text,
+              border: (isQrPayment(order) && order.trangThaiThanhToan === 'unpaid') ? '1.5px solid #fed7aa' : '1px solid rgba(0,0,0,0.06)',
+              fontSize: '0.8rem'
+            }"
           >
             <component :is="effectiveStatusIcon" :size="13" />
             {{ effectiveStatusLabel }}
@@ -70,9 +91,9 @@
         <!-- Cột trái: Chi tiết sản phẩm, Banner thanh toán & Tổng kết tài chính -->
         <div class="customer-order-left overflow-y-auto flex-grow-1 p-3 p-md-4" style="border-right:1px solid #f1f5f9;">
           
-          <!-- BANNER THANH TOÁN QR NỔI BẬT (Khi đơn chưa thanh toán) -->
+          <!-- BANNER 1: THANH TOÁN QR NỔI BẬT (CHỈ hiển thị cho đơn thanh toán trước qua VietQR mà chưa thanh toán) -->
           <div
-            v-if="order.trangThaiThanhToan !== 'paid'"
+            v-if="isQrPayment(order) && order.trangThaiThanhToan !== 'paid'"
             class="rounded-4 p-3 mb-4 shadow-sm"
             style="border:1.5px dashed #fbd38d; background:#fffdfa;"
           >
@@ -104,7 +125,7 @@
               <div class="text-muted small" style="font-size:0.75rem; max-width:320px; line-height:1.35;">
                 Quý khách quét mã và thanh toán, cửa hàng sẽ kiểm tra & duyệt đơn sang bước <strong>Chờ xử lý</strong>.
               </div>
-              <!-- NÚT THANH TOÁN NGAY MÀU CAM NỔI BẬT (Ảnh 5) -->
+              <!-- NÚT THANH TOÁN NGAY MÀU CAM NỔI BẬT (Chỉ cho đơn QR) -->
               <button
                 type="button"
                 class="btn btn-warning fw-extrabold text-white px-3.5 py-2 rounded-pill shadow-sm d-inline-flex align-items-center gap-2"
@@ -117,21 +138,89 @@
             </div>
           </div>
 
-          <!-- BANNER THÔNG BÁO ĐÃ THANH TOÁN QR & ĐANG CHỜ XỬ LÝ -->
+          <!-- BANNER 2: THÔNG BÁO ĐÃ THANH TOÁN QR & ĐANG CHỜ XỬ LÝ -->
           <div
             v-else-if="isQrPayment(order) && order.trangThaiThanhToan === 'paid' && order.trangThaiDonHang === 'pending'"
             class="rounded-3 p-3 mb-4 d-flex align-items-center gap-3"
             style="background:#f0fdf4; border:1px solid #bbf7d0;"
           >
-            <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:34px; height:34px; background:#16a34a;">
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:36px; height:36px; background:#16a34a;">
               <Check :size="18" stroke-width="3" />
             </div>
             <div>
-              <div class="fw-bold" style="font-size:0.88rem; color:#15803d;">
+              <div class="fw-bold" style="font-size:0.9rem; color:#15803d;">
                 Đã thanh toán VietQR thành công · Đang chờ xử lý
               </div>
               <div class="text-secondary small mt-0.5" style="font-size:0.76rem;">
                 Cửa hàng đã xác nhận thanh toán. Nhân viên đang kiểm tra đơn hàng và chuẩn bị xuất kho.
+              </div>
+            </div>
+          </div>
+
+          <!-- BANNER 3: HƯỚNG DẪN ĐƠN THANH TOÁN SAU (COD / TIỀN MẶT) -->
+          <div
+            v-else-if="!isQrPayment(order) && order.trangThaiDonHang !== 'delivered' && !['cancelled', 'returned'].includes(order.trangThaiDonHang)"
+            class="rounded-3 p-3 mb-4 shadow-sm"
+            style="background:#f8fafc; border:1.5px solid #cbd5e1;"
+          >
+            <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-2">
+              <div class="d-flex align-items-center gap-2.5">
+                <div
+                  class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                  style="width:40px; height:40px; background:#e2e8f0; color:#0f172a;"
+                >
+                  <Banknote :size="22" stroke-width="2.2" />
+                </div>
+                <div>
+                  <div class="fw-bold" style="font-size:0.92rem; color:#0f172a;">
+                    Thanh toán khi nhận hàng (COD)
+                  </div>
+                  <div class="text-secondary small" style="font-size:0.76rem;">
+                    Phương thức: <strong>Tiền mặt</strong> · Trả tiền cho Shipper khi giao hàng
+                  </div>
+                </div>
+              </div>
+              <div class="text-end">
+                <div class="text-secondary small" style="font-size:0.72rem;">Số tiền cần thanh toán</div>
+                <div class="fw-extrabold" style="font-size:1.25rem; color:#0f172a;">
+                  {{ formatPrice(orderTotalAmount) }}
+                </div>
+              </div>
+            </div>
+            <div class="text-secondary small pt-2 border-top" style="border-color:#e2e8f0 !important; font-size:0.76rem; line-height:1.45;">
+              <template v-if="order.trangThaiDonHang === 'pending'">
+                Đơn hàng đang chờ shop xác nhận và chuẩn bị sản phẩm. Quý khách vui lòng chuẩn bị tiền mặt khi nhận hàng (không cần chuyển khoản trước).
+              </template>
+              <template v-else-if="order.trangThaiDonHang === 'confirmed'">
+                Đơn hàng đã được duyệt và lên đơn thành công. Shop đang chuẩn bị sản phẩm để chuyển sang đóng gói.
+              </template>
+              <template v-else-if="order.trangThaiDonHang === 'processing'">
+                Kho đang chuẩn bị và đóng gói sản phẩm cẩn thận để bàn giao cho shipper.
+              </template>
+              <template v-else-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(order.trangThaiDonHang)">
+                Shipper đang trên đường giao hàng đến bạn. Quý khách vui lòng đồng kiểm và thanh toán tiền mặt cho nhân viên giao hàng.
+              </template>
+              <template v-else>
+                Quý khách vui lòng thanh toán bằng tiền mặt cho nhân viên giao hàng khi nhận và đồng kiểm sản phẩm.
+              </template>
+            </div>
+          </div>
+
+          <!-- BANNER 4: ĐƠN HÀNG ĐÃ GIAO THÀNH CÔNG -->
+          <div
+            v-else-if="order.trangThaiDonHang === 'delivered'"
+            class="rounded-3 p-3 mb-4 d-flex align-items-center gap-3"
+            style="background:#f0fdf4; border:1px solid #bbf7d0;"
+          >
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width:36px; height:36px; background:#16a34a;">
+              <Check :size="18" stroke-width="3" />
+            </div>
+            <div>
+              <div class="fw-bold" style="font-size:0.9rem; color:#15803d;">
+                Đơn hàng đã hoàn tất giao hàng thành công
+              </div>
+              <div class="text-secondary small mt-0.5" style="font-size:0.76rem;">
+                Cảm ơn bạn đã tin tưởng và mua sắm tại SAOClub!
               </div>
             </div>
           </div>
@@ -176,7 +265,7 @@
                   </div>
                   <div class="d-flex align-items-center gap-2 mt-1" style="font-size:0.72rem; color:#94a3b8;">
                     <span v-if="item.maSku">SKU: <code style="color:#475569;">{{ item.maSku }}</code></span>
-                    <span v-if="item.soSerial">· Serial: <strong style="color:#ea580c; font-family:monospace;">{{ item.soSerial }}</strong></span>
+                    <span v-if="order?.trangThaiDonHang !== 'pending' && item.soSerial">· Serial: <strong style="color:#ea580c; font-family:monospace;">{{ item.soSerial }}</strong></span>
                   </div>
                 </div>
 
@@ -271,51 +360,58 @@
             </span>
           </div>
 
-          <!-- Tiến trình đơn hàng (8 Bước dành cho QR) -->
+          <!-- Tiến trình đơn hàng (5 Bước COD / 7 Bước QR) -->
           <div class="mb-4">
             <div class="d-flex align-items-center justify-content-between mb-3">
               <div class="text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.06em;">
-                {{ isQrPayment(order) ? 'TIẾN TRÌNH THANH TOÁN QR' : t('orderStatus.timeline.title') }}
+                {{ isQrPayment(order) ? 'TIẾN TRÌNH THANH TOÁN QR' : 'TIẾN TRÌNH THANH TOÁN SAU' }}
               </div>
             </div>
 
             <div class="d-flex flex-column gap-0" style="position:relative;">
               <div
                 v-for="(step, index) in orderTimelineSteps" :key="step.id"
-                class="d-flex align-items-start gap-3" style="position:relative;"
+                class="d-flex align-items-start gap-3 position-relative"
               >
-                <!-- Cột icon + đường nối dọc -->
-                <div class="d-flex flex-column align-items-center" style="width:32px; flex-shrink:0; position:relative;">
+                <!-- Đường kẻ nối dọc liền mạch giữa các bước -->
+                <div
+                  v-if="index < orderTimelineSteps.length - 1"
+                  style="position:absolute; left:15px; top:28px; bottom:-2px; width:2px; z-index:0;"
+                  :style="isStepDone(orderTimelineSteps[index+1].id) || isStepNext(orderTimelineSteps[index+1].id)
+                    ? 'background:#16a34a;'
+                    : 'background:#e2e8f0;'"
+                ></div>
+
+                <!-- Cột icon tròn -->
+                <div class="d-flex flex-column align-items-center" style="width:32px; flex-shrink:0; position:relative; z-index:1;">
                   <div
                     class="rounded-circle d-flex align-items-center justify-content-center position-relative p-0"
-                    style="width:30px; height:30px;"
-                    :style="isStepReached(step.id)
-                      ? isStepDone(step.id)
-                        ? 'background:#16a34a; border:2px solid #16a34a; color:white;'
-                        : isStepCurrent(step.id)
-                          ? 'background:#ffffff; border:2.5px solid #ea580c; color:#ea580c; box-shadow:0 0 0 3px rgba(234, 88, 12, 0.2);'
-                          : 'background:#ffffff; border:2px solid #cbd5e1; color:#64748b;'
-                      : 'background:#ffffff; border:2px solid #e2e8f0; color:#94a3b8;'"
+                    style="width:30px; height:30px; z-index:1;"
+                    :style="isStepDone(step.id)
+                      ? 'background:#16a34a; border:2px solid #16a34a; color:white;'
+                      : isStepNext(step.id)
+                        ? 'background:#ffffff; border:2.5px solid #ea580c; color:#ea580c; box-shadow:0 0 0 3px rgba(234, 88, 12, 0.2);'
+                        : (isStepReached(step.id) && !isStepDone(step.id) && !isStepNext(step.id))
+                          ? 'background:#fff7ed; border:2px solid #fb923c; color:#ea580c;'
+                          : 'background:#ffffff; border:2px solid #cbd5e1; color:#64748b;'"
                   >
                     <Check v-if="isStepDone(step.id)" :size="14" stroke-width="3" color="white" />
-                    <component v-else :is="step.icon" :size="13" :style="{ opacity: isStepReached(step.id) ? 1 : 0.35 }" />
+                    <component v-else :is="step.icon" :size="13" :style="{
+                      opacity: (isStepNext(step.id) || (isStepReached(step.id) && !isStepDone(step.id))) ? 1 : 0.35,
+                      color: isStepNext(step.id) ? '#ea580c' : (isStepReached(step.id) && !isStepDone(step.id)) ? '#ea580c' : 'inherit'
+                    }" />
                   </div>
-                  <div
-                    v-if="index < orderTimelineSteps.length - 1"
-                    style="width:2px; flex-grow:1; min-height:22px; margin-top:4px;"
-                    :style="isStepReached(orderTimelineSteps[index+1].id)
-                      ? 'background:#16a34a;'
-                      : 'background:#e2e8f0;'"
-                  ></div>
                 </div>
 
                 <!-- Label & mô tả -->
                 <div class="flex-grow-1 pb-3" style="padding-top:3px;">
                   <div
                     class="fw-semibold" style="font-size:0.83rem; line-height:1.3;"
-                    :style="isStepCurrent(step.id)
+                    :style="isStepNext(step.id)
                       ? 'color:#ea580c; font-weight:700;'
-                      : isStepDone(step.id) ? 'color:#0f172a;' : 'color:#94a3b8;'"
+                      : isStepDone(step.id) ? 'color:#0f172a;'
+                      : (isStepReached(step.id) && !isStepDone(step.id)) ? 'color:#ea580c;'
+                      : 'color:#94a3b8;'"
                   >
                     {{ step.title }}
                   </div>
@@ -350,12 +446,14 @@
                 </template>
                 <template v-else-if="paymentMethodSummary.length">
                   <template v-for="(g, idx) in paymentMethodSummary" :key="g.method">
-                    <component :is="paymentMethodIcon(g.method)" :size="13" style="vertical-align:-2px; color:#ea580c;" />
-                    {{ paymentMethodLabel(g.method) }}
+                    <component :is="paymentMethodIcon(g.method)" :size="13" style="vertical-align:-2px; color:#475569;" />
+                    {{ g.method === 'tien_mat' ? 'Tiền mặt (COD khi nhận hàng)' : paymentMethodLabel(g.method) }}
                     <span v-if="idx < paymentMethodSummary.length - 1">, </span>
                   </template>
                 </template>
-                <template v-else>—</template>
+                <template v-else>
+                  <Banknote :size="13" style="vertical-align:-2px; color:#475569;" /> Tiền mặt (COD khi nhận hàng)
+                </template>
               </span>
             </div>
           </div>
@@ -406,7 +504,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { AuthStore } from '../../stores/index.js';
 import { t, I18nStore } from '../../i18n/index.js';
 import {
@@ -414,17 +512,19 @@ import {
   channelLabel, channelColor,
   paymentStatusLabel, paymentStatusColor, paymentStatusIcon,
   paymentMethodLabel, paymentMethodIcon,
-  isQrPayment, QR_TIMELINE_STEPS, isQrStepReached, isQrStepDone, isQrStepCurrent, getQrEffectiveStatus
+  isQrPayment, QR_TIMELINE_STEPS, isQrStepReached, isQrStepDone, isQrStepCurrent, isQrStepNext, getQrEffectiveStatus,
+  COD_TIMELINE_STEPS, isCodStepReached, isCodStepDone, isCodStepCurrent, isCodStepNext, getCodEffectiveStatus
 } from '../../utils/orderStatus.js';
 import { formatPrice as formatPriceRaw } from '../../utils/formatPrice.js';
 import * as ChiTietDonHangService from '../../services/ChiTietDonHangService.js';
 import * as ThanhToanService from '../../services/ThanhToanService.js';
+import * as DonHangService from '../../services/DonHangService.js';
 import OrderTrackingLog from './OrderTrackingLog.vue';
 import QrPaymentModal from '../checkout/QrPaymentModal.vue';
 import {
   Package, Laptop, CheckCircle2, RefreshCw, Undo2, Check,
   Clock, Truck, Bike, Inbox, User, Phone, MapPin, Mail,
-  DollarSign, CreditCard, X, ChevronDown, ChevronUp, FileText, QrCode
+  DollarSign, CreditCard, X, ChevronDown, ChevronUp, FileText, QrCode, Banknote
 } from '@lucide/vue';
 
 const props = defineProps({
@@ -440,6 +540,7 @@ const showQrModal = ref(false);
 const localItems = ref([]);
 const payments = ref([]);
 const loading = ref(false);
+let customerOrderEventSource = null;
 
 const displayOrderCode = computed(() => {
   return props.order?.maDonHang || props.order?.maDon || (props.order?.id ? `as_${props.order.id}` : '11622');
@@ -504,17 +605,6 @@ const getItemSpecs = (item) => {
   return parts.length ? parts.join(' · ') : '';
 };
 
-// 6 bước trạng thái tuyến tính cho đơn online thông thường
-const LINEAR_STATUS_ORDER = [
-  'pending', 'confirmed', 'processing',
-  'out_for_delivery', 'awaiting_confirmation', 'delivered',
-];
-
-const getLinearStatusIndex = (status) => {
-  if (status === 'shipping') return LINEAR_STATUS_ORDER.indexOf('processing');
-  return LINEAR_STATUS_ORDER.indexOf(status);
-};
-
 const orderTimelineSteps = computed(() => {
   if (props.order?.kenhBan === 'in_store') {
     return [
@@ -526,19 +616,12 @@ const orderTimelineSteps = computed(() => {
       },
     ];
   }
-  // Nếu là đơn thanh toán qua mã QR: hiển thị 8 bước đặc thù
+  // Nếu là đơn thanh toán qua mã QR: hiển thị 7 bước đặc thù
   if (isQrPayment(props.order)) {
     return QR_TIMELINE_STEPS;
   }
-  // Đơn online thông thường: 6 bước
-  return [
-    { id: 'pending',                title: orderStatusLabel('pending'),                desc: t('orderStatus.timeline.placedDesc'),    icon: CheckCircle2 },
-    { id: 'confirmed',              title: orderStatusLabel('confirmed'),              desc: t('orderStatus.timeline.confirmedDesc'), icon: CheckCircle2 },
-    { id: 'processing',             title: orderStatusLabel('processing'),             desc: t('orderStatus.timeline.packingDesc'),   icon: Package },
-    { id: 'out_for_delivery',       title: orderStatusLabel('out_for_delivery'),       desc: t('orderStatus.timeline.outForDeliveryDesc'), icon: Bike },
-    { id: 'awaiting_confirmation',  title: orderStatusLabel('awaiting_confirmation'),  desc: t('orderStatus.timeline.deliveredDesc'),  icon: Inbox },
-    { id: 'delivered',              title: orderStatusLabel('delivered'),              desc: t('orderStatus.timeline.deliveredDesc'),  icon: CheckCircle2 },
-  ];
+  // Đơn thanh toán sau (COD): hiển thị 5 bước
+  return COD_TIMELINE_STEPS;
 });
 
 const isStepReached = (stepId) => {
@@ -548,9 +631,7 @@ const isStepReached = (stepId) => {
   if (isQrPayment(props.order)) {
     return isQrStepReached(props.order, stepId);
   }
-  const cur = getLinearStatusIndex(props.order?.trangThaiDonHang);
-  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
-  return cur !== -1 && idx !== -1 && idx <= cur;
+  return isCodStepReached(props.order, stepId);
 };
 
 const isStepDone = (stepId) => {
@@ -560,9 +641,7 @@ const isStepDone = (stepId) => {
   if (isQrPayment(props.order)) {
     return isQrStepDone(props.order, stepId);
   }
-  const cur = getLinearStatusIndex(props.order?.trangThaiDonHang);
-  const idx = LINEAR_STATUS_ORDER.indexOf(stepId);
-  return cur !== -1 && idx !== -1 && idx <= cur;
+  return isCodStepDone(props.order, stepId);
 };
 
 const isStepCurrent = (stepId) => {
@@ -570,8 +649,15 @@ const isStepCurrent = (stepId) => {
   if (isQrPayment(props.order)) {
     return isQrStepCurrent(props.order, stepId);
   }
-  const curStatus = props.order?.trangThaiDonHang === 'shipping' ? 'processing' : props.order?.trangThaiDonHang;
-  return curStatus === stepId;
+  return isCodStepCurrent(props.order, stepId);
+};
+
+const isStepNext = (stepId) => {
+  if (props.order?.kenhBan === 'in_store') return false;
+  if (isQrPayment(props.order)) {
+    return isQrStepNext(props.order, stepId);
+  }
+  return isCodStepNext(props.order, stepId);
 };
 
 const effectiveStatus = computed(() => {
@@ -585,14 +671,14 @@ const effectiveStatusLabel = computed(() => {
   if (isQrPayment(props.order)) {
     return getQrEffectiveStatus(props.order).label;
   }
-  return orderStatusLabel(effectiveStatus.value);
+  return getCodEffectiveStatus(props.order).label;
 });
 
 const effectiveStatusStyle = computed(() => {
   if (isQrPayment(props.order)) {
     return getQrEffectiveStatus(props.order).color;
   }
-  return orderStatusColor(effectiveStatus.value);
+  return getCodEffectiveStatus(props.order).color;
 });
 
 const effectiveStatusIcon = computed(() => {
@@ -653,6 +739,30 @@ onMounted(async () => {
   if (orderId) {
     payments.value = await ThanhToanService.getByDonHang(orderId).catch(() => []);
   }
+
+  // SSE realtime: khi đơn được cập nhật (admin duyệt, chuyển trạng thái...) → reload props.order
+  if (orderId) {
+    customerOrderEventSource = new EventSource('/api/don-hang/events');
+    customerOrderEventSource.addEventListener('order-updated', async (e) => {
+      // Chỉ refresh nếu event chứa id đơn đang xem
+      const data = e?.data;
+      try {
+        const eventId = data ? Number(data) : null;
+        if (eventId && eventId !== orderId) return;
+      } catch (_) { /* nếu payload không phải số, refresh luôn */ }
+      try {
+        const khId = props.order?.khachHangId;
+        if (!khId) return;
+        const list = await DonHangService.getByKhachHang(khId);
+        const updated = (Array.isArray(list) ? list : []).find(o => (o.id || o.donHangId) === orderId);
+        if (updated) emit('order-updated', updated);
+      } catch (_) { /* bỏ qua */ }
+    });
+  }
+});
+
+onUnmounted(() => {
+  if (customerOrderEventSource) { customerOrderEventSource.close(); customerOrderEventSource = null; }
 });
 </script>
 

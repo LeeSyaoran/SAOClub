@@ -84,8 +84,8 @@ public class PaymentWebhookController {
             tt.setPhuongThucThanhToan(getStr(body, "phuongThuc", donHang.getPhuongThucThanhToan()));
             tt.setSoTien(getDecimal(body.get("soTien"), donHang.getThanhTien()));
             tt.setMaGiaoDich(getStr(body, "maGiaoDich", null));
-            tt.setTrangThai("paid");
-            tt.setGhiChu("[Manual] Nhân viên xác nhận đã nhận tiền");
+            tt.setTrangThai("success");
+            tt.setGhiChu(getStr(body, "ghiChu", "[Manual] Xác nhận đã nhận tiền"));
             thanhToanRepository.save(tt);
 
             // Push SSE để admin panel refresh

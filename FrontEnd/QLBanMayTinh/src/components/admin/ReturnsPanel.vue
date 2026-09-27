@@ -4,7 +4,7 @@ import {
   Search, Filter, X, ChevronDown, ChevronUp,
   Hash, FileText, Package, User, DollarSign, CreditCard, Activity,
   SlidersHorizontal, RotateCcw, Clock, CheckCircle2, XCircle,
-  Wallet, Banknote, Landmark, Eye, Edit3, Plus,
+  Wallet, Banknote, Landmark, Eye, Edit3, Plus, AlertCircle,
 } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as PhieuTraHangService from "../../services/PhieuTraHangService.js";
@@ -37,7 +37,7 @@ onMounted(() => {
   ensureOrders();
   ensureCustomers();
   ensureProducts();
-  if (props.canPickStaff) ensureStaff();
+  ensureStaff();
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -56,11 +56,44 @@ const returnStats = computed(() => {
 });
 const productByBienThe = (bienTheId) =>
   (ProductsStore.items ?? []).find((p) => p.bienTheId === bienTheId);
-const staffName = (id) =>
-  (StaffStore.items ?? []).find((s) => s.nhanVienId === id)?.hoTen ?? "—";
-const staffOptions = computed(() =>
-  (StaffStore.items ?? []).map((s) => ({ nhanVienId: s.nhanVienId, hoTen: s.hoTen })),
-);
+const staffOptions = computed(() => {
+  const list = (StaffStore.items ?? []).map((s) => ({
+    nhanVienId: Number(s.nhanVienId),
+    hoTen: s.hoTen,
+  }));
+  // Đảm bảo tài khoản đang đăng nhập (Admin hoặc Nhân viên) luôn có trong danh sách
+  const myId = AuthStore.user?.id || AuthStore.user?.nhanVienId;
+  if (myId) {
+    const numId = Number(myId);
+    const exists = list.some((s) => s.nhanVienId === numId);
+    if (!exists) {
+      const myName =
+        AuthStore.user?.hoTen ||
+        AuthStore.user?.username ||
+        (AuthStore.user?.role === "admin" ? "Quản trị viên" : `Nhân viên #${numId}`);
+      list.unshift({
+        nhanVienId: numId,
+        hoTen: `${myName}${AuthStore.user?.role === "admin" ? " (Admin)" : ""}`,
+      });
+    }
+  }
+  return list;
+});
+
+const staffName = (id) => {
+  if (!id) return "—";
+  const numId = Number(id);
+  const found = staffOptions.value.find((s) => s.nhanVienId === numId);
+  if (found) return found.hoTen;
+  if (
+    AuthStore.user &&
+    (Number(AuthStore.user.id) === numId || Number(AuthStore.user.nhanVienId) === numId)
+  ) {
+    return AuthStore.user.hoTen || AuthStore.user.username || "Quản trị viên";
+  }
+  return `Nhân viên #${id}`;
+};
+
 const orderById = (donHangId) =>
   (OrdersStore.items ?? []).find((o) => o.donHangId === donHangId);
 
@@ -104,25 +137,45 @@ const resetFilters = () => {
 
 const filteredReturns = computed(() => {
   const items = ReturnsStore?.items ?? [];
-  const q = search.value.trim().toLowerCase();
-  return items.filter((p) => {
-    // text search
-    if (q) {
-      const name = customerName(orderById(p.donHangId)?.khachHangId ?? -1).toLowerCase();
-      const match = String(p.phieuTraId).includes(q) || (p.maPhieu ?? "").toLowerCase().includes(q) || name.includes(q);
-      if (!match) return false;
-    }
-    if (filters.trangThai && p.trangThai !== filters.trangThai) return false;
-    if (filters.hinhThucHoan && p.hinhThucHoan !== filters.hinhThucHoan) return false;
-    // ngày trả
-    if (filters.ngayFrom && (p.ngayTra ?? '').slice(0, 10) < filters.ngayFrom) return false;
-    if (filters.ngayTo   && (p.ngayTra ?? '').slice(0, 10) > filters.ngayTo)   return false;
-    // tiền hoàn range
-    const tien = Number(p.soTienHoan ?? 0);
-    if (filters.tienMin !== "" && tien < Number(filters.tienMin)) return false;
-    if (filters.tienMax !== "" && tien > Number(filters.tienMax)) return false;
-    return true;
-  });
+  const rawQ = search.value.trim().toLowerCase();
+  const q = rawQ.replace(/^#/, "");
+  return items
+    .filter((p) => {
+      // text search (hỗ trợ tìm theo: mã phiếu, mã đơn hàng, ID đơn, tên khách hàng)
+      if (rawQ) {
+        const o = orderById(p.donHangId);
+        const name = customerName(o?.khachHangId ?? -1).toLowerCase();
+        const maDon = (o?.maDonHang ?? "").toLowerCase();
+        const donHangIdStr = String(p.donHangId ?? "").toLowerCase();
+        const maPhieu = (p.maPhieu ?? "").toLowerCase();
+        const phieuTraIdStr = String(p.phieuTraId ?? "").toLowerCase();
+
+        const match =
+          phieuTraIdStr.includes(rawQ) ||
+          phieuTraIdStr.includes(q) ||
+          maPhieu.includes(rawQ) ||
+          maPhieu.includes(q) ||
+          maDon.includes(rawQ) ||
+          maDon.includes(q) ||
+          donHangIdStr.includes(rawQ) ||
+          donHangIdStr.includes(q) ||
+          name.includes(rawQ);
+
+        if (!match) return false;
+      }
+      if (filters.trangThai && p.trangThai !== filters.trangThai) return false;
+      if (filters.hinhThucHoan && p.hinhThucHoan !== filters.hinhThucHoan) return false;
+      // ngày trả
+      if (filters.ngayFrom && (p.ngayTra ?? '').slice(0, 10) < filters.ngayFrom) return false;
+      if (filters.ngayTo   && (p.ngayTra ?? '').slice(0, 10) > filters.ngayTo)   return false;
+      // tiền hoàn range
+      const tien = Number(p.soTienHoan ?? 0);
+      if (filters.tienMin !== "" && tien < Number(filters.tienMin)) return false;
+      if (filters.tienMax !== "" && tien > Number(filters.tienMax)) return false;
+      return true;
+    })
+    // Sắp xếp mới nhất lên đầu: dùng phieuTraId (tự tăng) để đảm bảo đúng thứ tự tạo
+    .sort((a, b) => (b.phieuTraId ?? 0) - (a.phieuTraId ?? 0));
 });
 const { currentPage, totalPages, pagedItems: pagedReturns, pageSize } = usePagination(filteredReturns);
 watch([search, () => filters.trangThai, () => filters.hinhThucHoan, () => filters.ngayFrom, () => filters.ngayTo, () => filters.tienMin, () => filters.tienMax], () => {
@@ -138,31 +191,87 @@ const orderSearch = ref("");
 const selectedOrder = ref(null);
 const lineItems = ref([]); // [{ id, bienTheId, chiTietId, maSku, soSerial, donGia, soLuongDaMua, soLuongTra, tinhTrang, checked }]
 const orderLinesLoading = ref(false);
-const khachCoMat = ref(false); // checkbox gate hình thức hoàn — không lưu DB
 
-const emptyForm = () => ({
-  donHangId: null,
-  nhanVienId: props.canPickStaff ? "" : (AuthStore.user?.id ?? null),
-  lyDo: "",
-  ngayTra: nowLocalIso().slice(0, 16),
-  trangThai: "cho_xu_ly",
-  soTienHoan: 0,
-  hinhThucHoan: "vi",
-  ghiChu: "",
+// Những đơn ở trạng thái đã xử lý không cho sửa nữa
+const isModalReadonly = computed(() => {
+  if (props.readonly) return true;
+  if (editingId.value && form.value.trangThai === "da_xu_ly") return true;
+  return false;
 });
+
+const currentHandlerDisplayName = computed(() => {
+  const currentId = form.value.nhanVienId;
+  const myUser = AuthStore.user;
+  const myId = myUser?.id ?? myUser?.nhanVienId;
+  const targetId =
+    currentId != null && currentId !== ""
+      ? Number(currentId)
+      : myId
+      ? Number(myId)
+      : 1;
+
+  if (myId && Number(myId) === targetId) {
+    const name =
+      myUser?.hoTen ||
+      myUser?.username ||
+      (myUser?.role === "admin" ? "Quản trị viên" : "Nhân viên");
+    return myUser?.role === "admin" ? `${name} (Admin)` : name;
+  }
+  if (targetId === 1) {
+    return "Quản trị viên (Admin)";
+  }
+  const s = (StaffStore.items ?? []).find((x) => Number(x.nhanVienId) === targetId);
+  if (s?.hoTen) return s.hoTen;
+  return `Nhân viên #${targetId}`;
+});
+
+const isAllChecked = computed(() => {
+  return lineItems.value.length > 0 && lineItems.value.every((l) => l.checked);
+});
+
+const toggleSelectAll = (e) => {
+  const val = e.target.checked;
+  lineItems.value.forEach((l) => (l.checked = val));
+  recalcSoTienHoan();
+};
+
+const emptyForm = () => {
+  const myId = AuthStore.user?.id ?? AuthStore.user?.nhanVienId ?? 1;
+  return {
+    donHangId: null,
+    nhanVienId: Number(myId),
+    lyDo: "",
+    ngayTra: nowLocalIso().slice(0, 16),
+    trangThai: "cho_xu_ly",
+    soTienHoan: 0,
+    hinhThucHoan: "vi",
+    ghiChu: "",
+  };
+};
 const form = ref(emptyForm());
+
+// Những đơn đã có phiếu trả ở trạng thái "da_xu_ly" — không cho tạo thêm
+const donHangDaXuLyIds = computed(() => {
+  return new Set(
+    (ReturnsStore.items ?? [])
+      .filter((r) => r.trangThai === "da_xu_ly")
+      .map((r) => r.donHangId),
+  );
+});
 
 const searchedOrders = computed(() => {
   const q = orderSearch.value.trim().toLowerCase();
   if (!q) return [];
   return (OrdersStore.items ?? [])
-    .filter(
-      (o) =>
+    .filter((o) => {
+      // Loại bỏ các đơn đã có phiếu trả đã xử lý
+      if (donHangDaXuLyIds.value.has(o.donHangId)) return false;
+      return (
         String(o.donHangId).includes(q) ||
         (o.maDonHang ?? "").toLowerCase().includes(q) ||
-        customerName(o.khachHangId).toLowerCase().includes(q) ||
-        (o.sdtNguoiNhan ?? "").includes(q),
-    )
+        customerName(o.khachHangId).toLowerCase().includes(q)
+      );
+    })
     .slice(0, 10);
 });
 
@@ -183,14 +292,24 @@ const clampSoLuongTra = (l) => {
 };
 
 const loadOrderLines = async (donHangId, existingLines = []) => {
+  if (!donHangId) {
+    lineItems.value = [];
+    orderLinesLoading.value = false;
+    return;
+  }
   orderLinesLoading.value = true;
   try {
-    const items = await ChiTietDonHangService.getByDonHang(donHangId).catch(
+    const rawItems = await ChiTietDonHangService.getByDonHang(donHangId).catch(
       () => [],
     );
+    const items = Array.isArray(rawItems) ? rawItems : [];
+    const isNew = !existingLines || existingLines.length === 0;
+
     lineItems.value = items.map((i) => {
       const existed = existingLines.find(
-        (c) => c.bienTheId === i.bienTheId && c.chiTietId === i.chiTietId,
+        (c) =>
+          c.bienTheId === i.bienTheId &&
+          (c.chiTietId == null || c.chiTietId === i.chiTietId),
       );
       return {
         id: existed?.id ?? null,
@@ -202,9 +321,16 @@ const loadOrderLines = async (donHangId, existingLines = []) => {
         soLuongDaMua: i.soLuong,
         soLuongTra: existed?.soLuong ?? i.soLuong,
         tinhTrang: existed?.tinhTrang ?? "tot",
-        checked: !!existed,
+        checked: existed ? true : isNew,
       };
     });
+
+    if (isNew) {
+      recalcSoTienHoan();
+    }
+  } catch (err) {
+    console.error("[ReturnsPanel] Lỗi khi tải chi tiết đơn hàng:", err);
+    lineItems.value = [];
   } finally {
     orderLinesLoading.value = false;
   }
@@ -220,28 +346,29 @@ const pickOrder = async (o) => {
 const openAdd = () => {
   editingId.value = null;
   form.value = emptyForm();
+  const myId = AuthStore.user?.id ?? AuthStore.user?.nhanVienId ?? 1;
+  form.value.nhanVienId = Number(myId);
   selectedOrder.value = null;
   orderSearch.value = "";
   lineItems.value = [];
-  khachCoMat.value = false;
   formError.value = "";
   showModal.value = true;
 };
 
 const openDetail = async (p) => {
   editingId.value = p.phieuTraId;
+  const myId = AuthStore.user?.id ?? AuthStore.user?.nhanVienId ?? 1;
   form.value = {
     donHangId: p.donHangId,
-    nhanVienId: p.nhanVienId,
-    lyDo: p.lyDo,
+    nhanVienId: p.nhanVienId != null ? Number(p.nhanVienId) : Number(myId),
+    lyDo: p.lyDo ?? "",
     ngayTra: p.ngayTra ? p.ngayTra.slice(0, 16) : nowLocalIso().slice(0, 16),
-    trangThai: p.trangThai,
-    soTienHoan: p.soTienHoan,
-    hinhThucHoan: p.hinhThucHoan,
+    trangThai: p.trangThai ?? "cho_xu_ly",
+    soTienHoan: p.soTienHoan ?? 0,
+    hinhThucHoan: p.hinhThucHoan || "vi",
     ghiChu: p.ghiChu ?? "",
   };
   selectedOrder.value = orderById(p.donHangId) ?? null;
-  khachCoMat.value = p.hinhThucHoan === "tien_mat";
   formError.value = "";
   const allLines = await ChiTietTraHangService.getAll().catch(() => []);
   const mine = allLines.filter((c) => c.phieuTraId === p.phieuTraId);
@@ -250,6 +377,7 @@ const openDetail = async (p) => {
 };
 
 const saveReturn = async () => {
+  if (isModalReadonly.value) return;
   formError.value = "";
   if (!form.value.donHangId) {
     formError.value = t("admin.returnModal.orderRequired");
@@ -268,14 +396,22 @@ const saveReturn = async () => {
   if (saving.value) return;
   saving.value = true;
   try {
+    let nhanVienIdToSave = form.value.nhanVienId
+      ? Number(form.value.nhanVienId)
+      : null;
+    if (!nhanVienIdToSave) {
+      nhanVienIdToSave = AuthStore.user?.id
+        ? Number(AuthStore.user.id)
+        : (staffOptions.value[0]?.nhanVienId ?? 1);
+    }
     const headerBody = {
       donHangId: form.value.donHangId,
-      nhanVienId: form.value.nhanVienId ? Number(form.value.nhanVienId) : null,
+      nhanVienId: nhanVienIdToSave,
       lyDo: form.value.lyDo,
       ngayTra: nowLocalIso(new Date(form.value.ngayTra)),
       trangThai: form.value.trangThai,
       soTienHoan: form.value.soTienHoan,
-      hinhThucHoan: form.value.hinhThucHoan,
+      hinhThucHoan: form.value.hinhThucHoan || "vi",
       ghiChu: form.value.ghiChu || "—",
     };
     const res = await PhieuTraHangService.save(editingId.value, headerBody);
@@ -543,9 +679,9 @@ const saveReturn = async () => {
                   style="font-size:12px;"
                   @click="openDetail(p)"
                 >
-                  <Eye v-if="readonly" :size="13" />
+                  <Eye v-if="readonly || p.trangThai === 'da_xu_ly'" :size="13" />
                   <Edit3 v-else :size="13" />
-                  <span>{{ readonly ? t("admin.returns.view") : t("admin.returns.edit") }}</span>
+                  <span>{{ (readonly || p.trangThai === 'da_xu_ly') ? t("admin.returns.view") : t("admin.returns.edit") }}</span>
                 </button>
               </div>
             </td>
@@ -561,387 +697,421 @@ const saveReturn = async () => {
     </div>
   </div>
 
+  <!-- ── Modal Tạo / Sửa phiếu trả hàng ──────────────────────────────────────── -->
   <div
     v-if="showModal"
-    class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-    style="background: var(--bg-overlay); z-index: 1000"
+    class="cfm-backdrop position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
+    style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 1050;"
     @click.self="showModal = false"
   >
-    <div
-      class="rounded-3 p-3"
-      style="
-        background: var(--bg-card);
-        width: 640px;
-        max-width: 96vw;
-        max-height: 90vh;
-        overflow-y: auto;
-      "
-    >
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="fw-bold" style="color: var(--text-heading)">
-          {{
-            editingId
-              ? t("admin.returnModal.titleEdit")
-              : t("admin.returnModal.titleAdd")
-          }}
+    <div class="cfm-shell return-modal-shell">
+      <!-- ── Header ── -->
+      <div class="cfm-header">
+        <div class="cfm-header-icon">
+          <RotateCcw :size="22" />
         </div>
-        <button
-          class="btn-close btn-sm"
-          :aria-label="t('common.close')"
-          @click="showModal = false"
-        ></button>
-      </div>
-      <div v-if="formError" class="alert alert-danger small py-2 mb-2">
-        {{ formError }}
+        <div class="cfm-header-text">
+          <h3 class="cfm-title">
+            {{
+              editingId
+                ? (isModalReadonly ? 'Chi tiết phiếu trả hàng' : t("admin.returnModal.titleEdit"))
+                : t("admin.returnModal.titleAdd")
+            }}
+          </h3>
+          <p class="cfm-subtitle">
+            {{
+              isModalReadonly
+                ? 'Phiếu trả hàng đã hoàn tất xử lý (chỉ xem)'
+                : (editingId ? 'Xem và cập nhật thông tin phiếu đổi trả hàng' : 'Tạo phiếu đổi trả & hoàn tiền cho khách hàng')
+            }}
+          </p>
+        </div>
+        <button class="cfm-close" :aria-label="t('common.close')" @click="showModal = false">
+          <X :size="16" />
+        </button>
       </div>
 
-      <div class="mb-2">
-        <label class="form-label small text-secondary mb-1">{{
-          t("admin.returnModal.orderLabel")
-        }}</label>
+      <!-- ── Body ── -->
+      <div class="cfm-body return-modal-body">
+        <div v-if="formError" class="cfm-error">
+          <AlertCircle :size="16" class="flex-shrink-0" />
+          <span>{{ formError }}</span>
+        </div>
+
+        <!-- Thông báo phiếu đã xử lý (chỉ xem) -->
         <div
-          v-if="selectedOrder"
-          class="d-flex align-items-center justify-content-between p-2 rounded-2"
-          style="background: var(--bg-input)"
+          v-if="isModalReadonly"
+          class="alert py-2 px-3 small d-flex align-items-center gap-2 mb-3 rounded-3"
+          style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #047857;"
         >
-          <span>{{ selectedOrder.maDonHang || "#" + selectedOrder.donHangId }} —
-            {{ customerName(selectedOrder.khachHangId) }}</span>
-          <button
-            v-if="!editingId"
-            class="btn btn-sm btn-outline-secondary"
-            style="font-size: 0.72rem"
-            @click="
-              selectedOrder = null;
-              form.donHangId = null;
-              lineItems = [];
-            "
-          >
-            {{ t("admin.returnModal.changeOrder") }}
-          </button>
+          <CheckCircle2 :size="16" class="flex-shrink-0 text-success" />
+          <span>Phiếu trả hàng này ở trạng thái <strong>Đã xử lý</strong> nên không thể chỉnh sửa. Bạn chỉ có thể xem chi tiết.</span>
         </div>
-        <template v-else>
-          <input
-            v-model="orderSearch"
-            class="form-control form-control-sm"
-            style="
-              background: var(--bg-input);
-              color: var(--text-primary);
-              border-color: var(--border-color-strong);
-            "
-            :placeholder="t('admin.returnModal.orderSearchPlaceholder')"
-          />
-          <div
-            v-if="orderSearch.trim()"
-            class="mt-1 rounded-2 overflow-hidden"
-            style="
-              max-height: 160px;
-              overflow-y: auto;
-              border: 1px solid var(--border-color-soft);
-            "
-          >
-            <div
-              v-for="o in searchedOrders"
-              :key="o.donHangId"
-              class="p-2"
-              style="cursor: pointer"
-              @click="pickOrder(o)"
-            >
-              {{ o.maDonHang || "#" + o.donHangId }} —
-              {{ customerName(o.khachHangId) }}
-            </div>
-            <div
-              v-if="searchedOrders.length === 0"
-              class="p-2 text-secondary small"
-            >
-              {{ t("admin.returnModal.orderSearchEmpty") }}
-            </div>
-          </div>
-        </template>
-      </div>
 
-      <!-- Danh sach dong san pham -->
-      <div v-if="selectedOrder" class="mb-2">
-        <label class="form-label small text-secondary mb-1">{{
-          t("admin.returnModal.lineItemsTitle")
-        }}</label>
-        <div v-if="orderLinesLoading" class="text-secondary small">
-          {{ t("admin.returns.loading") }}
-        </div>
-        <table v-else class="w-100 mb-0" style="font-size: 0.8rem">
-          <thead>
-            <tr style="background: var(--bg-input)">
-              <th class="px-2 py-1" style="width: 26px"></th>
-              <th class="px-2 py-1">{{ t("admin.returnModal.colProduct") }}</th>
-              <th class="px-2 py-1">{{ t("admin.returnModal.colSku") }}</th>
-              <th class="px-2 py-1 text-center">
-                {{ t("admin.returnModal.colBought") }}
-              </th>
-              <th class="px-2 py-1 text-center">
-                {{ t("admin.returnModal.colReturnQty") }}
-              </th>
-              <th class="px-2 py-1">
-                {{ t("admin.returnModal.colCondition") }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="l in lineItems"
-              :key="`${l.bienTheId}-${l.chiTietId}`"
-              style="border-top: 1px solid var(--border-color-soft)"
+        <!-- Section 1: Đơn hàng & Sản phẩm trả -->
+        <div class="cfm-section">
+          <div class="cfm-section-title">
+            <Package :size="15" />
+            <span>ĐƠN HÀNG & SẢN PHẨM TRẢ</span>
+          </div>
+
+          <!-- Chọn đơn hàng -->
+          <div class="mb-3">
+            <label class="cfm-label mb-1.5">
+              <span>{{ t("admin.returnModal.orderLabel") }}</span>
+            </label>
+
+            <!-- Khi đã chọn đơn hàng -->
+            <div
+              v-if="selectedOrder"
+              class="return-order-card d-flex align-items-center justify-content-between p-3"
             >
-              <td class="px-2 py-1">
-                <input
-                  v-model="l.checked"
-                  type="checkbox"
-                  :disabled="readonly"
-                  @change="recalcSoTienHoan"
-                />
-              </td>
-              <td class="px-2 py-1">
-                {{ productByBienThe(l.bienTheId)?.tenSanPham || "—" }}
-              </td>
-              <td
-                class="px-2 py-1 text-secondary"
-                style="font-family: monospace"
+              <div class="d-flex align-items-center gap-3">
+                <div class="return-order-icon">
+                  <FileText :size="20" />
+                </div>
+                <div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="return-order-code">{{ selectedOrder.maDonHang || "#" + selectedOrder.donHangId }}</span>
+                    <span class="badge bg-secondary-subtle text-secondary small">{{ customerName(selectedOrder.khachHangId) }}</span>
+                  </div>
+                  <div class="text-secondary small mt-1" style="font-size: 12px;">
+                    Tổng đơn: <span class="fw-semibold text-dark">{{ formatPrice(selectedOrder.tongTien) }}</span>
+                    <span v-if="selectedOrder.ngayTao"> · {{ selectedOrder.ngayTao.slice(0, 10) }}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                v-if="!editingId && !isModalReadonly"
+                class="return-btn-change"
+                @click="
+                  selectedOrder = null;
+                  form.donHangId = null;
+                  lineItems = [];
+                "
               >
-                {{ l.maSku
-                }}<span v-if="l.soSerial" class="text-info">
-                  · SN {{ l.soSerial }}</span>
-              </td>
-              <td class="px-2 py-1 text-center">{{ l.soLuongDaMua }}</td>
-              <td class="px-2 py-1 text-center">
+                <RotateCcw :size="13" />
+                <span>{{ t("admin.returnModal.changeOrder") }}</span>
+              </button>
+            </div>
+
+            <!-- Khi chưa chọn đơn hàng: Tìm kiếm -->
+            <div v-else class="position-relative">
+              <div class="cfm-input-wrap">
+                <Search class="cfm-input-icon" :size="15" />
                 <input
-                  v-model.number="l.soLuongTra"
-                  type="number"
-                  min="1"
-                  :max="l.soLuongDaMua"
-                  :disabled="readonly || !l.checked"
-                  class="form-control form-control-sm"
-                  style="
-                    width: 64px;
-                    background: var(--bg-input);
-                    color: var(--text-primary);
-                  "
-                  @change="clampSoLuongTra(l)"
+                  v-model="orderSearch"
+                  class="cfm-input"
+                  :placeholder="t('admin.returnModal.orderSearchPlaceholder')"
                 />
-              </td>
-              <td class="px-2 py-1">
-                <select
-                  v-model="l.tinhTrang"
-                  :disabled="readonly || !l.checked"
-                  class="form-select form-select-sm"
-                  style="
-                    background: var(--bg-input);
-                    color: var(--text-primary);
-                  "
+              </div>
+              <div
+                v-if="orderSearch.trim()"
+                class="return-order-dropdown"
+              >
+                <div
+                  v-for="o in searchedOrders"
+                  :key="o.donHangId"
+                  class="return-order-item"
+                  @click="pickOrder(o)"
                 >
-                  <option value="tot">
-                    {{ t("admin.returnModal.conditionGood") }}
-                  </option>
-                  <option value="loi">
-                    {{ t("admin.returnModal.conditionBad") }}
-                  </option>
+                  <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="return-order-code">{{ o.maDonHang || "#" + o.donHangId }}</span>
+                      <span class="fw-medium text-dark">{{ customerName(o.khachHangId) }}</span>
+                    </div>
+                    <span class="fw-semibold text-pink-700 small">{{ formatPrice(o.tongTien) }}</span>
+                  </div>
+                </div>
+              <div
+                v-if="searchedOrders.length === 0"
+                class="p-3 text-secondary text-center small"
+              >
+                Không tìm thấy đơn hàng phù hợp (đơn đã có phiếu trả xử lý xong sẽ không hiện ở đây)
+              </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danh sách dòng sản phẩm trả -->
+          <div v-if="selectedOrder" class="mt-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label class="cfm-label mb-0">
+                <span>{{ t("admin.returnModal.lineItemsTitle") }}</span>
+                <span v-if="lineItems.length > 0" class="badge rounded-pill bg-pink-subtle text-pink-700 ms-1" style="font-size: 11px;">
+                  Đã chọn {{ lineItems.filter(l => l.checked).length }}/{{ lineItems.length }}
+                </span>
+              </label>
+              <div v-if="lineItems.length > 0 && !isModalReadonly" class="text-secondary small">
+                <label class="d-inline-flex align-items-center gap-1.5 cursor-pointer user-select-none" style="font-size: 12px; cursor: pointer;">
+                  <input
+                    type="checkbox"
+                    :checked="isAllChecked"
+                    class="form-check-input mt-0"
+                    style="cursor: pointer;"
+                    @change="toggleSelectAll"
+                  />
+                  <span class="fw-medium text-dark">Chọn tất cả</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Loading spinner -->
+            <div v-if="orderLinesLoading" class="return-table-loading">
+              <div class="spinner-border spinner-border-sm text-pink" role="status"></div>
+              <span>Đang tải danh sách sản phẩm của đơn hàng...</span>
+            </div>
+
+            <!-- Empty state -->
+            <div v-else-if="lineItems.length === 0" class="return-table-empty">
+              <Package :size="24" class="text-muted mb-1 opacity-50" />
+              <div>Đơn hàng này không có sản phẩm nào</div>
+            </div>
+
+            <!-- Table -->
+            <div v-else class="return-table-card">
+              <table class="return-table">
+                <thead>
+                  <tr>
+                    <th style="width: 38px;" class="text-center">#</th>
+                    <th>{{ t("admin.returnModal.colProduct") }}</th>
+                    <th>{{ t("admin.returnModal.colSku") }}</th>
+                    <th class="text-center" style="width: 75px;">{{ t("admin.returnModal.colBought") }}</th>
+                    <th class="text-center" style="width: 90px;">{{ t("admin.returnModal.colReturnQty") }}</th>
+                    <th style="width: 130px;">{{ t("admin.returnModal.colCondition") }}</th>
+                    <th class="text-end" style="width: 120px;">Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="l in lineItems"
+                    :key="`${l.bienTheId}-${l.chiTietId}`"
+                    :class="{ 'is-selected': l.checked }"
+                  >
+                    <td class="text-center">
+                      <input
+                        v-model="l.checked"
+                        type="checkbox"
+                        class="form-check-input"
+                        :disabled="isModalReadonly"
+                        style="cursor: pointer;"
+                        @change="recalcSoTienHoan"
+                      />
+                    </td>
+                    <td>
+                      <div class="fw-semibold text-dark" style="font-size: 12.5px;">
+                        {{ productByBienThe(l.bienTheId)?.tenSanPham || "—" }}
+                      </div>
+                      <div v-if="l.donGia" class="text-secondary small mt-0.5" style="font-size: 11px;">
+                        Đơn giá: {{ formatPrice(l.donGia) }}
+                      </div>
+                    </td>
+                    <td>
+                      <div class="return-sku-badge">{{ l.maSku }}</div>
+                      <div v-if="l.soSerial" class="text-info small mt-0.5" style="font-size: 10.5px; font-family: monospace;">
+                        SN: {{ l.soSerial }}
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-light text-dark border fw-medium px-2 py-1">{{ l.soLuongDaMua }}</span>
+                    </td>
+                    <td class="text-center">
+                      <input
+                        v-model.number="l.soLuongTra"
+                        type="number"
+                        min="1"
+                        :max="l.soLuongDaMua"
+                        :disabled="isModalReadonly || !l.checked"
+                        class="return-qty-input text-center"
+                        @change="clampSoLuongTra(l)"
+                      />
+                    </td>
+                    <td>
+                      <select
+                        v-model="l.tinhTrang"
+                        :disabled="isModalReadonly || !l.checked"
+                        class="return-cond-select"
+                      >
+                        <option value="tot">{{ t("admin.returnModal.conditionGood") }}</option>
+                        <option value="loi">{{ t("admin.returnModal.conditionBad") }}</option>
+                      </select>
+                    </td>
+                    <td class="text-end fw-semibold" style="font-size: 12.5px; color: var(--pink-700);">
+                      {{ formatPrice((l.donGia || 0) * (l.soLuongTra || 0)) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Table summary footer -->
+              <div class="return-table-footer d-flex align-items-center justify-content-between px-3 py-2">
+                <span class="text-secondary small">
+                  Đã chọn: <strong class="text-dark">{{ lineItems.filter(l => l.checked).length }}</strong> sản phẩm
+                </span>
+                <span class="small">
+                  Tổng tiền hoàn ước tính: <strong class="fs-6 text-pink-700 ms-1">{{ formatPrice(form.soTienHoan) }}</strong>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Thông tin xử lý & hoàn tiền -->
+        <div class="cfm-section">
+          <div class="cfm-section-title">
+            <DollarSign :size="15" />
+            <span>THÔNG TIN XỬ LÝ & HOÀN TIỀN</span>
+          </div>
+
+          <div class="cfm-fields">
+            <!-- Người xử lý (tự load từ tài khoản login) -->
+            <div class="cfm-field">
+              <label class="cfm-label">
+                <User :size="13" />
+                <span>{{ t("admin.returnModal.staffLabel") }}</span>
+              </label>
+
+              <!-- Tự động load và hiển thị người xử lý theo tài khoản đăng nhập -->
+              <div class="cfm-input-wrap">
+                <User class="cfm-input-icon" :size="14" />
+                <input
+                  type="text"
+                  :value="currentHandlerDisplayName"
+                  disabled
+                  class="cfm-input"
+                  style="background: var(--pink-50, #fff5f9); cursor: not-allowed; font-weight: 600;"
+                  placeholder="Hệ thống tự động ghi nhận"
+                />
+              </div>
+            </div>
+
+            <!-- Ngày trả -->
+            <div class="cfm-field">
+              <label class="cfm-label">
+                <Clock :size="13" />
+                <span>{{ t("admin.returnModal.dateLabel") }}</span>
+              </label>
+              <div class="cfm-input-wrap">
+                <Clock class="cfm-input-icon" :size="14" />
+                <input
+                  v-model="form.ngayTra"
+                  type="datetime-local"
+                  :disabled="isModalReadonly"
+                  class="cfm-input"
+                />
+              </div>
+            </div>
+
+            <!-- Lý do trả hàng (Full width) -->
+            <div class="cfm-field cfm-field--full">
+              <label class="cfm-label">
+                <FileText :size="13" />
+                <span>{{ t("admin.returnModal.reasonLabel") }}</span>
+                <span class="cfm-required">*</span>
+              </label>
+              <div class="cfm-input-wrap">
+                <FileText class="cfm-input-icon" :size="14" />
+                <input
+                  v-model="form.lyDo"
+                  :disabled="isModalReadonly"
+                  class="cfm-input"
+                  placeholder="Nhập lý do khách hàng trả hàng (VD: Đổi ý, sản phẩm lỗi phần cứng...)"
+                />
+              </div>
+            </div>
+
+            <!-- Số tiền hoàn -->
+            <div class="cfm-field">
+              <label class="cfm-label">
+                <Wallet :size="13" />
+                <span>{{ t("admin.returnModal.amountLabel") }} (VNĐ)</span>
+                <span class="cfm-required">*</span>
+              </label>
+              <div class="cfm-input-wrap">
+                <Wallet class="cfm-input-icon" :size="14" />
+                <input
+                  v-model.number="form.soTienHoan"
+                  type="number"
+                  min="0"
+                  :disabled="isModalReadonly"
+                  class="cfm-input fw-bold"
+                  style="color: var(--pink-700, #a81b5d);"
+                />
+              </div>
+            </div>
+
+            <!-- Hình thức hoàn (bỏ khách có mặt tại cửa hàng) -->
+            <div class="cfm-field">
+              <label class="cfm-label">
+                <CreditCard :size="13" />
+                <span>{{ t("admin.returnModal.hinhThucHoanLabel") }}</span>
+              </label>
+              <div class="cfm-input-wrap">
+                <CreditCard class="cfm-input-icon" :size="14" />
+                <select
+                  v-model="form.hinhThucHoan"
+                  :disabled="isModalReadonly"
+                  class="cfm-input cfm-select"
+                >
+                  <option value="vi">{{ t("admin.hinhThucHoan.vi") }} (Ví tài khoản)</option>
+                  <option value="tien_mat">{{ t("admin.hinhThucHoan.tien_mat") }} (Tại quầy)</option>
                 </select>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              </div>
+            </div>
 
-      <div class="row g-2 mb-2">
-        <div v-if="canPickStaff" class="col-6">
-          <label class="form-label small text-secondary mb-1">{{
-            t("admin.returnModal.staffLabel")
-          }}</label>
-          <select
-            v-model="form.nhanVienId"
-            :disabled="readonly"
-            class="form-select form-select-sm"
-            style="
-              background: var(--bg-input);
-              color: var(--text-primary);
-              border-color: var(--border-color-strong);
-            "
-          >
-            <option value="">—</option>
-            <option
-              v-for="s in staffOptions"
-              :key="s.nhanVienId"
-              :value="s.nhanVienId"
-            >
-              {{ s.hoTen }}
-            </option>
-          </select>
-        </div>
-        <div v-else class="col-6">
-          <label class="form-label small text-secondary mb-1">{{
-            t("admin.returnModal.staffLabel")
-          }}</label>
-          <div
-            class="form-control form-control-sm"
-            style="
-              background: var(--bg-input);
-              color: var(--text-secondary);
-              border-color: var(--border-color-strong);
-            "
-          >
-            {{ staffName(form.nhanVienId) }}
+            <!-- Trạng thái -->
+            <div class="cfm-field">
+              <label class="cfm-label">
+                <Activity :size="13" />
+                <span>{{ t("admin.returnModal.statusLabel") }}</span>
+              </label>
+              <div class="cfm-input-wrap">
+                <Activity class="cfm-input-icon" :size="14" />
+                <select
+                  v-model="form.trangThai"
+                  :disabled="isModalReadonly"
+                  class="cfm-input cfm-select"
+                >
+                  <option value="cho_xu_ly">{{ t("admin.returnStatus.cho_xu_ly") }}</option>
+                  <option value="da_xu_ly">{{ t("admin.returnStatus.da_xu_ly") }}</option>
+                  <option value="tu_choi">{{ t("admin.returnStatus.tu_choi") }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Ghi chú (Full width) -->
+            <div class="cfm-field cfm-field--full">
+              <label class="cfm-label">
+                <span>{{ t("admin.returnModal.noteLabel") }}</span>
+              </label>
+              <input
+                v-model="form.ghiChu"
+                :disabled="isModalReadonly"
+                class="cfm-input"
+                placeholder="Ghi chú thêm về phụ kiện kèm theo, số seri máy, tình trạng vỏ hộp..."
+              />
+            </div>
           </div>
         </div>
-        <div class="col-6">
-          <label class="form-label small text-secondary mb-1">{{
-            t("admin.returnModal.dateLabel")
-          }}</label>
-          <input
-            v-model="form.ngayTra"
-            type="datetime-local"
-            :disabled="readonly"
-            class="form-control form-control-sm"
-            style="
-              background: var(--bg-input);
-              color: var(--text-primary);
-              border-color: var(--border-color-strong);
-            "
-          />
-        </div>
       </div>
 
-      <div class="mb-2">
-        <label class="form-label small text-secondary mb-1">{{
-          t("admin.returnModal.reasonLabel")
-        }}</label>
-        <input
-          v-model="form.lyDo"
-          :disabled="readonly"
-          class="form-control form-control-sm"
-          style="
-            background: var(--bg-input);
-            color: var(--text-primary);
-            border-color: var(--border-color-strong);
-          "
-        />
-      </div>
-
-      <div class="row g-2 mb-2 align-items-end">
-        <div class="col-4">
-          <label class="form-label small text-secondary mb-1">{{
-            t("admin.returnModal.amountLabel")
-          }}</label>
-          <input
-            v-model.number="form.soTienHoan"
-            type="number"
-            min="0"
-            :disabled="readonly"
-            class="form-control form-control-sm"
-            style="
-              background: var(--bg-input);
-              color: var(--text-primary);
-              border-color: var(--border-color-strong);
-            "
-          />
-        </div>
-        <div class="col-4">
-          <div class="form-check mb-1">
-            <input
-              id="khachCoMat"
-              v-model="khachCoMat"
-              type="checkbox"
-              class="form-check-input"
-              :disabled="readonly"
-              @change="
-                () => {
-                  if (!khachCoMat && form.hinhThucHoan === 'tien_mat')
-                    form.hinhThucHoan = 'vi';
-                }
-              "
-            />
-            <label
-              class="form-check-label small text-secondary"
-              for="khachCoMat"
-            >{{ t("admin.returnModal.customerPresentLabel") }}</label>
-          </div>
-        </div>
-        <div class="col-4">
-          <label class="form-label small text-secondary mb-1">{{
-            t("admin.returnModal.hinhThucHoanLabel")
-          }}</label>
-          <select
-            v-model="form.hinhThucHoan"
-            :disabled="readonly"
-            class="form-select form-select-sm"
-            style="
-              background: var(--bg-input);
-              color: var(--text-primary);
-              border-color: var(--border-color-strong);
-            "
-          >
-            <option value="vi">{{ t("admin.hinhThucHoan.vi") }}</option>
-            <option value="tien_mat" :disabled="!khachCoMat">
-              {{ t("admin.hinhThucHoan.tien_mat") }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <div class="mb-2">
-        <label class="form-label small text-secondary mb-1">{{
-          t("admin.returnModal.statusLabel")
-        }}</label>
-        <select
-          v-model="form.trangThai"
-          :disabled="readonly"
-          class="form-select form-select-sm"
-          style="
-            background: var(--bg-input);
-            color: var(--text-primary);
-            border-color: var(--border-color-strong);
-          "
-        >
-          <option value="cho_xu_ly">
-            {{ t("admin.returnStatus.cho_xu_ly") }}
-          </option>
-          <option value="da_xu_ly">
-            {{ t("admin.returnStatus.da_xu_ly") }}
-          </option>
-          <option value="tu_choi">{{ t("admin.returnStatus.tu_choi") }}</option>
-        </select>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label small text-secondary mb-1">{{
-          t("admin.returnModal.noteLabel")
-        }}</label>
-        <input
-          v-model="form.ghiChu"
-          :disabled="readonly"
-          class="form-control form-control-sm"
-          style="
-            background: var(--bg-input);
-            color: var(--text-primary);
-            border-color: var(--border-color-strong);
-          "
-        />
-      </div>
-
-      <div class="d-flex justify-content-end gap-2">
+      <!-- ── Footer ── -->
+      <div class="cfm-footer">
         <button
-          class="btn btn-sm btn-outline-secondary"
+          class="cfm-btn cfm-btn--ghost"
           @click="showModal = false"
         >
-          {{
-            readonly
-              ? t("admin.returnModal.close")
-              : t("admin.returnModal.cancel")
-          }}
+          {{ isModalReadonly ? t("admin.returnModal.close") : t("admin.returnModal.cancel") }}
         </button>
         <button
-          v-if="!readonly"
-          class="btn btn-sm btn-warning text-dark fw-bold"
+          v-if="!isModalReadonly"
+          class="cfm-btn cfm-btn--primary"
           :disabled="saving"
           @click="saveReturn"
         >
-          {{ t("admin.returnModal.save") }}
+          <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
+          <CheckCircle2 v-else :size="16" />
+          <span>{{ t("admin.returnModal.save") }}</span>
         </button>
       </div>
     </div>
@@ -1005,4 +1175,422 @@ const saveReturn = async () => {
   cursor: pointer; align-self: flex-end; transition: all 0.15s;
 }
 .adv-filter-reset:hover { background: #dc2626; color: #fff; }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   RETURN MODAL - THEME SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.return-modal-shell {
+  background: #fff;
+  border-radius: 20px;
+  width: 780px;
+  max-width: 100%;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(168, 27, 93, 0.28);
+  border: 1px solid var(--pink-200, #ffcfe1);
+  animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.97) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Header ── */
+.cfm-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 24px;
+  background: linear-gradient(135deg, var(--pink-400, #ec4899) 0%, var(--pink-600, #db2777) 100%);
+  color: #fff;
+}
+.cfm-header-icon {
+  width: 44px; height: 44px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  flex-shrink: 0;
+}
+.cfm-header-text { flex: 1; min-width: 0; }
+.cfm-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 2px;
+  color: #fff;
+}
+.cfm-subtitle {
+  font-size: 12px;
+  margin: 0;
+  opacity: 0.88;
+}
+.cfm-close {
+  background: rgba(255,255,255,0.18);
+  border: none;
+  color: #fff;
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.cfm-close:hover { background: rgba(255,255,255,0.32); transform: rotate(90deg); }
+
+/* ── Body ── */
+.cfm-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+/* ── Error Alert ── */
+.cfm-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Section ── */
+.cfm-section {
+  margin-bottom: 20px;
+}
+.cfm-section:last-child { margin-bottom: 0; }
+
+.cfm-section-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--pink-700, #a81b5d);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--pink-100, #ffe6f0);
+  letter-spacing: 0.03em;
+}
+
+/* ── Fields ── */
+.cfm-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.cfm-field { display: flex; flex-direction: column; gap: 6px; }
+.cfm-field--full { grid-column: 1 / -1; }
+
+.cfm-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #6b7280);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.cfm-required { color: #ef4444; font-weight: bold; }
+
+.cfm-input-wrap {
+  position: relative;
+  width: 100%;
+}
+.cfm-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pink-500, #db2777);
+  opacity: 0.75;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cfm-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 2px solid var(--pink-100, #ffe6f0);
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--pink-50, #fff5f9);
+  color: var(--ink, #1f2937);
+  transition: all 0.2s ease;
+  font-family: inherit;
+  outline: none;
+}
+.cfm-input-wrap .cfm-input {
+  padding-left: 36px;
+}
+.cfm-input:focus {
+  border-color: var(--pink-400, #ec4899);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
+}
+.cfm-input::placeholder { color: #d1d5db; }
+.cfm-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+/* ── Footer ── */
+.cfm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--pink-100, #ffe6f0);
+  background: #fff;
+}
+
+.cfm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cfm-btn--primary {
+  background: linear-gradient(180deg, var(--pink-500, #db2777) 0%, var(--pink-700, #a81b5d) 100%);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--pink-700, #a81b5d), 0 4px 12px rgba(168, 27, 93, 0.35);
+  border-bottom: 3px solid var(--pink-700, #a81b5d);
+}
+.cfm-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--pink-400, #ec4899) 0%, var(--pink-600, #db2777) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 var(--pink-700, #a81b5d), 0 6px 16px rgba(168, 27, 93, 0.4);
+}
+.cfm-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+.cfm-btn--ghost {
+  background: transparent;
+  color: var(--muted, #6b7280);
+  border: 2px solid var(--border-color-strong, #d1d5db);
+}
+.cfm-btn--ghost:hover {
+  background: var(--pink-50, #fff5f9);
+  border-color: var(--pink-300, #f7a8c8);
+  color: var(--pink-700, #a81b5d);
+}
+
+/* ── Return Specific Elements ── */
+.return-order-card {
+  background: var(--pink-50, #fff5f9);
+  border: 1.5px solid var(--pink-200, #ffcfe1);
+  border-radius: 12px;
+}
+.return-order-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: rgba(219, 39, 119, 0.12);
+  color: var(--pink-600, #db2777);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.return-order-code {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--pink-700, #a81b5d);
+  font-size: 13.5px;
+}
+.return-btn-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--pink-200, #ffcfe1);
+  background: #fff;
+  color: var(--pink-700, #a81b5d);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.return-btn-change:hover {
+  background: var(--pink-100, #ffe6f0);
+  border-color: var(--pink-400, #ec4899);
+}
+.return-order-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1.5px solid var(--pink-200, #ffcfe1);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  z-index: 30;
+}
+.return-order-item {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--pink-50, #fff5f9);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.return-order-item:hover {
+  background: var(--pink-50, #fff5f9);
+}
+.return-table-card {
+  border: 1.5px solid var(--pink-200, #ffcfe1);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.return-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.return-table th {
+  background: var(--pink-50, #fff5f9);
+  color: var(--pink-700, #a81b5d);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 10px 12px;
+  border-bottom: 1.5px solid var(--pink-200, #ffcfe1);
+}
+.return-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--pink-100, #ffe6f0);
+  vertical-align: middle;
+}
+.return-table tr.is-selected {
+  background: rgba(254, 242, 248, 0.45);
+}
+.return-table tr:last-child td {
+  border-bottom: none;
+}
+.return-sku-badge {
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 5px;
+  display: inline-block;
+}
+.return-qty-input {
+  width: 60px;
+  padding: 5px 6px;
+  border: 1.5px solid var(--pink-200, #ffcfe1);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: #fff;
+  color: var(--ink, #1f2937);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.return-qty-input:focus {
+  border-color: var(--pink-500, #db2777);
+}
+.return-cond-select {
+  padding: 5px 8px;
+  border: 1.5px solid var(--pink-200, #ffcfe1);
+  border-radius: 8px;
+  font-size: 12px;
+  background: #fff;
+  color: var(--ink, #1f2937);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.return-cond-select:focus {
+  border-color: var(--pink-500, #db2777);
+}
+.return-table-footer {
+  background: var(--pink-50, #fff5f9);
+  border-top: 1.5px solid var(--pink-200, #ffcfe1);
+}
+.return-table-loading,
+.return-table-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted, #6b7280);
+  font-size: 13px;
+  background: var(--pink-50, #fff5f9);
+  border: 1.5px dashed var(--pink-200, #ffcfe1);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.return-handler-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 2px solid var(--pink-100, #ffe6f0);
+  border-radius: 10px;
+  background: var(--pink-50, #fff5f9);
+  min-height: 42px;
+}
+.return-handler-avatar {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--pink-500, #ec4899), var(--pink-700, #a81b5d));
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.return-handler-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.return-handler-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink, #1f2937);
+}
+.return-handler-role {
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+}
+
+@media (max-width: 600px) {
+  .return-modal-shell { border-radius: 16px; }
+  .cfm-fields { grid-template-columns: 1fr; }
+  .cfm-field--full { grid-column: 1; }
+  .cfm-header { padding: 16px; }
+  .cfm-body { padding: 16px; }
+  .cfm-footer { padding: 12px 16px; }
+}
 </style>

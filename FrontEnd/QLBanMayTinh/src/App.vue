@@ -155,8 +155,8 @@ const loadCart = () => {
   try {
     const raw = localStorage.getItem(cartStorageKey());
     cart.value = raw ? JSON.parse(raw) : [];
-    // Select all by default
-    cartSelected.value = new Set(cart.value.map(i => i.bienTheId));
+    // Không tự động chọn tất cả, để khách hàng tự chọn sản phẩm
+    cartSelected.value = new Set();
   } catch {
     cart.value = [];
     cartSelected.value = new Set();
@@ -246,8 +246,11 @@ const addToCart = (product, qty = 1) => {
   const soLuongMuon = existing ? existing.quantity + qty : qty;
   const daDatToiHan = soLuongMuon > ton;
   const soLuongCuoi = Math.min(soLuongMuon, ton);
-  if (existing) existing.quantity = soLuongCuoi;
-  else cart.value.push({ ...product, quantity: soLuongCuoi });
+  if (existing) {
+    existing.quantity = soLuongCuoi;
+  } else {
+    cart.value.push({ ...product, quantity: soLuongCuoi });
+  }
 
   if (daDatToiHan) {
     showToast(t("toast.maxStockReached", { name: product.tenSanPham, ton }), "error");
@@ -326,8 +329,20 @@ const openCheckout = () => {
   showCheckout.value = true;
 };
 
-const handleOrderPlaced = () => {
-  cart.value = [];
+const handleOrderPlaced = (placedOrder) => {
+  // Lấy danh sách ID các sản phẩm vừa được đặt hàng
+  const orderedIds = new Set(
+    placedOrder?.items?.map(i => i.bienTheId).filter(Boolean) || []
+  );
+  // Dự phòng: dùng các sản phẩm đang được chọn nếu placedOrder không có items
+  if (orderedIds.size === 0) {
+    cartSelected.value.forEach(id => orderedIds.add(id));
+  }
+
+  // Chỉ xóa những sản phẩm đã được đặt mua khỏi giỏ, GIỮ LẠI các sản phẩm còn lại
+  cart.value = cart.value.filter(item => !orderedIds.has(item.bienTheId));
+
+  // Sau khi đặt hàng, để trống danh sách chọn để khách hàng tự tích chọn các sản phẩm còn lại
   cartSelected.value = new Set();
 };
 

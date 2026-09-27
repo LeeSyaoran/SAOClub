@@ -72,7 +72,7 @@ public class AuthService {
         if (tk.getKhachHang() != null) {
             KhachHang kh = tk.getKhachHang();
             return new LoginResponse(kh.getKhachHangId(), kh.getHoTen(), tk.getUsername(),
-                    kh.getSoDienThoai(), kh.getEmail(), role, token, tk.getAvatarUrl());
+                    kh.getSoDienThoai(), kh.getEmail(), role, token, tk.getAvatarUrl(), kh.getDiaChi());
         }
 
         throw new UsernameNotFoundException("Tài khoản không liên kết với người dùng: " + username);

@@ -116,7 +116,7 @@ public class ChiTietDonHangService {
         ChiTietDonHang saved = chiTietDonHangRepository.save(entity);
 
         boolean online = "online".equals(donHang.getKenhBan());
-        String trangThaiMoi = online ? "giu_hang" : "da_ban";
+        String trangThaiMoi = online ? "trong_kho" : "da_ban";
 
         for (ChiTietSanPham serial : assignedSerials) {
             serial.setTrangThai(trangThaiMoi);

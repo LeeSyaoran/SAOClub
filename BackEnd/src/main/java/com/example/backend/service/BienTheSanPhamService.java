@@ -72,6 +72,7 @@ public class BienTheSanPhamService {
     public BienTheSanPham create(BienTheSanPhamRequest request) {
         String barcode = chuanHoa(request.getBarcode());
         kiemTraTrungBarcode(barcode, null);
+        kiemTraTrungMaSku(request.getMaSku(), null);
 
         BienTheSanPham entity = new BienTheSanPham();
         // Sao chép các thuộc tính từ request
@@ -95,7 +96,7 @@ public class BienTheSanPhamService {
     public BienTheSanPham update(Integer id, BienTheSanPhamRequest request) {
         BienTheSanPham entity = getById(id);
 
-        Integer sanPhamId = entity.getSanPham().getSanPhamId();
+        Integer sanPhamId = entity.getSanPham() != null ? entity.getSanPham().getSanPhamId() : request.getSanPhamId();
         String oldMaSku = entity.getMaSku();
         String oldBarcode = entity.getBarcode();
         BigDecimal oldGiaNhap = entity.getGiaNhap();
@@ -115,11 +116,14 @@ public class BienTheSanPhamService {
 
         String barcode = chuanHoa(request.getBarcode());
         kiemTraTrungBarcode(barcode, id);
+        kiemTraTrungMaSku(request.getMaSku(), id);
 
         BeanUtils.copyProperties(request, entity, "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode", "ngayTao");
         entity.setBarcode(barcode);
 
-        entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));
+        if (request.getSanPhamId() != null) {
+            entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));
+        }
         entity.setCpu(request.getCpuId() != null ? dmCpuRepository.getReferenceById(request.getCpuId()) : null);
         entity.setRam(request.getRamId() != null ? dmRamRepository.getReferenceById(request.getRamId()) : null);
         entity.setOCung(request.getOCungId() != null ? dmOcungRepository.getReferenceById(request.getOCungId()) : null);
@@ -160,6 +164,15 @@ public class BienTheSanPhamService {
                 ? bienTheSanPhamRepository.existsByBarcode(barcode)
                 : bienTheSanPhamRepository.existsByBarcodeAndBienTheIdNot(barcode, boQuaId);
         if (trung) throw new IllegalArgumentException("Barcode '" + barcode + "' đã được dùng");
+    }
+
+    /** Kiểm tra trùng SKU rõ ràng */
+    private void kiemTraTrungMaSku(String maSku, Integer boQuaId) {
+        if (maSku == null || maSku.isBlank()) return;
+        boolean trung = boQuaId == null
+                ? bienTheSanPhamRepository.existsByMaSku(maSku.trim())
+                : bienTheSanPhamRepository.existsByMaSkuAndBienTheIdNot(maSku.trim(), boQuaId);
+        if (trung) throw new IllegalArgumentException("Mã SKU '" + maSku.trim() + "' đã được dùng");
     }
 
 }

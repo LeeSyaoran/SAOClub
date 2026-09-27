@@ -126,8 +126,8 @@ class ChiTietDonHangServiceTest {
 
         service.create(request);
 
-        assertThat(s1.getTrangThai()).isEqualTo("giu_hang");
-        assertThat(s2.getTrangThai()).isEqualTo("giu_hang");
+        assertThat(s1.getTrangThai()).isEqualTo("trong_kho");
+        assertThat(s2.getTrangThai()).isEqualTo("trong_kho");
         verify(chiTietDonHangSerialRepository, times(2)).save(any(ChiTietDonHangSerial.class));
     }
 

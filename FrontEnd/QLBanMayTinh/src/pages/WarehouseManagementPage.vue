@@ -1,5 +1,8 @@
 <script setup>
-defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
+defineOptions({
+  inheritAttrs: false,
+});
+defineEmits(['addToCart', 'add-to-cart', 'buyAgainUnavailable', 'buy-again-unavailable', 'goHome', 'go-home', 'toast', 'logout']);
 import { computed, ref } from "vue";
 import { t } from "../i18n/index.js";
 import { ThemeStore, toggleTheme } from "../stores/theme.js";

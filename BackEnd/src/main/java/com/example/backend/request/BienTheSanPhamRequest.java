@@ -42,8 +42,16 @@ public class BienTheSanPhamRequest {
     private String mauSac;
     private Integer cpuId;
     private Integer ramId;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("oCungId")
     private Integer oCungId;
+
     private Integer gpuId;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("ocungId")
+    public void setOcungIdAlias(Integer id) {
+        if (this.oCungId == null) this.oCungId = id;
+    }
     private String kichThuocManHinh;
     private String heDieuHanh;
     private String pin;

@@ -17,7 +17,8 @@ const emit = defineEmits(["close", "view-order"]);
 // ── Avatar helpers ────────────────────────────────────────────────────────────
 const getAvatarUrl = (c) => c?.hinhAnh || c?.avatarUrl || null;
 const getInitials = (c) => {
-  const name = c?.hoTen || 'K';
+  const isBiz = c?.loaiKhach === 'doanh_nghiep';
+  const name = (isBiz && c?.tenCongTy) ? c.tenCongTy : (c?.hoTen || 'K');
   const parts = name.trim().split(' ');
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   return name.substring(0, 2).toUpperCase();
@@ -40,6 +41,9 @@ const TABS = [
   { id: 'orders', icon: 'fa-shopping-bag', label: 'Đơn hàng' },
   { id: 'chat',   icon: 'fa-comments', label: 'Chat' },
 ];
+
+const isBusiness = computed(() => props.customer?.loaiKhach === 'doanh_nghiep');
+const isFormBusiness = computed(() => infoForm.value?.loaiKhach === 'doanh_nghiep');
 
 // ── Info tab: edit mode ───────────────────────────────────────────────────────
 const editingInfo = ref(false);
@@ -64,16 +68,27 @@ const cancelEditInfo = () => {
 };
 const saveInfo = async () => {
   infoFormError.value = "";
-  if (!infoForm.value.hoTen?.trim()) { infoFormError.value = "Vui lòng nhập họ tên"; return; }
+  const isBiz = infoForm.value.loaiKhach === "doanh_nghiep";
+  if (!infoForm.value.hoTen?.trim()) {
+    infoFormError.value = isBiz ? "Vui lòng nhập người đại diện" : "Vui lòng nhập họ tên";
+    return;
+  }
+  if (isBiz && !infoForm.value.tenCongTy?.trim()) {
+    infoFormError.value = "Vui lòng nhập tên công ty";
+    return;
+  }
   if (!infoForm.value.soDienThoai?.trim()) { infoFormError.value = "Vui lòng nhập số điện thoại"; return; }
   if (!infoForm.value.diaChi?.trim()) { infoFormError.value = "Vui lòng nhập địa chỉ"; return; }
   if (savingInfo.value) return;
   savingInfo.value = true;
   const body = {
-    hoTen: infoForm.value.hoTen, soDienThoai: infoForm.value.soDienThoai,
-    email: infoForm.value.email ?? "", diaChi: infoForm.value.diaChi ?? "",
-    loaiKhach: infoForm.value.loaiKhach ?? "ca_nhan",
-    tenCongTy: infoForm.value.tenCongTy ?? "", maSoThue: infoForm.value.maSoThue ?? "",
+    hoTen: infoForm.value.hoTen.trim(),
+    soDienThoai: infoForm.value.soDienThoai.trim(),
+    email: infoForm.value.email ? infoForm.value.email.trim() : "",
+    diaChi: infoForm.value.diaChi ? infoForm.value.diaChi.trim() : "",
+    loaiKhach: isBiz ? "doanh_nghiep" : "ca_nhan",
+    tenCongTy: isBiz && infoForm.value.tenCongTy ? infoForm.value.tenCongTy.trim() : "",
+    maSoThue: isBiz && infoForm.value.maSoThue ? infoForm.value.maSoThue.trim() : "",
     diemTichLuy: Number(infoForm.value.diemTichLuy ?? 0),
     trangThai: infoForm.value.trangThai ?? "active",
   };
@@ -144,7 +159,9 @@ onMounted(() => { loadOrders(); });
             {{ getInitials(customer) }}
           </div>
           <div>
-            <div class="cdm-name">{{ customer.hoTen || 'Khách hàng' }}</div>
+            <div class="cdm-name">
+              {{ isBusiness ? (customer.tenCongTy || customer.hoTen || 'Doanh nghiệp') : (customer.hoTen || 'Khách hàng') }}
+            </div>
             <div class="cdm-contact">
               <Phone :size="14" /> {{ customer.soDienThoai || '—' }}
               <span class="mx-2">·</span>
@@ -154,7 +171,7 @@ onMounted(() => { loadOrders(); });
               <span class="cdm-badge" :class="customer.trangThai === 'active' ? 'is-active' : 'is-locked'">
                 {{ statusLabel(customer.trangThai) }}
               </span>
-              <span class="cdm-badge is-soft">{{ customer.loaiKhach || 'ca_nhan' }}</span>
+              <span class="cdm-badge is-soft">{{ isBusiness ? 'Doanh nghiệp' : 'Cá nhân' }}</span>
               <span v-if="customer.diemTichLuy" class="cdm-badge is-soft">
                 <Star :size="14" /> {{ customer.diemTichLuy }} điểm
               </span>
@@ -187,16 +204,31 @@ onMounted(() => { loadOrders(); });
           <!-- Read mode -->
           <div v-if="!editingInfo" class="info-view">
             <div class="info-grid">
-              <div class="info-row"><span class="info-label">Họ tên</span><span class="info-value">{{ customer.hoTen || '—' }}</span></div>
-              <div class="info-row"><span class="info-label">Số điện thoại</span><span class="info-value">{{ customer.soDienThoai || '—' }}</span></div>
-              <div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ customer.email || '—' }}</span></div>
-              <div class="info-row"><span class="info-label">Loại khách</span><span class="info-value">{{ customer.loaiKhach === 'doanh_nghiep' ? 'Doanh nghiệp' : 'Cá nhân' }}</span></div>
-              <div class="info-row"><span class="info-label">Địa chỉ</span><span class="info-value">{{ customer.diaChi || '—' }}</span></div>
-              <div class="info-row"><span class="info-label">Tên công ty</span><span class="info-value">{{ customer.tenCongTy || '—' }}</span></div>
-              <div class="info-row"><span class="info-label">Mã số thuế</span><span class="info-value">{{ customer.maSoThue || '—' }}</span></div>
-              <div class="info-row"><span class="info-label">Điểm tích lũy</span><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span></div>
-              <div class="info-row"><span class="info-label">Số dư ví</span><span class="info-value">{{ customer.soDuVi ? formatPrice(Number(customer.soDuVi)) : '0 ₫' }}</span></div>
-              <div class="info-row"><span class="info-label">Trạng thái</span><span class="info-value">{{ statusLabel(customer.trangThai) }}</span></div>
+              <!-- Hiển thị khi là Doanh nghiệp -->
+              <template v-if="isBusiness">
+                <div class="info-row"><span class="info-label">Tên công ty</span><span class="info-value">{{ customer.tenCongTy || customer.hoTen || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Mã số thuế</span><span class="info-value">{{ customer.maSoThue || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Người đại diện</span><span class="info-value">{{ customer.hoTen || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Số điện thoại</span><span class="info-value">{{ customer.soDienThoai || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ customer.email || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Loại khách</span><span class="info-value">Doanh nghiệp</span></div>
+                <div class="info-row"><span class="info-label">Địa chỉ trụ sở</span><span class="info-value">{{ customer.diaChi || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Điểm tích lũy</span><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span></div>
+                <div class="info-row"><span class="info-label">Số dư ví</span><span class="info-value">{{ customer.soDuVi ? formatPrice(Number(customer.soDuVi)) : '0 ₫' }}</span></div>
+                <div class="info-row"><span class="info-label">Trạng thái</span><span class="info-value">{{ statusLabel(customer.trangThai) }}</span></div>
+              </template>
+
+              <!-- Hiển thị khi là Cá nhân: ẨN hoàn toàn Tên công ty và Mã số thuế -->
+              <template v-else>
+                <div class="info-row"><span class="info-label">Họ tên</span><span class="info-value">{{ customer.hoTen || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Số điện thoại</span><span class="info-value">{{ customer.soDienThoai || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ customer.email || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Loại khách</span><span class="info-value">Cá nhân</span></div>
+                <div class="info-row"><span class="info-label">Địa chỉ</span><span class="info-value">{{ customer.diaChi || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Điểm tích lũy</span><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span></div>
+                <div class="info-row"><span class="info-label">Số dư ví</span><span class="info-value">{{ customer.soDuVi ? formatPrice(Number(customer.soDuVi)) : '0 ₫' }}</span></div>
+                <div class="info-row"><span class="info-label">Trạng thái</span><span class="info-value">{{ statusLabel(customer.trangThai) }}</span></div>
+              </template>
             </div>
             <div class="info-actions">
               <button class="cdm-btn cdm-btn--primary" @click="startEditInfo">
@@ -209,20 +241,56 @@ onMounted(() => { loadOrders(); });
           <div v-else class="info-edit">
             <div v-if="infoFormError" class="alert alert-danger small py-2 mb-3">{{ infoFormError }}</div>
             <div class="row g-3">
-              <div class="col-md-6"><label class="form-label small text-secondary">Họ tên *</label><input v-model="infoForm.hoTen" class="form-control form-control-sm cdm-input" /></div>
-              <div class="col-md-6"><label class="form-label small text-secondary">Số điện thoại *</label><input v-model="infoForm.soDienThoai" class="form-control form-control-sm cdm-input" /></div>
-              <div class="col-md-6"><label class="form-label small text-secondary">Email</label><input v-model="infoForm.email" type="email" class="form-control form-control-sm cdm-input" /></div>
-              <div class="col-md-6"><label class="form-label small text-secondary">Loại khách</label>
+              <div class="col-md-6">
+                <label class="form-label small text-secondary">Loại khách</label>
                 <select v-model="infoForm.loaiKhach" class="form-select form-select-sm cdm-input">
                   <option value="ca_nhan">Cá nhân</option>
                   <option value="doanh_nghiep">Doanh nghiệp</option>
                 </select>
               </div>
-              <div class="col-12"><label class="form-label small text-secondary">Địa chỉ *</label><input v-model="infoForm.diaChi" class="form-control form-control-sm cdm-input" /></div>
-              <div class="col-md-6"><label class="form-label small text-secondary">Tên công ty</label><input v-model="infoForm.tenCongTy" class="form-control form-control-sm cdm-input" /></div>
-              <div class="col-md-6"><label class="form-label small text-secondary">Mã số thuế</label><input v-model="infoForm.maSoThue" class="form-control form-control-sm cdm-input" /></div>
-              <div class="col-md-6"><label class="form-label small text-secondary">Điểm tích lũy</label><input v-model="infoForm.diemTichLuy" type="number" min="0" class="form-control form-control-sm cdm-input" /></div>
-              <div class="col-md-6"><label class="form-label small text-secondary">Trạng thái</label>
+
+              <!-- Nếu là Doanh nghiệp: Tên công ty & Mã số thuế hiển thị -->
+              <template v-if="isFormBusiness">
+                <div class="col-md-6">
+                  <label class="form-label small text-secondary">Tên công ty *</label>
+                  <input v-model="infoForm.tenCongTy" class="form-control form-control-sm cdm-input" placeholder="Nhập tên công ty" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small text-secondary">Mã số thuế</label>
+                  <input v-model="infoForm.maSoThue" class="form-control form-control-sm cdm-input" placeholder="Mã số thuế" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small text-secondary">Người đại diện / liên hệ *</label>
+                  <input v-model="infoForm.hoTen" class="form-control form-control-sm cdm-input" placeholder="Họ tên người đại diện" />
+                </div>
+              </template>
+
+              <!-- Nếu là Cá nhân: Chỉ hiển thị Họ tên cá nhân -->
+              <template v-else>
+                <div class="col-md-6">
+                  <label class="form-label small text-secondary">Họ tên *</label>
+                  <input v-model="infoForm.hoTen" class="form-control form-control-sm cdm-input" placeholder="Họ tên khách hàng" />
+                </div>
+              </template>
+
+              <div class="col-md-6">
+                <label class="form-label small text-secondary">Số điện thoại *</label>
+                <input v-model="infoForm.soDienThoai" class="form-control form-control-sm cdm-input" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-secondary">Email</label>
+                <input v-model="infoForm.email" type="email" class="form-control form-control-sm cdm-input" />
+              </div>
+              <div class="col-12">
+                <label class="form-label small text-secondary">{{ isFormBusiness ? 'Địa chỉ trụ sở *' : 'Địa chỉ *' }}</label>
+                <input v-model="infoForm.diaChi" class="form-control form-control-sm cdm-input" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-secondary">Điểm tích lũy</label>
+                <input v-model="infoForm.diemTichLuy" type="number" min="0" class="form-control form-control-sm cdm-input" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-secondary">Trạng thái</label>
                 <select v-model="infoForm.trangThai" class="form-select form-select-sm cdm-input">
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Bị khóa</option>

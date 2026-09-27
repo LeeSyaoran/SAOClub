@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.response.ChiTietSanPhamResponse;
+import com.example.backend.response.ChiTietSanPhamWithOrderResponse;
 import com.example.backend.response.WarrantyStatusResponse;
 
 import jakarta.persistence.LockModeType;
@@ -191,7 +192,10 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
         """)
     int unlockSerials(@Param("ids") List<Integer> ids, @Param("sessionId") String sessionId);
 
-    // Tìm serial đang bị lock (dùng cho hienThiChiTietSanPham — JOIN FETCH)
+    // Tìm serial đang bị "giữ" — bao gồm:
+    //   - lockedBy IS NOT NULL (POS session đang lock 5 phút)
+    //   - trangThai = 'giu_hang' (đơn online đã checkout, đợi thanh toán/giao hàng)
+    // Muc dich: cho nhan vien POS/admin thay serial nao dang bi giu boi ai.
     @Query("""
         SELECT new com.example.backend.response.ChiTietSanPhamResponse(
             c.chiTietId, c.bienThe.bienTheId, pn.phieuNhapId, c.bienThe.maSku,
@@ -203,12 +207,61 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
         FROM ChiTietSanPham c
         LEFT JOIN c.phieuNhap pn
         LEFT JOIN com.example.backend.entity.NhanVien nv ON nv.id = c.lockedBy
-        WHERE c.daXoa = false AND c.lockedBy IS NOT NULL
-        ORDER BY c.lockedAt DESC
+        WHERE c.daXoa = false
+          AND (c.lockedBy IS NOT NULL OR c.trangThai = 'giu_hang')
+        ORDER BY COALESCE(c.lockedAt, c.ngayNhapKho) DESC
         """)
     List<ChiTietSanPhamResponse> findLockedSerials();
 
     // Tìm serial đã hết lock timeout — dùng cho scheduled cleanup
     @Query("SELECT c FROM ChiTietSanPham c WHERE c.lockedAt IS NOT NULL AND c.lockedAt < :expiredBefore")
     List<ChiTietSanPham> findExpiredLocks(@Param("expiredBefore") LocalDateTime expiredBefore);
+
+    // Serial co thong tin don hang online/in_store dang tien hanh tren thanh tien trinh
+    @Query("""
+        SELECT new com.example.backend.response.ChiTietSanPhamWithOrderResponse(
+            ct.chiTietId, bt.bienTheId, bt.maSku, ct.soSerial, ct.trangThai, ct.ngayNhapKho, sp.tenSanPham,
+            NULL, NULL, NULL, NULL,
+            d.id, d.maDonHang, d.trangThaiDonHang,
+            kh.hoTen, kh.soDienThoai, d.ngayDat,
+            'online_held',
+            nv.nhanVienId, nv.hoTen, cv.maChucVu
+        )
+        FROM ChiTietSanPham ct
+        JOIN ct.bienThe bt
+        JOIN bt.sanPham sp
+        JOIN ChiTietDonHangSerial ctdhs ON ctdhs.chiTietSanPham = ct
+        JOIN ctdhs.chiTietDonHang ctdh
+        JOIN ctdh.donHang d
+        JOIN d.khachHang kh
+        LEFT JOIN d.nhanVien nv
+        LEFT JOIN nv.chucVu cv
+        WHERE ct.daXoa = false
+          AND ct.trangThai <> 'loi_bao_hanh'
+          AND d.trangThaiDonHang NOT IN ('delivered', 'cancelled', 'returned')
+        ORDER BY d.ngayDat DESC
+        """)
+    List<ChiTietSanPhamWithOrderResponse> findHeldSerialsWithOrder();
+
+    // Serial dang bi lock boi POS session (lock 5 phut)
+    @Query("""
+        SELECT new com.example.backend.response.ChiTietSanPhamWithOrderResponse(
+            c.chiTietId, c.bienThe.bienTheId, c.bienThe.maSku, c.soSerial, c.trangThai, c.ngayNhapKho,
+            c.bienThe.sanPham.tenSanPham,
+            c.lockedBy, c.lockedAt, c.lockSession,
+            nv.hoTen,
+            NULL, NULL, NULL, NULL, NULL, NULL,
+            'pos_lock',
+            nv.nhanVienId, nv.hoTen, cv.maChucVu
+        )
+        FROM ChiTietSanPham c
+        JOIN c.bienThe
+        LEFT JOIN com.example.backend.entity.NhanVien nv ON nv.id = c.lockedBy
+        LEFT JOIN nv.chucVu cv
+        WHERE c.daXoa = false
+          AND c.lockedBy IS NOT NULL
+          AND c.trangThai = 'trong_kho'
+        ORDER BY c.lockedAt DESC
+        """)
+    List<ChiTietSanPhamWithOrderResponse> findPosLockedSerials();
 }

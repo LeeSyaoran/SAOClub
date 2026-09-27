@@ -1,5 +1,8 @@
 <script setup>
-defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome']);
+defineOptions({
+  inheritAttrs: false,
+});
+defineEmits(['addToCart', 'add-to-cart', 'buyAgainUnavailable', 'buy-again-unavailable', 'goHome', 'go-home', 'toast', 'logout']);
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { AuthStore } from "../stores/index.js";
 import { t } from "../i18n/index.js";

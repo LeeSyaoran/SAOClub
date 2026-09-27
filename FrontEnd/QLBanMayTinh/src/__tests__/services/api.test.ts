@@ -171,9 +171,9 @@ describe('api service', () => {
     const { get } = await import('../../services/api.js');
     await get('/api/test');
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/test', {
+    expect(mockFetch).toHaveBeenCalledWith('/api/test', expect.objectContaining({
       headers: { Authorization: 'Bearer test-token-123' },
-    });
+    }));
   });
 
   it('should not include auth header when session is missing', async () => {

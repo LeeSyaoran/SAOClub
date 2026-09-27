@@ -1196,7 +1196,7 @@ export default {
       edit: "Edit",
       view: "View",
       empty: "No returns yet",
-      searchPlaceholder: "Search return ID, customer...",
+      searchPlaceholder: "Search return ID, order code, customer...",
     },
 
     returnStatus: {
@@ -1214,7 +1214,7 @@ export default {
       titleAdd: "Create return",
       titleEdit: "Return details",
       orderLabel: "Order *",
-      orderSearchPlaceholder: "Search order ID, customer name, phone...",
+      orderSearchPlaceholder: "Search by order code",
       orderSearchEmpty: "No matching order",
       changeOrder: "Change order",
       staffLabel: "Handled by",

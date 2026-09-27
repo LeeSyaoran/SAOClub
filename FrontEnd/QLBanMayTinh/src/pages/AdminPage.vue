@@ -65,6 +65,9 @@ import {
   MessageCircle, Brain, SlidersHorizontal,
 } from '@lucide/vue';
 
+defineOptions({
+  inheritAttrs: false,
+});
 defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome', 'toast', 'logout']);
 
 // ── Chat ref cho notification badge ─────────────────────────────────────────
@@ -1153,7 +1156,7 @@ onUnmounted(() => {
 
         <!-- ── Ban hang (POS) ── -->
         <section v-show="currentPage === 'ban-hang'">
-          <PosPanel />
+          <PosPanel @view-order="handleViewOrder" />
         </section>
 
         <!-- ── Chat ho tro ── -->

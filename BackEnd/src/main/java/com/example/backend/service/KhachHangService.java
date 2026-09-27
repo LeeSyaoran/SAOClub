@@ -74,6 +74,9 @@ public class KhachHangService {
     public KhachHang create(KhachHangRequest request) {
         KhachHang entity = new KhachHang();
         BeanUtils.copyProperties(request, entity);
+        if (entity.getLoaiKhach() == null || entity.getLoaiKhach().isBlank()) entity.setLoaiKhach("ca_nhan");
+        if (entity.getDiemTichLuy() == null) entity.setDiemTichLuy(0);
+        if (entity.getTrangThai() == null || entity.getTrangThai().isBlank()) entity.setTrangThai("active");
         entity.setSoDuVi(java.math.BigDecimal.ZERO);
         entity.setNgayTao(LocalDateTime.now());
         return khachHangRepository.save(entity);
@@ -83,10 +86,31 @@ public class KhachHangService {
     public KhachHang update(Integer id, KhachHangRequest request) {
         KhachHang entity = getById(id); 
 
+        if (request.getSoDienThoai() != null && !request.getSoDienThoai().equals(entity.getSoDienThoai())) {
+            khachHangRepository.findBySoDienThoai(request.getSoDienThoai()).ifPresent(existing -> {
+                if (!existing.getKhachHangId().equals(id)) {
+                    throw new IllegalArgumentException("Số điện thoại này đã được sử dụng bởi một tài khoản khác");
+                }
+            });
+        }
+
         if (isStaff()) {
-            BeanUtils.copyProperties(request, entity, "khachHangId", "ngayTao");
+            if (request.getHoTen() != null && !request.getHoTen().isBlank()) entity.setHoTen(request.getHoTen());
+            if (request.getSoDienThoai() != null && !request.getSoDienThoai().isBlank()) entity.setSoDienThoai(request.getSoDienThoai());
+            if (request.getEmail() != null) entity.setEmail(request.getEmail().isBlank() ? null : request.getEmail());
+            if (request.getDiaChi() != null && !request.getDiaChi().isBlank()) entity.setDiaChi(request.getDiaChi());
+            if (request.getLoaiKhach() != null && !request.getLoaiKhach().isBlank()) entity.setLoaiKhach(request.getLoaiKhach());
+            if (request.getTenCongTy() != null) entity.setTenCongTy(request.getTenCongTy());
+            if (request.getMaSoThue() != null) entity.setMaSoThue(request.getMaSoThue());
+            if (request.getDiemTichLuy() != null) entity.setDiemTichLuy(request.getDiemTichLuy());
+            if (request.getTrangThai() != null && !request.getTrangThai().isBlank()) entity.setTrangThai(request.getTrangThai());
+            if (request.getHinhAnh() != null) entity.setHinhAnh(request.getHinhAnh());
         } else {
-            BeanUtils.copyProperties(request, entity, "khachHangId", "ngayTao", "diemTichLuy", "trangThai");
+            if (request.getHoTen() != null && !request.getHoTen().isBlank()) entity.setHoTen(request.getHoTen());
+            if (request.getSoDienThoai() != null && !request.getSoDienThoai().isBlank()) entity.setSoDienThoai(request.getSoDienThoai());
+            if (request.getEmail() != null) entity.setEmail(request.getEmail().isBlank() ? null : request.getEmail());
+            if (request.getDiaChi() != null && !request.getDiaChi().isBlank()) entity.setDiaChi(request.getDiaChi());
+            if (request.getHinhAnh() != null) entity.setHinhAnh(request.getHinhAnh());
         }
         return khachHangRepository.save(entity);
     }

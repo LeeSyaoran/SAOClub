@@ -23,15 +23,46 @@ import { InventoryStore, ensureInventory, refreshInventory } from "../../stores/
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import { StaffStore, ensureStaff } from "../../stores/staff.js";
+import { posCartCountsByBienThe } from "../../stores/posCart.js";
+import { serialEvents } from "../../stores/serialEvents.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
 
 const router = useRouter();
 
+const heldOrdersList = ref([]);
+const loadHeldOrders = async () => {
+  try {
+    heldOrdersList.value = await ChiTietSanPhamService.getHeldWithOrder().catch(() => []);
+  } catch {}
+};
+
+const activeOrderSerialCountByBienThe = computed(() => {
+  const map = {};
+  (heldOrdersList.value || []).forEach((item) => {
+    if (item.bienTheId != null) {
+      map[item.bienTheId] = (map[item.bienTheId] || 0) + 1;
+    }
+  });
+  return map;
+});
+
+// Tính tổng số lượng giữ cho biến thể: chỉ những serial có trạng thái đang lên đơn mới làm cột giữ ở tab kho hàng thay đổi, sản phẩm đang bảo hành không được tính
+const getHeldQty = (item) => {
+  if (!item?.bienTheId) return 0;
+  return posCartCountsByBienThe.value[item.bienTheId] || 0;
+};
+
 // Tải trước danh sách sản phẩm
 onMounted(() => {
   ensureInventory();
   ensureProducts();
+  ensurePhieuNhapData();
+  loadHeldOrders();
+});
+watch(() => serialEvents.count, () => {
+  loadHeldOrders();
+  refreshInventory();
 });
 
 // Dịch đa ngôn ngữ
@@ -95,8 +126,26 @@ const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
   }
 };
 
+// Biến thể nằm trong ít nhất 1 phiếu nhập đang chờ duyệt
+const pendingBienTheIds = computed(() => {
+  const ids = new Set();
+  for (const pn of phieuNhapList.value) {
+    if (pn.trangThai !== 'cho_duyet') continue;
+    for (const ct of chiTietPhieuNhapList.value) {
+      if (ct.phieuNhapId === pn.phieuNhapId && ct.bienTheId != null) {
+        ids.add(ct.bienTheId);
+      }
+    }
+  }
+  return ids;
+});
+
 // Phân loại trạng thái tồn kho của biến thể
-const isPendingItem = (v) => !(Number(v?.giaNhap) > 0) || !(Number(v?.giaBan) > 0);
+const isPendingItem = (v) => {
+  if (!(Number(v?.giaNhap) > 0) || !(Number(v?.giaBan) > 0)) return true;
+  if (v?.bienTheId != null && pendingBienTheIds.value.has(v.bienTheId)) return true;
+  return false;
+};
 const stockStatusOf = (item, v) => {
   if (isPendingItem(v)) return 'pending';
   if ((item.soLuongTon ?? 0) === 0) return 'out';
@@ -1165,7 +1214,7 @@ const exportPhieuNhapExcel = () => {
                 <td class="ta-r inv-price">{{ formatPrice(v?.giaBan) }}</td>
                 <td class="ta-r inv-muted">{{ formatPrice(v?.giaNhap) }}</td>
                 <td class="ta-c"><span class="inv-ton" :class="{ 'text-danger': status==='out', 'text-warning': status==='low', 'text-success': status==='ok', 'text-info': status==='pending' }">{{ item.soLuongTon ?? '—' }}</span></td>
-                <td class="ta-c"><span class="inv-held" :class="{ 'text-warning': item.soLuongGiu > 0 }">{{ item.soLuongGiu ?? 0 }}</span></td>
+                <td class="ta-c"><span class="inv-held" :class="{ 'text-warning fw-bold': getHeldQty(item) > 0 }">{{ getHeldQty(item) }}</span></td>
                 <td class="ta-c">
                   <span class="inv-tag" :class="'inv-tag--' + status">{{ stockStatusLabel(status) }}</span>
                 </td>

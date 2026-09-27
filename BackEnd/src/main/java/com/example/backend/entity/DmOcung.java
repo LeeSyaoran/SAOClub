@@ -1,5 +1,6 @@
 package com.example.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,6 +16,7 @@ public class DmOcung {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "o_cung_id")
+    @JsonProperty("oCungId")
     private Integer oCungId;
 
     @Column(name = "loai_o_cung", length = 100, nullable = false, unique = true)
@@ -22,4 +24,14 @@ public class DmOcung {
 
     @Column(name = "hinh_anh")
     private String hinhAnh;
+
+    @JsonProperty("ocungId")
+    public Integer getOcungIdAlias() {
+        return oCungId;
+    }
+
+    @JsonProperty("ocungId")
+    public void setOcungIdAlias(Integer id) {
+        if (this.oCungId == null) this.oCungId = id;
+    }
 }

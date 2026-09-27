@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+const emit = defineEmits(["view-order"]);
 import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import * as DonHangService from "../../services/DonHangService.js";
@@ -7,8 +8,8 @@ import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js"
 import { formatPrice, formatDate, boDauTiengViet } from "../../utils/adminFormat.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
 import { refreshInventory } from "../../stores/inventory.js";
-import { bumpSerialEvent } from "../../stores/serialEvents.js";
-import { syncPosCart } from "../../stores/posCart.js";
+import { serialEvents, bumpSerialEvent, connectSerialEvents } from "../../stores/serialEvents.js";
+import { posCartItems, syncPosCart } from "../../stores/posCart.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import { PromotionsStore, refreshPromotions } from "../../stores/promotions.js";
 import { refreshOrders } from "../../stores/orders.js";
@@ -17,24 +18,13 @@ import PosVariantDetailPanel from "./PosVariantDetailPanel.vue";
 import { groupBySanPham, variantCountBySanPham, configKey, configLabel, colorDot } from "../../utils/productGrouping.js";
 import { POS_PAYMENT_METHODS, paymentMethodLabel, paymentMethodIcon } from "../../utils/orderStatus.js";
 import * as ThanhToanService from "../../services/ThanhToanService.js";
-import { SerialLockService } from "../../services/SerialLockService.js";
 import { AuthStore } from "../../stores/index.js";
 import { useToastStore } from "../../stores/toast.js";
-const { showToast } = useToastStore();
 import { askConfirm } from "../../stores/confirm.js";
-
-// POS session ID — tao moi neu chua co, giu khi reload
-const posSessionId = ref(
-  localStorage.getItem('pos_session_id') || crypto.randomUUID()
-);
-if (!localStorage.getItem('pos_session_id')) {
-  localStorage.setItem('pos_session_id', posSessionId.value);
-}
-
-// Theo doi serial dang lock boi session nay
-const trackedSerialIds = ref(new Set());
-import { Laptop, ShoppingCart, Receipt, Info, Hash, X, Check, ImageOff, Printer, Package, Search, Eye, Plus, Star, Shield, Cpu, HardDrive, MemoryStick, Flame } from '@lucide/vue';
+import { Laptop, ShoppingCart, Receipt, Info, Hash, X, Check, ImageOff, Printer, Package, Search, Eye, Plus, Star, Shield, Cpu, HardDrive, MemoryStick, Flame, Lock, User } from '@lucide/vue';
 import InvoiceModal from "./InvoiceModal.vue";
+
+const { showToast } = useToastStore();
 
 onMounted(async () => {
   await ensureProducts();
@@ -56,7 +46,7 @@ const POS_SHIP_TIERS = [
 const posStage = ref('start');
 const posPhoneNotFound = ref(false); // da tim nhung khong thay khach ung voi SDT vua nhap
 const posSearch = ref("");
-const posCart = ref([]);
+const posCart = ref([...posCartItems.value]);
 // Đồng bộ giỏ hàng với posCartStore
 watch(posCart, (v) => syncPosCart(v), { deep: true });
 
@@ -280,6 +270,7 @@ const saveHeldOrders = () => {
 
 const showHeldOrders = ref(false);
 
+
 const posHoldOrder = () => {
   if (!posCart.value.length) return;
   heldOrders.value.unshift({
@@ -327,12 +318,9 @@ const posResumeHeld = (id) => {
   posStage.value = 'selling';
 };
 
-const posDeleteHeld = async (id) => {
-  const held = heldOrders.value.find((h) => h.id === id);
+const posDeleteHeld = (id) => {
   heldOrders.value = heldOrders.value.filter((h) => h.id !== id);
   saveHeldOrders();
-  // Hủy đơn giữ và hoàn lại serial vào kho
-  if (held) await Promise.all(held.cart.map((item) => setSerialTrangThai(item, 'trong_kho')));
 };
 
 // Mở hộp thoại chọn cấu hình và màu sắc
@@ -350,6 +338,10 @@ onMounted(async () => {
     const { getActive } = await import("../../services/DanhMucService.js");
     posCategories.value = await getActive();
   } catch {}
+  // Ket noi SSE de nhan su kien serial thay doi
+  if (AuthStore.user?.token) {
+    connectSerialEvents(AuthStore.user.token);
+  }
 });
 
 const posHandleBarcode = async () => {
@@ -469,6 +461,10 @@ const serialPickerSwapChiTietId = ref(null);
 // Danh sách serial đang được chọn
 const serialPickerChosenIds = ref(new Set());
 
+// Kiểm tra serial đã có trong giỏ hàng POS hay chưa
+const isAlreadyInCart = (chiTietId) =>
+  posCart.value.some((i) => i.chiTietId === chiTietId && i.chiTietId !== serialPickerSwapChiTietId.value);
+
 const posOpenSerialPicker = async (p, swapChiTietId = null) => {
   // Kiểm tra thông tin khách hàng trước khi thêm vào giỏ
   if (posStage.value !== 'selling') {
@@ -482,57 +478,27 @@ const posOpenSerialPicker = async (p, swapChiTietId = null) => {
   serialPickerList.value = [];
   showSerialPicker.value = true;
   serialPickerLoading.value = true;
-  // Tải toàn bộ serial kèm trạng thái khóa
+  // Tải danh sách serial của biến thể
   const all = await ChiTietSanPhamService.getByBienThe(p.bienTheId).catch(() => []);
   serialPickerList.value = all;
   serialPickerLoading.value = false;
 };
 
-// Mở khóa các serial chưa thêm vào giỏ khi đóng modal
-const posCloseSerialPicker = async () => {
-  const chosen = [...serialPickerChosenIds.value];
-  if (chosen.length > 0) {
-    // Mở khóa các serial chưa thêm vào giỏ
-    const toUnlock = serialPickerList.value
-      .filter(s => chosen.includes(s.chiTietId) && s.trangThai === 'trong_kho')
-      .map(s => s.chiTietId);
-    if (toUnlock.length > 0) {
-      await SerialLockService.unlock(toUnlock, posSessionId.value);
-    }
-  }
+// Đóng modal chọn serial
+const posCloseSerialPicker = () => {
   serialPickerChosenIds.value = new Set();
   showSerialPicker.value = false;
   serialPickerSwapChiTietId.value = null;
 };
 
-const posToggleSerial = async (serial) => {
-  // Serial dang o trong_kho -> tick chon -> lock
-  if (!serialPickerChosenIds.value.has(serial.chiTietId)) {
-    // Kiểm tra serial có đang bị tài khoản khác khóa không
-    if (serial.lockedBy && serial.lockedByTen) {
-      showToast(`Serial đang được ${serial.lockedByTen} giữ`);
-      return;
-    }
-    // Lock serial
-    const result = await SerialLockService.lock(
-      [serial.chiTietId],
-      posSessionId.value,
-      AuthStore.user?.id
-    );
-    if (!result.success) {
-      showToast(`Không thể chọn serial này — đang được ai đó giữ`);
-      return;
-    }
-    const next = new Set(serialPickerChosenIds.value);
+const posToggleSerial = (serial) => {
+  const next = new Set(serialPickerChosenIds.value);
+  if (!next.has(serial.chiTietId)) {
     next.add(serial.chiTietId);
-    serialPickerChosenIds.value = next;
   } else {
-    // Bo tick -> unlock
-    const next = new Set(serialPickerChosenIds.value);
     next.delete(serial.chiTietId);
-    serialPickerChosenIds.value = next;
-    await SerialLockService.unlock([serial.chiTietId], posSessionId.value);
   }
+  serialPickerChosenIds.value = next;
 };
 
 // Cập nhật trạng thái serial trong kho
@@ -549,7 +515,7 @@ const setSerialTrangThai = async (item, trangThai) => {
   bumpSerialEvent();
 };
 
-const posSelectSerial = async (serial) => {
+const posSelectSerial = (serial) => {
   const p = serialPickerProduct.value;
   const item = {
     sanPhamId: p.sanPhamId,
@@ -566,21 +532,19 @@ const posSelectSerial = async (serial) => {
     soSerial: serial.soSerial,
     ngayNhapKho: serial.ngayNhapKho,
     soLuong: 1,
+    performerRole: AuthStore.user?.role === 'admin' ? 'Admin' : 'Nhân viên',
+    performerName: AuthStore.user?.hoTen || AuthStore.user?.username || '',
   };
   const swapId = serialPickerSwapChiTietId.value;
-  const oldItem = swapId != null ? posCart.value.find((i) => i.chiTietId === swapId) : null;
   posCart.value = swapId != null
     ? posCart.value.map((i) => (i.chiTietId === swapId ? item : i))
     : [...posCart.value, item];
   showSerialPicker.value = false;
   serialPickerSwapChiTietId.value = null;
-  // Đánh dấu giữ chỗ serial ngay khi chọn
-  await setSerialTrangThai(item, 'giu_hang');
-  if (oldItem) await setSerialTrangThai(oldItem, 'trong_kho');
 };
 
 // Thêm nhiều serial đã chọn vào giỏ hàng
-const posAddChosenSerials = async () => {
+const posAddChosenSerials = () => {
   const p = serialPickerProduct.value;
   const chosen = serialPickerList.value.filter((s) => serialPickerChosenIds.value.has(s.chiTietId));
   const items = chosen.map((serial) => ({
@@ -598,17 +562,17 @@ const posAddChosenSerials = async () => {
     soSerial: serial.soSerial,
     ngayNhapKho: serial.ngayNhapKho,
     soLuong: 1,
+    performerRole: AuthStore.user?.role === 'admin' ? 'Admin' : 'Nhân viên',
+    performerName: AuthStore.user?.hoTen || AuthStore.user?.username || '',
   }));
   posCart.value = [...posCart.value, ...items];
   showSerialPicker.value = false;
-  await Promise.all(items.map((item) => setSerialTrangThai(item, 'giu_hang')));
 };
 
-const posDecrementGroup = async (g) => {
+const posDecrementGroup = (g) => {
   if (g.items.length === 0) return;
   const lastItem = g.items[g.items.length - 1];
   posCart.value = posCart.value.filter((i) => i.chiTietId !== lastItem.chiTietId);
-  await setSerialTrangThai(lastItem, 'trong_kho');
 };
 
 // Xóa toàn bộ sản phẩm cùng biến thể khỏi giỏ hàng
@@ -616,10 +580,8 @@ const posRemoveGroup = async (g) => {
   if (!(await askConfirm(t('admin.pos.confirmRemoveGroup', { name: g.tenSanPham, count: g.items.length })))) return;
   const ids = new Set(g.items.map((i) => i.chiTietId));
   posCart.value = posCart.value.filter((i) => !ids.has(i.chiTietId));
-  await Promise.all(g.items.map((i) => setSerialTrangThai(i, 'trong_kho')));
 };
-const posReset = async () => {
-  await Promise.all(posCart.value.map((item) => setSerialTrangThai(item, 'trong_kho')));
+const posReset = () => {
   posCart.value = [];
   posPhone.value = "";
   posFoundCust.value = null;
@@ -724,6 +686,7 @@ const posPlaceOrder = async () => {
       : (posFoundCust.value.diaChi ?? "Tai cua hang");
     const orderRes = await DonHangService.create({
       khachHangId, nguoiNhan, sdtNguoiNhan: posFoundCust.value.soDienThoai,
+      nhanVienId: AuthStore.user?.id || AuthStore.user?.nhanVienId,
       diaChiGiaoHangText: diaChiGiao,
       khuyenMaiId: posAppliedPromo.value?.khuyenMaiId ?? null,
       tongTien: posCartTotal.value, giamGia: posGiamGia.value,
@@ -738,8 +701,6 @@ const posPlaceOrder = async () => {
     // Xử lý hoàn tác đơn hàng nếu xảy ra lỗi trong quá trình tạo
     try {
       for (const item of posCart.value) {
-        // Cập nhật serial để chuẩn bị gán vào chi tiết đơn hàng
-        await setSerialTrangThai(item, 'trong_kho');
         const ctRes = await DonHangService.addChiTiet({
           donHangId, bienTheId: item.bienTheId, chiTietId: item.chiTietId, soLuong: item.soLuong, donGia: item.giaBan, giamGiaDong: 0,
         });
@@ -1183,22 +1144,19 @@ const posPlaceOrder = async () => {
           v-for="s in serialPickerList" v-else :key="s.chiTietId"
           class="btn d-flex justify-content-between align-items-center"
           :class="[
-            s.trangThai !== 'trong_kho' || (s.lockedBy && s.lockedByTen) ? 'btn-secondary opacity-50' :
-              (serialPickerSwapChiTietId == null && serialPickerChosenIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-warning'),
-            s.lockedBy && s.lockedByTen ? 'text-decoration-line-through' : ''
+            s.trangThai !== 'trong_kho' || isAlreadyInCart(s.chiTietId) ? 'btn-secondary opacity-50' :
+              (serialPickerSwapChiTietId == null && serialPickerChosenIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-warning')
           ]"
-          :disabled="s.trangThai !== 'trong_kho' || (s.lockedBy && s.lockedByTen)"
-          :title="s.lockedByTen ? `Đang được ${s.lockedByTen} giữ` : (s.trangThai !== 'trong_kho' ? `Đã ${s.trangThai === 'giu_hang' ? 'được chọn' : s.trangThai}` : '')"
+          :disabled="s.trangThai !== 'trong_kho' || isAlreadyInCart(s.chiTietId)"
+          :title="s.trangThai !== 'trong_kho' ? s.trangThai : (isAlreadyInCart(s.chiTietId) ? 'Đã có trong giỏ hàng' : '')"
           style="font-family:monospace;font-size:0.85rem;"
           @click="serialPickerSwapChiTietId != null ? posSelectSerial(s) : posToggleSerial(s)"
         >
           <span>
-            <span v-if="s.lockedBy && s.lockedByTen" class="me-1">🔒</span>
             {{ s.soSerial }}
           </span>
           <span class="text-secondary" style="font-size:0.7rem;">
-            <span v-if="s.lockedBy && s.lockedByTen" class="text-warning">{{ s.lockedByTen }}</span>
-            <span v-else>{{ formatDate(s.ngayNhapKho) }}</span>
+            {{ formatDate(s.ngayNhapKho) }}
           </span>
         </button>
       </div>
@@ -1235,6 +1193,7 @@ const posPlaceOrder = async () => {
       </div>
     </div>
   </div>
+
 
   <!-- Modal thêm khách hàng nhanh -->
        CustomersTable.vue vi 2 noi mo modal doc lap nhau ══ -->

@@ -4,7 +4,7 @@ import {
   Search, Filter, X, ChevronDown, ChevronUp,
   Hash, Layers, Laptop, Barcode, Activity, Calendar,
   SlidersHorizontal, CheckCircle2, Clock, Package, AlertTriangle,
-  RotateCcw, Eye, Pencil, Plus, Cpu, MemoryStick, HardDrive, Monitor, Lock, User,
+  RotateCcw, Eye, Pencil, Plus, Cpu, MemoryStick, HardDrive, Monitor, Lock, User, FileText,
 } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
@@ -16,7 +16,8 @@ import { showToast } from "../../stores/toast.js";
 import { askConfirm } from "../../stores/confirm.js";
 import { ProductsStore, ensureProducts } from "../../stores/products.js";
 import { serialEvents } from "../../stores/serialEvents.js";
-import { posCartChiTietIds } from "../../stores/posCart.js";
+import { posCartChiTietIds, getPosCartItem } from "../../stores/posCart.js";
+import { AuthStore } from "../../stores/index.js";
 import SearchSelect from "../common/SearchSelect.vue";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
@@ -31,19 +32,22 @@ const LINH_KIEN_META = {
 };
 
 const items = ref([]);
+const heldOrderSerials = ref([]);
 const loading = ref(false);
 const search = ref("");
 
 const load = async () => {
   loading.value = true;
   try {
-    const [sp, cpu, ram, gpu, oCung] = await Promise.all([
+    const [sp, cpu, ram, gpu, oCung, heldOrders] = await Promise.all([
       ChiTietSanPhamService.getAll().catch(() => []),
       ChiTietCpuService.getAll().catch(() => []),
       ChiTietRamService.getAll().catch(() => []),
       ChiTietGpuService.getAll().catch(() => []),
       ChiTietOCungService.getAll().catch(() => []),
+      ChiTietSanPhamService.getHeldWithOrder().catch(() => []),
     ]);
+    heldOrderSerials.value = heldOrders ?? [];
     items.value = [
       ...(sp ?? []).map((i) => ({ ...i, loai: 'sanPham', rowId: i.chiTietId })),
       ...(cpu ?? []).map((i) => ({ ...i, loai: 'cpu', rowId: i.chiTietCpuId })),
@@ -143,12 +147,89 @@ const resetFilters = () => {
   filterNgayTo.value = '';
 };
 
+// Map serials trong đơn hàng đang tiến hành
+const activeOrderSerialMap = computed(() => {
+  const map = new Map();
+  (heldOrderSerials.value || []).forEach((item) => {
+    if (item.trangThai === 'loi_bao_hanh') return;
+    if (item.chiTietId) map.set(item.chiTietId, item);
+    if (item.soSerial) map.set(item.soSerial, item);
+  });
+  return map;
+});
+
+// Kiểm tra serial có đang trong giỏ POS hiện tại không (không tính sản phẩm lỗi/bảo hành)
+const isInPosCart = (item) => item.loai === 'sanPham' && item.trangThai !== 'loi_bao_hanh' && posCartChiTietIds.value.has(item.chiTietId);
+
+// Lấy thông tin đơn hàng đang tiến hành của serial (nếu có, không tính bảo hành)
+const getActiveOrderItem = (item) => {
+  if (item.loai !== 'sanPham' || item.trangThai === 'loi_bao_hanh') return null;
+  return activeOrderSerialMap.value.get(item.chiTietId) || activeOrderSerialMap.value.get(item.soSerial) || null;
+};
+
+// Kiểm tra serial có thuộc đơn hàng đang trên thanh tiến trình (chưa hoàn tất giao)
+const isOrderInProgress = (item) => {
+  if (item.trangThai === 'loi_bao_hanh') return false;
+  const ord = getActiveOrderItem(item);
+  if (!ord) return false;
+  return !['delivered', 'cancelled', 'returned'].includes(ord.trangThaiDonHang);
+};
+
+// Xác định người thực hiện: Admin hay Nhân viên tùy vào tài khoản đang login và thực hiện thanh toán hiện tại
+const getSerialPerformer = (item) => {
+  if (item.trangThai === 'loi_bao_hanh') return null;
+  // 1. Nếu đang trong giỏ POS (thực hiện thanh toán hiện tại):
+  if (isInPosCart(item)) {
+    const cartItem = getPosCartItem(item.chiTietId);
+    const roleStr = (cartItem?.performerRole || (AuthStore.user?.role === 'admin' ? 'Admin' : 'Nhân viên')).toLowerCase();
+    const isAdmin = roleStr.includes('admin');
+    return {
+      role: isAdmin ? 'Admin' : 'Nhân viên',
+      name: cartItem?.performerName || AuthStore.user?.hoTen || AuthStore.user?.username || '',
+      isAdmin,
+    };
+  }
+
+  // 2. Nếu đang trong đơn hàng tiến trình hoặc đã lên đơn:
+  const ord = getActiveOrderItem(item);
+  if (ord) {
+    if (ord.nhanVienRole || ord.nhanVienTen) {
+      const isAdmin = (ord.nhanVienRole || '').toLowerCase().includes('admin');
+      return {
+        role: isAdmin ? 'Admin' : 'Nhân viên',
+        name: ord.nhanVienTen || '',
+        isAdmin,
+      };
+    }
+    const isAdmin = AuthStore.user?.role === 'admin';
+    return {
+      role: isAdmin ? 'Admin' : 'Nhân viên',
+      name: AuthStore.user?.hoTen || '',
+      isAdmin,
+    };
+  }
+
+  // 3. Nếu có lock cũ từ POS session
+  if (item.lockedBy && item.lockedByTen) {
+    return {
+      role: 'Nhân viên',
+      name: item.lockedByTen,
+      isAdmin: false,
+    };
+  }
+
+  return null;
+};
+
 const filteredItems = computed(() => {
   const q = search.value.trim().toLowerCase();
   return items.value.filter((i) => {
     if (q && ![i.soSerial, rowSpecLabel(i)].some((v) => (v || '').toLowerCase().includes(q))) return false;
     if (filterLoai.value && i.loai !== filterLoai.value) return false;
-    if (filterTrangThai.value && i.trangThai !== filterTrangThai.value) return false;
+    if (filterTrangThai.value === 'dang_len_don_pos' && !isInPosCart(i)) return false;
+    if (filterTrangThai.value === 'da_len_don' && !isOrderInProgress(i)) return false;
+    if (filterTrangThai.value === 'trong_kho' && (i.trangThai !== 'trong_kho' || isInPosCart(i) || isOrderInProgress(i))) return false;
+    if (filterTrangThai.value && !['dang_len_don_pos', 'da_len_don', 'trong_kho'].includes(filterTrangThai.value) && i.trangThai !== filterTrangThai.value) return false;
     if (filterInPosCart.value && !isInPosCart(i)) return false;
     const ngay = (i.ngayNhapKho || '').slice(0, 10);
     if (filterNgayFrom.value && ngay < filterNgayFrom.value) return false;
@@ -163,6 +244,8 @@ watch([search, filterLoai, filterTrangThai, filterInPosCart, filterNgayFrom, fil
 
 const STATUS_COLOR = {
   trong_kho: '#22c55e',
+  dang_len_don_pos: '#f59e0b',
+  da_len_don: '#0284c7',
   giu_hang: '#f59e0b',
   da_ban: '#94a3b8',
   loi_bao_hanh: '#fb923c',
@@ -170,18 +253,19 @@ const STATUS_COLOR = {
   da_su_dung: '#a78bfa',
 };
 const statusColor = (s) => STATUS_COLOR[s] ?? '#6b7280';
-const statusLabel = (s) => t(`admin.statusLabel.${s}`);
+const statusLabel = (s) => {
+  if (s === 'dang_len_don_pos') return 'Đang lên đơn POS';
+  if (s === 'da_len_don') return 'Đã lên đơn';
+  return t(`admin.statusLabel.${s}`);
+};
 
 const serialStats = computed(() => {
   const all = items.value ?? [];
-  const trongKho = all.filter((i) => i.trangThai === 'trong_kho').length;
-  const daBan = all.filter((i) => i.trangThai === 'da_ban').length;
-  const giuHangOrLoi = all.filter((i) => i.trangThai === 'giu_hang' || i.trangThai === 'loi_bao_hanh').length;
-  return { total: all.length, trongKho, daBan, giuHangOrLoi };
+  const trongKho = all.filter((i) => i.trangThai === 'trong_kho' && !isInPosCart(i) && !isOrderInProgress(i)).length;
+  const daBan = all.filter((i) => i.trangThai === 'da_ban' && !isOrderInProgress(i)).length;
+  const loiBaoHanh = all.filter((i) => i.trangThai === 'loi_bao_hanh').length;
+  return { total: all.length, trongKho, daBan, loiBaoHanh };
 });
-
-// Kiểm tra serial có đang trong giỏ POS hiện tại không (cùng tab, tức thì)
-const isInPosCart = (item) => item.loai === 'sanPham' && posCartChiTietIds.value.has(item.chiTietId);
 
 const showModal = ref(false);
 const editingId = ref(null);
@@ -196,7 +280,7 @@ const emptyForm = () => ({
   ghiChu: '',
 });
 const form = ref(emptyForm());
-const STATUS_OPTIONS_SAN_PHAM = ['trong_kho', 'giu_hang', 'da_ban', 'loi_bao_hanh', 'da_tra_hang'];
+const STATUS_OPTIONS_SAN_PHAM = ['trong_kho', 'da_ban', 'loi_bao_hanh', 'da_tra_hang'];
 const STATUS_OPTIONS_LINH_KIEN = ['trong_kho', 'da_su_dung', 'loi_bao_hanh'];
 const statusOptions = computed(() =>
   form.value.loai === 'sanPham' ? STATUS_OPTIONS_SAN_PHAM : STATUS_OPTIONS_LINH_KIEN
@@ -338,11 +422,11 @@ const deleteSerial = async (item) => {
       <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
         <div class="d-flex align-items-center justify-content-between">
           <div>
-            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Giữ hàng POS / Lỗi</div>
-            <div class="fs-4 fw-bold mt-1 text-warning">{{ serialStats.giuHangOrLoi }}</div>
+            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Lỗi bảo hành</div>
+            <div class="fs-4 fw-bold mt-1 text-danger">{{ serialStats.loiBaoHanh }}</div>
           </div>
-          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(234,179,8,0.12);color:#eab308;">
-            <Clock :size="20" />
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(239,68,68,0.12);color:#ef4444;">
+            <AlertTriangle :size="20" />
           </div>
         </div>
       </div>
@@ -398,7 +482,8 @@ const deleteSerial = async (item) => {
           <select v-model="filterTrangThai" class="adv-filter-select">
             <option value="">Tất cả</option>
             <option value="trong_kho">Trong kho</option>
-            <option value="giu_hang">Giữ hàng (POS)</option>
+            <option value="dang_len_don_pos">Đang lên đơn POS</option>
+            <option value="da_len_don">Đã lên đơn (tiến trình)</option>
             <option value="da_ban">Đã bán</option>
             <option value="loi_bao_hanh">Lỗi / Bảo hành</option>
             <option value="da_tra_hang">Đã trả hàng</option>
@@ -445,7 +530,6 @@ const deleteSerial = async (item) => {
           <tr
             v-for="(item, idx) in pagedItems"
             :key="`${item.loai}-${item.rowId}`"
-            :class="{ 'sm-row--held': item.trangThai === 'giu_hang' }"
           >
             <td class="text-center text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
             <td class="text-center text-nowrap">
@@ -489,19 +573,34 @@ const deleteSerial = async (item) => {
               </span>
             </td>
             <td class="text-center text-nowrap">
-              <span v-if="item.trangThai === 'giu_hang'" class="sm-badge sm-badge--held text-nowrap" :title="isInPosCart(item) ? 'Đang trong giỏ POS hiện tại' : 'Đang giữ (có thể từ phiên POS khác)'">
-                <span class="sm-dot sm-dot--held"></span>
-                <Clock :size="11" class="me-1" />
-                {{ statusLabel(item.trangThai) }}
+              <!-- Sản phẩm đang bảo hành / lỗi: không tính đang lên đơn và luôn hiển thị Lỗi / Bảo hành -->
+              <span v-if="item.trangThai === 'loi_bao_hanh'" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
+                <AlertTriangle :size="12" /> {{ statusLabel(item.trangThai) }}
               </span>
+              <!-- Đang lên đơn trong giỏ POS -->
+              <span
+                v-else-if="isInPosCart(item)"
+                class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                style="font-size:11.5px; font-weight:600;"
+                title="Sản phẩm đang được lên đơn tại quầy POS"
+              >
+                <Clock :size="12" /> Đang lên đơn POS
+              </span>
+              <!-- Đang ở trạng thái đã lên đơn ở thanh tiến trình -->
+              <span
+                v-else-if="isOrderInProgress(item)"
+                class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                style="font-size:11.5px; font-weight:600;"
+                :title="`Đơn hàng #${getActiveOrderItem(item)?.maDonHang || getActiveOrderItem(item)?.donHangId} — Đã lên đơn ở thanh tiến trình`"
+              >
+                <FileText :size="12" /> Đã lên đơn
+              </span>
+              <!-- Các trạng thái thông thường -->
               <span v-else-if="item.trangThai === 'trong_kho'" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
                 <CheckCircle2 :size="12" /> {{ statusLabel(item.trangThai) }}
               </span>
               <span v-else-if="item.trangThai === 'da_ban'" class="badge rounded-pill bg-secondary-subtle text-secondary border px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
                 <Package :size="12" /> {{ statusLabel(item.trangThai) }}
-              </span>
-              <span v-else-if="item.trangThai === 'loi_bao_hanh'" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
-                <AlertTriangle :size="12" /> {{ statusLabel(item.trangThai) }}
               </span>
               <span v-else-if="item.trangThai === 'da_tra_hang'" class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
                 <RotateCcw :size="12" /> {{ statusLabel(item.trangThai) }}
@@ -512,22 +611,24 @@ const deleteSerial = async (item) => {
               </span>
             </td>
             <td class="text-center text-nowrap">
-              <span
-                v-if="item.lockedBy && item.lockedByTen"
-                class="badge d-inline-flex align-items-center gap-1 text-nowrap px-2.5 py-1"
-                style="background: #b45309; color: #fef9c3; font-size: 11.5px; font-weight: 600; border-radius: 6px;"
-                :title="`Đang được ${item.lockedByTen} chọn trong POS / picker`"
-              >
-                <Lock :size="11" /> {{ item.lockedByTen }}
-              </span>
-              <span
-                v-else-if="isInPosCart(item)"
-                class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
-                style="font-size: 11px; font-weight: 600;"
-                title="Đang trong giỏ hàng POS"
-              >
-                <Clock :size="11" /> Giỏ POS
-              </span>
+              <template v-if="getSerialPerformer(item)">
+                <span
+                  v-if="getSerialPerformer(item).isAdmin"
+                  class="badge px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                  style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; font-size: 11px; font-weight: 600; border-radius: 9999px;"
+                  :title="getSerialPerformer(item).name ? `Người thực hiện: ${getSerialPerformer(item).name} (Admin)` : 'Người thực hiện: Admin'"
+                >
+                  <User :size="11" /> Admin
+                </span>
+                <span
+                  v-else
+                  class="badge px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                  style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 11px; font-weight: 600; border-radius: 9999px;"
+                  :title="getSerialPerformer(item).name ? `Người thực hiện: ${getSerialPerformer(item).name} (Nhân viên)` : 'Người thực hiện: Nhân viên'"
+                >
+                  <User :size="11" /> Nhân viên
+                </span>
+              </template>
               <span v-else class="text-secondary opacity-75">—</span>
             </td>
             <td class="text-center text-secondary small text-nowrap">{{ formatDate(item.ngayNhapKho) }}</td>

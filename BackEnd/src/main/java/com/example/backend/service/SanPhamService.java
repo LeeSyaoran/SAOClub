@@ -54,6 +54,8 @@ public class SanPhamService {
     private SanPhamHinhAnhRepository sanPhamHinhAnhRepository;
     @Autowired
     private EntityManager entityManager;
+    @Autowired(required = false)
+    private PhanLoaiService phanLoaiService;
 
     public Page<SanPhamResponse> hienThiSanPham(String keyword, Integer danhMucId,
                                                 Integer thuongHieuId, String trangThai,
@@ -89,20 +91,32 @@ public class SanPhamService {
 
         // Map biến thể
         List<SanPhamChiTietResponse.BienTheChiTietResponse> variants = bienTheList.stream()
-                .map(bt -> new SanPhamChiTietResponse.BienTheChiTietResponse(
-                        bt.getBienTheId(),
-                        bt.getMaSku(),
-                        bt.getBarcode(),
-                        bt.getMauSac(),
-                        bt.getCpu() != null ? bt.getCpu().getTenCpu() : null,
-                        bt.getRam() != null ? bt.getRam().getDungLuong() : null,
-                        bt.getOCung() != null ? bt.getOCung().getLoaiOcung() : null,
-                        bt.getGpu() != null ? bt.getGpu().getTenGpu() : null,
-                        bt.getGiaNhap(),
-                        bt.getGiaBan(),
-                        bt.getTrangThai(),
-                        null // soLuongTon cần thêm query từ ton_kho
-                ))
+                .map(bt -> {
+                    SanPhamChiTietResponse.BienTheChiTietResponse item = new SanPhamChiTietResponse.BienTheChiTietResponse();
+                    item.setBienTheId(bt.getBienTheId());
+                    item.setMaSku(bt.getMaSku());
+                    item.setBarcode(bt.getBarcode());
+                    item.setMauSac(bt.getMauSac());
+                    item.setCpu(bt.getCpu() != null ? bt.getCpu().getTenCpu() : null);
+                    item.setCpuId(bt.getCpu() != null ? bt.getCpu().getCpuId() : null);
+                    item.setRam(bt.getRam() != null ? bt.getRam().getDungLuong() : null);
+                    item.setRamId(bt.getRam() != null ? bt.getRam().getRamId() : null);
+                    item.setOCung(bt.getOCung() != null ? bt.getOCung().getLoaiOcung() : null);
+                    item.setOCungId(bt.getOCung() != null ? bt.getOCung().getOCungId() : null);
+                    item.setGpu(bt.getGpu() != null ? bt.getGpu().getTenGpu() : null);
+                    item.setGpuId(bt.getGpu() != null ? bt.getGpu().getGpuId() : null);
+                    item.setGiaNhap(bt.getGiaNhap());
+                    item.setGiaBan(bt.getGiaBan());
+                    item.setTrangThai(bt.getTrangThai());
+                    item.setHinhAnhBienThe(bt.getHinhAnhBienThe());
+                    item.setBaoHanhThang(bt.getBaoHanhThang());
+                    item.setKichThuocManHinh(bt.getKichThuocManHinh());
+                    item.setHeDieuHanh(bt.getHeDieuHanh());
+                    item.setPin(bt.getPin());
+                    item.setTrongLuongKg(bt.getTrongLuongKg());
+                    item.setSoLuongTon(null);
+                    return item;
+                })
                 .toList();
 
         // Tạo response
@@ -134,6 +148,11 @@ public class SanPhamService {
             resp.setBaoHanhThang(btDau.getBaoHanhThang());
             resp.setPhanLoaiTags(btDau.getPhanLoaiTags());
             resp.setPhanLoaiTen(btDau.getPhanLoaiTen());
+        }
+
+        if (phanLoaiService != null) {
+            resp.setPhanLoaiIds(phanLoaiService.cuaSanPham(sanPhamId));
+            resp.setPhanLoai(phanLoaiService.maCuaSanPham(sanPhamId));
         }
 
         // Khoảng giá
@@ -175,7 +194,7 @@ public class SanPhamService {
 
         SanPham saved = sanPhamRepository.save(sanPham);
 
-        entityManager.refresh(saved);
+        if (entityManager != null) entityManager.refresh(saved);
 
         if (request.getHinhAnhList() != null) luuDanhSachHinhAnh(saved.getSanPhamId(), request.getHinhAnhList());
 
@@ -186,10 +205,19 @@ public class SanPhamService {
         bt.setSanPham(saved);
         bt.setTrangThai(trangThaiBienThe(request.getTrangThai()));
         bt.setBarcode(barcodeBienThe);
+        String maSku = chuanHoa(request.getMaSku());
+        if (maSku == null) {
+            String prefix = (maSanPham != null ? maSanPham : "SP" + saved.getSanPhamId()).toUpperCase();
+            maSku = prefix + "-001";
+        }
+        bt.setMaSku(maSku);
+        if (bt.getGiaBan() == null) bt.setGiaBan(BigDecimal.ZERO);
+        if (bt.getGiaNhap() == null) bt.setGiaNhap(BigDecimal.ZERO);
+        if (bt.getBaoHanhThang() == null) bt.setBaoHanhThang(12);
         ganLinhKien(bt, request);
 
         BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
-        entityManager.flush(); // ponytail: ensure bien_the ID is generated before returning response
+        if (entityManager != null) entityManager.flush(); // ponytail: ensure bien_the ID is generated before returning response
 
         return new SanPhamCreatedResponse(saved.getSanPhamId(), saved.getMaSanPham(),
                 savedBt.getBarcode(), savedBt.getBienTheId(), savedBt.getMaSku());
@@ -231,7 +259,7 @@ public class SanPhamService {
         log.info("[DEBUG updateSanPham] BEFORE save: nhaCungCap will be set to nhaCungCapId={}, entity.tenSanPham={}",
                 request.getNhaCungCapId(), sanPham.getTenSanPham());
         sanPhamRepository.save(sanPham);
-        entityManager.flush(); // ponytail: ensure JPA dirty-check is flushed to DB immediately
+        if (entityManager != null) entityManager.flush(); // ponytail: ensure JPA dirty-check is flushed to DB immediately
         log.info("[DEBUG updateSanPham] AFTER flush: nhaCungCapId={}", sanPham.getNhaCungCap() != null ? sanPham.getNhaCungCap().getNhaCungCapId() : "null");
         if (request.getHinhAnhList() != null) luuDanhSachHinhAnh(sanPhamId, request.getHinhAnhList());
 
@@ -256,15 +284,29 @@ public class SanPhamService {
             String barcodeBienThe = chuanHoa(request.getBarcodeBienThe());
             kiemTraTrungBarcodeBienThe(barcodeBienThe, bt.getBienTheId());
 
-            // Giữ nguyên ngày tạo gốc của biến thể, chỉ cập nhật phần dữ liệu nghiệp vụ
-            BeanUtils.copyProperties(request, bt, "bienTheId", "ngayTao");
+            if (request.getMaSku() != null && !request.getMaSku().isBlank()) {
+                String maSku = request.getMaSku().trim();
+                kiemTraTrungMaSku(maSku, bt.getBienTheId());
+                bt.setMaSku(maSku);
+            }
+            if (request.getGiaBan() != null) bt.setGiaBan(request.getGiaBan());
+            if (request.getGiaNhap() != null) bt.setGiaNhap(request.getGiaNhap());
+            if (request.getBaoHanhThang() != null) bt.setBaoHanhThang(request.getBaoHanhThang());
+            if (request.getMauSac() != null) bt.setMauSac(request.getMauSac());
+            if (request.getKichThuocManHinh() != null) bt.setKichThuocManHinh(request.getKichThuocManHinh());
+            if (request.getHeDieuHanh() != null) bt.setHeDieuHanh(request.getHeDieuHanh());
+            if (request.getPin() != null) bt.setPin(request.getPin());
+            if (request.getTrongLuongKg() != null) bt.setTrongLuongKg(request.getTrongLuongKg());
+            if (request.getHinhAnhBienThe() != null) bt.setHinhAnhBienThe(request.getHinhAnhBienThe());
+            if (request.getPhanLoaiTags() != null) bt.setPhanLoaiTags(request.getPhanLoaiTags());
+            if (request.getPhanLoaiTen() != null) bt.setPhanLoaiTen(request.getPhanLoaiTen());
+            if (request.getTrangThai() != null) bt.setTrangThai(trangThaiBienThe(request.getTrangThai()));
+            if (barcodeBienThe != null) bt.setBarcode(barcodeBienThe);
             bt.setSanPham(sanPham);
-            bt.setTrangThai(trangThaiBienThe(request.getTrangThai()));
-            bt.setBarcode(barcodeBienThe);
             ganLinhKien(bt, request);
 
             BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
-            entityManager.flush(); // ponytail: ensure bien_the update is flushed to DB immediately
+            if (entityManager != null) entityManager.flush(); // ponytail: ensure bien_the update is flushed to DB immediately
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "giaNhap", oldGiaNhapBienThe, savedBt.getGiaNhap(), nguoiSua);
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "giaBan", oldGiaBanBienThe, savedBt.getGiaBan(), nguoiSua);
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "barcode", oldBarcodeBienThe, savedBt.getBarcode(), nguoiSua);
@@ -293,10 +335,18 @@ public class SanPhamService {
     /* ───────────────────────── Helper ───────────────────────── */
 
     private void ganLinhKien(BienTheSanPham bt, SanPhamRequest request) {
-        bt.setCpu(request.getCpuId() != null ? dmCpuRepository.getReferenceById(request.getCpuId()) : null);
-        bt.setRam(request.getRamId() != null ? dmRamRepository.getReferenceById(request.getRamId()) : null);
-        bt.setOCung(request.getOCungId() != null ? dmOcungRepository.getReferenceById(request.getOCungId()) : null);
-        bt.setGpu(request.getGpuId() != null ? dmGpuRepository.getReferenceById(request.getGpuId()) : null);
+        if (request.getCpuId() != null) {
+            bt.setCpu(dmCpuRepository.getReferenceById(request.getCpuId()));
+        }
+        if (request.getRamId() != null) {
+            bt.setRam(dmRamRepository.getReferenceById(request.getRamId()));
+        }
+        if (request.getOCungId() != null) {
+            bt.setOCung(dmOcungRepository.getReferenceById(request.getOCungId()));
+        }
+        if (request.getGpuId() != null) {
+            bt.setGpu(dmGpuRepository.getReferenceById(request.getGpuId()));
+        }
     }
 
     // Cập nhật danh sách ảnh gallery của sản phẩm
@@ -350,5 +400,14 @@ public class SanPhamService {
                 ? bienTheSanPhamRepository.existsByBarcode(barcode)
                 : bienTheSanPhamRepository.existsByBarcodeAndBienTheIdNot(barcode, boQuaBienTheId);
         if (trung) throw new IllegalArgumentException("Barcode '" + barcode + "' đã được dùng");
+    }
+
+    /** Kiểm tra trùng SKU rõ ràng */
+    private void kiemTraTrungMaSku(String maSku, Integer boQuaBienTheId) {
+        if (maSku == null || maSku.isBlank()) return;
+        boolean trung = boQuaBienTheId == null
+                ? bienTheSanPhamRepository.existsByMaSku(maSku.trim())
+                : bienTheSanPhamRepository.existsByMaSkuAndBienTheIdNot(maSku.trim(), boQuaBienTheId);
+        if (trung) throw new IllegalArgumentException("Mã SKU '" + maSku.trim() + "' đã được dùng");
     }
 }

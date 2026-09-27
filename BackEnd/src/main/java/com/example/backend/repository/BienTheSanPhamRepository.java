@@ -74,6 +74,11 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
 
     boolean existsByBarcodeAndBienTheIdNot(String barcode, Integer bienTheId);
 
+    // Kiểm tra trùng mã SKU TRƯỚC khi insert/update
+    boolean existsByMaSku(String maSku);
+
+    boolean existsByMaSkuAndBienTheIdNot(String maSku, Integer bienTheId);
+
     @Query("""
     SELECT new com.example.backend.response.BienTheSanPhamPublicResponse(
         bt.bienTheId, sp.sanPhamId, bt.maSku, bt.giaBan,

@@ -356,13 +356,19 @@ const ramOptions = computed(() => [
 ]);
 const oCungOptions = computed(() => [
   { value: null, label: NONE_LABEL() },
-  ...oCungList.value.map((o) => ({ value: o.oCungId, label: o.loaiOcung })),
+  ...oCungList.value.map((o) => ({
+    value: o.oCungId ?? o.ocungId ?? o.id,
+    label: o.loaiOcung ?? o.loaiOCung ?? o.LoaiOcung,
+  })),
 ]);
 // Tên hiển thị cho tag của các trường chọn theo ID
 const cpuName = (id) => cpuList.value.find((c) => c.cpuId === id)?.tenCpu ?? '';
 const gpuName = (id) => gpuList.value.find((g) => g.gpuId === id)?.tenGpu ?? '';
 const ramName = (id) => ramList.value.find((r) => r.ramId === id)?.dungLuong ?? '';
-const oCungName = (id) => oCungList.value.find((o) => o.oCungId === id)?.loaiOcung ?? '';
+const oCungName = (id) => {
+  const o = oCungList.value.find((item) => (item.oCungId ?? item.ocungId ?? item.id) === id);
+  return o ? (o.loaiOcung ?? o.loaiOCung ?? o.LoaiOcung ?? '') : '';
+};
 
 // Gợi ý thuộc tính biến thể
 const stringOptionsFor = (field, base) => {
@@ -473,27 +479,36 @@ const changeProductForVariant = () => {
 
 const openEdit = async (p) => {
   await ensureProductRefData();
+  await ensureProducts(); // ponytail: cần ProductsStore.items để lookup thông số sản phẩm cha
+  // ponytail: thông số chung (màn hình/HĐH/pin/trọng lượng/bảo hành/NCC) lấy từ sản phẩm cha
+  // — khớp với modal chi tiết (showRowDetail) và đồng bộ với tab Sản phẩm
+  const parent = (ProductsStore.items ?? []).find((it) => it.sanPhamId === p.sanPhamId);
   Object.assign(form, {
     bienTheId: p.bienTheId,
     tenSanPham: p.tenSanPham,
     thuongHieuId: p.thuongHieuId,
     danhMucId: p.danhMucId,
-    nhaCungCapId: p.nhaCungCapId,
+    nhaCungCapId: parent?.nhaCungCapId ?? p.nhaCungCapId,
     loaiSanPham: p.loaiSanPham,
     maSku: p.maSku,
     barcodeBienThe: p.barcode ?? "",
-    cpuId: cpuList.value.find((c) => c.tenCpu === p.cpu)?.cpuId ?? null,
-    ramId: ramList.value.find((r) => r.dungLuong === p.ram)?.ramId ?? null,
-    oCungId: oCungList.value.find((o) => (o.loaiOcung ?? o.LoaiOcung) === p.oCung)?.oCungId ?? null,
-    gpuId: gpuList.value.find((g) => g.tenGpu === p.gpu)?.gpuId ?? null,
-    kichThuocManHinh: p.kichThuocManHinh,
-    heDieuHanh: p.heDieuHanh,
-    pin: p.pin,
-    trongLuongKg: p.trongLuongKg,
+    cpuId: p.cpuId ?? cpuList.value.find((c) => (c.tenCpu ?? "").trim().toLowerCase() === (p.cpu ?? "").trim().toLowerCase())?.cpuId ?? null,
+    ramId: p.ramId ?? ramList.value.find((r) => (r.dungLuong ?? "").trim().toLowerCase() === (p.ram ?? "").trim().toLowerCase())?.ramId ?? null,
+    oCungId: p.oCungId ?? p.ocungId ?? (() => {
+      const target = (p.oCung ?? p.ocung ?? "").trim().toLowerCase();
+      if (!target) return null;
+      const found = oCungList.value.find((o) => (o.loaiOcung ?? o.loaiOCung ?? o.LoaiOcung ?? "").trim().toLowerCase() === target);
+      return found ? (found.oCungId ?? found.ocungId ?? found.id) : null;
+    })(),
+    gpuId: p.gpuId ?? gpuList.value.find((g) => (g.tenGpu ?? "").trim().toLowerCase() === (p.gpu ?? "").trim().toLowerCase())?.gpuId ?? null,
+    kichThuocManHinh: parent?.kichThuocManHinh ?? p.kichThuocManHinh,
+    heDieuHanh: parent?.heDieuHanh ?? p.heDieuHanh,
+    pin: parent?.pin ?? p.pin,
+    trongLuongKg: parent?.trongLuongKg ?? p.trongLuongKg,
     mauSac: p.mauSac,
     giaBan: p.giaBan,
     giaNhap: p.giaNhap,
-    baoHanhThang: p.baoHanhThang,
+    baoHanhThang: parent?.baoHanhThang ?? p.baoHanhThang,
     moTa: p.moTa,
     hinhAnhChinh: p.hinhAnhChinh,
     trangThai: p.trangThai,
@@ -573,6 +588,7 @@ const saveVariant = async () => {
       cpuId: form.cpuId ? Number(form.cpuId) : null,
       ramId: form.ramId ? Number(form.ramId) : null,
       oCungId: form.oCungId ? Number(form.oCungId) : null,
+      ocungId: form.oCungId ? Number(form.oCungId) : null,
       gpuId: form.gpuId ? Number(form.gpuId) : null,
       kichThuocManHinh: form.kichThuocManHinh,
       heDieuHanh: form.heDieuHanh,
@@ -616,6 +632,7 @@ const saveVariant = async () => {
     cpuId: form.cpuId ? Number(form.cpuId) : null,
     ramId: form.ramId ? Number(form.ramId) : null,
     oCungId: form.oCungId ? Number(form.oCungId) : null,
+    ocungId: form.oCungId ? Number(form.oCungId) : null,
     gpuId: form.gpuId ? Number(form.gpuId) : null,
     giaBan: Number(form.giaBan),
     giaNhap: Number(form.giaNhap),
@@ -914,7 +931,7 @@ const saveVariant = async () => {
         <div class="vt-head-main">
           <div class="vt-head-title">{{ addVariantMode ? t('admin.variantModal.addVariant') : t('admin.productModal.titleEdit') }}</div>
           <div v-if="addVariantMode && addVariantSanPhamName" class="vt-head-sub">{{ addVariantSanPhamName }}</div>
-          <div v-else-if="editingId" class="vt-head-sub">{{ t('admin.productModal.idLabel') }} {{ editingId }}</div>
+          <div v-else-if="editingId" class="vt-head-sub">{{ t('admin.productModal.idLabel') }} {{ editingId }} <span class="vt-muted">· Thông số chung (màn hình/HĐH/pin/trọng lượng/bảo hành/NCC) chỉ sửa ở tab Sản phẩm</span></div>
         </div>
         <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showVariantModal = false"></button>
       </div>
@@ -988,7 +1005,8 @@ const saveVariant = async () => {
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.warrantyLabel') }}</label>
-              <SearchSelect v-model="form.baoHanhThang" :options="baoHanhOptions" placeholder="Số tháng" />
+              <SearchSelect v-model="form.baoHanhThang" :options="baoHanhOptions" placeholder="Số tháng" :disabled="isEditingExisting" />
+              <em v-if="isEditingExisting" class="vt-hint">Sửa ở tab Sản phẩm</em>
             </div>
             <template v-if="!addVariantMode">
               <div class="col-4">
@@ -1007,7 +1025,7 @@ const saveVariant = async () => {
               </div>
               <div class="col-4">
                 <label class="vt-label">{{ t('admin.productModal.supplierLabel') }}</label>
-                <select v-model="form.nhaCungCapId" class="form-select form-select-sm vt-input">
+                <select v-model="form.nhaCungCapId" class="form-select form-select-sm vt-input" :disabled="isEditingExisting">
                   <option :value="null">{{ t('admin.productModal.noneOption') }}</option>
                   <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">{{ s.tenNhaCungCap }}</option>
                 </select>
@@ -1062,37 +1080,37 @@ const saveVariant = async () => {
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.screenLabel') }}</label>
-              <SearchSelect v-model="form.kichThuocManHinh" :options="manHinhOptions" :placeholder="t('admin.productModal.screenPlaceholder')" />
+              <SearchSelect v-model="form.kichThuocManHinh" :options="manHinhOptions" :placeholder="t('admin.productModal.screenPlaceholder')" :disabled="isEditingExisting" />
               <div v-if="form.kichThuocManHinh" class="vt-picked-tags">
                 <span class="vt-tag-pill">
                   {{ form.kichThuocManHinh }}
-                  <button type="button" aria-label="Bỏ chọn" @click="form.kichThuocManHinh = ''">&times;</button>
+                  <button type="button" aria-label="Bỏ chọn" @click="form.kichThuocManHinh = ''" v-if="!isEditingExisting">&times;</button>
                 </span>
               </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.osLabel') }}</label>
-              <SearchSelect v-model="form.heDieuHanh" :options="heDieuHanhOptions" :placeholder="t('admin.productModal.osPlaceholder')" />
+              <SearchSelect v-model="form.heDieuHanh" :options="heDieuHanhOptions" :placeholder="t('admin.productModal.osPlaceholder')" :disabled="isEditingExisting" />
               <div v-if="form.heDieuHanh" class="vt-picked-tags">
                 <span class="vt-tag-pill">
                   {{ form.heDieuHanh }}
-                  <button type="button" aria-label="Bỏ chọn" @click="form.heDieuHanh = ''">&times;</button>
+                  <button type="button" aria-label="Bỏ chọn" @click="form.heDieuHanh = ''" v-if="!isEditingExisting">&times;</button>
                 </span>
               </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.batteryLabel') }}</label>
-              <SearchSelect v-model="form.pin" :options="pinOptions" :placeholder="t('admin.productModal.batteryPlaceholder')" />
+              <SearchSelect v-model="form.pin" :options="pinOptions" :placeholder="t('admin.productModal.batteryPlaceholder')" :disabled="isEditingExisting" />
               <div v-if="form.pin" class="vt-picked-tags">
                 <span class="vt-tag-pill">
                   {{ form.pin }}
-                  <button type="button" aria-label="Bỏ chọn" @click="form.pin = ''">&times;</button>
+                  <button type="button" aria-label="Bỏ chọn" @click="form.pin = ''" v-if="!isEditingExisting">&times;</button>
                 </span>
               </div>
             </div>
             <div class="col-4">
               <label class="vt-label">{{ t('admin.productModal.weightLabel') }}</label>
-              <SearchSelect v-model="form.trongLuongKg" :options="trongLuongOptions" placeholder="Trọng lượng (kg)" />
+              <SearchSelect v-model="form.trongLuongKg" :options="trongLuongOptions" placeholder="Trọng lượng (kg)" :disabled="isEditingExisting" />
             </div>
           </div>
         </div>

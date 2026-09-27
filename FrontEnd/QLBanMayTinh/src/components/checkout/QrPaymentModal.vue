@@ -554,14 +554,14 @@ const handleClose = () => {
 
 const handleManualConfirm = async () => {
   confirming.value = true;
+  const donHangId = props.order?.id || props.order?.donHangId;
   try {
-    const donHangId = props.order?.id || props.order?.donHangId;
     if (donHangId) {
       await ThanhToanService.confirmPayment(donHangId, {
         soTien: totalAmount.value,
         phuongThuc: 'chuyen_khoan',
         maGiaoDich: `TIMO_${Date.now()}`
-      }).catch(() => {});
+      });
     }
     showToast('Thanh toán thành công! Đơn hàng đã được xác nhận.', 'success');
     emit('paid', props.order);

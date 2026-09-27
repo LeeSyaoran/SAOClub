@@ -65,6 +65,7 @@ export default defineConfig({
       // Vite cố "import" SVG trong /public/images và gây lỗi MIME type trong trình duyệt.
     },
     headers: {
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
       "Content-Security-Policy": [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://accounts.google.com https://apis.google.com https://*.firebaseapp.com blob:",

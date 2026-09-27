@@ -17,4 +17,11 @@ public class XacNhanDonHangRequest {
     @NotEmpty(message = "Đơn hàng chưa có dòng sản phẩm nào")
     @Valid
     private List<XacNhanDonHangLineRequest> lines;
+
+    private Integer nhanVienId;
+
+    public XacNhanDonHangRequest(List<XacNhanDonHangLineRequest> lines) {
+        this.lines = lines;
+        this.nhanVienId = null;
+    }
 }

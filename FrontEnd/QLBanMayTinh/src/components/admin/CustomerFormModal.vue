@@ -56,14 +56,36 @@ const close = () => emit("update:modelValue", false);
 
 const saveCustomer = async () => {
   customerFormError.value = "";
-  if (!customerForm.value.hoTen.trim()) { customerFormError.value = t('admin.customerModal.nameRequired'); return; }
-  if (!customerForm.value.soDienThoai.trim()) { customerFormError.value = t('admin.customerModal.phoneRequired'); return; }
-  if (!customerForm.value.diaChi.trim()) { customerFormError.value = t('admin.customerModal.addressRequired'); return; }
+  const isBiz = customerForm.value.loaiKhach === "doanh_nghiep";
+  if (isBiz) {
+    if (!customerForm.value.tenCongTy?.trim()) {
+      customerFormError.value = "Vui lòng nhập tên công ty";
+      return;
+    }
+    if (!customerForm.value.hoTen?.trim()) {
+      customerFormError.value = "Vui lòng nhập người đại diện / liên hệ";
+      return;
+    }
+  } else {
+    if (!customerForm.value.hoTen?.trim()) {
+      customerFormError.value = t('admin.customerModal.nameRequired');
+      return;
+    }
+  }
+  if (!customerForm.value.soDienThoai?.trim()) { customerFormError.value = t('admin.customerModal.phoneRequired'); return; }
+  if (!customerForm.value.diaChi?.trim()) { customerFormError.value = t('admin.customerModal.addressRequired'); return; }
   if (saving.value) return;
   saving.value = true;
   const body = {
     ...customerForm.value,
-    diemTichLuy: Number(customerForm.value.diemTichLuy),
+    hoTen: customerForm.value.hoTen.trim(),
+    soDienThoai: customerForm.value.soDienThoai.trim(),
+    email: customerForm.value.email ? customerForm.value.email.trim() : "",
+    diaChi: customerForm.value.diaChi ? customerForm.value.diaChi.trim() : "",
+    loaiKhach: isBiz ? "doanh_nghiep" : "ca_nhan",
+    tenCongTy: isBiz && customerForm.value.tenCongTy ? customerForm.value.tenCongTy.trim() : "",
+    maSoThue: isBiz && customerForm.value.maSoThue ? customerForm.value.maSoThue.trim() : "",
+    diemTichLuy: Number(customerForm.value.diemTichLuy ?? 0),
   };
   try {
     const res = await KhachHangService.save(editingCustomerId.value, body);
@@ -115,53 +137,14 @@ const saveCustomer = async () => {
           {{ customerFormError }}
         </div>
 
-        <!-- Section: Thông tin cá nhân -->
+        <!-- Section: Chọn loại khách hàng -->
         <div class="cfm-section">
           <div class="cfm-section-title">
-            <IdCard :size="14" />
-            Thông tin cá nhân
+            <Tag :size="14" />
+            Loại khách hàng
           </div>
           <div class="cfm-fields">
-            <div class="cfm-field">
-              <label class="cfm-label">Họ tên <span class="cfm-required">*</span></label>
-              <div class="cfm-input-wrap">
-                <User class="cfm-input-icon" :size="14" />
-                <input v-model="customerForm.hoTen" class="cfm-input" placeholder="Nhập họ tên khách hàng" />
-              </div>
-            </div>
-            <div class="cfm-field">
-              <label class="cfm-label">Số điện thoại <span class="cfm-required">*</span></label>
-              <div class="cfm-input-wrap">
-                <Phone class="cfm-input-icon" :size="14" />
-                <input v-model="customerForm.soDienThoai" class="cfm-input" placeholder="0xxx xxx xxx" />
-              </div>
-            </div>
-            <div class="cfm-field">
-              <label class="cfm-label">Email</label>
-              <div class="cfm-input-wrap">
-                <Mail class="cfm-input-icon" :size="14" />
-                <input v-model="customerForm.email" type="email" class="cfm-input" placeholder="email@example.com" />
-              </div>
-            </div>
             <div class="cfm-field cfm-field--full">
-              <label class="cfm-label">Địa chỉ <span class="cfm-required">*</span></label>
-              <div class="cfm-input-wrap">
-                <MapPin class="cfm-input-icon" :size="14" />
-                <input v-model="customerForm.diaChi" class="cfm-input" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Section: Thông tin doanh nghiệp -->
-        <div class="cfm-section">
-          <div class="cfm-section-title">
-            <Building :size="14" />
-            Thông tin doanh nghiệp (nếu có)
-          </div>
-          <div class="cfm-fields">
-            <div class="cfm-field">
-              <label class="cfm-label">Loại khách</label>
               <div class="cfm-input-wrap">
                 <Tag class="cfm-input-icon" :size="14" />
                 <select v-model="customerForm.loaiKhach" class="cfm-input cfm-select">
@@ -170,22 +153,114 @@ const saveCustomer = async () => {
                 </select>
               </div>
             </div>
-            <div class="cfm-field">
-              <label class="cfm-label">Tên công ty</label>
-              <div class="cfm-input-wrap">
-                <Briefcase class="cfm-input-icon" :size="14" />
-                <input v-model="customerForm.tenCongTy" class="cfm-input" placeholder="Tên công ty" />
-              </div>
+          </div>
+        </div>
+
+        <!-- ── Nếu là DOANH NGHIỆP: Hiển thị thông tin công ty trước ── -->
+        <template v-if="customerForm.loaiKhach === 'doanh_nghiep'">
+          <!-- Section: Thông tin doanh nghiệp -->
+          <div class="cfm-section">
+            <div class="cfm-section-title">
+              <Building :size="14" />
+              Thông tin doanh nghiệp
             </div>
-            <div class="cfm-field">
-              <label class="cfm-label">Mã số thuế</label>
-              <div class="cfm-input-wrap">
-                <FileText class="cfm-input-icon" :size="14" />
-                <input v-model="customerForm.maSoThue" class="cfm-input" placeholder="Mã số thuế công ty" />
+            <div class="cfm-fields">
+              <div class="cfm-field">
+                <label class="cfm-label">Tên công ty <span class="cfm-required">*</span></label>
+                <div class="cfm-input-wrap">
+                  <Briefcase class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.tenCongTy" class="cfm-input" placeholder="Tên công ty / doanh nghiệp" />
+                </div>
+              </div>
+              <div class="cfm-field">
+                <label class="cfm-label">Mã số thuế</label>
+                <div class="cfm-input-wrap">
+                  <FileText class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.maSoThue" class="cfm-input" placeholder="Mã số thuế công ty" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+
+          <!-- Section: Thông tin liên hệ / đại diện -->
+          <div class="cfm-section">
+            <div class="cfm-section-title">
+              <User :size="14" />
+              Thông tin người đại diện & liên hệ
+            </div>
+            <div class="cfm-fields">
+              <div class="cfm-field">
+                <label class="cfm-label">Người đại diện / liên hệ <span class="cfm-required">*</span></label>
+                <div class="cfm-input-wrap">
+                  <User class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.hoTen" class="cfm-input" placeholder="Họ tên người đại diện" />
+                </div>
+              </div>
+              <div class="cfm-field">
+                <label class="cfm-label">Số điện thoại <span class="cfm-required">*</span></label>
+                <div class="cfm-input-wrap">
+                  <Phone class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.soDienThoai" class="cfm-input" placeholder="0xxx xxx xxx" />
+                </div>
+              </div>
+              <div class="cfm-field">
+                <label class="cfm-label">Email</label>
+                <div class="cfm-input-wrap">
+                  <Mail class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.email" type="email" class="cfm-input" placeholder="email@congty.com" />
+                </div>
+              </div>
+              <div class="cfm-field cfm-field--full">
+                <label class="cfm-label">Địa chỉ trụ sở <span class="cfm-required">*</span></label>
+                <div class="cfm-input-wrap">
+                  <MapPin class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.diaChi" class="cfm-input" placeholder="Địa chỉ trụ sở công ty" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ── Nếu là CÁ NHÂN: ẨN hoàn toàn thông tin công ty ── -->
+        <template v-else>
+          <!-- Section: Thông tin cá nhân -->
+          <div class="cfm-section">
+            <div class="cfm-section-title">
+              <IdCard :size="14" />
+              Thông tin cá nhân
+            </div>
+            <div class="cfm-fields">
+              <div class="cfm-field">
+                <label class="cfm-label">Họ tên <span class="cfm-required">*</span></label>
+                <div class="cfm-input-wrap">
+                  <User class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.hoTen" class="cfm-input" placeholder="Nhập họ tên khách hàng" />
+                </div>
+              </div>
+              <div class="cfm-field">
+                <label class="cfm-label">Số điện thoại <span class="cfm-required">*</span></label>
+                <div class="cfm-input-wrap">
+                  <Phone class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.soDienThoai" class="cfm-input" placeholder="0xxx xxx xxx" />
+                </div>
+              </div>
+              <div class="cfm-field">
+                <label class="cfm-label">Email</label>
+                <div class="cfm-input-wrap">
+                  <Mail class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.email" type="email" class="cfm-input" placeholder="email@example.com" />
+                </div>
+              </div>
+              <div class="cfm-field cfm-field--full">
+                <label class="cfm-label">Địa chỉ <span class="cfm-required">*</span></label>
+                <div class="cfm-input-wrap">
+                  <MapPin class="cfm-input-icon" :size="14" />
+                  <input v-model="customerForm.diaChi" class="cfm-input" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
 
         <!-- Section: Cài đặt tài khoản -->
         <div class="cfm-section">

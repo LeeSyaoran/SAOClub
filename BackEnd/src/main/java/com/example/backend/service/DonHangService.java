@@ -120,6 +120,28 @@ public class DonHangService {
 
         Integer khachHangId = resolveKhachHangIdForCreate(request.getKhachHangId());
         entity.setKhachHang(khachHangRepository.getReferenceById(khachHangId));
+
+        // Tự động hoàn thiện số điện thoại & địa chỉ cho hồ sơ khách hàng nếu hồ sơ chưa có
+        try {
+            khachHangRepository.findById(khachHangId).ifPresent(kh -> {
+                boolean changed = false;
+                if ((kh.getSoDienThoai() == null || kh.getSoDienThoai().isBlank())
+                        && request.getSdtNguoiNhan() != null && !request.getSdtNguoiNhan().isBlank()) {
+                    kh.setSoDienThoai(request.getSdtNguoiNhan());
+                    changed = true;
+                }
+                if ((kh.getDiaChi() == null || kh.getDiaChi().isBlank())
+                        && request.getDiaChiGiaoHangText() != null && !request.getDiaChiGiaoHangText().isBlank()) {
+                    kh.setDiaChi(request.getDiaChiGiaoHangText());
+                    changed = true;
+                }
+                if (changed) {
+                    khachHangRepository.save(kh);
+                }
+            });
+        } catch (Exception ex) {
+            log.warn("[CustomerSync] Không thể tự động đồng bộ SĐT/Địa chỉ vào khách hàng #{}: {}", khachHangId, ex.getMessage());
+        }
         if (request.getNhanVienId() != null)
             entity.setNhanVien(nhanVienRepository.getReferenceById(request.getNhanVienId()));
         if (request.getDiaChiGiaoHangId() != null)
@@ -187,6 +209,12 @@ public class DonHangService {
     // Checkout trực tuyến hoàn tất đơn hàng
     @Transactional
     public DonHang checkoutComplete(DonHangRequest orderReq, List<ChiTietDonHangRequest> items) {
+        if (orderReq.getSdtNguoiNhan() == null || orderReq.getSdtNguoiNhan().isBlank()) {
+            throw new IllegalArgumentException("Số điện thoại nhận hàng không được để trống");
+        }
+        if (orderReq.getDiaChiGiaoHangText() == null || orderReq.getDiaChiGiaoHangText().isBlank()) {
+            throw new IllegalArgumentException("Địa chỉ giao hàng không được để trống");
+        }
         DonHang order = create(orderReq);
         for (ChiTietDonHangRequest item : items) {
             item.setDonHangId(order.getId());
@@ -204,7 +232,7 @@ public class DonHangService {
             ChiTietDonHang saved = chiTietDonHangRepository.save(entity);
 
             boolean online = "online".equals(order.getKenhBan());
-            String trangThaiMoi = online ? "giu_hang" : "da_ban";
+            String trangThaiMoi = online ? "trong_kho" : "da_ban";
 
             for (ChiTietSanPham serial : assignedSerials) {
                 serial.setTrangThai(trangThaiMoi);
@@ -245,7 +273,7 @@ public class DonHangService {
             "confirmed",            Set.of("processing", "cancelled"),
             "processing",           Set.of("out_for_delivery", "shipping", "cancelled"),
             "shipping",             Set.of("out_for_delivery", "cancelled"),
-            "out_for_delivery",     Set.of("awaiting_confirmation", "cancelled"),
+            "out_for_delivery",     Set.of("delivered", "awaiting_confirmation", "cancelled"),
             "awaiting_confirmation", Set.of("delivered"),
             "delivered",            Set.of("returned"),
             "cancelled",            Set.of(),
@@ -266,7 +294,13 @@ public class DonHangService {
         String oldStatus = entity.getTrangThaiDonHang();
         kiemTraChuyenTrangThai(oldStatus, request.getTrangThaiDonHang(), entity.getKenhBan());
         BeanUtils.copyProperties(request, entity,
-                "id", "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId");
+                "id", "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId", "phuongThucThanhToan", "idempotencyKey");
+        if (request.getPhuongThucThanhToan() != null && !request.getPhuongThucThanhToan().isBlank()) {
+            entity.setPhuongThucThanhToan(request.getPhuongThucThanhToan());
+        }
+        if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
+            entity.setIdempotencyKey(request.getIdempotencyKey());
+        }
 
         entity.setKhachHang(khachHangRepository.getReferenceById(request.getKhachHangId()));
         entity.setNhanVien(request.getNhanVienId() != null
@@ -472,8 +506,8 @@ public class DonHangService {
         DonHang donHang = getById(donHangId);
         if (!"online".equals(donHang.getKenhBan()))
             throw new IllegalArgumentException("Chỉ đơn hàng online mới cần chọn serial trước khi xác nhận");
-        if (!"pending".equals(donHang.getTrangThaiDonHang()))
-            throw new IllegalArgumentException("Đơn hàng phải ở trạng thái 'Chờ xác nhận' mới xác nhận được");
+        if (!"pending".equals(donHang.getTrangThaiDonHang()) && !"confirmed".equals(donHang.getTrangThaiDonHang()))
+            throw new IllegalArgumentException("Đơn hàng phải ở trạng thái 'Chờ xác nhận' hoặc 'Đã lên đơn' mới cập nhật được serial");
 
         for (XacNhanDonHangLineRequest line : request.getLines()) {
             ChiTietDonHang item = chiTietDonHangRepository.findById(line.getChiTietDonHangId())
@@ -527,6 +561,9 @@ public class DonHangService {
             chiTietDonHangRepository.save(item);
         }
 
+        if (request.getNhanVienId() != null) {
+            nhanVienRepository.findById(request.getNhanVienId()).ifPresent(donHang::setNhanVien);
+        }
         donHang.setTrangThaiDonHang("confirmed");
         donHangRepository.save(donHang);
         sseService.notifyOrderUpdate(donHangId);
@@ -690,6 +727,62 @@ public class DonHangService {
                     autoPaid, warnings);
         } catch (Exception ex) {
             log.warn("[Reconcile] Lỗi khi chạy đối soát: {}", ex.getMessage());
+        }
+    }
+
+    // ── AUTO-CANCEL EXPIRED HELD ORDERS ──────────────────────────────────────────
+    // Chạy mỗi 15 phút: tìm đơn online có serial đang bị lock quá 90 phút → hủy + trả serial về kho
+
+    /**
+     * Tự động hủy đơn online quá 90 phút chưa thanh toán.
+     * Điều kiện:
+     *   - kenh_ban = 'online'
+     *   - trang_thai NOT IN (delivered, cancelled, returned)
+     *   - thanh_toan = unpaid
+     *   - serial đang bị lock đã hết 90 phút (locked_at < cutoff)
+     * Serial trong đơn được trả về kho (trang_thai → trong_kho).
+     */
+    @Scheduled(fixedRate = 900_000) // 15 phút
+    @Transactional
+    public void autoCancelExpiredHeldOrders() {
+        try {
+            LocalDateTime cutoff = LocalDateTime.now().minusMinutes(90);
+            List<DonHang> expired = donHangRepository.findOnlineOrdersWithExpiredHeldSerials(cutoff);
+            if (expired.isEmpty()) return;
+
+            int count = 0;
+            for (DonHang order : expired) {
+                try {
+                    // 1. Trả serial về kho (re-use existing logic)
+                    releaseSerialsToStock(order.getId(), true);
+
+                    // 2. Giải phóng voucher (re-use existing logic)
+                    giaiPhongKhuyenMaiVoucher(order);
+
+                    // 3. Hủy đơn
+                    String oldNote = order.getGhiChu() != null ? order.getGhiChu() : "";
+                    order.setTrangThaiDonHang("cancelled");
+                    order.setGhiChu(oldNote + " [Auto-hủy: serial hết hạn giữ 90 phút]");
+                    donHangRepository.save(order);
+
+                    // 4. Ghi lịch sử
+                    LichSuDonHang lichSu = new LichSuDonHang();
+                    lichSu.setDonHangId(order.getId());
+                    lichSu.setTrangThaiCu(order.getTrangThaiDonHang());
+                    lichSu.setTrangThaiMoi("cancelled");
+                    lichSu.setThoiGian(LocalDateTime.now());
+                    lichSuDonHangRepository.save(lichSu);
+
+                    count++;
+                    log.info("[AutoCancel] Đơn #{} ({}) bị hủy tự động — serial đã trả về kho",
+                            order.getId(), order.getMaDonHang());
+                } catch (Exception ex) {
+                    log.warn("[AutoCancel] Lỗi khi hủy đơn #{}: {}", order.getId(), ex.getMessage());
+                }
+            }
+            log.info("[AutoCancel] Hoàn tất: đã hủy {} đơn hết hạn giữ serial", count);
+        } catch (Exception ex) {
+            log.warn("[AutoCancel] Lỗi khi chạy auto-cancel: {}", ex.getMessage());
         }
     }
 }

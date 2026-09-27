@@ -75,7 +75,8 @@ const showCustomerForm = ref(false);
 // ── Avatar helpers ────────────────────────────────────────────────────────────
 const getAvatarUrl = (c) => c?.hinhAnh || c?.avatarUrl || null;
 const getInitials = (c) => {
-  const name = c?.hoTen || 'K';
+  const isBiz = c?.loaiKhach === 'doanh_nghiep';
+  const name = (isBiz && c?.tenCongTy) ? c.tenCongTy : (c?.hoTen || 'K');
   const parts = name.trim().split(' ');
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   return name.substring(0, 2).toUpperCase();
@@ -150,7 +151,7 @@ const closeDetailModal = () => {
           <select v-model="filters.loaiKhach" class="adv-filter-select">
             <option value="">Tất cả</option>
             <option value="ca_nhan">Cá nhân</option>
-            <option value="cong_ty">Công ty</option>
+            <option value="doanh_nghiep">Doanh nghiệp</option>
           </select>
         </div>
         <div class="adv-filter-group adv-filter-group--range">
@@ -187,7 +188,7 @@ const closeDetailModal = () => {
             <span class="customer-card__status" :class="getStatusClass(c)">{{ statusLabel(c.trangThai) }}</span>
           </div>
           <div class="customer-card__body">
-            <h4 class="customer-card__name">{{ c.hoTen || 'Khách hàng' }}</h4>
+            <h4 class="customer-card__name">{{ (c.loaiKhach === 'doanh_nghiep' && c.tenCongTy) ? c.tenCongTy : (c.hoTen || 'Khách hàng') }}</h4>
             <div class="customer-card__phone">
               <Phone :size="14" />
               {{ c.soDienThoai || '—' }}

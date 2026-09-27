@@ -28,7 +28,7 @@ export const checkoutInfoSchema = z.object({
   nguoiNhan: z.string().min(1, 'Vui lòng nhập tên người nhận'),
   sdtNguoiNhan: z.string()
     .min(1, 'Vui lòng nhập số điện thoại người nhận')
-    .refine((val) => isValidPhoneNumber(val) || val === 'logged-in', {
+    .refine((val) => isValidPhoneNumber(val), {
       message: 'Số điện thoại nhận hàng không hợp lệ (cần 10 số bắt đầu bằng 0)',
     }),
   diaChiGiaoHangText: z.string().min(1, 'Vui lòng nhập địa chỉ giao hàng'),

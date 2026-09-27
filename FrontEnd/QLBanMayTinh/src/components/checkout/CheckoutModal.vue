@@ -43,7 +43,7 @@
             </div>
           </div>
           <div
-            v-else-if="selectedPayment === 'qr'"
+            v-else
             class="p-3 rounded-3 text-start small border"
             style="background:var(--bg-card-alt); border-color:var(--border-color-soft); max-width:440px;"
           >
@@ -57,18 +57,6 @@
             <div class="mt-2 d-flex align-items-center gap-2 p-2 rounded-2 small" style="background:rgba(72,199,142,0.08);border:1px dashed #48c78e;font-size:11.5px;color:#059669;">
               <CheckCircle2 :size="13" />
               <span>Mã nội dung: <strong class="font-monospace">{{ qrTransferContent }}</strong></span>
-            </div>
-          </div>
-          <div
-            v-else
-            class="p-3 rounded-3 text-start small border"
-            style="background:var(--bg-card-alt); border-color:var(--border-color-soft); max-width:440px;"
-          >
-            <div class="d-flex align-items-center gap-2 mb-1 fw-bold" style="color:#1a56db;">
-              <CreditCard :size="16" /> Thanh toán qua Visa
-            </div>
-            <div style="color:var(--text-secondary); line-height:1.6;">
-              {{ t('checkout.visaInstruction') }}
             </div>
           </div>
 
@@ -216,10 +204,12 @@
                     type="button"
                     class="btn btn-sm btn-success d-inline-flex align-items-center gap-2 px-3.5 py-1.5 rounded-pill shadow-xs transition-all"
                     style="font-size:12.5px; font-weight:600;"
+                    :disabled="isSavingShipping"
                     @click="saveShippingInfo"
                   >
-                    <Check :size="14" />
-                    <span>Lưu thông tin</span>
+                    <span v-if="isSavingShipping" class="spinner-border spinner-border-sm" style="width:13px;height:13px;"></span>
+                    <Check v-else :size="14" />
+                    <span>{{ isSavingShipping ? 'Đang lưu...' : 'Lưu thông tin' }}</span>
                   </button>
                 </div>
 
@@ -460,10 +450,12 @@
                       <button
                         type="button"
                         class="btn btn-sm btn-danger px-4 py-2.5 rounded-pill shadow-xs fw-semibold d-inline-flex align-items-center gap-2"
+                        :disabled="isSavingShipping"
                         @click="saveShippingInfo"
                       >
-                        <Check :size="15" />
-                        <span>Xác nhận thông tin giao hàng</span>
+                        <span v-if="isSavingShipping" class="spinner-border spinner-border-sm" style="width:14px;height:14px;"></span>
+                        <Check v-else :size="15" />
+                        <span>{{ isSavingShipping ? 'Đang lưu...' : 'Xác nhận thông tin giao hàng' }}</span>
                       </button>
                     </div>
                   </div>
@@ -521,27 +513,6 @@
                       <div v-if="selectedPayment === 'qr'" class="payment-radio-dot"></div>
                     </div>
                   </label>
-
-                  <!-- Visa / Credit Card -->
-                  <label
-                    class="payment-option-card d-flex align-items-center gap-3 p-3 rounded-3 cursor-pointer"
-                    :class="{ 'payment-selected': selectedPayment === 'visa' }"
-                    @click="selectedPayment = 'visa'"
-                  >
-                    <div class="payment-icon-box rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="background:rgba(26,86,219,0.12); color:#1a56db;">
-                      <CreditCard :size="20" />
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold" style="font-size:0.92rem; color:var(--text-heading);">{{ t('checkout.visaTitle') }}</span>
-                        <span class="badge rounded-pill small" style="font-size:10px; background:rgba(26,86,219,0.12); color:#1a56db;">Visa / Mastercard</span>
-                      </div>
-                      <div class="small" style="font-size:12px; color:var(--text-secondary);">{{ t('checkout.visaDesc') }}</div>
-                    </div>
-                    <div class="payment-radio-circle rounded-circle border d-flex align-items-center justify-content-center flex-shrink-0">
-                      <div v-if="selectedPayment === 'visa'" class="payment-radio-dot"></div>
-                    </div>
-                  </label>
                 </div>
               </div>
 
@@ -557,128 +528,6 @@
                       <div class="small mt-0.5" style="font-size:12px; color:var(--text-secondary); line-height:1.45;">
                         Mã QR chuẩn Timo / Napas247 kèm thông tin STK và cú pháp chuyển khoản tự động sẽ <strong>hiển thị ngay khi bạn nhấn "Xác nhận thanh toán"</strong>.
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </Transition>
-
-              <!-- Visa Card Form -->
-              <Transition name="fade">
-                <div v-if="selectedPayment === 'visa'" class="card border rounded-3 p-3.5" style="background:var(--bg-card-alt); border-color:var(--border-color-soft) !important;">
-                  <!-- Card Preview -->
-                  <div class="visa-card-preview rounded-3 p-3 mb-3 position-relative overflow-hidden" style="background:linear-gradient(135deg,#1a1a4e 0%,#0d47a1 50%,#1565c0 100%); color:#fff; min-height:120px;">
-                    <div class="position-absolute" style="top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.05);"></div>
-                    <div class="position-absolute" style="top:10px;right:20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.04);"></div>
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                      <div class="d-flex align-items-center gap-2">
-                        <div style="width:32px;height:20px;background:linear-gradient(135deg,#f59e0b,#fbbf24);border-radius:3px;"></div>
-                        <span class="fw-bold" style="font-size:11px;letter-spacing:1px;opacity:0.9;">SAOClub</span>
-                      </div>
-                      <div class="d-flex flex-column align-items-end">
-                        <span style="font-size:18px;font-weight:900;letter-spacing:2px;font-style:italic;">VISA</span>
-                      </div>
-                    </div>
-                    <div class="font-monospace fw-bold mb-2" style="font-size:0.95rem;letter-spacing:3px;">
-                      {{ visaForm.cardNumber ? visaForm.cardNumber.replace(/(.{4})/g,'$1 ').trim() : '•••• •••• •••• ••••' }}
-                    </div>
-                    <div class="d-flex justify-content-between align-items-end">
-                      <div>
-                        <div style="font-size:9px;opacity:0.7;text-transform:uppercase;letter-spacing:1px;">Tên chủ thẻ</div>
-                        <div class="fw-semibold text-uppercase" style="font-size:12px;letter-spacing:1px;">{{ visaForm.cardHolder || 'TÊN CHỦ THẺ' }}</div>
-                      </div>
-                      <div class="text-end">
-                        <div style="font-size:9px;opacity:0.7;text-transform:uppercase;letter-spacing:1px;">Hết hạn</div>
-                        <div class="fw-semibold font-monospace" style="font-size:12px;">{{ visaForm.expiry || 'MM/YY' }}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Card Input Form -->
-                  <div class="d-flex flex-column gap-2.5">
-                    <!-- Card Number -->
-                    <div>
-                      <label class="form-label small fw-semibold mb-1" style="color:var(--text-secondary);font-size:12px;">{{ t('checkout.visaCardNumber') }} <span class="text-danger">*</span></label>
-                      <div class="input-group" style="height:40px;">
-                        <span class="input-group-text border-end-0 px-2.5" style="background:var(--bg-input);border-color:var(--border-color-strong);color:#1a56db;width:40px;">
-                          <CreditCard :size="15" />
-                        </span>
-                        <input
-                          v-model="visaForm.cardNumber"
-                          type="text"
-                          inputmode="numeric"
-                          maxlength="19"
-                          class="form-control border-start-0 font-monospace"
-                          style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);height:40px;font-size:13.5px;letter-spacing:2px;"
-                          placeholder="1234 5678 9012 3456"
-                          @input="formatCardNumber"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Card Holder -->
-                    <div>
-                      <label class="form-label small fw-semibold mb-1" style="color:var(--text-secondary);font-size:12px;">{{ t('checkout.visaCardHolder') }} <span class="text-danger">*</span></label>
-                      <div class="input-group" style="height:40px;">
-                        <span class="input-group-text border-end-0 px-2.5" style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-secondary);width:40px;">
-                          <User :size="15" />
-                        </span>
-                        <input
-                          v-model="visaForm.cardHolder"
-                          type="text"
-                          class="form-control border-start-0 text-uppercase"
-                          style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);height:40px;font-size:13px;"
-                          placeholder="NGUYEN VAN A"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Expiry + CVV -->
-                    <div class="row g-2">
-                      <div class="col-6">
-                        <label class="form-label small fw-semibold mb-1" style="color:var(--text-secondary);font-size:12px;">{{ t('checkout.visaExpiry') }} <span class="text-danger">*</span></label>
-                        <div class="input-group" style="height:40px;">
-                          <span class="input-group-text border-end-0 px-2.5" style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-secondary);width:40px;">
-                            <Calendar :size="14" />
-                          </span>
-                          <input
-                            v-model="visaForm.expiry"
-                            type="text"
-                            inputmode="numeric"
-                            maxlength="5"
-                            class="form-control border-start-0 font-monospace"
-                            style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);height:40px;font-size:13px;"
-                            placeholder="MM/YY"
-                            @input="formatExpiry"
-                          />
-                        </div>
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label small fw-semibold mb-1" style="color:var(--text-secondary);font-size:12px;">{{ t('checkout.visaCVV') }} <span class="text-danger">*</span></label>
-                        <div class="input-group" style="height:40px;">
-                          <span class="input-group-text border-end-0 px-2.5" style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-secondary);width:40px;">
-                            <Lock :size="14" />
-                          </span>
-                          <input
-                            v-model="visaForm.cvv"
-                            :type="showCvv ? 'text' : 'password'"
-                            inputmode="numeric"
-                            maxlength="4"
-                            class="form-control border-start-0 font-monospace"
-                            style="background:var(--bg-input);border-color:var(--border-color-strong);color:var(--text-primary);height:40px;font-size:13px;"
-                            placeholder="•••"
-                          />
-                          <button type="button" class="input-group-text border-start-0 px-2" style="background:var(--bg-input);border-color:var(--border-color-strong);cursor:pointer;" @click="showCvv=!showCvv">
-                            <Eye v-if="!showCvv" :size="14" style="color:var(--text-secondary);" />
-                            <EyeOff v-else :size="14" style="color:var(--text-secondary);" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Security Note -->
-                    <div class="d-flex align-items-center gap-2 p-2 rounded-2 small" style="background:rgba(26,86,219,0.06);border:1px solid rgba(26,86,219,0.15);font-size:11.5px;color:#1a56db;">
-                      <ShieldCheck :size="14" class="flex-shrink-0" />
-                      <span>{{ t('checkout.visaSecure') }}</span>
                     </div>
                   </div>
                 </div>
@@ -928,7 +777,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue';
 import { t } from '../../i18n/index.js';
-import { AuthStore } from '../../stores/index.js';
+import { AuthStore, setSession } from '../../stores/index.js';
 import { nowLocalIso } from '../../utils/datetime.js';
 import { formatPrice as formatPriceRaw } from '../../utils/formatPrice.js';
 import { checkoutInfoSchema, isValidPhoneNumber } from '../../utils/validators.js';
@@ -936,8 +785,7 @@ import {
   CheckCircle2, Laptop, Banknote, Smartphone, Landmark, ImageOff,
   ArrowLeft, ArrowRight, User, Phone, Mail, MapPin, FileText, Tag,
   Copy, Check, AlertCircle, AlertTriangle, X, ShieldCheck, Percent,
-  Pencil, Truck, Store, Navigation, Sparkles, CreditCard, Calendar,
-  Lock, Eye, EyeOff,
+  Pencil, Truck, Store, Navigation, Sparkles,
 } from '@lucide/vue';
 import AddressPicker from './AddressPicker.vue';
 import QrPaymentModal from './QrPaymentModal.vue';
@@ -969,7 +817,7 @@ const appliedPromo       = ref(null);  // Khuyến mãi đã áp dụng
 const promoMsg           = ref('');    // Kết quả áp dụng mã
 const myVouchers         = ref([]);    // Voucher cá nhân của khách
 const appliedVoucher     = ref(null);  // Voucher cá nhân đang chọn
-const selectedPayment    = ref('tien_mat'); // 'tien_mat' | 'qr' | 'visa'
+const selectedPayment    = ref('tien_mat'); // 'tien_mat' | 'qr'
 const showQrModal        = ref(false);       // Hiển thị modal quét mã QR SePay/VietQR
 const createdOrderObject = ref(null);        // Đơn hàng vừa tạo để truyền sang QR modal
 
@@ -982,21 +830,6 @@ const onQrModalClose = () => {
 const onQrModalPaid = (o) => {
   showQrModal.value = false;
   checkoutSuccess.value = true;
-};
-
-// Visa card form
-const visaForm = reactive({ cardNumber: '', cardHolder: '', expiry: '', cvv: '' });
-const showCvv  = ref(false);
-
-const formatCardNumber = (e) => {
-  let v = e.target.value.replace(/\D/g, '').slice(0, 16);
-  visaForm.cardNumber = v.replace(/(\d{4})(?=\d)/g, '$1 ');
-};
-
-const formatExpiry = (e) => {
-  let v = e.target.value.replace(/\D/g, '').slice(0, 4);
-  if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
-  visaForm.expiry = v;
 };
 const phoneTouched       = ref(false); // Đã chạm vào ô SĐT nhận hàng chưa
 const copiedField        = ref('');    // Tên trường vừa sao chép
@@ -1069,8 +902,58 @@ const canGoToPayment = computed(() => {
 
 // Chế độ chỉnh sửa thông tin giao hàng
 const isEditingShipping = ref(false);
+const isSavingShipping  = ref(false);
 
-const saveShippingInfo = () => {
+// Đồng bộ thông tin người nhận vào hồ sơ cá nhân của khách hàng đã đăng nhập
+const syncCustomerProfile = async () => {
+  const customerId = AuthStore.user?.id || AuthStore.user?.khachHangId || foundCustomer.value?.khachHangId;
+  if (!customerId || (AuthStore.user && AuthStore.user.role && AuthStore.user.role !== 'khach_hang')) {
+    return false;
+  }
+
+  const nguoiNhan = checkoutForm.nguoiNhan?.trim();
+  const sdt = checkoutForm.sdtNguoiNhan?.trim();
+  const diaChi = checkoutForm.diaChiGiaoHangText?.trim();
+  const email = checkoutForm.email?.trim() || null;
+
+  // Cần tên người nhận, SĐT hợp lệ và địa chỉ nhận hàng
+  if (!nguoiNhan || !isValidPhoneNumber(sdt) || !diaChi) {
+    return false;
+  }
+
+  try {
+    const current = await KhachHangService.getById(customerId).catch(() => null);
+    const body = {
+      ...(current || {}),
+      hoTen: nguoiNhan,
+      soDienThoai: sdt,
+      email: email || current?.email || AuthStore.user?.email || null,
+      diaChi: diaChi,
+      loaiKhach: current?.loaiKhach || 'ca_nhan',
+      diemTichLuy: current?.diemTichLuy ?? 0,
+      trangThai: current?.trangThai || 'active',
+    };
+
+    const res = await KhachHangService.save(customerId, body);
+    if (res && (res.ok || res.status === 200 || res.status === 204)) {
+      if (AuthStore.user) {
+        setSession({
+          ...AuthStore.user,
+          hoTen: body.hoTen,
+          soDienThoai: body.soDienThoai,
+          email: body.email,
+          diaChi: body.diaChi,
+        });
+      }
+      return true;
+    }
+  } catch (err) {
+    console.warn('[CheckoutModal] Lỗi khi đồng bộ thông tin cá nhân:', err);
+  }
+  return false;
+};
+
+const saveShippingInfo = async () => {
   if (!checkoutForm.nguoiNhan?.trim()) {
     validationWarning.value = 'Vui lòng nhập tên người nhận';
     return;
@@ -1085,6 +968,12 @@ const saveShippingInfo = () => {
     return;
   }
   validationWarning.value = '';
+  isSavingShipping.value = true;
+  try {
+    await syncCustomerProfile();
+  } finally {
+    isSavingShipping.value = false;
+  }
   isEditingShipping.value = false;
   fetchShippingFee();
   try {
@@ -1452,8 +1341,6 @@ watch(() => props.modelValue, async (open) => {
   phoneTouched.value       = false;
   selectedPayment.value    = 'tien_mat';
   idempotencyKey.value     = genIdempotencyKey(); // Sinh key mới mỗi lần mở modal
-  Object.assign(visaForm, { cardNumber: '', cardHolder: '', expiry: '', cvv: '' });
-  showCvv.value = false;
   qrImageFailed.value      = false;
 
   Object.keys(checkoutForm).forEach(k => { checkoutForm[k] = ''; });
@@ -1546,15 +1433,17 @@ const applyPromo = async () => {
 };
 
 // Chuyển sang bước 2 (Thanh toán)
-const goToPayment = () => {
+const goToPayment = async () => {
   checkoutError.value = '';
   validationWarning.value = '';
   phoneTouched.value = true;
 
   // Nếu đang ở chế độ chỉnh sửa thông tin giao hàng thì lưu trước
   if (isEditingShipping.value) {
-    saveShippingInfo();
+    await saveShippingInfo();
     if (validationWarning.value) return;
+  } else {
+    await syncCustomerProfile();
   }
 
   const data = {
@@ -1607,7 +1496,7 @@ const placeOrder = async () => {
   checkoutProgress.value = t('checkout.progressCustomer');
 
   try {
-    let khachHangId = foundCustomer.value?.khachHangId;
+    let khachHangId = AuthStore.user?.id || AuthStore.user?.khachHangId || foundCustomer.value?.khachHangId;
 
     if (!khachHangId) {
       // Khách vãng lai: tạo mới
@@ -1624,17 +1513,9 @@ const placeOrder = async () => {
       if (!r.ok) throw new Error(await parseApiError(r, t('checkout.createCustomerError')));
       const newC = await r.json();
       khachHangId = newC.khachHangId;
-    } else if (AuthStore.user?.role === 'khach_hang' && AuthStore.user.id === khachHangId) {
-      // Khách đăng nhập: Đồng bộ số điện thoại thật & địa chỉ mới vào profile DB
-      const syncBody = {
-        hoTen:       checkoutForm.nguoiNhan || AuthStore.user.hoTen,
-        soDienThoai: checkoutForm.sdtNguoiNhan,
-        email:       checkoutForm.email || AuthStore.user.email,
-        diaChi:      checkoutForm.diaChiGiaoHangText,
-      };
-      KhachHangService.save(khachHangId, syncBody).catch(() => {});
-      // Cập nhật SĐT thật vào phiên đăng nhập
-      AuthStore.user.soDienThoai = checkoutForm.sdtNguoiNhan;
+    } else if (AuthStore.user?.role === 'khach_hang') {
+      // Khách đăng nhập: Đồng bộ thông tin cá nhân vào DB và session
+      await syncCustomerProfile();
     }
 
     checkoutProgress.value = t('checkout.progressOrder');
@@ -1690,6 +1571,7 @@ const placeOrder = async () => {
       trangThaiThanhToan: 'unpaid',
       trangThaiDonHang: 'pending',
       items: props.cart.map(item => ({
+        bienTheId: item.bienTheId,
         tenSanPham: item.tenSanPham,
         donGia: item.donGia,
         thanhTien: item.thanhTien,

@@ -40,16 +40,22 @@ const kiemTraHetPhien = (r) => {
 
 // Gửi GET request và parse JSON kết quả
 export const get = async (url) => {
-  const r = kiemTraHetPhien(await fetch(url, { headers: authHeaders() }));
-  // Trả về null nếu không có quyền truy cập
-  if (r.status === 403) {
-    return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const r = kiemTraHetPhien(await fetch(url, { headers: authHeaders(), signal: controller.signal }));
+    // Trả về null nếu không có quyền truy cập
+    if (r.status === 403) {
+      return null;
+    }
+    if (!r.ok) {
+      const msg = await r.text().catch(() => '');
+      throw new Error(`HTTP ${r.status}${msg ? ': ' + msg : ''}`);
+    }
+    return await r.json();
+  } finally {
+    clearTimeout(timer);
   }
-  if (!r.ok) {
-    const msg = await r.text().catch(() => '');
-    throw new Error(`HTTP ${r.status}${msg ? ': ' + msg : ''}`);
-  }
-  return r.json();
 };
 
 export const post = (url, body) =>

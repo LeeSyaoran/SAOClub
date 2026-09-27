@@ -1,5 +1,14 @@
 <script setup>
-defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome', 'toast']);
+defineOptions({
+  inheritAttrs: false,
+});
+defineEmits([
+  'addToCart', 'add-to-cart',
+  'buyAgainUnavailable', 'buy-again-unavailable',
+  'goHome', 'go-home',
+  'toast',
+  'logout',
+]);
 import {
   ref,
   computed,
@@ -2956,21 +2965,21 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
     </div>
 
     <AppFooter @open-register="openRegister" />
-  </div>
 
-  <ProductCompareBar
-    :items="compareList"
-    :max="MAX_COMPARE"
-    @open="showCompareModal = true"
-    @clear="clearCompare"
-    @remove="removeFromCompare"
-  />
-  <ProductCompareModal
-    v-model="showCompareModal"
-    :items="compareList"
-    @remove="removeFromCompare"
-    @add-to-cart="addToCartFromCompare"
-  />
+    <ProductCompareBar
+      :items="compareList"
+      :max="MAX_COMPARE"
+      @open="showCompareModal = true"
+      @clear="clearCompare"
+      @remove="removeFromCompare"
+    />
+    <ProductCompareModal
+      v-model="showCompareModal"
+      :items="compareList"
+      @remove="removeFromCompare"
+      @add-to-cart="addToCartFromCompare"
+    />
+  </div>
 </template>
 
 <style scoped>
