@@ -7,7 +7,10 @@ import com.example.backend.response.TonKhoResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -18,7 +21,20 @@ public class TonKhoService {
     @Autowired
     private BienTheSanPhamRepository bienTheSanPhamRepository;
 
+    @Transactional
     public List<TonKhoResponse> getAll() {
+        bienTheSanPhamRepository.findAll().forEach(bt -> {
+            if (tonKhoRepository.findByBienTheBienTheId(bt.getBienTheId()).isEmpty()) {
+                TonKho tk = new TonKho();
+                tk.setBienThe(bt);
+                tk.setSoLuongTon(0);
+                tk.setSoLuongGiu(0);
+                tk.setTonKhoToiThieu(5);
+                tk.setNgayTao(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")));
+                tk.setNgayCapNhat(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")));
+                tonKhoRepository.save(tk);
+            }
+        });
         return tonKhoRepository.findAllAsResponse();
     }
 
@@ -29,6 +45,11 @@ public class TonKhoService {
 
     public TonKho getByBienTheId(Integer bienTheId) {
         return tonKhoRepository.findByBienTheBienTheId(bienTheId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tồn kho cho biến thể id: " + bienTheId));
+    }
+
+    public TonKhoResponse getResponseByBienTheId(Integer bienTheId) {
+        return tonKhoRepository.findResponseByBienTheId(bienTheId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tồn kho cho biến thể id: " + bienTheId));
     }
 

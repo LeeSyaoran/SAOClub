@@ -13,7 +13,7 @@ import { authHeaders } from "../../services/api.js";
 import { formatPrice, statusLabel } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
 import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
-import { refreshInventory } from "../../stores/inventory.js";
+import { InventoryStore, ensureInventory, refreshInventory } from "../../stores/inventory.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import { Camera, Image, Cpu, MemoryStick, HardDrive, Monitor, Barcode, Palette, Hash, Tag, Laptop, Coins, DollarSign, Activity } from '@lucide/vue';
 import Pagination from "../common/Pagination.vue";
@@ -48,7 +48,8 @@ const loadDynamicAttrsList = async () => {
 
 // Tải trước danh sách sản phẩm và thuộc tính
 onMounted(() => {
-  ensureProducts();
+  refreshProducts();
+  ensureInventory();
   loadDynamicAttrsList();
 });
 
@@ -114,10 +115,27 @@ const isFilterOpen = ref(false);
 // allVariants: lọc theo filterSanPhamId nếu có (dùng ở cả tab Product lẫn tab độc lập)
 const allVariants = computed(() => {
   const all = ProductsStore.items ?? [];
-  return props.filterSanPhamId != null
+  const list = props.filterSanPhamId != null
     ? all.filter((p) => p.sanPhamId === props.filterSanPhamId)
     : all;
+  return [...list].sort((a, b) => {
+    const spDiff = (b.sanPhamId ?? 0) - (a.sanPhamId ?? 0);
+    if (spDiff !== 0) return spDiff;
+    return (b.bienTheId ?? 0) - (a.bienTheId ?? 0);
+  });
 });
+
+const variantDisplayStatus = (p) => {
+  if (p.trangThai === 'inactive' || p.trangThai === 'ngung_kinh_doanh') return p.trangThai;
+  const ton = Number(p.soLuongTon || 0);
+  if (ton > 0) return 'active';
+
+  const tkItem = (InventoryStore.items ?? []).find(i => i.bienTheId === p.bienTheId);
+  const daTungCoHang = tkItem && (Number(tkItem.tongSerial || 0) > 0 || Number(tkItem.soLuongDaBan || 0) > 0);
+  if (daTungCoHang) return 'het_hang';
+
+  return 'cho_nhap_hang';
+};
 
 const optionsOf = (idKey, nameKey) => {
   const map = new Map();
@@ -129,10 +147,12 @@ const optionsOf = (idKey, nameKey) => {
 };
 const brandOptions = computed(() => optionsOf("thuongHieuId", "tenThuongHieu"));
 const categoryOptions = computed(() => optionsOf("danhMucId", "tenDanhMuc"));
-const statusOptions = computed(() =>
-  [...new Set(allVariants.value.map((p) => p.trangThai).filter(Boolean))]
-    .map((value) => ({ value, label: statusLabel(value) }))
-);
+const statusOptions = computed(() => [
+  { value: 'active', label: 'Đang bán' },
+  { value: 'cho_nhap_hang', label: 'Chờ nhập hàng' },
+  { value: 'het_hang', label: 'Hết hàng' },
+  { value: 'inactive', label: 'Tạm ngừng' },
+]);
 
 // Dynamic options for new filters
 const filterCpuOptions = computed(() => [...new Set(allVariants.value.map(p => p.cpu).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'vi')).map(v => ({ value: v, label: v })));
@@ -144,7 +164,7 @@ const filteredVariants = computed(() => {
   return allVariants.value.filter((p) => {
     if (filterThuongHieu.value !== "" && String(p.thuongHieuId) !== String(filterThuongHieu.value)) return false;
     if (filterDanhMuc.value !== "" && String(p.danhMucId) !== String(filterDanhMuc.value)) return false;
-    if (filterTrangThai.value !== "" && p.trangThai !== filterTrangThai.value) return false;
+    if (filterTrangThai.value !== "" && variantDisplayStatus(p) !== filterTrangThai.value) return false;
     if (filterCpu.value !== "" && p.cpu !== filterCpu.value) return false;
     if (filterRam.value !== "" && p.ram !== filterRam.value) return false;
     if (filterMauSac.value !== "" && p.mauSac !== filterMauSac.value) return false;
@@ -863,8 +883,13 @@ const saveVariant = async () => {
             <td v-if="canViewCost" class="vt-col-price vt-muted">{{ formatPrice(p.giaNhap) }}</td>
             <td class="vt-col-price vt-price">{{ formatPrice(p.giaBan) }}</td>
             <td class="text-center">
-              <span class="vt-tag" :class="stockOf(p) === 0 ? 'vt-tag--wait' : (p.trangThai === 'active' ? 'vt-tag--on' : 'vt-tag--off')">
-                {{ stockOf(p) === 0 ? tt('admin.variants.statusWait', 'Chờ nhập hàng') : statusLabel(p.trangThai) }}
+              <span class="vt-tag" :class="{
+                'vt-tag--on': variantDisplayStatus(p) === 'active',
+                'vt-tag--wait': variantDisplayStatus(p) === 'cho_nhap_hang',
+                'vt-tag--out': variantDisplayStatus(p) === 'het_hang',
+                'vt-tag--off': variantDisplayStatus(p) === 'inactive' || variantDisplayStatus(p) === 'ngung_kinh_doanh'
+              }">
+                {{ statusLabel(variantDisplayStatus(p)) }}
               </span>
             </td>
           </tr>
@@ -1507,6 +1532,7 @@ const saveVariant = async () => {
 .vt-tag--on  { background: var(--ok-bg); color: var(--ok-text); }
 .vt-tag--off { background: var(--bg-card-alt); color: var(--muted); }
 .vt-tag--wait { background: rgba(251, 191, 36, 0.15); color: var(--state-warning); }
+.vt-tag--out { background: rgba(239, 68, 68, 0.12); color: var(--danger, #ef4444); }
 
 .vt-pager {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

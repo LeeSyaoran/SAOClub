@@ -30,8 +30,8 @@ public class TonKhoController {
     }
 
     @GetMapping("/bien-the/{bienTheId}")
-    public TonKho getByBienTheId(@PathVariable Integer bienTheId) {
-        return tonKhoService.getByBienTheId(bienTheId);
+    public TonKhoResponse getByBienTheId(@PathVariable Integer bienTheId) {
+        return tonKhoService.getResponseByBienTheId(bienTheId);
     }
 
     @PostMapping

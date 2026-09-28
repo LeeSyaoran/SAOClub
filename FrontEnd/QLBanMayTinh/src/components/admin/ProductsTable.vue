@@ -11,6 +11,10 @@ import {
   ensureProducts,
   refreshProducts,
 } from "../../stores/products.js";
+import {
+  InventoryStore,
+  ensureInventory,
+} from "../../stores/inventory.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
 import ProductFormModal from "./ProductFormModal.vue";
 import Pagination from "../common/Pagination.vue";
@@ -22,6 +26,7 @@ const router = useRouter();
 
 onMounted(() => {
   ensureProducts();
+  ensureInventory();
 });
 
 // Sắp xếp danh sách sản phẩm
@@ -46,16 +51,34 @@ const groupedProducts = computed(() => {
         variantCount: 1,
         minPrice: Number(p.giaBan),
         maxPrice: Number(p.giaBan),
+        tongTonKho: Number(p.soLuongTon || 0),
       });
     } else {
       const ex = map.get(p.sanPhamId);
       ex.variantCount++;
+      ex.tongTonKho += Number(p.soLuongTon || 0);
       if (Number(p.giaBan) < ex.minPrice) ex.minPrice = Number(p.giaBan);
       if (Number(p.giaBan) > ex.maxPrice) ex.maxPrice = Number(p.giaBan);
     }
   });
   return [...map.values()];
 });
+
+const productDisplayStatus = (p) => {
+  if (p.trangThai === 'inactive' || p.trangThai === 'ngung_kinh_doanh') return p.trangThai;
+  if ((p.tongTonKho || 0) > 0) return 'active';
+
+  // Kiểm tra nếu sản phẩm đã từng có hàng (đã bán hết)
+  const variantIds = (ProductsStore.items ?? [])
+    .filter((x) => x.sanPhamId === p.sanPhamId && x.bienTheId != null)
+    .map((x) => x.bienTheId);
+  const daTungCoHang = (InventoryStore.items ?? []).some((item) => {
+    return variantIds.includes(item.bienTheId) && (Number(item.tongSerial || 0) > 0 || Number(item.soLuongDaBan || 0) > 0);
+  });
+  if (daTungCoHang) return 'het_hang';
+
+  return 'cho_nhap_hang';
+};
 
 /** Danh sách đã sắp xếp theo sortKey */
 const sortedGroupedProducts = computed(() => {
@@ -252,8 +275,16 @@ const deleteProduct = async (id) => {
           <td class="text-center">
             <span
               class="badge"
-              :class="p.trangThai === 'active' ? 'bg-success' : 'bg-secondary'"
-            >{{ statusLabel(p.trangThai) }}</span>
+              :class="
+                productDisplayStatus(p) === 'active'
+                  ? 'bg-success'
+                  : productDisplayStatus(p) === 'het_hang'
+                  ? 'bg-danger'
+                  : productDisplayStatus(p) === 'cho_nhap_hang'
+                  ? 'bg-warning text-dark'
+                  : 'bg-secondary'
+              "
+            >{{ statusLabel(productDisplayStatus(p)) }}</span>
           </td>
           <td class="text-secondary text-center" style="font-size: 0.78rem">{{ formatDateTime(p.ngayTao) }}</td>
           <td class="text-secondary text-center" style="font-size: 0.78rem">{{ formatDateTime(p.ngayCapNhat) }}</td>

@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.NhanVien;
+import com.example.backend.entity.TonKho;
 import com.example.backend.repository.*;
 import com.example.backend.request.BienTheSanPhamRequest;
 import com.example.backend.response.BienTheSanPhamPublicResponse;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -78,9 +80,12 @@ public class BienTheSanPhamService {
         // Sao chép các thuộc tính từ request
         BeanUtils.copyProperties(request, entity,
                 "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode", "ngayTao");
+        if ("cho_nhap_hang".equalsIgnoreCase(request.getTrangThai())) {
+            entity.setTrangThai("active");
+        }
         entity.setBarcode(barcode);
         // Khởi tạo ngày tạo nếu chưa có
-        if (entity.getNgayTao() == null) entity.setNgayTao(LocalDateTime.now());
+        if (entity.getNgayTao() == null) entity.setNgayTao(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")));
 
         entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));
         entity.setCpu(request.getCpuId() != null ? dmCpuRepository.getReferenceById(request.getCpuId()) : null);
@@ -89,6 +94,16 @@ public class BienTheSanPhamService {
         entity.setGpu(request.getGpuId() != null ? dmGpuRepository.getReferenceById(request.getGpuId()) : null);
 
         BienTheSanPham saved = bienTheSanPhamRepository.save(entity);
+        if (tonKhoRepository != null && tonKhoRepository.findByBienTheBienTheId(saved.getBienTheId()).isEmpty()) {
+            TonKho tk = new TonKho();
+            tk.setBienThe(saved);
+            tk.setSoLuongTon(0);
+            tk.setSoLuongGiu(0);
+            tk.setTonKhoToiThieu(5);
+            tk.setNgayTao(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")));
+            tk.setNgayCapNhat(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")));
+            tonKhoRepository.save(tk);
+        }
         NhanVien nguoiSua = lichSuThayDoiSanPhamService.nguoiSuaHienTai();
         Integer spId = entity.getSanPham() != null ? entity.getSanPham().getSanPhamId() : request.getSanPhamId();
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(spId, saved.getBienTheId(), "bien_the", "maSku", null, saved.getMaSku(), nguoiSua);
@@ -97,6 +112,9 @@ public class BienTheSanPhamService {
 
     @Transactional
     public BienTheSanPham update(Integer id, BienTheSanPhamRequest request) {
+        if ("cho_nhap_hang".equalsIgnoreCase(request.getTrangThai())) {
+            request.setTrangThai("active");
+        }
         BienTheSanPham entity = getById(id);
 
         Integer sanPhamId = entity.getSanPham() != null ? entity.getSanPham().getSanPhamId() : request.getSanPhamId();
@@ -119,19 +137,42 @@ public class BienTheSanPhamService {
         String oldMoTa = entity.getMoTa();
 
         String barcode = chuanHoa(request.getBarcode());
-        kiemTraTrungBarcode(barcode, id);
-        kiemTraTrungMaSku(request.getMaSku(), id);
-
-        BeanUtils.copyProperties(request, entity, "bienTheId", "sanPhamId", "cpuId", "ramId", "oCungId", "gpuId", "barcode", "ngayTao");
-        entity.setBarcode(barcode);
+        if (barcode != null) {
+            kiemTraTrungBarcode(barcode, id);
+            entity.setBarcode(barcode);
+        }
+        if (request.getMaSku() != null && !request.getMaSku().isBlank()) {
+            kiemTraTrungMaSku(request.getMaSku(), id);
+            entity.setMaSku(request.getMaSku().trim());
+        }
 
         if (request.getSanPhamId() != null) {
             entity.setSanPham(sanPhamRepository.getReferenceById(request.getSanPhamId()));
         }
-        entity.setCpu(request.getCpuId() != null ? dmCpuRepository.getReferenceById(request.getCpuId()) : null);
-        entity.setRam(request.getRamId() != null ? dmRamRepository.getReferenceById(request.getRamId()) : null);
-        entity.setOCung(request.getOCungId() != null ? dmOcungRepository.getReferenceById(request.getOCungId()) : null);
-        entity.setGpu(request.getGpuId() != null ? dmGpuRepository.getReferenceById(request.getGpuId()) : null);
+        if (request.getCpuId() != null) {
+            entity.setCpu(dmCpuRepository.getReferenceById(request.getCpuId()));
+        }
+        if (request.getRamId() != null) {
+            entity.setRam(dmRamRepository.getReferenceById(request.getRamId()));
+        }
+        if (request.getOCungId() != null) {
+            entity.setOCung(dmOcungRepository.getReferenceById(request.getOCungId()));
+        }
+        if (request.getGpuId() != null) {
+            entity.setGpu(dmGpuRepository.getReferenceById(request.getGpuId()));
+        }
+
+        if (request.getGiaNhap() != null) entity.setGiaNhap(request.getGiaNhap());
+        if (request.getGiaBan() != null) entity.setGiaBan(request.getGiaBan());
+        if (request.getBaoHanhThang() != null) entity.setBaoHanhThang(request.getBaoHanhThang());
+        if (request.getMauSac() != null && !request.getMauSac().isBlank()) entity.setMauSac(request.getMauSac());
+        if (request.getKichThuocManHinh() != null && !request.getKichThuocManHinh().isBlank()) entity.setKichThuocManHinh(request.getKichThuocManHinh());
+        if (request.getHeDieuHanh() != null && !request.getHeDieuHanh().isBlank()) entity.setHeDieuHanh(request.getHeDieuHanh());
+        if (request.getPin() != null && !request.getPin().isBlank()) entity.setPin(request.getPin());
+        if (request.getTrongLuongKg() != null) entity.setTrongLuongKg(request.getTrongLuongKg());
+        if (request.getHinhAnhBienThe() != null && !request.getHinhAnhBienThe().isBlank()) entity.setHinhAnhBienThe(request.getHinhAnhBienThe());
+        if (request.getTrangThai() != null && !request.getTrangThai().isBlank()) entity.setTrangThai(request.getTrangThai());
+        if (request.getMoTa() != null && !request.getMoTa().isBlank()) entity.setMoTa(request.getMoTa());
 
         BienTheSanPham saved = bienTheSanPhamRepository.save(entity);
 
@@ -155,6 +196,36 @@ public class BienTheSanPhamService {
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "moTa", oldMoTa, saved.getMoTa(), nguoiSua);
 
         return saved;
+    }
+
+    @Transactional
+    public void updateGiaNhap(Integer bienTheId, BigDecimal giaNhap) {
+        if (giaNhap == null || giaNhap.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Giá nhập không hợp lệ");
+        }
+        BienTheSanPham entity = bienTheSanPhamRepository.findById(bienTheId)
+                .orElseThrow(() -> new IllegalArgumentException("Biến thể không tồn tại với id: " + bienTheId));
+        BigDecimal oldGiaNhap = entity.getGiaNhap();
+        entity.setGiaNhap(giaNhap);
+        BienTheSanPham saved = bienTheSanPhamRepository.save(entity);
+        Integer sanPhamId = entity.getSanPham() != null ? entity.getSanPham().getSanPhamId() : null;
+        NhanVien nguoiSua = lichSuThayDoiSanPhamService.nguoiSuaHienTai();
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, bienTheId, "bien_the", "giaNhap", oldGiaNhap, saved.getGiaNhap(), nguoiSua);
+    }
+
+    @Transactional
+    public void updateGiaBan(Integer bienTheId, BigDecimal giaBan) {
+        if (giaBan == null || giaBan.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Giá bán không hợp lệ");
+        }
+        BienTheSanPham entity = bienTheSanPhamRepository.findById(bienTheId)
+                .orElseThrow(() -> new IllegalArgumentException("Biến thể không tồn tại với id: " + bienTheId));
+        BigDecimal oldGiaBan = entity.getGiaBan();
+        entity.setGiaBan(giaBan);
+        BienTheSanPham saved = bienTheSanPhamRepository.save(entity);
+        Integer sanPhamId = entity.getSanPham() != null ? entity.getSanPham().getSanPhamId() : null;
+        NhanVien nguoiSua = lichSuThayDoiSanPhamService.nguoiSuaHienTai();
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, bienTheId, "bien_the", "giaBan", oldGiaBan, saved.getGiaBan(), nguoiSua);
     }
 
     /** Chuỗi rỗng phải về null: hai biến thể cùng để barcode "" sẽ đụng unique index. */

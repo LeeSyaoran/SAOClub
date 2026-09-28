@@ -73,7 +73,10 @@ public class SanPhamChiTietResponse {
         private BigDecimal giaNhap;
         private BigDecimal giaBan;
         private String trangThai;
+        private String trangThaiHienThi;
         private Long soLuongTon;
+        private Long tongSerial;
+        private Long soLuongDaBan;
         private String hinhAnhBienThe;
         private Integer baoHanhThang;
         private String kichThuocManHinh;

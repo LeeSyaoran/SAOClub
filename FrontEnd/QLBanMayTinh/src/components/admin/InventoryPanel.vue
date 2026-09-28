@@ -56,7 +56,7 @@ const getHeldQty = (item) => {
 
 // Tải trước danh sách sản phẩm
 onMounted(() => {
-  ensureInventory();
+  refreshInventory();
   ensureProducts();
   ensurePhieuNhapData();
   loadHeldOrders();
@@ -101,29 +101,28 @@ const buildBienTheUpdateBody = (bienThe, overrides = {}) => ({
   mauSac: bienThe?.mauSac ?? '',
   cpuId: bienThe?.cpuId ?? null,
   ramId: bienThe?.ramId ?? null,
-  oCungId: bienThe?.oCungId ?? null,
+  oCungId: bienThe?.oCungId ?? bienThe?.ocungId ?? null,
+  ocungId: bienThe?.oCungId ?? bienThe?.ocungId ?? null,
   gpuId: bienThe?.gpuId ?? null,
   kichThuocManHinh: bienThe?.kichThuocManHinh ?? '',
   heDieuHanh: bienThe?.heDieuHanh ?? '',
   pin: bienThe?.pin ?? '',
   trongLuongKg: bienThe?.trongLuongKg != null ? Number(bienThe.trongLuongKg) : 0,
+  moTa: bienThe?.moTa ?? '',
   ...overrides,
 });
 
-// Đồng bộ giá nhập của biến thể theo đơn giá phiếu nhập mới nhất
+// Đồng bộ giá nhập của biến thể theo đơn giá phiếu nhập mới nhất (chỉ cập nhật giá nhập, không ghi đè cấu hình)
 const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
-  const item = inventory.value.find((i) => i.bienTheId === bienTheId);
-  const bienThe = getVariantInfo(item);
-  if (!bienThe) return;
+  if (!bienTheId || !donGia || Number(donGia) <= 0) return;
   try {
-    const body = buildBienTheUpdateBody(bienThe, { giaNhap: Number(donGia) || 0 });
-    const res = await BienTheSanPhamService.update(bienTheId, body);
+    const res = await BienTheSanPhamService.updateGiaNhap(bienTheId, Number(donGia));
     if (!res.ok) {
       const text = await res.text().catch(() => res.statusText);
-      showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho') + ` ${bienThe.maSku}: ${text}`);
+      showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho biến thể') + `: ${text}`);
     }
   } catch (e) {
-    showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho') + ` ${bienThe.maSku}: ${e.message}`);
+    showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho biến thể') + `: ${e.message}`);
   }
 };
 
@@ -147,11 +146,33 @@ const isPendingItem = (v) => {
   if (v?.bienTheId != null && pendingBienTheIds.value.has(v.bienTheId)) return true;
   return false;
 };
+// Phân loại trạng thái tồn kho của biến thể:
+// - Sản phẩm/biến thể mới thêm vào kho chưa có serial -> Chờ nhập hàng (pending)
+// - Khi nào nhập serial vào thì soLuongTon > 0 -> Còn hàng (ok) hoặc Sắp hết (low)
+// - Trạng thái Hết hàng (out) chỉ dành cho biến thể đã từng có serial/đã bán trước đó nhưng hiện tại hết hàng
 const stockStatusOf = (item, v) => {
+  const ton = item?.soLuongTon ?? 0;
+  const daBan = item?.soLuongDaBan ?? 0;
+  const tongSerial = item?.tongSerial ?? 0;
+  const daTungCoHang = tongSerial > 0 || daBan > 0;
+
+  // 1. Đang nằm trong phiếu nhập chờ duyệt hoặc chưa có giá hợp lệ -> Chờ nhập hàng
   if (isPendingItem(v)) return 'pending';
-  if ((item.soLuongTon ?? 0) === 0) return 'out';
-  if (item.soLuongTon != null && item.tonKhoToiThieu != null && item.soLuongTon <= item.tonKhoToiThieu) return 'low';
-  return 'ok';
+
+  // 2. Nếu có hàng trong kho:
+  if (ton > 0) {
+    if (item?.tonKhoToiThieu != null && ton <= item.tonKhoToiThieu) return 'low';
+    return 'ok';
+  }
+
+  // 3. Nếu số lượng tồn = 0:
+  // Đã từng có serial / đã từng có giao dịch bán hết -> Hết hàng
+  if (daTungCoHang) {
+    return 'out';
+  }
+
+  // Mới thêm vào kho, chưa nhập serial nào -> Chờ nhập hàng
+  return 'pending';
 };
 const stockStatusLabel = (s) => ({
   pending: tt('admin.inventory.filterPending', 'Chờ nhập hàng'),
@@ -159,7 +180,7 @@ const stockStatusLabel = (s) => ({
   low: t('admin.inventory.filterLow'),
   ok: t('admin.inventory.filterOk'),
 }[s] || '—');
-const pendingItems = computed(() => inventory.value.filter((item) => isPendingItem(getVariantInfo(item))));
+const pendingItems = computed(() => inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === 'pending'));
 const outOfStockItems = computed(() =>
   inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === 'out'),
 );
@@ -232,11 +253,11 @@ const flatInventory = computed(() => {
       if (invTonMax.value !== '' && ton > Number(invTonMax.value)) return false;
       return true;
     })
-    // Sắp xếp danh sách biến thể theo ngày tạo mới nhất
+    // Sắp xếp danh sách biến thể theo sản phẩm và biến thể mới nhất
     .sort((a, b) => {
-      const da = a.v?.ngayTao ? new Date(a.v.ngayTao).getTime() : (a.item.bienTheId ?? 0);
-      const db = b.v?.ngayTao ? new Date(b.v.ngayTao).getTime() : (b.item.bienTheId ?? 0);
-      return db - da;
+      const spDiff = (b.v?.sanPhamId ?? b.item.sanPhamId ?? 0) - (a.v?.sanPhamId ?? a.item.sanPhamId ?? 0);
+      if (spDiff !== 0) return spDiff;
+      return (b.item.bienTheId ?? 0) - (a.item.bienTheId ?? 0);
     });
 });
 const { currentPage: invCurrentPage, totalPages: invTotalPages, pagedItems: pagedFlatInventory } = usePagination(flatInventory);
@@ -430,23 +451,17 @@ const saveStock = async () => {
       tonKhoToiThieu: Number(stockForm.tonKhoToiThieu),
     });
     if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
-    // Cập nhật giá bán biến thể
+    // Cập nhật giá bán biến thể (chỉ cập nhật giá bán, không ghi đè cấu hình)
     const currentGiaBan = Number(getVariantInfo(item)?.giaBan ?? 0);
     if (stockForm.giaBan !== currentGiaBan) {
-      const bienThe = getVariantInfo(item);
-      if (bienThe) {
-        const body = buildBienTheUpdateBody(bienThe, { giaBan: Number(stockForm.giaBan) || 0 });
-        const priceRes = await BienTheSanPhamService.update(bienTheId, body);
-        if (!priceRes.ok) { showToast(t('admin.errors.updateFailed', { status: priceRes.status })); return; }
-      }
+      const priceRes = await BienTheSanPhamService.updateGiaBan(bienTheId, Number(stockForm.giaBan) || 0);
+      if (!priceRes.ok) { showToast(t('admin.errors.updateFailed', { status: priceRes.status })); return; }
     }
     // Làm mới dữ liệu tồn kho sau khi chỉnh sửa
-    const [updated] = await Promise.all([
-      TonKhoService.getByBienThe(bienTheId).catch(() => null),
+    await Promise.all([
+      refreshInventory(),
       refreshProducts().catch(() => {}),
     ]);
-    const idx = inventory.value.findIndex((i) => i.tonKhoId === item.tonKhoId);
-    if (idx !== -1 && updated) inventory.value[idx] = updated;
     stockForm.newSerials = [''];
     await loadDetailSerials(bienTheId);
     detailTab.value = 'serials';

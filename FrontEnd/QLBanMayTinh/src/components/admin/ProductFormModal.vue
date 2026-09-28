@@ -147,7 +147,7 @@ const emptyForm = () => ({
   baoHanhThang: "",
   moTa: "",
   hinhAnhChinh: "",
-  trangThai: "active",
+  trangThai: "cho_nhap_hang",
   phanLoaiTags: "",
   phanLoaiTen: "",
 });
@@ -271,6 +271,7 @@ const save = async () => {
       oCungId: form.oCungId ? Number(form.oCungId) : null,
       ocungId: form.oCungId ? Number(form.oCungId) : null,
       gpuId: form.gpuId ? Number(form.gpuId) : null,
+      trangThai: form.trangThai === 'cho_nhap_hang' ? 'active' : form.trangThai,
       giaBan: Number(form.giaBan),
       giaNhap: Number(form.giaNhap),
       trongLuongKg: form.trongLuongKg ? Number(form.trongLuongKg) : null,
@@ -441,6 +442,9 @@ const save = async () => {
                   border-color: var(--border-color-strong);
                 "
               >
+                <option value="cho_nhap_hang">
+                  Chờ nhập hàng
+                </option>
                 <option value="active">
                   {{ t("admin.productModal.statusActive") }}
                 </option>

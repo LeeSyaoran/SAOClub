@@ -116,7 +116,7 @@ const navigate = (page) => {
   if (page === "staff") { ensureChucVuList(); ensureStaff(); }
   // Làm mới dữ liệu trả hàng khi chuyển tab
   if (page === "tra-hang") refreshReturns();
-  if (page === "inventory") {
+  if (page === "inventory" || page === "bien-the") {
     refreshInventory().catch(() => {});
     refreshProducts().catch(() => {});
   }

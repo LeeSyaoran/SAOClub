@@ -4,6 +4,7 @@ import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.NhanVien;
 import com.example.backend.entity.SanPham;
 import com.example.backend.entity.SanPhamHinhAnh;
+import com.example.backend.entity.TonKho;
 import com.example.backend.repository.*;
 import com.example.backend.request.SanPhamRequest;
 import com.example.backend.response.SanPhamCreatedResponse;
@@ -22,6 +23,7 @@ import jakarta.persistence.EntityManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,6 +54,8 @@ public class SanPhamService {
     private LichSuThayDoiSanPhamService lichSuThayDoiSanPhamService;
     @Autowired
     private SanPhamHinhAnhRepository sanPhamHinhAnhRepository;
+    @Autowired
+    private TonKhoRepository tonKhoRepository;
     @Autowired
     private EntityManager entityManager;
     @Autowired(required = false)
@@ -115,7 +119,24 @@ public class SanPhamService {
                     item.setPin(bt.getPin());
                     item.setTrongLuongKg(bt.getTrongLuongKg());
                     item.setMoTa(bt.getMoTa());
-                    item.setSoLuongTon(null);
+
+                    com.example.backend.response.TonKhoResponse tkr = tonKhoRepository.findResponseByBienTheId(bt.getBienTheId()).orElse(null);
+                    long ton = (tkr != null && tkr.getSoLuongTon() != null) ? tkr.getSoLuongTon().longValue() : 0L;
+                    long tongSerial = (tkr != null && tkr.getTongSerial() != null) ? tkr.getTongSerial() : 0L;
+                    long daBan = (tkr != null && tkr.getSoLuongDaBan() != null) ? tkr.getSoLuongDaBan() : 0L;
+                    item.setSoLuongTon(ton);
+                    item.setTongSerial(tongSerial);
+                    item.setSoLuongDaBan(daBan);
+
+                    if ("inactive".equalsIgnoreCase(bt.getTrangThai()) || "ngung_kinh_doanh".equalsIgnoreCase(bt.getTrangThai())) {
+                        item.setTrangThaiHienThi(bt.getTrangThai());
+                    } else if (ton > 0) {
+                        item.setTrangThaiHienThi("active");
+                    } else if (tongSerial > 0 || daBan > 0) {
+                        item.setTrangThaiHienThi("het_hang");
+                    } else {
+                        item.setTrangThaiHienThi("cho_nhap_hang");
+                    }
                     return item;
                 })
                 .toList();
@@ -135,7 +156,19 @@ public class SanPhamService {
         resp.setMoTa(sp.getMoTa());
         resp.setHinhAnhChinh(sp.getHinhAnhChinh());
         resp.setHinhAnhList(hinhAnhList);
-        resp.setTrangThai(btDau != null ? btDau.getTrangThai() : null);
+
+        long tongTon = variants.stream().mapToLong(v -> v.getSoLuongTon() != null ? v.getSoLuongTon() : 0L).sum();
+        boolean coBienTheDaTungCoHang = variants.stream().anyMatch(v -> "het_hang".equals(v.getTrangThaiHienThi()));
+        if ("inactive".equalsIgnoreCase(sp.getTrangThai()) || "ngung_kinh_doanh".equalsIgnoreCase(sp.getTrangThai())) {
+            resp.setTrangThai(sp.getTrangThai());
+        } else if (tongTon > 0) {
+            resp.setTrangThai("active");
+        } else if (coBienTheDaTungCoHang) {
+            resp.setTrangThai("het_hang");
+        } else {
+            resp.setTrangThai("cho_nhap_hang");
+        }
+
         resp.setNgayTao(sp.getNgayTao());
         resp.setNgayCapNhat(sp.getNgayCapNhat());
         resp.setKhachDat(null); // Có thể tính sau nếu cần
@@ -182,13 +215,16 @@ public class SanPhamService {
 
         SanPham sanPham = new SanPham();
         BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham");
+        if ("cho_nhap_hang".equalsIgnoreCase(request.getTrangThai())) {
+            sanPham.setTrangThai("active");
+        }
         // Auto-generate maSanPham nếu request không truyền
         if (maSanPham == null || maSanPham.isBlank()) {
             sanPham.setMaSanPham(null); // tạm null, sẽ fill sau khi có id
         } else {
             sanPham.setMaSanPham(maSanPham);
         }
-        sanPham.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());
+        sanPham.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")));
         // Lấy ảnh đầu tiên làm ảnh đại diện
         if (request.getHinhAnhList() != null && !request.getHinhAnhList().isEmpty())
             sanPham.setHinhAnhChinh(request.getHinhAnhList().get(0));
@@ -214,7 +250,7 @@ public class SanPhamService {
         BienTheSanPham bt = new BienTheSanPham();
         // Sao chép thuộc tính cho biến thể
         BeanUtils.copyProperties(request, bt, "bienTheId", "ngayTao");
-        bt.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());
+        bt.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")));
         bt.setSanPham(saved);
         bt.setTrangThai(trangThaiBienThe(request.getTrangThai()));
         bt.setBarcode(barcodeBienThe);
@@ -232,6 +268,15 @@ public class SanPhamService {
 
         BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
         if (entityManager != null) entityManager.flush(); // ponytail: ensure bien_the ID is generated before returning response
+
+        if (tonKhoRepository != null && tonKhoRepository.findByBienTheBienTheId(savedBt.getBienTheId()).isEmpty()) {
+            TonKho tk = new TonKho();
+            tk.setBienThe(savedBt);
+            tk.setSoLuongTon(0);
+            tk.setSoLuongGiu(0);
+            tk.setTonKhoToiThieu(5);
+            tonKhoRepository.save(tk);
+        }
 
         return new SanPhamCreatedResponse(saved.getSanPhamId(), saved.getMaSanPham(),
                 savedBt.getBarcode(), savedBt.getBienTheId(), savedBt.getMaSku());
@@ -260,6 +305,9 @@ public class SanPhamService {
         kiemTraTrungMaSanPham(maSanPham, sanPhamId);
 
         BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham");
+        if ("cho_nhap_hang".equalsIgnoreCase(request.getTrangThai())) {
+            sanPham.setTrangThai("active");
+        }
         // Chỉ cập nhật maSanPham khi request truyền giá trị hợp lệ, không được set null
         if (maSanPham != null && !maSanPham.isBlank()) {
             sanPham.setMaSanPham(maSanPham);
@@ -423,7 +471,10 @@ public class SanPhamService {
 
     // Quy đổi trạng thái cho biến thể sản phẩm
     private String trangThaiBienThe(String trangThai) {
-        return "active".equalsIgnoreCase(trangThai) ? "active" : "inactive";
+        if ("cho_nhap_hang".equalsIgnoreCase(trangThai) || "active".equalsIgnoreCase(trangThai)) {
+            return "active";
+        }
+        return "inactive";
     }
 
     // Kiểm tra trùng mã sản phẩm

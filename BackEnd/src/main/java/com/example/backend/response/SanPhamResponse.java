@@ -35,6 +35,14 @@ public class SanPhamResponse {
 
     private String gpu;
 
+    private Integer cpuId;
+    private Integer ramId;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("oCungId")
+    private Integer oCungId;
+
+    private Integer gpuId;
+
     @com.fasterxml.jackson.annotation.JsonProperty("ocung")
     public String getOcungAlias() {
         return oCung;
@@ -43,6 +51,16 @@ public class SanPhamResponse {
     @com.fasterxml.jackson.annotation.JsonProperty("ocung")
     public void setOcungAlias(String val) {
         if (this.oCung == null) this.oCung = val;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("ocungId")
+    public Integer getOcungIdAlias() {
+        return oCungId;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("ocungId")
+    public void setOcungIdAlias(Integer val) {
+        if (this.oCungId == null) this.oCungId = val;
     }
     private String kichThuocManHinh;
     private String heDieuHanh;

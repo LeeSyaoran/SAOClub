@@ -518,6 +518,10 @@ const setSerialTrangThai = async (item, trangThai) => {
 };
 
 const posSelectSerial = (serial) => {
+  if (posLastOrder.value) {
+    posLastOrder.value = null; // Làm mới phần in hóa đơn khi bắt đầu giao dịch mới
+    posSuccess.value = false;
+  }
   const p = serialPickerProduct.value;
   const item = {
     sanPhamId: p.sanPhamId,
@@ -547,6 +551,10 @@ const posSelectSerial = (serial) => {
 
 // Thêm nhiều serial đã chọn vào giỏ hàng
 const posAddChosenSerials = () => {
+  if (posLastOrder.value) {
+    posLastOrder.value = null; // Làm mới phần in hóa đơn khi bắt đầu giao dịch mới
+    posSuccess.value = false;
+  }
   const p = serialPickerProduct.value;
   const chosen = serialPickerList.value.filter((s) => serialPickerChosenIds.value.has(s.chiTietId));
   const items = chosen.map((serial) => ({
@@ -592,6 +600,8 @@ const posReset = async () => {
   posCart.value = [];
   posError.value = "";
   posSuccess.value = false;
+  posLastOrder.value = null; // Làm mới phần in hóa đơn
+  showInvoiceModal.value = false;
   posPromoCode.value = "";
   posAppliedPromo.value = null;
   posPromoMsg.value = "";
@@ -618,6 +628,8 @@ const posResetWithCustomer = async () => {
   posFoundCust.value = null;
   posError.value = "";
   posSuccess.value = false;
+  posLastOrder.value = null;
+  showInvoiceModal.value = false;
   posPromoCode.value = "";
   posAppliedPromo.value = null;
   posPromoMsg.value = "";
@@ -629,6 +641,17 @@ const posResetWithCustomer = async () => {
   posStage.value = 'start';
   posPhoneNotFound.value = false;
 };
+
+// Khi thêm sản phẩm mới vào giỏ hàng, tự động làm mới trạng thái in hóa đơn của giao dịch trước
+watch(
+  () => posCart.value.length,
+  (newLen) => {
+    if (newLen > 0) {
+      if (posLastOrder.value) posLastOrder.value = null;
+      if (posSuccess.value) posSuccess.value = false;
+    }
+  }
+);
 
 const posStartInvoice = () => {
   posStage.value = 'phone';
@@ -760,15 +783,16 @@ const posPlaceOrder = async () => {
     posSuccess.value = true;
     // Luu don va khach hang de mo modal in hoa don
     posLastOrder.value = { ...created, khachHangId, maDonHang: created.maDonHang, thanhTien: posGrandTotal.value, tongTien: posCartTotal.value, giamGia: posGiamGia.value, phiVanChuyen: posFee.value, ngayDat, kenhBan: 'in_store' };
-    const _custSnapshot = posFoundCust.value ? { ...posFoundCust.value } : null;
-    posCart.value = []; posPhone.value = ""; posFoundCust.value = null;
+    showInvoiceModal.value = true;
+    // Xóa giỏ hàng và thanh toán, nhưng GIỮ LẠI khách hàng hiện tại để giao dịch tiếp
+    posCart.value = [];
     posPromoCode.value = ""; posAppliedPromo.value = null; posPromoMsg.value = "";
     posPaymentMethod.value = null;
     posDeliveryMode.value = 'pickup';
     posDeliveryAddress.value = '';
     posDistanceKm.value = '';
     posQrScanned.value = false;
-    posStage.value = 'start';
+    posStage.value = 'selling';
     await refreshOrders();
   } catch (e) {
     posError.value = e.message;

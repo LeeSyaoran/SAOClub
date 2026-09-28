@@ -61,4 +61,19 @@ public class BienTheSanPhamController {
         return ResponseEntity.ok().build();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
+    @PatchMapping("/{id}/gia-nhap")
+    public ResponseEntity<Void> updateGiaNhap(@PathVariable Integer id, @RequestBody java.util.Map<String, java.math.BigDecimal> body) {
+        java.math.BigDecimal giaNhap = body.get("giaNhap");
+        bienTheSanPhamService.updateGiaNhap(id, giaNhap);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
+    @PatchMapping("/{id}/gia-ban")
+    public ResponseEntity<Void> updateGiaBan(@PathVariable Integer id, @RequestBody java.util.Map<String, java.math.BigDecimal> body) {
+        java.math.BigDecimal giaBan = body.get("giaBan");
+        bienTheSanPhamService.updateGiaBan(id, giaBan);
+        return ResponseEntity.noContent().build();
+    }
 }

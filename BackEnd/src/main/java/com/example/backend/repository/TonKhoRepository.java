@@ -19,12 +19,27 @@ public interface TonKhoRepository extends JpaRepository<TonKho, Integer> {
         SELECT new com.example.backend.response.TonKhoResponse(
             t.tonKhoId, t.bienThe.bienTheId, t.bienThe.maSku,
             t.bienThe.sanPham.tenSanPham, t.bienThe.mauSac,
-            t.soLuongTon, t.soLuongGiu, t.tonKhoToiThieu, t.ngayCapNhat
+            t.soLuongTon, t.soLuongGiu, t.tonKhoToiThieu, t.ngayCapNhat,
+            (SELECT COUNT(ct1) FROM ChiTietSanPham ct1 WHERE ct1.bienThe.bienTheId = t.bienThe.bienTheId AND ct1.trangThai = 'da_ban' AND ct1.daXoa = false),
+            (SELECT COUNT(ct2) FROM ChiTietSanPham ct2 WHERE ct2.bienThe.bienTheId = t.bienThe.bienTheId AND ct2.daXoa = false)
         )
         FROM TonKho t
-        ORDER BY t.ngayCapNhat DESC
+        ORDER BY t.bienThe.sanPham.sanPhamId DESC, t.bienThe.bienTheId DESC
         """)
     List<TonKhoResponse> findAllAsResponse();
+
+    @Query("""
+        SELECT new com.example.backend.response.TonKhoResponse(
+            t.tonKhoId, t.bienThe.bienTheId, t.bienThe.maSku,
+            t.bienThe.sanPham.tenSanPham, t.bienThe.mauSac,
+            t.soLuongTon, t.soLuongGiu, t.tonKhoToiThieu, t.ngayCapNhat,
+            (SELECT COUNT(ct1) FROM ChiTietSanPham ct1 WHERE ct1.bienThe.bienTheId = t.bienThe.bienTheId AND ct1.trangThai = 'da_ban' AND ct1.daXoa = false),
+            (SELECT COUNT(ct2) FROM ChiTietSanPham ct2 WHERE ct2.bienThe.bienTheId = t.bienThe.bienTheId AND ct2.daXoa = false)
+        )
+        FROM TonKho t
+        WHERE t.bienThe.bienTheId = :bienTheId
+        """)
+    Optional<TonKhoResponse> findResponseByBienTheId(@Param("bienTheId") Integer bienTheId);
 
     Optional<TonKho> findByBienTheBienTheId(Integer bienTheId);
 

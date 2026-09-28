@@ -178,7 +178,7 @@
               <td class="ta-r hh-td-gia">{{ group.khoangGia }}</td>
               <td class="ta-r hh-td-gia hh-muted">{{ group.khoangGiaVon }}</td>
               <td class="ta-c">
-                <span class="hh-tag" :class="tagClass(group.trangThai)">{{ nhanTrangThai(group.trangThai) }}</span>
+                <span class="hh-tag" :class="tagClass(group.trangThaiHienThi || group.trangThai)">{{ nhanTrangThai(group.trangThaiHienThi || group.trangThai) }}</span>
               </td>
               <td class="ta-c hh-muted hh-td-ngay">{{ formatDate(group.ngayTao) }}</td>
               <td class="ta-c hh-muted hh-td-ngay">{{ formatDate(group.ngayCapNhat) }}</td>
@@ -260,7 +260,7 @@
 
                 <div class="hh-ct-main">
                   <div class="hh-ct-tags">
-                    <span class="hh-tag" :class="tagClass(chiTiet.trangThai)">{{ nhanTrangThai(chiTiet.trangThai) }}</span>
+                    <span class="hh-tag" :class="tagClass(chiTiet.trangThaiHienThi || chiTiet.trangThai)">{{ nhanTrangThai(chiTiet.trangThaiHienThi || chiTiet.trangThai) }}</span>
                     <span class="hh-tag hh-tag--soft">{{ nhanLoaiSanPham(chiTiet.loaiSanPham) }}</span>
                     <span v-for="ma in chiTiet.phanLoai" :key="ma" class="hh-tag hh-tag--outline">{{ tenTheoMaPhanLoai(ma) }}</span>
                   </div>
@@ -360,7 +360,7 @@
                       <td class="ta-r hh-muted">{{ formatNumber(v.giaNhap) }}</td>
                       <td class="ta-r hh-vt__gia">{{ formatNumber(v.giaBan) }}</td>
                       <td>
-                        <span class="hh-tag" :class="tagClass(v.trangThai)">{{ nhanTrangThai(v.trangThai) }}</span>
+                        <span class="hh-tag" :class="tagClass(v.trangThaiHienThi || v.trangThai)">{{ nhanTrangThai(v.trangThaiHienThi || v.trangThai) }}</span>
                       </td>
                     </tr>
                     <tr v-if="!chiTiet?.variants?.length" class="hh-vt__empty">
@@ -755,6 +755,8 @@
                           <th><span class="d-inline-flex align-items-center gap-1.5"><MemoryStick :size="12" /> RAM</span></th>
                           <th><span class="d-inline-flex align-items-center gap-1.5"><HardDrive :size="12" /> Ổ cứng</span></th>
                           <th><span class="d-inline-flex align-items-center gap-1.5"><Monitor :size="12" /> GPU</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><DollarSign :size="12" /> Giá vốn (₫)</span></th>
+                          <th><span class="d-inline-flex align-items-center gap-1.5"><Coins :size="12" /> Giá bán (₫)</span></th>
                           <!-- Cột thuộc tính động của Biến thể -->
                           <th v-for="vAttr in variantCustomAttrs" :key="vAttr.thuocTinhId">
                             <span class="d-inline-flex align-items-center gap-1.5">{{ vAttr.tenHienThi }}</span>
@@ -797,6 +799,26 @@
                               <option v-for="g in danhSachGpu" :key="idOf(g,'gpuId')" :value="idOf(g,'gpuId')">{{ g.tenGpu }}</option>
                             </select>
                           </td>
+                          <td>
+                            <input
+                              v-model.number="row.giaNhap"
+                              type="number"
+                              min="0"
+                              class="hh-cell"
+                              placeholder="0"
+                              style="min-width: 95px; text-align: right;"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              v-model.number="row.giaBan"
+                              type="number"
+                              min="0"
+                              class="hh-cell"
+                              placeholder="0"
+                              style="min-width: 95px; text-align: right;"
+                            />
+                          </td>
                           <!-- Thuộc tính động của biến thể -->
                           <td v-for="vAttr in variantCustomAttrs" :key="vAttr.thuocTinhId">
                             <select
@@ -821,7 +843,7 @@
                           </td>
                         </tr>
                         <tr v-if="!bienTheRows.length">
-                          <td :colspan="9 + variantCustomAttrs.length" class="hh-rows__empty">Chưa có phiên bản nào — bấm "+ Thêm dòng" để tạo.</td>
+                          <td :colspan="11 + variantCustomAttrs.length" class="hh-rows__empty">Chưa có phiên bản nào — bấm "+ Thêm dòng" để tạo.</td>
                         </tr>
                       </tbody>
                     </table>
@@ -836,7 +858,7 @@
 
                   <p class="hh-note" style="margin-top: 12px">
                     <Info :size="14" />
-                    Giá vốn và giá bán đặt sau — mở chi tiết sản phẩm, chọn phiên bản rồi bấm "Chỉnh sửa", hoặc dùng phiếu nhập kho.
+                    Nhập giá vốn và giá bán cho từng phiên bản. Phiên bản mới tạo sẽ ở trạng thái chờ nhập hàng cho đến khi nhập serial.
                   </p>
                 </fieldset>
               </template>
@@ -1010,7 +1032,9 @@ const THU_MUC_ANH = '/images/'
 
 // Trạng thái kinh doanh sản phẩm
 const TRANG_THAI_SAN_PHAM = [
-  { value: 'active', label: 'Đang kinh doanh' },
+  { value: 'active', label: 'Đang bán' },
+  { value: 'cho_nhap_hang', label: 'Chờ nhập hàng' },
+  { value: 'het_hang', label: 'Hết hàng' },
   { value: 'inactive', label: 'Ngừng kinh doanh' }
 ]
 const LOAI_SAN_PHAM = [
@@ -1168,9 +1192,22 @@ const formatDate = (v) => {
     ? '—'
     : d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
-const nhanTrangThai = (tt) => ({ active: 'Đang bán', inactive: 'Tạm ngừng', ngung_kinh_doanh: 'Ngừng KD' }[tt] || tt || '—')
+const nhanTrangThai = (tt) => ({
+  active: 'Đang bán',
+  cho_nhap_hang: 'Chờ nhập hàng',
+  pending: 'Chờ nhập hàng',
+  het_hang: 'Hết hàng',
+  out: 'Hết hàng',
+  inactive: 'Tạm ngừng',
+  ngung_kinh_doanh: 'Ngừng KD'
+}[tt] || tt || '—')
 const nhanLoaiSanPham = (l) => LOAI_SAN_PHAM.find((x) => x.value === l)?.label || l || '—'
-const tagClass = (tt) => (tt === 'active' ? 'hh-tag--ok' : 'hh-tag--off')
+const tagClass = (tt) => {
+  if (tt === 'active') return 'hh-tag--ok'
+  if (tt === 'cho_nhap_hang' || tt === 'pending') return 'hh-tag--wait'
+  if (tt === 'het_hang' || tt === 'out') return 'hh-tag--out'
+  return 'hh-tag--off'
+}
 const onImgError = (e) => { e.target.src = ANH_MAC_DINH }
 const khongDau = (s) =>
   String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase()
@@ -1220,7 +1257,7 @@ const groupsDaLoc = computed(() => {
     }
     // Filter: trạng thái
     const fTrangThai = filters.trangThai
-    if (fTrangThai) ds = ds.filter(p => p.trangThai === fTrangThai)
+    if (fTrangThai) ds = ds.filter(p => (p.trangThaiHienThi || p.trangThai) === fTrangThai || p.trangThai === fTrangThai)
     // Filter: thương hiệu
     const fThuongHieu = filters.thuongHieuId
     if (fThuongHieu) ds = ds.filter(p => String(idOf(p, 'thuongHieuId')) === String(fThuongHieu))
@@ -1793,7 +1830,7 @@ const resetForm = () => {
   form.value = {
     sanPhamId: null, maSanPham: sinhMaSanPham(), tenSanPham: '',
     thuongHieuId: '', danhMucId: '', nhaCungCapId: '',
-    loaiSanPham: 'LAPTOP', trangThaiSanPham: 'active',
+    loaiSanPham: 'LAPTOP', trangThaiSanPham: 'cho_nhap_hang',
     phanLoaiIds: [], phanLoaiTags: null, phanLoaiTen: null,
     hinhAnhList: [], moTa: '',
     baoHanhThang: 12, kichThuocManHinh: '', pin: '', heDieuHanh: '', trongLuongKg: '',
@@ -1826,6 +1863,7 @@ const moChiTiet = async (group) => {
     loadThuocTinh().catch(() => {})
     const spRes = await get(`/api/san-pham/${group.sanPhamId}`)
     chiTiet.value = spRes.data || spRes
+    chiTiet.value.trangThaiHienThi = group.trangThaiHienThi || (group.tongTonKho > 0 ? 'active' : 'cho_nhap_hang')
     // Trích xuất thuộc tính động từ moTa hoặc trường dữ liệu chiTiet
     const saved = tríchXuatThuocTinhTuMoTa(chiTiet.value?.moTa)
     chiTietThuocTinh.value = { ...saved }
@@ -1834,8 +1872,28 @@ const moChiTiet = async (group) => {
         chiTietThuocTinh.value[attr.tenTruong] = chiTiet.value[attr.tenTruong]
       }
     })
-    // Trích xuất thuộc tính động của từng biến thể
+    // Trích xuất thuộc tính động và đồng bộ trạng thái hiển thị của từng biến thể
     ;(chiTiet.value?.variants || []).forEach(v => {
+      const matched = (group.variants || []).find(gv => String(gv.bienTheId) === String(v.bienTheId))
+        || (bienThe.value || []).find(bt => String(bt.bienTheId) === String(v.bienTheId))
+      if (matched) {
+        v.trangThaiHienThi = matched.trangThaiHienThi
+        v.soLuongTon = matched.soLuongTon
+        v.tongSerial = matched.tongSerial
+        v.soLuongDaBan = matched.soLuongDaBan
+      } else {
+        const ton = Number(v.soLuongTon ?? 0)
+        const daTungCoHang = Number(v.tongSerial ?? 0) > 0 || Number(v.soLuongDaBan ?? 0) > 0
+        if (v.trangThai === 'inactive' || v.trangThai === 'ngung_kinh_doanh') {
+          v.trangThaiHienThi = v.trangThai
+        } else if (ton > 0) {
+          v.trangThaiHienThi = 'active'
+        } else if (daTungCoHang) {
+          v.trangThaiHienThi = 'het_hang'
+        } else {
+          v.trangThaiHienThi = 'cho_nhap_hang'
+        }
+      }
       const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa)
       variantCustomAttrs.value.forEach(attr => {
         if (!v[attr.tenTruong] && vMeta[attr.tenTruong]) {
@@ -2148,9 +2206,20 @@ const validate = () => {
     if (bienTheRows.value.length === 0) {
       errors.value.bienThe = 'Phải có ít nhất 1 phiên bản'
     }
-    for (const row of bienTheRows.value) {
-      if (!row.giaBan && row.giaBan !== 0) errors.value.giaBan = 'Giá bán bắt buộc'
-      break
+    for (let i = 0; i < bienTheRows.value.length; i++) {
+      const row = bienTheRows.value[i]
+      if (row.giaBan === '' || row.giaBan == null || isNaN(row.giaBan)) {
+        errors.value.giaBan = `Phiên bản #${i + 1}: Giá bán bắt buộc`
+        break
+      }
+      if (Number(row.giaBan) < 0) {
+        errors.value.giaBan = `Phiên bản #${i + 1}: Giá bán không được âm`
+        break
+      }
+      if (row.giaNhap !== '' && row.giaNhap != null && Number(row.giaNhap) < 0) {
+        errors.value.giaNhap = `Phiên bản #${i + 1}: Giá nhập không được âm`
+        break
+      }
     }
   }
   return Object.keys(errors.value).length === 0
@@ -2399,14 +2468,20 @@ const fetchData = async () => {
   isLoading.value = true
   loadError.value = ''
   try {
-    // Lấy sản phẩm và biến thể
-    const [spRes, btRes] = await Promise.all([
+    // Lấy sản phẩm, biến thể và thông tin tồn kho
+    const [spRes, btRes, tkRes] = await Promise.all([
       get('/api/san-pham/hien-thi?size=500'),
-      get('/api/bien-the-san-pham/staff')
+      get('/api/bien-the-san-pham/staff'),
+      get('/api/ton-kho').catch(() => [])
     ])
     // Xử lý response
     const spRaw = Array.isArray(spRes) ? spRes : (spRes?.content || [])
     bienThe.value = Array.isArray(btRes) ? btRes : []
+    const tkList = Array.isArray(tkRes) ? tkRes : []
+    const tonKhoMap = {}
+    for (const tk of tkList) {
+      if (tk.bienTheId != null) tonKhoMap[tk.bienTheId] = tk
+    }
 
     // Gộp nhóm theo sanPhamId: backend /api/san-pham/hien-thi trả 1 dòng / biến thể
     // (vì JOIN BienTheSanPham), nên cần dedup để bảng chỉ hiển thị mỗi sản phẩm 1 dòng.
@@ -2431,11 +2506,38 @@ const fetchData = async () => {
       return sp
     })
 
+    // Map tồn kho theo biến thể từ spRaw và TonKho
+    const tonMap = {}
+    for (const r of spRaw) {
+      if (r.bienTheId != null) tonMap[r.bienTheId] = r.soLuongTon || 0
+    }
+
     // Merge variants vào groups
     const btMap = {}
     for (const bt of bienThe.value) {
       const spId = bt.sanPhamId
       if (!btMap[spId]) btMap[spId] = []
+      const tk = tonKhoMap[bt.bienTheId]
+      const ton = tk ? (tk.soLuongTon ?? 0) : (tonMap[bt.bienTheId] ?? 0)
+      const tongSerial = tk ? (tk.tongSerial ?? 0) : 0
+      const daBan = tk ? (tk.soLuongDaBan ?? 0) : 0
+      const daTungCoHang = tongSerial > 0 || daBan > 0
+
+      bt.soLuongTon = ton
+      bt.tongSerial = tongSerial
+      bt.soLuongDaBan = daBan
+      bt.daTungCoHang = daTungCoHang
+
+      if (bt.trangThai === 'inactive') {
+        bt.trangThaiHienThi = 'inactive'
+      } else if (ton > 0) {
+        bt.trangThaiHienThi = 'active'
+      } else if (daTungCoHang) {
+        bt.trangThaiHienThi = 'het_hang'
+      } else {
+        bt.trangThaiHienThi = 'cho_nhap_hang'
+      }
+
       btMap[spId].push(bt)
     }
     for (const sp of danhSachSanPham.value) {
@@ -2458,6 +2560,20 @@ const fetchData = async () => {
       sp.mauSacList = [...new Set(sp.variants.map(v => v.mauSac).filter(Boolean))]
       // Lay hinh anh
       sp.hinhAnh = sp.hinhAnhChinh || (sp.variants[0]?.hinhAnhBienThe) || ANH_MAC_DINH
+
+      // Trạng thái hiển thị theo tồn kho serials thực tế
+      const tongTon = sp.variants.reduce((s, v) => s + (v.soLuongTon || 0), 0)
+      const coBienTheDaTungCoHang = sp.variants.some((v) => v.trangThaiHienThi === 'het_hang')
+      sp.tongTonKho = tongTon
+      if (sp.trangThai === 'inactive' || sp.trangThai === 'ngung_kinh_doanh') {
+        sp.trangThaiHienThi = sp.trangThai
+      } else if (tongTon > 0) {
+        sp.trangThaiHienThi = 'active' // Đang bán khi có serial trong kho
+      } else if (coBienTheDaTungCoHang) {
+        sp.trangThaiHienThi = 'het_hang' // Đã bán hết
+      } else {
+        sp.trangThaiHienThi = 'cho_nhap_hang' // Chờ nhập hàng khi chưa có serial nào
+      }
     }
     // Cập nhật lại chiTiet nếu modal đang mở để biến thể và mã vạch đồng bộ ngay lập tức
     if (chiTiet.value && chiTiet.value.sanPhamId) {
@@ -2502,7 +2618,7 @@ const phanChungBienThe = () => ({
   trongLuongKg: soHoacNull(form.value.trongLuongKg),
   phanLoaiTags: form.value.phanLoaiTags || null,
   phanLoaiTen: form.value.phanLoaiTen || null,
-  trangThai: form.value.trangThaiSanPham
+  trangThai: form.value.trangThaiSanPham === 'cho_nhap_hang' ? 'active' : (form.value.trangThaiSanPham || 'active')
 })
 
 // Dữ liệu tạo sản phẩm và biến thể chính
@@ -2573,7 +2689,7 @@ const payloadBienThe = (sanPhamId, row) => {
     hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null,
     moTa: ganMetadataVaoMoTa(row.moTa || '', customBtMeta) || null,
     ...phanChungBienThe(),
-    trangThai: row.trangThai || form.value.trangThaiSanPham || 'active'
+    trangThai: row.trangThai === 'cho_nhap_hang' ? 'active' : (row.trangThai || (form.value.trangThaiSanPham === 'cho_nhap_hang' ? 'active' : form.value.trangThaiSanPham) || 'active')
   }
 }
 
@@ -2875,11 +2991,11 @@ const submitForm = async () => {
       moLaiChiTiet.value = null
     }
 
-    // Đồng bộ dữ liệu vào ProductsStore
-    lamMoiKhoDuLieuChung().catch(() => {})
-
-    // Đồng bộ dữ liệu vào InventoryStore
-    lamMoiTonKhoDuLieuChung().catch(() => {})
+    // Đồng bộ dữ liệu vào ProductsStore và InventoryStore
+    await Promise.all([
+      lamMoiKhoDuLieuChung().catch(() => {}),
+      lamMoiTonKhoDuLieuChung().catch(() => {})
+    ])
   } catch (e) {
     console.error(`[Hàng hóa] lỗi ở bước "${buoc}":`, e?.response?.data ?? e)
     const chiTietLoi = thongBaoLoi(e)
@@ -3164,6 +3280,7 @@ watch(() => ProductsStore.version, () => {
 .hh-tag--soft { background: var(--pink-100); color: var(--pink-700); font-weight: 600; }
 .hh-tag--outline { background: #fff; color: var(--pink-700); border: 1px solid var(--pink-200); font-weight: 600; }
 .hh-tag--wait { background: #fef3c7; color: #92400e; }
+.hh-tag--out { background: #fee2e2; color: #dc2626; }
 
 .hh-ton { font-weight: 700; font-variant-numeric: tabular-nums; }
 .hh-ton.is-het { color: var(--danger); }

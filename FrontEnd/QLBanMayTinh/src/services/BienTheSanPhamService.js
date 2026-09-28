@@ -1,4 +1,4 @@
-import { get, post, put } from './api.js';
+import { get, post, put, patch } from './api.js';
 
 export const getPage = ({ page = 0, size = 50 } = {}) => get(`/api/bien-the-san-pham?page=${page}&size=${size}`);
 
@@ -7,3 +7,7 @@ export const getAll = () => getPage({ size: 1000 }).then((p) => p.content);
 export const create = (body) => post('/api/bien-the-san-pham', body);
 
 export const update = (id, body) => put(`/api/bien-the-san-pham/update/${id}`, body);
+
+export const updateGiaNhap = (id, giaNhap) => patch(`/api/bien-the-san-pham/${id}/gia-nhap`, { giaNhap });
+
+export const updateGiaBan = (id, giaBan) => patch(`/api/bien-the-san-pham/${id}/gia-ban`, { giaBan });

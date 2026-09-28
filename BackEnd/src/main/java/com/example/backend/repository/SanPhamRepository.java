@@ -41,6 +41,10 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
         ram.dungLuong,
         oCung.loaiOcung,
         gpu.tenGpu,
+        cpu.cpuId,
+        ram.ramId,
+        oCung.oCungId,
+        gpu.gpuId,
         bt.kichThuocManHinh,
         bt.heDieuHanh,
         bt.pin,
@@ -74,7 +78,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
       AND (:danhMucId IS NULL OR dm.id = :danhMucId)
       AND (:thuongHieuId IS NULL OR th.thuongHieuId = :thuongHieuId)
       AND (:trangThai IS NULL OR bt.trangThai = :trangThai)
-    ORDER BY sp.ngayTao DESC
+    ORDER BY sp.sanPhamId DESC, bt.bienTheId DESC
     """,
             countQuery = """
     SELECT COUNT(bt)
