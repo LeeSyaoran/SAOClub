@@ -8,12 +8,14 @@ import ProductFormModal from "./ProductFormModal.vue";
 import BienTheTable from "./BienTheTable.vue";
 import { Image } from "@lucide/vue";
 import * as SanPhamService from "../../services/SanPhamService.js";
+import { ThuocTinhService } from "../../services/ThuocTinhService.js";
 
 const props = defineProps({ sanPhamId: { type: Number, required: true } });
 const router = useRouter();
 
 const history = ref([]);
 const historyLoading = ref(false);
+const dynamicAttrs = ref([]);
 const loadHistory = async () => {
   historyLoading.value = true;
   try {
@@ -25,9 +27,35 @@ const loadHistory = async () => {
   }
 };
 
+const loadDynamicAttrs = async () => {
+  try {
+    const attrs = await ThuocTinhService.getAll();
+    const standard = new Set(["mau_sac", "man_hinh", "pin", "he_dieu_hanh", "trong_luong"]);
+    dynamicAttrs.value = (attrs || []).filter((a) => !standard.has(a.tenTruong));
+  } catch {}
+};
+
 onMounted(() => {
   ensureProducts();
   loadHistory();
+  loadDynamicAttrs();
+});
+
+const METADATA_TAG_REGEX = /<!--METADATA_THUOC_TINH:([\s\S]*?)-->/;
+const extractedAttrs = computed(() => {
+  const moTa = productInfo.value?.moTa;
+  if (!moTa) return {};
+  const m = String(moTa).match(METADATA_TAG_REGEX);
+  if (m && m[1]) {
+    try {
+      return JSON.parse(m[1]) || {};
+    } catch {}
+  }
+  return {};
+});
+const cleanMoTa = computed(() => {
+  const moTa = productInfo.value?.moTa;
+  return moTa ? String(moTa).replace(METADATA_TAG_REGEX, "").trim() : "";
 });
 
 const productVariants = computed(() =>
@@ -122,9 +150,11 @@ const formatFieldName = (f) => {
               <div>{{ t("admin.productModal.brandLabel").replace(" *", "") }}: <span class="text-primary">{{ productInfo.tenThuongHieu }}</span></div>
               <div>{{ t("admin.productModal.categoryLabel").replace(" *", "") }}: <span class="text-primary">{{ productInfo.tenDanhMuc }}</span></div>
               <div>{{ t("admin.productModal.supplierLabel").replace(" *", "") }}: <span class="text-primary">{{ productInfo.tenNhaCungCap || t("admin.productModal.noneOption") }}</span></div>
-              <div>{{ t("admin.productModal.typeLabel").replace(" *", "") }}: <span class="text-primary">{{ productInfo.loaiSanPham }}</span></div>
+              <div v-for="attr in dynamicAttrs" :key="attr.thuocTinhId">
+                {{ attr.tenHienThi }}: <span class="text-primary">{{ extractedAttrs[attr.tenTruong] || productInfo[attr.tenTruong] || "—" }}</span>
+              </div>
               <div>{{ t("admin.productDetail.releaseDate") }}: <span class="text-primary">{{ formatDateTime(productInfo.ngayTao) }}</span></div>
-              <div v-if="productInfo.moTa">{{ t("admin.productModal.descLabel") }}: <span class="text-primary">{{ productInfo.moTa }}</span></div>
+              <div v-if="cleanMoTa">{{ t("admin.productModal.descLabel") }}: <span class="text-primary">{{ cleanMoTa }}</span></div>
             </div>
           </div>
         </div>

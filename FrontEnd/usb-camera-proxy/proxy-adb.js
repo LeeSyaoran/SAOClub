@@ -424,8 +424,8 @@ function main() {
     if (reverseInterval) clearInterval(reverseInterval);
     try {
       execSync(`"${adbPath}" reverse --remove tcp:${HTTP_PORT}`, { stdio: 'ignore' });
-    } catch {}
-    sseClients.forEach(c => { try { c.end(); } catch {} });
+    } catch { }
+    sseClients.forEach(c => { try { c.end(); } catch { } });
     server.close();
     process.exit(0);
   };

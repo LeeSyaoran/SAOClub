@@ -1298,6 +1298,10 @@ GO
     ('SP0003', '8934567000039', N'Lenovo IdeaPad 5 Pro 16',  4, 1, 2, 'LAPTOP', N'Màn 2.5K 16" 120Hz, AMD Ryzen mạnh, vỏ nhôm bền',                   N'/images/Lenovo IdeaPad 5 Pro 16.webp'),
     ('SP0004', '8934567000046', N'HP Envy x360 16 2024',     5, 1, 1, 'LAPTOP', N'2-in-1 cao cấp, màn OLED 2.8K cảm ứng, chip Intel Gen 13',          N'/images/HP Envy x360 16 2024.webp'),
     ('SP0005', '8934567000053', N'MSI Stealth 15M B12U',     6, 1, 3, 'LAPTOP', N'Gaming mỏng nhẹ RTX 4050, màn 144Hz, trọng lượng chỉ 1.7kg',        N'/images/MSI Stealth 15M B12U.webp');
+
+    -- Fix: khôi phục ma_san_pham bị NULL (do updateSanPham cho phép null)
+    UPDATE san_pham SET ma_san_pham = 'SP0005' WHERE ma_san_pham IS NULL AND ten_san_pham = N'MSI Stealth 15M B12U';
+
     -- san_pham: Dell=1, Asus=2, Lenovo=3, HP=4, MSI=5
 
     -- Biến thể sản phẩm

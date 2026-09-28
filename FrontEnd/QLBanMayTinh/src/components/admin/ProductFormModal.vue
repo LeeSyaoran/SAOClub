@@ -9,6 +9,7 @@ import * as DmService from "../../services/DmService.js";
 import { authHeaders } from "../../services/api.js";
 import { ProductsStore } from "../../stores/products.js";
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
+import { ThuocTinhService } from "../../services/ThuocTinhService.js";
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -24,6 +25,8 @@ const cpuList = ref([]);
 const ramList = ref([]);
 const oCungList = ref([]);
 const gpuList = ref([]);
+const dynamicAttrs = ref([]); // Thuộc tính động từ ThuocTinhService
+const thuocTinhValues = reactive({}); // { [tenTruong]: giaTri }
 
 let productRefDataPromise = null;
 const ensureProductRefData = () => {
@@ -36,7 +39,8 @@ const ensureProductRefData = () => {
     DmService.getOCung().catch(() => []),
     DmService.getGpu().catch(() => []),
     ensureSuppliers(),
-  ]).then(([cat, br, cpu, ram, oc, gpu]) => {
+    ThuocTinhService.getAll().catch(() => []),
+  ]).then(([cat, br, cpu, ram, oc, gpu, , attrs]) => {
     categories.value = cat;
     brands.value = br;
     cpuList.value = cpu;
@@ -44,9 +48,45 @@ const ensureProductRefData = () => {
     oCungList.value = oc;
     gpuList.value = gpu;
     suppliers.value = SuppliersStore.items ?? [];
+    const STANDARD_ATTR_FIELDS = new Set(["mau_sac", "man_hinh", "pin", "he_dieu_hanh", "trong_luong"]);
+    dynamicAttrs.value = Array.isArray(attrs)
+      ? attrs
+          .filter((a) => !STANDARD_ATTR_FIELDS.has(a.tenTruong))
+          .sort((a, b) => (a.thuTuHienThi ?? 0) - (b.thuTuHienThi ?? 0))
+      : [];
+    // Khởi tạo giá trị mặc định cho thuộc tính động
+    dynamicAttrs.value.forEach((attr) => {
+      if (!(attr.tenTruong in thuocTinhValues)) {
+        thuocTinhValues[attr.tenTruong] = "";
+      }
+    });
   });
   return productRefDataPromise;
 };
+
+// Regex và helper gán/trích xuất metadata thuộc tính động vào moTa
+const METADATA_TAG_REGEX = /<!--METADATA_THUOC_TINH:([\s\S]*?)-->/;
+const tríchXuatThuocTinhTuMoTa = (moTaStr) => {
+  if (!moTaStr) return {};
+  const match = String(moTaStr).match(METADATA_TAG_REGEX);
+  if (match && match[1]) {
+    try {
+      return JSON.parse(match[1]) || {};
+    } catch (e) {
+      console.warn("Lỗi parse metadata thuộc tính từ mô tả", e);
+    }
+  }
+  return {};
+};
+const loaiBoMetadataTuMoTa = (moTaStr) => (moTaStr ? String(moTaStr).replace(METADATA_TAG_REGEX, "").trim() : "");
+const ganMetadataVaoMoTa = (moTaStr, thuocTinhObj) => {
+  const baseMoTa = loaiBoMetadataTuMoTa(moTaStr);
+  const hasValues = thuocTinhObj && Object.values(thuocTinhObj).some((v) => v !== "" && v != null);
+  return hasValues ? `${baseMoTa}\n<!--METADATA_THUOC_TINH:${JSON.stringify(thuocTinhObj)}-->` : baseMoTa;
+};
+
+// Reset promise để load lại thuộc tính động mỗi lần mở modal
+const resetRefDataCache = () => { productRefDataPromise = null; };
 
 const formError = ref("");
 const saving = ref(false);
@@ -122,10 +162,16 @@ watch(
   () => props.modelValue,
   async (open) => {
     if (!open) return;
+    // Reset cache để luôn tải lại thuộc tính động mới nhất
+    resetRefDataCache();
     await ensureProductRefData();
     formError.value = "";
     soSerialMoi.value = "";
     resetImageState();
+    // Reset tất cả thuocTinhValues
+    Object.keys(thuocTinhValues).forEach((k) => delete thuocTinhValues[k]);
+    dynamicAttrs.value.forEach((attr) => { thuocTinhValues[attr.tenTruong] = ""; });
+
     if (props.mode === "edit") {
       const variants = (ProductsStore.items ?? []).filter((p) => p.sanPhamId === props.sanPhamId);
       const base = variants[0];
@@ -161,11 +207,16 @@ watch(
         giaBan: base.giaBan ?? "",
         giaNhap: base.giaNhap ?? "",
         baoHanhThang: base.baoHanhThang ?? "",
-        moTa: base.moTa || "",
+        moTa: loaiBoMetadataTuMoTa(base.moTa || ""),
         hinhAnhChinh: base.hinhAnhChinh || "",
         trangThai: base.trangThai || "active",
         phanLoaiTags: base.phanLoaiTags || "",
         phanLoaiTen: base.phanLoaiTen || "",
+      });
+      // Nạp giá trị thuộc tính động từ dữ liệu sản phẩm (nếu có)
+      const savedAttrs = tríchXuatThuocTinhTuMoTa(base.moTa);
+      dynamicAttrs.value.forEach((attr) => {
+        thuocTinhValues[attr.tenTruong] = savedAttrs[attr.tenTruong] ?? base[attr.tenTruong] ?? base.thuocTinhValues?.[attr.tenTruong] ?? "";
       });
       imagePreview.value = base.hinhAnhChinh || "";
     } else {
@@ -224,7 +275,11 @@ const save = async () => {
       giaNhap: Number(form.giaNhap),
       trongLuongKg: form.trongLuongKg ? Number(form.trongLuongKg) : null,
       baoHanhThang: Number(form.baoHanhThang),
+      moTa: ganMetadataVaoMoTa(form.moTa, thuocTinhValues) || "",
       ngayTao: props.mode === "edit" ? null : nowLocalIso(),
+      // Gộp thuộc tính động vào body (flat fields + object thuocTinhValues)
+      ...thuocTinhValues,
+      thuocTinhValues: { ...thuocTinhValues },
     };
     if (props.mode === "edit") {
       body.bienTheId = null;
@@ -832,6 +887,68 @@ const save = async () => {
                 "
                 :placeholder="t('admin.productModal.tagNamePlaceholder')"
               />
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Thuộc tính động ── -->
+        <div v-if="dynamicAttrs.length > 0">
+          <div
+            class="text-uppercase fw-bold mb-2"
+            style="font-size: 0.65rem; letter-spacing: 0.1em; color: #a78bfa"
+          >
+            Thuộc tính bổ sung
+          </div>
+          <div
+            class="rounded-3 p-3 mb-3"
+            style="
+              background: var(--bg-input);
+              border: 1px solid var(--border-color);
+            "
+          >
+            <div class="row g-3">
+              <div
+                v-for="attr in dynamicAttrs"
+                :key="attr.thuocTinhId"
+                class="col-6"
+              >
+                <label class="form-label small text-secondary mb-1">
+                  {{ attr.tenHienThi }}
+                  <span v-if="attr.batBuoc" class="text-danger">*</span>
+                </label>
+                <!-- Select với danh sách giá trị -->
+                <select
+                  v-if="attr.loaiDuLieu === 'select' && attr.giaTriList && attr.giaTriList.length > 0"
+                  v-model="thuocTinhValues[attr.tenTruong]"
+                  class="form-select form-select-sm"
+                  style="
+                    background: var(--bg-input);
+                    color: var(--text-primary);
+                    border-color: var(--border-color-strong);
+                  "
+                >
+                  <option value="">-- Chọn {{ attr.tenHienThi }} --</option>
+                  <option
+                    v-for="gv in attr.giaTriList"
+                    :key="gv.giaTriId"
+                    :value="gv.giaTri"
+                  >
+                    {{ gv.giaTri }}
+                  </option>
+                </select>
+                <!-- Input text nếu không có giá trị hoặc loại text -->
+                <input
+                  v-else
+                  v-model="thuocTinhValues[attr.tenTruong]"
+                  class="form-control form-control-sm"
+                  style="
+                    background: var(--bg-input);
+                    color: var(--text-primary);
+                    border-color: var(--border-color-strong);
+                  "
+                  :placeholder="'Nhập ' + attr.tenHienThi"
+                />
+              </div>
             </div>
           </div>
         </div>

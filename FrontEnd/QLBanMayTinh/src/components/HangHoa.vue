@@ -287,12 +287,16 @@
                   <div class="hh-ct-item"><dt>Hệ điều hành</dt><dd>{{ chiTiet.heDieuHanh || 'Chưa có' }}</dd></div>
                   <div class="hh-ct-item"><dt>Pin</dt><dd>{{ chiTiet.pin || 'Chưa có' }}</dd></div>
                   <div class="hh-ct-item"><dt>Trọng lượng</dt><dd>{{ chiTiet.trongLuongKg ? chiTiet.trongLuongKg + ' kg' : 'Chưa có' }}</dd></div>
+                  <div v-for="attr in dynamicCustomAttrs" :key="attr.thuocTinhId" class="hh-ct-item">
+                    <dt>{{ attr.tenHienThi }}</dt>
+                    <dd>{{ chiTietThuocTinh[attr.tenTruong] || 'Chưa có' }}</dd>
+                  </div>
                 </dl>
               </section>
 
               <section class="hh-ct-block">
                 <h3>Mô tả</h3>
-                <div v-if="chiTiet.moTa" class="hh-ct-mota" v-html="chiTiet.moTa"></div>
+                <div v-if="moTaHienThi" class="hh-ct-mota" v-html="moTaHienThi"></div>
                 <p v-else class="hh-muted">Chưa có mô tả. Bấm "Chỉnh sửa" để bổ sung.</p>
               </section>
             </div>
@@ -617,6 +621,24 @@
                       placeholder="VD: 1.7"
                     />
                   </label>
+
+                  <!-- Thuộc tính bổ sung từ tab Thuộc tính -->
+                  <label v-for="attr in dynamicCustomAttrs" :key="attr.thuocTinhId" class="hh-field">
+                    <span>{{ attr.tenHienThi }} <b v-if="attr.batBuoc">*</b></span>
+                    <select
+                      v-if="attr.loaiDuLieu === 'select' && attr.giaTriList && attr.giaTriList.length > 0"
+                      v-model="formThuocTinh[attr.tenTruong]"
+                    >
+                      <option value="">-- Chọn {{ attr.tenHienThi }} --</option>
+                      <option v-for="gv in attr.giaTriList" :key="gv.giaTriId" :value="gv.giaTri">{{ gv.giaTri }}</option>
+                    </select>
+                    <input
+                      v-else
+                      v-model.trim="formThuocTinh[attr.tenTruong]"
+                      :placeholder="'Nhập ' + attr.tenHienThi"
+                    />
+                    <em v-if="errors[attr.tenTruong]" class="hh-err">{{ errors[attr.tenTruong] }}</em>
+                  </label>
                 </div>
               </fieldset>
             </div>
@@ -772,42 +794,22 @@
                     </table>
                   </div>
 
-                  <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" style="margin-top:10px" @click="themDong">
-                    <Plus :size="14" /> Thêm dòng
-                  </button>
-                </fieldset>
-
-                <fieldset class="hh-block">
-                  <legend>Thông số chung <span class="hh-chip hh-chip--soft">áp dụng mọi phiên bản</span></legend>
-                  <div class="hh-grid">
-                    <label class="hh-field">
-                      <span>Màn hình</span>
-                      <SearchSelect v-model="form.kichThuocManHinh" :options="optManHinhSelect" placeholder="-- Không chọn --" />
-                    </label>
-                    <label class="hh-field">
-                      <span>Pin</span>
-                      <SearchSelect v-model="form.pin" :options="optPinSelect" placeholder="-- Không chọn --" />
-                    </label>
-                    <label class="hh-field">
-                      <span>Hệ điều hành</span>
-                      <SearchSelect v-model="form.heDieuHanh" :options="optHeDieuHanhSelect" placeholder="-- Không chọn --" />
-                    </label>
-                    <label class="hh-field">
-                      <span>Trọng lượng (kg)</span>
-                      <SearchSelect v-model="form.trongLuongKg" :options="optTrongLuongSelect" placeholder="-- Không chọn --" />
-                    </label>
-                    <label class="hh-field">
-                      <span>Bảo hành (tháng) <b>*</b></span>
-                      <SearchSelect v-model="form.baoHanhThang" :options="optBaoHanhSelect" placeholder="-- Chọn --" />
-                      <em v-if="errors.baoHanhThang" class="hh-err">{{ errors.baoHanhThang }}</em>
-                    </label>
-                    <label class="hh-field">
-                      <span>Tiền tố mã SKU</span>
-                      <input v-model.trim="form.skuPrefix" placeholder="Để trống lấy theo mã sản phẩm" />
-                      <em class="hh-hint">Dùng khi cần SKU theo quy tắc riêng.</em>
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2" style="margin-top:10px">
+                    <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" @click="themDong">
+                      <Plus :size="14" /> Thêm dòng
+                    </button>
+                    <label class="d-inline-flex align-items-center gap-2 m-0" style="font-size: 13px;">
+                      <span class="hh-muted">Tiền tố mã SKU:</span>
+                      <input
+                        v-model.trim="form.skuPrefix"
+                        placeholder="Để trống lấy theo mã sản phẩm"
+                        class="hh-cell hh-cell--sku"
+                        style="width: 220px; height: 32px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px;"
+                      />
                     </label>
                   </div>
-                  <p class="hh-note">
+
+                  <p class="hh-note" style="margin-top: 12px">
                     <Info :size="14" />
                     Giá vốn và giá bán đặt sau — mở chi tiết sản phẩm, chọn phiên bản rồi bấm "Chỉnh sửa", hoặc dùng phiếu nhập kho.
                   </p>
@@ -1025,16 +1027,59 @@ const TRONG_LUONG_GOI_Y = [1.2, 1.3, 1.5, 1.7, 1.8, 2.0, 2.3, 2.5]
 
 // Cache thuộc tính động từ API
 const thuocTinhDong = ref({})
+const allThuocTinhList = ref([])
+const formThuocTinh = reactive({})
+const chiTietThuocTinh = ref({})
+
+const dynamicCustomAttrs = computed(() => {
+  const standardFields = new Set(['mau_sac', 'man_hinh', 'pin', 'he_dieu_hanh', 'trong_luong'])
+  return (allThuocTinhList.value || []).filter(tt => !standardFields.has(tt.tenTruong))
+})
+
+const getAttrOptions = (attr) => {
+  return (attr.giaTriList || []).map(g => ({ label: g.giaTri, value: g.giaTri }))
+}
+
+// Regex và helper gán/trích xuất metadata thuộc tính động vào moTa
+const METADATA_TAG_REGEX = /<!--METADATA_THUOC_TINH:([\s\S]*?)-->/
+const tríchXuatThuocTinhTuMoTa = (moTaStr) => {
+  if (!moTaStr) return {}
+  const match = String(moTaStr).match(METADATA_TAG_REGEX)
+  if (match && match[1]) {
+    try {
+      return JSON.parse(match[1]) || {}
+    } catch (e) {
+      console.warn('[HangHoa] Lỗi parse metadata thuộc tính từ mô tả', e)
+    }
+  }
+  return {}
+}
+const loaiBoMetadataTuMoTa = (moTaStr) => {
+  if (!moTaStr) return ''
+  return String(moTaStr).replace(METADATA_TAG_REGEX, '').trim()
+}
+const ganMetadataVaoMoTa = (moTaStr, thuocTinhObj) => {
+  const baseMoTa = loaiBoMetadataTuMoTa(moTaStr)
+  const hasValues = thuocTinhObj && Object.values(thuocTinhObj).some(v => v !== '' && v !== null && v !== undefined)
+  if (!hasValues) return baseMoTa
+  return `${baseMoTa}\n<!--METADATA_THUOC_TINH:${JSON.stringify(thuocTinhObj)}-->`
+}
+
+const moTaHienThi = computed(() => {
+  return loaiBoMetadataTuMoTa(chiTiet.value?.moTa || '')
+})
+
 const loadThuocTinh = async () => {
   try {
     const list = await ThuocTinhService.getAll()
+    allThuocTinhList.value = Array.isArray(list) ? list.sort((a, b) => (a.thuTuHienThi ?? 0) - (b.thuTuHienThi ?? 0)) : []
     const map = {}
-    for (const tt of list) {
+    for (const tt of allThuocTinhList.value) {
       const cfg = HE_THONG_THUOC_TINH[tt.tenTruong]
       if (cfg) {
         // Gộp giá trị API + giá trị đã có trong data + default
         const apiValues = (tt.giaTriList || []).map(g => g.giaTri)
-        const existingValues = bienTheChuan.value.map(v => v[cfg.field]).filter(Boolean)
+        const existingValues = (bienTheChuan.value || []).map(v => v[cfg.field]).filter(Boolean)
         map[tt.tenTruong] = {
           field: cfg.field,
           tenHienThi: tt.tenHienThi,
@@ -1381,10 +1426,11 @@ const resetFilters = () => {
   page.value = 1
 }
 
-const openCreate = () => {
+const openCreate = async () => {
   modalMode.value = 'create'
   tieuDeModal.value = 'Tạo sản phẩm mới'
   tab.value = 'info'
+  await loadThuocTinh().catch(() => {})
   resetForm()
   showModal.value = true
 }
@@ -1401,6 +1447,10 @@ const resetForm = () => {
     bienTheId: null, maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
     giaNhap: 0, giaBan: 0, hinhAnhBienThe: null
   }
+  Object.keys(formThuocTinh).forEach(k => delete formThuocTinh[k])
+  dynamicCustomAttrs.value.forEach(attr => {
+    formThuocTinh[attr.tenTruong] = ''
+  })
   bienTheRows.value = [taoDongBienThe()]
   errors.value = {}
   saveError.value = ''
@@ -1421,8 +1471,17 @@ const moChiTiet = async (group) => {
   bienTheChonId.value = null
   lichSuHienTai.value = []
   try {
+    loadThuocTinh().catch(() => {})
     const spRes = await get(`/api/san-pham/${group.sanPhamId}`)
     chiTiet.value = spRes.data || spRes
+    // Trích xuất thuộc tính động từ moTa hoặc trường dữ liệu chiTiet
+    const saved = tríchXuatThuocTinhTuMoTa(chiTiet.value?.moTa)
+    chiTietThuocTinh.value = { ...saved }
+    dynamicCustomAttrs.value.forEach(attr => {
+      if (!chiTietThuocTinh.value[attr.tenTruong] && chiTiet.value?.[attr.tenTruong]) {
+        chiTietThuocTinh.value[attr.tenTruong] = chiTiet.value[attr.tenTruong]
+      }
+    })
     // Load images
     anhSanPham.value = []
     if (chiTiet.value.hinhAnhChinh) anhSanPham.value.push(chiTiet.value.hinhAnhChinh)
@@ -1452,6 +1511,9 @@ const suaSanPham = async (sp) => {
   tab.value = 'info'
   form.value.bienTheId = null
 
+  // Tải lại danh sách thuộc tính động mới nhất
+  await loadThuocTinh().catch(() => {})
+
   // Luôn fetch fresh data từ API để tránh stale cache
   let data
   try {
@@ -1472,7 +1534,14 @@ const suaSanPham = async (sp) => {
   form.value.loaiSanPham = data.loaiSanPham || 'LAPTOP'
   form.value.trangThaiSanPham = data.trangThai || 'active'
   form.value.hinhAnhList = data.hinhAnhList || (data.hinhAnhChinh ? [data.hinhAnhChinh] : [])
-  form.value.moTa = data.moTa || ''
+  const rawMoTa = data.moTa || ''
+  const savedAttrs = tríchXuatThuocTinhTuMoTa(rawMoTa)
+  form.value.moTa = loaiBoMetadataTuMoTa(rawMoTa)
+  // Fill formThuocTinh
+  Object.keys(formThuocTinh).forEach(k => delete formThuocTinh[k])
+  dynamicCustomAttrs.value.forEach(attr => {
+    formThuocTinh[attr.tenTruong] = savedAttrs[attr.tenTruong] ?? data[attr.tenTruong] ?? ''
+  })
   form.value.phanLoaiIds = data.phanLoaiIds || []
   form.value.baoHanhThang = data.baoHanhThang ?? 12
   form.value.kichThuocManHinh = data.kichThuocManHinh || ''
@@ -1519,8 +1588,8 @@ const suaSanPham = async (sp) => {
   saveError.value = ''
   showModal.value = true
   moLaiChiTiet.value = data.sanPhamId
-  // Set moTa editor
-  setTimeout(() => { if (moTaEl.value) moTaEl.value.innerHTML = data.moTa || '' }, 50)
+  // Set moTa editor sạch sẽ
+  setTimeout(() => { if (moTaEl.value) moTaEl.value.innerHTML = form.value.moTa || '' }, 50)
 }
 
 const suaBienThe = (v) => {
@@ -1662,6 +1731,14 @@ const validate = () => {
   if (!form.value.thuongHieuId) errors.value.thuongHieuId = 'Chọn thương hiệu'
   if (!form.value.danhMucId) errors.value.danhMucId = 'Chọn danh mục'
   if (!form.value.baoHanhThang) errors.value.baoHanhThang = 'Chọn thời gian bảo hành'
+
+  if (dynamicCustomAttrs.value) {
+    for (const attr of dynamicCustomAttrs.value) {
+      if (attr.batBuoc && (!formThuocTinh[attr.tenTruong] || !String(formThuocTinh[attr.tenTruong]).trim())) {
+        errors.value[attr.tenTruong] = `${attr.tenHienThi} bắt buộc`
+      }
+    }
+  }
 
   // Validate bien the
   if (modalMode.value === 'edit') {
@@ -1921,6 +1998,13 @@ const formHopLe = computed(() => {
   if (!form.value.thuongHieuId) return false
   if (!form.value.danhMucId) return false
   if (!form.value.baoHanhThang) return false
+  if (dynamicCustomAttrs.value) {
+    for (const attr of dynamicCustomAttrs.value) {
+      if (attr.batBuoc && (!formThuocTinh[attr.tenTruong] || !String(formThuocTinh[attr.tenTruong]).trim())) {
+        return false
+      }
+    }
+  }
   if (modalMode.value !== 'edit' && bienTheRows.value.length === 0) return false
   return true
 })
@@ -2038,11 +2122,13 @@ const payloadSanPham = (row) => ({
   danhMucId: soHoacNull(form.value.danhMucId),
   nhaCungCapId: soHoacNull(form.value.nhaCungCapId),
   loaiSanPham: form.value.loaiSanPham,
-  moTa: form.value.moTa || null,
+  moTa: ganMetadataVaoMoTa(form.value.moTa, formThuocTinh) || null,
   hinhAnhChinh: form.value.hinhAnhList?.[0] || null,
   hinhAnhList: form.value.hinhAnhList?.length ? form.value.hinhAnhList : null,
   ngayTao: bayGio(),
   ...phanChungBienThe(),
+  ...formThuocTinh,
+  thuocTinhValues: { ...formThuocTinh },
   ...(row
     ? {
         ...(row.bienTheId ? { bienTheId: Number(row.bienTheId) } : {}),

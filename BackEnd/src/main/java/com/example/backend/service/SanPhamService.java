@@ -181,7 +181,12 @@ public class SanPhamService {
 
         SanPham sanPham = new SanPham();
         BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham");
-        sanPham.setMaSanPham(maSanPham);
+        // Auto-generate maSanPham nếu request không truyền
+        if (maSanPham == null || maSanPham.isBlank()) {
+            sanPham.setMaSanPham(null); // tạm null, sẽ fill sau khi có id
+        } else {
+            sanPham.setMaSanPham(maSanPham);
+        }
         sanPham.setNgayTao(request.getNgayTao() != null ? request.getNgayTao() : LocalDateTime.now());
         // Lấy ảnh đầu tiên làm ảnh đại diện
         if (request.getHinhAnhList() != null && !request.getHinhAnhList().isEmpty())
@@ -195,6 +200,13 @@ public class SanPhamService {
         SanPham saved = sanPhamRepository.save(sanPham);
 
         if (entityManager != null) entityManager.refresh(saved);
+
+        // Fill maSanPham nếu chưa có (tạo mới mà không truyền mã)
+        if (saved.getMaSanPham() == null || saved.getMaSanPham().isBlank()) {
+            saved.setMaSanPham("SP" + saved.getSanPhamId());
+            saved = sanPhamRepository.save(saved);
+            if (entityManager != null) entityManager.refresh(saved);
+        }
 
         if (request.getHinhAnhList() != null) luuDanhSachHinhAnh(saved.getSanPhamId(), request.getHinhAnhList());
 
@@ -246,7 +258,10 @@ public class SanPhamService {
         kiemTraTrungMaSanPham(maSanPham, sanPhamId);
 
         BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham");
-        sanPham.setMaSanPham(maSanPham);
+        // Chỉ cập nhật maSanPham khi request truyền giá trị hợp lệ, không được set null
+        if (maSanPham != null && !maSanPham.isBlank()) {
+            sanPham.setMaSanPham(maSanPham);
+        }
         if (request.getNgayTao() != null) sanPham.setNgayTao(request.getNgayTao());
         if (request.getHinhAnhList() != null && !request.getHinhAnhList().isEmpty())
             sanPham.setHinhAnhChinh(request.getHinhAnhList().get(0));
