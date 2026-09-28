@@ -10,10 +10,10 @@ set "SERVER=localhost"
 set "DATABASE=QLBanMayTinh"
 set "USER=sa"
 set "PASSWORD=SaoClub@2024"
-set "SCRIPT=%~dp0Migrate_ThuocTinh.sql"
+set "SCRIPT=%~dp0QLBanMayTinh.sql"
 
 echo ================================================
-echo  Migration: thuoc_tinh
+echo  Database Script: QLBanMayTinh.sql
 echo ================================================
 echo   Server: %SERVER%
 echo   Database: %DATABASE%

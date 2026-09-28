@@ -1,22 +1,15 @@
 package com.example.backend.service;
 
-import com.example.backend.entity.ChiTietDonHang;
-import com.example.backend.entity.ChiTietDonHangSerial;
-import com.example.backend.entity.ChiTietSanPham;
-import com.example.backend.entity.DonHang;
-import com.example.backend.entity.LichSuDonHang;
-import com.example.backend.entity.ThanhToan;
-import com.example.backend.entity.LichSuTonKho;
-import com.example.backend.entity.PhieuTraHang;
-import com.example.backend.entity.PhieuBaoHanh;
-import com.example.backend.entity.KhuyenMai;
-import com.example.backend.entity.PhieuGiamGiaCaNhan;
-import com.example.backend.entity.TaiKhoan;
-import com.example.backend.repository.*;
-import com.example.backend.request.DonHangRequest;
-import com.example.backend.request.XacNhanDonHangLineRequest;
-import com.example.backend.request.XacNhanDonHangRequest;
-import com.example.backend.response.DonHangResponse;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -30,17 +23,41 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
+import com.example.backend.entity.ChiTietDonHang;
+import com.example.backend.entity.ChiTietDonHangSerial;
+import com.example.backend.entity.ChiTietSanPham;
+import com.example.backend.entity.DonHang;
+import com.example.backend.entity.KhuyenMai;
+import com.example.backend.entity.LichSuDonHang;
+import com.example.backend.entity.LichSuTonKho;
+import com.example.backend.entity.PhieuBaoHanh;
+import com.example.backend.entity.PhieuGiamGiaCaNhan;
+import com.example.backend.entity.PhieuTraHang;
+import com.example.backend.entity.TaiKhoan;
+import com.example.backend.entity.ThanhToan;
+import com.example.backend.repository.BienTheSanPhamRepository;
+import com.example.backend.repository.ChiTietDonHangRepository;
+import com.example.backend.repository.ChiTietDonHangSerialRepository;
+import com.example.backend.repository.ChiTietSanPhamRepository;
+import com.example.backend.repository.DiaChiGiaoHangRepository;
+import com.example.backend.repository.DonHangRepository;
+import com.example.backend.repository.KhachHangRepository;
+import com.example.backend.repository.KhuyenMaiRepository;
+import com.example.backend.repository.LichSuDonHangRepository;
+import com.example.backend.repository.LichSuTonKhoRepository;
+import com.example.backend.repository.NhanVienRepository;
+import com.example.backend.repository.PhieuBaoHanhRepository;
+import com.example.backend.repository.PhieuGiamGiaCaNhanRepository;
+import com.example.backend.repository.PhieuTraHangRepository;
+import com.example.backend.repository.TaiKhoanRepository;
+import com.example.backend.repository.ThanhToanRepository;
 import com.example.backend.request.ChiTietDonHangRequest;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import com.example.backend.request.DonHangRequest;
+import com.example.backend.request.XacNhanDonHangLineRequest;
+import com.example.backend.request.XacNhanDonHangRequest;
+import com.example.backend.response.DonHangResponse;
+
+import jakarta.persistence.EntityManager;
 
 @Service
 public class DonHangService {
@@ -293,6 +310,36 @@ public class DonHangService {
         DonHang entity = getById(id);
         String oldStatus = entity.getTrangThaiDonHang();
         kiemTraChuyenTrangThai(oldStatus, request.getTrangThaiDonHang(), entity.getKenhBan());
+        if ("online".equals(entity.getKenhBan()) && "confirmed".equals(oldStatus) && "processing".equals(request.getTrangThaiDonHang())) {
+            List<ChiTietDonHang> items = chiTietDonHangRepository.findEntityByDonHangId(id);
+            for (ChiTietDonHang item : items) {
+                ChiTietSanPham serial = item.getChiTietSanPham();
+                if (serial == null) {
+                    List<ChiTietSanPham> available = chiTietSanPhamRepository
+                            .findByBienThe_BienTheIdAndTrangThaiOrderByNgayNhapKhoAsc(
+                                    item.getBienThe().getBienTheId(), "trong_kho");
+                    if (!available.isEmpty()) {
+                        serial = available.get(0);
+                        item.setChiTietSanPham(serial);
+                        chiTietDonHangRepository.save(item);
+                    }
+                }
+                if (serial != null) {
+                    if (!"da_ban".equals(serial.getTrangThai())) {
+                        serial.setTrangThai("da_ban");
+                        chiTietSanPhamRepository.save(serial);
+                    }
+                    boolean exists = chiTietDonHangSerialRepository
+                            .existsByChiTietDonHang_IdAndChiTietSanPham_ChiTietId(item.getId(), serial.getChiTietId());
+                    if (!exists) {
+                        ChiTietDonHangSerial link = new ChiTietDonHangSerial();
+                        link.setChiTietDonHang(item);
+                        link.setChiTietSanPham(serial);
+                        chiTietDonHangSerialRepository.save(link);
+                    }
+                }
+            }
+        }
         BeanUtils.copyProperties(request, entity,
                 "id", "khachHangId", "nhanVienId", "khuyenMaiId", "diaChiGiaoHangId", "phuongThucThanhToan", "idempotencyKey");
         if (request.getPhuongThucThanhToan() != null && !request.getPhuongThucThanhToan().isBlank()) {
@@ -506,8 +553,10 @@ public class DonHangService {
         DonHang donHang = getById(donHangId);
         if (!"online".equals(donHang.getKenhBan()))
             throw new IllegalArgumentException("Chỉ đơn hàng online mới cần chọn serial trước khi xác nhận");
-        if (!"pending".equals(donHang.getTrangThaiDonHang()) && !"confirmed".equals(donHang.getTrangThaiDonHang()))
-            throw new IllegalArgumentException("Đơn hàng phải ở trạng thái 'Chờ xác nhận' hoặc 'Đã lên đơn' mới cập nhật được serial");
+        if (!"pending".equals(donHang.getTrangThaiDonHang())
+                && !"confirmed".equals(donHang.getTrangThaiDonHang())
+                && !"processing".equals(donHang.getTrangThaiDonHang()))
+            throw new IllegalArgumentException("Đơn hàng phải ở trạng thái 'Chờ xác nhận', 'Đã lên đơn' hoặc 'Đang đóng gói' mới cập nhật được serial");
 
         for (XacNhanDonHangLineRequest line : request.getLines()) {
             ChiTietDonHang item = chiTietDonHangRepository.findById(line.getChiTietDonHangId())
@@ -564,7 +613,9 @@ public class DonHangService {
         if (request.getNhanVienId() != null) {
             nhanVienRepository.findById(request.getNhanVienId()).ifPresent(donHang::setNhanVien);
         }
-        donHang.setTrangThaiDonHang("confirmed");
+        if ("pending".equals(donHang.getTrangThaiDonHang())) {
+            donHang.setTrangThaiDonHang("confirmed");
+        }
         donHangRepository.save(donHang);
         sseService.notifyOrderUpdate(donHangId);
     }

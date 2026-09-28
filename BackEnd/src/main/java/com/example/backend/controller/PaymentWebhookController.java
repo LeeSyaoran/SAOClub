@@ -60,21 +60,11 @@ public class PaymentWebhookController {
                 ));
             }
 
-            // Cập nhật trạng thái thanh toán & trạng thái đơn hàng
+            // Cập nhật trạng thái thanh toán (giữ nguyên trangThaiDonHang = pending để vào bước "Chờ xử lý" trừ khi truyền rõ trangThaiDonHang)
             donHang.setTrangThaiThanhToan("paid");
-            String phuongThuc = donHang.getPhuongThucThanhToan();
-            boolean isQr = phuongThuc != null && (
-                    phuongThuc.equalsIgnoreCase("qr") ||
-                    phuongThuc.equalsIgnoreCase("bank_transfer") ||
-                    phuongThuc.equalsIgnoreCase("chuyen_khoan") ||
-                    phuongThuc.equalsIgnoreCase("vietqr")
-            );
             if (body.containsKey("trangThaiDonHang") && body.get("trangThaiDonHang") != null) {
                 donHang.setTrangThaiDonHang((String) body.get("trangThaiDonHang"));
-            } else if (!isQr && "pending".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
-                donHang.setTrangThaiDonHang("confirmed");
             }
-            // Đối với đơn hàng QR, sau khi thanh toán sẽ chuyển vào bước 3 "Chờ xử lý" (trangThaiDonHang = pending, trangThaiThanhToan = paid)
             donHangRepository.save(donHang);
 
             // Tạo bản ghi thanh toán

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { t } from "../../i18n/index.js";
 import { showToast } from "../../stores/toast.js";
 import { ThuocTinhService } from "../../services/ThuocTinhService.js";
@@ -129,12 +129,67 @@ const loadAttributes = async () => {
 };
 onMounted(loadAttributes);
 
+// ── Scope Filter (Tất cả / Sản phẩm / Biến thể) ───────────────────────────
+const scopeFilter = ref("all"); // 'all' | 'san_pham' | 'bien_the'
+const productAttrsCount = computed(() => (attributes.value || []).filter(a => (a.phamVi || 'san_pham') === 'san_pham').length);
+const variantAttrsCount = computed(() => (attributes.value || []).filter(a => a.phamVi === 'bien_the').length);
+
+const filteredAttributes = computed(() => {
+  if (scopeFilter.value === 'san_pham') {
+    return (attributes.value || []).filter(a => (a.phamVi || 'san_pham') === 'san_pham');
+  }
+  if (scopeFilter.value === 'bien_the') {
+    return (attributes.value || []).filter(a => a.phamVi === 'bien_the');
+  }
+  return attributes.value || [];
+});
+
 // ── Add/Edit Attribute Modal ────────────────────────────────────────────────
 const showAddModal = ref(false);
 const editingAttr = ref(null);
-const attrForm = ref({ tenTruong: "", tenHienThi: "", loaiDuLieu: "select", batBuoc: true, thuTuHienThi: 0 });
+const attrForm = ref({ tenTruong: "", tenHienThi: "", loaiDuLieu: "select", phamVi: "san_pham", batBuoc: true, thuTuHienThi: 0 });
 const attrError = ref("");
 const savingAttr = ref(false);
+
+const taoMaDinhDanh = (str) => {
+  if (!str) return "";
+  let s = str.trim().toLowerCase();
+  // Bỏ dấu tiếng Việt
+  s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // Xử lý đ, Đ
+  s = s.replace(/đ/g, "d").replace(/Đ/g, "d");
+  // Thay thế ký tự không phải chữ/số bằng dấu gạch dưới
+  s = s.replace(/[^a-z0-9_]/g, "_");
+  // Gộp nhiều dấu gạch dưới liên tiếp thành một
+  s = s.replace(/_+/g, "_");
+  // Cắt gạch dưới ở đầu và cuối
+  s = s.replace(/^_+|_+$/g, "");
+  return s;
+};
+
+const taoMaDinhDanhDuyNhat = (str) => {
+  const base = taoMaDinhDanh(str);
+  if (!base) return "";
+  const existingKeys = new Set(
+    (attributes.value || []).map((a) => String(a.tenTruong || "").toLowerCase())
+  );
+  if (!existingKeys.has(base)) return base;
+  let idx = 2;
+  while (existingKeys.has(`${base}_${idx}`)) {
+    idx++;
+  }
+  return `${base}_${idx}`;
+};
+
+// Tự động cập nhật mã định danh theo tên hiển thị khi thêm mới
+watch(
+  () => attrForm.value.tenHienThi,
+  (newVal) => {
+    if (!editingAttr.value) {
+      attrForm.value.tenTruong = taoMaDinhDanhDuyNhat(newVal);
+    }
+  }
+);
 
 const openAddModal = () => {
   editingAttr.value = null;
@@ -142,6 +197,7 @@ const openAddModal = () => {
     tenTruong: "",
     tenHienThi: "",
     loaiDuLieu: "select",
+    phamVi: scopeFilter.value === 'all' ? 'san_pham' : scopeFilter.value,
     batBuoc: false,
     thuTuHienThi: attributes.value.length + 1,
   };
@@ -155,6 +211,7 @@ const openEditModal = (attr) => {
     tenTruong: attr.tenTruong,
     tenHienThi: attr.tenHienThi,
     loaiDuLieu: attr.loaiDuLieu,
+    phamVi: attr.phamVi || "san_pham",
     batBuoc: attr.batBuoc,
     thuTuHienThi: attr.thuTuHienThi,
   };
@@ -164,18 +221,12 @@ const openEditModal = (attr) => {
 
 const saveAttribute = async () => {
   attrError.value = "";
-  if (!attrForm.value.tenTruong.trim()) {
-    attrError.value = "Tên trường không được để trống";
-    return;
-  }
   if (!attrForm.value.tenHienThi.trim()) {
     attrError.value = "Tên hiển thị không được để trống";
     return;
   }
-  // Validate tenTruong: lowercase, only a-z, 0-9, _
-  if (!/^[a-z0-9_]+$/.test(attrForm.value.tenTruong)) {
-    attrError.value = "Tên trường chỉ chứa chữ thường không dấu, số và gạch dưới (VD: ban_phim, cong_ket_noi)";
-    return;
+  if (!editingAttr.value) {
+    attrForm.value.tenTruong = taoMaDinhDanhDuyNhat(attrForm.value.tenHienThi) || `thuoc_tinh_${Date.now()}`;
   }
 
   savingAttr.value = true;
@@ -331,6 +382,34 @@ const deleteValue = async (attr, giaTri) => {
         <div class="tt-tab-toolbar__left">
           <span class="tt-tab-toolbar__title">Danh sách thuộc tính</span>
           <span class="tt-tab-toolbar__badge">{{ attributes.length }} trường</span>
+
+          <!-- Scope Filter Segmented Pills -->
+          <div class="tt-scope-filters">
+            <button
+              type="button"
+              class="tt-scope-btn"
+              :class="{ active: scopeFilter === 'all' }"
+              @click="scopeFilter = 'all'"
+            >
+              Tất cả ({{ attributes.length }})
+            </button>
+            <button
+              type="button"
+              class="tt-scope-btn tt-scope-btn--sp"
+              :class="{ active: scopeFilter === 'san_pham' }"
+              @click="scopeFilter = 'san_pham'"
+            >
+              📦 Sản phẩm ({{ productAttrsCount }})
+            </button>
+            <button
+              type="button"
+              class="tt-scope-btn tt-scope-btn--bt"
+              :class="{ active: scopeFilter === 'bien_the' }"
+              @click="scopeFilter = 'bien_the'"
+            >
+              🧩 Biến thể ({{ variantAttrsCount }})
+            </button>
+          </div>
         </div>
         <button class="tt-btn-create" @click="openAddModal">
           <Plus :size="16" />
@@ -340,8 +419,11 @@ const deleteValue = async (attr, giaTri) => {
 
       <!-- Attributes List -->
       <div v-if="!loading && attributes.length > 0" class="tt-cards-stack">
+        <div v-if="filteredAttributes.length === 0" class="tt-empty-filtered">
+          Không tìm thấy thuộc tính nào thuộc phạm vi này.
+        </div>
         <div
-          v-for="attr in attributes"
+          v-for="attr in filteredAttributes"
           :key="attr.thuocTinhId"
           class="tt-item-card"
           :class="{ 'is-expanded': expandedAttrs[attr.thuocTinhId] }"
@@ -361,6 +443,13 @@ const deleteValue = async (attr, giaTri) => {
               <div class="tt-item-meta">
                 <div class="tt-item-title-row">
                   <span class="tt-item-name">{{ attr.tenHienThi }}</span>
+                  <!-- Scope Badge -->
+                  <span
+                    class="tt-pill-scope"
+                    :class="attr.phamVi === 'bien_the' ? 'tt-pill-scope--bt' : 'tt-pill-scope--sp'"
+                  >
+                    {{ attr.phamVi === 'bien_the' ? '🧩 Thuộc tính Biến thể' : '📦 Thuộc tính Sản phẩm' }}
+                  </span>
                   <span class="tt-pill-type" :class="attr.loaiDuLieu">
                     {{ attr.loaiDuLieu === 'select' ? 'Danh sách chọn' : 'Văn bản tự do' }}
                   </span>
@@ -370,9 +459,6 @@ const deleteValue = async (attr, giaTri) => {
                   <span v-if="attr.loaiDuLieu === 'select'" class="tt-pill-count">
                     {{ attr.giaTriList?.length || 0 }} giá trị
                   </span>
-                </div>
-                <div class="tt-item-key">
-                  Key định danh: <code>{{ attr.tenTruong }}</code>
                 </div>
               </div>
             </div>
@@ -504,19 +590,52 @@ const deleteValue = async (attr, giaTri) => {
               <span class="tt-form-hint">Tên sẽ hiển thị cho khách hàng và nhân viên xem.</span>
             </div>
 
-            <!-- Tên trường (Key) -->
+            <!-- Phạm vi áp dụng (Sản phẩm vs Biến thể) -->
             <div class="tt-form-group">
               <label class="tt-form-label">
-                Mã định danh (Key CSDL) <span class="text-danger">*</span>
+                Phạm vi áp dụng <span class="text-danger">*</span>
               </label>
-              <input
-                v-model="attrForm.tenTruong"
-                type="text"
-                class="tt-form-input"
-                placeholder="VD: ban_phim, cong_ket_noi"
-                :disabled="!!editingAttr"
-              />
-              <span class="tt-form-hint">Viết thường không dấu, dùng gạch dưới để phân cách (VD: <code>ban_phim</code>).</span>
+              <div class="tt-scope-grid">
+                <label
+                  class="tt-scope-card"
+                  :class="{ selected: attrForm.phamVi === 'san_pham' }"
+                >
+                  <input
+                    type="radio"
+                    v-model="attrForm.phamVi"
+                    value="san_pham"
+                    class="d-none"
+                  />
+                  <div class="tt-scope-card-header">
+                    <span class="tt-scope-icon-box sp">📦</span>
+                    <div>
+                      <strong>Thuộc tính Sản phẩm</strong>
+                      <span class="tt-scope-tag sp">Thông số chung</span>
+                    </div>
+                  </div>
+                  <p>Là thông số kỹ thuật chung của dòng sản phẩm (VD: Màn hình, Pin, Hệ điều hành, Trọng lượng, Chất liệu vỏ...). Các biến thể sẽ tự động có và kế thừa các thông tin chung này.</p>
+                </label>
+
+                <label
+                  class="tt-scope-card"
+                  :class="{ 'selected-bt': attrForm.phamVi === 'bien_the' }"
+                >
+                  <input
+                    type="radio"
+                    v-model="attrForm.phamVi"
+                    value="bien_the"
+                    class="d-none"
+                  />
+                  <div class="tt-scope-card-header">
+                    <span class="tt-scope-icon-box bt">🧩</span>
+                    <div>
+                      <strong>Thuộc tính Biến thể</strong>
+                      <span class="tt-scope-tag bt">Đặc trưng phân loại riêng</span>
+                    </div>
+                  </div>
+                  <p>Là thông số tạo nên các phiên bản khác nhau (VD: Màu sắc, CPU, RAM, Ổ cứng, Card đồ họa, Đèn bàn phím...). Mỗi biến thể/SKU sẽ có giá trị riêng biệt.</p>
+                </label>
+              </div>
             </div>
 
             <!-- Loại dữ liệu Selector Cards -->
@@ -1220,9 +1339,10 @@ const deleteValue = async (attr, giaTri) => {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(8px);
   animation: ttModalFade 0.2s ease-out;
+  overflow: hidden;
 }
 
 @keyframes ttModalFade {
@@ -1232,7 +1352,10 @@ const deleteValue = async (attr, giaTri) => {
 
 .tt-modal-card {
   width: 100%;
-  max-width: 520px;
+  max-width: 550px;
+  max-height: min(90vh, 720px);
+  display: flex;
+  flex-direction: column;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 1.1rem;
@@ -1247,11 +1370,13 @@ const deleteValue = async (attr, giaTri) => {
 }
 
 .tt-modal-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.4rem;
   border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
 }
 
 .tt-modal-title-box {
@@ -1298,10 +1423,59 @@ const deleteValue = async (attr, giaTri) => {
 }
 
 .tt-modal-body {
-  padding: 1.5rem;
+  padding: 1.2rem 1.4rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.tt-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.tt-modal-body::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+.tt-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.tt-input-readonly-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tt-input-readonly {
+  background-color: var(--bg-card-inset) !important;
+  color: var(--text-muted) !important;
+  cursor: default;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.86rem;
+  padding-right: 7.5rem;
+  user-select: all;
+}
+
+.tt-input-readonly:focus {
+  border-color: var(--border-color);
+  box-shadow: none;
+}
+
+.tt-auto-badge {
+  position: absolute;
+  right: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+  pointer-events: none;
 }
 
 .tt-form-group {
@@ -1347,7 +1521,7 @@ const deleteValue = async (attr, giaTri) => {
 }
 
 .tt-type-card {
-  padding: 0.9rem;
+  padding: 0.75rem 0.85rem;
   border: 1.5px solid var(--border-color);
   border-radius: 0.75rem;
   background: var(--bg-card-inset);
@@ -1379,8 +1553,9 @@ const deleteValue = async (attr, giaTri) => {
 
 .tt-type-card p {
   margin: 0;
-  font-size: 0.74rem;
+  font-size: 0.73rem;
   color: var(--text-muted);
+  line-height: 1.35;
 }
 
 /* Toggle Switch row */
@@ -1389,7 +1564,7 @@ const deleteValue = async (attr, giaTri) => {
   align-items: flex-start;
   gap: 0.75rem;
   cursor: pointer;
-  padding: 0.75rem 0.9rem;
+  padding: 0.65rem 0.85rem;
   background: var(--bg-card-inset);
   border: 1px solid var(--border-color);
   border-radius: 0.65rem;
@@ -1428,11 +1603,13 @@ const deleteValue = async (attr, giaTri) => {
 }
 
 .tt-modal-footer {
+  flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  padding: 1.15rem 1.5rem;
+  padding: 0.85rem 1.4rem;
   border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
 }
 
 .tt-btn-secondary {
@@ -1475,5 +1652,154 @@ const deleteValue = async (attr, giaTri) => {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* ── Scope Filter Segmented Pills ── */
+.tt-scope-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-card-inset);
+  padding: 0.25rem 0.35rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border-color);
+  margin-left: 0.85rem;
+}
+
+.tt-scope-btn {
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.45rem;
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tt-scope-btn:hover {
+  color: var(--text-heading);
+  background: var(--bg-hover);
+}
+
+.tt-scope-btn.active {
+  background: var(--bg-card);
+  color: var(--text-heading);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.tt-scope-btn--sp.active {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.tt-scope-btn--bt.active {
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
+}
+
+/* ── Scope Badge on Card ── */
+.tt-pill-scope {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tt-pill-scope--sp {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.tt-pill-scope--bt {
+  background: rgba(124, 58, 237, 0.1);
+  color: #7c3aed;
+  border: 1px solid rgba(124, 58, 237, 0.25);
+}
+
+/* ── Modal Scope Selector Cards ── */
+.tt-scope-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.tt-scope-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0.7rem 0.85rem;
+  border: 1.5px solid var(--border-color);
+  border-radius: 0.75rem;
+  background: var(--bg-card-inset);
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.tt-scope-card:hover {
+  border-color: var(--border-color-strong);
+}
+
+.tt-scope-card.selected {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.tt-scope-card.selected-bt {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.tt-scope-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.tt-scope-icon-box {
+  width: 26px;
+  height: 26px;
+  border-radius: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.tt-scope-icon-box.sp {
+  background: rgba(37, 99, 235, 0.15);
+}
+
+.tt-scope-icon-box.bt {
+  background: rgba(124, 58, 237, 0.15);
+}
+
+.tt-scope-tag {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.tt-scope-card p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.tt-empty-filtered {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  background: var(--bg-card-inset);
+  border: 1px dashed var(--border-color);
+  border-radius: 0.75rem;
 }
 </style>

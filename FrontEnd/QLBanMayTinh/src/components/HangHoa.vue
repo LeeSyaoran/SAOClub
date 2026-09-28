@@ -268,7 +268,6 @@
                   <dl class="hh-ct-grid">
                     <div class="hh-ct-item"><dt>Mã sản phẩm</dt><dd>{{ chiTiet.maSanPham }}</dd></div>
                     <div class="hh-ct-item"><dt>Số phiên bản</dt><dd>{{ chiTiet?.variants?.length ?? 0 }}</dd></div>
-                    <div class="hh-ct-item"><dt>Khách đặt</dt><dd>{{ chiTiet.khachDat }}</dd></div>
                     <div class="hh-ct-item"><dt>Giá bán</dt><dd class="hh-ct-item__manh">{{ chiTiet.khoangGia ? chiTiet.khoangGia + ' ₫' : 'Liên hệ' }}</dd></div>
                     <div class="hh-ct-item"><dt>Thương hiệu</dt><dd>{{ chiTiet.tenThuongHieu || 'Chưa có' }}</dd></div>
                     <div class="hh-ct-item"><dt>Nhà cung cấp</dt><dd>{{ chiTiet.tenNhaCungCap || 'Chưa có' }}</dd></div>
@@ -562,22 +561,18 @@
                         <img :src="url" alt="" @error="onImgError" />
                         <span v-if="i === 0" class="hh-gallery__badge">Ảnh chính</span>
                         <div class="hh-gallery__actions">
-                          <button v-if="i !== 0" type="button" class="hh-icon-btn hh-icon-btn--sm" title="Đặt làm ảnh chính" @click="datLamAnhChinh(i)">
-                            <Star :size="14" />
-                          </button>
                           <button type="button" class="hh-icon-btn hh-icon-btn--sm" title="Xóa ảnh" @click="xoaAnhTaiViTri(i)">
                             <Trash2 :size="14" />
                           </button>
                         </div>
                       </div>
-                      <label class="hh-gallery__add">
-                        <input type="file" accept="image/*" multiple class="hh-hidden" @change="chonAnhSanPham" />
+                      <label v-if="form.hinhAnhList.length === 0" class="hh-gallery__add">
+                        <input type="file" accept="image/*" class="hh-hidden" @change="chonAnhSanPham" />
                         <i class="fa" :class="dangTaiAnh ? 'fa-spinner fa-spin' : 'fa-plus'"></i>
                         <span>{{ dangTaiAnh ? 'Đang tải…' : 'Thêm ảnh' }}</span>
                       </label>
                     </div>
-                    <input class="hh-mt6" placeholder="Hoặc dán đường dẫn ảnh rồi nhấn Enter" @keydown.enter.prevent="themAnhTuUrl" />
-                    <em class="hh-hint">{{ ghiChuAnh }}</em>
+                    <em class="hh-hint">Chỉ upload 1 ảnh đại diện. Xóa ảnh hiện tại để thay bằng ảnh khác.</em>
                   </div>
                 </div>
 
@@ -716,6 +711,23 @@
                       <input v-model="form.giaBan" type="number" min="0" step="1000" />
                       <em v-if="errors.giaBan" class="hh-err">{{ errors.giaBan }}</em>
                     </label>
+
+                    <!-- Thuộc tính bổ sung của Biến thể (phamVi === 'bien_the') -->
+                    <label v-for="attr in variantCustomAttrs" :key="attr.thuocTinhId" class="hh-field">
+                      <span>{{ attr.tenHienThi }} <b v-if="attr.batBuoc">*</b></span>
+                      <select
+                        v-if="attr.loaiDuLieu === 'select' && attr.giaTriList && attr.giaTriList.length > 0"
+                        v-model="formThuocTinhBienThe[attr.tenTruong]"
+                      >
+                        <option value="">-- Chọn {{ attr.tenHienThi }} --</option>
+                        <option v-for="gv in attr.giaTriList" :key="gv.giaTriId" :value="gv.giaTri">{{ gv.giaTri }}</option>
+                      </select>
+                      <input
+                        v-else
+                        v-model.trim="formThuocTinhBienThe[attr.tenTruong]"
+                        :placeholder="'Nhập ' + attr.tenHienThi"
+                      />
+                    </label>
                   </div>
                 </fieldset>
                 <p v-else class="hh-note"><MousePointer2 :size="14" /> Chọn một phiên bản trong danh sách bên trái để sửa.</p>
@@ -743,14 +755,18 @@
                           <th><span class="d-inline-flex align-items-center gap-1.5"><MemoryStick :size="12" /> RAM</span></th>
                           <th><span class="d-inline-flex align-items-center gap-1.5"><HardDrive :size="12" /> Ổ cứng</span></th>
                           <th><span class="d-inline-flex align-items-center gap-1.5"><Monitor :size="12" /> GPU</span></th>
+                          <!-- Cột thuộc tính động của Biến thể -->
+                          <th v-for="vAttr in variantCustomAttrs" :key="vAttr.thuocTinhId">
+                            <span class="d-inline-flex align-items-center gap-1.5">{{ vAttr.tenHienThi }}</span>
+                          </th>
                           <th></th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr v-for="(row, i) in bienTheRows" :key="row._key">
                           <td class="hh-muted hh-rows__stt">{{ i + 1 }}</td>
-                          <td><input v-model.trim="row.maSku" class="hh-cell hh-cell--sku" placeholder="Tự sinh nếu trống" /></td>
-                          <td><input v-model.trim="row.barcode" class="hh-cell hh-cell--ma" placeholder="8–13 số" /></td>
+                          <td><input :value="row.maSku" :title="row.maSku" class="hh-cell hh-cell--sku" placeholder="Tự sinh khi nhập đủ thông tin" disabled style="opacity:0.75;cursor:not-allowed;background:var(--bg-input-disabled,#f5f5f5)" /></td>
+                          <td><input :value="row.barcode" :title="row.barcode" class="hh-cell hh-cell--ma" placeholder="Tự sinh" disabled style="opacity:0.75;cursor:not-allowed;background:var(--bg-input-disabled,#f5f5f5)" /></td>
                           <td>
                             <select v-model="row.mauSac" class="hh-cell hh-cell--sel">
                               <option value="">— Không —</option>
@@ -781,6 +797,23 @@
                               <option v-for="g in danhSachGpu" :key="idOf(g,'gpuId')" :value="idOf(g,'gpuId')">{{ g.tenGpu }}</option>
                             </select>
                           </td>
+                          <!-- Thuộc tính động của biến thể -->
+                          <td v-for="vAttr in variantCustomAttrs" :key="vAttr.thuocTinhId">
+                            <select
+                              v-if="vAttr.loaiDuLieu === 'select' && vAttr.giaTriList && vAttr.giaTriList.length > 0"
+                              v-model="row[vAttr.tenTruong]"
+                              class="hh-cell hh-cell--sel"
+                            >
+                              <option value="">— Chọn —</option>
+                              <option v-for="gv in vAttr.giaTriList" :key="gv.giaTriId" :value="gv.giaTri">{{ gv.giaTri }}</option>
+                            </select>
+                            <input
+                              v-else
+                              v-model.trim="row[vAttr.tenTruong]"
+                              class="hh-cell"
+                              :placeholder="vAttr.tenHienThi"
+                            />
+                          </td>
                           <td class="ta-c">
                             <button type="button" class="hh-icon-btn" title="Xóa dòng này" @click="xoaDong(row._key)">
                               <X :size="14" />
@@ -788,7 +821,7 @@
                           </td>
                         </tr>
                         <tr v-if="!bienTheRows.length">
-                          <td colspan="9" class="hh-rows__empty">Chưa có phiên bản nào — bấm "+ Thêm dòng" để tạo.</td>
+                          <td :colspan="9 + variantCustomAttrs.length" class="hh-rows__empty">Chưa có phiên bản nào — bấm "+ Thêm dòng" để tạo.</td>
                         </tr>
                       </tbody>
                     </table>
@@ -798,15 +831,7 @@
                     <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" @click="themDong">
                       <Plus :size="14" /> Thêm dòng
                     </button>
-                    <label class="d-inline-flex align-items-center gap-2 m-0" style="font-size: 13px;">
-                      <span class="hh-muted">Tiền tố mã SKU:</span>
-                      <input
-                        v-model.trim="form.skuPrefix"
-                        placeholder="Để trống lấy theo mã sản phẩm"
-                        class="hh-cell hh-cell--sku"
-                        style="width: 220px; height: 32px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px;"
-                      />
-                    </label>
+                    <span class="hh-muted" style="font-size:12px"><Info :size="13" style="vertical-align:-2px" /> Mã SKU tự sinh theo tên sản phẩm & cấu hình; mã vạch tự sinh ngẫu nhiên không trùng.</span>
                   </div>
 
                   <p class="hh-note" style="margin-top: 12px">
@@ -943,8 +968,8 @@ import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } 
 import { useAutoHideOnScroll } from '@/composables/useAutoHideOnScroll.js'
 import SearchSelect from '@/components/common/SearchSelect.vue'
 import TagComboInput from '@/components/common/TagComboInput.vue'
-import { get, put } from '@/services/api.js'
-import { refreshProducts as lamMoiKhoDuLieuChung } from '@/stores/products.js'
+import { get, put, authHeaders } from '@/services/api.js'
+import { ProductsStore, refreshProducts as lamMoiKhoDuLieuChung } from '@/stores/products.js'
 import { refreshInventory as lamMoiTonKhoDuLieuChung } from '@/stores/inventory.js'
 import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '@/services/DmService.js'
 import { ThuocTinhService } from '@/services/ThuocTinhService.js'
@@ -980,7 +1005,7 @@ const apiSuaSanPham = (id, payload) => goiSua(sanPhamApi, id, payload, 'sanPhamS
 const apiTaoBienThe = (payload) => goiTao(bienTheApi, payload, 'bienTheSanPhamService')
 
 // Tải ảnh sản phẩm lên server
-const UPLOAD_URL = '/api/upload'
+const UPLOAD_URL = '/api/upload/image'
 const THU_MUC_ANH = '/images/'
 
 // Trạng thái kinh doanh sản phẩm
@@ -1031,10 +1056,24 @@ const allThuocTinhList = ref([])
 const formThuocTinh = reactive({})
 const chiTietThuocTinh = ref({})
 
-const dynamicCustomAttrs = computed(() => {
-  const standardFields = new Set(['mau_sac', 'man_hinh', 'pin', 'he_dieu_hanh', 'trong_luong'])
-  return (allThuocTinhList.value || []).filter(tt => !standardFields.has(tt.tenTruong))
+const STANDARD_ATTR_FIELDS = new Set(['mau_sac', 'man_hinh', 'pin', 'he_dieu_hanh', 'trong_luong'])
+
+// Thuộc tính tùy chỉnh cấp Sản phẩm (phạm vi: san_pham)
+const productCustomAttrs = computed(() => {
+  return (allThuocTinhList.value || []).filter(
+    tt => (tt.phamVi || 'san_pham') === 'san_pham' && !STANDARD_ATTR_FIELDS.has(tt.tenTruong) && (tt.trangThai || 'active') === 'active'
+  )
 })
+
+// Thuộc tính tùy chỉnh cấp Biến thể (phạm vi: bien_the)
+const variantCustomAttrs = computed(() => {
+  return (allThuocTinhList.value || []).filter(
+    tt => tt.phamVi === 'bien_the' && !STANDARD_ATTR_FIELDS.has(tt.tenTruong) && (tt.trangThai || 'active') === 'active'
+  )
+})
+
+const dynamicCustomAttrs = productCustomAttrs
+const formThuocTinhBienThe = reactive({})
 
 const getAttrOptions = (attr) => {
   return (attr.giaTriList || []).map(g => ({ label: g.giaTri, value: g.giaTri }))
@@ -1426,10 +1465,325 @@ const resetFilters = () => {
   page.value = 1
 }
 
+/* ─── Sinh mã sản phẩm tự động (SP0001, SP0002, ...) ─── */
+const sinhMaSanPham = () => {
+  const soTuMa = danhSachSanPham.value
+    .map((p) => Number(String(p.maSanPham || '').replace(/\D/g, '')))
+    .filter((n) => !Number.isNaN(n) && n > 0)
+  const soTuId = danhSachSanPham.value
+    .map((p) => Number(idOf(p, 'sanPhamId')))
+    .filter((n) => !Number.isNaN(n) && n > 0)
+  const soTuStore = (ProductsStore.items || [])
+    .map((p) => Number(String(p.maSanPham || '').replace(/\D/g, '')))
+    .filter((n) => !Number.isNaN(n) && n > 0)
+  const max = Math.max(0, ...soTuMa, ...soTuId, ...soTuStore)
+  return 'SP' + String(max + 1).padStart(4, '0')
+}
+
+/* ─── Sinh SKU tự động theo quy tắc mẫu (VD: ACER-NV15-I5-8G-BLK, MSI-STL15-RTX4050-SLV) ─── */
+const MAP_THUONG_HIEU_SKU = {
+  dell: 'DELL',
+  asus: 'ASUS',
+  lenovo: 'LENO',
+  hp: 'HP',
+  msi: 'MSI',
+  acer: 'ACER',
+  apple: 'APPL',
+  macbook: 'MAC',
+  gigabyte: 'GIGA',
+  lg: 'LG',
+  samsung: 'SAMS',
+  microsoft: 'MSFT',
+  huawei: 'HUAW',
+  razer: 'RAZR',
+  logitech: 'LOGI'
+}
+
+const MAP_DONG_MAY_SKU = {
+  stealth: 'STL',
+  pavilion: 'PAV',
+  envy: 'ENVY',
+  omen: 'OMEN',
+  victus: 'VICT',
+  spectre: 'SPEC',
+  vivobook: 'VIVO',
+  zenbook: 'ZEN',
+  tuf: 'TUF',
+  rog: 'ROG',
+  strix: 'STRX',
+  zephyrus: 'ZEPH',
+  inspiron: 'INSP',
+  latitude: 'LAT',
+  vostro: 'VOST',
+  alienware: 'ALW',
+  xps: 'XPS',
+  ideapad: 'IP',
+  thinkpad: 'TP',
+  thinkbook: 'TB',
+  legion: 'LEGI',
+  yoga: 'YOGA',
+  loq: 'LOQ',
+  aspire: 'ASP',
+  nitro: 'N',
+  swift: 'SWF',
+  predator: 'PRED',
+  katana: 'KTN',
+  cyborg: 'CYB',
+  prestige: 'PRST',
+  modern: 'MDN',
+  raider: 'RDR',
+  titan: 'TTN',
+  macbook: 'MB'
+}
+
+const MAP_MAU_SKU = [
+  ['bach kim', 'PLT'],
+  ['platinum', 'PLT'],
+  ['xanh duong', 'BLU'],
+  ['xanh la', 'GRN'],
+  ['xanh luc', 'GRN'],
+  ['do', 'RED'],
+  ['den', 'BLK'],
+  ['bac', 'SLV'],
+  ['trang', 'WHT'],
+  ['xam', 'GRY'],
+  ['vang', 'GLD'],
+  ['hong', 'PNK'],
+  ['tim', 'PUR'],
+  ['cam', 'ORG'],
+  ['nau', 'BRN'],
+  ['black', 'BLK'],
+  ['silver', 'SLV'],
+  ['white', 'WHT'],
+  ['grey', 'GRY'],
+  ['gray', 'GRY'],
+  ['blue', 'BLU'],
+  ['red', 'RED'],
+  ['gold', 'GLD'],
+  ['pink', 'PNK'],
+  ['green', 'GRN']
+]
+
+const taoTienToSanPham = (tenSanPham, thuongHieuId) => {
+  const tenClean = khongDau(tenSanPham || '').trim()
+  if (!tenClean) return ''
+
+  const words = tenClean.toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean)
+  if (!words.length) return ''
+
+  // Xác định mã thương hiệu từ thuongHieuId hoặc từ chữ đầu của tên sản phẩm
+  const thObj = (danhSachThuongHieu.value || []).find(
+    (t) => String(idOf(t, 'thuongHieuId')) === String(thuongHieuId)
+  )
+  const tenThClean = khongDau(thObj?.tenThuongHieu || '').trim()
+  const firstWordLower = words[0].toLowerCase()
+
+  let brandCode = ''
+  if (tenThClean) {
+    brandCode = MAP_THUONG_HIEU_SKU[tenThClean] || vietTat(tenThClean, 4)
+  } else if (MAP_THUONG_HIEU_SKU[firstWordLower]) {
+    brandCode = MAP_THUONG_HIEU_SKU[firstWordLower]
+  } else if (words.length >= 2) {
+    brandCode = words[0].slice(0, 4)
+  }
+
+  // Bỏ từ đầu nếu trùng tên thương hiệu
+  let rest = [...words]
+  if (
+    rest.length > 1 &&
+    ((tenThClean && firstWordLower === tenThClean.split(/\s+/)[0]) ||
+      MAP_THUONG_HIEU_SKU[firstWordLower] ||
+      rest[0].slice(0, 4) === brandCode)
+  ) {
+    rest.shift()
+  }
+
+  if (!rest.length) return brandCode || words[0].slice(0, 6)
+
+  // Tìm mã dòng máy (model code)
+  let modelCode = ''
+  const w0Lower = rest[0].toLowerCase()
+
+  // Trường hợp có mã model chuyên biệt kiểu X1504VA -> X1504, A515-58 -> A515, G614 -> G614
+  const alphaNumModel = rest.find((w, idx) => idx > 0 && /^[A-Z]\d{3,4}[A-Z0-9]*$/.test(w))
+  // Trường hợp mã model 4 chữ số cuối kiểu Inspiron 15 3520 -> 3520 (không phải năm 2020-2029)
+  const fourDigitModel = rest.find((w, idx) => idx > 0 && /^\d{4}$/.test(w) && !/^202\d$/.test(w))
+
+  if (alphaNumModel) {
+    const m = alphaNumModel.match(/^[A-Z]\d{3,4}/)
+    modelCode = m ? m[0] : alphaNumModel.slice(0, 5)
+  } else if (fourDigitModel && w0Lower !== 'xps') {
+    modelCode = fourDigitModel
+  } else if (rest.length >= 3 && (w0Lower === 'nitro' || w0Lower === 'ideapad' || w0Lower === 'legion' || w0Lower === 'thinkpad')) {
+    // VD: Nitro V 15 -> NV15, IdeaPad 5 Pro -> IP5P
+    const p0 = MAP_DONG_MAY_SKU[w0Lower] || rest[0][0]
+    const p1 = rest[1].length <= 2 ? rest[1] : rest[1][0]
+    const p2 = /^\d+/.test(rest[2]) ? rest[2].match(/^\d+/)[0] : rest[2][0]
+    modelCode = `${p0}${p1}${p2}`
+  } else {
+    const baseSeries = MAP_DONG_MAY_SKU[w0Lower] || rest[0].slice(0, 4)
+    const numToken = rest.slice(1).find((w) => /^\d{1,2}[A-Z]?$/.test(w))
+    const digits = numToken ? (numToken.match(/^\d+/)?.[0] || '') : ''
+    modelCode = `${baseSeries}${digits}`
+  }
+
+  return [brandCode, modelCode].filter(Boolean).join('-')
+}
+
+const maCpuTuId = (cpuId) => {
+  if (!cpuId) return ''
+  const c = (danhSachCpu.value || []).find((x) => String(idOf(x, 'cpuId')) === String(cpuId))
+  const ten = c?.tenCpu || ''
+  if (!ten) return ''
+  const mCore = ten.match(/\b(i[3579])\b/i)
+  if (mCore) return mCore[1].toUpperCase()
+  const mRyzen = ten.match(/ryzen\s*([3579])/i)
+  if (mRyzen) return 'R' + mRyzen[1]
+  const mUltra = ten.match(/ultra\s*([579])/i)
+  if (mUltra) return 'U' + mUltra[1]
+  const mApple = ten.match(/\b(m[1234](?:\s*(?:pro|max|ultra))?)\b/i)
+  if (mApple) return mApple[1].replace(/\s+/g, '').toUpperCase()
+  return vietTat(ten.split(' ').pop(), 5)
+}
+
+const maRamTuId = (ramId) => {
+  if (!ramId) return ''
+  const r = (danhSachRam.value || []).find((x) => String(idOf(x, 'ramId')) === String(ramId))
+  const ten = r?.dungLuong || r?.tenRam || ''
+  if (!ten) return ''
+  const mGb = ten.match(/(\d+)\s*GB/i)
+  if (mGb) return `${mGb[1]}G`
+  return vietTat(ten, 4)
+}
+
+const maOCungTuId = (oCungId) => {
+  if (!oCungId) return ''
+  const o = (danhSachOCung.value || []).find((x) => String(idOf(x, 'oCungId')) === String(oCungId))
+  const ten = o ? tenOCung(o) : ''
+  if (!ten) return ''
+  const mTb = ten.match(/(\d+)\s*TB/i)
+  if (mTb) return `${mTb[1]}TB`
+  const mGb = ten.match(/(\d+)\s*GB/i)
+  if (mGb) return `${mGb[1]}G`
+  return vietTat(ten, 4)
+}
+
+const maGpuTuId = (gpuId) => {
+  if (!gpuId) return ''
+  const g = (danhSachGpu.value || []).find((x) => String(idOf(x, 'gpuId')) === String(gpuId))
+  const ten = g?.tenGpu || ''
+  if (!ten) return ''
+  const mRtx = ten.match(/((?:RTX|GTX|RX|MX)\s*\d+[A-Z]*)/i)
+  if (mRtx) return mRtx[1].replace(/\s+/g, '').toUpperCase()
+  const mRadeon = ten.match(/radeon\s*(\d+[a-z]*)/i)
+  if (mRadeon) return 'R' + mRadeon[1].toUpperCase()
+  if (/iris\s*xe/i.test(ten)) return 'IRIS'
+  if (/uhd/i.test(ten)) return 'UHD'
+  return vietTat(ten.replace(/^(nvidia|amd|intel|geforce|radeon)\s+/gi, ''), 6)
+}
+
+const maMauTuTen = (mauSac) => {
+  if (!mauSac || !String(mauSac).trim()) return ''
+  const norm = khongDau(mauSac).trim()
+  for (const [k, code] of MAP_MAU_SKU) {
+    if (norm === k || norm.includes(k)) return code
+  }
+  return vietTat(mauSac, 3)
+}
+
+const sinhSkuChoDong = (row) => {
+  if (!row) return ''
+  const prefix = taoTienToSanPham(form.value.tenSanPham, form.value.thuongHieuId)
+  const maCpu = maCpuTuId(row.cpuId)
+  const maRam = maRamTuId(row.ramId)
+  const maOCung = maOCungTuId(row.oCungId ?? row.ocungId)
+  const maGpu = maGpuTuId(row.gpuId)
+  const maMau = maMauTuTen(row.mauSac)
+
+  return [prefix, maCpu, maRam, maOCung, maGpu, maMau].filter(Boolean).join('-')
+}
+
+const skuKhongTrung = (goc, daDung) => {
+  if (!goc) return ''
+  let ma = goc
+  let i = 2
+  while (daDung.has(ma)) {
+    ma = `${goc}-${i}`
+    i++
+  }
+  daDung.add(ma)
+  return ma
+}
+
+const capNhatSkuCacDong = () => {
+  if (modalMode.value !== 'create' && modalMode.value !== 'variant') return
+  const skuDaDung = new Set(
+    (bienTheChuan.value || []).map((v) => v.maSku).filter((s) => s && s !== '—')
+  )
+  bienTheRows.value.forEach((row) => {
+    if (row.bienTheId) {
+      if (row.maSku) skuDaDung.add(row.maSku)
+      return
+    }
+    const base = sinhSkuChoDong(row)
+    row.maSku = base ? skuKhongTrung(base, skuDaDung) : ''
+  })
+}
+
+// Tự động cập nhật SKU khi tên sản phẩm, thương hiệu hoặc cấu hình dòng phiên bản thay đổi
+watch(
+  () => [
+    form.value.tenSanPham,
+    form.value.thuongHieuId,
+    ...bienTheRows.value.map(
+      (r) => `${r._key}|${r.mauSac || ''}|${r.cpuId || ''}|${r.ramId || ''}|${r.oCungId || ''}|${r.gpuId || ''}`
+    )
+  ],
+  () => {
+    capNhatSkuCacDong()
+  }
+)
+
+// Lấy tập barcode đã có trong hệ thống (để tránh trùng)
+const barcodeDaCoTrongHe = computed(() => {
+  const s = new Set()
+  for (const sp of danhSachSanPham.value) {
+    for (const v of (sp.variants || [])) {
+      if (v.barcode) s.add(v.barcode)
+    }
+  }
+  for (const v of (bienThe.value || [])) {
+    if (v.barcode) s.add(v.barcode)
+  }
+  for (const r of bienTheRows.value) {
+    if (r.barcode) s.add(r.barcode)
+  }
+  return s
+})
+
+const sinhBarcodeKhongTrung = () => sinhBarcode(barcodeDaCoTrongHe.value)
+
+const taoDongBienThe = () => {
+  const row = {
+    _key: Date.now() + Math.random(), bienTheId: null,
+    maSku: '', barcode: sinhBarcodeKhongTrung(),
+    mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
+    giaNhap: 0, giaBan: 0
+  }
+  variantCustomAttrs.value.forEach(attr => {
+    row[attr.tenTruong] = ''
+  })
+  row.maSku = sinhSkuChoDong(row)
+  return row
+}
+
 const openCreate = async () => {
   modalMode.value = 'create'
   tieuDeModal.value = 'Tạo sản phẩm mới'
   tab.value = 'info'
+  if (!danhSachSanPham.value.length) {
+    await fetchData().catch(() => {})
+  }
   await loadThuocTinh().catch(() => {})
   resetForm()
   showModal.value = true
@@ -1437,7 +1791,7 @@ const openCreate = async () => {
 
 const resetForm = () => {
   form.value = {
-    sanPhamId: null, maSanPham: '', tenSanPham: '',
+    sanPhamId: null, maSanPham: sinhMaSanPham(), tenSanPham: '',
     thuongHieuId: '', danhMucId: '', nhaCungCapId: '',
     loaiSanPham: 'LAPTOP', trangThaiSanPham: 'active',
     phanLoaiIds: [], phanLoaiTags: null, phanLoaiTen: null,
@@ -1448,8 +1802,12 @@ const resetForm = () => {
     giaNhap: 0, giaBan: 0, hinhAnhBienThe: null
   }
   Object.keys(formThuocTinh).forEach(k => delete formThuocTinh[k])
-  dynamicCustomAttrs.value.forEach(attr => {
+  productCustomAttrs.value.forEach(attr => {
     formThuocTinh[attr.tenTruong] = ''
+  })
+  Object.keys(formThuocTinhBienThe).forEach(k => delete formThuocTinhBienThe[k])
+  variantCustomAttrs.value.forEach(attr => {
+    formThuocTinhBienThe[attr.tenTruong] = ''
   })
   bienTheRows.value = [taoDongBienThe()]
   errors.value = {}
@@ -1457,12 +1815,6 @@ const resetForm = () => {
   moTaEl.value = null
   setTimeout(() => { if (moTaEl.value) moTaEl.value.innerHTML = '' }, 50)
 }
-
-const taoDongBienThe = () => ({
-  _key: Date.now() + Math.random(), bienTheId: null,
-  maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
-  giaNhap: 0, giaBan: 0
-})
 
 const moChiTiet = async (group) => {
   chiTiet.value = null
@@ -1477,10 +1829,19 @@ const moChiTiet = async (group) => {
     // Trích xuất thuộc tính động từ moTa hoặc trường dữ liệu chiTiet
     const saved = tríchXuatThuocTinhTuMoTa(chiTiet.value?.moTa)
     chiTietThuocTinh.value = { ...saved }
-    dynamicCustomAttrs.value.forEach(attr => {
+    productCustomAttrs.value.forEach(attr => {
       if (!chiTietThuocTinh.value[attr.tenTruong] && chiTiet.value?.[attr.tenTruong]) {
         chiTietThuocTinh.value[attr.tenTruong] = chiTiet.value[attr.tenTruong]
       }
+    })
+    // Trích xuất thuộc tính động của từng biến thể
+    ;(chiTiet.value?.variants || []).forEach(v => {
+      const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa)
+      variantCustomAttrs.value.forEach(attr => {
+        if (!v[attr.tenTruong] && vMeta[attr.tenTruong]) {
+          v[attr.tenTruong] = vMeta[attr.tenTruong]
+        }
+      })
     })
     // Load images
     anhSanPham.value = []
@@ -1537,9 +1898,9 @@ const suaSanPham = async (sp) => {
   const rawMoTa = data.moTa || ''
   const savedAttrs = tríchXuatThuocTinhTuMoTa(rawMoTa)
   form.value.moTa = loaiBoMetadataTuMoTa(rawMoTa)
-  // Fill formThuocTinh
+  // Fill formThuocTinh (Sản phẩm)
   Object.keys(formThuocTinh).forEach(k => delete formThuocTinh[k])
-  dynamicCustomAttrs.value.forEach(attr => {
+  productCustomAttrs.value.forEach(attr => {
     formThuocTinh[attr.tenTruong] = savedAttrs[attr.tenTruong] ?? data[attr.tenTruong] ?? ''
   })
   form.value.phanLoaiIds = data.phanLoaiIds || []
@@ -1550,25 +1911,31 @@ const suaSanPham = async (sp) => {
   form.value.trongLuongKg = data.trongLuongKg != null ? data.trongLuongKg : ''
 
   // Bien the — ưu tiên lấy trực tiếp ID từ backend response nếu có, fallback reverse lookup theo tên
-  bienTheRows.value = (data.variants || []).map(v => ({
-    bienTheId: v.bienTheId,
-    maSku: v.maSku,
-    barcode: v.barcode,
-    mauSac: v.mauSac,
-    cpuId: v.cpuId ?? idOf(v, 'cpuId') ?? (v.cpu ? cpuIdByName.value[v.cpu.trim()] : null),
-    ramId: v.ramId ?? idOf(v, 'ramId') ?? (v.ram ? ramIdByName.value[v.ram.trim()] : null),
-    oCungId: v.oCungId ?? v.ocungId ?? idOf(v, 'oCungId') ?? (v.oCung ? oCungIdByName.value[v.oCung.trim()] : null),
-    gpuId: v.gpuId ?? idOf(v, 'gpuId') ?? (v.gpu ? gpuIdByName.value[v.gpu.trim()] : null),
-    giaNhap: v.giaNhap,
-    giaBan: v.giaBan,
-    hinhAnhBienThe: v.hinhAnhBienThe,
-    _key: v.bienTheId || Date.now() + Math.random()
-  }))
+  bienTheRows.value = (data.variants || []).map(v => {
+    const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa)
+    const row = {
+      bienTheId: v.bienTheId,
+      maSku: v.maSku,
+      barcode: v.barcode,
+      mauSac: v.mauSac,
+      cpuId: v.cpuId ?? idOf(v, 'cpuId') ?? (v.cpu ? cpuIdByName.value[v.cpu.trim()] : null),
+      ramId: v.ramId ?? idOf(v, 'ramId') ?? (v.ram ? ramIdByName.value[v.ram.trim()] : null),
+      oCungId: v.oCungId ?? v.ocungId ?? idOf(v, 'oCungId') ?? (v.oCung ? oCungIdByName.value[v.oCung.trim()] : null),
+      gpuId: v.gpuId ?? idOf(v, 'gpuId') ?? (v.gpu ? gpuIdByName.value[v.gpu.trim()] : null),
+      giaNhap: v.giaNhap,
+      giaBan: v.giaBan,
+      hinhAnhBienThe: v.hinhAnhBienThe,
+      moTa: v.moTa,
+      _key: v.bienTheId || Date.now() + Math.random()
+    }
+    variantCustomAttrs.value.forEach(attr => {
+      row[attr.tenTruong] = vMeta[attr.tenTruong] ?? v[attr.tenTruong] ?? ''
+    })
+    return row
+  })
   banGocBienThe.value = JSON.parse(JSON.stringify(bienTheRows.value))
 
   if (bienTheRows.value.length > 0 && !form.value.bienTheId) {
-    // ponytail: chỉ mặc định chọn biến thể đầu khi form chưa có biến thể nào
-    // (tránh ghi đè khi user vừa chọn 1 biến thể trong modal chi tiết rồi bấm Chỉnh sửa)
     suaBienThe(bienTheRows.value[0])
   } else if (bienTheRows.value.length === 0) {
     form.value.bienTheId = null
@@ -1605,13 +1972,20 @@ const suaBienThe = (v) => {
   form.value.giaNhap = v.giaNhap || 0
   form.value.giaBan = v.giaBan || 0
   form.value.hinhAnhBienThe = v.hinhAnhBienThe || null
+
+  // Fill formThuocTinhBienThe
+  Object.keys(formThuocTinhBienThe).forEach(k => delete formThuocTinhBienThe[k])
+  const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa)
+  variantCustomAttrs.value.forEach(attr => {
+    formThuocTinhBienThe[attr.tenTruong] = vMeta[attr.tenTruong] ?? v[attr.tenTruong] ?? ''
+  })
 }
 
 const chonBienTheDeSua = (v) => {
   if (form.value.bienTheId) {
     const prevIdx = bienTheRows.value.findIndex(r => String(r.bienTheId) === String(form.value.bienTheId))
     if (prevIdx !== -1) {
-      bienTheRows.value[prevIdx] = {
+      const updatedRow = {
         ...bienTheRows.value[prevIdx],
         maSku: form.value.maSku,
         barcode: form.value.barcode,
@@ -1624,6 +1998,10 @@ const chonBienTheDeSua = (v) => {
         giaBan: form.value.giaBan,
         hinhAnhBienThe: form.value.hinhAnhBienThe
       }
+      variantCustomAttrs.value.forEach(attr => {
+        updatedRow[attr.tenTruong] = formThuocTinhBienThe[attr.tenTruong] || ''
+      })
+      bienTheRows.value[prevIdx] = updatedRow
     }
   }
   suaBienThe(v)
@@ -1667,22 +2045,25 @@ const saoChepSanPham = (sp) => {
   modalMode.value = 'create'
   tieuDeModal.value = 'Sao chép sản phẩm'
   tab.value = 'info'
+  const firstImg = sp.hinhAnhList?.[0] || sp.hinhAnhChinh
   form.value = {
-    sanPhamId: null, maSanPham: '', tenSanPham: sp.tenSanPham + ' (Copy)',
+    sanPhamId: null, maSanPham: sinhMaSanPham(), tenSanPham: sp.tenSanPham + ' (Copy)',
     thuongHieuId: idOf(sp, 'thuongHieuId'), danhMucId: idOf(sp, 'danhMucId'),
     nhaCungCapId: idOf(sp, 'nhaCungCapId'),
     loaiSanPham: sp.loaiSanPham || 'LAPTOP', trangThaiSanPham: 'active',
     phanLoaiIds: sp.phanLoaiIds || sp.phanLoai || [], phanLoaiTags: null, phanLoaiTen: null,
-    hinhAnhList: [...(sp.hinhAnhList || [])],
+    hinhAnhList: firstImg ? [firstImg] : [],
     moTa: sp.moTa || '', baoHanhThang: 12, kichThuocManHinh: '', pin: '', heDieuHanh: '', trongLuongKg: '', skuPrefix: '',
     bienTheId: null, maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
     giaNhap: 0, giaBan: 0, hinhAnhBienThe: null
   }
   bienTheRows.value = (sp.variants || []).map(v => ({
     ...v, _key: Date.now() + Math.random(), bienTheId: null,
+    barcode: sinhBarcodeKhongTrung(),
     cpuId: v.cpuId ?? idOf(v, 'cpuId'), ramId: v.ramId ?? idOf(v, 'ramId'),
     oCungId: v.oCungId ?? v.ocungId ?? idOf(v, 'oCungId'), gpuId: v.gpuId ?? idOf(v, 'gpuId')
   }))
+  capNhatSkuCacDong()
   errors.value = {}
   saveError.value = ''
   showModal.value = true
@@ -1708,13 +2089,27 @@ const saoChepBienThe = async (v) => {
   }
 }
 
+// Barcode rendering with EAN13 & CODE128 fallback
+const barcodeFormat = (v) => (/^\d{13}$/.test(String(v ?? '')) ? 'EAN13' : 'CODE128')
+const drawBarcode = (el, value, opts = {}) => {
+  if (!el || !value) return
+  const str = String(value).trim()
+  const base = { height: 28, width: 1.15, displayValue: true, fontSize: 10.5, font: 'monospace', textMargin: 3, margin: 2, background: '#ffffff', lineColor: '#111827', ...opts }
+  try {
+    JsBarcode(el, str, { format: barcodeFormat(str), ...base })
+  } catch {
+    try { JsBarcode(el, str, { format: 'CODE128', ...base }) } catch {}
+  }
+}
+const renderBarcode = (el, code) => drawBarcode(el, code)
+
 const inTemMa = (v) => {
   if (!v) return
   const w = window.open('', '_blank')
   if (!w) return
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   try {
-    JsBarcode(svg, v.barcode || v.maSku, { format: 'EAN13', displayValue: true, fontSize: 14, margin: 10 })
+    drawBarcode(svg, v.barcode || v.maSku, { height: 50, width: 1.8, displayValue: true, fontSize: 13, margin: 8 })
     w.document.write(`<html><head><title>Tem mã: ${v.maSku}</title></head><body style="text-align:center;padding:20px;font-family:sans-serif">${svg.outerHTML}<p style="margin-top:10px">${v.maSku}</p></body></html>`)
     w.document.close()
     setTimeout(() => w.print(), 300)
@@ -1785,39 +2180,31 @@ const togglePhanLoai = (id) => {
 const tenPhanLoai = (id) => phanLoaiOptions.value.find(p => p.phanLoaiId == id)?.tenPhanLoai || ''
 const tenTheoMaPhanLoai = (ma) => phanLoaiOptions.value.find(p => p.maPhanLoai === ma)?.tenPhanLoai || ma
 
-// Ảnh
+// Ảnh (chỉ cho phép upload 1 ảnh đại diện duy nhất)
 const chonAnhSanPham = async (e) => {
-  const files = Array.from(e.target.files || [])
-  if (!files.length) return
+  const file = (e.target.files || [])[0]
+  if (!file) return
   dangTaiAnh.value = true
   try {
-    for (const file of files) {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd })
-      if (res.ok) {
-        const data = await res.json()
-        const url = data.url || data.path || data.filename || (THU_MUC_ANH + data.name)
-        if (!form.value.hinhAnhList.includes(url)) form.value.hinhAnhList.push(url)
-      }
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch(UPLOAD_URL, { method: 'POST', headers: authHeaders(), body: fd })
+    if (res.ok) {
+      const data = await res.json()
+      const url = data.url || data.path || data.filename || (THU_MUC_ANH + data.name)
+      form.value.hinhAnhList = [url]
+    } else {
+      form.value.hinhAnhList = [THU_MUC_ANH + file.name]
     }
   } catch (e) {
     console.error('[HangHoa] loi tai anh', e)
+    form.value.hinhAnhList = [THU_MUC_ANH + file.name]
   } finally {
     dangTaiAnh.value = false
     e.target.value = ''
   }
 }
-const datLamAnhChinh = (i) => {
-  const url = form.value.hinhAnhList.splice(i, 1)[0]
-  form.value.hinhAnhList.unshift(url)
-}
 const xoaAnhTaiViTri = (i) => form.value.hinhAnhList.splice(i, 1)
-const themAnhTuUrl = (e) => {
-  const url = e.target.value.trim()
-  if (url && !form.value.hinhAnhList.includes(url)) form.value.hinhAnhList.push(url)
-  e.target.value = ''
-}
 
 // Bien the helper
 const coThongSoBienThe = (v) => v?.mauSac || layCpu(v) || layRam(v) || layOCung(v) || layGpu(v)
@@ -1842,11 +2229,7 @@ const chenLink = () => {
   if (url) dinhDang('createLink', url)
 }
 
-// Barcode
-const renderBarcode = (el, code) => {
-  if (!el || !code) return
-  try { JsBarcode(el, code, { format: 'EAN13', displayValue: false, margin: 2 }) } catch (e) {}
-}
+// (renderBarcode and drawBarcode are defined above inTemMa)
 
 // Nhat ky: backend đã tự ghi log qua LichSuThayDoiSanPhamService khi SanPhamService.updateSanPham
 // nên FE chỉ cần đọc, không cần ghi/xóa.
@@ -1878,7 +2261,8 @@ const TEN_TRUONG_LABEL = {
   pin: 'Pin',
   trongLuongKg: 'Trọng lượng (kg)',
   baoHanhThang: 'Bảo hành (tháng)',
-  hinhAnhBienThe: 'Ảnh phiên bản'
+  hinhAnhBienThe: 'Ảnh phiên bản',
+  moTaBienThe: 'Mô tả phiên bản'
 }
 
 // Định dạng giá trị hiển thị trong lịch sử
@@ -1916,6 +2300,7 @@ const formatGiaTriLichSu = (tenTruong, val) => {
   if (tenTruong === 'trongLuongKg') return `${val} kg`
   if (tenTruong === 'baoHanhThang') return `${val} tháng`
   if (tenTruong === 'trangThai') return nhanTrangThai(val)
+  if (tenTruong === 'moTa' || tenTruong === 'moTaBienThe') return loaiBoMetadataTuMoTa(val) || val
   return val
 }
 
@@ -2074,6 +2459,13 @@ const fetchData = async () => {
       // Lay hinh anh
       sp.hinhAnh = sp.hinhAnhChinh || (sp.variants[0]?.hinhAnhBienThe) || ANH_MAC_DINH
     }
+    // Cập nhật lại chiTiet nếu modal đang mở để biến thể và mã vạch đồng bộ ngay lập tức
+    if (chiTiet.value && chiTiet.value.sanPhamId) {
+      const freshSp = danhSachSanPham.value.find(s => String(s.sanPhamId) === String(chiTiet.value.sanPhamId))
+      if (freshSp) {
+        chiTiet.value = { ...chiTiet.value, ...freshSp, variants: freshSp.variants || [] }
+      }
+    }
     page.value = 1
   } catch (e) {
     console.error('[HangHoa] fetchData error:', e)
@@ -2114,58 +2506,76 @@ const phanChungBienThe = () => ({
 })
 
 // Dữ liệu tạo sản phẩm và biến thể chính
-const payloadSanPham = (row) => ({
-  ...(form.value.sanPhamId ? { sanPhamId: Number(form.value.sanPhamId) } : {}),
-  maSanPham: form.value.maSanPham || null,
-  tenSanPham: form.value.tenSanPham,
-  thuongHieuId: soHoacNull(form.value.thuongHieuId),
-  danhMucId: soHoacNull(form.value.danhMucId),
-  nhaCungCapId: soHoacNull(form.value.nhaCungCapId),
-  loaiSanPham: form.value.loaiSanPham,
-  moTa: ganMetadataVaoMoTa(form.value.moTa, formThuocTinh) || null,
-  hinhAnhChinh: form.value.hinhAnhList?.[0] || null,
-  hinhAnhList: form.value.hinhAnhList?.length ? form.value.hinhAnhList : null,
-  ngayTao: bayGio(),
-  ...phanChungBienThe(),
-  ...formThuocTinh,
-  thuocTinhValues: { ...formThuocTinh },
-  ...(row
-    ? {
-        ...(row.bienTheId ? { bienTheId: Number(row.bienTheId) } : {}),
-        maSku: row.maSku,
-        // gửi cả hai tên trường để khớp dù DTO backend đặt tên nào
-        barcode: row.barcode || null,
-        barcodeBienThe: row.barcode || null,
-        giaNhap: Number(row.giaNhap || 0),
-        giaBan: Number(row.giaBan || 0),
-        mauSac: row.mauSac || null,
-        cpuId: soHoacNull(row.cpuId),
-        ramId: soHoacNull(row.ramId),
-        oCungId: soHoacNull(row.oCungId ?? row.ocungId),
-        ocungId: soHoacNull(row.oCungId ?? row.ocungId),
-        gpuId: soHoacNull(row.gpuId),
-        hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null
-      }
-    : {})
-})
+const payloadSanPham = (row) => {
+  const customRowBtMeta = {}
+  if (row) {
+    variantCustomAttrs.value.forEach(attr => {
+      const val = row[attr.tenTruong] ?? (String(form.value.bienTheId) === String(row.bienTheId) ? formThuocTinhBienThe[attr.tenTruong] : null)
+      if (val) customRowBtMeta[attr.tenTruong] = val
+    })
+  }
+  return {
+    ...(form.value.sanPhamId ? { sanPhamId: Number(form.value.sanPhamId) } : {}),
+    maSanPham: form.value.maSanPham || null,
+    tenSanPham: form.value.tenSanPham,
+    thuongHieuId: soHoacNull(form.value.thuongHieuId),
+    danhMucId: soHoacNull(form.value.danhMucId),
+    nhaCungCapId: soHoacNull(form.value.nhaCungCapId),
+    loaiSanPham: form.value.loaiSanPham,
+    moTa: ganMetadataVaoMoTa(form.value.moTa, formThuocTinh) || null,
+    hinhAnhChinh: form.value.hinhAnhList?.[0] || null,
+    hinhAnhList: form.value.hinhAnhList?.length ? form.value.hinhAnhList : null,
+    ngayTao: bayGio(),
+    ...phanChungBienThe(),
+    ...formThuocTinh,
+    thuocTinhValues: { ...formThuocTinh },
+    ...(row
+      ? {
+          ...(row.bienTheId ? { bienTheId: Number(row.bienTheId) } : {}),
+          maSku: row.maSku,
+          // gửi cả hai tên trường để khớp dù DTO backend đặt tên nào
+          barcode: row.barcode || null,
+          barcodeBienThe: row.barcode || null,
+          giaNhap: Number(row.giaNhap || 0),
+          giaBan: Number(row.giaBan || 0),
+          mauSac: row.mauSac || null,
+          cpuId: soHoacNull(row.cpuId),
+          ramId: soHoacNull(row.ramId),
+          oCungId: soHoacNull(row.oCungId ?? row.ocungId),
+          ocungId: soHoacNull(row.oCungId ?? row.ocungId),
+          gpuId: soHoacNull(row.gpuId),
+          hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null,
+          moTaBienThe: ganMetadataVaoMoTa(row.moTa || '', customRowBtMeta) || null
+        }
+      : {})
+  }
+}
 
 // Dữ liệu tạo các biến thể tiếp theo
-const payloadBienThe = (sanPhamId, row) => ({
-  sanPhamId: soHoacNull(sanPhamId),
-  maSku: row.maSku,
-  barcode: row.barcode || null,
-  giaNhap: Number(row.giaNhap || 0),
-  giaBan: Number(row.giaBan || 0),
-  mauSac: row.mauSac || null,
-  cpuId: soHoacNull(row.cpuId),
-  ramId: soHoacNull(row.ramId),
-  oCungId: soHoacNull(row.oCungId ?? row.ocungId),
-  ocungId: soHoacNull(row.oCungId ?? row.ocungId),
-  gpuId: soHoacNull(row.gpuId),
-  hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null,
-  ...phanChungBienThe(),
-  trangThai: row.trangThai || form.value.trangThaiSanPham || 'active'
-})
+const payloadBienThe = (sanPhamId, row) => {
+  const customBtMeta = {}
+  variantCustomAttrs.value.forEach(attr => {
+    const val = row[attr.tenTruong] ?? (String(form.value.bienTheId) === String(row.bienTheId) ? formThuocTinhBienThe[attr.tenTruong] : null)
+    if (val) customBtMeta[attr.tenTruong] = val
+  })
+  return {
+    sanPhamId: soHoacNull(sanPhamId),
+    maSku: row.maSku,
+    barcode: row.barcode || null,
+    giaNhap: Number(row.giaNhap || 0),
+    giaBan: Number(row.giaBan || 0),
+    mauSac: row.mauSac || null,
+    cpuId: soHoacNull(row.cpuId),
+    ramId: soHoacNull(row.ramId),
+    oCungId: soHoacNull(row.oCungId ?? row.ocungId),
+    ocungId: soHoacNull(row.oCungId ?? row.ocungId),
+    gpuId: soHoacNull(row.gpuId),
+    hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null,
+    moTa: ganMetadataVaoMoTa(row.moTa || '', customBtMeta) || null,
+    ...phanChungBienThe(),
+    trangThai: row.trangThai || form.value.trangThaiSanPham || 'active'
+  }
+}
 
 const layId = (res, key) => res?.[key] ?? res?.id ?? res?.data?.[key] ?? res?.data?.id ?? null
 
@@ -2364,12 +2774,14 @@ const submitForm = async () => {
       // Sau khi fetch data thành công, mở lại chi tiết
       moLaiChiTiet.value = sanPhamIdVuaLuu
     } else if (modalMode.value === 'variant') {
-      // Sinh SKU tự động cho các dòng để trống
+      // Đảm bảo mỗi dòng có SKU và barcode hợp lệ, không trùng
+      capNhatSkuCacDong()
       bienTheRows.value.forEach((row, i) => {
         if (!row.maSku) {
-          const prefix = (form.value.skuPrefix || form.value.maSanPham || vietTat(form.value.tenSanPham, 6) || 'SP').toUpperCase()
+          const prefix = taoTienToSanPham(form.value.tenSanPham, form.value.thuongHieuId) || form.value.maSanPham || 'SP'
           row.maSku = `${prefix}-${String(i + 1).padStart(3, '0')}`
         }
+        if (!row.barcode) row.barcode = sinhBarcodeKhongTrung()
       })
       const dsSku = []
       for (const row of bienTheRows.value) {
@@ -2390,12 +2802,15 @@ const submitForm = async () => {
       closeModal()
       moLaiChiTiet.value = null // Đảm bảo reset cho variant mode
     } else {
-      // Sinh SKU tự động cho các dòng để trống
+      // Đảm bảo mã sản phẩm, SKU và barcode hợp lệ trước khi lưu
+      if (!form.value.maSanPham) form.value.maSanPham = sinhMaSanPham()
+      capNhatSkuCacDong()
       bienTheRows.value.forEach((row, i) => {
         if (!row.maSku) {
-          const prefix = (form.value.skuPrefix || form.value.maSanPham || vietTat(form.value.tenSanPham, 6) || 'SP').toUpperCase()
+          const prefix = taoTienToSanPham(form.value.tenSanPham, form.value.thuongHieuId) || form.value.maSanPham || 'SP'
           row.maSku = `${prefix}-${String(i + 1).padStart(3, '0')}`
         }
+        if (!row.barcode) row.barcode = sinhBarcodeKhongTrung()
       })
       const [dauTien, ...conLai] = bienTheRows.value
 
@@ -2480,6 +2895,13 @@ const submitForm = async () => {
     isSaving.value = false
   }
 }
+
+// Tự động đồng bộ lại dữ liệu khi ProductsStore có cập nhật từ tab Biến thể
+watch(() => ProductsStore.version, () => {
+  if (!isSaving.value) {
+    fetchData()
+  }
+})
 </script>
 
 <style scoped>
@@ -3106,7 +3528,7 @@ const submitForm = async () => {
 .hh-matrix__cfg { color: var(--muted); font-size: 12.5px; min-width: 180px; white-space: normal; word-break: break-word; }
 .hh-matrix__empty { text-align: center; color: var(--muted); padding: 20px; }
 .hh-cell { padding: 6px 9px; font-size: 12.5px; }
-.hh-cell--sku { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; min-width: 190px; }
+.hh-cell--sku { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; min-width: 240px; }
 .hh-cell--ma { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; min-width: 140px; }
 
 /* trình soạn mô tả */

@@ -151,4 +151,26 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
         )
     """)
     boolean hasTransactionHistoryBySanPhamId(@Param("sanPhamId") Integer sanPhamId);
+
+    @Query("""
+    SELECT bt FROM BienTheSanPham bt
+    JOIN FETCH bt.sanPham sp
+    LEFT JOIN FETCH bt.cpu
+    LEFT JOIN FETCH bt.ram
+    LEFT JOIN FETCH bt.oCung
+    LEFT JOIN FETCH bt.gpu
+    WHERE bt.barcode = :barcode
+    """)
+    Optional<BienTheSanPham> findByBarcodeWithDetails(@Param("barcode") String barcode);
+
+    @Query("""
+    SELECT bt FROM BienTheSanPham bt
+    JOIN FETCH bt.sanPham sp
+    LEFT JOIN FETCH bt.cpu
+    LEFT JOIN FETCH bt.ram
+    LEFT JOIN FETCH bt.oCung
+    LEFT JOIN FETCH bt.gpu
+    WHERE bt.maSku = :maSku
+    """)
+    Optional<BienTheSanPham> findByMaSkuWithDetails(@Param("maSku") String maSku);
 }

@@ -1,5 +1,15 @@
 package com.example.backend.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.entity.ChiTietDonHangSerial;
@@ -18,15 +28,6 @@ import com.example.backend.request.ChiTietDonHangRequest;
 import com.example.backend.response.ChiTietDonHangResponse;
 import com.example.backend.response.ChiTietDonHangSerialResponse;
 import com.example.backend.response.WarrantyProductResponse;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class ChiTietDonHangService {
@@ -53,7 +54,26 @@ public class ChiTietDonHangService {
     public List<ChiTietDonHangResponse> getByDonHangId(Integer donHangId) {
         if (!isStaffOrOwner(donHangId))
             throw new AccessDeniedException("Không có quyền xem đơn hàng này");
-        return chiTietDonHangRepository.findByDonHangId(donHangId);
+        DonHang donHang = donHangRepository.findById(donHangId).orElse(null);
+        List<ChiTietDonHangResponse> list = chiTietDonHangRepository.findByDonHangId(donHangId);
+        if (donHang != null && "online".equals(donHang.getKenhBan())) {
+            boolean beforeConfirmed = "pending".equals(donHang.getTrangThaiDonHang());
+            List<ChiTietDonHang> entities = chiTietDonHangRepository.findEntityByDonHangId(donHangId);
+            java.util.Map<Integer, String> serialStatusByLineId = new java.util.HashMap<>();
+            for (ChiTietDonHang e : entities) {
+                if (e.getChiTietSanPham() != null) {
+                    serialStatusByLineId.put(e.getId(), e.getChiTietSanPham().getTrangThai());
+                }
+            }
+            for (ChiTietDonHangResponse resp : list) {
+                String st = serialStatusByLineId.get(resp.getId());
+                if (beforeConfirmed || "trong_kho".equals(st)) {
+                    resp.setChiTietId(null);
+                    resp.setSoSerial(null);
+                }
+            }
+        }
+        return list;
     }
 
     private TaiKhoan currentAccount() {

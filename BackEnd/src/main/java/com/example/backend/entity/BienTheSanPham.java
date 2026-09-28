@@ -84,4 +84,7 @@ public class BienTheSanPham extends BaseEntity {
 
     @Column(name = "phan_loai_ten", length = 200)
     private String phanLoaiTen;
+
+    @Column(name = "mo_ta", columnDefinition = "nvarchar(max)")
+    private String moTa;
 }

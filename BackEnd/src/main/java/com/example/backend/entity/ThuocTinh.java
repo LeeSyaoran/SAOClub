@@ -39,6 +39,9 @@ public class ThuocTinh {
     @Column(name = "trang_thai", length = 20, nullable = false)
     private String trangThai = "active";
 
+    @Column(name = "pham_vi", length = 20, nullable = false)
+    private String phamVi = "san_pham"; // "san_pham" | "bien_the"
+
     @Column(name = "ngay_tao")
     private LocalDateTime ngayTao;
 

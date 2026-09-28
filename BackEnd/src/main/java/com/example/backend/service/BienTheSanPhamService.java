@@ -89,6 +89,9 @@ public class BienTheSanPhamService {
         entity.setGpu(request.getGpuId() != null ? dmGpuRepository.getReferenceById(request.getGpuId()) : null);
 
         BienTheSanPham saved = bienTheSanPhamRepository.save(entity);
+        NhanVien nguoiSua = lichSuThayDoiSanPhamService.nguoiSuaHienTai();
+        Integer spId = entity.getSanPham() != null ? entity.getSanPham().getSanPhamId() : request.getSanPhamId();
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(spId, saved.getBienTheId(), "bien_the", "maSku", null, saved.getMaSku(), nguoiSua);
         return saved;
     }
 
@@ -113,6 +116,7 @@ public class BienTheSanPhamService {
         String oldHeDieuHanh = entity.getHeDieuHanh();
         String oldPin = entity.getPin();
         BigDecimal oldTrongLuongKg = entity.getTrongLuongKg();
+        String oldMoTa = entity.getMoTa();
 
         String barcode = chuanHoa(request.getBarcode());
         kiemTraTrungBarcode(barcode, id);
@@ -140,14 +144,15 @@ public class BienTheSanPhamService {
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "hinhAnhBienThe", oldHinhAnhBienThe, saved.getHinhAnhBienThe(), nguoiSua);
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "trangThai", oldTrangThai, saved.getTrangThai(), nguoiSua);
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "mauSac", oldMauSac, saved.getMauSac(), nguoiSua);
-        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "cpuId", oldCpuId, request.getCpuId(), nguoiSua);
-        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "ramId", oldRamId, request.getRamId(), nguoiSua);
-        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "oCungId", oldOCungId, request.getOCungId(), nguoiSua);
-        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "gpuId", oldGpuId, request.getGpuId(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "cpuId", oldCpuId, saved.getCpu() != null ? saved.getCpu().getCpuId() : null, nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "ramId", oldRamId, saved.getRam() != null ? saved.getRam().getRamId() : null, nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "oCungId", oldOCungId, saved.getOCung() != null ? saved.getOCung().getOCungId() : null, nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "gpuId", oldGpuId, saved.getGpu() != null ? saved.getGpu().getGpuId() : null, nguoiSua);
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "kichThuocManHinh", oldKichThuocManHinh, saved.getKichThuocManHinh(), nguoiSua);
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "heDieuHanh", oldHeDieuHanh, saved.getHeDieuHanh(), nguoiSua);
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "pin", oldPin, saved.getPin(), nguoiSua);
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "trongLuongKg", oldTrongLuongKg, saved.getTrongLuongKg(), nguoiSua);
+        lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, id, "bien_the", "moTa", oldMoTa, saved.getMoTa(), nguoiSua);
 
         return saved;
     }

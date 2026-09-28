@@ -114,6 +114,7 @@ public class SanPhamService {
                     item.setHeDieuHanh(bt.getHeDieuHanh());
                     item.setPin(bt.getPin());
                     item.setTrongLuongKg(bt.getTrongLuongKg());
+                    item.setMoTa(bt.getMoTa());
                     item.setSoLuongTon(null);
                     return item;
                 })
@@ -203,7 +204,7 @@ public class SanPhamService {
 
         // Fill maSanPham nếu chưa có (tạo mới mà không truyền mã)
         if (saved.getMaSanPham() == null || saved.getMaSanPham().isBlank()) {
-            saved.setMaSanPham("SP" + saved.getSanPhamId());
+            saved.setMaSanPham(String.format("SP%04d", saved.getSanPhamId()));
             saved = sanPhamRepository.save(saved);
             if (entityManager != null) entityManager.refresh(saved);
         }
@@ -226,6 +227,7 @@ public class SanPhamService {
         if (bt.getGiaBan() == null) bt.setGiaBan(BigDecimal.ZERO);
         if (bt.getGiaNhap() == null) bt.setGiaNhap(BigDecimal.ZERO);
         if (bt.getBaoHanhThang() == null) bt.setBaoHanhThang(12);
+        if (request.getMoTaBienThe() != null) bt.setMoTa(request.getMoTaBienThe());
         ganLinhKien(bt, request);
 
         BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
@@ -293,9 +295,25 @@ public class SanPhamService {
                     .orElseThrow(() -> new IllegalArgumentException(
                             "Biến thể không tồn tại với id: " + request.getBienTheId()));
 
+            // Lưu lại tất cả giá trị cũ TRƯỚC KHI cập nhật biến thể
             BigDecimal oldGiaNhapBienThe = bt.getGiaNhap();
             BigDecimal oldGiaBanBienThe = bt.getGiaBan();
             String oldBarcodeBienThe = bt.getBarcode();
+            String oldMaSku = bt.getMaSku();
+            String oldMauSac = bt.getMauSac();
+            Integer oldBaoHanhThang = bt.getBaoHanhThang();
+            String oldKichThuocManHinh = bt.getKichThuocManHinh();
+            String oldHeDieuHanh = bt.getHeDieuHanh();
+            String oldPin = bt.getPin();
+            BigDecimal oldTrongLuongKg = bt.getTrongLuongKg();
+            String oldHinhAnhBienThe = bt.getHinhAnhBienThe();
+            String oldTrangThaiBienThe = bt.getTrangThai();
+            Integer oldCpuId = bt.getCpu() != null ? bt.getCpu().getCpuId() : null;
+            Integer oldRamId = bt.getRam() != null ? bt.getRam().getRamId() : null;
+            Integer oldOCungId = bt.getOCung() != null ? bt.getOCung().getOCungId() : null;
+            Integer oldGpuId = bt.getGpu() != null ? bt.getGpu().getGpuId() : null;
+            String oldMoTaBienThe = bt.getMoTa();
+
             String barcodeBienThe = chuanHoa(request.getBarcodeBienThe());
             kiemTraTrungBarcodeBienThe(barcodeBienThe, bt.getBienTheId());
 
@@ -316,15 +334,32 @@ public class SanPhamService {
             if (request.getPhanLoaiTags() != null) bt.setPhanLoaiTags(request.getPhanLoaiTags());
             if (request.getPhanLoaiTen() != null) bt.setPhanLoaiTen(request.getPhanLoaiTen());
             if (request.getTrangThai() != null) bt.setTrangThai(trangThaiBienThe(request.getTrangThai()));
-            if (barcodeBienThe != null) bt.setBarcode(barcodeBienThe);
+            if (request.getMoTaBienThe() != null) bt.setMoTa(request.getMoTaBienThe());
+            bt.setBarcode(barcodeBienThe);
             bt.setSanPham(sanPham);
             ganLinhKien(bt, request);
 
             BienTheSanPham savedBt = bienTheSanPhamRepository.save(bt);
             if (entityManager != null) entityManager.flush(); // ponytail: ensure bien_the update is flushed to DB immediately
+
+            // Ghi log tất cả trường có thể thay đổi
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "maSku", oldMaSku, savedBt.getMaSku(), nguoiSua);
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "giaNhap", oldGiaNhapBienThe, savedBt.getGiaNhap(), nguoiSua);
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "giaBan", oldGiaBanBienThe, savedBt.getGiaBan(), nguoiSua);
             lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "barcode", oldBarcodeBienThe, savedBt.getBarcode(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "baoHanhThang", oldBaoHanhThang, savedBt.getBaoHanhThang(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "mauSac", oldMauSac, savedBt.getMauSac(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "cpuId", oldCpuId, savedBt.getCpu() != null ? savedBt.getCpu().getCpuId() : null, nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "ramId", oldRamId, savedBt.getRam() != null ? savedBt.getRam().getRamId() : null, nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "oCungId", oldOCungId, savedBt.getOCung() != null ? savedBt.getOCung().getOCungId() : null, nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "gpuId", oldGpuId, savedBt.getGpu() != null ? savedBt.getGpu().getGpuId() : null, nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "kichThuocManHinh", oldKichThuocManHinh, savedBt.getKichThuocManHinh(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "heDieuHanh", oldHeDieuHanh, savedBt.getHeDieuHanh(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "pin", oldPin, savedBt.getPin(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "trongLuongKg", oldTrongLuongKg, savedBt.getTrongLuongKg(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "hinhAnhBienThe", oldHinhAnhBienThe, savedBt.getHinhAnhBienThe(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "trangThai", oldTrangThaiBienThe, savedBt.getTrangThai(), nguoiSua);
+            lichSuThayDoiSanPhamService.ghiNeuThayDoi(sanPhamId, savedBt.getBienTheId(), "bien_the", "moTa", oldMoTaBienThe, savedBt.getMoTa(), nguoiSua);
         }
     }
 

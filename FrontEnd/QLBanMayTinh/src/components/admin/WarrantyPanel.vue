@@ -573,8 +573,11 @@ const lookupBanner = computed(() => {
         <!-- Info -->
         <div style="flex:1;min-width:0;">
           <div class="fw-bold" style="color:var(--text-heading);font-size:0.95rem;">{{ lookupResult.tenSanPham }}</div>
-          <div class="text-secondary small font-monospace">#{{ lookupResult.soSerial }}</div>
-          <div v-if="lookupResult.maSku" class="text-secondary small font-monospace">{{ lookupResult.maSku }}</div>
+          <div v-if="lookupResult.soSerial" class="text-secondary small font-monospace">#{{ lookupResult.soSerial }}</div>
+          <div v-if="lookupResult.barcode" class="text-secondary small font-monospace d-flex align-items-center gap-1">
+            <Barcode :size="13" /> {{ lookupResult.barcode }}
+          </div>
+          <div v-if="lookupResult.maSku" class="text-secondary small font-monospace">SKU: {{ lookupResult.maSku }}</div>
         </div>
       </div>
 

@@ -478,9 +478,11 @@ const posOpenSerialPicker = async (p, swapChiTietId = null) => {
   serialPickerList.value = [];
   showSerialPicker.value = true;
   serialPickerLoading.value = true;
-  // Tải danh sách serial của biến thể
+  // Chỉ lấy serial còn trong kho; nếu đang swap thì giữ cả serial cũ để hiện
   const all = await ChiTietSanPhamService.getByBienThe(p.bienTheId).catch(() => []);
-  serialPickerList.value = all;
+  serialPickerList.value = all.filter(
+    (s) => s.trangThai === 'trong_kho' || s.chiTietId === swapChiTietId
+  );
   serialPickerLoading.value = false;
 };
 
@@ -581,7 +583,36 @@ const posRemoveGroup = async (g) => {
   const ids = new Set(g.items.map((i) => i.chiTietId));
   posCart.value = posCart.value.filter((i) => !ids.has(i.chiTietId));
 };
-const posReset = () => {
+const posReset = async () => {
+  if (posCart.value.length > 0) {
+    const ok = await askConfirm('Làm mới sẽ xóa toàn bộ giỏ hàng hiện tại. Bạn có chắc không?');
+    if (!ok) return;
+  }
+  // Chỉ reset giỏ hàng + khuyến mãi + thanh toán, GIỮ LẠI thông tin khách hàng
+  posCart.value = [];
+  posError.value = "";
+  posSuccess.value = false;
+  posPromoCode.value = "";
+  posAppliedPromo.value = null;
+  posPromoMsg.value = "";
+  posPaymentMethod.value = null;
+  posDeliveryMode.value = 'pickup';
+  posDeliveryAddress.value = '';
+  posDistanceKm.value = '';
+  posQrScanned.value = false;
+  // Nếu chưa có khách thì về start, nếu đã có khách thì giữ nguyên bước selling
+  if (!posFoundCust.value) {
+    posStage.value = 'start';
+    posPhoneNotFound.value = false;
+  }
+};
+
+// Đổi khách hàng — reset hoàn toàn (cả giỏ + khách)
+const posResetWithCustomer = async () => {
+  if (posCart.value.length > 0 || posFoundCust.value) {
+    const ok = await askConfirm('Đổi khách hàng sẽ xóa toàn bộ giỏ hàng và thông tin khách hàng. Bạn có chắc không?');
+    if (!ok) return;
+  }
   posCart.value = [];
   posPhone.value = "";
   posFoundCust.value = null;
@@ -926,7 +957,7 @@ const posPlaceOrder = async () => {
                 <span>{{ paymentMethodLabel(m) }}</span>
               </button>
             </div>
-            <div v-if="posPaymentMethod === 'chuyen_khoan'" class="pos-qr-block">
+            <div v-if="posPaymentMethod === 'vnpay' || posPaymentMethod === 'chuyen_khoan'" class="pos-qr-block">
               <img
                 v-if="!posQrImageFailed" :src="posQrImageUrl" alt="VietQR" class="pos-qr-img"
                 @error="posQrImageFailed = true"
@@ -947,7 +978,7 @@ const posPlaceOrder = async () => {
                 <div class="pos-customer-name"><Check :size="13" /> {{ posFoundCust.hoTen }}</div>
                 <div class="pos-customer-phone">{{ posFoundCust.soDienThoai }}</div>
               </div>
-              <button class="pos-change-btn" @click="posReset">{{ t('admin.pos.changeCustomer') }}</button>
+              <button class="pos-change-btn" @click="posResetWithCustomer">{{ t('admin.pos.changeCustomer') }}</button>
             </div>
             <div v-else class="small text-secondary">{{ t('admin.pos.noCustomerYet') }}</div>
             <div v-if="posError" class="pos-error-msg">{{ posError }}</div>
@@ -967,7 +998,7 @@ const posPlaceOrder = async () => {
             </div>
             <button
               class="pos-pay-submit"
-              :disabled="posStage !== 'selling' || !posCart.length || !posPaymentMethod || posPlacing || (posPaymentMethod === 'chuyen_khoan' && !posQrScanned)"
+              :disabled="posStage !== 'selling' || !posCart.length || !posPaymentMethod || posPlacing || ((posPaymentMethod === 'vnpay' || posPaymentMethod === 'chuyen_khoan') && !posQrScanned)"
               @click="posPlaceOrder"
             >
               <Star :size="15" /> {{ t('admin.pos.createOrder') }}
@@ -1144,11 +1175,11 @@ const posPlaceOrder = async () => {
           v-for="s in serialPickerList" v-else :key="s.chiTietId"
           class="btn d-flex justify-content-between align-items-center"
           :class="[
-            s.trangThai !== 'trong_kho' || isAlreadyInCart(s.chiTietId) ? 'btn-secondary opacity-50' :
+            isAlreadyInCart(s.chiTietId) ? 'btn-secondary opacity-50' :
               (serialPickerSwapChiTietId == null && serialPickerChosenIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-warning')
           ]"
-          :disabled="s.trangThai !== 'trong_kho' || isAlreadyInCart(s.chiTietId)"
-          :title="s.trangThai !== 'trong_kho' ? s.trangThai : (isAlreadyInCart(s.chiTietId) ? 'Đã có trong giỏ hàng' : '')"
+          :disabled="isAlreadyInCart(s.chiTietId)"
+          :title="isAlreadyInCart(s.chiTietId) ? 'Đã có trong giỏ hàng' : ''"
           style="font-family:monospace;font-size:0.85rem;"
           @click="serialPickerSwapChiTietId != null ? posSelectSerial(s) : posToggleSerial(s)"
         >

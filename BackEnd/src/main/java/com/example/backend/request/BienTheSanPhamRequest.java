@@ -25,6 +25,17 @@ public class BienTheSanPhamRequest {
     @Pattern(regexp = "^$|^\\d{8,13}$", message = "Barcode phải gồm 8–13 chữ số")
     private String barcode;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("barcodeBienThe")
+    public void setBarcodeBienTheAlias(String barcodeBienThe) {
+        if (this.barcode == null || this.barcode.isBlank()) {
+            this.barcode = barcodeBienThe;
+        }
+    }
+
+    public String getBarcodeBienThe() {
+        return this.barcode;
+    }
+
     @NotNull(message = "Giá nhập không được để trống")
     @PositiveOrZero(message = "Giá nhập phải lớn hơn hoặc bằng 0")
     private BigDecimal giaNhap;
@@ -58,4 +69,6 @@ public class BienTheSanPhamRequest {
 
     @PositiveOrZero(message = "Trọng lượng phải lớn hơn hoặc bằng 0")
     private BigDecimal trongLuongKg;
+
+    private String moTa;
 }

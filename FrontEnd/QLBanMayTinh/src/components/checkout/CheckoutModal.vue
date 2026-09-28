@@ -977,13 +977,15 @@ const saveShippingInfo = async () => {
   isEditingShipping.value = false;
   fetchShippingFee();
   try {
-    localStorage.setItem('saoclub_shipping_info', JSON.stringify({
+    const storageKey = AuthStore.user?.id ? `saoclub_shipping_info_${AuthStore.user.id}` : 'saoclub_guest_shipping_info';
+    localStorage.setItem(storageKey, JSON.stringify({
       nguoiNhan: checkoutForm.nguoiNhan,
       sdtNguoiNhan: checkoutForm.sdtNguoiNhan,
       email: checkoutForm.email,
       diaChiGiaoHangText: checkoutForm.diaChiGiaoHangText,
       ghiChu: checkoutForm.ghiChu,
     }));
+    localStorage.removeItem('saoclub_shipping_info');
   } catch {}
 };
 
@@ -1265,6 +1267,11 @@ const onBackdropClick = () => {
 
 // Tự động điền thông tin tài khoản đăng nhập và khôi phục thông tin mua hàng trước đó
 const fillFromLoggedInAccount = async () => {
+  // Luôn xóa sạch key cũ dùng chung không phân biệt tài khoản để loại bỏ dữ liệu demo / rác
+  try {
+    localStorage.removeItem('saoclub_shipping_info');
+  } catch {}
+
   // 1. Tự động lấy từ tài khoản đăng nhập hiện tại
   if (AuthStore.user) {
     const user = AuthStore.user;
@@ -1306,22 +1313,39 @@ const fillFromLoggedInAccount = async () => {
       khachHangId: user.id,
       hoTen: hoTen || 'Khách hàng',
     };
-  }
 
-  // 2. Khôi phục từ localStorage nếu trường nào còn trống (dành cho khách vãng lai hoặc bổ sung thông tin đã nhập)
-  try {
-    const saved = JSON.parse(localStorage.getItem('saoclub_shipping_info') || 'null');
-    if (saved) {
-      if (!checkoutForm.nguoiNhan && saved.nguoiNhan) checkoutForm.nguoiNhan = saved.nguoiNhan;
-      if (!checkoutForm.sdtNguoiNhan && isValidPhoneNumber(saved.sdtNguoiNhan)) {
-        checkoutForm.sdtNguoiNhan = saved.sdtNguoiNhan;
-        if (!checkoutForm.soDienThoai) checkoutForm.soDienThoai = saved.sdtNguoiNhan;
+    // Kiểm tra xem chính tài khoản này trước đó đã từng lưu thông tin trên thiết bị này chưa
+    try {
+      const userSaved = JSON.parse(localStorage.getItem(`saoclub_shipping_info_${user.id}`) || 'null');
+      if (userSaved) {
+        if (!checkoutForm.sdtNguoiNhan && isValidPhoneNumber(userSaved.sdtNguoiNhan)) {
+          checkoutForm.sdtNguoiNhan = userSaved.sdtNguoiNhan;
+          if (!checkoutForm.soDienThoai) checkoutForm.soDienThoai = userSaved.sdtNguoiNhan;
+        }
+        if (!checkoutForm.diaChiGiaoHangText && userSaved.diaChiGiaoHangText) {
+          checkoutForm.diaChiGiaoHangText = userSaved.diaChiGiaoHangText;
+        }
+        if (!checkoutForm.ghiChu && userSaved.ghiChu) {
+          checkoutForm.ghiChu = userSaved.ghiChu;
+        }
       }
-      if (!checkoutForm.email && saved.email) checkoutForm.email = saved.email;
-      if (!checkoutForm.diaChiGiaoHangText && saved.diaChiGiaoHangText) checkoutForm.diaChiGiaoHangText = saved.diaChiGiaoHangText;
-      if (!checkoutForm.ghiChu && saved.ghiChu) checkoutForm.ghiChu = saved.ghiChu;
-    }
-  } catch {}
+    } catch {}
+  } else {
+    // 2. Chỉ dành riêng cho khách vãng lai (chưa đăng nhập tài khoản)
+    try {
+      const guestSaved = JSON.parse(localStorage.getItem('saoclub_guest_shipping_info') || 'null');
+      if (guestSaved) {
+        if (!checkoutForm.nguoiNhan && guestSaved.nguoiNhan) checkoutForm.nguoiNhan = guestSaved.nguoiNhan;
+        if (!checkoutForm.sdtNguoiNhan && isValidPhoneNumber(guestSaved.sdtNguoiNhan)) {
+          checkoutForm.sdtNguoiNhan = guestSaved.sdtNguoiNhan;
+          if (!checkoutForm.soDienThoai) checkoutForm.soDienThoai = guestSaved.sdtNguoiNhan;
+        }
+        if (!checkoutForm.email && guestSaved.email) checkoutForm.email = guestSaved.email;
+        if (!checkoutForm.diaChiGiaoHangText && guestSaved.diaChiGiaoHangText) checkoutForm.diaChiGiaoHangText = guestSaved.diaChiGiaoHangText;
+        if (!checkoutForm.ghiChu && guestSaved.ghiChu) checkoutForm.ghiChu = guestSaved.ghiChu;
+      }
+    } catch {}
+  }
 };
 
 watch(() => props.modelValue, async (open) => {
@@ -1549,13 +1573,15 @@ const placeOrder = async () => {
 
     // Lưu thông tin giao hàng thành công để tự động điền các lần sau
     try {
-      localStorage.setItem('saoclub_shipping_info', JSON.stringify({
+      const storageKey = AuthStore.user?.id ? `saoclub_shipping_info_${AuthStore.user.id}` : 'saoclub_guest_shipping_info';
+      localStorage.setItem(storageKey, JSON.stringify({
         nguoiNhan: checkoutForm.nguoiNhan,
         sdtNguoiNhan: checkoutForm.sdtNguoiNhan,
         email: checkoutForm.email,
         diaChiGiaoHangText: checkoutForm.diaChiGiaoHangText,
         ghiChu: checkoutForm.ghiChu,
       }));
+      localStorage.removeItem('saoclub_shipping_info');
     } catch {}
 
     checkoutFinalTotal.value = checkoutTotal.value;
@@ -1568,14 +1594,22 @@ const placeOrder = async () => {
       maDonHang: createdOrder.maDonHang || checkoutOrderCode.value,
       thanhTien: checkoutTotal.value,
       tongTien: checkoutTotal.value,
+      tamTinh: props.cartTotal,
+      phiVanChuyen: phiVanChuyen.value,
+      giamGia: checkoutGiamGia.value,
+      nguoiNhan: checkoutForm.nguoiNhan,
+      sdtNguoiNhan: checkoutForm.sdtNguoiNhan,
+      email: checkoutForm.email,
+      diaChiGiaoHangText: checkoutForm.diaChiGiaoHangText,
+      ghiChu: checkoutForm.ghiChu,
       trangThaiThanhToan: 'unpaid',
       trangThaiDonHang: 'pending',
       items: props.cart.map(item => ({
         bienTheId: item.bienTheId,
         tenSanPham: item.tenSanPham,
-        donGia: item.donGia,
-        thanhTien: item.thanhTien,
-        soLuong: item.quantity,
+        donGia: item.donGia ?? item.giaBan ?? 0,
+        thanhTien: item.thanhTien ?? ((item.giaBan ?? item.donGia ?? 0) * (item.quantity || 1)),
+        soLuong: item.quantity || 1,
         hinhAnh: item.hinhAnhChinh || item.hinhAnh,
       }))
     };

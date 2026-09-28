@@ -20,9 +20,37 @@ import Pagination from "../common/Pagination.vue";
 import SearchSelect from "../common/SearchSelect.vue";
 import { usePagination } from "../../composables/usePagination.js";
 import ProductDetailModal from "./ProductDetailModal.vue";
+import { ThuocTinhService } from "../../services/ThuocTinhService.js";
 
-// Tải trước danh sách sản phẩm
-onMounted(() => { ensureProducts(); });
+const METADATA_TAG_REGEX = /<!--METADATA_THUOC_TINH:([\s\S]*?)-->/;
+const tríchXuatThuocTinhTuMoTa = (moTaStr) => {
+  if (!moTaStr) return {};
+  const match = String(moTaStr).match(METADATA_TAG_REGEX);
+  if (match && match[1]) {
+    try {
+      return JSON.parse(match[1]) || {};
+    } catch (e) {}
+  }
+  return {};
+};
+
+const dynamicCustomAttrsList = ref([]); // Thuộc tính riêng của Biến thể (phamVi === 'bien_the')
+const productCustomAttrsList = ref([]); // Thuộc tính chung của Sản phẩm (phamVi === 'san_pham')
+
+const loadDynamicAttrsList = async () => {
+  try {
+    const list = await ThuocTinhService.getAll();
+    const standardFields = new Set(['mau_sac', 'man_hinh', 'pin', 'he_dieu_hanh', 'trong_luong']);
+    dynamicCustomAttrsList.value = (list || []).filter(a => a.phamVi === 'bien_the' && !standardFields.has(a.tenTruong) && (a.trangThai || 'active') === 'active');
+    productCustomAttrsList.value = (list || []).filter(a => (a.phamVi || 'san_pham') === 'san_pham' && !standardFields.has(a.tenTruong) && (a.trangThai || 'active') === 'active');
+  } catch (e) {}
+};
+
+// Tải trước danh sách sản phẩm và thuộc tính
+onMounted(() => {
+  ensureProducts();
+  loadDynamicAttrsList();
+});
 
 // Danh sách biến thể sản phẩm
 const props = defineProps({
@@ -291,6 +319,15 @@ const detailParent = computed(() => {
   const pid = detailVariant.value?.sanPhamId;
   if (pid == null) return null;
   return (ProductsStore.items ?? []).find((p) => p.sanPhamId === pid) ?? null;
+});
+
+const detailCustomAttrs = computed(() => {
+  const rawMoTa = detailVariant.value?.moTa || '';
+  return tríchXuatThuocTinhTuMoTa(rawMoTa);
+});
+const detailParentCustomAttrs = computed(() => {
+  const rawMoTa = detailParent.value?.moTa || '';
+  return tríchXuatThuocTinhTuMoTa(rawMoTa);
 });
 // ponytail: đang sửa biến thể đã có (không phải tạo mới) → các field thông số chung read-only
 const isEditingExisting = computed(() => !addVariantMode.value && editingId.value != null);
@@ -891,6 +928,16 @@ const saveVariant = async () => {
             <div><dt>{{ t('admin.productModal.batteryLabel') }}</dt><dd>{{ detailParent?.pin || '—' }}</dd></div>
             <div><dt>{{ t('admin.productModal.weightLabel') }}</dt><dd>{{ detailParent?.trongLuongKg ? detailParent.trongLuongKg + ' kg' : '—' }}</dd></div>
             <div><dt>{{ t('admin.productModal.supplierLabel') }}</dt><dd>{{ detailParent?.tenNhaCungCap || '—' }}</dd></div>
+            <!-- Thuộc tính riêng của Biến thể -->
+            <div v-for="attr in dynamicCustomAttrsList" :key="attr.thuocTinhId">
+              <dt>{{ attr.tenHienThi }}</dt>
+              <dd>{{ detailCustomAttrs[attr.tenTruong] || detailVariant[attr.tenTruong] || '—' }}</dd>
+            </div>
+            <!-- Thuộc tính chung của Sản phẩm -->
+            <div v-for="attr in productCustomAttrsList" :key="attr.thuocTinhId">
+              <dt>{{ attr.tenHienThi }} (SP)</dt>
+              <dd>{{ detailParentCustomAttrs[attr.tenTruong] || '—' }}</dd>
+            </div>
           </dl>
         </div>
 

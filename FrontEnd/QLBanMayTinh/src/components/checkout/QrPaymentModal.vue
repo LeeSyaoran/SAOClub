@@ -23,175 +23,161 @@
       <!-- ═════════════════════════════════════════════════════════════
            CỘT TRÁI: THÔNG TIN ĐƠN HÀNG (Ảnh 1 & 2)
       ══════════════════════════════════════════════════════════════ -->
+      <!-- ═════════════════════════════════════════════════════════════
+           CỘT TRÁI: THÔNG TIN ĐƠN HÀNG & NGƯỜI NHẬN
+      ══════════════════════════════════════════════════════════════ -->
       <div
-        class="qr-left-panel p-4 p-md-4 d-flex flex-column overflow-y-auto"
-        style="flex: 1.1; background:#ffffff; border-right:1px solid #f1f5f9;"
+        class="qr-left-panel p-4 d-flex flex-column overflow-y-auto"
+        style="flex: 1.1; background:#ffffff; border-right:1px solid #f1f5f9; gap: 14px;"
       >
-        <!-- Badge Xác nhận thanh toán -->
-        <div class="mb-2">
-          <span
-            class="badge rounded-pill fw-bold text-uppercase d-inline-flex align-items-center gap-1.5"
-            style="background:#fff7ed; color:#ea580c; border:1px solid #ffedd5; font-size:0.75rem; letter-spacing:0.5px; padding:6px 12px;"
-          >
-            <span style="font-size:10px;">●</span> XÁC NHẬN THANH TOÁN
-          </span>
+        <!-- Badge & Tiêu đề -->
+        <div>
+          <div class="mb-1.5">
+            <span
+              class="badge rounded-pill fw-bold text-uppercase d-inline-flex align-items-center gap-1.5"
+              style="background:#fff7ed; color:#ea580c; border:1px solid #ffedd5; font-size:0.75rem; letter-spacing:0.5px; padding:5px 12px;"
+            >
+              <span style="font-size:10px;">●</span> XÁC NHẬN THANH TOÁN
+            </span>
+          </div>
+          <h3 class="fw-bold m-0" style="font-size:1.45rem; color:#0f172a; letter-spacing:-0.02em;">
+            Thông tin đơn hàng
+          </h3>
         </div>
 
-        <!-- Tiêu đề lớn -->
-        <h3 class="fw-bold mb-3" style="font-size:1.55rem; color:#0f172a; letter-spacing:-0.02em;">
-          Thông tin đơn hàng
-        </h3>
-
-        <!-- Ô nhập mã giảm giá -->
-        <div class="mb-3">
-          <div class="input-group" style="border-radius:12px; overflow:hidden; border:1px solid #e2e8f0; background:#f8fafc;">
-            <input
-              v-model="discountInput"
-              type="text"
-              class="form-control border-0 bg-transparent"
-              style="font-size:0.86rem; box-shadow:none; padding:10px 14px; color:#1e293b;"
-              placeholder="Nhập mã giảm giá..."
-            />
-            <button
-              class="btn fw-semibold px-3"
-              type="button"
-              style="background:#475569; color:#ffffff; font-size:0.84rem;"
-              @click="applyCustomCoupon"
-            >
-              Áp dụng
-            </button>
-          </div>
-
-          <!-- Tags mã giảm giá gợi ý -->
-          <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
-            <button
-              type="button"
-              class="btn btn-sm coupon-tag"
-              @click="discountInput = 'SALE1MORDER247'"
-            >
-              SALE1MORDER247
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm coupon-tag"
-              @click="discountInput = 'HAPPY35KFOR500K247'"
-            >
-              HAPPY35KFOR500K247
-            </button>
-          </div>
-        </div>
-
-        <!-- Danh sách mã giảm giá hiện có -->
-        <div class="mb-3">
-          <div class="text-uppercase fw-bold mb-2" style="font-size:0.7rem; color:#94a3b8; letter-spacing:0.05em;">
-            MÃ GIẢM GIÁ HIỆN CÓ
-          </div>
-          <div class="d-flex flex-column gap-2">
-            <div
-              v-for="v in sampleVouchers"
-              :key="v.code"
-              class="d-flex align-items-center justify-content-between p-2.5 rounded-3 border"
-              style="background:#ffffff; border-color:#e2e8f0; font-size:0.82rem; cursor:pointer; transition:all 0.2s;"
-              :class="{ 'border-warning bg-light-orange': discountInput === v.code }"
-              @click="discountInput = v.code"
-            >
-              <div>
-                <div class="fw-bold font-monospace" style="color:#0f172a;">{{ v.code }}</div>
-                <div v-if="v.desc" style="font-size:0.72rem; color:#64748b;">{{ v.desc }}</div>
-              </div>
-              <span
-                class="badge rounded-pill fw-bold"
-                style="background:#fff7ed; color:#ea580c; border:1px solid #ffedd5; font-size:0.78rem;"
-              >
-                {{ v.amount }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Khối Đơn hàng (Accordion toggle chi tiết) -->
+        <!-- Khối Tóm tắt Đơn hàng -->
         <div
-          class="rounded-3 border overflow-hidden mt-auto"
-          style="border-color:#e2e8f0; background:#f8fafc;"
+          class="rounded-3 p-3 border"
+          style="border-color:#fed7aa; background:linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);"
         >
-          <div
-            class="d-flex align-items-center justify-content-between p-3 cursor-pointer user-select-none"
-            @click="orderAccordionOpen = !orderAccordionOpen"
-          >
+          <div class="d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-2.5">
               <div
                 class="rounded-3 d-flex align-items-center justify-content-center"
-                style="width:38px; height:38px; background:#fff7ed; color:#ea580c; border:1px solid #ffedd5;"
+                style="width:38px; height:38px; background:#ffffff; color:#ea580c; box-shadow:0 1px 3px rgba(0,0,0,0.06);"
               >
                 <ShoppingBag :size="20" />
               </div>
               <div>
-                <div class="fw-bold" style="font-size:0.88rem; color:#0f172a;">
-                  Đơn hàng #{{ displayOrderCode }}
+                <div class="fw-semibold text-secondary" style="font-size:0.78rem;">
+                  Mã đơn hàng
                 </div>
-                <div class="fw-extrabold" style="font-size:1.15rem; color:#ea580c;">
-                  {{ formatPrice(totalAmount) }}
+                <div class="fw-bold font-monospace" style="font-size:0.95rem; color:#0f172a;">
+                  #{{ displayOrderCode }}
                 </div>
               </div>
             </div>
+            <div class="text-end">
+              <div class="fw-semibold text-secondary" style="font-size:0.78rem;">
+                Cần thanh toán
+              </div>
+              <div class="fw-extrabold" style="font-size:1.2rem; color:#ea580c;">
+                {{ formatPrice(totalAmount) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Khối Thông tin người nhận & Địa chỉ giao hàng -->
+        <div
+          v-if="recipientName || recipientPhone || recipientAddress"
+          class="rounded-3 p-3 border"
+          style="border-color:#e2e8f0; background:#f8fafc;"
+        >
+          <div class="text-uppercase fw-bold mb-2 d-flex align-items-center gap-1.5" style="font-size:0.72rem; color:#64748b; letter-spacing:0.04em;">
+            <MapPin :size="14" style="color:#ea580c;" />
+            <span>THÔNG TIN GIAO HÀNG</span>
+          </div>
+
+          <div class="d-flex flex-column gap-1.5" style="font-size:0.83rem;">
+            <div class="d-flex align-items-center gap-2" v-if="recipientName || recipientPhone">
+              <span class="fw-bold" style="color:#0f172a;">{{ recipientName }}</span>
+              <span v-if="recipientPhone" class="text-secondary font-monospace">· {{ recipientPhone }}</span>
+            </div>
+            <div v-if="recipientEmail" class="text-muted small">
+              {{ recipientEmail }}
+            </div>
+            <div v-if="recipientAddress" class="d-flex align-items-start gap-1.5 text-secondary mt-1">
+              <span style="line-height:1.4;">{{ recipientAddress }}</span>
+            </div>
+            <div v-if="props.order?.ghiChu" class="text-muted small fst-italic mt-1">
+              Ghi chú: {{ props.order.ghiChu }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Khối Chi tiết sản phẩm -->
+        <div
+          class="rounded-3 border overflow-hidden"
+          style="border-color:#e2e8f0; background:#ffffff;"
+        >
+          <div
+            class="d-flex align-items-center justify-content-between p-2.5 px-3 border-bottom cursor-pointer user-select-none"
+            style="background:#f8fafc; border-color:#e2e8f0;"
+            @click="orderAccordionOpen = !orderAccordionOpen"
+          >
+            <span class="text-uppercase fw-bold" style="font-size:0.72rem; color:#64748b; letter-spacing:0.04em;">
+              SẢN PHẨM TRONG ĐƠN ({{ displayOrderItems.length }})
+            </span>
             <component
               :is="orderAccordionOpen ? ChevronUp : ChevronDown"
-              :size="18"
+              :size="16"
               style="color:#64748b;"
             />
           </div>
 
-          <!-- Chi tiết sản phẩm khi mở rộng -->
-          <div
-            v-if="orderAccordionOpen"
-            class="px-3 pb-3 pt-1 border-top"
-            style="border-color:#e2e8f0; background:#ffffff;"
-          >
-            <div class="text-uppercase fw-bold mt-2 mb-2" style="font-size:0.7rem; color:#94a3b8; letter-spacing:0.04em;">
-              CHI TIẾT SẢN PHẨM
-            </div>
-
-            <div class="d-flex flex-column gap-2 mb-3">
+          <div v-if="orderAccordionOpen" class="p-3 d-flex flex-column gap-2.5">
+            <div
+              v-for="(item, idx) in displayOrderItems"
+              :key="idx"
+              class="d-flex align-items-center gap-2.5 p-2 rounded-2"
+              style="background:#f8fafc;"
+            >
               <div
-                v-for="(item, idx) in displayOrderItems"
-                :key="idx"
-                class="d-flex align-items-center gap-2.5 p-2 rounded-2"
-                style="background:#f8fafc;"
+                class="rounded-2 d-flex align-items-center justify-content-center fw-bold text-muted font-monospace overflow-hidden"
+                style="width:40px; height:40px; background:#ffffff; border:1px solid #e2e8f0; flex-shrink:0;"
               >
-                <div
-                  class="rounded-2 d-flex align-items-center justify-content-center fw-bold text-muted font-monospace"
-                  style="width:36px; height:36px; background:#ffffff; border:1px solid #e2e8f0; font-size:0.75rem; flex-shrink:0;"
-                >
-                  <img
-                    v-if="item.hinhAnh || item.hinhAnhChinh"
-                    :src="item.hinhAnh || item.hinhAnhChinh"
-                    style="width:100%; height:100%; object-fit:contain; border-radius:6px;"
-                  />
-                  <Laptop v-else :size="18" style="color:#94a3b8;" />
+                <img
+                  v-if="item.hinhAnh || item.hinhAnhChinh"
+                  :src="item.hinhAnh || item.hinhAnhChinh"
+                  style="width:100%; height:100%; object-fit:contain;"
+                />
+                <Laptop v-else :size="18" style="color:#94a3b8;" />
+              </div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate" style="font-size:0.83rem; color:#1e293b;" :title="item.tenSanPham">
+                  {{ item.tenSanPham || 'Sản phẩm SAOClub' }}
                 </div>
-                <div class="flex-grow-1 min-w-0">
-                  <div class="fw-semibold text-truncate" style="font-size:0.82rem; color:#1e293b;">
-                    {{ item.tenSanPham || 'Sản phẩm SAOClub' }}
-                  </div>
-                  <div class="small" style="font-size:0.74rem; color:#ea580c; font-weight:600;">
-                    {{ formatPrice(item.donGia || item.thanhTien) }}
-                    <span class="text-secondary fw-normal">x{{ item.soLuong || 1 }}</span>
-                  </div>
+                <div class="small d-flex align-items-center gap-1.5" style="font-size:0.75rem;">
+                  <span class="fw-bold" style="color:#ea580c;">
+                    {{ formatPrice(item.donGia ?? item.giaBan ?? item.thanhTien ?? totalAmount) }}
+                  </span>
+                  <span class="text-secondary">× {{ item.soLuong || item.quantity || 1 }}</span>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <!-- Tóm tắt chi phí -->
-            <div class="pt-2 border-top" style="border-color:#f1f5f9; font-size:0.82rem;">
-              <div class="d-flex justify-content-between mb-1" style="color:#64748b;">
-                <span>Giá trị giỏ hàng:</span>
-                <span class="fw-semibold text-dark">{{ formatPrice(totalAmount) }}</span>
-              </div>
-              <div class="d-flex justify-content-between" style="color:#64748b;">
-                <span>Phí giao dịch:</span>
-                <span class="fw-semibold text-success fst-italic">Miễn phí</span>
-              </div>
-            </div>
+        <!-- Chi tiết chi phí -->
+        <div class="p-3 rounded-3 border mt-auto" style="border-color:#e2e8f0; background:#f8fafc; font-size:0.82rem;">
+          <div class="d-flex justify-content-between mb-1.5" style="color:#64748b;">
+            <span>Tạm tính tiền hàng:</span>
+            <span class="fw-semibold text-dark">{{ formatPrice(subtotalAmount) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-1.5" style="color:#64748b;">
+            <span>Phí vận chuyển:</span>
+            <span class="fw-semibold" :class="shippingFeeAmount > 0 ? 'text-dark' : 'text-success'">
+              {{ shippingFeeAmount > 0 ? formatPrice(shippingFeeAmount) : 'Miễn phí' }}
+            </span>
+          </div>
+          <div v-if="discountAmount > 0" class="d-flex justify-content-between mb-1.5 text-danger">
+            <span>Khuyến mãi / Giảm giá:</span>
+            <span class="fw-semibold">-{{ formatPrice(discountAmount) }}</span>
+          </div>
+          <div class="d-flex justify-content-between pt-2 border-top mt-1" style="border-color:#e2e8f0; font-size:0.9rem;">
+            <span class="fw-bold" style="color:#0f172a;">Tổng thanh toán:</span>
+            <span class="fw-extrabold" style="color:#ea580c; font-size:1.05rem;">{{ formatPrice(totalAmount) }}</span>
           </div>
         </div>
       </div>
@@ -412,7 +398,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import {
   X, ShoppingBag, ChevronDown, ChevronUp, Laptop, Heart, Download,
-  Clock, Copy, CheckCircle2, Lock, ImageOff
+  Clock, Copy, CheckCircle2, Lock, ImageOff, MapPin
 } from '@lucide/vue';
 import { formatPrice } from '../../utils/formatPrice.js';
 import * as ThanhToanService from '../../services/ThanhToanService.js';
@@ -426,10 +412,54 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'close', 'paid']);
 
-const discountInput = ref('');
 const orderAccordionOpen = ref(true);
 const qrFailed = ref(false);
 const confirming = ref(false);
+
+// Thông tin người nhận & giao hàng
+const recipientName = computed(() => {
+  return props.order?.nguoiNhan || props.order?.khachHang?.hoTen || props.order?.hoTen || props.order?.tenKhachHang || '';
+});
+
+const recipientPhone = computed(() => {
+  return props.order?.sdtNguoiNhan || props.order?.khachHang?.soDienThoai || props.order?.soDienThoai || '';
+});
+
+const recipientEmail = computed(() => {
+  return props.order?.email || props.order?.khachHang?.email || '';
+});
+
+const recipientAddress = computed(() => {
+  return props.order?.diaChiGiaoHangText || props.order?.diaChiGiaoHang || props.order?.diaChi || '';
+});
+
+// Chi tiết chi phí
+const shippingFeeAmount = computed(() => {
+  return Number(props.order?.phiVanChuyen ?? 0);
+});
+
+const discountAmount = computed(() => {
+  return Number(props.order?.giamGia ?? props.order?.tienGiamGia ?? 0);
+});
+
+const subtotalAmount = computed(() => {
+  if (props.order?.tamTinh !== undefined && props.order?.tamTinh !== null) {
+    return Number(props.order.tamTinh);
+  }
+  if (props.order?.tongTienHang !== undefined && props.order?.tongTienHang !== null) {
+    return Number(props.order.tongTienHang);
+  }
+  const items = displayOrderItems.value;
+  if (items && items.length > 0) {
+    const sum = items.reduce((acc, it) => {
+      const price = Number(it.donGia ?? it.giaBan ?? it.thanhTien ?? 0);
+      const qty = Number(it.soLuong ?? it.quantity ?? 1);
+      return acc + (price * qty);
+    }, 0);
+    if (sum > 0) return sum;
+  }
+  return Math.max(0, totalAmount.value - shippingFeeAmount.value + discountAmount.value);
+});
 
 // Đồng hồ đếm ngược 15 phút (900 giây)
 const timeLeftSeconds = ref(450); // 450s ~ 7m30s hoặc 900s
@@ -509,20 +539,6 @@ const displayOrderItems = computed(() => {
   ];
 });
 
-// Gợi ý mã giảm giá
-const sampleVouchers = [
-  { code: 'SALE1MORDER247', amount: '95.000 đ', desc: 'Giảm ngay 95k cho đơn hàng' },
-  { code: 'HAPPY35KFOR500K247', amount: '35.000 đ', desc: 'Giảm 35k cho đơn từ 500k trở lên' },
-  { code: 'CHAOHE2026PM1', amount: '15.000 đ', desc: 'Chào hè 2026 cùng SAOClub' },
-];
-
-const applyCustomCoupon = () => {
-  if (!discountInput.value.trim()) {
-    showToast('Vui lòng nhập mã giảm giá', 'warning');
-    return;
-  }
-  showToast(`Đã ghi nhận mã: ${discountInput.value}`, 'info');
-};
 
 const copyText = (txt, label) => {
   navigator.clipboard.writeText(txt).then(() => {

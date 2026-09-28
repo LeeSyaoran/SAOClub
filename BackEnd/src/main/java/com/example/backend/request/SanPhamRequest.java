@@ -42,6 +42,17 @@ public class SanPhamRequest {
     @Pattern(regexp = "^$|^\\d{8,13}$", message = "Barcode phải gồm 8–13 chữ số")
     private String barcodeBienThe;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("barcode")
+    public void setBarcodeAlias(String barcode) {
+        if (this.barcodeBienThe == null || this.barcodeBienThe.isBlank()) {
+            this.barcodeBienThe = barcode;
+        }
+    }
+
+    public String getBarcode() {
+        return this.barcodeBienThe;
+    }
+
     private Integer cpuId;
     private Integer ramId;
 
@@ -87,4 +98,5 @@ public class SanPhamRequest {
     private String hinhAnhBienThe;
     private String phanLoaiTags;
     private String phanLoaiTen;
+    private String moTaBienThe;
 }

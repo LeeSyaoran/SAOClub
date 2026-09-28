@@ -11,7 +11,7 @@ export const getPage = ({ page = 0, size = 20, keyword, danhMucId, thuongHieuId,
 };
 
 // Lấy danh sách tất cả sản phẩm
-export const getAll = () => getPage({ size: 200 }).then((p) => p.content);
+export const getAll = () => getPage({ size: 1000 }).then((p) => p.content);
 
 export const save = (id, body) =>
   id ? put(`/api/san-pham/update/${id}`, body) : post('/api/san-pham', body);

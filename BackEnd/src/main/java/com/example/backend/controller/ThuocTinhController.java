@@ -65,6 +65,7 @@ public class ThuocTinhController {
         tt.setBatBuoc(request.getBatBuoc() != null ? request.getBatBuoc() : false);
         tt.setThuTuHienThi(request.getThuTuHienThi() != null ? request.getThuTuHienThi() : 0);
         tt.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : "active");
+        tt.setPhamVi(request.getPhamVi() != null ? request.getPhamVi() : "san_pham");
 
         ThuocTinh saved = thuocTinhRepository.save(tt);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
@@ -94,6 +95,9 @@ public class ThuocTinhController {
         }
         if (request.getTrangThai() != null) {
             tt.setTrangThai(request.getTrangThai());
+        }
+        if (request.getPhamVi() != null) {
+            tt.setPhamVi(request.getPhamVi());
         }
 
         ThuocTinh updated = thuocTinhRepository.save(tt);
@@ -161,6 +165,7 @@ public class ThuocTinhController {
                 tt.getBatBuoc(),
                 tt.getThuTuHienThi(),
                 tt.getTrangThai(),
+                tt.getPhamVi() != null ? tt.getPhamVi() : "san_pham",
                 giaTriResponses
         );
     }

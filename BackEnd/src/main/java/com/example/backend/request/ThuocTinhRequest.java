@@ -21,4 +21,5 @@ public class ThuocTinhRequest {
     private Integer thuTuHienThi = 0;
 
     private String trangThai = "active";
+    private String phamVi = "san_pham"; // "san_pham" | "bien_the"
 }

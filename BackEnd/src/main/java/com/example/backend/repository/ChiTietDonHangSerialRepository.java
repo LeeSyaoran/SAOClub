@@ -22,4 +22,7 @@ public interface ChiTietDonHangSerialRepository extends JpaRepository<ChiTietDon
 
     // Kiểm tra serial đã liên kết với đơn hàng nào hay chưa
     boolean existsByChiTietSanPham_ChiTietId(Integer chiTietId);
+
+    // Kiểm tra cặp chiTietDonHangId và chiTietId đã liên kết hay chưa
+    boolean existsByChiTietDonHang_IdAndChiTietSanPham_ChiTietId(Integer chiTietDonHangId, Integer chiTietId);
 }

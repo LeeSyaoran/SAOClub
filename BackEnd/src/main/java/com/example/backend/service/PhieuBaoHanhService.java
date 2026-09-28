@@ -17,7 +17,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class PhieuBaoHanhService {
@@ -147,14 +149,19 @@ public class PhieuBaoHanhService {
         // TODO: implement when extension logic is finalized
     }
 
-    // Tra cứu thông tin bảo hành theo số serial
+    // Tra cứu thông tin bảo hành theo số serial hoặc mã vạch
     public WarrantyLookupResponse traCuuSerial(String soSerial) {
-        // Bước 1: Tìm serial chưa xóa theo barcode (bien_the) hoac so_serial (chi_tiet_san_pham)
+        String cleanCode = soSerial != null ? soSerial.trim() : "";
+        if (cleanCode.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng nhập mã serial hoặc mã vạch");
+        }
+
+        // Bước 1: Tìm serial chưa xóa theo barcode (bien_the) hoặc so_serial (chi_tiet_san_pham)
         List<ChiTietSanPham> results = chiTietSanPhamRepository
-                .findActiveByBarcodeOrSoSerial(soSerial, soSerial);
+                .findActiveByBarcodeOrSoSerial(cleanCode, cleanCode);
 
         if (!results.isEmpty()) {
-            // Tim theo barcode -> lay san pham da_ban neu co, neu khong lay dau tien
+            // Tìm theo barcode/serial -> ưu tiên lấy sản phẩm da_ban nếu có, nếu không lấy đầu tiên
             ChiTietSanPham serial = results.stream()
                     .filter(c -> "da_ban".equals(c.getTrangThai()))
                     .findFirst()
@@ -162,15 +169,75 @@ public class PhieuBaoHanhService {
             return buildLookupResponse(serial);
         }
 
-        // Bước 2: Không tìm thấy -> kiem tra co phai da bi xoa mem
-        boolean existedDeleted = chiTietSanPhamRepository
-                .existsDeletedByBarcodeOrSoSerial(soSerial, soSerial);
-
-        if (existedDeleted) {
-            throw new SerialDeletedException("Mã " + soSerial + " đã bị xóa khỏi hệ thống");
+        // Bước 2: Kiểm tra xem mã vạch hoặc SKU có tồn tại trong danh mục Biến Thể Sản Phẩm không
+        Optional<BienTheSanPham> btOpt = bienTheSanPhamRepository.findByBarcodeWithDetails(cleanCode);
+        if (btOpt.isEmpty()) {
+            btOpt = bienTheSanPhamRepository.findByMaSkuWithDetails(cleanCode);
+        }
+        if (btOpt.isPresent()) {
+            BienTheSanPham bt = btOpt.get();
+            // Nếu biến thể có serial trong kho, kiểm tra xem có serial nào liên kết không
+            if (bt.getBarcode() != null && !bt.getBarcode().isBlank()) {
+                List<ChiTietSanPham> btSerials = chiTietSanPhamRepository.findActiveByBarcodeOrSoSerial(bt.getBarcode(), "");
+                if (!btSerials.isEmpty()) {
+                    ChiTietSanPham serial = btSerials.stream()
+                            .filter(c -> "da_ban".equals(c.getTrangThai()))
+                            .findFirst()
+                            .orElse(btSerials.get(0));
+                    return buildLookupResponse(serial);
+                }
+            }
+            return buildLookupResponseFromBienThe(bt);
         }
 
-        throw new jakarta.persistence.EntityNotFoundException("Mã " + soSerial + " không tồn tại trong hệ thống");
+        // Bước 3: Không tìm thấy -> kiểm tra xem có phải đã bị xóa mềm
+        boolean existedDeleted = chiTietSanPhamRepository
+                .existsDeletedByBarcodeOrSoSerial(cleanCode, cleanCode);
+
+        if (existedDeleted) {
+            throw new SerialDeletedException("Mã " + cleanCode + " đã bị xóa khỏi hệ thống");
+        }
+
+        throw new jakarta.persistence.EntityNotFoundException("Mã " + cleanCode + " không tồn tại trong hệ thống");
+    }
+
+    private WarrantyLookupResponse buildLookupResponseFromBienThe(BienTheSanPham bt) {
+        SanPham sp = bt.getSanPham();
+
+        WarrantyLookupResponse r = new WarrantyLookupResponse();
+        r.setChiTietId(null);
+        r.setSoSerial(null);
+        r.setTrangThaiSerial("trong_kho");
+        r.setNgayNhapKho(null);
+
+        // BienThe
+        r.setBienTheId(bt.getBienTheId());
+        r.setMaSku(bt.getMaSku());
+        r.setBarcode(bt.getBarcode());
+        r.setGiaBan(bt.getGiaBan());
+        r.setBaoHanhThang(bt.getBaoHanhThang());
+        r.setHinhAnhBienThe(bt.getHinhAnhBienThe() != null ? bt.getHinhAnhBienThe() : (sp != null ? sp.getHinhAnhChinh() : null));
+        r.setMauSac(bt.getMauSac());
+        r.setKichThuocManHinh(bt.getKichThuocManHinh());
+        r.setHeDieuHanh(bt.getHeDieuHanh());
+        r.setPin(bt.getPin());
+        r.setTrongLuongKg(bt.getTrongLuongKg());
+
+        // CPU/RAM/GPU/OCung
+        r.setCpuTen(bt.getCpu() != null ? bt.getCpu().getTenCpu() : null);
+        r.setRamTen(bt.getRam() != null ? bt.getRam().getDungLuong() : null);
+        r.setGpuTen(bt.getGpu() != null ? bt.getGpu().getTenGpu() : null);
+        r.setOCungTen(bt.getOCung() != null ? bt.getOCung().getLoaiOcung() : null);
+
+        // SanPham
+        if (sp != null) {
+            r.setSanPhamId(sp.getSanPhamId());
+            r.setTenSanPham(sp.getTenSanPham());
+            r.setMaSanPham(sp.getMaSanPham());
+        }
+
+        r.setLichSuPhieuBaoHanh(Collections.emptyList());
+        return r;
     }
 
     private WarrantyLookupResponse buildLookupResponse(ChiTietSanPham serial) {

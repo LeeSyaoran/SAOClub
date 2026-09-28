@@ -80,6 +80,7 @@ public class SanPhamChiTietResponse {
         private String heDieuHanh;
         private String pin;
         private BigDecimal trongLuongKg;
+        private String moTa;
 
         @JsonProperty("ocung")
         public String getOcungAlias() {

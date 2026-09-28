@@ -18,6 +18,7 @@ public class ThuocTinhResponse {
     private Boolean batBuoc;
     private Integer thuTuHienThi;
     private String trangThai;
+    private String phamVi;
     private List<GiaTriResponse> giaTriList;
 
     @Data

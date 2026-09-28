@@ -9,9 +9,9 @@ $Server = "localhost"
 $Database = "QLBanMayTinh"
 $User = "sa"
 $Password = "SaoClub@2024"
-$ScriptPath = "$PSScriptRoot\Migrate_ThuocTinh.sql"
+$ScriptPath = "$PSScriptRoot\QLBanMayTinh.sql"
 
-Write-Host "🚀 Bắt đầu migration..." -ForegroundColor Cyan
+Write-Host "🚀 Chạy script cơ sở dữ liệu..." -ForegroundColor Cyan
 Write-Host "   Server: $Server"
 Write-Host "   Database: $Database"
 Write-Host "   Script: $ScriptPath"

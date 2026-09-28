@@ -2,7 +2,7 @@ import { reactive } from "vue";
 import * as SanPhamService from "../services/SanPhamService.js";
 
 // Store dữ liệu sản phẩm dùng chung
-export const ProductsStore = reactive({ items: [], loading: false, loaded: false });
+export const ProductsStore = reactive({ items: [], loading: false, loaded: false, version: 0 });
 
 let productsPromise = null;
 
@@ -24,6 +24,7 @@ export const refreshProducts = async () => {
   try {
     ProductsStore.items = await SanPhamService.getAll().catch(() => []);
     ProductsStore.loaded = true;
+    ProductsStore.version++;
   } finally {
     ProductsStore.loading = false;
   }

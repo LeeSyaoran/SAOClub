@@ -51,7 +51,7 @@ const ensureProductRefData = () => {
     const STANDARD_ATTR_FIELDS = new Set(["mau_sac", "man_hinh", "pin", "he_dieu_hanh", "trong_luong"]);
     dynamicAttrs.value = Array.isArray(attrs)
       ? attrs
-          .filter((a) => !STANDARD_ATTR_FIELDS.has(a.tenTruong))
+          .filter((a) => (a.phamVi || 'san_pham') === 'san_pham' && !STANDARD_ATTR_FIELDS.has(a.tenTruong) && (a.trangThai || 'active') === 'active')
           .sort((a, b) => (a.thuTuHienThi ?? 0) - (b.thuTuHienThi ?? 0))
       : [];
     // Khởi tạo giá trị mặc định cho thuộc tính động

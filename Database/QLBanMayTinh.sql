@@ -262,6 +262,43 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dm_gpu')  
 GO
 
 -- ============================================================
+--  3.B. THUỘC TÍNH SẢN PHẨM ĐỘNG (Màu sắc, Màn hình, Pin,...)
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'thuoc_tinh')
+BEGIN
+    CREATE TABLE thuoc_tinh (
+        thuoc_tinh_id    INT            IDENTITY(1,1) PRIMARY KEY,
+        ten_truong       VARCHAR(50)    NOT NULL UNIQUE,   -- mau_sac, man_hinh, pin, trong_luong, he_dieu_hanh
+        ten_hien_thi    NVARCHAR(100)  NOT NULL,          -- Tên hiển thị: "Màu sắc", "Màn hình", "Pin"
+        loai_du_lieu    VARCHAR(20)    NOT NULL DEFAULT 'text', -- text | select
+        bat_buoc        BIT            NOT NULL DEFAULT 0,
+        thu_tu_hien_thi INT            NOT NULL DEFAULT 0,
+        trang_thai      NVARCHAR(20)   NOT NULL DEFAULT N'active'
+            CONSTRAINT CK_thuoctinh_trangthai CHECK (trang_thai IN (N'active', N'inactive')),
+        pham_vi         VARCHAR(20)    NOT NULL DEFAULT 'san_pham', -- san_pham | bien_the
+        ngay_tao        DATETIME       NOT NULL DEFAULT GETDATE()
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'thuoc_tinh_gia_tri')
+BEGIN
+    CREATE TABLE thuoc_tinh_gia_tri (
+        gia_tri_id      INT            IDENTITY(1,1) PRIMARY KEY,
+        thuoc_tinh_id   INT            NOT NULL,
+        gia_tri         NVARCHAR(100)  NOT NULL,
+        thu_tu          INT            NOT NULL DEFAULT 0,
+        CONSTRAINT UQ_ttgt_thuoc_tinh_gia_tri UNIQUE (thuoc_tinh_id, gia_tri),
+        CONSTRAINT FK_ttgt_thuoc_tinh FOREIGN KEY (thuoc_tinh_id) REFERENCES thuoc_tinh(thuoc_tinh_id) ON DELETE CASCADE
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ttgt_thuoc_tinh_id')
+    CREATE INDEX IX_ttgt_thuoc_tinh_id ON thuoc_tinh_gia_tri(thuoc_tinh_id);
+GO
+
+-- ============================================================
 --  4. BIẾN THỂ SẢN PHẨM (ĐỊNH GIÁ & THÔNG SỐ KỸ THUẬT)
 -- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'bien_the_san_pham')
@@ -290,6 +327,7 @@ BEGIN
         he_dieu_hanh        NVARCHAR(100)   NULL,
         pin                 NVARCHAR(50)    NULL,
         trong_luong_kg      DECIMAL(5,2)    NULL,
+        mo_ta               NVARCHAR(MAX)   NULL,
 
         -- Cache phân loại sản phẩm
         phan_loai_tags      NVARCHAR(200)   NULL,
@@ -303,6 +341,54 @@ BEGIN
         CONSTRAINT FK_bien_the_ocung    FOREIGN KEY (o_cung_id)   REFERENCES dm_o_cung(o_cung_id),
         CONSTRAINT FK_bien_the_gpu      FOREIGN KEY (gpu_id)      REFERENCES dm_gpu(gpu_id)
     );
+END
+GO
+
+-- ============================================================
+--  4.B. BẢNG TRUNG GIAN LIÊN KẾT THUỘC TÍNH VỚI SẢN PHẨM & BIẾN THỂ
+-- ============================================================
+
+-- Sản phẩm có những thuộc tính nào (vd: Laptop có màu, màn hình, pin)
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'san_pham_thuoc_tinh')
+BEGIN
+    CREATE TABLE san_pham_thuoc_tinh (
+        san_pham_id      INT       NOT NULL,
+        thuoc_tinh_id    INT       NOT NULL,
+        ngay_tao         DATETIME  NOT NULL DEFAULT GETDATE(),
+
+        CONSTRAINT PK_sptt PRIMARY KEY CLUSTERED (san_pham_id, thuoc_tinh_id),
+        CONSTRAINT FK_sptt_san_pham FOREIGN KEY (san_pham_id)
+            REFERENCES san_pham(san_pham_id) ON DELETE CASCADE,
+        CONSTRAINT FK_sptt_thuoc_tinh FOREIGN KEY (thuoc_tinh_id)
+            REFERENCES thuoc_tinh(thuoc_tinh_id) ON DELETE CASCADE
+    );
+
+    CREATE NONCLUSTERED INDEX IX_sptt_thuoc_tinh_id
+        ON san_pham_thuoc_tinh(thuoc_tinh_id);
+END
+GO
+
+-- Biến thể mang giá trị cụ thể của thuộc tính (vd: Laptop X, 256GB, Đen)
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'bien_the_thuoc_tinh')
+BEGIN
+    CREATE TABLE bien_the_thuoc_tinh (
+        bien_the_id     INT NOT NULL,
+        thuoc_tinh_id   INT NOT NULL,
+        gia_tri_id      INT NOT NULL,
+
+        CONSTRAINT PK_bttt PRIMARY KEY CLUSTERED (bien_the_id, thuoc_tinh_id),
+        CONSTRAINT FK_bttt_bien_the FOREIGN KEY (bien_the_id)
+            REFERENCES bien_the_san_pham(bien_the_id) ON DELETE CASCADE,
+        CONSTRAINT FK_bttt_thuoc_tinh FOREIGN KEY (thuoc_tinh_id)
+            REFERENCES thuoc_tinh(thuoc_tinh_id) ON DELETE CASCADE,
+        CONSTRAINT FK_bttt_gia_tri FOREIGN KEY (gia_tri_id)
+            REFERENCES thuoc_tinh_gia_tri(gia_tri_id) -- NO CASCADE: tránh cycle
+    );
+
+    CREATE NONCLUSTERED INDEX IX_bttt_thuoc_tinh_id
+        ON bien_the_thuoc_tinh(thuoc_tinh_id);
+    CREATE NONCLUSTERED INDEX IX_bttt_gia_tri_id
+        ON bien_the_thuoc_tinh(gia_tri_id);
 END
 GO
 
@@ -349,15 +435,7 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (
-    SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_ctsp_phieu_nhap'
-)
-BEGIN
-    ALTER TABLE chi_tiet_san_pham
-        ADD CONSTRAINT FK_ctsp_phieu_nhap FOREIGN KEY (phieu_nhap_id)
-        REFERENCES phieu_nhap_kho(phieu_nhap_id);
-END
-GO
+
 
 IF COL_LENGTH('chi_tiet_san_pham', 'locked_by') IS NULL
 BEGIN
@@ -485,6 +563,21 @@ BEGIN
         CONSTRAINT CK_km_ngay CHECK (ngay_ket_thuc > ngay_bat_dau)
     );
 END
+GO
+
+-- Bảng liên kết khuyến mãi - sản phẩm (áp dụng khuyến mãi cho sản phẩm cụ thể)
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'khuyen_mai_san_pham')
+BEGIN
+    CREATE TABLE khuyen_mai_san_pham (
+        khuyen_mai_san_pham_id  INT  IDENTITY(1,1) PRIMARY KEY,
+        khuyen_mai_id           INT  NOT NULL,
+        san_pham_id             INT  NOT NULL,
+        CONSTRAINT FK_kmsp_khuyen_mai FOREIGN KEY (khuyen_mai_id) REFERENCES khuyen_mai(khuyen_mai_id) ON DELETE CASCADE,
+        CONSTRAINT FK_kmsp_san_pham   FOREIGN KEY (san_pham_id)    REFERENCES san_pham(san_pham_id)    ON DELETE CASCADE,
+        CONSTRAINT UQ_kmsp_km_sp      UNIQUE (khuyen_mai_id, san_pham_id)
+    );
+END
+GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'dia_chi_giao_hang')
 BEGIN
@@ -522,6 +615,18 @@ BEGIN
         CONSTRAINT FK_phieu_nhap_nhan_vien FOREIGN KEY (nhan_vien_id)    REFERENCES nhan_vien(nhan_vien_id)
     );
 END
+GO
+
+-- FK từ chi_tiet_san_pham tới phieu_nhap_kho (thêm sau khi phieu_nhap_kho đã được tạo)
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_ctsp_phieu_nhap'
+)
+BEGIN
+    ALTER TABLE chi_tiet_san_pham
+        ADD CONSTRAINT FK_ctsp_phieu_nhap FOREIGN KEY (phieu_nhap_id)
+        REFERENCES phieu_nhap_kho(phieu_nhap_id);
+END
+GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'chi_tiet_phieu_nhap')
 BEGIN
@@ -1247,6 +1352,11 @@ GO
     FROM Ganh g
     ORDER BY g.rn;
 
+    -- Cập nhật ảnh đại diện cho 3 khách hàng đầu tiên (từ migration_git_updates)
+    UPDATE khach_hang SET hinh_anh = '/images/kh1.jpg' WHERE khach_hang_id = 1;
+    UPDATE khach_hang SET hinh_anh = '/images/kh2.webp' WHERE khach_hang_id = 2;
+    UPDATE khach_hang SET hinh_anh = '/images/kh3.webp' WHERE khach_hang_id = 3;
+
     -- Dữ liệu mẫu tài khoản người dùng
     INSERT INTO tai_khoan (username, mat_khau_hash, chuc_vu_id, nhan_vien_id, khach_hang_id) VALUES
     ('admin',        '$2a$10$V3q/GGHrWTQ/9cju6ohqEe4HR8TlXWwHXI7R2/V47CTCpHIHwu4Ie', 1, 1, NULL),
@@ -1290,6 +1400,40 @@ GO
     ('laptop_cu',  N'Laptop cũ',       N'Hàng refurbished còn bảo hành, đã kiểm tra kỹ',                        7);
     -- phan_loai: van_phong=1, sinh_vien=2, gaming=3, do_hoa=4, ky_thuat=5, macbook=6, laptop_cu=7
 
+    -- Thuộc tính sản phẩm động (Sản phẩm: thông số chung; Biến thể: đặc trưng riêng)
+    INSERT INTO thuoc_tinh (ten_truong, ten_hien_thi, loai_du_lieu, bat_buoc, thu_tu_hien_thi, pham_vi) VALUES
+    ('mau_sac',      N'Màu sắc',          'select', 1, 1, 'bien_the'),
+    ('man_hinh',     N'Màn hình',         'select', 0, 2, 'san_pham'),
+    ('pin',          N'Pin',              'select', 0, 3, 'san_pham'),
+    ('trong_luong',  N'Trọng lượng (kg)', 'text',   0, 4, 'san_pham'),
+    ('he_dieu_hanh', N'Hệ điều hành',     'select', 0, 5, 'san_pham'),
+    ('chat_lieu_vo', N'Chất liệu vỏ',     'select', 0, 6, 'san_pham'),
+    ('den_ban_phim', N'Đèn bàn phím',     'select', 0, 7, 'bien_the');
+
+    -- Giá trị mẫu cho Màu sắc (thuoc_tinh_id = 1)
+    INSERT INTO thuoc_tinh_gia_tri (thuoc_tinh_id, gia_tri, thu_tu) VALUES
+    (1, N'Đen', 1), (1, N'Trắng', 2), (1, N'Bạc', 3), (1, N'Xám', 4),
+    (1, N'Xanh Dương', 5), (1, N'Xanh Lá', 6), (1, N'Đỏ', 7), (1, N'Vàng', 8),
+    (1, N'Hồng', 9), (1, N'Tím', 10), (1, N'Cam', 11), (1, N'Nâu', 12);
+
+    -- Giá trị mẫu cho Màn hình (thuoc_tinh_id = 2)
+    INSERT INTO thuoc_tinh_gia_tri (thuoc_tinh_id, gia_tri, thu_tu) VALUES
+    (2, N'15.6" FHD 60Hz', 1), (2, N'15.6" FHD 144Hz', 2), (2, N'15.6" QHD 240Hz', 3),
+    (2, N'16" 2.5K 120Hz', 4), (2, N'16" FHD 165Hz', 5), (2, N'16" WQXGA 165Hz', 6),
+    (2, N'16" 2.8K OLED 120Hz', 7), (2, N'14" FHD 60Hz', 8), (2, N'14" 2.8K OLED', 9);
+
+    -- Giá trị mẫu cho Pin (thuoc_tinh_id = 3)
+    INSERT INTO thuoc_tinh_gia_tri (thuoc_tinh_id, gia_tri, thu_tu) VALUES
+    (3, N'41Wh', 1), (3, N'48Wh', 2), (3, N'50Wh', 3), (3, N'52Wh', 4),
+    (3, N'54Wh', 5), (3, N'57Wh', 6), (3, N'75Wh', 7), (3, N'80Wh', 8),
+    (3, N'86Wh', 9), (3, N'90Wh', 10);
+
+    -- Giá trị mẫu cho Hệ điều hành (thuoc_tinh_id = 5)
+    INSERT INTO thuoc_tinh_gia_tri (thuoc_tinh_id, gia_tri, thu_tu) VALUES
+    (5, N'Windows 11 Home', 1), (5, N'Windows 11 Pro', 2),
+    (5, N'Windows 10 Home', 3), (5, N'Windows 10 Pro', 4),
+    (5, N'macOS', 5), (5, N'Không kèm HĐH', 6), (5, N'Linux', 7);
+
     -- Sản phẩm (chỉ LAPTOP)
     -- ma_san_pham: mã nội bộ hiển thị trên UI  |  barcode: EAN-13 (số minh hoạ, tiền tố 893 của VN)
     INSERT INTO san_pham (ma_san_pham, barcode, ten_san_pham, thuong_hieu_id, danh_muc_id, nha_cung_cap_id, loai_san_pham, mo_ta, hinh_anh_chinh) VALUES
@@ -1326,6 +1470,92 @@ GO
     (5,'MSI-STL15-RTX4050',22500000, 27990000, 24, 7,2,2,2, N'15.6" FHD 144Hz', N'Windows 11 Home', N'52Wh', 1.70, N'Đen'),
     (5,'MSI-STL15-RTX4070',30000000, 37490000, 24, 7,2,3,4, N'15.6" QHD 240Hz', N'Windows 11 Home', N'52Wh', 1.70, N'Đen');
     -- Danh sách ID biến thể mẫu
+
+    -- Backfill giá trị thuộc tính từ bien_the_san_pham vào thuoc_tinh_gia_tri (nếu chưa có)
+    INSERT INTO thuoc_tinh_gia_tri (thuoc_tinh_id, gia_tri, thu_tu)
+    SELECT tt.thuoc_tinh_id, bt.mau_sac, 100
+    FROM thuoc_tinh tt
+    JOIN (
+        SELECT DISTINCT mau_sac FROM bien_the_san_pham
+        WHERE mau_sac IS NOT NULL AND mau_sac <> N''
+    ) bt ON tt.ten_truong = 'mau_sac'
+    WHERE NOT EXISTS (
+        SELECT 1 FROM thuoc_tinh_gia_tri ttgt
+        WHERE ttgt.thuoc_tinh_id = tt.thuoc_tinh_id AND ttgt.gia_tri = bt.mau_sac
+    );
+
+    INSERT INTO thuoc_tinh_gia_tri (thuoc_tinh_id, gia_tri, thu_tu)
+    SELECT tt.thuoc_tinh_id, bt.kich_thuoc_man_hinh, 100
+    FROM thuoc_tinh tt
+    JOIN (
+        SELECT DISTINCT kich_thuoc_man_hinh FROM bien_the_san_pham
+        WHERE kich_thuoc_man_hinh IS NOT NULL AND kich_thuoc_man_hinh <> N''
+    ) bt ON tt.ten_truong = 'man_hinh'
+    WHERE NOT EXISTS (
+        SELECT 1 FROM thuoc_tinh_gia_tri ttgt
+        WHERE ttgt.thuoc_tinh_id = tt.thuoc_tinh_id AND ttgt.gia_tri = bt.kich_thuoc_man_hinh
+    );
+
+    INSERT INTO thuoc_tinh_gia_tri (thuoc_tinh_id, gia_tri, thu_tu)
+    SELECT tt.thuoc_tinh_id, bt.pin, 100
+    FROM thuoc_tinh tt
+    JOIN (
+        SELECT DISTINCT pin FROM bien_the_san_pham
+        WHERE pin IS NOT NULL AND pin <> N''
+    ) bt ON tt.ten_truong = 'pin'
+    WHERE NOT EXISTS (
+        SELECT 1 FROM thuoc_tinh_gia_tri ttgt
+        WHERE ttgt.thuoc_tinh_id = tt.thuoc_tinh_id AND ttgt.gia_tri = bt.pin
+    );
+
+    INSERT INTO thuoc_tinh_gia_tri (thuoc_tinh_id, gia_tri, thu_tu)
+    SELECT tt.thuoc_tinh_id, bt.he_dieu_hanh, 100
+    FROM thuoc_tinh tt
+    JOIN (
+        SELECT DISTINCT he_dieu_hanh FROM bien_the_san_pham
+        WHERE he_dieu_hanh IS NOT NULL AND he_dieu_hanh <> N''
+    ) bt ON tt.ten_truong = 'he_dieu_hanh'
+    WHERE NOT EXISTS (
+        SELECT 1 FROM thuoc_tinh_gia_tri ttgt
+        WHERE ttgt.thuoc_tinh_id = tt.thuoc_tinh_id AND ttgt.gia_tri = bt.he_dieu_hanh
+    );
+
+    -- ============================================================
+    -- Backfill: Gán thuộc tính cho sản phẩm (mặc định tất cả sản phẩm đều có các thuộc tính chung)
+    -- ============================================================
+    INSERT INTO san_pham_thuoc_tinh (san_pham_id, thuoc_tinh_id)
+    SELECT sp.san_pham_id, tt.thuoc_tinh_id
+    FROM san_pham sp
+    CROSS JOIN thuoc_tinh tt
+    WHERE tt.trang_thai = N'active'
+    AND NOT EXISTS (
+        SELECT 1 FROM san_pham_thuoc_tinh sptt
+        WHERE sptt.san_pham_id = sp.san_pham_id AND sptt.thuoc_tinh_id = tt.thuoc_tinh_id
+    );
+
+    -- ============================================================
+    -- Backfill: Gán giá trị thuộc tính cho biến thể dựa trên cột trong bien_the_san_pham
+    -- ============================================================
+    INSERT INTO bien_the_thuoc_tinh (bien_the_id, thuoc_tinh_id, gia_tri_id)
+    SELECT
+        bt.bien_the_id,
+        tt.thuoc_tinh_id,
+        ttgt.gia_tri_id
+    FROM bien_the_san_pham bt
+    CROSS JOIN thuoc_tinh tt
+    JOIN thuoc_tinh_gia_tri ttgt ON ttgt.thuoc_tinh_id = tt.thuoc_tinh_id
+        AND ttgt.gia_tri = CASE tt.ten_truong
+            WHEN 'mau_sac' THEN bt.mau_sac
+            WHEN 'man_hinh' THEN bt.kich_thuoc_man_hinh
+            WHEN 'pin' THEN bt.pin
+            WHEN 'he_dieu_hanh' THEN bt.he_dieu_hanh
+        END
+    WHERE tt.trang_thai = N'active'
+    AND NOT EXISTS (
+        SELECT 1 FROM bien_the_thuoc_tinh bttt
+        WHERE bttt.bien_the_id = bt.bien_the_id
+        AND bttt.thuoc_tinh_id = tt.thuoc_tinh_id
+    );
 
     -- Khởi tạo số lượng tồn kho ban đầu
     INSERT INTO ton_kho (bien_the_id, so_luong_ton_thuc_te, so_luong_giu, ton_kho_toi_thieu) VALUES
@@ -1373,6 +1603,11 @@ GO
     (N'VIP500',    N'Khách VIP - Giảm 500.000đ',             N'fixed',  500000,NULL, 15000000, N'2024-01-01', N'2026-12-31', 100,  1, N'active'),
     (N'TECHFEST15',N'Tech Fest - Giảm 15%',                  N'percent', 15,1500000, 5000000, N'2024-07-01', N'2024-07-31',  50, 12, N'inactive');
     -- Sau trigger DH3 insert: VIP500.so_lan_da_dung = 2
+
+    -- Dữ liệu mẫu liên kết khuyến mãi - sản phẩm (khuyen_mai_san_pham)
+    INSERT INTO khuyen_mai_san_pham (khuyen_mai_id, san_pham_id) VALUES
+    (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),  -- SUMMER24 áp dụng cho tất cả laptop mẫu
+    (3, 1), (3, 2), (3, 3);                   -- LAPTOP20 áp dụng cho sản phẩm 1, 2, 3
 GO
 
     -- Dữ liệu mẫu phiếu nhập kho
@@ -2574,18 +2809,22 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @MaxNum INT;
-    SELECT @MaxNum = MAX(CAST(SUBSTRING(ma_san_pham, 3, 10) AS INT))
+    SELECT @MaxNum = ISNULL(MAX(CAST(SUBSTRING(ma_san_pham, 3, 10) AS INT)), 0)
     FROM san_pham
     WHERE ma_san_pham IS NOT NULL
       AND ma_san_pham LIKE 'SP%';
 
-    IF @MaxNum IS NULL SET @MaxNum = 0;
-
+    ;WITH NewRows AS (
+        SELECT sp.san_pham_id,
+               'SP' + RIGHT('0000' + CAST(@MaxNum + ROW_NUMBER() OVER (ORDER BY sp.san_pham_id) AS VARCHAR(10)), 4) AS new_ma
+        FROM san_pham sp
+        JOIN inserted i ON sp.san_pham_id = i.san_pham_id
+        WHERE sp.ma_san_pham IS NULL
+    )
     UPDATE sp
-    SET sp.ma_san_pham = 'SP' + RIGHT('0000' + CAST(@MaxNum + ROW_NUMBER() OVER (ORDER BY i.san_pham_id), 10), 4)
+    SET sp.ma_san_pham = nr.new_ma
     FROM san_pham sp
-    JOIN inserted i ON sp.san_pham_id = i.san_pham_id
-    WHERE sp.ma_san_pham IS NULL;
+    JOIN NewRows nr ON sp.san_pham_id = nr.san_pham_id;
 END
 GO
 

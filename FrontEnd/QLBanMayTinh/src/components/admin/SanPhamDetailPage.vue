@@ -31,7 +31,9 @@ const loadDynamicAttrs = async () => {
   try {
     const attrs = await ThuocTinhService.getAll();
     const standard = new Set(["mau_sac", "man_hinh", "pin", "he_dieu_hanh", "trong_luong"]);
-    dynamicAttrs.value = (attrs || []).filter((a) => !standard.has(a.tenTruong));
+    dynamicAttrs.value = (attrs || []).filter(
+      (a) => (a.phamVi || "san_pham") === "san_pham" && !standard.has(a.tenTruong) && (a.trangThai || "active") === "active"
+    );
   } catch {}
 };
 

@@ -24,16 +24,30 @@ public class LichSuThayDoiSanPhamService {
     @Autowired private TaiKhoanRepository taiKhoanRepository;
 
     public NhanVien nguoiSuaHienTai() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return taiKhoanRepository.findByUsername(username)
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equalsIgnoreCase(auth.getName())) {
+            return taiKhoanRepository.findAll().stream()
+                    .filter(tk -> tk.getNhanVien() != null)
+                    .map(tk -> tk.getNhanVien())
+                    .findFirst()
+                    .orElse(null);
+        }
+        return taiKhoanRepository.findByUsername(auth.getName())
                 .map(tk -> tk.getNhanVien())
                 .orElse(null);
     }
 
     public void ghiNeuThayDoi(Integer sanPhamId, Integer bienTheId, String doiTuong,
                                String tenTruong, Object giaTriCu, Object giaTriMoi, NhanVien nguoiSua) {
-        String cu = giaTriCu == null ? null : String.valueOf(giaTriCu).trim();
-        String moi = giaTriMoi == null ? null : String.valueOf(giaTriMoi).trim();
+        // Chuyển null thành chuỗi null, không phải "null"
+        String cu = giaTriCu == null ? null : String.valueOf(giaTriCu);
+        String moi = giaTriMoi == null ? null : String.valueOf(giaTriMoi);
+
+        // Trim sau khi đã lọc null
+        if (cu != null) cu = cu.trim();
+        if (moi != null) moi = moi.trim();
+
+        if ((cu == null || cu.isEmpty()) && (moi == null || moi.isEmpty())) return;
         if (Objects.equals(cu, moi)) return;
 
         // So sánh số học nếu cả hai đều là số (tránh log 1.70 -> 1.7 hoặc 28990000.00 -> 28990000)
