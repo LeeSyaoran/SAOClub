@@ -1674,8 +1674,8 @@ import {
   getGpu,
 } from "@/services/DmService.js";
 import { ThuocTinhService } from "@/services/ThuocTinhService.js";
-import * as bienTheApi from "@/services/bienTheSanPhamService.js";
-import * as sanPhamApi from "@/services/sanPhamService.js";
+import * as bienTheApi from "@/services/BienTheSanPhamService.js";
+import * as sanPhamApi from "@/services/SanPhamService.js";
 import { getLichSu } from "@/services/SanPhamService.js";
 import {
   Cpu,
