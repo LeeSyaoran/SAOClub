@@ -85,6 +85,7 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     JOIN cdh.donHang d
     JOIN d.khachHang kh
     WHERE c.trangThai = 'da_ban' AND d.ngayGiaoThucTe IS NOT NULL AND c.daXoa = false
+    ORDER BY d.ngayGiaoThucTe DESC, d.id DESC
     """)
     List<WarrantyStatusResponse> timSerialDaBanCoGiaoHang();
 
@@ -116,6 +117,19 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
 
     // Batch check trùng serial trong DB (chỉ serial chưa xóa) — dùng khi duyệt phiếu nhập.
     List<ChiTietSanPham> findBySoSerialInAndDaXoaFalse(Collection<String> soSerials);
+
+    // Tìm các serial đã bán nhưng chưa gán vào bảng chi_tiet_don_hang_serial (dùng gán tự động cho dữ liệu đơn hàng)
+    @Query("""
+        SELECT c FROM ChiTietSanPham c
+        WHERE c.bienThe.bienTheId = :bienTheId
+          AND c.trangThai = 'da_ban'
+          AND c.daXoa = false
+          AND NOT EXISTS (
+              SELECT 1 FROM ChiTietDonHangSerial s WHERE s.chiTietSanPham.chiTietId = c.chiTietId
+          )
+        ORDER BY c.chiTietId ASC
+        """)
+    List<ChiTietSanPham> findUnlinkedSoldSerialsByBienTheId(@Param("bienTheId") Integer bienTheId);
 
     // Lấy tất cả serial thuộc phiếu nhập (bao gồm đã xóa)
     @Query("SELECT c FROM ChiTietSanPham c WHERE c.phieuNhap.phieuNhapId = :phieuNhapId")
@@ -165,7 +179,7 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
         WHERE cdh.chiTietSanPham.chiTietId = :chiTietId
         ORDER BY d.ngayDat DESC
         """)
-    java.util.Optional<ChiTietDonHang> findLatestOrderBySerialChiTietId(@Param("chiTietId") Integer chiTietId);
+    java.util.List<ChiTietDonHang> findLatestOrderBySerialChiTietId(@Param("chiTietId") Integer chiTietId);
 
     // ========== SERIAL LOCKING ==========
 

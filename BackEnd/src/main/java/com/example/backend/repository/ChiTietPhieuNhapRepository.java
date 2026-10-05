@@ -13,6 +13,8 @@ public interface ChiTietPhieuNhapRepository extends JpaRepository<ChiTietPhieuNh
     @Query("SELECT new com.example.backend.response.ChiTietPhieuNhapResponse(c.id, c.phieuNhapKho.phieuNhapId, c.bienThe.bienTheId, c.bienThe.maSku, c.soLuong, c.donGiaNhap, c.thanhTien) FROM ChiTietPhieuNhap c")
     List<ChiTietPhieuNhapResponse> hienThiChiTietPhieuNhap();
 
+    List<ChiTietPhieuNhap> findByPhieuNhapKho_PhieuNhapId(Integer phieuNhapId);
+
     void deleteByPhieuNhapKho_PhieuNhapId(Integer phieuNhapId);
 
     void deleteByBienThe_BienTheId(Integer bienTheId);

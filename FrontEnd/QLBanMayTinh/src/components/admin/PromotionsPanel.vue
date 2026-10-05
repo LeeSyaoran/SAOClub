@@ -8,14 +8,16 @@ import * as VongQuayService from "../../services/VongQuayService.js";
 import { formatPrice, formatDate, statusLabel, toLocalDT, boDauTiengViet } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
 import { PromotionsStore, ensurePromotions, refreshPromotions } from "../../stores/promotions.js";
+import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import { Filter, RotateCcw, X, Plus, Gift, Tag, Sparkles, ChevronDown, Hash, FileText, Percent, DollarSign, Calendar, CalendarCheck, Users, Activity, SlidersHorizontal } from '@lucide/vue';
+import { Filter, RotateCcw, X, Plus, Gift, Tag, Sparkles, ChevronDown, Hash, FileText, Percent, DollarSign, Calendar, CalendarCheck, Users, Activity, SlidersHorizontal, User } from '@lucide/vue';
 
 onMounted(() => {
   ensurePromotions();
   loadWheelConfig();
   loadSanPhamList();
+  ensureCustomers();
 });
 
 const promotions = computed(() => PromotionsStore?.items ?? []);
@@ -168,6 +170,7 @@ const emptyForm = () => ({
   soLuongToiDa: "",
   trangThai: "active",
   sanPhamIds: [], // Danh sách sản phẩm áp dụng - rỗng = tất cả
+  khachHangIds: [], // Danh sách khách hàng nhận voucher - rỗng = tất cả
 });
 const form = reactive(emptyForm());
 
@@ -191,6 +194,39 @@ const removeSanPham = (sanPhamId) => {
   if (idx !== -1) form.sanPhamIds.splice(idx, 1);
 };
 
+// ── Khách hàng chọn nhận voucher ───────────────────────────────────────────
+const khachHangSearch = ref("");
+const allKhachHangs = computed(() => CustomersStore.items ?? []);
+const filteredKhachHangs = computed(() => {
+  const q = boDauTiengViet(khachHangSearch.value.trim());
+  const list = allKhachHangs.value.filter(kh => !kh.daXoa);
+  if (!q) return list.slice(0, 50);
+  return list.filter(kh =>
+    boDauTiengViet(kh.hoTen ?? '').includes(q) ||
+    (kh.soDienThoai ?? '').includes(q) ||
+    boDauTiengViet(kh.email ?? '').includes(q)
+  ).slice(0, 50);
+});
+
+const selectedKhachHangs = computed(() => {
+  if (!form.khachHangIds || form.khachHangIds.length === 0) return [];
+  return allKhachHangs.value.filter(kh => form.khachHangIds.includes(kh.khachHangId));
+});
+
+const toggleKhachHang = (khachHangId) => {
+  const idx = form.khachHangIds.indexOf(khachHangId);
+  if (idx === -1) {
+    form.khachHangIds.push(khachHangId);
+  } else {
+    form.khachHangIds.splice(idx, 1);
+  }
+};
+
+const removeKhachHang = (khachHangId) => {
+  const idx = form.khachHangIds.indexOf(khachHangId);
+  if (idx !== -1) form.khachHangIds.splice(idx, 1);
+};
+
 const openAdd = () => {
   Object.assign(form, emptyForm());
   editingId.value = null;
@@ -212,6 +248,7 @@ const openEdit = async (p) => {
     soLuongToiDa: p.soLuongToiDa ?? "",
     trangThai: p.trangThai ?? "active",
     sanPhamIds: [],
+    khachHangIds: [],
   });
   // Load sản phẩm đã chọn từ API
   try {
@@ -219,6 +256,13 @@ const openEdit = async (p) => {
     form.sanPhamIds = sanPhams.map(sp => sp.sanPhamId);
   } catch (e) {
     console.error("Lỗi load sản phẩm khuyến mãi:", e);
+  }
+  // Load khách hàng đã chọn từ API
+  try {
+    const khachHangs = await KhuyenMaiService.getKhachHangNhanVoucher(p.khuyenMaiId);
+    form.khachHangIds = khachHangs.map(kh => kh.khachHangId);
+  } catch (e) {
+    console.error("Lỗi load khách hàng khuyến mãi:", e);
   }
   editingId.value = p.khuyenMaiId;
   formError.value = "";
@@ -520,6 +564,60 @@ const savePromo = async () => {
               <div v-if="form.sanPhamIds.length > 0" class="mt-1">
                 <span class="text-muted small">
                   Đã chọn {{ form.sanPhamIds.length }} sản phẩm. Khuyến mãi chỉ áp dụng cho các sản phẩm đã chọn.
+                </span>
+              </div>
+            </div>
+
+            <!-- ══ CHỌN KHÁCH HÀNG NHẬN VOUCHER ══ -->
+            <div class="col-12">
+              <label class="form-label small fw-bold" style="color:var(--pink-600);">
+                <User :size="12" class="me-1" />
+                Khách hàng nhận voucher
+                <span class="text-muted fw-normal ms-1">(để trống = tất cả khách hàng)</span>
+              </label>
+
+              <!-- Chips khách hàng đã chọn -->
+              <div v-if="selectedKhachHangs.length > 0" class="d-flex flex-wrap gap-1 mb-2">
+                <span v-for="kh in selectedKhachHangs" :key="kh.khachHangId"
+                  class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                  style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:11px;">
+                  <User :size="11" />
+                  <span>{{ kh.hoTen }}</span>
+                  <span class="text-muted" style="font-size:10px;">({{ kh.soDienThoai }})</span>
+                  <button type="button" @click="removeKhachHang(kh.khachHangId)" style="background:none;border:none;padding:0;cursor:pointer;color:#2563eb;display:flex;">
+                    <X :size="10" />
+                  </button>
+                </span>
+              </div>
+
+              <!-- Dropdown chọn khách hàng -->
+              <div class="position-relative">
+                <div class="d-flex align-items-center gap-2">
+                  <input v-model="khachHangSearch" type="text" placeholder="Tìm tên, SĐT, email khách hàng..." class="form-control form-control-sm admin-input" style="max-width:300px;" />
+                </div>
+                <div v-if="khachHangSearch.trim()" class="position-absolute bg-white shadow rounded border overflow-y-auto" style="max-height:200px;min-width:380px;z-index:100;top:100%;left:0;">
+                  <div v-if="filteredKhachHangs.length === 0" class="p-2 text-secondary small">Không tìm thấy khách hàng</div>
+                  <div v-for="kh in filteredKhachHangs" :key="kh.khachHangId"
+                    class="d-flex align-items-center gap-2 px-2 py-1"
+                    :style="form.khachHangIds.includes(kh.khachHangId) ? 'background:rgba(59,130,246,0.12)' : ''"
+                    style="cursor:pointer;"
+                    @click="toggleKhachHang(kh.khachHangId)">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;background:var(--bg-input);">
+                      <User :size="15" class="text-secondary" />
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                      <div class="fw-medium small text-truncate">{{ kh.hoTen }}</div>
+                      <div class="text-muted" style="font-size:11px;">{{ kh.soDienThoai }} {{ kh.email ? '· ' + kh.email : '' }}</div>
+                    </div>
+                    <div v-if="form.khachHangIds.includes(kh.khachHangId)"><span class="badge bg-primary-subtle text-primary">✓</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hint -->
+              <div v-if="form.khachHangIds.length > 0" class="mt-1">
+                <span class="text-muted small">
+                  Đã chọn {{ form.khachHangIds.length }} khách hàng. Voucher chỉ áp dụng cho các khách hàng đã chọn.
                 </span>
               </div>
             </div>

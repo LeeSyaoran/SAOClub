@@ -1,8 +1,12 @@
 package com.example.backend.response;
 
-import lombok.*;
-
 import java.time.LocalDateTime;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Data
 @NoArgsConstructor
@@ -19,4 +23,5 @@ public class ChatTinNhanResponse {
     private Boolean daDoc;
     private Boolean laCauHoiCuaAi;
     private LocalDateTime createdAt;
+    private String trangThai;
 }

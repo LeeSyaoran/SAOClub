@@ -97,5 +97,14 @@ public class DonHang extends BaseEntity {
     /** Idempotency key từ frontend — ngăn tạo đơn trùng khi retry */
     @Column(name = "idempotency_key", length = 64, unique = true)
     private String idempotencyKey;
+
+    @Column(name = "yeu_cau_huy")
+    private Boolean yeuCauHuy = false;
+
+    @Column(name = "ly_do_huy", length = 500)
+    private String lyDoHuy;
+
+    @Column(name = "ngay_yeu_cau_huy")
+    private LocalDateTime ngayYeuCauHuy;
 }
 

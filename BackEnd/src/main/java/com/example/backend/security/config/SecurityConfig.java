@@ -78,7 +78,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/khach-hang/register").permitAll()
                 .requestMatchers("/api/khach-hang/tim-theo-sdt").permitAll()
                 .requestMatchers("/api/khach-hang/khach-vang-lai").permitAll()
-                .requestMatchers("/api/dev/**").permitAll() // TODO: Xóa sau khi chạy xong migration
 
                 // Checkout online cho khách vãng lai (chưa đăng nhập)
                 .requestMatchers(HttpMethod.POST, "/api/don-hang").permitAll()
@@ -86,9 +85,9 @@ public class SecurityConfig {
                 // SSE events — browser establishes connection before auth completes
                 .requestMatchers("/api/don-hang/events").permitAll()
 
-                // Thanh toán & xác nhận thanh toán (hỗ trợ cả khách hàng online, webhook và admin)
-                .requestMatchers("/api/payment/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/thanh-toan/don-hang/**").permitAll()
+                // Chỉ callback server-to-server của cổng thanh toán là public.
+                // /api/payment/confirm yêu cầu ADMIN/NHAN_VIEN (xem PaymentWebhookController).
+                .requestMatchers(HttpMethod.POST, "/api/payment/vnpay/ipn").permitAll()
 
                 .requestMatchers(HttpMethod.GET, "/api/cai-dat").permitAll()
                 .requestMatchers("/images/**").permitAll()

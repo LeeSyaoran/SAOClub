@@ -1,15 +1,36 @@
 <script setup>
 import { ref, computed, onMounted, reactive, watch } from "vue";
 import {
-  Search, Filter, X, ChevronDown, ChevronUp,
-  Hash, FileText, Package, User, DollarSign, CreditCard, Activity,
-  SlidersHorizontal, RotateCcw, Clock, CheckCircle2, XCircle,
-  Wallet, Banknote, Landmark, Eye, Edit3, Plus, AlertCircle,
+  Search,
+  Filter,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Hash,
+  FileText,
+  Package,
+  User,
+  DollarSign,
+  CreditCard,
+  Activity,
+  SlidersHorizontal,
+  RotateCcw,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Wallet,
+  Banknote,
+  Landmark,
+  Eye,
+  Edit3,
+  Plus,
+  AlertCircle,
 } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as PhieuTraHangService from "../../services/PhieuTraHangService.js";
 import * as ChiTietTraHangService from "../../services/ChiTietTraHangService.js";
 import * as ChiTietDonHangService from "../../services/ChiTietDonHangService.js";
+import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
 import { formatPrice } from "../../utils/adminFormat.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { showToast } from "../../stores/toast.js";
@@ -17,15 +38,12 @@ import { askConfirm } from "../../stores/confirm.js";
 import { AuthStore } from "../../stores/index.js";
 import { OrdersStore, ensureOrders } from "../../stores/orders.js";
 import { CustomersStore, ensureCustomers } from "../../stores/customers.js";
-import { ProductsStore, ensureProducts } from "../../stores/products.js";
+import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/products.js";
+import { refreshInventory } from "../../stores/inventory.js";
 import { StaffStore, ensureStaff } from "../../stores/staff.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
-import {
-  ReturnsStore,
-  ensureReturns,
-  refreshReturns,
-} from "../../stores/returns.js";
+import { ReturnsStore, ensureReturns, refreshReturns } from "../../stores/returns.js";
 
 const props = defineProps({
   readonly: { type: Boolean, default: false },
@@ -42,15 +60,16 @@ onMounted(() => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const customerName = (id) =>
-  (CustomersStore.items ?? []).find((c) => c.khachHangId === id)?.hoTen ?? (id > 0 ? `Khách #${id}` : 'Khách vãng lai');
+  (CustomersStore.items ?? []).find((c) => c.khachHangId === id)?.hoTen ??
+  (id > 0 ? `Khách #${id}` : "Khách vãng lai");
 
 const returnStats = computed(() => {
   const all = ReturnsStore?.items ?? [];
-  const choXuLy = all.filter((r) => r.trangThai === 'cho_xu_ly').length;
-  const daXuLy = all.filter((r) => r.trangThai === 'da_xu_ly').length;
-  const tuChoi = all.filter((r) => r.trangThai === 'tu_choi').length;
+  const choXuLy = all.filter((r) => r.trangThai === "cho_xu_ly").length;
+  const daXuLy = all.filter((r) => r.trangThai === "da_xu_ly").length;
+  const tuChoi = all.filter((r) => r.trangThai === "tu_choi").length;
   const tongTien = all
-    .filter((r) => r.trangThai === 'da_xu_ly')
+    .filter((r) => r.trangThai === "da_xu_ly")
     .reduce((sum, r) => sum + (Number(r.soTienHoan) || 0), 0);
   return { total: all.length, choXuLy, daXuLy, tuChoi, tongTien };
 });
@@ -94,16 +113,14 @@ const staffName = (id) => {
   return `Nhân viên #${id}`;
 };
 
-const orderById = (donHangId) =>
-  (OrdersStore.items ?? []).find((o) => o.donHangId === donHangId);
+const orderById = (donHangId) => (OrdersStore.items ?? []).find((o) => o.donHangId === donHangId);
 
 const STATUS_COLOR = {
   cho_xu_ly: { bg: "#fde68a", text: "#92400e" },
   da_xu_ly: { bg: "#bbf7d0", text: "#166534" },
   tu_choi: { bg: "#fecaca", text: "#991b1b" },
 };
-const statusColor = (s) =>
-  STATUS_COLOR[s] ?? { bg: "#e5e7eb", text: "#374151" };
+const statusColor = (s) => STATUS_COLOR[s] ?? { bg: "#e5e7eb", text: "#374151" };
 const statusLabel = (s) => t(`admin.returnStatus.${s}`);
 const hinhThucHoanLabel = (h) => t(`admin.hinhThucHoan.${h}`);
 
@@ -111,17 +128,22 @@ const hinhThucHoanLabel = (h) => t(`admin.hinhThucHoan.${h}`);
 const search = ref("");
 const isFilterOpen = ref(false);
 const filters = reactive({
-  trangThai: "",      // '' | 'cho_xu_ly' | 'da_xu_ly' | 'tu_choi'
-  hinhThucHoan: "",   // '' | 'vi' | 'tien_mat' | 'chuyen_khoan'
-  ngayFrom: "",       // YYYY-MM-DD
+  trangThai: "", // '' | 'cho_xu_ly' | 'da_xu_ly' | 'tu_choi'
+  hinhThucHoan: "", // '' | 'vi' | 'tien_mat' | 'chuyen_khoan'
+  ngayFrom: "", // YYYY-MM-DD
   ngayTo: "",
   tienMin: "",
   tienMax: "",
 });
 
 const activeFilterCount = computed(() => {
-  return [filters.trangThai, filters.hinhThucHoan, filters.ngayFrom, filters.ngayTo,
-    filters.tienMin !== "" ? filters.tienMin : "", filters.tienMax !== "" ? filters.tienMax : ""
+  return [
+    filters.trangThai,
+    filters.hinhThucHoan,
+    filters.ngayFrom,
+    filters.ngayTo,
+    filters.tienMin !== "" ? filters.tienMin : "",
+    filters.tienMax !== "" ? filters.tienMax : "",
   ].filter((v) => v !== "").length;
 });
 
@@ -139,48 +161,69 @@ const filteredReturns = computed(() => {
   const items = ReturnsStore?.items ?? [];
   const rawQ = search.value.trim().toLowerCase();
   const q = rawQ.replace(/^#/, "");
-  return items
-    .filter((p) => {
-      // text search (hỗ trợ tìm theo: mã phiếu, mã đơn hàng, ID đơn, tên khách hàng)
-      if (rawQ) {
-        const o = orderById(p.donHangId);
-        const name = customerName(o?.khachHangId ?? -1).toLowerCase();
-        const maDon = (o?.maDonHang ?? "").toLowerCase();
-        const donHangIdStr = String(p.donHangId ?? "").toLowerCase();
-        const maPhieu = (p.maPhieu ?? "").toLowerCase();
-        const phieuTraIdStr = String(p.phieuTraId ?? "").toLowerCase();
+  return (
+    items
+      .filter((p) => {
+        // text search (hỗ trợ tìm theo: mã phiếu, mã đơn hàng, ID đơn, tên khách hàng)
+        if (rawQ) {
+          const o = orderById(p.donHangId);
+          const name = customerName(o?.khachHangId ?? -1).toLowerCase();
+          const maDon = (o?.maDonHang ?? "").toLowerCase();
+          const donHangIdStr = String(p.donHangId ?? "").toLowerCase();
+          const maPhieu = (p.maPhieu ?? "").toLowerCase();
+          const phieuTraIdStr = String(p.phieuTraId ?? "").toLowerCase();
 
-        const match =
-          phieuTraIdStr.includes(rawQ) ||
-          phieuTraIdStr.includes(q) ||
-          maPhieu.includes(rawQ) ||
-          maPhieu.includes(q) ||
-          maDon.includes(rawQ) ||
-          maDon.includes(q) ||
-          donHangIdStr.includes(rawQ) ||
-          donHangIdStr.includes(q) ||
-          name.includes(rawQ);
+          const serialStr = getReceiptSerials(p.phieuTraId).join(" ").toLowerCase();
 
-        if (!match) return false;
-      }
-      if (filters.trangThai && p.trangThai !== filters.trangThai) return false;
-      if (filters.hinhThucHoan && p.hinhThucHoan !== filters.hinhThucHoan) return false;
-      // ngày trả
-      if (filters.ngayFrom && (p.ngayTra ?? '').slice(0, 10) < filters.ngayFrom) return false;
-      if (filters.ngayTo   && (p.ngayTra ?? '').slice(0, 10) > filters.ngayTo)   return false;
-      // tiền hoàn range
-      const tien = Number(p.soTienHoan ?? 0);
-      if (filters.tienMin !== "" && tien < Number(filters.tienMin)) return false;
-      if (filters.tienMax !== "" && tien > Number(filters.tienMax)) return false;
-      return true;
-    })
-    // Sắp xếp mới nhất lên đầu: dùng phieuTraId (tự tăng) để đảm bảo đúng thứ tự tạo
-    .sort((a, b) => (b.phieuTraId ?? 0) - (a.phieuTraId ?? 0));
+          const match =
+            phieuTraIdStr.includes(rawQ) ||
+            phieuTraIdStr.includes(q) ||
+            maPhieu.includes(rawQ) ||
+            maPhieu.includes(q) ||
+            maDon.includes(rawQ) ||
+            maDon.includes(q) ||
+            donHangIdStr.includes(rawQ) ||
+            donHangIdStr.includes(q) ||
+            name.includes(rawQ) ||
+            serialStr.includes(rawQ);
+
+          if (!match) return false;
+        }
+        if (filters.trangThai && p.trangThai !== filters.trangThai) return false;
+        if (filters.hinhThucHoan && p.hinhThucHoan !== filters.hinhThucHoan) return false;
+        // ngày trả
+        if (filters.ngayFrom && (p.ngayTra ?? "").slice(0, 10) < filters.ngayFrom) return false;
+        if (filters.ngayTo && (p.ngayTra ?? "").slice(0, 10) > filters.ngayTo) return false;
+        // tiền hoàn range
+        const tien = Number(p.soTienHoan ?? 0);
+        if (filters.tienMin !== "" && tien < Number(filters.tienMin)) return false;
+        if (filters.tienMax !== "" && tien > Number(filters.tienMax)) return false;
+        return true;
+      })
+      // Sắp xếp mới nhất lên đầu: dùng phieuTraId (tự tăng) để đảm bảo đúng thứ tự tạo
+      .sort((a, b) => (b.phieuTraId ?? 0) - (a.phieuTraId ?? 0))
+  );
 });
-const { currentPage, totalPages, pagedItems: pagedReturns, pageSize } = usePagination(filteredReturns);
-watch([search, () => filters.trangThai, () => filters.hinhThucHoan, () => filters.ngayFrom, () => filters.ngayTo, () => filters.tienMin, () => filters.tienMax], () => {
-  currentPage.value = 0;
-});
+const {
+  currentPage,
+  totalPages,
+  pagedItems: pagedReturns,
+  pageSize,
+} = usePagination(filteredReturns);
+watch(
+  [
+    search,
+    () => filters.trangThai,
+    () => filters.hinhThucHoan,
+    () => filters.ngayFrom,
+    () => filters.ngayTo,
+    () => filters.tienMin,
+    () => filters.tienMax,
+  ],
+  () => {
+    currentPage.value = 0;
+  },
+);
 
 // ── Modal tao/sua/xem ─────────────────────────────────────────────────────────
 const showModal = ref(false);
@@ -191,11 +234,12 @@ const orderSearch = ref("");
 const selectedOrder = ref(null);
 const lineItems = ref([]); // [{ id, bienTheId, chiTietId, maSku, soSerial, donGia, soLuongDaMua, soLuongTra, tinhTrang, checked }]
 const orderLinesLoading = ref(false);
+const initialTrangThai = ref("cho_xu_ly");
 
-// Những đơn ở trạng thái đã xử lý không cho sửa nữa
+// Những đơn vốn đã ở trạng thái đã xử lý từ trước không cho sửa nữa
 const isModalReadonly = computed(() => {
   if (props.readonly) return true;
-  if (editingId.value && form.value.trangThai === "da_xu_ly") return true;
+  if (editingId.value && initialTrangThai.value === "da_xu_ly") return true;
   return false;
 });
 
@@ -204,11 +248,7 @@ const currentHandlerDisplayName = computed(() => {
   const myUser = AuthStore.user;
   const myId = myUser?.id ?? myUser?.nhanVienId;
   const targetId =
-    currentId != null && currentId !== ""
-      ? Number(currentId)
-      : myId
-      ? Number(myId)
-      : 1;
+    currentId != null && currentId !== "" ? Number(currentId) : myId ? Number(myId) : 1;
 
   if (myId && Number(myId) === targetId) {
     const name =
@@ -253,9 +293,7 @@ const form = ref(emptyForm());
 // Những đơn đã có phiếu trả ở trạng thái "da_xu_ly" — không cho tạo thêm
 const donHangDaXuLyIds = computed(() => {
   return new Set(
-    (ReturnsStore.items ?? [])
-      .filter((r) => r.trangThai === "da_xu_ly")
-      .map((r) => r.donHangId),
+    (ReturnsStore.items ?? []).filter((r) => r.trangThai === "da_xu_ly").map((r) => r.donHangId),
   );
 });
 
@@ -278,10 +316,7 @@ const searchedOrders = computed(() => {
 const recalcSoTienHoan = () => {
   form.value.soTienHoan = lineItems.value
     .filter((l) => l.checked)
-    .reduce(
-      (s, l) => s + (Number(l.donGia) || 0) * (Number(l.soLuongTra) || 0),
-      0,
-    );
+    .reduce((s, l) => s + (Number(l.donGia) || 0) * (Number(l.soLuongTra) || 0), 0);
 };
 
 // Giới hạn số lượng sản phẩm hoàn trả hợp lệ
@@ -289,6 +324,32 @@ const clampSoLuongTra = (l) => {
   const n = Math.trunc(Number(l.soLuongTra)) || 1;
   l.soLuongTra = Math.min(Math.max(n, 1), l.soLuongDaMua);
   recalcSoTienHoan();
+};
+
+const parseSerialList = (item, existed) => {
+  if (Array.isArray(item?.serials) && item.serials.length > 0) {
+    return item.serials.map((s) => (typeof s === "string" ? s : s?.soSerial)).filter(Boolean);
+  }
+  const raw = item?.soSerial || existed?.soSerial || "";
+  if (!raw) return [];
+  return String(raw)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+};
+
+const getLineDisplayedSerials = (l) => {
+  const list =
+    Array.isArray(l?.serials) && l.serials.length > 0
+      ? l.serials
+      : l?.soSerial
+        ? String(l.soSerial)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+  const qty = Math.max(1, Number(l?.soLuongTra) || 1);
+  return list.slice(0, qty);
 };
 
 const loadOrderLines = async (donHangId, existingLines = []) => {
@@ -299,33 +360,119 @@ const loadOrderLines = async (donHangId, existingLines = []) => {
   }
   orderLinesLoading.value = true;
   try {
-    const rawItems = await ChiTietDonHangService.getByDonHang(donHangId).catch(
-      () => [],
-    );
+    const rawItems = await ChiTietDonHangService.getByDonHang(donHangId).catch(() => []);
     const items = Array.isArray(rawItems) ? rawItems : [];
     const isNew = !existingLines || existingLines.length === 0;
 
-    lineItems.value = items.map((i) => {
-      const existed = existingLines.find(
-        (c) =>
-          c.bienTheId === i.bienTheId &&
-          (c.chiTietId == null || c.chiTietId === i.chiTietId),
-      );
-      return {
-        id: existed?.id ?? null,
-        bienTheId: i.bienTheId,
-        chiTietId: i.chiTietId,
-        maSku: i.maSku,
-        soSerial: i.soSerial,
-        donGia: i.donGia,
-        soLuongDaMua: i.soLuong,
-        soLuongTra: existed?.soLuong ?? i.soLuong,
-        tinhTrang: existed?.tinhTrang ?? "tot",
-        checked: existed ? true : isNew,
-      };
-    });
+    if (items.length > 0) {
+      const mapped = items.map((i) => {
+        const existed = existingLines.find(
+          (c) =>
+            c.bienTheId === i.bienTheId && (c.chiTietId == null || c.chiTietId === i.chiTietId),
+        );
+        const serials = parseSerialList(i, existed);
+        return {
+          id: existed?.id ?? null,
+          bienTheId: i.bienTheId,
+          chiTietId: i.chiTietId ?? existed?.chiTietId ?? null,
+          maSku: i.maSku,
+          soSerial: serials.join(", ") || i.soSerial || existed?.soSerial || null,
+          serials,
+          donGia: i.donGia,
+          soLuongDaMua: i.soLuong,
+          soLuongTra: existed?.soLuong ?? i.soLuong,
+          tinhTrang: existed?.tinhTrang ?? "tot",
+          checked: existed ? true : isNew,
+        };
+      });
+      if (!isNew) {
+        for (const c of existingLines) {
+          const alreadyMatched = mapped.some(
+            (m) =>
+              m.bienTheId === c.bienTheId && (c.chiTietId == null || m.chiTietId === c.chiTietId),
+          );
+          if (!alreadyMatched) {
+            const serials = parseSerialList(null, c);
+            mapped.push({
+              id: c.id ?? null,
+              bienTheId: c.bienTheId,
+              chiTietId: c.chiTietId ?? null,
+              maSku: c.maSku || productByBienThe(c.bienTheId)?.maSku || `#${c.bienTheId}`,
+              soSerial: serials.join(", ") || c.soSerial || null,
+              serials,
+              donGia: c.donGiaHoan ?? 0,
+              soLuongDaMua: c.soLuong ?? 1,
+              soLuongTra: c.soLuong ?? 1,
+              tinhTrang: c.tinhTrang ?? "tot",
+              checked: true,
+            });
+          }
+        }
+      }
+      lineItems.value = mapped;
+    } else if (existingLines && existingLines.length > 0) {
+      lineItems.value = existingLines.map((c) => {
+        const serials = parseSerialList(null, c);
+        return {
+          id: c.id ?? null,
+          bienTheId: c.bienTheId,
+          chiTietId: c.chiTietId ?? null,
+          maSku: c.maSku || productByBienThe(c.bienTheId)?.maSku || `#${c.bienTheId}`,
+          soSerial: serials.join(", ") || c.soSerial || null,
+          serials,
+          donGia: c.donGiaHoan ?? 0,
+          soLuongDaMua: c.soLuong ?? 1,
+          soLuongTra: c.soLuong ?? 1,
+          tinhTrang: c.tinhTrang ?? "tot",
+          checked: true,
+        };
+      });
+    } else {
+      lineItems.value = [];
+    }
 
-    if (isNew) {
+    // Fallback: nếu dòng nào chưa có mã serial, tra cứu từ danh sách serial của biến thể
+    for (const line of lineItems.value) {
+      const needed = Math.max(1, Number(line.soLuongDaMua) || 1);
+      if ((!line.serials || line.serials.length < needed) && line.bienTheId) {
+        const variantSerials = await ChiTietSanPhamService.getByBienThe(line.bienTheId).catch(
+          () => [],
+        );
+        if (Array.isArray(variantSerials) && variantSerials.length > 0) {
+          const picked = [];
+          const pickedIds = [];
+          if (line.chiTietId) {
+            const exact = variantSerials.find((s) => s.chiTietId === line.chiTietId);
+            if (exact?.soSerial) {
+              picked.push(exact.soSerial);
+              pickedIds.push(exact.chiTietId);
+            }
+          }
+          const sorted = [...variantSerials].sort((a, b) => {
+            const score = (s) =>
+              s.trangThai === "da_ban" ? 0 : s.trangThai === "trong_kho" ? 1 : 2;
+            return score(a) - score(b);
+          });
+          for (const s of sorted) {
+            if (picked.length >= needed) break;
+            if (s?.soSerial && !picked.includes(s.soSerial)) {
+              picked.push(s.soSerial);
+              pickedIds.push(s.chiTietId);
+            }
+          }
+          if (picked.length > 0) {
+            line.serials = picked;
+            line.soSerial = picked.join(", ");
+            if (!line.chiTietId && pickedIds[0]) {
+              line.chiTietId = pickedIds[0];
+            }
+            line.resolvedSerialIds = pickedIds.filter(Boolean);
+          }
+        }
+      }
+    }
+
+    if (isNew && lineItems.value.length > 0) {
       recalcSoTienHoan();
     }
   } catch (err) {
@@ -345,6 +492,7 @@ const pickOrder = async (o) => {
 
 const openAdd = () => {
   editingId.value = null;
+  initialTrangThai.value = "cho_xu_ly";
   form.value = emptyForm();
   const myId = AuthStore.user?.id ?? AuthStore.user?.nhanVienId ?? 1;
   form.value.nhanVienId = Number(myId);
@@ -357,6 +505,7 @@ const openAdd = () => {
 
 const openDetail = async (p) => {
   editingId.value = p.phieuTraId;
+  initialTrangThai.value = p.trangThai ?? "cho_xu_ly";
   const myId = AuthStore.user?.id ?? AuthStore.user?.nhanVienId ?? 1;
   form.value = {
     donHangId: p.donHangId,
@@ -368,7 +517,16 @@ const openDetail = async (p) => {
     hinhThucHoan: p.hinhThucHoan || "vi",
     ghiChu: p.ghiChu ?? "",
   };
-  selectedOrder.value = orderById(p.donHangId) ?? null;
+  selectedOrder.value =
+    orderById(p.donHangId) ??
+    (p.donHangId
+      ? {
+          donHangId: p.donHangId,
+          maDonHang: `#${p.donHangId}`,
+          khachHangId: -1,
+          tongTien: p.soTienHoan ?? 0,
+        }
+      : null);
   formError.value = "";
   const allLines = await ChiTietTraHangService.getAll().catch(() => []);
   const mine = allLines.filter((c) => c.phieuTraId === p.phieuTraId);
@@ -388,7 +546,7 @@ const saveReturn = async () => {
     return;
   }
   const checkedLines = lineItems.value.filter((l) => l.checked);
-  if (checkedLines.length === 0) {
+  if (checkedLines.length === 0 && (!editingId.value || lineItems.value.length > 0)) {
     formError.value = t("admin.returnModal.lineRequired");
     return;
   }
@@ -396,9 +554,7 @@ const saveReturn = async () => {
   if (saving.value) return;
   saving.value = true;
   try {
-    let nhanVienIdToSave = form.value.nhanVienId
-      ? Number(form.value.nhanVienId)
-      : null;
+    let nhanVienIdToSave = form.value.nhanVienId ? Number(form.value.nhanVienId) : null;
     if (!nhanVienIdToSave) {
       nhanVienIdToSave = AuthStore.user?.id
         ? Number(AuthStore.user.id)
@@ -416,10 +572,13 @@ const saveReturn = async () => {
     };
     const res = await PhieuTraHangService.save(editingId.value, headerBody);
     if (!res.ok) {
-      formError.value = t("admin.errors.saveFailed", {
-        status: res.status,
-        text: await res.text(),
-      });
+      const errText = await res.text().catch(() => "");
+      formError.value =
+        errText ||
+        t("admin.errors.saveFailed", {
+          status: res.status,
+          text: "",
+        });
       return;
     }
 
@@ -430,15 +589,9 @@ const saveReturn = async () => {
     }
 
     const originalIds = checkedLines.filter((l) => l.id).map((l) => l.id);
-    const allExisting = editingId.value
-      ? await ChiTietTraHangService.getAll().catch(() => [])
-      : [];
-    const mineExisting = allExisting
-      .filter((c) => c.phieuTraId === phieuTraId)
-      .map((c) => c.id);
-    for (const oldId of mineExisting.filter(
-      (id) => !originalIds.includes(id),
-    )) {
+    const allExisting = editingId.value ? await ChiTietTraHangService.getAll().catch(() => []) : [];
+    const mineExisting = allExisting.filter((c) => c.phieuTraId === phieuTraId).map((c) => c.id);
+    for (const oldId of mineExisting.filter((id) => !originalIds.includes(id))) {
       await ChiTietTraHangService.remove(oldId);
     }
     for (const l of checkedLines) {
@@ -450,71 +603,119 @@ const saveReturn = async () => {
         donGiaHoan: l.donGia,
         tinhTrang: l.tinhTrang,
       };
-      if (l.id) await ChiTietTraHangService.update(l.id, body);
-      else await ChiTietTraHangService.create(body);
+      const lineRes = l.id
+        ? await ChiTietTraHangService.update(l.id, body)
+        : await ChiTietTraHangService.create(body);
+      if (!lineRes.ok) {
+        const lineErr = await lineRes.text().catch(() => `HTTP ${lineRes.status}`);
+        formError.value = lineErr || `Lỗi lưu chi tiết trả hàng (HTTP ${lineRes.status})`;
+        return;
+      }
     }
 
+    const returnedSerials = checkedLines.flatMap((l) => getLineDisplayedSerials(l));
     showModal.value = false;
-    await refreshReturns();
+    await Promise.all([
+      refreshReturns(),
+      refreshInventory().catch(() => {}),
+      refreshProducts().catch(() => {}),
+    ]);
+    if (form.value.trangThai === "da_xu_ly") {
+      const snText = returnedSerials.length > 0 ? ` (${returnedSerials.join(", ")})` : "";
+      showToast(`Đã duyệt phiếu trả hàng và hoàn serial${snText} vào kho!`, "success");
+    } else {
+      showToast("Đã lưu phiếu trả hàng thành công!", "success");
+    }
   } catch (e) {
     formError.value = e.message;
   } finally {
     saving.value = false;
   }
 };
-
 </script>
 
 <template>
   <!-- KPI Summary Cards -->
   <div class="row g-3 mb-3">
     <div class="col-6 col-md-3">
-      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+      <div
+        class="card border shadow-sm rounded-3 p-3 h-100"
+        style="background: var(--bg-card); border-color: var(--border-color-soft) !important"
+      >
         <div class="d-flex align-items-center justify-content-between">
           <div>
-            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Tổng phiếu trả</div>
-            <div class="fs-4 fw-bold mt-1" style="color:var(--text-heading);">{{ returnStats.total }}</div>
+            <div class="text-secondary small fw-semibold" style="font-size: 11.5px">
+              Tổng phiếu trả
+            </div>
+            <div class="fs-4 fw-bold mt-1" style="color: var(--text-heading)">
+              {{ returnStats.total }}
+            </div>
           </div>
-          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(168,85,247,0.12);color:#a855f7;">
+          <div
+            class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+            style="width: 42px; height: 42px; background: rgba(168, 85, 247, 0.12); color: #a855f7"
+          >
             <RotateCcw :size="20" />
           </div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+      <div
+        class="card border shadow-sm rounded-3 p-3 h-100"
+        style="background: var(--bg-card); border-color: var(--border-color-soft) !important"
+      >
         <div class="d-flex align-items-center justify-content-between">
           <div>
-            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Chờ xử lý</div>
+            <div class="text-secondary small fw-semibold" style="font-size: 11.5px">Chờ xử lý</div>
             <div class="fs-4 fw-bold mt-1 text-warning">{{ returnStats.choXuLy }}</div>
           </div>
-          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(234,179,8,0.12);color:#eab308;">
+          <div
+            class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+            style="width: 42px; height: 42px; background: rgba(234, 179, 8, 0.12); color: #eab308"
+          >
             <Clock :size="20" />
           </div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+      <div
+        class="card border shadow-sm rounded-3 p-3 h-100"
+        style="background: var(--bg-card); border-color: var(--border-color-soft) !important"
+      >
         <div class="d-flex align-items-center justify-content-between">
           <div>
-            <div class="text-secondary small fw-semibold" style="font-size:11.5px;">Đã xử lý</div>
+            <div class="text-secondary small fw-semibold" style="font-size: 11.5px">Đã xử lý</div>
             <div class="fs-4 fw-bold mt-1 text-success">{{ returnStats.daXuLy }}</div>
           </div>
-          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(34,197,94,0.12);color:#22c55e;">
+          <div
+            class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+            style="width: 42px; height: 42px; background: rgba(34, 197, 94, 0.12); color: #22c55e"
+          >
             <CheckCircle2 :size="20" />
           </div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border shadow-sm rounded-3 p-3 h-100" style="background:var(--bg-card); border-color:var(--border-color-soft) !important;">
+      <div
+        class="card border shadow-sm rounded-3 p-3 h-100"
+        style="background: var(--bg-card); border-color: var(--border-color-soft) !important"
+      >
         <div class="d-flex align-items-center justify-content-between">
           <div class="min-w-0 me-2">
-            <div class="text-secondary small fw-semibold text-truncate" style="font-size:11.5px;">Tổng tiền đã hoàn</div>
-            <div class="fs-5 fw-bold mt-1 text-danger font-monospace text-truncate">{{ formatPrice(returnStats.tongTien) }}</div>
+            <div class="text-secondary small fw-semibold text-truncate" style="font-size: 11.5px">
+              Tổng tiền đã hoàn
+            </div>
+            <div class="fs-5 fw-bold mt-1 text-danger font-monospace text-truncate">
+              {{ formatPrice(returnStats.tongTien) }}
+            </div>
           </div>
-          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;background:rgba(239,68,68,0.12);color:#ef4444;">
+          <div
+            class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+            style="width: 42px; height: 42px; background: rgba(239, 68, 68, 0.12); color: #ef4444"
+          >
             <DollarSign :size="20" />
           </div>
         </div>
@@ -526,8 +727,10 @@ const saveReturn = async () => {
     <div class="alt-toolbar">
       <div class="d-flex align-items-center gap-2">
         <RotateCcw :size="16" class="text-secondary" />
-        <span class="alt-toolbar__count">{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
-          {{ t("admin.returns.countSuffix") }}</span>
+        <span class="alt-toolbar__count"
+          >{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
+          {{ t("admin.returns.countSuffix") }}</span
+        >
       </div>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
@@ -544,10 +747,18 @@ const saveReturn = async () => {
           <ChevronDown v-if="!isFilterOpen" :size="13" />
           <ChevronUp v-else :size="13" />
         </button>
-        <button v-if="activeFilterCount > 0" class="alt-btn alt-btn--ghost-sm" @click="resetFilters">
+        <button
+          v-if="activeFilterCount > 0"
+          class="alt-btn alt-btn--ghost-sm"
+          @click="resetFilters"
+        >
           <X :size="13" /> Xóa lọc
         </button>
-        <button v-if="!readonly" class="alt-btn alt-btn--primary d-inline-flex align-items-center gap-1.5" @click="openAdd">
+        <button
+          v-if="!readonly"
+          class="alt-btn alt-btn--primary d-inline-flex align-items-center gap-1.5"
+          @click="openAdd"
+        >
           <Plus :size="14" /> {{ t("admin.returns.add") }}
         </button>
       </div>
@@ -585,9 +796,21 @@ const saveReturn = async () => {
         <div class="adv-filter-group adv-filter-group--range">
           <label class="adv-filter-label">Tiền hoàn (₫)</label>
           <div class="adv-filter-range">
-            <input v-model="filters.tienMin" type="number" min="0" placeholder="Từ" class="adv-filter-input" />
+            <input
+              v-model="filters.tienMin"
+              type="number"
+              min="0"
+              placeholder="Từ"
+              class="adv-filter-input"
+            />
             <span class="adv-filter-sep">–</span>
-            <input v-model="filters.tienMax" type="number" min="0" placeholder="Đến" class="adv-filter-input" />
+            <input
+              v-model="filters.tienMax"
+              type="number"
+              min="0"
+              placeholder="Đến"
+              class="adv-filter-input"
+            />
           </div>
         </div>
         <button v-if="activeFilterCount > 0" class="adv-filter-reset" @click="resetFilters">
@@ -603,21 +826,55 @@ const saveReturn = async () => {
       <table class="alt-table">
         <thead>
           <tr>
-            <th style="width: 45px"><span class="d-inline-flex align-items-center gap-1"><Hash :size="12" /> {{ t("admin.common.stt") }}</span></th>
-            <th style="width: 90px"><span class="d-inline-flex align-items-center gap-1">{{ t("admin.returns.colId") }}</span></th>
-            <th><span class="d-inline-flex align-items-center gap-1">{{ t("admin.returns.colOrder") }}</span></th>
-            <th><span class="d-inline-flex align-items-center gap-1"><User :size="12" /> {{ t("admin.returns.colCustomer") }}</span></th>
-            <th><span class="d-inline-flex align-items-center gap-1"><DollarSign :size="12" /> {{ t("admin.returns.colAmount") }}</span></th>
-            <th><span class="d-inline-flex align-items-center gap-1"><CreditCard :size="12" /> {{ t("admin.returns.colHinhThucHoan") }}</span></th>
-            <th><span class="d-inline-flex align-items-center gap-1"><Activity :size="12" /> {{ t("admin.returns.colStatus") }}</span></th>
-            <th style="width: 100px"><span class="d-inline-flex align-items-center gap-1"><SlidersHorizontal :size="12" /> {{ t("admin.returns.colAction") }}</span></th>
+            <th style="width: 45px">
+              <span class="d-inline-flex align-items-center gap-1"
+                ><Hash :size="12" /> {{ t("admin.common.stt") }}</span
+              >
+            </th>
+            <th style="width: 90px">
+              <span class="d-inline-flex align-items-center gap-1">{{
+                t("admin.returns.colId")
+              }}</span>
+            </th>
+            <th>
+              <span class="d-inline-flex align-items-center gap-1">{{
+                t("admin.returns.colOrder")
+              }}</span>
+            </th>
+            <th>
+              <span class="d-inline-flex align-items-center gap-1"
+                ><User :size="12" /> {{ t("admin.returns.colCustomer") }}</span
+              >
+            </th>
+            <th>
+              <span class="d-inline-flex align-items-center gap-1"
+                ><DollarSign :size="12" /> {{ t("admin.returns.colAmount") }}</span
+              >
+            </th>
+            <th>
+              <span class="d-inline-flex align-items-center gap-1"
+                ><CreditCard :size="12" /> {{ t("admin.returns.colHinhThucHoan") }}</span
+              >
+            </th>
+            <th>
+              <span class="d-inline-flex align-items-center gap-1"
+                ><Activity :size="12" /> {{ t("admin.returns.colStatus") }}</span
+              >
+            </th>
+            <th style="width: 100px">
+              <span class="d-inline-flex align-items-center gap-1"
+                ><SlidersHorizontal :size="12" /> {{ t("admin.returns.colAction") }}</span
+              >
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(p, idx) in pagedReturns" :key="p.phieuTraId">
             <td class="text-secondary">{{ currentPage * pageSize + idx + 1 }}</td>
             <td>
-              <span class="badge font-monospace bg-body-secondary text-body-secondary border px-2 py-1">
+              <span
+                class="badge font-monospace bg-body-secondary text-body-secondary border px-2 py-1"
+              >
                 {{ p.maPhieu || "#" + p.phieuTraId }}
               </span>
             </td>
@@ -629,38 +886,75 @@ const saveReturn = async () => {
             <td>
               <div class="d-flex align-items-center gap-1.5">
                 <User :size="13" class="text-secondary flex-shrink-0" />
-                <span :class="{ 'text-muted fst-italic': !orderById(p.donHangId)?.khachHangId || orderById(p.donHangId)?.khachHangId <= 0 }">
+                <span
+                  :class="{
+                    'text-muted fst-italic':
+                      !orderById(p.donHangId)?.khachHangId ||
+                      orderById(p.donHangId)?.khachHangId <= 0,
+                  }"
+                >
                   {{ customerName(orderById(p.donHangId)?.khachHangId ?? -1) }}
                 </span>
               </div>
             </td>
             <td>
-              <span class="fw-bold font-monospace" :class="Number(p.soTienHoan) > 0 ? 'text-danger' : 'text-muted'">
+              <span
+                class="fw-bold font-monospace"
+                :class="Number(p.soTienHoan) > 0 ? 'text-danger' : 'text-muted'"
+              >
                 {{ formatPrice(p.soTienHoan) }}
               </span>
             </td>
             <td>
-              <span v-if="p.hinhThucHoan === 'vi'" class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+              <span
+                v-if="p.hinhThucHoan === 'vi'"
+                class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 d-inline-flex align-items-center gap-1"
+                style="font-size: 11px"
+              >
                 <Wallet :size="12" /> Ví điện tử
               </span>
-              <span v-else-if="p.hinhThucHoan === 'tien_mat'" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+              <span
+                v-else-if="p.hinhThucHoan === 'tien_mat'"
+                class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2 py-1 d-inline-flex align-items-center gap-1"
+                style="font-size: 11px"
+              >
                 <Banknote :size="12" /> Tiền mặt
               </span>
-              <span v-else-if="p.hinhThucHoan === 'chuyen_khoan'" class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:11px;">
+              <span
+                v-else-if="p.hinhThucHoan === 'chuyen_khoan'"
+                class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 d-inline-flex align-items-center gap-1"
+                style="font-size: 11px"
+              >
                 <Landmark :size="12" /> Chuyển khoản
               </span>
-              <span v-else class="badge rounded-pill bg-secondary-subtle text-secondary border px-2 py-1" style="font-size:11px;">
+              <span
+                v-else
+                class="badge rounded-pill bg-secondary-subtle text-secondary border px-2 py-1"
+                style="font-size: 11px"
+              >
                 {{ hinhThucHoanLabel(p.hinhThucHoan) }}
               </span>
             </td>
             <td>
-              <span v-if="p.trangThai === 'cho_xu_ly'" class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1" style="font-size:11.5px;">
+              <span
+                v-if="p.trangThai === 'cho_xu_ly'"
+                class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1"
+                style="font-size: 11.5px"
+              >
                 <Clock :size="12" /> {{ statusLabel(p.trangThai) }}
               </span>
-              <span v-else-if="p.trangThai === 'da_xu_ly'" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1" style="font-size:11.5px;">
+              <span
+                v-else-if="p.trangThai === 'da_xu_ly'"
+                class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1"
+                style="font-size: 11.5px"
+              >
                 <CheckCircle2 :size="12" /> {{ statusLabel(p.trangThai) }}
               </span>
-              <span v-else-if="p.trangThai === 'tu_choi'" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1" style="font-size:11.5px;">
+              <span
+                v-else-if="p.trangThai === 'tu_choi'"
+                class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1"
+                style="font-size: 11.5px"
+              >
                 <XCircle :size="12" /> {{ statusLabel(p.trangThai) }}
               </span>
               <span
@@ -670,18 +964,23 @@ const saveReturn = async () => {
                   background: statusColor(p.trangThai).bg,
                   color: statusColor(p.trangThai).text,
                 }"
-              >{{ statusLabel(p.trangThai) }}</span>
+                >{{ statusLabel(p.trangThai) }}</span
+              >
             </td>
             <td>
               <div class="d-flex gap-1">
                 <button
                   class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 px-2.5 py-1 rounded-2"
-                  style="font-size:12px;"
+                  style="font-size: 12px"
                   @click="openDetail(p)"
                 >
                   <Eye v-if="readonly || p.trangThai === 'da_xu_ly'" :size="13" />
                   <Edit3 v-else :size="13" />
-                  <span>{{ (readonly || p.trangThai === 'da_xu_ly') ? t("admin.returns.view") : t("admin.returns.edit") }}</span>
+                  <span>{{
+                    readonly || p.trangThai === "da_xu_ly"
+                      ? t("admin.returns.view")
+                      : t("admin.returns.edit")
+                  }}</span>
                 </button>
               </div>
             </td>
@@ -693,7 +992,13 @@ const saveReturn = async () => {
           </tr>
         </tbody>
       </table>
-      <div v-if="totalPages > 1" class="alt-pager"><Pagination :current-page="currentPage" :total-pages="totalPages" @page-change="currentPage = $event" /></div>
+      <div v-if="totalPages > 1" class="alt-pager">
+        <Pagination
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          @page-change="currentPage = $event"
+        />
+      </div>
     </div>
   </div>
 
@@ -701,7 +1006,7 @@ const saveReturn = async () => {
   <div
     v-if="showModal"
     class="cfm-backdrop position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
-    style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 1050;"
+    style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 1050"
     @click.self="showModal = false"
   >
     <div class="cfm-shell return-modal-shell">
@@ -714,15 +1019,19 @@ const saveReturn = async () => {
           <h3 class="cfm-title">
             {{
               editingId
-                ? (isModalReadonly ? 'Chi tiết phiếu trả hàng' : t("admin.returnModal.titleEdit"))
+                ? isModalReadonly
+                  ? "Chi tiết phiếu trả hàng"
+                  : t("admin.returnModal.titleEdit")
                 : t("admin.returnModal.titleAdd")
             }}
           </h3>
           <p class="cfm-subtitle">
             {{
               isModalReadonly
-                ? 'Phiếu trả hàng đã hoàn tất xử lý (chỉ xem)'
-                : (editingId ? 'Xem và cập nhật thông tin phiếu đổi trả hàng' : 'Tạo phiếu đổi trả & hoàn tiền cho khách hàng')
+                ? "Phiếu trả hàng đã hoàn tất xử lý (chỉ xem)"
+                : editingId
+                  ? "Xem và cập nhật thông tin phiếu đổi trả hàng"
+                  : "Tạo phiếu đổi trả & hoàn tiền cho khách hàng"
             }}
           </p>
         </div>
@@ -742,10 +1051,17 @@ const saveReturn = async () => {
         <div
           v-if="isModalReadonly"
           class="alert py-2 px-3 small d-flex align-items-center gap-2 mb-3 rounded-3"
-          style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #047857;"
+          style="
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #047857;
+          "
         >
           <CheckCircle2 :size="16" class="flex-shrink-0 text-success" />
-          <span>Phiếu trả hàng này ở trạng thái <strong>Đã xử lý</strong> nên không thể chỉnh sửa. Bạn chỉ có thể xem chi tiết.</span>
+          <span
+            >Phiếu trả hàng này ở trạng thái <strong>Đã xử lý</strong> nên không thể chỉnh sửa. Bạn
+            chỉ có thể xem chi tiết.</span
+          >
         </div>
 
         <!-- Section 1: Đơn hàng & Sản phẩm trả -->
@@ -772,12 +1088,21 @@ const saveReturn = async () => {
                 </div>
                 <div>
                   <div class="d-flex align-items-center gap-2">
-                    <span class="return-order-code">{{ selectedOrder.maDonHang || "#" + selectedOrder.donHangId }}</span>
-                    <span class="badge bg-secondary-subtle text-secondary small">{{ customerName(selectedOrder.khachHangId) }}</span>
+                    <span class="return-order-code">{{
+                      selectedOrder.maDonHang || "#" + selectedOrder.donHangId
+                    }}</span>
+                    <span class="badge bg-secondary-subtle text-secondary small">{{
+                      customerName(selectedOrder.khachHangId)
+                    }}</span>
                   </div>
-                  <div class="text-secondary small mt-1" style="font-size: 12px;">
-                    Tổng đơn: <span class="fw-semibold text-dark">{{ formatPrice(selectedOrder.tongTien) }}</span>
-                    <span v-if="selectedOrder.ngayTao"> · {{ selectedOrder.ngayTao.slice(0, 10) }}</span>
+                  <div class="text-secondary small mt-1" style="font-size: 12px">
+                    Tổng đơn:
+                    <span class="fw-semibold text-dark">{{
+                      formatPrice(selectedOrder.tongTien)
+                    }}</span>
+                    <span v-if="selectedOrder.ngayTao">
+                      · {{ selectedOrder.ngayTao.slice(0, 10) }}</span
+                    >
                   </div>
                 </div>
               </div>
@@ -805,10 +1130,7 @@ const saveReturn = async () => {
                   :placeholder="t('admin.returnModal.orderSearchPlaceholder')"
                 />
               </div>
-              <div
-                v-if="orderSearch.trim()"
-                class="return-order-dropdown"
-              >
+              <div v-if="orderSearch.trim()" class="return-order-dropdown">
                 <div
                   v-for="o in searchedOrders"
                   :key="o.donHangId"
@@ -820,15 +1142,18 @@ const saveReturn = async () => {
                       <span class="return-order-code">{{ o.maDonHang || "#" + o.donHangId }}</span>
                       <span class="fw-medium text-dark">{{ customerName(o.khachHangId) }}</span>
                     </div>
-                    <span class="fw-semibold text-pink-700 small">{{ formatPrice(o.tongTien) }}</span>
+                    <span class="fw-semibold text-pink-700 small">{{
+                      formatPrice(o.tongTien)
+                    }}</span>
                   </div>
                 </div>
-              <div
-                v-if="searchedOrders.length === 0"
-                class="p-3 text-secondary text-center small"
-              >
-                Không tìm thấy đơn hàng phù hợp (đơn đã có phiếu trả xử lý xong sẽ không hiện ở đây)
-              </div>
+                <div
+                  v-if="searchedOrders.length === 0"
+                  class="p-3 text-secondary text-center small"
+                >
+                  Không tìm thấy đơn hàng phù hợp (đơn đã có phiếu trả xử lý xong sẽ không hiện ở
+                  đây)
+                </div>
               </div>
             </div>
           </div>
@@ -838,17 +1163,24 @@ const saveReturn = async () => {
             <div class="d-flex align-items-center justify-content-between mb-2">
               <label class="cfm-label mb-0">
                 <span>{{ t("admin.returnModal.lineItemsTitle") }}</span>
-                <span v-if="lineItems.length > 0" class="badge rounded-pill bg-pink-subtle text-pink-700 ms-1" style="font-size: 11px;">
-                  Đã chọn {{ lineItems.filter(l => l.checked).length }}/{{ lineItems.length }}
+                <span
+                  v-if="lineItems.length > 0"
+                  class="badge rounded-pill bg-pink-subtle text-pink-700 ms-1"
+                  style="font-size: 11px"
+                >
+                  Đã chọn {{ lineItems.filter((l) => l.checked).length }}/{{ lineItems.length }}
                 </span>
               </label>
               <div v-if="lineItems.length > 0 && !isModalReadonly" class="text-secondary small">
-                <label class="d-inline-flex align-items-center gap-1.5 cursor-pointer user-select-none" style="font-size: 12px; cursor: pointer;">
+                <label
+                  class="d-inline-flex align-items-center gap-1.5 cursor-pointer user-select-none"
+                  style="font-size: 12px; cursor: pointer"
+                >
                   <input
                     type="checkbox"
                     :checked="isAllChecked"
                     class="form-check-input mt-0"
-                    style="cursor: pointer;"
+                    style="cursor: pointer"
                     @change="toggleSelectAll"
                   />
                   <span class="fw-medium text-dark">Chọn tất cả</span>
@@ -873,13 +1205,18 @@ const saveReturn = async () => {
               <table class="return-table">
                 <thead>
                   <tr>
-                    <th style="width: 38px;" class="text-center">#</th>
+                    <th style="width: 38px" class="text-center">#</th>
                     <th>{{ t("admin.returnModal.colProduct") }}</th>
                     <th>{{ t("admin.returnModal.colSku") }}</th>
-                    <th class="text-center" style="width: 75px;">{{ t("admin.returnModal.colBought") }}</th>
-                    <th class="text-center" style="width: 90px;">{{ t("admin.returnModal.colReturnQty") }}</th>
-                    <th style="width: 130px;">{{ t("admin.returnModal.colCondition") }}</th>
-                    <th class="text-end" style="width: 120px;">Thành tiền</th>
+                    <th style="min-width: 135px">Mã Serial</th>
+                    <th class="text-center" style="width: 75px">
+                      {{ t("admin.returnModal.colBought") }}
+                    </th>
+                    <th class="text-center" style="width: 90px">
+                      {{ t("admin.returnModal.colReturnQty") }}
+                    </th>
+                    <th style="width: 130px">{{ t("admin.returnModal.colCondition") }}</th>
+                    <th class="text-end" style="width: 120px">Thành tiền</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -894,26 +1231,44 @@ const saveReturn = async () => {
                         type="checkbox"
                         class="form-check-input"
                         :disabled="isModalReadonly"
-                        style="cursor: pointer;"
+                        style="cursor: pointer"
                         @change="recalcSoTienHoan"
                       />
                     </td>
                     <td>
-                      <div class="fw-semibold text-dark" style="font-size: 12.5px;">
+                      <div class="fw-semibold text-dark" style="font-size: 12.5px">
                         {{ productByBienThe(l.bienTheId)?.tenSanPham || "—" }}
                       </div>
-                      <div v-if="l.donGia" class="text-secondary small mt-0.5" style="font-size: 11px;">
+                      <div
+                        v-if="l.donGia"
+                        class="text-secondary small mt-0.5"
+                        style="font-size: 11px"
+                      >
                         Đơn giá: {{ formatPrice(l.donGia) }}
                       </div>
                     </td>
                     <td>
                       <div class="return-sku-badge">{{ l.maSku }}</div>
-                      <div v-if="l.soSerial" class="text-info small mt-0.5" style="font-size: 10.5px; font-family: monospace;">
-                        SN: {{ l.soSerial }}
+                    </td>
+                    <td>
+                      <div
+                        v-if="getLineDisplayedSerials(l).length > 0"
+                        class="d-flex flex-wrap gap-1"
+                      >
+                        <span
+                          v-for="sn in getLineDisplayedSerials(l)"
+                          :key="sn"
+                          class="return-serial-badge"
+                        >
+                          {{ sn }}
+                        </span>
                       </div>
+                      <span v-else class="text-muted small">—</span>
                     </td>
                     <td class="text-center">
-                      <span class="badge bg-light text-dark border fw-medium px-2 py-1">{{ l.soLuongDaMua }}</span>
+                      <span class="badge bg-light text-dark border fw-medium px-2 py-1">{{
+                        l.soLuongDaMua
+                      }}</span>
                     </td>
                     <td class="text-center">
                       <input
@@ -936,7 +1291,10 @@ const saveReturn = async () => {
                         <option value="loi">{{ t("admin.returnModal.conditionBad") }}</option>
                       </select>
                     </td>
-                    <td class="text-end fw-semibold" style="font-size: 12.5px; color: var(--pink-700);">
+                    <td
+                      class="text-end fw-semibold"
+                      style="font-size: 12.5px; color: var(--pink-700)"
+                    >
                       {{ formatPrice((l.donGia || 0) * (l.soLuongTra || 0)) }}
                     </td>
                   </tr>
@@ -944,12 +1302,19 @@ const saveReturn = async () => {
               </table>
 
               <!-- Table summary footer -->
-              <div class="return-table-footer d-flex align-items-center justify-content-between px-3 py-2">
+              <div
+                class="return-table-footer d-flex align-items-center justify-content-between px-3 py-2"
+              >
                 <span class="text-secondary small">
-                  Đã chọn: <strong class="text-dark">{{ lineItems.filter(l => l.checked).length }}</strong> sản phẩm
+                  Đã chọn:
+                  <strong class="text-dark">{{ lineItems.filter((l) => l.checked).length }}</strong>
+                  sản phẩm
                 </span>
                 <span class="small">
-                  Tổng tiền hoàn ước tính: <strong class="fs-6 text-pink-700 ms-1">{{ formatPrice(form.soTienHoan) }}</strong>
+                  Tổng tiền hoàn ước tính:
+                  <strong class="fs-6 text-pink-700 ms-1">{{
+                    formatPrice(form.soTienHoan)
+                  }}</strong>
                 </span>
               </div>
             </div>
@@ -979,7 +1344,7 @@ const saveReturn = async () => {
                   :value="currentHandlerDisplayName"
                   disabled
                   class="cfm-input"
-                  style="background: var(--pink-50, #fff5f9); cursor: not-allowed; font-weight: 600;"
+                  style="background: var(--pink-50, #fff5f9); cursor: not-allowed; font-weight: 600"
                   placeholder="Hệ thống tự động ghi nhận"
                 />
               </div>
@@ -1035,7 +1400,7 @@ const saveReturn = async () => {
                   min="0"
                   :disabled="isModalReadonly"
                   class="cfm-input fw-bold"
-                  style="color: var(--pink-700, #a81b5d);"
+                  style="color: var(--pink-700, #a81b5d)"
                 />
               </div>
             </div>
@@ -1054,7 +1419,9 @@ const saveReturn = async () => {
                   class="cfm-input cfm-select"
                 >
                   <option value="vi">{{ t("admin.hinhThucHoan.vi") }} (Ví tài khoản)</option>
-                  <option value="tien_mat">{{ t("admin.hinhThucHoan.tien_mat") }} (Tại quầy)</option>
+                  <option value="tien_mat">
+                    {{ t("admin.hinhThucHoan.tien_mat") }} (Tại quầy)
+                  </option>
                 </select>
               </div>
             </div>
@@ -1097,10 +1464,7 @@ const saveReturn = async () => {
 
       <!-- ── Footer ── -->
       <div class="cfm-footer">
-        <button
-          class="cfm-btn cfm-btn--ghost"
-          @click="showModal = false"
-        >
+        <button class="cfm-btn cfm-btn--ghost" @click="showModal = false">
           {{ isModalReadonly ? t("admin.returnModal.close") : t("admin.returnModal.cancel") }}
         </button>
         <button
@@ -1121,28 +1485,56 @@ const saveReturn = async () => {
 <style scoped>
 /* ─── Filter Button ─── */
 .alt-btn--filter {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 12px; border: 1px solid var(--border, #e2e8f0);
-  border-radius: 8px; background: var(--surface, #fff);
-  color: var(--ink, #1e293b); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: var(--ink, #1e293b);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
-.alt-btn--filter:hover, .alt-btn--filter-active {
+.alt-btn--filter:hover,
+.alt-btn--filter-active {
   border-color: var(--pink-400, #f472b6);
-  background: var(--pink-50, #fdf2f8); color: var(--pink-700, #be185d);
+  background: var(--pink-50, #fdf2f8);
+  color: var(--pink-700, #be185d);
 }
 .filter-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
-  background: var(--pink-600, #db2777); color: #fff; font-size: 11px; font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--pink-600, #db2777);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
 }
 .alt-btn--ghost-sm {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 10px; border: 1px solid var(--border, #e2e8f0);
-  border-radius: 8px; background: transparent; color: var(--muted, #64748b);
-  font-size: 12px; cursor: pointer; transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted, #64748b);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
-.alt-btn--ghost-sm:hover { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
+.alt-btn--ghost-sm:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #dc2626;
+}
 
 /* ─── Advanced Filter Panel ─── */
 .adv-filter-panel {
@@ -1152,29 +1544,85 @@ const saveReturn = async () => {
   animation: slideDown 0.15s ease;
 }
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.adv-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
-.adv-filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
-.adv-filter-group--range { min-width: 240px; }
-.adv-filter-label { font-size: 11px; font-weight: 600; color: var(--muted, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
-.adv-filter-select, .adv-filter-input {
-  padding: 6px 10px; border: 1px solid var(--border, #e2e8f0);
-  border-radius: 7px; background: #fff; color: var(--ink, #1e293b);
-  font-size: 13px; outline: none; transition: border-color 0.15s; width: 100%;
+.adv-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
 }
-.adv-filter-select:focus, .adv-filter-input:focus { border-color: var(--pink-500, #ec4899); }
-.adv-filter-range { display: flex; align-items: center; gap: 6px; }
-.adv-filter-range .adv-filter-input { width: 100px; }
-.adv-filter-sep { color: var(--muted, #94a3b8); font-size: 13px; font-weight: 600; }
+.adv-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+.adv-filter-group--range {
+  min-width: 240px;
+}
+.adv-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.adv-filter-select,
+.adv-filter-input {
+  padding: 6px 10px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink, #1e293b);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.adv-filter-select:focus,
+.adv-filter-input:focus {
+  border-color: var(--pink-500, #ec4899);
+}
+.adv-filter-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.adv-filter-range .adv-filter-input {
+  width: 100px;
+}
+.adv-filter-sep {
+  color: var(--muted, #94a3b8);
+  font-size: 13px;
+  font-weight: 600;
+}
 .adv-filter-reset {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 12px; border: 1px solid #dc2626; border-radius: 7px;
-  background: transparent; color: #dc2626; font-size: 12px; font-weight: 500;
-  cursor: pointer; align-self: flex-end; transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid #dc2626;
+  border-radius: 7px;
+  background: transparent;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  align-self: flex-end;
+  transition: all 0.15s;
 }
-.adv-filter-reset:hover { background: #dc2626; color: #fff; }
+.adv-filter-reset:hover {
+  background: #dc2626;
+  color: #fff;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    RETURN MODAL - THEME SYSTEM
@@ -1182,7 +1630,7 @@ const saveReturn = async () => {
 .return-modal-shell {
   background: #fff;
   border-radius: 20px;
-  width: 780px;
+  width: 880px;
   max-width: 100%;
   max-height: 92vh;
   display: flex;
@@ -1194,8 +1642,14 @@ const saveReturn = async () => {
 }
 
 @keyframes modalIn {
-  from { opacity: 0; transform: scale(0.97) translateY(-8px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* ── Header ── */
@@ -1208,17 +1662,21 @@ const saveReturn = async () => {
   color: #fff;
 }
 .cfm-header-icon {
-  width: 44px; height: 44px;
-  background: rgba(255,255,255,0.2);
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   flex-shrink: 0;
 }
-.cfm-header-text { flex: 1; min-width: 0; }
+.cfm-header-text {
+  flex: 1;
+  min-width: 0;
+}
 .cfm-title {
   font-size: 17px;
   font-weight: 700;
@@ -1231,10 +1689,11 @@ const saveReturn = async () => {
   opacity: 0.88;
 }
 .cfm-close {
-  background: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.18);
   border: none;
   color: #fff;
-  width: 34px; height: 34px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   cursor: pointer;
   display: flex;
@@ -1242,7 +1701,10 @@ const saveReturn = async () => {
   justify-content: center;
   transition: all 0.15s ease;
 }
-.cfm-close:hover { background: rgba(255,255,255,0.32); transform: rotate(90deg); }
+.cfm-close:hover {
+  background: rgba(255, 255, 255, 0.32);
+  transform: rotate(90deg);
+}
 
 /* ── Body ── */
 .cfm-body {
@@ -1269,7 +1731,9 @@ const saveReturn = async () => {
 .cfm-section {
   margin-bottom: 20px;
 }
-.cfm-section:last-child { margin-bottom: 0; }
+.cfm-section:last-child {
+  margin-bottom: 0;
+}
 
 .cfm-section-title {
   font-size: 12.5px;
@@ -1290,8 +1754,14 @@ const saveReturn = async () => {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
-.cfm-field { display: flex; flex-direction: column; gap: 6px; }
-.cfm-field--full { grid-column: 1 / -1; }
+.cfm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cfm-field--full {
+  grid-column: 1 / -1;
+}
 
 .cfm-label {
   font-size: 12px;
@@ -1301,7 +1771,10 @@ const saveReturn = async () => {
   align-items: center;
   gap: 5px;
 }
-.cfm-required { color: #ef4444; font-weight: bold; }
+.cfm-required {
+  color: #ef4444;
+  font-weight: bold;
+}
 
 .cfm-input-wrap {
   position: relative;
@@ -1338,7 +1811,9 @@ const saveReturn = async () => {
   background: #fff;
   box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
 }
-.cfm-input::placeholder { color: #d1d5db; }
+.cfm-input::placeholder {
+  color: #d1d5db;
+}
 .cfm-select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
@@ -1373,13 +1848,17 @@ const saveReturn = async () => {
 .cfm-btn--primary {
   background: linear-gradient(180deg, var(--pink-500, #db2777) 0%, var(--pink-700, #a81b5d) 100%);
   color: #fff;
-  box-shadow: 0 3px 0 var(--pink-700, #a81b5d), 0 4px 12px rgba(168, 27, 93, 0.35);
+  box-shadow:
+    0 3px 0 var(--pink-700, #a81b5d),
+    0 4px 12px rgba(168, 27, 93, 0.35);
   border-bottom: 3px solid var(--pink-700, #a81b5d);
 }
 .cfm-btn--primary:hover:not(:disabled) {
   background: linear-gradient(180deg, var(--pink-400, #ec4899) 0%, var(--pink-600, #db2777) 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 0 var(--pink-700, #a81b5d), 0 6px 16px rgba(168, 27, 93, 0.4);
+  box-shadow:
+    0 4px 0 var(--pink-700, #a81b5d),
+    0 6px 16px rgba(168, 27, 93, 0.4);
 }
 .cfm-btn--primary:disabled {
   opacity: 0.6;
@@ -1404,7 +1883,8 @@ const saveReturn = async () => {
   border-radius: 12px;
 }
 .return-order-icon {
-  width: 40px; height: 40px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
   background: rgba(219, 39, 119, 0.12);
   color: var(--pink-600, #db2777);
@@ -1447,7 +1927,7 @@ const saveReturn = async () => {
   background: #fff;
   border: 1.5px solid var(--pink-200, #ffcfe1);
   border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   z-index: 30;
 }
 .return-order-item {
@@ -1500,6 +1980,18 @@ const saveReturn = async () => {
   padding: 2px 7px;
   border-radius: 5px;
   display: inline-block;
+}
+.return-serial-badge {
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0369a1;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  padding: 2px 7px;
+  border-radius: 5px;
+  display: inline-block;
+  line-height: 1.3;
 }
 .return-qty-input {
   width: 60px;
@@ -1559,7 +2051,8 @@ const saveReturn = async () => {
   min-height: 42px;
 }
 .return-handler-avatar {
-  width: 28px; height: 28px;
+  width: 28px;
+  height: 28px;
   border-radius: 8px;
   background: linear-gradient(135deg, var(--pink-500, #ec4899), var(--pink-700, #a81b5d));
   color: #fff;
@@ -1586,11 +2079,23 @@ const saveReturn = async () => {
 }
 
 @media (max-width: 600px) {
-  .return-modal-shell { border-radius: 16px; }
-  .cfm-fields { grid-template-columns: 1fr; }
-  .cfm-field--full { grid-column: 1; }
-  .cfm-header { padding: 16px; }
-  .cfm-body { padding: 16px; }
-  .cfm-footer { padding: 12px 16px; }
+  .return-modal-shell {
+    border-radius: 16px;
+  }
+  .cfm-fields {
+    grid-template-columns: 1fr;
+  }
+  .cfm-field--full {
+    grid-column: 1;
+  }
+  .cfm-header {
+    padding: 16px;
+  }
+  .cfm-body {
+    padding: 16px;
+  }
+  .cfm-footer {
+    padding: 12px 16px;
+  }
 }
 </style>

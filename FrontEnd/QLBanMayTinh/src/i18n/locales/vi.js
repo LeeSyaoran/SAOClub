@@ -1350,19 +1350,19 @@ export default {
       edit: "Sửa",
       empty: "Chưa có phiếu bảo hành",
       searchPlaceholder: "Tìm mã phiếu, khách hàng, serial...",
-      createManual: "+ Tạo phiếu thủ công",
+      createManual: "Tạo phiếu thủ công",
     },
 
     warrantyScan: {
-      placeholder: "Quét barcode hoặc gõ số serial rồi nhấn Enter...",
-      searchBtn: "Tra cứu",
-      emptyHint: "Quét barcode bằng máy quét USB, hoặc gõ số serial rồi nhấn Enter để tra nhanh thông tin máy và tạo phiếu bảo hành.",
-      loading: "Đang tra cứu serial...",
+      placeholder: "Nhập số serial để kiểm tra bảo hành...",
+      searchBtn: "Kiểm tra bảo hành",
+      emptyHint: "Nhập số serial của máy rồi nhấn Enter hoặc bấm Kiểm tra bảo hành để tra cứu thời hạn bảo hành, thông tin đơn hàng và tạo phiếu.",
+      loading: "Đang kiểm tra bảo hành theo số serial...",
       // NOT_FOUND: serial chua tung ton tai trong he thong
-      notFound: 'Mã "{serial}" không tồn tại trong hệ thống. Vui lòng kiểm tra lại.',
+      notFound: 'Số serial "{serial}" không tồn tại trong hệ thống. Vui lòng kiểm tra lại.',
       // DELETED: serial da tung ton tai nhung da bi xoa mem
-      deleted: 'Mã "{serial}" đã bị xóa khỏi hệ thống.',
-      error: "Lỗi tra cứu. Vui lòng thử lại.",
+      deleted: 'Số serial "{serial}" đã bị xóa khỏi hệ thống.',
+      error: "Lỗi kiểm tra bảo hành. Vui lòng thử lại.",
       machineInfo: "Thông tin máy",
       variantSpecs: "Cấu hình chi tiết",
       sku: "SKU",
@@ -1382,8 +1382,6 @@ export default {
       notSold: "Chưa bán",
       noWarranty: "Không có thông tin BH",
       notSoldTooltip: "Serial chưa được bán — không thể tạo phiếu bảo hành",
-      openCamera: "Mở camera",
-      cameraTitle: "Quét barcode từ camera",
       // Banner trang thai
       banner: {
         inStock: "Máy đang trong kho — chưa bán",

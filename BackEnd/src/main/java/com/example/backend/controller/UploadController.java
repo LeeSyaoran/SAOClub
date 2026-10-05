@@ -8,12 +8,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -89,22 +88,43 @@ public class UploadController {
             return ResponseEntity.badRequest().body(Map.of("error", "URL rong"));
         }
 
-        // Chi cho phep tu cac domain hinh anh pho bien
-        String[] duocPhep = { "imgur.com", "i.imgur.com", "flic.kr", "flickr.com", "bb.com.vn" };
-        boolean choPhep = false;
-        for (String d : duocPhep) {
-            if (imageUrl.contains(d)) { choPhep = true; break; }
+        URI uri;
+        try {
+            uri = URI.create(imageUrl.trim());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "URL khong hop le"));
         }
-        if (!choPhep) {
+
+        // Chi cho phep http/https (chan file://, jar://, ...) va host thuoc danh sach cho phep
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+        if (!scheme.equals("http") && !scheme.equals("https")) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Chi chap nhan URL http/https"));
+        }
+        if (!hostDuocPhep(uri.getHost())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Chi chap nhan tu imgur.com, flickr.com, bb.com.vn"));
         }
 
+        String duoi = layDuoiFile(uri.getPath());
+        if (!DUOI_ANH_HOP_LE.contains(duoi)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "URL khong tro toi anh hop le"));
+        }
+
+        HttpURLConnection conn = null;
         try {
-            URI uri = URI.create(imageUrl);
-            URL url = uri.toURL();
-            String duoi = layDuoiTuUrl(imageUrl);
-            if (!DUOI_ANH_HOP_LE.contains(duoi)) {
+            conn = (HttpURLConnection) uri.toURL().openConnection();
+            conn.setInstanceFollowRedirects(false); // redirect co the tro toi host noi bo
+            conn.setConnectTimeout(5_000);
+            conn.setReadTimeout(10_000);
+            if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Khong tai duoc anh (HTTP " + conn.getResponseCode() + ")"));
+            }
+            String contentType = conn.getContentType();
+            if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("image/")) {
                 return ResponseEntity.badRequest().body(Map.of("error", "URL khong tro toi anh hop le"));
+            }
+            long len = conn.getContentLengthLong();
+            if (len > MAX_URL_IMAGE_BYTES) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Anh vuot qua 10MB"));
             }
 
             Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
@@ -112,24 +132,34 @@ public class UploadController {
             String filename = UUID.randomUUID() + "." + duoi;
             Path dest = uploadPath.resolve(filename);
 
-            try (InputStream is = url.openStream()) {
-                Files.copy(is, dest, StandardCopyOption.REPLACE_EXISTING);
+            try (InputStream is = conn.getInputStream()) {
+                byte[] data = is.readNBytes((int) MAX_URL_IMAGE_BYTES + 1);
+                if (data.length > MAX_URL_IMAGE_BYTES) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Anh vuot qua 10MB"));
+                }
+                Files.write(dest, data);
             }
 
             return ResponseEntity.ok(Map.of("url", "/images/" + filename, "filename", filename));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | ClassCastException e) {
             return ResponseEntity.badRequest().body(Map.of("error", "URL khong hop le"));
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Loi tai anh: " + e.getMessage()));
+        } finally {
+            if (conn != null) conn.disconnect();
         }
     }
 
-    private static String layDuoiTuUrl(String url) {
-        try {
-            String path = URI.create(url).getPath();
-            return layDuoiFile(path);
-        } catch (Exception e) {
-            return "";
+    private static final long MAX_URL_IMAGE_BYTES = 10L * 1024 * 1024;
+    private static final Set<String> HOST_DUOC_PHEP = Set.of("imgur.com", "flic.kr", "flickr.com", "staticflickr.com", "bb.com.vn");
+
+    // Host phai trung khop hoac la subdomain cua domain cho phep (vd: i.imgur.com)
+    private static boolean hostDuocPhep(String host) {
+        if (host == null || host.isBlank()) return false;
+        String h = host.toLowerCase(Locale.ROOT);
+        for (String d : HOST_DUOC_PHEP) {
+            if (h.equals(d) || h.endsWith("." + d)) return true;
         }
+        return false;
     }
 }

@@ -235,14 +235,28 @@ public class PhieuNhapKhoService {
                 lichSuTonKhoRepository.save(log);
                 serialCount++;
             }
-            // Insert dòng chi tiết phiếu nhập (để frontend hiển thị đúng bảng SKU + đơn giá)
+            // Cập nhật hoặc thêm mới dòng chi tiết phiếu nhập (tránh nhân đôi dòng khi duyệt)
             if (serialCount > 0) {
-                ChiTietPhieuNhap ctpn = new ChiTietPhieuNhap();
-                ctpn.setPhieuNhapKho(phieu);
-                ctpn.setBienThe(bienThe);
-                ctpn.setSoLuong(serialCount);
-                ctpn.setDonGiaNhap(draft.getDonGia() != null ? draft.getDonGia() : BigDecimal.ZERO);
-                chiTietPhieuNhapRepository.save(ctpn);
+                List<ChiTietPhieuNhap> existingList = chiTietPhieuNhapRepository.findByPhieuNhapKho_PhieuNhapId(phieuNhapId);
+                ChiTietPhieuNhap ctpn = existingList.stream()
+                        .filter(c -> c.getBienThe() != null && c.getBienThe().getBienTheId().equals(bienThe.getBienTheId()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (ctpn == null) {
+                    ctpn = new ChiTietPhieuNhap();
+                    ctpn.setPhieuNhapKho(phieu);
+                    ctpn.setBienThe(bienThe);
+                    ctpn.setSoLuong(serialCount);
+                    ctpn.setDonGiaNhap(draft.getDonGia() != null ? draft.getDonGia() : BigDecimal.ZERO);
+                    chiTietPhieuNhapRepository.save(ctpn);
+                } else {
+                    ctpn.setSoLuong(serialCount);
+                    if (draft.getDonGia() != null && draft.getDonGia().compareTo(BigDecimal.ZERO) > 0) {
+                        ctpn.setDonGiaNhap(draft.getDonGia());
+                    }
+                    chiTietPhieuNhapRepository.save(ctpn);
+                }
             }
         }
 

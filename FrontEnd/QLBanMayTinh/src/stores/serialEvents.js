@@ -33,6 +33,14 @@ export const connectSerialEvents = (token) => {
       bumpSerialEvent();
     } catch {}
   });
+
+  serialEventSource.addEventListener('new-order', () => {
+    bumpSerialEvent();
+  });
+
+  serialEventSource.addEventListener('order-updated', () => {
+    bumpSerialEvent();
+  });
 };
 
 export const disconnectSerialEvents = () => {

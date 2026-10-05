@@ -1,5 +1,16 @@
 package com.example.backend.service;
 
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Random;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.backend.entity.CauHinhVongQuay;
 import com.example.backend.entity.KhachHang;
 import com.example.backend.entity.KhuyenMai;
@@ -18,17 +29,8 @@ import com.example.backend.response.KetQuaQuayResponse;
 import com.example.backend.response.KhuyenMaiResponse;
 import com.example.backend.response.LichSuQuayResponse;
 import com.example.backend.response.PhieuGiamGiaCaNhanResponse;
-import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Random;
+import jakarta.persistence.EntityManager;
 
 @Service
 public class VongQuayService {
@@ -70,7 +72,7 @@ public class VongQuayService {
         return new KhuyenMaiResponse(k.getKhuyenMaiId(), k.getMaKhuyenMai(), k.getTenKhuyenMai(),
                 k.getLoai(), k.getGiaTri(), k.getGiaTriToiDa(), k.getDonHangToiThieu(),
                 k.getNgayBatDau(), k.getNgayKetThuc(), k.getSoLuongToiDa(), k.getSoLanDaDung(),
-                null, k.getTrangThai(), k.getNgayTao(), null);
+                null, k.getTrangThai(), k.getNgayTao());
     }
 
 

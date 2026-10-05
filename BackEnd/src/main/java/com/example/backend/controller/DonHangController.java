@@ -170,6 +170,50 @@ public class DonHangController {
         return ResponseEntity.ok(saved);
     }
 
+    // POST /api/don-hang/{id}/yeu-cau-huy — khách hàng yêu cầu hủy đơn (chỉ khi pending hoặc confirmed)
+    @PostMapping("{id}/yeu-cau-huy")
+    public ResponseEntity<?> yeuCauHuy(
+            @PathVariable Integer id,
+            @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String lyDoHuy = body != null ? body.get("lyDoHuy") : null;
+            donHangService.yeuCauHuyDon(id, lyDoHuy);
+            return ResponseEntity.ok(Map.of("message", "Đã gửi yêu cầu hủy đơn thành công"));
+        } catch (IllegalArgumentException | org.springframework.security.access.AccessDeniedException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // POST /api/don-hang/{id}/duyet-huy — admin duyệt hủy đơn
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
+    @PostMapping("{id}/duyet-huy")
+    public ResponseEntity<?> duyetHuy(
+            @PathVariable Integer id,
+            @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String ghiChu = body != null ? body.get("ghiChu") : null;
+            DonHang saved = donHangService.duyetHuyDon(id, ghiChu);
+            return ResponseEntity.ok(saved);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // POST /api/don-hang/{id}/tu-choi-huy — admin từ chối yêu cầu hủy đơn
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
+    @PostMapping("{id}/tu-choi-huy")
+    public ResponseEntity<?> tuChoiHuy(
+            @PathVariable Integer id,
+            @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String lyDoTuChoi = body != null ? body.get("lyDoTuChoi") : null;
+            DonHang saved = donHangService.tuChoiHuyDon(id, lyDoTuChoi);
+            return ResponseEntity.ok(saved);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping(value = "events", produces = "text/event-stream")
     public SseEmitter subscribe() {
         return sseService.subscribe();

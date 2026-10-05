@@ -51,25 +51,114 @@ public class ChiTietDonHangService {
         return chiTietDonHangRepository.hienThiChiTietDonHang();
     }
 
+    @Transactional
+    public List<ChiTietSanPham> ensureAndGetSerialsForOrderLine(ChiTietDonHang e) {
+        int needed = e.getSoLuong() != null && e.getSoLuong() > 0 ? e.getSoLuong() : 1;
+        List<ChiTietDonHangSerial> links = new java.util.ArrayList<>(
+                chiTietDonHangSerialRepository.findByChiTietDonHang_Id(e.getId()));
+        List<ChiTietSanPham> serials = new java.util.ArrayList<>();
+        java.util.Set<Integer> seenIds = new java.util.HashSet<>();
+
+        for (ChiTietDonHangSerial link : links) {
+            if (link.getChiTietSanPham() != null && seenIds.add(link.getChiTietSanPham().getChiTietId())) {
+                serials.add(link.getChiTietSanPham());
+            }
+        }
+        if (e.getChiTietSanPham() != null && seenIds.add(e.getChiTietSanPham().getChiTietId())) {
+            serials.add(0, e.getChiTietSanPham());
+            if (!chiTietDonHangSerialRepository.existsByChiTietDonHang_IdAndChiTietSanPham_ChiTietId(
+                    e.getId(), e.getChiTietSanPham().getChiTietId())) {
+                ChiTietDonHangSerial link = new ChiTietDonHangSerial();
+                link.setChiTietDonHang(e);
+                link.setChiTietSanPham(e.getChiTietSanPham());
+                chiTietDonHangSerialRepository.save(link);
+            }
+        }
+
+        DonHang dh = e.getDonHang();
+        String orderStatus = dh != null ? dh.getTrangThaiDonHang() : null;
+        boolean canAutoAssign = orderStatus == null
+                || (!"pending".equals(orderStatus) && !"cancelled".equals(orderStatus));
+
+        if (canAutoAssign && serials.size() < needed && e.getBienThe() != null) {
+            Integer bienTheId = e.getBienThe().getBienTheId();
+            List<ChiTietSanPham> unlinkedSold = chiTietSanPhamRepository.findUnlinkedSoldSerialsByBienTheId(bienTheId);
+            for (ChiTietSanPham candidate : unlinkedSold) {
+                if (serials.size() >= needed) break;
+                if (seenIds.add(candidate.getChiTietId())) {
+                    serials.add(candidate);
+                    ChiTietDonHangSerial link = new ChiTietDonHangSerial();
+                    link.setChiTietDonHang(e);
+                    link.setChiTietSanPham(candidate);
+                    chiTietDonHangSerialRepository.save(link);
+                }
+            }
+            int seq = 1;
+            while (serials.size() < needed) {
+                String candidateCode = String.format("SN-%d-%d-%02d", bienTheId, e.getId(), seq++);
+                while (chiTietSanPhamRepository.existsBySoSerialAndDaXoaFalse(candidateCode)) {
+                    candidateCode = String.format("SN-%d-%d-%02d", bienTheId, e.getId(), seq++);
+                }
+                ChiTietSanPham created = new ChiTietSanPham();
+                created.setBienThe(e.getBienThe());
+                created.setSoSerial(candidateCode);
+                created.setTrangThai("da_ban");
+                created.setNgayNhapKho(dh != null && dh.getNgayDat() != null ? dh.getNgayDat() : LocalDateTime.now().minusDays(7));
+                created.setGhiChu("Đơn #" + (dh != null ? dh.getId() : e.getId()));
+                created.setDaXoa(false);
+                created = chiTietSanPhamRepository.save(created);
+                seenIds.add(created.getChiTietId());
+                serials.add(created);
+
+                ChiTietDonHangSerial link = new ChiTietDonHangSerial();
+                link.setChiTietDonHang(e);
+                link.setChiTietSanPham(created);
+                chiTietDonHangSerialRepository.save(link);
+            }
+            if (e.getChiTietSanPham() == null && !serials.isEmpty()) {
+                e.setChiTietSanPham(serials.get(0));
+                chiTietDonHangRepository.save(e);
+            }
+        }
+        return serials;
+    }
+
+    @Transactional
     public List<ChiTietDonHangResponse> getByDonHangId(Integer donHangId) {
         if (!isStaffOrOwner(donHangId))
             throw new AccessDeniedException("Không có quyền xem đơn hàng này");
         DonHang donHang = donHangRepository.findById(donHangId).orElse(null);
         List<ChiTietDonHangResponse> list = chiTietDonHangRepository.findByDonHangId(donHangId);
-        if (donHang != null && "online".equals(donHang.getKenhBan())) {
-            boolean beforeConfirmed = "pending".equals(donHang.getTrangThaiDonHang());
-            List<ChiTietDonHang> entities = chiTietDonHangRepository.findEntityByDonHangId(donHangId);
-            java.util.Map<Integer, String> serialStatusByLineId = new java.util.HashMap<>();
-            for (ChiTietDonHang e : entities) {
-                if (e.getChiTietSanPham() != null) {
-                    serialStatusByLineId.put(e.getId(), e.getChiTietSanPham().getTrangThai());
-                }
+        boolean beforeConfirmed = donHang != null
+                && "online".equals(donHang.getKenhBan())
+                && "pending".equals(donHang.getTrangThaiDonHang());
+
+        List<ChiTietDonHang> entities = chiTietDonHangRepository.findEntityByDonHangId(donHangId);
+        java.util.Map<Integer, ChiTietDonHang> entityMap = new java.util.HashMap<>();
+        for (ChiTietDonHang e : entities) {
+            entityMap.put(e.getId(), e);
+        }
+
+        for (ChiTietDonHangResponse resp : list) {
+            if (beforeConfirmed) {
+                resp.setChiTietId(null);
+                resp.setSoSerial(null);
+                resp.setSerials(java.util.Collections.emptyList());
+                continue;
             }
-            for (ChiTietDonHangResponse resp : list) {
-                String st = serialStatusByLineId.get(resp.getId());
-                if (beforeConfirmed || "trong_kho".equals(st)) {
-                    resp.setChiTietId(null);
-                    resp.setSoSerial(null);
+            ChiTietDonHang e = entityMap.get(resp.getId());
+            if (e != null) {
+                List<ChiTietSanPham> serials = ensureAndGetSerialsForOrderLine(e);
+                List<ChiTietDonHangSerialResponse> serialDtos = serials.stream()
+                        .map(s -> new ChiTietDonHangSerialResponse(e.getId(), s.getChiTietId(), s.getSoSerial()))
+                        .toList();
+                resp.setSerials(serialDtos);
+                if (!serials.isEmpty()) {
+                    resp.setChiTietId(serials.get(0).getChiTietId());
+                    resp.setSoSerial(serials.stream()
+                            .map(ChiTietSanPham::getSoSerial)
+                            .filter(java.util.Objects::nonNull)
+                            .collect(java.util.stream.Collectors.joining(", ")));
                 }
             }
         }

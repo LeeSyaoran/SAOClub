@@ -17,8 +17,8 @@ const props = defineProps({
   nameField: { type: String, required: true },
   label: { type: String, required: true },
   nameLabel: { type: String, required: true },
-  serialService: { type: Object, required: true },
-  serialFieldName: { type: String, required: true },
+  serialService: { type: Object, default: null },
+  serialFieldName: { type: String, default: null },
   // Header icon - truyen component hoac string icon name
   headerIcon: { type: [Object, String, Function], default: null },
   // Advanced filter config: { filters: [{ key, label, type, options }] }
@@ -28,15 +28,11 @@ const props = defineProps({
 // ── Load data ──────────────────────────────────────────────────────────────
 const items = ref([]);
 const loading = ref(false);
-const serials = ref([]);
 
 const load = async () => {
   loading.value = true;
   try {
-    [items.value, serials.value] = await Promise.all([
-      props.service.getAll().catch(() => []),
-      props.serialService.getAll().catch(() => []),
-    ]);
+    items.value = (await props.service.getAll().catch(() => [])) ?? [];
   } finally {
     loading.value = false;
   }
@@ -44,8 +40,6 @@ const load = async () => {
 onMounted(load);
 
 const getItemId = (item) => item?.[props.idField] ?? item?.ocungId ?? item?.oCungId ?? item?.id;
-const serialsOf = (item) => serials.value.filter((s) => (s[props.serialFieldName] ?? s.ocungId ?? s.oCungId) === getItemId(item));
-const stockCountOf = (item) => serialsOf(item).filter((s) => s.trangThai === "trong_kho").length;
 
 // ── Search ────────────────────────────────────────────────────────────────
 const search = ref("");
@@ -242,63 +236,16 @@ const formError = ref("");
 const formValue = ref({});
 const saving = ref(false);
 
-const newSerials = ref([""]);
-const addSerialRow = () => newSerials.value.push("");
-const removeSerialRow = (idx) => {
-  if (newSerials.value.length > 1) newSerials.value.splice(idx, 1);
-  else newSerials.value[idx] = "";
-};
-const importSerialsFromFile = async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const ext = file.name.split(".").pop()?.toLowerCase();
-  let parsed;
-  if (ext === "xlsx" || ext === "xls") {
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array" });
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-    parsed = rows.flat().map((v) => String(v ?? "").trim()).filter(Boolean);
-  } else {
-    const text = await file.text();
-    parsed = text.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-  }
-  const existing = newSerials.value.filter(Boolean);
-  newSerials.value = [...existing, ...parsed].length ? [...existing, ...parsed] : [""];
-  e.target.value = "";
-};
-
-// Upload ảnh minh hoạ cho CPU/RAM/GPU/Ổ cứng — gọi lại /api/upload/image có sẵn.
-const dangTaiAnh = ref(false);
-const loiUploadAnh = ref("");
-const chonFileAnh = async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  dangTaiAnh.value = true;
-  loiUploadAnh.value = "";
-  try {
-    const { url } = await uploadImage(file);
-    formValue.value.hinhAnh = url;
-    formValue.value.imgError = false;
-  } catch (err) {
-    loiUploadAnh.value = err.message || "Tải ảnh thất bại";
-  } finally {
-    dangTaiAnh.value = false;
-    e.target.value = "";
-  }
-};
-
 const openAdd = () => {
   editingId.value = null;
   formValue.value = { [props.nameField]: "", hinhAnh: "" };
   formError.value = "";
-  newSerials.value = [""];
   showModal.value = true;
 };
 const openEdit = (item) => {
   editingId.value = getItemId(item);
   formValue.value = { ...item };
   formError.value = "";
-  newSerials.value = [""];
   showModal.value = true;
 };
 
@@ -307,14 +254,6 @@ const saveItem = async () => {
   if (!formValue.value[props.nameField]?.trim()) {
     formError.value = t("admin.dmCategory.nameRequired", { label: props.nameLabel });
     return;
-  }
-  const serialList = newSerials.value.map((s) => s.trim()).filter(Boolean);
-  // Chỉ yêu cầu serial khi THÊM mới (editingId == null). Khi SỬA chỉ cập nhật ảnh → không cần serial.
-  if (!editingId.value) {
-    if (serialList.length === 0) {
-      formError.value = t("admin.dmCategory.serialRequired", { label: props.nameLabel });
-      return;
-    }
   }
   if (saving.value) return;
   saving.value = true;
@@ -333,38 +272,14 @@ const saveItem = async () => {
       formError.value = t("admin.errors.saveFailed", { status: res.status, text: await res.text() });
       return;
     }
-    if (!editingId.value) {
-      const created = await res.json();
-      const newId = getItemId(created);
-      for (const soSerial of serialList) {
-        const sres = await props.serialService.create({
-          [props.serialFieldName]: newId,
-          ...(props.serialFieldName === "oCungId" ? { ocungId: newId } : {}),
-          soSerial,
-          trangThai: "trong_kho",
-          ngayNhapKho: nowLocalIso(),
-        });
-        if (!sres.ok) {
-          showToast(await sres.text().catch(() => t("admin.errors.addSerialError")));
-          return;
-        }
-      }
-    }
     showModal.value = false;
     await load();
+    showToast(t("admin.toast.saveSuccess") || "Lưu thành công", "success");
   } catch (e) {
     formError.value = e.message;
   } finally {
     saving.value = false;
   }
-};
-
-// ── Serial modal ────────────────────────────────────────────────────────────
-const showSerialsModal = ref(false);
-const serialsModalItem = ref(null);
-const openSerials = (item) => {
-  serialsModalItem.value = item;
-  showSerialsModal.value = true;
 };
 </script>
 
@@ -378,7 +293,7 @@ const openSerials = (item) => {
       </div>
       <div class="dm-header__text">
         <h2 class="dm-header__title">{{ label }}</h2>
-        <p class="dm-header__sub">{{ t("admin.dmCategory.subtitle") }}</p>
+        <p class="dm-header__sub">{{ t("admin.dmCategory.subtitle", { label }) || `Quản lý danh mục ${label}` }}</p>
       </div>
     </div>
 
@@ -448,16 +363,15 @@ const openSerials = (item) => {
       <table class="alt-table">
         <thead>
           <tr>
-            <th style="width:5%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t("admin.common.stt") }}</span></th>
-            <th style="width:8%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><ImageIcon :size="12" /> Hình ảnh</span></th>
-            <th style="width:55%;">
+            <th style="width:6%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t("admin.common.stt") }}</span></th>
+            <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><ImageIcon :size="12" /> Hình ảnh</span></th>
+            <th style="width:66%;">
               <span class="d-inline-flex align-items-center gap-1.5">
                 <component v-if="props.headerIcon && (typeof props.headerIcon === 'object' || typeof props.headerIcon === 'function')" :is="props.headerIcon" :size="12" />
                 <Layers v-else :size="12" />
                 {{ nameLabel }}
               </span>
             </th>
-            <th style="width:14%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Package :size="12" /> {{ t("admin.dmCategory.colStock") }}</span></th>
             <th style="width:18%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><SlidersHorizontal :size="12" /> {{ t("admin.dmCategory.colAction") }}</span></th>
           </tr>
         </thead>
@@ -472,20 +386,9 @@ const openSerials = (item) => {
             </td>
             <td class="dm-name">{{ item[nameField] }}</td>
             <td class="text-center">
-              <span class="dm-stock-badge" :class="{ 'dm-stock--zero': stockCountOf(item) === 0 }">
-                {{ stockCountOf(item) }}
-              </span>
-            </td>
-            <td class="text-center">
-              <div class="d-flex justify-content-center gap-1">
-                <button class="alt-btn alt-btn--ghost" style="padding:4px 10px;" @click="openSerials(item)">
-                  <Hash :size="12" style="vertical-align:-2px;" />
-                  {{ t("admin.dmCategory.viewSerials", { count: stockCountOf(item) }) }}
-                </button>
-                <button class="alt-btn alt-btn--ghost" style="padding:4px 10px;" @click="openEdit(item)">
-                  {{ t("admin.dmCategory.edit") }}
-                </button>
-              </div>
+              <button class="alt-btn alt-btn--ghost" style="padding:4px 14px;" @click="openEdit(item)">
+                {{ t("admin.dmCategory.edit") }}
+              </button>
             </td>
           </tr>
           <tr v-if="filteredItems.length === 0">
@@ -565,64 +468,9 @@ const openSerials = (item) => {
           required
         />
       </div>
-      <div v-if="!editingId" class="mb-3">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label small text-secondary mb-0">{{ t("admin.stockModal.newSerialsLabel") }}</label>
-          <label class="btn btn-sm btn-outline-info" style="padding:2px 10px;font-size:0.72rem;cursor:pointer;">
-            <FolderOpen :size="14" style="vertical-align:-2px;" /> {{ t("admin.stockModal.importFromFile") }}
-            <input type="file" accept=".csv,.txt,.xlsx,.xls" class="d-none" @change="importSerialsFromFile" />
-          </label>
-        </div>
-        <div class="d-flex flex-column gap-2">
-          <div v-for="(s, idx) in newSerials" :key="idx" class="d-flex gap-2 align-items-center">
-            <input v-model="newSerials[idx]" class="form-control form-control-sm" style="background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color-strong);" :placeholder="t('admin.stockModal.serialPlaceholder')" />
-            <button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;" :aria-label="t('common.remove')" @click="removeSerialRow(idx)">
-              <X :size="14" />
-            </button>
-          </div>
-        </div>
-        <button class="btn btn-sm btn-outline-warning mt-2" @click="addSerialRow">{{ t("admin.stockModal.addSerialRow") }}</button>
-        <div class="text-secondary mt-1" style="font-size:0.72rem;">{{ t("admin.stockModal.importHint") }}</div>
-      </div>
       <div class="d-flex justify-content-end gap-2">
         <button class="btn btn-sm btn-outline-secondary" @click="showModal = false">{{ t("admin.dmCategory.cancel") }}</button>
         <button class="btn btn-sm btn-warning text-dark fw-bold" :disabled="saving" @click="saveItem">{{ t("admin.dmCategory.save") }}</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal xem serial -->
-  <div
-    v-if="showSerialsModal"
-    class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-    style="background:rgba(0,0,0,0.6);z-index:1000;backdrop-filter:blur(2px);"
-    @click.self="showSerialsModal = false"
-  >
-    <div class="rounded-3 p-4 d-flex flex-column" style="background:var(--bg-card);width:460px;max-width:94vw;max-height:70vh;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="fw-bold" style="color:var(--text-heading);">
-          {{ t("admin.dmCategory.serialsModalTitle", { name: serialsModalItem?.[nameField] }) }}
-          <span class="dm-serial-count">{{ serialsOf(serialsModalItem).length }} serial</span>
-        </div>
-        <button class="dm-modal-close" :aria-label="t('common.close')" @click="showSerialsModal = false">
-          <X :size="16" />
-        </button>
-      </div>
-      <div class="overflow-y-auto d-flex flex-column gap-1 flex-grow-1">
-        <div v-if="serialsOf(serialsModalItem).length === 0" class="text-secondary small text-center py-4">
-          {{ t("admin.serialManager.empty") }}
-        </div>
-        <div
-          v-for="s in serialsOf(serialsModalItem)"
-          :key="s.soSerial"
-          class="dm-serial-row"
-        >
-          <span class="dm-serial-number">{{ s.soSerial }}</span>
-          <span class="dm-serial-status" :class="`dm-serial-status--${s.trangThai}`">
-            {{ t(`admin.statusLabel.${s.trangThai}`) }}
-          </span>
-          <span class="dm-serial-date">{{ formatDate(s.ngayNhapKho) }}</span>
-        </div>
       </div>
     </div>
   </div>

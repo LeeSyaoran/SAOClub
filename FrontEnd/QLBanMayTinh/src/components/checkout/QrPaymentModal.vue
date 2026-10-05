@@ -401,7 +401,6 @@ import {
   Clock, Copy, CheckCircle2, Lock, ImageOff, MapPin
 } from '@lucide/vue';
 import { formatPrice } from '../../utils/formatPrice.js';
-import * as ThanhToanService from '../../services/ThanhToanService.js';
 import { showToast } from '../../stores/toast.js';
 
 const props = defineProps({
@@ -568,22 +567,12 @@ const handleClose = () => {
   emit('close');
 };
 
+// Khách báo đã chuyển khoản. Việc đánh dấu "đã thanh toán" do nhân viên xác nhận
+// (POST /api/payment/confirm chỉ dành cho ADMIN/NHAN_VIEN) để tránh khách tự xác nhận.
 const handleManualConfirm = async () => {
   confirming.value = true;
-  const donHangId = props.order?.id || props.order?.donHangId;
   try {
-    if (donHangId) {
-      await ThanhToanService.confirmPayment(donHangId, {
-        soTien: totalAmount.value,
-        phuongThuc: 'chuyen_khoan',
-        maGiaoDich: `TIMO_${Date.now()}`
-      });
-    }
-    showToast('Thanh toán thành công! Đơn hàng đã được xác nhận.', 'success');
-    emit('paid', props.order);
-    handleClose();
-  } catch (e) {
-    showToast('Đã ghi nhận thông tin chuyển khoản của bạn!', 'success');
+    showToast('Đã ghi nhận chuyển khoản! Cửa hàng sẽ xác nhận khi nhận được tiền.', 'success');
     emit('paid', props.order);
     handleClose();
   } finally {

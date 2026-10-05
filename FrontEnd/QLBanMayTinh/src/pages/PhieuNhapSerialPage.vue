@@ -81,7 +81,7 @@ const serialsByBienThe = computed(() => {
 });
 
 const itemsWithSerials = computed(() => {
-// Gom nhóm serial theo biến thể
+  // Gom nhóm serial theo biến thể
   if (chiTietList.value.length === 0 && serialList.value.length > 0) {
     const avgDonGia = phieu.value?.tongTien && serialList.value.length
       ? phieu.value.tongTien / serialList.value.length
@@ -95,7 +95,25 @@ const itemsWithSerials = computed(() => {
       serials,
     }));
   }
-  return chiTietList.value.map((c) => ({
+
+  // Deduplicate / gom nhóm chiTietList theo bienTheId để đảm bảo không bị lặp dòng
+  const grouped = new Map();
+  for (const c of chiTietList.value) {
+    const key = c.bienTheId || c.id;
+    if (!grouped.has(key)) {
+      grouped.set(key, { ...c });
+    } else {
+      const existing = grouped.get(key);
+      // Giữ bản ghi hợp lệ, không cộng dồn số lượng nếu số lượng đã bằng tổng serial
+      const serCount = (serialsByBienThe.value.get(key) || []).length;
+      if (serCount > 0) {
+        existing.soLuong = serCount;
+        existing.thanhTien = (existing.donGiaNhap || 0) * serCount;
+      }
+    }
+  }
+
+  return Array.from(grouped.values()).map((c) => ({
     ...c,
     serials: serialsByBienThe.value.get(c.bienTheId) ?? [],
   }));

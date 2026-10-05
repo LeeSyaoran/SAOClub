@@ -9,7 +9,7 @@ import {
   onBeforeUnmount,
   provide,
 } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useHead } from "@unhead/vue";
 import { CheckCircle2, XCircle, Info } from '@lucide/vue';
 
@@ -40,8 +40,19 @@ import CheckoutModal from "./components/checkout/CheckoutModal.vue";
 import ProductDetail from "./components/product/ProductDetail.vue";
 import Modal from "./components/common/Modal.vue";
 import ChatWidget from "./components/account/ChatWidget.vue";
+import AdminAiChatWidget from "./components/admin/AdminAiChatWidget.vue";
 
 const router = useRouter();
+const route = useRoute();
+
+const isAdminRoute = computed(() => {
+  return (
+    Boolean(route?.path) &&
+    (route.path.startsWith("/admin") ||
+      route.path.startsWith("/staff") ||
+      route.path.startsWith("/kho"))
+  );
+});
 
 const auth = AuthStore;
 
@@ -536,8 +547,11 @@ onBeforeUnmount(() => {
       />
     </Transition>
 
-    <!-- Chat Widget — hiển thị toàn site -->
-    <ChatWidget />
+    <!-- Chat Widget (khách hàng) — chỉ hiển thị ở trang khách hàng (ẩn khi ở trang admin/quản lý) -->
+    <ChatWidget v-if="!isAdminRoute" />
+
+    <!-- Admin AI Analytics Widget — chỉ hiển thị cho admin trên trang admin -->
+    <AdminAiChatWidget v-if="auth.isAdmin && isAdminRoute" />
   </div>
 </template>
 

@@ -4,12 +4,7 @@ import { t } from "../../i18n/index.js";
 import { showToast } from "../../stores/toast.js";
 import { ThuocTinhService } from "../../services/ThuocTinhService.js";
 import * as DmService from "../../services/DmService.js";
-import {
-  ChiTietCpuService,
-  ChiTietRamService,
-  ChiTietGpuService,
-  ChiTietOCungService,
-} from "../../services/ChiTietLinhKienService.js";
+
 import DmCategoryTable from "./DmCategoryTable.vue";
 import {
   Settings,
@@ -737,8 +732,6 @@ const deleteValue = async (attr, giaTri) => {
         :label="t('admin.productsTabs.cpu') || 'CPU'"
         :name-label="t('admin.productsTabs.cpu') || 'CPU'"
         :header-icon="Cpu"
-        :serial-service="ChiTietCpuService"
-        serial-field-name="cpuId"
         :advanced-filter-config="{
           filters: [
             { key: 'hang', label: 'Hãng' },
@@ -757,8 +750,6 @@ const deleteValue = async (attr, giaTri) => {
         :label="t('admin.productsTabs.ram') || 'RAM'"
         :name-label="t('admin.productsTabs.ram') || 'RAM'"
         :header-icon="MemoryStick"
-        :serial-service="ChiTietRamService"
-        serial-field-name="ramId"
         :advanced-filter-config="{
           filters: [
             { key: 'loai', label: 'Loại RAM' },
@@ -777,8 +768,6 @@ const deleteValue = async (attr, giaTri) => {
         :label="t('admin.productsTabs.gpu') || 'GPU'"
         :name-label="t('admin.productsTabs.gpu') || 'GPU'"
         :header-icon="Monitor"
-        :serial-service="ChiTietGpuService"
-        serial-field-name="gpuId"
         :advanced-filter-config="{
           filters: [
             { key: 'hang', label: 'Hãng' },
@@ -797,8 +786,6 @@ const deleteValue = async (attr, giaTri) => {
         :label="t('admin.productsTabs.oCung') || 'Ổ cứng'"
         :name-label="t('admin.productsTabs.oCung') || 'Ổ cứng'"
         :header-icon="HardDrive"
-        :serial-service="ChiTietOCungService"
-        serial-field-name="oCungId"
         :advanced-filter-config="{
           filters: [
             { key: 'loai', label: 'Loại ổ cứng' },

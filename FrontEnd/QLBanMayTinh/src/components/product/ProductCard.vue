@@ -73,15 +73,15 @@
           {{ tag.trim() }}
         </span>
       </div>
-      <!-- Nút thêm vào giỏ hàng -->
+      <!-- Nút xem chi tiết -->
       <button
         class="btn btn-sm w-100 fw-bold mt-1"
         style="font-size:11px; border-radius:8px;"
         :class="stockBadgeClass === 'bg-secondary' ? 'btn-secondary' : 'btn-warning text-dark'"
         :disabled="stockBadgeClass === 'bg-secondary'"
-        @click.stop="$emit('add-to-cart', product)"
+        @click.stop="$emit('click', product)"
       >
-        <ShoppingCart :size="12" style="vertical-align:-2px;" /> {{ t('home.addToCart') }}
+        <Eye :size="12" style="vertical-align:-2px;" /> Xem chi tiết
       </button>
 
       <!-- Nút so sánh sản phẩm -->
@@ -108,7 +108,7 @@
 import { computed } from 'vue';
 import { t } from '../../i18n/index.js';
 import { formatPrice } from '../../utils/formatPrice.js';
-import { Laptop, Heart, Star, Truck, ShoppingCart, CheckCircle2 } from '@lucide/vue';
+import { Laptop, Heart, Star, Truck, ShoppingCart, CheckCircle2, Eye } from '@lucide/vue';
 
 const props = defineProps({
   // Sản phẩm từ API /api/san-pham/hien-thi

@@ -516,6 +516,64 @@ const refreshOrderDetail = async () => {
   ).catch(() => []);
 };
 
+// ── Duyệt hủy và Từ chối hủy đơn hàng (Admin) ──────────────────────
+const cancellingOrder = ref(false);
+
+const handleApproveCancel = async (order) => {
+  if (!order || cancellingOrder.value) return;
+  const oId = order.donHangId || order.id;
+  const ma = order.maDonHang || oId;
+  const ok = await askConfirm(
+    `Duyệt hủy đơn hàng #${ma}?`,
+    `Bạn có chắc chắn muốn duyệt yêu cầu hủy đơn hàng #${ma} của khách không? Tất cả sản phẩm và serial (nếu có) sẽ được hoàn trả về kho.`
+  );
+  if (!ok) return;
+
+  cancellingOrder.value = true;
+  try {
+    const res = await DonHangService.duyetHuy(oId, "Admin đã duyệt yêu cầu hủy đơn");
+    if (res?.error) {
+      showToast(res.error, "error");
+      return;
+    }
+    showToast(`Đã duyệt hủy đơn hàng #${ma} thành công!`, "success");
+    await refreshOrders();
+    if (orderDetailData.value?.donHangId === oId) {
+      await refreshOrderDetail();
+    }
+  } catch (err) {
+    showToast(err.message || "Lỗi khi duyệt hủy đơn", "error");
+  } finally {
+    cancellingOrder.value = false;
+  }
+};
+
+const handleRejectCancel = async (order) => {
+  if (!order || cancellingOrder.value) return;
+  const oId = order.donHangId || order.id;
+  const ma = order.maDonHang || oId;
+  const reason = window.prompt("Nhập lý do từ chối yêu cầu hủy đơn (tùy chọn):", "Cửa hàng đã chuẩn bị hàng, không thể hủy đơn lúc này");
+  if (reason === null) return;
+
+  cancellingOrder.value = true;
+  try {
+    const res = await DonHangService.tuChoiHuy(oId, reason);
+    if (res?.error) {
+      showToast(res.error, "error");
+      return;
+    }
+    showToast(`Đã từ chối yêu cầu hủy đơn #${ma}`, "info");
+    await refreshOrders();
+    if (orderDetailData.value?.donHangId === oId) {
+      await refreshOrderDetail();
+    }
+  } catch (err) {
+    showToast(err.message || "Lỗi khi từ chối hủy đơn", "error");
+  } finally {
+    cancellingOrder.value = false;
+  }
+};
+
 const addItemToOrder = async () => {
   if (!addItemBienTheId.value || addItemQty.value < 1) return;
   const v = productByBienThe(Number(addItemBienTheId.value));
@@ -1233,31 +1291,47 @@ const confirmXacNhanSerial = async () => {
               <td>{{ customerName(o.khachHangId) }}</td>
               <td>{{ formatPrice(o.thanhTien) }}</td>
               <td>
-                <span
-                  v-if="isQrPayment(o)"
-                  class="alt-tag"
-                  :style="{
-                    background: getQrEffectiveStatus(o).color.bg,
-                    color: getQrEffectiveStatus(o).color.text,
-                    border: o.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none',
-                    fontWeight: '600',
-                  }"
-                >
-                  <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="13" />
-                  {{ getQrEffectiveStatus(o).label }}
-                </span>
-                <span
-                  v-else
-                  class="alt-tag"
-                  :style="{
-                    background: getCodEffectiveStatus(o).color.bg,
-                    color: getCodEffectiveStatus(o).color.text,
-                    fontWeight: '600',
-                  }"
-                >
-                  <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="13" />
-                  {{ getCodEffectiveStatus(o).label }}
-                </span>
+                <div class="d-flex flex-column gap-1">
+                  <div>
+                    <span
+                      v-if="isQrPayment(o)"
+                      class="alt-tag"
+                      :style="{
+                        background: getQrEffectiveStatus(o).color.bg,
+                        color: getQrEffectiveStatus(o).color.text,
+                        border: o.trangThaiThanhToan === 'unpaid' ? '1px solid #fed7aa' : 'none',
+                        fontWeight: '600',
+                      }"
+                    >
+                      <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="13" />
+                      {{ getQrEffectiveStatus(o).label }}
+                    </span>
+                    <span
+                      v-else
+                      class="alt-tag"
+                      :style="{
+                        background: getCodEffectiveStatus(o).color.bg,
+                        color: getCodEffectiveStatus(o).color.text,
+                        fontWeight: '600',
+                      }"
+                    >
+                      <component :is="orderStatusIcon(o.trangThaiDonHang)" :size="13" />
+                      {{ getCodEffectiveStatus(o).label }}
+                    </span>
+                  </div>
+
+                  <!-- Badge khách xin hủy đơn -->
+                  <div v-if="o.yeuCauHuy">
+                    <span
+                      class="badge bg-danger text-white d-inline-flex align-items-center gap-1 px-2 py-0.5 rounded-pill"
+                      style="font-size: 0.68rem; font-weight: 700; cursor: pointer;"
+                      :title="o.lyDoHuy ? 'Lý do: ' + o.lyDoHuy : 'Khách yêu cầu hủy đơn'"
+                      @click.stop="openOrderDetail(o)"
+                    >
+                      <AlertCircle :size="10" /> Khách xin hủy
+                    </span>
+                  </div>
+                </div>
               </td>
               <td>
                 <span
@@ -1295,13 +1369,33 @@ const confirmXacNhanSerial = async () => {
                 <span v-else class="text-secondary">—</span>
               </td>
               <td>
-                <div class="d-flex align-items-center gap-1.5">
+                <div class="d-flex align-items-center gap-1.5 flex-wrap">
                   <button
                     class="alt-btn alt-btn--ghost"
-                    style="padding: 4px 12px"
+                    style="padding: 4px 10px"
                     @click="openOrderDetail(o)"
                   >
                     {{ t("admin.orders.detail") }}
+                  </button>
+                  <button
+                    v-if="o.yeuCauHuy"
+                    class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 shadow-sm"
+                    style="font-size: 0.72rem; padding: 4px 8px; border-radius: 6px; font-weight: 600;"
+                    title="Duyệt yêu cầu hủy đơn hàng"
+                    :disabled="cancellingOrder"
+                    @click.stop="handleApproveCancel(o)"
+                  >
+                    <Check :size="12" stroke-width="2.5" /> Duyệt hủy
+                  </button>
+                  <button
+                    v-if="o.yeuCauHuy"
+                    class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center"
+                    style="font-size: 0.72rem; padding: 4px 6px; border-radius: 6px;"
+                    title="Từ chối yêu cầu hủy"
+                    :disabled="cancellingOrder"
+                    @click.stop="handleRejectCancel(o)"
+                  >
+                    <X :size="12" />
                   </button>
                 </div>
               </td>
@@ -1610,12 +1704,12 @@ const confirmXacNhanSerial = async () => {
             class="d-flex align-items-center gap-2 mt-0.5"
             style="font-size: 0.78rem; flex-wrap: wrap; color: var(--text-muted)"
           >
-            <span
-              >{{ t("admin.orderDetailModal.titlePrefix") }}{{ orderDetailData?.donHangId }}</span
-            >
-            <span v-if="orderDetailData?.maDonHang" style="font-family: monospace">{{
-              orderDetailData.maDonHang
-            }}</span>
+            <span class="fw-medium" style="font-family: monospace">
+              {{ t("admin.orderDetailModal.titlePrefix") }}{{ orderDetailData?.maDonHang || orderDetailData?.donHangId }}
+            </span>
+            <span v-if="orderDetailData?.maDonHang" style="font-size: 0.72rem; color: var(--text-muted)">
+              (ID: #{{ orderDetailData?.donHangId }})
+            </span>
             <span
               v-if="orderDetailData?.kenhBan"
               class="alt-tag"
@@ -1833,6 +1927,48 @@ const confirmXacNhanSerial = async () => {
           style="width: 280px; min-width: 280px; flex-shrink: 0; background: var(--bg-card-alt)"
         >
           <div class="overflow-y-auto p-3 d-flex flex-column gap-3">
+            <!-- CẢNH BÁO KHÁCH HÀNG YÊU CẦU HỦY ĐƠN (ADMIN) -->
+            <div
+              v-if="orderDetailData?.yeuCauHuy"
+              class="p-3 rounded-3 shadow-sm"
+              style="background: #fff1f2; border: 1.5px solid #fecdd3;"
+            >
+              <div class="d-flex align-items-center justify-content-between mb-1.5">
+                <div class="d-flex align-items-center gap-1.5 text-danger fw-bold" style="font-size: 0.85rem;">
+                  <AlertCircle :size="16" stroke-width="2.5" /> KHÁCH XIN HỦY ĐƠN
+                </div>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5 rounded-pill" style="font-size: 0.68rem; font-weight:700;">
+                  Chờ duyệt
+                </span>
+              </div>
+              <div class="text-secondary small mb-2.5" style="font-size: 0.78rem; line-height: 1.4;">
+                <div><strong>Lý do:</strong> {{ orderDetailData.lyDoHuy || "Khách yêu cầu hủy đơn hàng" }}</div>
+                <div v-if="orderDetailData.ngayYeuCauHuy" class="text-muted mt-0.5" style="font-size: 0.72rem;">
+                  Thời gian gửi: {{ formatDateTime(orderDetailData.ngayYeuCauHuy) }}
+                </div>
+              </div>
+              <div class="d-flex gap-2">
+                <button
+                  type="button"
+                  class="btn btn-danger btn-sm flex-grow-1 fw-bold d-inline-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                  style="font-size: 0.78rem; border-radius: 6px; padding: 6px 10px;"
+                  :disabled="cancellingOrder"
+                  @click="handleApproveCancel(orderDetailData)"
+                >
+                  <Check :size="14" stroke-width="2.5" /> DUYỆT HỦY
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1"
+                  style="font-size: 0.78rem; border-radius: 6px; padding: 6px 10px;"
+                  :disabled="cancellingOrder"
+                  @click="handleRejectCancel(orderDetailData)"
+                >
+                  <X :size="14" /> Từ chối
+                </button>
+              </div>
+            </div>
+
             <!-- Nhóm trạng thái: badge trạng thái hiện tại -->
             <div>
               <div

@@ -252,12 +252,12 @@
       </div>
 
       <!-- ── Mô tả sản phẩm ── -->
-      <div v-if="activeVariant.moTa" class="mt-4 p-4 rounded" style="background: #FFFFFF; border: 1px solid #E5E5E7;">
+      <div v-if="cleanMoTa" class="mt-4 p-4 rounded" style="background: #FFFFFF; border: 1px solid #E5E5E7;">
         <h3 class="fw-bold mb-3" style="font-size: 14px; color: #333333;">
           📝 Mô tả sản phẩm
         </h3>
         <div style="font-size: 13px; line-height: 1.8; color: #555555; white-space: pre-wrap;">
-          {{ activeVariant.moTa }}
+          {{ cleanMoTa }}
         </div>
       </div>
 
@@ -489,6 +489,12 @@ const activeVariant = computed(() =>
     (v.mauSac ?? '') === activeColor.value
   ) ?? props.product
 );
+
+const cleanMoTa = computed(() => {
+  const m = activeVariant.value?.moTa;
+  if (!m) return '';
+  return String(m).replace(/<!--METADATA_THUOC_TINH:([\s\S]*?)-->/g, '').trim();
+});
 
 const isWishlisted = computed(() =>
   props.wishlistIds.has(activeVariant.value.bienTheId)

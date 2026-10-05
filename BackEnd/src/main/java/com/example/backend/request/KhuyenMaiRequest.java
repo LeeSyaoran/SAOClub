@@ -40,4 +40,7 @@ public class KhuyenMaiRequest {
 
     // Danh sách sản phẩm áp dụng - null hoặc rỗng = áp dụng cho tất cả
     private List<Integer> sanPhamIds;
+
+    // Danh sách khách hàng được nhận voucher - null hoặc rỗng = tất cả khách hàng
+    private List<Integer> khachHangIds;
 }

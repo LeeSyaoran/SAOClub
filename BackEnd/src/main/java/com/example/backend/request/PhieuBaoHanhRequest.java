@@ -17,7 +17,6 @@ public class PhieuBaoHanhRequest {
     @NotNull(message = "Đơn hàng không được để trống")
     private Integer donHangId;
 
-    @NotNull(message = "Biến thể sản phẩm không được để trống")
     private Integer bienTheId;
 
     @NotNull(message = "Khách hàng không được để trống")
@@ -25,10 +24,8 @@ public class PhieuBaoHanhRequest {
 
     private Integer chiTietId;
 
-    @NotNull(message = "Ngày mua không được để trống")
     private LocalDateTime ngayMua;
 
-    @NotNull(message = "Ngày hết bảo hành không được để trống")
     private LocalDateTime ngayHetBh;
 
     private LocalDateTime ngayTiepNhan;
@@ -47,4 +44,10 @@ public class PhieuBaoHanhRequest {
     private BigDecimal chiPhiPhatSinh;
 
     private String ghiChu;
+
+    private String phuongThuc;
+
+    private String diaChiLayHang;
+
+    private String lyDoTuChoi;
 }

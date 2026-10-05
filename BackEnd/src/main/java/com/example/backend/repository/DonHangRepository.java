@@ -20,6 +20,10 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
     /** Tìm đơn hàng theo idempotency key — chống tạo đơn trùng */
     java.util.Optional<DonHang> findByIdempotencyKey(String idempotencyKey);
 
+    java.util.Optional<DonHang> findByMaDonHang(String maDonHang);
+
+    java.util.List<DonHang> findByKhachHang_SoDienThoai(String soDienThoai);
+
     @Query(value = """
     SELECT new com.example.backend.response.DonHangResponse(
         d.id, d.maDonHang,
@@ -31,7 +35,8 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
         d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon, d.phuongThucThanhToan,
-        kh.hoTen, kh.soDienThoai, kh.diaChi
+        kh.hoTen, kh.soDienThoai, kh.diaChi,
+        d.yeuCauHuy, d.lyDoHuy, d.ngayYeuCauHuy
     )
     FROM DonHang d
     JOIN d.khachHang kh
@@ -49,6 +54,8 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
 
     @Query("SELECT COALESCE(SUM(d.thanhTien), 0) FROM DonHang d WHERE d.trangThaiDonHang <> 'cancelled'")
     BigDecimal sumDoanhThu();
+
+    long countByTrangThaiDonHang(String trangThaiDonHang);
 
     @Query("""
     SELECT new com.example.backend.response.RevenueByDayResponse(CAST(d.ngayDat AS java.time.LocalDate), SUM(d.thanhTien))
@@ -97,7 +104,8 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
         d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon, d.phuongThucThanhToan,
-        kh.hoTen, kh.soDienThoai, kh.diaChi
+        kh.hoTen, kh.soDienThoai, kh.diaChi,
+        d.yeuCauHuy, d.lyDoHuy, d.ngayYeuCauHuy
     )
     FROM DonHang d
     JOIN d.khachHang kh
@@ -121,7 +129,8 @@ public interface DonHangRepository extends JpaRepository<DonHang, Integer> {
         d.tongTien, d.giamGia, d.phiVanChuyen, d.thanhTien,
         d.ngayDat, d.ngayGiaoDuKien, d.ngayGiaoThucTe,
         d.trangThaiDonHang, d.trangThaiThanhToan, d.kenhBan, d.ghiChu, d.maVanDon, d.phuongThucThanhToan,
-        kh.hoTen, kh.soDienThoai, kh.diaChi
+        kh.hoTen, kh.soDienThoai, kh.diaChi,
+        d.yeuCauHuy, d.lyDoHuy, d.ngayYeuCauHuy
     )
     FROM DonHang d
     JOIN d.khachHang kh

@@ -34,6 +34,8 @@ public class PhieuBaoHanhService {
     private KhachHangRepository khachHangRepository;
     @Autowired
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
+    @Autowired
+    private ChiTietDonHangRepository chiTietDonHangRepository;
 
     public List<PhieuBaoHanhResponse> hienThiPhieuBaoHanh() {
         return phieuBaoHanhRepository.hienThiPhieuBaoHanh();
@@ -49,9 +51,11 @@ public class PhieuBaoHanhService {
     }
 
     private void kiemTraKhoangNgayHopLe(PhieuBaoHanhRequest request) {
-        if (!request.getNgayHetBh().isAfter(request.getNgayMua()))
-            throw new IllegalArgumentException("Ngày hết bảo hành phải sau ngày mua");
-        if (request.getNgayTiepNhan() != null && request.getNgayTiepNhan().isBefore(request.getNgayMua()))
+        if (request.getNgayHetBh() != null && request.getNgayMua() != null) {
+            if (!request.getNgayHetBh().isAfter(request.getNgayMua()))
+                throw new IllegalArgumentException("Ngày hết bảo hành phải sau ngày mua");
+        }
+        if (request.getNgayTiepNhan() != null && request.getNgayMua() != null && request.getNgayTiepNhan().isBefore(request.getNgayMua()))
             throw new IllegalArgumentException("Ngày tiếp nhận không thể trước ngày mua");
         if (request.getNgayTraKhach() != null && request.getNgayTiepNhan() != null
                 && request.getNgayTraKhach().isBefore(request.getNgayTiepNhan()))
@@ -59,14 +63,70 @@ public class PhieuBaoHanhService {
     }
 
     public PhieuBaoHanh create(PhieuBaoHanhRequest request) {
+        ChiTietSanPham ctsp = null;
+        if (request.getChiTietId() != null) {
+            ctsp = chiTietSanPhamRepository.findById(request.getChiTietId()).orElse(null);
+        }
+
+        BienTheSanPham bienThe = null;
+        if (request.getBienTheId() != null) {
+            bienThe = bienTheSanPhamRepository.findById(request.getBienTheId()).orElse(null);
+        } else if (ctsp != null && ctsp.getBienThe() != null) {
+            bienThe = ctsp.getBienThe();
+            request.setBienTheId(bienThe.getBienTheId());
+        }
+
+        DonHang donHang = donHangRepository.findById(request.getDonHangId())
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại: " + request.getDonHangId()));
+
+        if (bienThe == null) {
+            List<ChiTietDonHang> ctdhList = chiTietDonHangRepository.findEntityByDonHangId(request.getDonHangId());
+            if (ctdhList != null && !ctdhList.isEmpty()) {
+                bienThe = ctdhList.get(0).getBienThe();
+                if (bienThe != null) {
+                    request.setBienTheId(bienThe.getBienTheId());
+                }
+            }
+        }
+
+        if (bienThe == null) {
+            throw new IllegalArgumentException("Không xác định được biến thể sản phẩm bảo hành");
+        }
+
+        if (request.getNgayMua() == null) {
+            java.time.LocalDateTime ngayMua = donHang.getNgayGiaoThucTe() != null
+                    ? donHang.getNgayGiaoThucTe()
+                    : (donHang.getNgayDat() != null ? donHang.getNgayDat() : java.time.LocalDateTime.now());
+            request.setNgayMua(ngayMua);
+        }
+
+        if (request.getNgayHetBh() == null) {
+            int thangBh = (bienThe.getBaoHanhThang() != null && bienThe.getBaoHanhThang() > 0)
+                    ? bienThe.getBaoHanhThang()
+                    : 12;
+            request.setNgayHetBh(request.getNgayMua().plusMonths(thangBh));
+        }
+
+        if (request.getChiPhiPhatSinh() == null) {
+            request.setChiPhiPhatSinh(java.math.BigDecimal.ZERO);
+        }
+        if (request.getTrangThai() == null || request.getTrangThai().isBlank()) {
+            request.setTrangThai("cho_xu_ly");
+        }
+
         kiemTraKhoangNgayHopLe(request);
         PhieuBaoHanh entity = new PhieuBaoHanh();
         BeanUtils.copyProperties(request, entity, "donHangId", "bienTheId", "khachHangId", "chiTietId");
-        entity.setDonHang(donHangRepository.getReferenceById(request.getDonHangId()));
-        entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
+        if (entity.getChiPhiPhatSinh() == null) {
+            entity.setChiPhiPhatSinh(java.math.BigDecimal.ZERO);
+        }
+        if (entity.getTrangThai() == null || entity.getTrangThai().isBlank()) {
+            entity.setTrangThai("cho_xu_ly");
+        }
+        entity.setDonHang(donHang);
+        entity.setBienThe(bienThe);
         entity.setKhachHang(khachHangRepository.getReferenceById(request.getKhachHangId()));
-        entity.setChiTietSanPham(request.getChiTietId() != null
-                ? chiTietSanPhamRepository.getReferenceById(request.getChiTietId()) : null);
+        entity.setChiTietSanPham(ctsp);
         PhieuBaoHanh saved = phieuBaoHanhRepository.save(entity);
         capNhatSerialTheoTrangThai(null, saved);
         return saved;
@@ -77,6 +137,9 @@ public class PhieuBaoHanhService {
         PhieuBaoHanh entity = getById(id);
         String trangThaiCu = entity.getTrangThai();
         BeanUtils.copyProperties(request, entity, "baoHanhId", "donHangId", "bienTheId", "khachHangId", "chiTietId");
+        if (entity.getChiPhiPhatSinh() == null) {
+            entity.setChiPhiPhatSinh(java.math.BigDecimal.ZERO);
+        }
         entity.setDonHang(donHangRepository.getReferenceById(request.getDonHangId()));
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
         entity.setKhachHang(khachHangRepository.getReferenceById(request.getKhachHangId()));
@@ -258,7 +321,9 @@ public class PhieuBaoHanhService {
         r.setBarcode(bt.getBarcode());
         r.setGiaBan(bt.getGiaBan());
         r.setBaoHanhThang(bt.getBaoHanhThang());
-        r.setHinhAnhBienThe(bt.getHinhAnhBienThe());
+        r.setHinhAnhBienThe(bt.getHinhAnhBienThe() != null && !bt.getHinhAnhBienThe().isBlank()
+                ? bt.getHinhAnhBienThe()
+                : (sp != null ? sp.getHinhAnhChinh() : null));
         r.setMauSac(bt.getMauSac());
         r.setKichThuocManHinh(bt.getKichThuocManHinh());
         r.setHeDieuHanh(bt.getHeDieuHanh());
@@ -276,23 +341,24 @@ public class PhieuBaoHanhService {
         r.setTenSanPham(sp.getTenSanPham());
         r.setMaSanPham(sp.getMaSanPham());
 
-        // DonHang + KhachHang (neu co)
-        chiTietSanPhamRepository.findLatestOrderBySerialChiTietId(serial.getChiTietId())
-                .ifPresent(ctdh -> {
-                    DonHang donHang = ctdh.getDonHang();
-                    r.setDonHangId(donHang.getId());
-                    r.setMaDonHang(donHang.getMaDonHang());
-                    r.setNgayGiaoThucTe(donHang.getNgayGiaoThucTe());
-                    if (donHang.getKhachHang() != null) {
-                        r.setKhachHangId(donHang.getKhachHang().getKhachHangId());
-                        r.setTenKhachHang(donHang.getKhachHang().getHoTen());
-                        r.setSoDienThoai(donHang.getKhachHang().getSoDienThoai());
-                    }
-                    // Tinh ngay het bao hanh
-                    if (donHang.getNgayGiaoThucTe() != null && bt.getBaoHanhThang() != null) {
-                        r.setNgayHetBaoHanh(donHang.getNgayGiaoThucTe().plusMonths(bt.getBaoHanhThang()));
-                    }
-                });
+        // DonHang + KhachHang (neu co) — lay moi nhat (list da order by ngayDat DESC)
+        java.util.List<ChiTietDonHang> ctdhList = chiTietSanPhamRepository.findLatestOrderBySerialChiTietId(serial.getChiTietId());
+        if (!ctdhList.isEmpty()) {
+            ChiTietDonHang ctdh = ctdhList.get(0);
+            DonHang donHang = ctdh.getDonHang();
+            r.setDonHangId(donHang.getId());
+            r.setMaDonHang(donHang.getMaDonHang());
+            r.setNgayGiaoThucTe(donHang.getNgayGiaoThucTe());
+            if (donHang.getKhachHang() != null) {
+                r.setKhachHangId(donHang.getKhachHang().getKhachHangId());
+                r.setTenKhachHang(donHang.getKhachHang().getHoTen());
+                r.setSoDienThoai(donHang.getKhachHang().getSoDienThoai());
+            }
+            // Tinh ngay het bao hanh
+            if (donHang.getNgayGiaoThucTe() != null && bt.getBaoHanhThang() != null) {
+                r.setNgayHetBaoHanh(donHang.getNgayGiaoThucTe().plusMonths(bt.getBaoHanhThang()));
+            }
+        }
 
         // Lich su phieu bao hanh cu
         r.setLichSuPhieuBaoHanh(
@@ -302,3 +368,4 @@ public class PhieuBaoHanhService {
     }
 
 }
+

@@ -3,6 +3,7 @@ import { ref, onUnmounted } from "vue";
 
 export function useChatWebSocket() {
   const connected = ref(false);
+  const stompConnected = ref(false);
 
   // Per-instance state (not module-level, so multiple components don't share one socket)
   let socket = null;
@@ -14,21 +15,23 @@ export function useChatWebSocket() {
   let savedOnStaffNotification = null;
   let subscribedChatIds = []; // [{ chatId, onMessage, onStatusChange }]
 
-  const rawUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  const getWsUrl = () => {
+    const rawUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
+    if (rawUrl && rawUrl.startsWith("http")) {
+      return rawUrl.replace(/\/api\/?$/, "").replace(/^http/, "ws") + "/ws/chat";
+    }
+    const proto = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = typeof window !== "undefined" ? window.location.host : "localhost:8080";
+    return `${proto}//${host}/ws/chat`;
+  };
 
-  // Resolve relative paths (e.g. "/api") against current origin
-  let baseUrl = rawUrl;
-  if (!rawUrl.match(/^https?:\/\//)) {
-    baseUrl = window.location.origin + (rawUrl.startsWith("/") ? rawUrl : "/" + rawUrl);
-  }
-
-  // Build WebSocket URL — strip /api suffix, convert http→ws
-  const wsBase = baseUrl.replace(/\/api\/?$/, "");
-  const WS_URL = wsBase.replace(/^http/, "ws") + "/ws/chat";
+  const WS_URL = getWsUrl();
 
   function connect(onMessage, onStatusChange, onStaffNotification) {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      console.warn("[ChatWS] Already connected");
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+      if (onMessage) savedOnMessage = onMessage;
+      if (onStatusChange) savedOnStatusChange = onStatusChange;
+      if (onStaffNotification) savedOnStaffNotification = onStaffNotification;
       return;
     }
 
@@ -46,11 +49,12 @@ export function useChatWebSocket() {
     }
 
     socket.onopen = () => {
-      connected.value = true;
-      console.log("[ChatWS] Connected to", WS_URL);
-
-      // STOMP CONNECT frame
-      sendFrame("CONNECT", { accept: "application/json, text/plain, */*" });
+      console.log("[ChatWS] WebSocket transport opened to", WS_URL);
+      // STOMP 1.1 / 1.2 CONNECT frame
+      sendFrame("CONNECT", {
+        "accept-version": "1.1,1.2",
+        "heart-beat": "10000,10000",
+      });
     };
 
     socket.onmessage = (event) => {
@@ -60,12 +64,17 @@ export function useChatWebSocket() {
       const { command, headers, body } = frame;
 
       if (command === "CONNECTED") {
+        connected.value = true;
+        stompConnected.value = true;
         console.log("[ChatWS] STOMP connected, session:", headers["session"]);
 
-        // Re-subscribe to all previously subscribed topics after reconnect
+        // Re-subscribe to all previously subscribed topics after connect / reconnect
         for (const sub of subscribedChatIds) {
           sendSubscribeStomp(`/topic/chat/${sub.chatId}`);
           sendSubscribeStomp(`/topic/chat/${sub.chatId}/status`);
+        }
+        if (savedOnStaffNotification) {
+          sendSubscribeStomp("/topic/staff/notifications");
         }
       } else if (command === "MESSAGE") {
         const dest = headers["destination"];
@@ -74,23 +83,29 @@ export function useChatWebSocket() {
             const data = JSON.parse(body);
             // Route to the correct subscriber's callback
             const chatId = dest.replace("/topic/chat/", "");
-            const sub = subscribedChatIds.find((s) => String(s.chatId) === chatId);
+            const sub = subscribedChatIds.find((s) => String(s.chatId) === String(chatId));
             if (sub && sub.onMessage) sub.onMessage(data);
             else if (savedOnMessage) savedOnMessage(data);
-          } catch {}
+          } catch (e) {
+            console.error("[ChatWS] Error parsing message:", e);
+          }
         } else if (dest && dest.includes("/status")) {
           try {
             const data = JSON.parse(body);
             const chatIdStr = dest.replace("/topic/chat/", "").replace("/status", "");
-            const sub = subscribedChatIds.find((s) => String(s.chatId) === chatIdStr);
+            const sub = subscribedChatIds.find((s) => String(s.chatId) === String(chatIdStr));
             if (sub && sub.onStatusChange) sub.onStatusChange(data);
             else if (savedOnStatusChange) savedOnStatusChange(data);
-          } catch {}
-        } else if (dest === "/topic/staff/notifications") {
+          } catch (e) {
+            console.error("[ChatWS] Error parsing status:", e);
+          }
+        } else if (dest === "/topic/staff/notifications" || dest === "/topic/staff/conversations") {
           try {
             const data = JSON.parse(body);
             if (savedOnStaffNotification) savedOnStaffNotification(data);
-          } catch {}
+          } catch (e) {
+            console.error("[ChatWS] Error parsing staff notification:", e);
+          }
         }
       }
     };
@@ -101,6 +116,7 @@ export function useChatWebSocket() {
 
     socket.onclose = (event) => {
       connected.value = false;
+      stompConnected.value = false;
       console.log("[ChatWS] Disconnected, code:", event.code);
       if (!event.wasClean) {
         scheduleReconnect();
@@ -119,26 +135,31 @@ export function useChatWebSocket() {
   }
 
   function parseFrame(data) {
+    if (typeof data !== "string") return null;
     const nullIndex = data.indexOf("\x00");
     const content = nullIndex >= 0 ? data.substring(0, nullIndex) : data;
-    const lines = content.split("\n");
+    const lines = content.replace(/\r\n/g, "\n").split("\n");
     if (lines.length < 1) return null;
 
     const command = lines[0].trim();
+    if (!command) return null;
     const headers = {};
     let body = "";
 
     let i = 1;
     for (; i < lines.length; i++) {
       const line = lines[i];
-      if (line === "") break;
+      if (line === "") {
+        i++;
+        break;
+      }
       const colonIdx = line.indexOf(":");
       if (colonIdx > 0) {
-        headers[line.substring(0, colonIdx)] = line.substring(colonIdx + 1);
+        headers[line.substring(0, colonIdx).trim()] = line.substring(colonIdx + 1).trim();
       }
     }
 
-    if (i < lines.length) {
+    if (i <= lines.length) {
       body = lines.slice(i).join("\n");
     }
 
@@ -152,24 +173,38 @@ export function useChatWebSocket() {
   }
 
   function subscribeChat(chatId, onMessage, onStatusChange) {
+    if (!chatId) return { sub1: null, sub2: null };
+
     // Track subscription for reconnect
-    const existing = subscribedChatIds.find((s) => s.chatId === chatId);
-    if (!existing) {
+    const existingIndex = subscribedChatIds.findIndex((s) => String(s.chatId) === String(chatId));
+    if (existingIndex >= 0) {
+      subscribedChatIds[existingIndex] = { chatId, onMessage, onStatusChange };
+    } else {
       subscribedChatIds.push({ chatId, onMessage, onStatusChange });
     }
 
-    const sub1 = sendSubscribeStomp(`/topic/chat/${chatId}`);
-    const sub2 = sendSubscribeStomp(`/topic/chat/${chatId}/status`);
-    return { sub1, sub2 };
+    if (stompConnected.value) {
+      const sub1 = sendSubscribeStomp(`/topic/chat/${chatId}`);
+      const sub2 = sendSubscribeStomp(`/topic/chat/${chatId}/status`);
+      return { sub1, sub2 };
+    }
+    return { sub1: null, sub2: null };
   }
 
   function subscribeStaffNotifications(onNotification) {
     savedOnStaffNotification = onNotification;
-    return sendSubscribeStomp("/topic/staff/notifications");
+    if (stompConnected.value) {
+      return sendSubscribeStomp("/topic/staff/notifications");
+    }
+    return null;
   }
 
   function subscribeConversationsList(onUpdate) {
-    return sendSubscribeStomp("/topic/staff/conversations");
+    savedOnStaffNotification = onUpdate;
+    if (stompConnected.value) {
+      return sendSubscribeStomp("/topic/staff/conversations");
+    }
+    return null;
   }
 
   function unsubscribeAll() {
@@ -184,6 +219,7 @@ export function useChatWebSocket() {
       socket = null;
     }
     connected.value = false;
+    stompConnected.value = false;
   }
 
   function scheduleReconnect() {
@@ -191,7 +227,7 @@ export function useChatWebSocket() {
     reconnectTimer = setTimeout(() => {
       console.log("[ChatWS] Attempting reconnect...");
       connect(); // reuses saved callbacks
-    }, 5000);
+    }, 4000);
   }
 
   onUnmounted(() => {
@@ -200,6 +236,7 @@ export function useChatWebSocket() {
 
   return {
     connected,
+    stompConnected,
     connect,
     disconnect,
     subscribeChat,
@@ -208,4 +245,3 @@ export function useChatWebSocket() {
     unsubscribeAll,
   };
 }
-

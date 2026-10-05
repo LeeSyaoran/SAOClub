@@ -44,51 +44,115 @@ public class ChatService {
     @Autowired
     private AiChatService aiChatService;
 
-    // Keywords trigger escalate (khách yêu cầu chat với nhân viên)
+    // Keywords trigger escalate (chỉ chuyển khi khách thực sự muốn gặp nhân viên người thật)
     private static final List<String> ESCALATE_KEYWORDS = Arrays.asList(
-            "nhân viên", "tư vấn", "người thật", "chuyển", "kết nối nhân viên",
-            "cần người", "agent", "staff", "đặt hàng", "mua hàng", "thanh toán",
-            "đặt", "order", "chủ shop", "admin", "quản lý", "giám đốc",
-            "nói chuyện với", "chat với người", "tôi muốn mua", "giao hàng"
+            "chuyển nhân viên", "chuyên nhân viên", "chuyen nhan vien",
+            "chuyển nv", "chuyên nv", "chuyen nv",
+            "gặp nhân viên", "kết nối nhân viên", "nói chuyện với nhân viên",
+            "chat với nhân viên", "chat vs nhân viên", "chat nhan vien",
+            "người thật", "chuyển người thật", "gặp người thật",
+            "chat với người thật", "gặp tư vấn viên", "chuyển qua nhân viên",
+            "chuyển sang nhân viên", "yêu cầu nhân viên", "gặp hỗ trợ viên",
+            "chuyển người", "nói chuyện với người", "chat với người", "human agent", "talk to human"
     );
 
     // Keywords trigger back to AI
     private static final List<String> BACK_TO_AI_KEYWORDS = Arrays.asList(
-            "quay lại bot", "chat với bot", "bot", "tự trả lời", "không cần nhân viên",
-            "hỏi bot", "tự động", "auto"
+            "chuyển chat bot", "chuyên chat bot", "chuyen chat bot",
+            "chuyển chatbot", "chuyên chatbot", "chuyen chatbot",
+            "chuyển bot", "chuyên bot", "chuyen bot",
+            "chuyển sang bot", "chuyển qua bot", "chuyển về bot",
+            "chuyển sang chat bot", "chuyển qua chat bot", "chuyển về chat bot",
+            "quay lại bot", "quay lai bot", "quay lại chat bot", "quay lại ai", "quay lai ai",
+            "chat với bot", "chat vs bot", "chat với chat bot", "chat vs chat bot",
+            "tự trả lời", "không cần nhân viên"
     );
 
     // ─── Tạo phiên chat mới (public — không cần auth) ───────────────────────
     @Transactional
     public ChatCuocTroChuyenResponse taoPhienChat(String sessionId, Integer khachHangId, String hoTen) {
-        CuocTroChuyen ctc;
+        if (khachHangId == null) {
+            TaiKhoan tk = currentAccount();
+            if (tk != null && tk.getKhachHang() != null) {
+                khachHangId = tk.getKhachHang().getKhachHangId();
+            }
+        }
 
         if (khachHangId != null) {
-            // Khách có tài khoản
-            Optional<KhachHang> kh = khachHangRepository.findById(khachHangId);
-            if (kh.isEmpty()) throw new IllegalArgumentException("Khách hàng không tồn tại");
+            Optional<KhachHang> khOpt = khachHangRepository.findById(khachHangId);
+            if (khOpt.isEmpty()) throw new IllegalArgumentException("Khách hàng không tồn tại");
+            KhachHang kh = khOpt.get();
 
-            ctc = new CuocTroChuyen();
-            ctc.setLoaiKhach(CuocTroChuyen.LOAI_HE_THONG);
-            ctc.setKhachHang(kh.get());
-            ctc.setHoTenKhach(kh.get().getHoTen());
-            ctc.setTrangThai(CuocTroChuyen.TRANG_THAI_HOI_DAP_AI);
-        } else {
-            // Khách lẻ — kiểm tra session đã tồn tại chưa
+            // Nếu có sessionId từ phiên ẩn danh trước khi đăng nhập, kiểm tra để gộp/nâng cấp
             if (sessionId != null && !sessionId.isBlank()) {
-                Optional<CuocTroChuyen> existing = cuocTroChuyenRepository.findBySessionId(sessionId);
-                if (existing.isPresent()) {
-                    return toResponse(existing.get());
+                Optional<CuocTroChuyen> bySession = cuocTroChuyenRepository.findBySessionId(sessionId);
+                if (bySession.isPresent()) {
+                    CuocTroChuyen sCtc = bySession.get();
+                    if (sCtc.getKhachHang() == null) {
+                        sCtc.setLoaiKhach(CuocTroChuyen.LOAI_HE_THONG);
+                        sCtc.setKhachHang(kh);
+                        sCtc.setHoTenKhach(kh.getHoTen());
+                        sCtc = cuocTroChuyenRepository.save(sCtc);
+                        return toResponse(sCtc);
+                    } else if (kh.getKhachHangId().equals(sCtc.getKhachHang().getKhachHangId())) {
+                        return toResponse(sCtc);
+                    }
                 }
             }
 
-            ctc = new CuocTroChuyen();
-            ctc.setLoaiKhach(CuocTroChuyen.LOAI_ANONYMOUS);
-            ctc.setSessionId(sessionId != null ? sessionId : UUID.randomUUID().toString());
-            ctc.setHoTenKhach(hoTen != null ? hoTen : "Ẩn danh");
+            // Kiểm tra khách hàng đã có cuộc trò chuyện nào chưa — ưu tiên tái sử dụng cuộc trò chuyện gần nhất
+            List<CuocTroChuyen> existingList = cuocTroChuyenRepository.findByKhachHang_KhachHangIdOrderByUpdatedAtDesc(khachHangId);
+            if (!existingList.isEmpty()) {
+                CuocTroChuyen existing = existingList.stream()
+                        .filter(c -> !CuocTroChuyen.TRANG_THAI_DA_DONG.equals(c.getTrangThai()))
+                        .findFirst()
+                        .orElse(existingList.get(0));
+                boolean changed = false;
+                if (existing.getSessionId() == null || existing.getSessionId().isBlank()) {
+                    existing.setSessionId(UUID.randomUUID().toString());
+                    changed = true;
+                }
+                if (!CuocTroChuyen.LOAI_HE_THONG.equals(existing.getLoaiKhach())) {
+                    existing.setLoaiKhach(CuocTroChuyen.LOAI_HE_THONG);
+                    changed = true;
+                }
+                if (existing.getHoTenKhach() == null || "Ẩn danh".equals(existing.getHoTenKhach())) {
+                    existing.setHoTenKhach(kh.getHoTen());
+                    changed = true;
+                }
+                if (changed) {
+                    existing = cuocTroChuyenRepository.save(existing);
+                }
+                return toResponse(existing);
+            }
+
+            CuocTroChuyen ctc = new CuocTroChuyen();
+            ctc.setLoaiKhach(CuocTroChuyen.LOAI_HE_THONG);
+            ctc.setKhachHang(kh);
+            ctc.setHoTenKhach(kh.getHoTen());
+            ctc.setSessionId(sessionId != null && !sessionId.isBlank() ? sessionId : UUID.randomUUID().toString());
             ctc.setTrangThai(CuocTroChuyen.TRANG_THAI_HOI_DAP_AI);
+            ctc = cuocTroChuyenRepository.save(ctc);
+
+            String loiChao = aiChatService.getWelcomeMessage();
+            luuTinNhanBot(ctc.getId(), loiChao);
+
+            return toResponse(ctc);
         }
 
+        // Khách lẻ — kiểm tra session đã tồn tại chưa
+        if (sessionId != null && !sessionId.isBlank()) {
+            Optional<CuocTroChuyen> existing = cuocTroChuyenRepository.findBySessionId(sessionId);
+            if (existing.isPresent()) {
+                return toResponse(existing.get());
+            }
+        }
+
+        CuocTroChuyen ctc = new CuocTroChuyen();
+        ctc.setLoaiKhach(CuocTroChuyen.LOAI_ANONYMOUS);
+        ctc.setSessionId(sessionId != null && !sessionId.isBlank() ? sessionId : UUID.randomUUID().toString());
+        ctc.setHoTenKhach(hoTen != null ? hoTen : "Ẩn danh");
+        ctc.setTrangThai(CuocTroChuyen.TRANG_THAI_HOI_DAP_AI);
         ctc = cuocTroChuyenRepository.save(ctc);
 
         // Gửi tin nhắn chào từ AI
@@ -99,9 +163,27 @@ public class ChatService {
     }
 
     // ─── Lấy cuộc trò chuyện theo session ID ──────────────────────────────
+    @Transactional
     public ChatCuocTroChuyenResponse layPhienChat(String sessionId) {
-        CuocTroChuyen ctc = cuocTroChuyenRepository.findBySessionId(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Phiên chat không tồn tại"));
+        Optional<CuocTroChuyen> opt = cuocTroChuyenRepository.findBySessionId(sessionId);
+        if (opt.isEmpty()) {
+            try {
+                Long id = Long.parseLong(sessionId);
+                opt = cuocTroChuyenRepository.findById(id);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        CuocTroChuyen ctc = opt.orElseThrow(() -> new IllegalArgumentException("Phiên chat không tồn tại"));
+
+        // Nếu khách đang đăng nhập mà phiên chat vẫn là ANONYMOUS, tự động gắn vào khách hàng
+        TaiKhoan tk = currentAccount();
+        if (tk != null && tk.getKhachHang() != null && ctc.getKhachHang() == null) {
+            ctc.setKhachHang(tk.getKhachHang());
+            ctc.setLoaiKhach(CuocTroChuyen.LOAI_HE_THONG);
+            ctc.setHoTenKhach(tk.getKhachHang().getHoTen());
+            ctc = cuocTroChuyenRepository.save(ctc);
+        }
+
         return toResponse(ctc);
     }
 
@@ -131,6 +213,15 @@ public class ChatService {
         String noiDung = request.getNoiDung().trim();
         if (noiDung.isEmpty()) throw new IllegalArgumentException("Nội dung không được trống");
 
+        // Nếu khách đã đăng nhập nhưng cuộc trò chuyện chưa gắn khách hàng -> gắn luôn
+        TaiKhoan tk = currentAccount();
+        if (tk != null && tk.getKhachHang() != null && ctc.getKhachHang() == null) {
+            ctc.setKhachHang(tk.getKhachHang());
+            ctc.setLoaiKhach(CuocTroChuyen.LOAI_HE_THONG);
+            ctc.setHoTenKhach(tk.getKhachHang().getHoTen());
+            ctc = cuocTroChuyenRepository.save(ctc);
+        }
+
         // Lưu tin nhắn khách
         TinNhan tinNhan = new TinNhan();
         tinNhan.setCuocTroChuyen(ctc);
@@ -144,19 +235,35 @@ public class ChatService {
         tinNhan.setDaDoc(false);
         tinNhan = tinNhanRepository.save(tinNhan);
 
-        // Broadcast cho khách thấy
+        // Cập nhật thời gian cuộc trò chuyện
+        ctc.setUpdatedAt(LocalDateTime.now());
+        ctc = cuocTroChuyenRepository.save(ctc);
+
+        // Broadcast cho khách và admin thấy tin nhắn khách vừa gửi
         broadcastTinNhan(ctc.getId(), toTinNhanResponse(tinNhan));
 
-        // Xử lý tiếp theo trạng thái
-        if (CuocTroChuyen.TRANG_THAI_HOI_DAP_AI.equals(ctc.getTrangThai())) {
-            // Đang ở chế độ AI — kiểm tra escalation
-            if (containsEscalateKeyword(noiDung)) {
-                return xuLyEscalate(ctc, tinNhan);
+        // 1. Kiểm tra lệnh chuyển về Chat Bot (hoạt động ở mọi trạng thái)
+        if (containsBackToAiKeyword(noiDung)) {
+            return xuLyQuayLaiAITuKhach(ctc);
+        }
+
+        // 2. Kiểm tra lệnh chuyển sang Nhân viên (hoạt động ở mọi trạng thái)
+        if (containsEscalateKeyword(noiDung)) {
+            return xuLyEscalate(ctc, tinNhan);
+        }
+
+        // 3. Xử lý tiếp theo trạng thái hiện tại
+        if (CuocTroChuyen.TRANG_THAI_HOI_DAP_AI.equals(ctc.getTrangThai())
+                || CuocTroChuyen.TRANG_THAI_DA_DONG.equals(ctc.getTrangThai())) {
+            if (CuocTroChuyen.TRANG_THAI_DA_DONG.equals(ctc.getTrangThai())) {
+                ctc.setTrangThai(CuocTroChuyen.TRANG_THAI_HOI_DAP_AI);
+                ctc = cuocTroChuyenRepository.save(ctc);
+                broadcastTrangThaiChange(ctc);
             }
             // AI trả lời
             return xuLyTraLoiAI(ctc, tinNhan);
         } else {
-            // Thông báo cho nhân viên khi có tin nhắn mới
+            // Đang ở chế độ CHAT_NHAN_VIEN -> thông báo cho nhân viên khi có tin nhắn mới
             notifyStaffNewMessage(ctc);
             return toTinNhanResponse(tinNhan);
         }
@@ -178,6 +285,19 @@ public class ChatService {
                 ? TinNhan.NGUOI_GUI_ADMIN
                 : TinNhan.NGUOI_GUI_NHAN_VIEN;
 
+        // Khi nhân viên nhắn tin trực tiếp, đảm bảo cuộc trò chuyện ở chế độ CHAT_NHAN_VIEN
+        boolean statusChanged = false;
+        if (!CuocTroChuyen.TRANG_THAI_CHAT_NV.equals(ctc.getTrangThai())) {
+            ctc.setTrangThai(CuocTroChuyen.TRANG_THAI_CHAT_NV);
+            statusChanged = true;
+        }
+        if (ctc.getNhanVienPhuTrach() == null) {
+            ctc.setNhanVienPhuTrach(nv);
+            statusChanged = true;
+        }
+        ctc.setUpdatedAt(LocalDateTime.now());
+        ctc = cuocTroChuyenRepository.save(ctc);
+
         TinNhan tinNhan = new TinNhan();
         tinNhan.setCuocTroChuyen(ctc);
         tinNhan.setNguoiGui(nguoiGui);
@@ -195,10 +315,15 @@ public class ChatService {
         tinNhanRepository.markAllAsReadByCuocTroChuyenId(cuocTroChuyenId);
 
         // Broadcast
-        broadcastTinNhan(ctc.getId(), toTinNhanResponse(tinNhan));
-        notifyCustomer(ctc);
+        ChatTinNhanResponse response = toTinNhanResponse(tinNhan);
+        broadcastTinNhan(ctc.getId(), response);
+        if (statusChanged) {
+            broadcastTrangThaiChange(ctc);
+        } else {
+            notifyCustomer(ctc);
+        }
 
-        return toTinNhanResponse(tinNhan);
+        return response;
     }
 
     // ─── Khách yêu cầu chat với NV ────────────────────────────────────────
@@ -206,20 +331,37 @@ public class ChatService {
     public ChatTinNhanResponse xuLyEscalate(CuocTroChuyen ctc, TinNhan tinNhanKhach) {
         // Chuyển trạng thái
         ctc.setTrangThai(CuocTroChuyen.TRANG_THAI_CHAT_NV);
-        ctc.setSoLanEscalate(ctc.getSoLanEscalate() + 1);
-        cuocTroChuyenRepository.save(ctc);
+        ctc.setSoLanEscalate((ctc.getSoLanEscalate() != null ? ctc.getSoLanEscalate() : 0) + 1);
+        ctc = cuocTroChuyenRepository.save(ctc);
 
         // Tin nhắn từ bot thông báo
-        String noiDung = "Tôi đã kết nối bạn với nhân viên. Vui lòng đợi trong giây lát. Nhân viên sẽ phản hồi sớm nhất có thể!";
+        String noiDung = "Tôi đã kết nối bạn với nhân viên tư vấn 🧑‍💻. Vui lòng đợi trong giây lát, nhân viên sẽ phản hồi sớm nhất có thể! (Gõ \"chuyển chat bot\" nếu bạn muốn quay lại chat với Bot)";
         TinNhan botMsg = luuTinNhanBot(ctc.getId(), noiDung);
+        ChatTinNhanResponse botResp = toTinNhanResponse(botMsg);
 
-        // Notify staff
+        // Broadcast tin nhắn thông báo và trạng thái
+        broadcastTinNhan(ctc.getId(), botResp);
         notifyStaffEscalate(ctc);
-
-        // Broadcast cập nhật trạng thái
         broadcastTrangThaiChange(ctc);
 
-        return toTinNhanResponse(botMsg);
+        return botResp;
+    }
+
+    // ─── Khách chủ động chuyển về AI bằng lệnh ────────────────────────────
+    @Transactional
+    public ChatTinNhanResponse xuLyQuayLaiAITuKhach(CuocTroChuyen ctc) {
+        ctc.setTrangThai(CuocTroChuyen.TRANG_THAI_HOI_DAP_AI);
+        ctc.setNhanVienPhuTrach(null);
+        ctc = cuocTroChuyenRepository.save(ctc);
+
+        String noiDung = "Đã chuyển về chế độ chat với SAOClub Bot 🤖. Mình có thể giúp gì cho bạn? (Gõ \"chuyển nhân viên\" nếu bạn cần gặp nhân viên tư vấn nhé!)";
+        TinNhan botMsg = luuTinNhanBot(ctc.getId(), noiDung);
+        ChatTinNhanResponse botResp = toTinNhanResponse(botMsg);
+
+        broadcastTinNhan(ctc.getId(), botResp);
+        broadcastTrangThaiChange(ctc);
+
+        return botResp;
     }
 
     // ─── Quay lại AI (từ NV/Admin) ──────────────────────────────────────────
@@ -270,11 +412,12 @@ public class ChatService {
         chaoTuNV.setNhanVien(tk.getNhanVien());
         chaoTuNV.setNoiDung("Xin chào! Mình là " + tenNguoiGui + ", sẵn sàng hỗ trợ bạn. Bạn cần hỏi gì?");
         chaoTuNV.setDaDoc(true);
-        tinNhanRepository.save(chaoTuNV);
+        chaoTuNV = tinNhanRepository.save(chaoTuNV);
 
         // Đánh dấu đã đọc
         tinNhanRepository.markAllAsReadByCuocTroChuyenId(cuocTroChuyenId);
 
+        broadcastTinNhan(ctc.getId(), toTinNhanResponse(chaoTuNV));
         broadcastTrangThaiChange(ctc);
         notifyCustomer(ctc);
 
@@ -291,8 +434,9 @@ public class ChatService {
         ctc = cuocTroChuyenRepository.save(ctc);
 
         String noiDung = "Cảm ơn bạn đã chat với SAOClub. Nếu cần hỗ trợ thêm, bạn có thể quay lại bất cứ lúc nào. Chúc bạn một ngày tốt lành!";
-        luuTinNhanBot(ctc.getId(), noiDung);
+        TinNhan botMsg = luuTinNhanBot(ctc.getId(), noiDung);
 
+        broadcastTinNhan(ctc.getId(), toTinNhanResponse(botMsg));
         broadcastTrangThaiChange(ctc);
 
         return toResponse(ctc);
@@ -300,8 +444,8 @@ public class ChatService {
 
     // ─── Lấy lịch sử chat của khách hàng ──────────────────────────────────
     public Page<ChatCuocTroChuyenResponse> layLichSuChatKhach(Integer khachHangId, Pageable pageable) {
-        return cuocTroChuyenRepository.findByLoaiKhachOrderByUpdatedAtDesc(
-                CuocTroChuyen.LOAI_HE_THONG, pageable
+        return cuocTroChuyenRepository.findByKhachHang_KhachHangIdOrderByUpdatedAtDesc(
+                khachHangId, pageable
         ).map(this::toResponse);
     }
 
@@ -377,9 +521,24 @@ public class ChatService {
 
     // ─── Keyword detection ─────────────────────────────────────────────────
     private boolean containsEscalateKeyword(String text) {
-        String lower = text.toLowerCase();
+        if (text == null) return false;
+        String lower = text.trim().toLowerCase();
         for (String kw : ESCALATE_KEYWORDS) {
-            if (Pattern.compile("\\b" + Pattern.quote(kw.toLowerCase()) + "\\b").matcher(lower).find()) {
+            if (lower.contains(kw)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsBackToAiKeyword(String text) {
+        if (text == null) return false;
+        String lower = text.trim().toLowerCase();
+        if (lower.equals("bot") || lower.equals("chat bot") || lower.equals("chatbot")) {
+            return true;
+        }
+        for (String kw : BACK_TO_AI_KEYWORDS) {
+            if (lower.contains(kw)) {
                 return true;
             }
         }
@@ -443,6 +602,7 @@ public class ChatService {
         r.setDaDoc(tn.getDaDoc());
         r.setLaCauHoiCuaAi(tn.getLaCauHoiCuaAi());
         r.setCreatedAt(tn.getCreatedAt());
+        r.setTrangThai(tn.getCuocTroChuyen().getTrangThai());
 
         // Tên người gửi
         if (TinNhan.NGUOI_GUI_AI.equals(tn.getNguoiGui())) {

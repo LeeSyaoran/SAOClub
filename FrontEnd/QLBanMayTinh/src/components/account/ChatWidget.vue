@@ -15,6 +15,10 @@ const sessionId = ref(null);
 const cuocTroChuyenId = ref(null);
 const trangThai = ref("HOI_DAP_AI");
 const isStaff = computed(() => auth.isAdmin);
+const currentKhachHangId = computed(() => {
+  if (isStaff.value) return null;
+  return auth.user?.khachHangId || auth.user?.id || null;
+});
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 const { connected, connect, subscribeChat, subscribeStaffNotifications, disconnect } =
@@ -30,7 +34,8 @@ function setupWebSocket() {
     // onStatusChange
     (status) => {
       trangThai.value = status.trangThai;
-    }
+      saveSession();
+    },
   );
 }
 
@@ -44,42 +49,58 @@ async function initSession() {
       sessionId.value = data.sessionId;
       cuocTroChuyenId.value = data.cuocTroChuyenId;
       trangThai.value = data.trangThai || "HOI_DAP_AI";
+    } catch {
+      localStorage.removeItem("saoclub_chat_session");
+    }
+  }
 
-      // Kiểm tra cuộc trò chuyện còn hoạt động không
+  const khachHangId = currentKhachHangId.value;
+
+  if (khachHangId) {
+    // Khách hàng đã đăng nhập → luôn gọi taoPhienChat với khachHangId để gắn/lấy đúng phiên của khách hàng
+    try {
+      const ctc = await ChatService.taoPhienChat({
+        sessionId: sessionId.value || null,
+        khachHangId,
+        hoTen: auth.user?.hoTen || null,
+      });
+      sessionId.value = ctc.sessionId || ctc.id?.toString();
+      cuocTroChuyenId.value = ctc.id;
+      trangThai.value = ctc.trangThai;
+      saveSession();
+      await loadMessages();
+    } catch (e) {
+      console.error("Lỗi khởi tạo chat session cho khách hàng:", e);
+    }
+  } else {
+    // Khách lẻ (ẩn danh)
+    if (sessionId.value) {
       try {
         const ctc = await ChatService.layPhienChat(sessionId.value);
         cuocTroChuyenId.value = ctc.id;
         trangThai.value = ctc.trangThai;
         await loadMessages();
       } catch {
-        // Session hết hạn → tạo mới
         sessionId.value = null;
         cuocTroChuyenId.value = null;
       }
-    } catch {
-      localStorage.removeItem("saoclub_chat_session");
     }
-  }
 
-  // Tạo session mới nếu chưa có
-  if (!sessionId.value) {
-    try {
-      const khachHangId = auth.user?.khachHangId || null;
-      const ctc = await ChatService.taoPhienChat({
-        sessionId: null,
-        khachHangId,
-        hoTen: auth.user?.hoTen || null,
-      });
-      // Backend returns sessionId for anonymous users, numeric id for registered
-      sessionId.value = ctc.sessionId || ctc.id?.toString();
-      cuocTroChuyenId.value = ctc.id;
-      trangThai.value = ctc.trangThai;
-      saveSession();
-
-      // Load tin nhắn ban đầu
-      await loadMessages();
-    } catch (e) {
-      console.error("Lỗi khởi tạo chat session:", e);
+    if (!sessionId.value) {
+      try {
+        const ctc = await ChatService.taoPhienChat({
+          sessionId: null,
+          khachHangId: null,
+          hoTen: null,
+        });
+        sessionId.value = ctc.sessionId || ctc.id?.toString();
+        cuocTroChuyenId.value = ctc.id;
+        trangThai.value = ctc.trangThai;
+        saveSession();
+        await loadMessages();
+      } catch (e) {
+        console.error("Lỗi khởi tạo chat session:", e);
+      }
     }
   }
 
@@ -92,7 +113,7 @@ async function initSession() {
         if (msg.nguoiGui === "KHACH") {
           // Tin nhắn của chính khách: cập nhật id của optimistic message thay vì thêm mới
           const tempMsg = messages.value.find(
-            (m) => String(m.id).startsWith("temp-") && m.noiDung === msg.noiDung
+            (m) => String(m.id).startsWith("temp-") && m.noiDung === msg.noiDung,
           );
           if (tempMsg) {
             tempMsg.id = msg.id; // gán id thật, giữ nguyên bubble
@@ -105,6 +126,10 @@ async function initSession() {
 
         // Tin nhắn từ bot/nhân viên
         botThinking.value = false; // bot đã trả lời xong
+        if (msg.trangThai) {
+          trangThai.value = msg.trangThai;
+          saveSession();
+        }
         if (!messages.value.find((m) => m.id === msg.id)) {
           messages.value.push(formatMessage(msg));
           nextTick(() => scrollToBottom());
@@ -113,7 +138,8 @@ async function initSession() {
       // onStatusChange
       (status) => {
         trangThai.value = status.trangThai;
-      }
+        saveSession();
+      },
     );
   }
 }
@@ -123,7 +149,7 @@ async function loadMessages() {
   loading.value = true;
   try {
     const page = await ChatService.layTinNhan(cuocTroChuyenId.value, 0, 100);
-    messages.value = (page.content || []).map(formatMessage).reverse();
+    messages.value = (page.content || []).map(formatMessage);
     nextTick(() => scrollToBottom());
   } catch (e) {
     console.error("Lỗi load tin nhắn:", e);
@@ -140,7 +166,8 @@ function saveSession() {
       sessionId: sessionId.value,
       cuocTroChuyenId: cuocTroChuyenId.value,
       trangThai: trangThai.value,
-    })
+      khachHangId: currentKhachHangId.value,
+    }),
   );
 }
 
@@ -163,15 +190,17 @@ async function send() {
 
   // Thêm ngay vào UI (optimistic)
   const tempId = `temp-${Date.now()}`;
-  messages.value.push({
-    id: tempId,
-    nguoiGui: "KHACH",
-    loaiNguoiGui: auth.user?.khachHangId ? "KHACH_HANG" : "ANONYMOUS",
-    tenNguoiGui: auth.user?.hoTen || "Ẩn danh",
-    noiDung: text,
-    createdAt: new Date().toISOString(),
-    daDoc: true,
-  });
+  messages.value.push(
+    formatMessage({
+      id: tempId,
+      nguoiGui: "KHACH",
+      loaiNguoiGui: currentKhachHangId.value ? "KHACH_HANG" : "ANONYMOUS",
+      tenNguoiGui: auth.user?.hoTen || "Ẩn danh",
+      noiDung: text,
+      createdAt: new Date().toISOString(),
+      daDoc: true,
+    }),
+  );
   nextTick(() => scrollToBottom());
 
   loading.value = true;
@@ -182,11 +211,16 @@ async function send() {
 
   try {
     const reply = await ChatService.guiTinNhan(cuocTroChuyenId.value, text, sessionId.value);
-    trangThai.value = reply.trangThai || trangThai.value;
+    if (reply.trangThai) {
+      trangThai.value = reply.trangThai;
+      saveSession();
+    }
 
     if (reply.nguoiGui === "KHACH") {
       // Server trả về xác nhận tin nhắn khách (ví dụ chat với nhân viên)
-      const optMsg = messages.value.find((m) => m.id === tempId || (String(m.id).startsWith("temp-") && m.noiDung === reply.noiDung));
+      const optMsg = messages.value.find(
+        (m) => m.id === tempId || (String(m.id).startsWith("temp-") && m.noiDung === reply.noiDung),
+      );
       if (optMsg) {
         optMsg.id = reply.id;
         optMsg.createdAt = reply.createdAt || optMsg.createdAt;
@@ -194,7 +228,7 @@ async function send() {
         messages.value.push(formatMessage(reply));
       }
     } else {
-      // Server trả về câu trả lời của Bot/AI/Escalate
+      // Server trả về câu trả lời của Bot/AI/Escalate/Chuyển chế độ
       botThinking.value = false;
       if (!messages.value.find((m) => m.id === reply.id)) {
         messages.value.push(formatMessage(reply));
@@ -255,11 +289,71 @@ function formatMessage(msg) {
     senderLabel,
     avatarIcon,
     avatarBg,
-    isMe: ["KHACH_HANG", "ANONYMOUS"].includes(msg.loaiNguoiGui) &&
-      msg.nguoiGui === "KHACH",
+    isMe: ["KHACH_HANG", "ANONYMOUS"].includes(msg.loaiNguoiGui) && msg.nguoiGui === "KHACH",
     isBot: msg.loaiNguoiGui === "AI",
     isStaff: ["NHAN_VIEN", "ADMIN"].includes(msg.loaiNguoiGui),
   };
+}
+
+// ─── Quick suggestions & Markdown rendering ──────────────────────────────────
+const quickSuggestions = [
+  "💻 Tư vấn laptop",
+  "🎁 Khuyến mãi",
+  "📦 Tra cứu đơn",
+  "🛡️ Bảo hành",
+  "🏪 Cửa hàng ở đâu?",
+];
+
+function sendQuick(chip) {
+  input.value = chip;
+  send();
+}
+
+function renderMarkdown(text) {
+  if (!text) return "";
+  let out = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  // Format markdown tables
+  out = out.replace(
+    /(?:(?:^|\n)\|[^\n]+\|\r?\n(?:\|[-: |]+\|\r?\n)(?:\|[^\n]+\|\r?\n?)+)/g,
+    (match) => {
+      const lines = match
+        .trim()
+        .split(/\r?\n/)
+        .filter((l) => l.trim().startsWith("|"));
+      if (lines.length < 2) return match;
+      let html = '<div class="chat-md-table-wrap"><table>';
+      let isHeader = true;
+      for (let i = 0; i < lines.length; i++) {
+        if (i === 1) continue;
+        const cells = lines[i]
+          .split("|")
+          .slice(1, -1)
+          .map((c) => c.trim());
+        html += "<tr>";
+        for (const c of cells) {
+          const tag = isHeader ? "th" : "td";
+          html += `<${tag}>${c}</${tag}>`;
+        }
+        html += "</tr>";
+        if (i === 0) isHeader = false;
+      }
+      html += "</table></div>";
+      return html;
+    },
+  );
+
+  out = out
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/^### (.+)$/gm, "<h4>$1</h4>")
+    .replace(/^## (.+)$/gm, "<h3>$1</h3>")
+    .replace(/^# (.+)$/gm, "<h2>$1</h2>")
+    .replace(/^[•\-\*]\s+(.+)$/gm, "<li>$1</li>")
+    .replace(/\n/g, "<br>");
+
+  return out;
 }
 
 // ─── Status helpers ────────────────────────────────────────────────────────────
@@ -286,6 +380,18 @@ function scrollToBottom() {
   }
 }
 
+watch(currentKhachHangId, (newId, oldId) => {
+  if (newId !== oldId) {
+    if (!newId) {
+      localStorage.removeItem("saoclub_chat_session");
+      sessionId.value = null;
+      cuocTroChuyenId.value = null;
+      messages.value = [];
+    }
+    initSession();
+  }
+});
+
 watch(open, (v) => {
   if (v) {
     nextTick(() => scrollToBottom());
@@ -297,13 +403,36 @@ watch(open, (v) => {
   }
 });
 
+let pollTimer = null;
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    if (open.value && cuocTroChuyenId.value && trangThai.value === "CHAT_NHAN_VIEN") {
+      try {
+        const page = await ChatService.layTinNhan(cuocTroChuyenId.value, 0, 100);
+        const fetched = (page.content || []).map(formatMessage);
+        if (
+          fetched.length !== messages.value.length ||
+          (fetched.length > 0 && messages.value.length > 0 && fetched[fetched.length - 1].id !== messages.value[messages.value.length - 1].id)
+        ) {
+          messages.value = fetched;
+          nextTick(() => scrollToBottom());
+        }
+      } catch {}
+    }
+  }, 5000);
+}
+
 onMounted(() => {
   // Khởi tạo session và kết nối WebSocket một lần duy nhất
   initSession();
   setupWebSocket();
+  startPolling();
 });
 
 onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer);
   disconnect();
 });
 </script>
@@ -326,23 +455,18 @@ onUnmounted(() => {
       <!-- Header -->
       <div class="chat-popup-header">
         <div class="chat-popup-avatar">
-          <span style="font-size: 18px">🤖</span>
+          <span style="font-size: 18px">{{ trangThai === "CHAT_NHAN_VIEN" ? "🧑‍💻" : "🤖" }}</span>
         </div>
         <div class="chat-popup-meta">
-          <div class="chat-popup-title">SAOClub Bot</div>
+          <div class="chat-popup-title">
+            {{ trangThai === "CHAT_NHAN_VIEN" ? "Hỗ trợ SAOClub" : "SAOClub Bot" }}
+          </div>
           <div class="chat-popup-sub">
-            <span
-              class="status-dot"
-              :style="{ background: statusColor }"
-            ></span>
+            <span class="status-dot" :style="{ background: statusColor }"></span>
             {{ statusLabel }}
           </div>
         </div>
-        <button
-          class="chat-popup-close"
-          :aria-label="'Đóng'"
-          @click="open = false"
-        >
+        <button class="chat-popup-close" :aria-label="'Đóng'" @click="open = false">
           <i class="fa fa-chevron-down"></i>
         </button>
       </div>
@@ -350,9 +474,7 @@ onUnmounted(() => {
       <!-- Body -->
       <div ref="chatBodyRef" class="chat-popup-body">
         <div v-if="loading && messages.length === 0" class="chat-loading">
-          <div class="chat-loading-dots">
-            <span></span><span></span><span></span>
-          </div>
+          <div class="chat-loading-dots"><span></span><span></span><span></span></div>
         </div>
 
         <div
@@ -366,33 +488,25 @@ onUnmounted(() => {
           }"
         >
           <!-- Avatar -->
-          <div
-            v-if="!m.isMe"
-            class="chat-avatar"
-            :style="{ background: m.avatarBg }"
-          >
+          <div v-if="!m.isMe" class="chat-avatar" :style="{ background: m.avatarBg }">
             {{ m.avatarIcon }}
           </div>
 
           <div class="chat-bubble-wrap">
             <!-- Sender name -->
-            <div
-              v-if="!m.isMe && !m.isBot"
-              class="chat-sender-label"
-              :class="{ staff: m.isStaff }"
-            >
+            <div v-if="!m.isMe && !m.isBot" class="chat-sender-label" :class="{ staff: m.isStaff }">
               {{ m.senderLabel }}
             </div>
-            <div
-              v-else-if="!m.isMe && m.isBot"
-              class="chat-sender-label bot-label"
-            >
+            <div v-else-if="!m.isMe && m.isBot" class="chat-sender-label bot-label">
               🤖 {{ m.senderLabel }}
             </div>
 
             <!-- Bubble -->
-            <div class="chat-popup-bubble" :class="{ 'bubble-bot': m.isBot, 'bubble-staff': m.isStaff }">
-              <span class="chat-popup-bubble-text">{{ m.noiDung }}</span>
+            <div
+              class="chat-popup-bubble"
+              :class="{ 'bubble-bot': m.isBot, 'bubble-staff': m.isStaff }"
+            >
+              <span class="chat-popup-bubble-text" v-html="renderMarkdown(m.noiDung)"></span>
               <span class="chat-popup-bubble-time">{{ m.time }}</span>
             </div>
           </div>
@@ -413,6 +527,20 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Quick suggestion chips -->
+      <div v-if="trangThai === 'HOI_DAP_AI'" class="chat-quick-suggestions">
+        <button
+          v-for="chip in quickSuggestions"
+          :key="chip"
+          type="button"
+          class="chat-quick-chip"
+          :disabled="loading"
+          @click="sendQuick(chip)"
+        >
+          {{ chip }}
+        </button>
+      </div>
+
       <!-- Action buttons -->
       <div v-if="trangThai === 'DA_DONG'" class="chat-ended-bar">
         <i class="fa fa-check-circle"></i> Cuộc trò chuyện đã kết thúc
@@ -423,27 +551,40 @@ onUnmounted(() => {
         <textarea
           v-model="input"
           rows="1"
-          placeholder="Nhắn tin cho Bot..."
+          :placeholder="
+            trangThai === 'CHAT_NHAN_VIEN'
+              ? 'Nhắn nhân viên (hoặc gõ: chuyển chat bot)...'
+              : 'Nhắn tin cho Bot (hoặc gõ: chuyển nhân viên)...'
+          "
           :disabled="loading"
           @keyup.enter.exact.prevent="send"
         ></textarea>
-        <button
-          class="chat-popup-send"
-          :disabled="!input.trim() || loading"
-          @click="send"
-        >
+        <button class="chat-popup-send" :disabled="!input.trim() || loading" @click="send">
           <i class="fa" :class="loading ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
         </button>
       </div>
 
-      <!-- Escalate button -->
-      <div v-if="showEscalateButton && trangThai !== 'DA_DONG'" class="chat-escalate-bar">
-        <span>Bạn cần hỗ trợ từ nhân viên?</span>
+      <!-- Mode switch bar (chuyển nhân viên / chuyển chat bot) -->
+      <div v-if="trangThai === 'HOI_DAP_AI'" class="chat-escalate-bar">
+        <span>Cần tư vấn trực tiếp?</span>
         <button
+          type="button"
           class="btn-escalate"
-          @click="send"
+          :disabled="loading"
+          @click="sendQuick('chuyển nhân viên')"
         >
-          💬 Chat với nhân viên
+          💬 Chuyển nhân viên
+        </button>
+      </div>
+      <div v-else-if="trangThai === 'CHAT_NHAN_VIEN'" class="chat-escalate-bar chat-bot-bar">
+        <span>Quay lại hỏi tự động?</span>
+        <button
+          type="button"
+          class="btn-escalate btn-back-bot"
+          :disabled="loading"
+          @click="sendQuick('chuyển chat bot')"
+        >
+          🤖 Chuyển chat bot
         </button>
       </div>
     </div>
@@ -473,23 +614,29 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 0 var(--pink-700, #a81b5d), 0 6px 16px rgba(168, 27, 93, 0.4);
+  box-shadow:
+    0 4px 0 var(--pink-700, #a81b5d),
+    0 6px 16px rgba(168, 27, 93, 0.4);
   border-bottom: 4px solid var(--pink-700, #a81b5d);
   transition: all 0.15s ease;
 }
 .chat-fab:hover {
   transform: translateY(-2px);
   background: linear-gradient(180deg, var(--pink-400, #ec4899) 0%, var(--pink-600, #db2777) 100%);
-  box-shadow: 0 6px 0 var(--pink-700, #a81b5d), 0 10px 24px rgba(168, 27, 93, 0.45);
+  box-shadow:
+    0 6px 0 var(--pink-700, #a81b5d),
+    0 10px 24px rgba(168, 27, 93, 0.45);
 }
 .chat-fab:active {
   transform: translateY(2px);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   border-bottom-width: 0;
 }
 .chat-fab.is-open {
   background: linear-gradient(180deg, #6b7280 0%, #4b5563 100%);
-  box-shadow: 0 4px 0 #374151, 0 6px 16px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 0 #374151,
+    0 6px 16px rgba(0, 0, 0, 0.3);
   border-bottom-color: #374151;
 }
 .chat-fab-pulse {
@@ -504,8 +651,13 @@ onUnmounted(() => {
   animation: pulse 1.6s infinite;
 }
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
-  50%      { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
 }
 
 /* ═══ Popup ═══ */
@@ -526,8 +678,14 @@ onUnmounted(() => {
   animation: slideUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ═══ Header ═══ */
@@ -543,14 +701,19 @@ onUnmounted(() => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.2);
-  border: 2px solid rgba(255,255,255,0.5);
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.chat-popup-meta { flex: 1; }
-.chat-popup-title { font-size: 14px; font-weight: 700; }
+.chat-popup-meta {
+  flex: 1;
+}
+.chat-popup-title {
+  font-size: 14px;
+  font-weight: 700;
+}
 .chat-popup-sub {
   font-size: 11px;
   opacity: 0.9;
@@ -576,7 +739,10 @@ onUnmounted(() => {
   opacity: 0.85;
   transition: all 0.15s ease;
 }
-.chat-popup-close:hover { background: rgba(255,255,255,0.2); opacity: 1; }
+.chat-popup-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 1;
+}
 
 /* ═══ Body ═══ */
 .chat-popup-body {
@@ -605,11 +771,23 @@ onUnmounted(() => {
   border-radius: 50%;
   animation: bounce 1.2s infinite;
 }
-.chat-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-.chat-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+.chat-loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.chat-loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
 @keyframes bounce {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-  40% { transform: scale(1); opacity: 1; }
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .chat-popup-msg {
@@ -626,8 +804,14 @@ onUnmounted(() => {
   animation: fadeInUp 0.3s ease;
 }
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .thinking-bubble {
   display: flex;
@@ -645,12 +829,26 @@ onUnmounted(() => {
   flex-shrink: 0;
   animation: thinkBounce 1.2s infinite ease-in-out;
 }
-.thinking-dot:nth-child(1) { animation-delay: 0s; }
-.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
-.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+.thinking-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+.thinking-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.thinking-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
 @keyframes thinkBounce {
-  0%, 60%, 100% { transform: translateY(0);    opacity: 0.35; }
-  30%            { transform: translateY(-6px); opacity: 1; }
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
 }
 .thinking-text {
   font-size: 11px;
@@ -687,8 +885,12 @@ onUnmounted(() => {
   color: #6b7280;
   padding: 0 4px;
 }
-.chat-sender-label.staff { color: #f97316; }
-.chat-sender-label.bot-label { color: #8b5cf6; }
+.chat-sender-label.staff {
+  color: #f97316;
+}
+.chat-sender-label.bot-label {
+  color: #8b5cf6;
+}
 
 .chat-popup-bubble {
   background: #fff;
@@ -710,7 +912,9 @@ onUnmounted(() => {
   color: #fff;
   border-color: transparent;
 }
-.chat-popup-msg.right .chat-popup-bubble-time { color: rgba(255,255,255,0.8); }
+.chat-popup-msg.right .chat-popup-bubble-time {
+  color: rgba(255, 255, 255, 0.8);
+}
 
 .chat-popup-bubble-text {
   display: block;
@@ -769,17 +973,21 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 0 var(--pink-700, #a81b5d), 0 3px 6px rgba(168, 27, 93, 0.3);
+  box-shadow:
+    0 2px 0 var(--pink-700, #a81b5d),
+    0 3px 6px rgba(168, 27, 93, 0.3);
   border-bottom: 2px solid var(--pink-700, #a81b5d);
   transition: all 0.12s ease;
 }
 .chat-popup-send:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 3px 0 var(--pink-700, #a81b5d), 0 4px 8px rgba(168, 27, 93, 0.4);
+  box-shadow:
+    0 3px 0 var(--pink-700, #a81b5d),
+    0 4px 8px rgba(168, 27, 93, 0.4);
 }
 .chat-popup-send:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   border-bottom-width: 0;
 }
 .chat-popup-send:disabled {
@@ -801,7 +1009,9 @@ onUnmounted(() => {
   font-size: 12px;
   color: #92400e;
 }
-.chat-escalate-bar span { flex: 1; }
+.chat-escalate-bar span {
+  flex: 1;
+}
 .btn-escalate {
   flex-shrink: 0;
   padding: 4px 10px;
@@ -815,7 +1025,24 @@ onUnmounted(() => {
   white-space: nowrap;
   transition: all 0.12s;
 }
-.btn-escalate:hover { background: #ea580c; }
+.btn-escalate:hover {
+  background: #ea580c;
+}
+.btn-escalate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.chat-bot-bar {
+  background: #ede9fe;
+  border-top-color: #c4b5fd;
+  color: #5b21b6;
+}
+.btn-back-bot {
+  background: #8b5cf6;
+}
+.btn-back-bot:hover {
+  background: #7c3aed;
+}
 
 /* ═══ Ended bar ═══ */
 .chat-ended-bar {
@@ -830,9 +1057,89 @@ onUnmounted(() => {
   color: #6b7280;
 }
 
+/* ═══ Quick suggestions chips ═══ */
+.chat-quick-suggestions {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px 10px;
+  background: rgba(244, 114, 182, 0.08);
+  border-top: 1px solid var(--border-color-soft, #f1dbe6);
+  scrollbar-width: none;
+}
+.chat-quick-suggestions::-webkit-scrollbar {
+  display: none;
+}
+.chat-quick-chip {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  background: #fff;
+  border: 1px solid var(--pink-300, #f472b6);
+  border-radius: 16px;
+  color: var(--pink-600, #db2777);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.chat-quick-chip:hover:not(:disabled) {
+  background: var(--pink-500, #ec4899);
+  color: #fff;
+  border-color: var(--pink-500, #ec4899);
+}
+.chat-quick-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ═══ Markdown table & formatting in bubbles ═══ */
+.chat-popup-bubble-text strong {
+  color: inherit;
+  font-weight: 700;
+}
+.chat-popup-bubble-text code {
+  background: rgba(0, 0, 0, 0.07);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+.chat-popup-bubble-text li {
+  margin-left: 14px;
+  margin-bottom: 2px;
+}
+.chat-md-table-wrap {
+  overflow-x: auto;
+  margin: 6px 0;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+.chat-md-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.chat-md-table-wrap th,
+.chat-md-table-wrap td {
+  padding: 4px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+.chat-md-table-wrap th {
+  background: rgba(0, 0, 0, 0.05);
+  font-weight: 700;
+}
+
 /* ═══ Responsive ═══ */
 @media (max-width: 480px) {
-  .chat-widget { right: 16px; bottom: 16px; }
-  .chat-popup { width: calc(100vw - 32px); height: 70vh; }
+  .chat-widget {
+    right: 16px;
+    bottom: 16px;
+  }
+  .chat-popup {
+    width: calc(100vw - 32px);
+    height: 70vh;
+  }
 }
 </style>

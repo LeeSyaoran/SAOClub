@@ -1,9 +1,11 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { Phone, Mail, Star, X, Pen, Save, ShoppingBag, Clock } from "@lucide/vue";
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { Phone, Mail, Star, X, Pen, Save, ShoppingBag, Clock, Send, RefreshCw } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as KhachHangService from "../../services/KhachHangService.js";
 import * as DonHangService from "../../services/DonHangService.js";
+import * as ChatService from "../../services/ChatService.js";
+import { useChatWebSocket } from "../../composables/useChatWebSocket.js";
 import { refreshCustomers } from "../../stores/customers.js";
 import { showToast } from "../../stores/toast.js";
 import { formatPrice, formatDate, statusLabel } from "../../utils/adminFormat.js";
@@ -17,33 +19,41 @@ const emit = defineEmits(["close", "view-order"]);
 // ── Avatar helpers ────────────────────────────────────────────────────────────
 const getAvatarUrl = (c) => c?.hinhAnh || c?.avatarUrl || null;
 const getInitials = (c) => {
-  const isBiz = c?.loaiKhach === 'doanh_nghiep';
-  const name = (isBiz && c?.tenCongTy) ? c.tenCongTy : (c?.hoTen || 'K');
-  const parts = name.trim().split(' ');
+  const isBiz = c?.loaiKhach === "doanh_nghiep";
+  const name = isBiz && c?.tenCongTy ? c.tenCongTy : c?.hoTen || "K";
+  const parts = name.trim().split(" ");
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   return name.substring(0, 2).toUpperCase();
 };
 const getAvatarBgColor = (c) => {
   const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+    "#FF6B6B",
+    "#4ECDC4",
+    "#45B7D1",
+    "#96CEB4",
+    "#FFEAA7",
+    "#DDA0DD",
+    "#98D8C8",
+    "#F7DC6F",
+    "#BB8FCE",
+    "#85C1E9",
   ];
-  const name = c?.hoTen || '';
+  const name = c?.hoTen || "";
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return colors[Math.abs(hash) % colors.length];
 };
 
-// ── Tab state ────────────────────────────────────────────────────────────────
-const activeTab = ref('info');
+// ── Tab state ─────────────────────────────────────────────────────────────────
+const activeTab = ref("info");
 const TABS = [
-  { id: 'info',   icon: 'fa-user',     label: 'Thông tin khách hàng' },
-  { id: 'orders', icon: 'fa-shopping-bag', label: 'Đơn hàng' },
-  { id: 'chat',   icon: 'fa-comments', label: 'Chat' },
+  { id: "info", icon: "fa-user", label: "Thông tin khách hàng" },
+  { id: "orders", icon: "fa-shopping-bag", label: "Đơn hàng" },
+  { id: "chat", icon: "fa-comments", label: "Chat" },
 ];
 
-const isBusiness = computed(() => props.customer?.loaiKhach === 'doanh_nghiep');
-const isFormBusiness = computed(() => infoForm.value?.loaiKhach === 'doanh_nghiep');
+const isBusiness = computed(() => props.customer?.loaiKhach === "doanh_nghiep");
+const isFormBusiness = computed(() => infoForm.value?.loaiKhach === "doanh_nghiep");
 
 // ── Info tab: edit mode ───────────────────────────────────────────────────────
 const editingInfo = ref(false);
@@ -52,9 +62,15 @@ const infoFormError = ref("");
 const savingInfo = ref(false);
 
 const emptyInfoForm = () => ({
-  hoTen: "", soDienThoai: "", email: "", diaChi: "",
-  loaiKhach: "ca_nhan", tenCongTy: "", maSoThue: "",
-  diemTichLuy: 0, trangThai: "active",
+  hoTen: "",
+  soDienThoai: "",
+  email: "",
+  diaChi: "",
+  loaiKhach: "ca_nhan",
+  tenCongTy: "",
+  maSoThue: "",
+  diemTichLuy: 0,
+  trangThai: "active",
 });
 
 const startEditInfo = () => {
@@ -77,8 +93,14 @@ const saveInfo = async () => {
     infoFormError.value = "Vui lòng nhập tên công ty";
     return;
   }
-  if (!infoForm.value.soDienThoai?.trim()) { infoFormError.value = "Vui lòng nhập số điện thoại"; return; }
-  if (!infoForm.value.diaChi?.trim()) { infoFormError.value = "Vui lòng nhập địa chỉ"; return; }
+  if (!infoForm.value.soDienThoai?.trim()) {
+    infoFormError.value = "Vui lòng nhập số điện thoại";
+    return;
+  }
+  if (!infoForm.value.diaChi?.trim()) {
+    infoFormError.value = "Vui lòng nhập địa chỉ";
+    return;
+  }
   if (savingInfo.value) return;
   savingInfo.value = true;
   const body = {
@@ -108,46 +130,228 @@ const saveInfo = async () => {
   }
 };
 
-// ── Orders tab ───────────────────────────────────────────────────────────────
+// ── Orders tab ────────────────────────────────────────────────────────────────
 const orders = ref([]);
 const ordersLoading = ref(false);
-const expandedOrder = ref(null); // id đơn đang mở inline detail
+const expandedOrder = ref(null);
 
 const loadOrders = async () => {
   ordersLoading.value = true;
   try {
     const list = await DonHangService.getByKhachHang(props.customer.khachHangId);
     orders.value = (list || []).sort((a, b) => new Date(b.ngayDat) - new Date(a.ngayDat));
-  } catch (e) {
+  } catch {
     orders.value = [];
   } finally {
     ordersLoading.value = false;
   }
 };
 
-// ── Chat tab (mock) ──────────────────────────────────────────────────────────
-const chatMessages = ref([
-  { side: 'left',  name: props.customer.hoTen || 'Khách', text: 'Xin chào shop, tôi muốn hỏi về đơn hàng gần đây.', time: '09:30' },
-  { side: 'right', name: 'CSKH',                          text: 'Chào bạn, mình đang tra cứu đơn của bạn nhé!',     time: '09:31' },
-]);
-const chatInput = ref('');
-const sendChat = () => {
-  const text = chatInput.value.trim();
-  if (!text) return;
-  chatMessages.value.push({
-    side: 'right',
-    name: 'CSKH',
-    text,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  });
-  chatInput.value = '';
+// ── Chat tab — kết nối thật với ChatService + WebSocket ───────────────────────
+const chatMessages = ref([]);
+const chatInput = ref("");
+const chatLoading = ref(false);
+const chatSending = ref(false);
+const chatConversationId = ref(null);
+const chatTrangThai = ref("HOI_DAP_AI");
+const chatConversations = ref([]);
+const chatBodyRef = ref(null);
+
+const { connect, subscribeChat, disconnect: disconnectChatWs } = useChatWebSocket();
+let currentChatSub = null;
+
+const scrollToBottom = async () => {
+  await nextTick();
+  if (chatBodyRef.value) chatBodyRef.value.scrollTop = chatBodyRef.value.scrollHeight;
 };
 
-onMounted(() => { loadOrders(); });
+const mapMessage = (m) => {
+  const isCustomer = m.nguoiGui === "KHACH" || m.vaiTro === "KHACH";
+  const isBot = m.nguoiGui === "AI" || m.loaiNguoiGui === "AI";
+  return {
+    id: m.id || m.tinNhanId,
+    side: isCustomer ? "left" : "right",
+    isBot,
+    name: isCustomer
+      ? props.customer.hoTen || "Khách"
+      : isBot
+        ? "🤖 SAOClub Bot"
+        : m.tenNguoiGui || "CSKH",
+    text: m.noiDung || m.content || "",
+    time:
+      m.thoiGian || m.createdAt
+        ? new Date(m.thoiGian || m.createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "",
+  };
+};
+
+const loadMessages = async (cuocTroChuyenId) => {
+  chatLoading.value = true;
+  try {
+    const res = await ChatService.layTinNhan(cuocTroChuyenId, 0, 100);
+    const list = res?.content || res || [];
+    chatMessages.value = list.map(mapMessage);
+    scrollToBottom();
+  } catch {
+    chatMessages.value = [];
+  } finally {
+    chatLoading.value = false;
+  }
+};
+
+const subscribeToConversation = (cuocTroChuyenId) => {
+  if (currentChatSub) {
+    try {
+      currentChatSub.sub1?.unsubscribe?.();
+    } catch {}
+    try {
+      currentChatSub.sub2?.unsubscribe?.();
+    } catch {}
+    currentChatSub = null;
+  }
+  currentChatSub = subscribeChat(
+    cuocTroChuyenId,
+    (msg) => {
+      const msgId = msg.id || msg.tinNhanId;
+      if (msg.trangThai) {
+        chatTrangThai.value = msg.trangThai;
+      }
+      // Nếu là tin nhắn optimistic vừa gửi từ nhân viên, gán id thật thay vì thêm trùng
+      const optMatch = chatMessages.value.find(
+        (m) => !m.id && m.side === "right" && m.text === (msg.noiDung || msg.content),
+      );
+      if (optMatch) {
+        optMatch.id = msgId;
+        return;
+      }
+      const isDup = chatMessages.value.some((m) => m.id && m.id === msgId);
+      if (!isDup) {
+        chatMessages.value.push(mapMessage(msg));
+        scrollToBottom();
+      }
+    },
+    (status) => {
+      if (status?.trangThai) {
+        chatTrangThai.value = status.trangThai;
+      }
+    },
+  );
+};
+
+const loadChatHistory = async () => {
+  chatLoading.value = true;
+  try {
+    const res = await ChatService.layLichSuChatKhach(props.customer.khachHangId, 0, 20);
+    let list = res?.content || res || [];
+    if (list.length === 0) {
+      // Tự động tạo/gắn phiên chat cho khách hàng nếu chưa có
+      const created = await ChatService.taoPhienChat({
+        sessionId: null,
+        khachHangId: props.customer.khachHangId,
+        hoTen: props.customer.hoTen,
+      });
+      if (created) list = [created];
+    }
+    chatConversations.value = list;
+    if (list.length > 0) {
+      const active =
+        list.find((c) => c.trangThai === "CHAT_NHAN_VIEN" || c.trangThai === "HOI_DAP_AI") ||
+        list[0];
+      chatConversationId.value = active.id || active.cuocTroChuyenId;
+      chatTrangThai.value = active.trangThai || "HOI_DAP_AI";
+      await loadMessages(chatConversationId.value);
+      subscribeToConversation(chatConversationId.value);
+    } else {
+      chatMessages.value = [];
+    }
+  } catch {
+    chatMessages.value = [];
+  } finally {
+    chatLoading.value = false;
+  }
+};
+
+const toggleChatMode = async () => {
+  if (!chatConversationId.value) return;
+  try {
+    if (chatTrangThai.value === "CHAT_NHAN_VIEN") {
+      const updated = await ChatService.quayLaiAI(chatConversationId.value);
+      chatTrangThai.value = updated.trangThai || "HOI_DAP_AI";
+      showToast("Đã chuyển cuộc trò chuyện về Chat Bot AI", "success");
+    } else {
+      const updated = await ChatService.nhanTiepChat(chatConversationId.value);
+      chatTrangThai.value = updated.trangThai || "CHAT_NHAN_VIEN";
+      showToast("Đã chuyển sang chế độ Nhân viên tư vấn", "success");
+    }
+    await loadMessages(chatConversationId.value);
+  } catch (e) {
+    showToast("Lỗi chuyển chế độ chat: " + e.message, "error");
+  }
+};
+
+const sendChat = async () => {
+  const text = chatInput.value.trim();
+  if (!text || chatSending.value) return;
+  if (!chatConversationId.value) {
+    showToast("Khách chưa có cuộc trò chuyện nào", "error");
+    return;
+  }
+  chatSending.value = true;
+  const optimistic = {
+    id: null,
+    side: "right",
+    name: "CSKH",
+    text,
+    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
+  chatMessages.value.push(optimistic);
+  chatInput.value = "";
+  scrollToBottom();
+  try {
+    const saved = await ChatService.guiTinNhanTuNhanVien(chatConversationId.value, text);
+    if (saved?.id) optimistic.id = saved.id;
+    if (saved?.trangThai) chatTrangThai.value = saved.trangThai;
+  } catch (e) {
+    showToast("Gửi tin nhắn thất bại: " + e.message, "error");
+    chatMessages.value = chatMessages.value.filter((m) => m !== optimistic);
+  } finally {
+    chatSending.value = false;
+  }
+};
+
+// Khi chuyển sang tab chat → khởi động WS và load lịch sử
+watch(activeTab, (tab) => {
+  if (tab === "chat") {
+    connect(null, null, null);
+    loadChatHistory();
+  }
+});
+
+onMounted(() => {
+  loadOrders();
+});
+
+onUnmounted(() => {
+  if (currentChatSub) {
+    try {
+      currentChatSub.sub1?.unsubscribe?.();
+    } catch {}
+    try {
+      currentChatSub.sub2?.unsubscribe?.();
+    } catch {}
+  }
+  disconnectChatWs();
+});
 </script>
 
 <template>
-  <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center cdm-backdrop" @click.self="emit('close')">
+  <div
+    class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center cdm-backdrop"
+    @click.self="emit('close')"
+  >
     <div class="cdm-shell">
       <!-- ── Header ── -->
       <div class="cdm-header">
@@ -155,23 +359,34 @@ onMounted(() => { loadOrders(); });
           <div v-if="getAvatarUrl(customer)" class="cdm-avatar cdm-avatar--img">
             <img :src="getAvatarUrl(customer)" :alt="customer.hoTen" />
           </div>
-          <div v-else class="cdm-avatar cdm-avatar--initials" :style="{ background: getAvatarBgColor(customer) }">
+          <div
+            v-else
+            class="cdm-avatar cdm-avatar--initials"
+            :style="{ background: getAvatarBgColor(customer) }"
+          >
             {{ getInitials(customer) }}
           </div>
           <div>
             <div class="cdm-name">
-              {{ isBusiness ? (customer.tenCongTy || customer.hoTen || 'Doanh nghiệp') : (customer.hoTen || 'Khách hàng') }}
+              {{
+                isBusiness
+                  ? customer.tenCongTy || customer.hoTen || "Doanh nghiệp"
+                  : customer.hoTen || "Khách hàng"
+              }}
             </div>
             <div class="cdm-contact">
-              <Phone :size="14" /> {{ customer.soDienThoai || '—' }}
+              <Phone :size="14" /> {{ customer.soDienThoai || "—" }}
               <span class="mx-2">·</span>
-              <Mail :size="14" /> {{ customer.email || '—' }}
+              <Mail :size="14" /> {{ customer.email || "—" }}
             </div>
             <div class="cdm-tags">
-              <span class="cdm-badge" :class="customer.trangThai === 'active' ? 'is-active' : 'is-locked'">
+              <span
+                class="cdm-badge"
+                :class="customer.trangThai === 'active' ? 'is-active' : 'is-locked'"
+              >
                 {{ statusLabel(customer.trangThai) }}
               </span>
-              <span class="cdm-badge is-soft">{{ isBusiness ? 'Doanh nghiệp' : 'Cá nhân' }}</span>
+              <span class="cdm-badge is-soft">{{ isBusiness ? "Doanh nghiệp" : "Cá nhân" }}</span>
               <span v-if="customer.diemTichLuy" class="cdm-badge is-soft">
                 <Star :size="14" /> {{ customer.diemTichLuy }} điểm
               </span>
@@ -186,14 +401,17 @@ onMounted(() => { loadOrders(); });
       <!-- ── Tabs ── -->
       <div class="cdm-tabs">
         <button
-          v-for="tab in TABS" :key="tab.id"
+          v-for="tab in TABS"
+          :key="tab.id"
           class="cdm-tab"
           :class="{ 'is-active': activeTab === tab.id }"
           @click="activeTab = tab.id"
         >
           <i :class="['fa', tab.icon]"></i>
           <span>{{ tab.label }}</span>
-          <span v-if="tab.id === 'orders' && orders.length" class="cdm-tab-badge">{{ orders.length }}</span>
+          <span v-if="tab.id === 'orders' && orders.length" class="cdm-tab-badge">{{
+            orders.length
+          }}</span>
         </button>
       </div>
 
@@ -206,28 +424,85 @@ onMounted(() => { loadOrders(); });
             <div class="info-grid">
               <!-- Hiển thị khi là Doanh nghiệp -->
               <template v-if="isBusiness">
-                <div class="info-row"><span class="info-label">Tên công ty</span><span class="info-value">{{ customer.tenCongTy || customer.hoTen || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Mã số thuế</span><span class="info-value">{{ customer.maSoThue || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Người đại diện</span><span class="info-value">{{ customer.hoTen || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Số điện thoại</span><span class="info-value">{{ customer.soDienThoai || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ customer.email || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Loại khách</span><span class="info-value">Doanh nghiệp</span></div>
-                <div class="info-row"><span class="info-label">Địa chỉ trụ sở</span><span class="info-value">{{ customer.diaChi || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Điểm tích lũy</span><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span></div>
-                <div class="info-row"><span class="info-label">Số dư ví</span><span class="info-value">{{ customer.soDuVi ? formatPrice(Number(customer.soDuVi)) : '0 ₫' }}</span></div>
-                <div class="info-row"><span class="info-label">Trạng thái</span><span class="info-value">{{ statusLabel(customer.trangThai) }}</span></div>
+                <div class="info-row">
+                  <span class="info-label">Tên công ty</span
+                  ><span class="info-value">{{ customer.tenCongTy || customer.hoTen || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Mã số thuế</span
+                  ><span class="info-value">{{ customer.maSoThue || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Người đại diện</span
+                  ><span class="info-value">{{ customer.hoTen || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Số điện thoại</span
+                  ><span class="info-value">{{ customer.soDienThoai || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Email</span
+                  ><span class="info-value">{{ customer.email || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Loại khách</span
+                  ><span class="info-value">Doanh nghiệp</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Địa chỉ trụ sở</span
+                  ><span class="info-value">{{ customer.diaChi || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Điểm tích lũy</span
+                  ><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Số dư ví</span
+                  ><span class="info-value">{{
+                    customer.soDuVi ? formatPrice(Number(customer.soDuVi)) : "0 ₫"
+                  }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Trạng thái</span
+                  ><span class="info-value">{{ statusLabel(customer.trangThai) }}</span>
+                </div>
               </template>
 
               <!-- Hiển thị khi là Cá nhân: ẨN hoàn toàn Tên công ty và Mã số thuế -->
               <template v-else>
-                <div class="info-row"><span class="info-label">Họ tên</span><span class="info-value">{{ customer.hoTen || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Số điện thoại</span><span class="info-value">{{ customer.soDienThoai || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ customer.email || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Loại khách</span><span class="info-value">Cá nhân</span></div>
-                <div class="info-row"><span class="info-label">Địa chỉ</span><span class="info-value">{{ customer.diaChi || '—' }}</span></div>
-                <div class="info-row"><span class="info-label">Điểm tích lũy</span><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span></div>
-                <div class="info-row"><span class="info-label">Số dư ví</span><span class="info-value">{{ customer.soDuVi ? formatPrice(Number(customer.soDuVi)) : '0 ₫' }}</span></div>
-                <div class="info-row"><span class="info-label">Trạng thái</span><span class="info-value">{{ statusLabel(customer.trangThai) }}</span></div>
+                <div class="info-row">
+                  <span class="info-label">Họ tên</span
+                  ><span class="info-value">{{ customer.hoTen || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Số điện thoại</span
+                  ><span class="info-value">{{ customer.soDienThoai || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Email</span
+                  ><span class="info-value">{{ customer.email || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Loại khách</span><span class="info-value">Cá nhân</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Địa chỉ</span
+                  ><span class="info-value">{{ customer.diaChi || "—" }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Điểm tích lũy</span
+                  ><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Số dư ví</span
+                  ><span class="info-value">{{
+                    customer.soDuVi ? formatPrice(Number(customer.soDuVi)) : "0 ₫"
+                  }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Trạng thái</span
+                  ><span class="info-value">{{ statusLabel(customer.trangThai) }}</span>
+                </div>
               </template>
             </div>
             <div class="info-actions">
@@ -239,7 +514,9 @@ onMounted(() => { loadOrders(); });
 
           <!-- Edit mode -->
           <div v-else class="info-edit">
-            <div v-if="infoFormError" class="alert alert-danger small py-2 mb-3">{{ infoFormError }}</div>
+            <div v-if="infoFormError" class="alert alert-danger small py-2 mb-3">
+              {{ infoFormError }}
+            </div>
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label small text-secondary">Loại khách</label>
@@ -253,15 +530,27 @@ onMounted(() => { loadOrders(); });
               <template v-if="isFormBusiness">
                 <div class="col-md-6">
                   <label class="form-label small text-secondary">Tên công ty *</label>
-                  <input v-model="infoForm.tenCongTy" class="form-control form-control-sm cdm-input" placeholder="Nhập tên công ty" />
+                  <input
+                    v-model="infoForm.tenCongTy"
+                    class="form-control form-control-sm cdm-input"
+                    placeholder="Nhập tên công ty"
+                  />
                 </div>
                 <div class="col-md-6">
                   <label class="form-label small text-secondary">Mã số thuế</label>
-                  <input v-model="infoForm.maSoThue" class="form-control form-control-sm cdm-input" placeholder="Mã số thuế" />
+                  <input
+                    v-model="infoForm.maSoThue"
+                    class="form-control form-control-sm cdm-input"
+                    placeholder="Mã số thuế"
+                  />
                 </div>
                 <div class="col-md-6">
                   <label class="form-label small text-secondary">Người đại diện / liên hệ *</label>
-                  <input v-model="infoForm.hoTen" class="form-control form-control-sm cdm-input" placeholder="Họ tên người đại diện" />
+                  <input
+                    v-model="infoForm.hoTen"
+                    class="form-control form-control-sm cdm-input"
+                    placeholder="Họ tên người đại diện"
+                  />
                 </div>
               </template>
 
@@ -269,25 +558,43 @@ onMounted(() => { loadOrders(); });
               <template v-else>
                 <div class="col-md-6">
                   <label class="form-label small text-secondary">Họ tên *</label>
-                  <input v-model="infoForm.hoTen" class="form-control form-control-sm cdm-input" placeholder="Họ tên khách hàng" />
+                  <input
+                    v-model="infoForm.hoTen"
+                    class="form-control form-control-sm cdm-input"
+                    placeholder="Họ tên khách hàng"
+                  />
                 </div>
               </template>
 
               <div class="col-md-6">
                 <label class="form-label small text-secondary">Số điện thoại *</label>
-                <input v-model="infoForm.soDienThoai" class="form-control form-control-sm cdm-input" />
+                <input
+                  v-model="infoForm.soDienThoai"
+                  class="form-control form-control-sm cdm-input"
+                />
               </div>
               <div class="col-md-6">
                 <label class="form-label small text-secondary">Email</label>
-                <input v-model="infoForm.email" type="email" class="form-control form-control-sm cdm-input" />
+                <input
+                  v-model="infoForm.email"
+                  type="email"
+                  class="form-control form-control-sm cdm-input"
+                />
               </div>
               <div class="col-12">
-                <label class="form-label small text-secondary">{{ isFormBusiness ? 'Địa chỉ trụ sở *' : 'Địa chỉ *' }}</label>
+                <label class="form-label small text-secondary">{{
+                  isFormBusiness ? "Địa chỉ trụ sở *" : "Địa chỉ *"
+                }}</label>
                 <input v-model="infoForm.diaChi" class="form-control form-control-sm cdm-input" />
               </div>
               <div class="col-md-6">
                 <label class="form-label small text-secondary">Điểm tích lũy</label>
-                <input v-model="infoForm.diemTichLuy" type="number" min="0" class="form-control form-control-sm cdm-input" />
+                <input
+                  v-model="infoForm.diemTichLuy"
+                  type="number"
+                  min="0"
+                  class="form-control form-control-sm cdm-input"
+                />
               </div>
               <div class="col-md-6">
                 <label class="form-label small text-secondary">Trạng thái</label>
@@ -300,7 +607,7 @@ onMounted(() => { loadOrders(); });
             <div class="info-actions">
               <button class="cdm-btn cdm-btn--ghost" @click="cancelEditInfo">Hủy</button>
               <button class="cdm-btn cdm-btn--primary" :disabled="savingInfo" @click="saveInfo">
-                <Save :size="14" /> {{ savingInfo ? 'Đang lưu...' : 'Lưu thay đổi' }}
+                <Save :size="14" /> {{ savingInfo ? "Đang lưu..." : "Lưu thay đổi" }}
               </button>
             </div>
           </div>
@@ -308,29 +615,41 @@ onMounted(() => { loadOrders(); });
 
         <!-- ============ ORDERS ============ -->
         <div v-if="activeTab === 'orders'" class="cdm-tab-pane">
-          <div v-if="ordersLoading" class="text-secondary small text-center py-4">Đang tải đơn hàng...</div>
+          <div v-if="ordersLoading" class="text-secondary small text-center py-4">
+            Đang tải đơn hàng...
+          </div>
           <div v-else-if="orders.length === 0" class="cdm-empty">
             <ShoppingBag :size="14" />
             <p>Khách hàng chưa có đơn hàng nào.</p>
           </div>
           <div v-else class="orders-list">
             <div
-              v-for="o in orders" :key="o.donHangId"
+              v-for="o in orders"
+              :key="o.donHangId"
               class="order-row"
               :class="{ 'is-open': expandedOrder === o.donHangId }"
               @click="expandedOrder = expandedOrder === o.donHangId ? null : o.donHangId"
             >
               <div class="order-head">
                 <div class="order-head-left">
-                  <span class="order-code">{{ o.maDonHang || o.maDon || '#' + o.donHangId }}</span>
+                  <span class="order-code">{{ o.maDonHang || o.maDon || "#" + o.donHangId }}</span>
                   <span class="order-date"><Clock :size="14" /> {{ formatDate(o.ngayDat) }}</span>
                 </div>
                 <div class="order-head-right">
                   <span class="order-total">{{ formatPrice(o.thanhTien) }}</span>
-                  <span class="order-status" :style="{ background: orderStatusColor(o.trangThaiDonHang).bg, color: orderStatusColor(o.trangThaiDonHang).text }">
+                  <span
+                    class="order-status"
+                    :style="{
+                      background: orderStatusColor(o.trangThaiDonHang).bg,
+                      color: orderStatusColor(o.trangThaiDonHang).text,
+                    }"
+                  >
                     {{ orderStatusLabel(o.trangThaiDonHang) }}
                   </span>
-                  <i class="fa" :class="expandedOrder === o.donHangId ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                  <i
+                    class="fa"
+                    :class="expandedOrder === o.donHangId ? 'fa-chevron-up' : 'fa-chevron-down'"
+                  ></i>
                 </div>
               </div>
               <div v-if="expandedOrder === o.donHangId" class="order-detail" @click.stop>
@@ -339,16 +658,34 @@ onMounted(() => { loadOrders(); });
                   <div class="order-products">{{ o.tenSanPham || o.danhSachSanPham }}</div>
                 </div>
                 <div class="order-detail-grid">
-                  <div><span class="info-label">Phương thức TT</span><span class="info-value">{{ o.phuongThucThanhToan || '—' }}</span></div>
-                  <div><span class="info-label">Địa chỉ giao</span><span class="info-value">{{ o.diaChiGiaoHang || '—' }}</span></div>
-                  <div><span class="info-label">Phí ship</span><span class="info-value">{{ formatPrice(o.phiVanChuyen || 0) }}</span></div>
-                  <div><span class="info-label">Giảm giá</span><span class="info-value">{{ formatPrice(o.giamGia || 0) }}</span></div>
+                  <div>
+                    <span class="info-label">Phương thức TT</span
+                    ><span class="info-value">{{ o.phuongThucThanhToan || "—" }}</span>
+                  </div>
+                  <div>
+                    <span class="info-label">Địa chỉ giao</span
+                    ><span class="info-value">{{ o.diaChiGiaoHang || "—" }}</span>
+                  </div>
+                  <div>
+                    <span class="info-label">Phí ship</span
+                    ><span class="info-value">{{ formatPrice(o.phiVanChuyen || 0) }}</span>
+                  </div>
+                  <div>
+                    <span class="info-label">Giảm giá</span
+                    ><span class="info-value">{{ formatPrice(o.giamGia || 0) }}</span>
+                  </div>
                 </div>
                 <div class="order-detail-actions">
-                  <button class="cdm-btn cdm-btn--ghost cdm-btn--sm" @click.stop="expandedOrder = null">
+                  <button
+                    class="cdm-btn cdm-btn--ghost cdm-btn--sm"
+                    @click.stop="expandedOrder = null"
+                  >
                     <X :size="14" /> Đóng
                   </button>
-                  <button class="cdm-btn cdm-btn--primary cdm-btn--sm" @click.stop="emit('view-order', o)">
+                  <button
+                    class="cdm-btn cdm-btn--primary cdm-btn--sm"
+                    @click.stop="emit('view-order', o)"
+                  >
                     <i class="fa fa-external-link-alt"></i> Xem chi tiết
                   </button>
                 </div>
@@ -365,17 +702,61 @@ onMounted(() => { loadOrders(); });
                 <div v-if="getAvatarUrl(customer)" class="cdm-avatar-mini cdm-avatar-mini--img">
                   <img :src="getAvatarUrl(customer)" :alt="customer.hoTen" />
                 </div>
-                <div v-else class="cdm-avatar-mini cdm-avatar-mini--initials" :style="{ background: getAvatarBgColor(customer) }">
+                <div
+                  v-else
+                  class="cdm-avatar-mini cdm-avatar-mini--initials"
+                  :style="{ background: getAvatarBgColor(customer) }"
+                >
                   {{ getInitials(customer) }}
                 </div>
               </div>
               <div>
-                <div class="chat-title">Chat với {{ customer.hoTen || 'khách' }}</div>
-                <div class="chat-sub">CSKH trực tuyến</div>
+                <div class="chat-title">Chat với {{ customer.hoTen || "khách" }}</div>
+                <div class="chat-sub">
+                  {{
+                    !chatConversationId
+                      ? "Không có cuộc trò chuyện"
+                      : chatTrangThai === "CHAT_NHAN_VIEN"
+                        ? "Nhân viên đang trả lời"
+                        : "Bot tự động (AI)"
+                  }}
+                </div>
+              </div>
+              <div v-if="chatConversationId" class="d-flex align-items-center gap-2 ms-auto">
+                <button
+                  type="button"
+                  class="cdm-btn cdm-btn--ghost cdm-btn--sm"
+                  @click="toggleChatMode"
+                >
+                  {{ chatTrangThai === "CHAT_NHAN_VIEN" ? "🤖 Chuyển về AI" : "🧑‍💻 Nhận tiếp (NV)" }}
+                </button>
+                <button class="chat-reload-btn" title="Tải lại" @click="loadChatHistory">
+                  <RefreshCw :size="14" />
+                </button>
               </div>
             </div>
-            <div class="chat-body">
-              <div v-for="(m, idx) in chatMessages" :key="idx" class="chat-message" :class="m.side">
+
+            <!-- Loading -->
+            <div v-if="chatLoading" class="chat-body chat-body--center">
+              <span class="chat-empty-text">Đang tải...</span>
+            </div>
+
+            <!-- Empty — khách chưa nhắn tin -->
+            <div v-else-if="!chatConversationId" class="chat-body chat-body--center">
+              <span class="chat-empty-text">Khách hàng chưa có cuộc trò chuyện nào.</span>
+            </div>
+
+            <!-- Danh sách tin nhắn -->
+            <div v-else ref="chatBodyRef" class="chat-body">
+              <div v-if="chatMessages.length === 0" class="chat-empty-text text-center">
+                Chưa có tin nhắn nào.
+              </div>
+              <div
+                v-for="(m, idx) in chatMessages"
+                :key="m.id || idx"
+                class="chat-message"
+                :class="m.side"
+              >
                 <div class="chat-bubble">
                   <span class="chat-bubble-name">{{ m.name }}</span>
                   <span class="chat-bubble-text">{{ m.text }}</span>
@@ -383,10 +764,21 @@ onMounted(() => { loadOrders(); });
                 </div>
               </div>
             </div>
-            <div class="chat-composer">
-              <textarea v-model="chatInput" rows="2" placeholder="Nhắn với khách hàng..." @keyup.enter="sendChat"></textarea>
-              <button class="cdm-btn cdm-btn--primary cdm-btn--sm" @click="sendChat">
-                <i class="fa fa-paper-plane"></i> Gửi
+
+            <div class="chat-composer" v-if="chatConversationId">
+              <textarea
+                v-model="chatInput"
+                rows="2"
+                placeholder="Nhắn với khách hàng..."
+                :disabled="chatSending"
+                @keyup.enter.exact="sendChat"
+              ></textarea>
+              <button
+                class="cdm-btn cdm-btn--primary cdm-btn--sm"
+                :disabled="chatSending || !chatInput.trim()"
+                @click="sendChat"
+              >
+                <Send :size="14" /> Gửi
               </button>
             </div>
           </div>
@@ -399,7 +791,7 @@ onMounted(() => { loadOrders(); });
 <style scoped>
 /* ═══ Backdrop & Shell ═══ */
 .cdm-backdrop {
-  background: var(--bg-overlay, rgba(0,0,0,0.5));
+  background: var(--bg-overlay, rgba(0, 0, 0, 0.5));
   z-index: 1000;
 }
 .cdm-shell {
@@ -412,7 +804,7 @@ onMounted(() => { loadOrders(); });
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 /* ═══ Header ═══ */
@@ -442,10 +834,18 @@ onMounted(() => { loadOrders(); });
   font-size: 22px;
   font-weight: 700;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
-.cdm-avatar--img img { width: 100%; height: 100%; object-fit: cover; }
-.cdm-name { font-size: 18px; font-weight: 700; color: var(--ink, #1f2937); }
+.cdm-avatar--img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cdm-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink, #1f2937);
+}
 .cdm-contact {
   font-size: 13px;
   color: var(--muted, #6b7280);
@@ -466,9 +866,18 @@ onMounted(() => { loadOrders(); });
   padding: 3px 10px;
   border-radius: 10px;
 }
-.cdm-badge.is-active { background: var(--ok-bg, #ecfdf5); color: var(--ok-text, #047857); }
-.cdm-badge.is-locked { background: #fee2e2; color: #b91c1c; }
-.cdm-badge.is-soft   { background: var(--pink-100, #ffe6f0); color: var(--pink-700, #a81b5d); }
+.cdm-badge.is-active {
+  background: var(--ok-bg, #ecfdf5);
+  color: var(--ok-text, #047857);
+}
+.cdm-badge.is-locked {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.cdm-badge.is-soft {
+  background: var(--pink-100, #ffe6f0);
+  color: var(--pink-700, #a81b5d);
+}
 .cdm-close {
   background: transparent;
   border: none;
@@ -479,7 +888,10 @@ onMounted(() => { loadOrders(); });
   border-radius: 6px;
   transition: background 0.15s ease;
 }
-.cdm-close:hover { background: var(--pink-100, #ffe6f0); color: var(--pink-700, #a81b5d); }
+.cdm-close:hover {
+  background: var(--pink-100, #ffe6f0);
+  color: var(--pink-700, #a81b5d);
+}
 
 /* ═══ Tabs ═══ */
 .cdm-tabs {
@@ -504,13 +916,17 @@ onMounted(() => { loadOrders(); });
   border-radius: 10px 10px 0 0;
   transition: color 0.15s ease;
 }
-.cdm-tab i { font-size: 13px; }
-.cdm-tab:hover { color: var(--pink-600, #db2777); }
+.cdm-tab i {
+  font-size: 13px;
+}
+.cdm-tab:hover {
+  color: var(--pink-600, #db2777);
+}
 .cdm-tab.is-active {
   color: var(--pink-700, #a81b5d);
 }
 .cdm-tab.is-active::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -1px;
   left: 8px;
@@ -535,8 +951,19 @@ onMounted(() => { loadOrders(); });
   padding: 20px;
   background: #fafafa;
 }
-.cdm-tab-pane { animation: fadeIn 0.2s ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.cdm-tab-pane {
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 
 /* ═══ Info view ═══ */
 .info-grid {
@@ -555,7 +982,9 @@ onMounted(() => { loadOrders(); });
   padding: 12px 16px;
   border-bottom: 1px dashed var(--border-color-soft, #f1dbe6);
 }
-.info-row:nth-last-child(-n+2) { border-bottom: none; }
+.info-row:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
 .info-label {
   color: var(--muted, #6b7280);
   font-size: 13px;
@@ -590,17 +1019,21 @@ onMounted(() => { loadOrders(); });
   transition: all 0.15s ease;
   background: var(--pink-600, #db2777);
   color: #fff;
-  box-shadow: 0 3px 0 var(--pink-700, #a81b5d), 0 4px 8px rgba(168, 27, 93, 0.3);
+  box-shadow:
+    0 3px 0 var(--pink-700, #a81b5d),
+    0 4px 8px rgba(168, 27, 93, 0.3);
   border-bottom: 3px solid var(--pink-700, #a81b5d);
 }
 .cdm-btn:hover {
   background: var(--pink-700, #a81b5d);
   transform: translateY(-1px);
-  box-shadow: 0 4px 0 var(--pink-700, #a81b5d), 0 6px 12px rgba(168, 27, 93, 0.35);
+  box-shadow:
+    0 4px 0 var(--pink-700, #a81b5d),
+    0 6px 12px rgba(168, 27, 93, 0.35);
 }
 .cdm-btn:active {
   transform: translateY(2px);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   border-bottom-width: 0;
 }
 .cdm-btn:disabled {
@@ -625,7 +1058,10 @@ onMounted(() => { loadOrders(); });
   box-shadow: none;
   transform: translateY(-1px);
 }
-.cdm-btn--sm { padding: 6px 12px; font-size: 12px; }
+.cdm-btn--sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
 
 /* ═══ Info edit ═══ */
 .info-edit {
@@ -641,7 +1077,11 @@ onMounted(() => { loadOrders(); });
 }
 
 /* ═══ Orders tab ═══ */
-.orders-list { display: flex; flex-direction: column; gap: 8px; }
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .order-row {
   background: #fff;
   border: 1px solid var(--border-color-soft, #f1dbe6);
@@ -650,27 +1090,57 @@ onMounted(() => { loadOrders(); });
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.order-row:hover { border-color: var(--pink-300, #f7a8c8); box-shadow: 0 2px 8px rgba(168,27,93,0.1); }
-.order-row.is-open { border-color: var(--pink-400, #ec4899); }
+.order-row:hover {
+  border-color: var(--pink-300, #f7a8c8);
+  box-shadow: 0 2px 8px rgba(168, 27, 93, 0.1);
+}
+.order-row.is-open {
+  border-color: var(--pink-400, #ec4899);
+}
 .order-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
 }
-.order-head-left { display: flex; flex-direction: column; gap: 4px; }
-.order-code { font-weight: 700; color: var(--ink, #1f2937); font-size: 14px; }
-.order-date { color: var(--muted, #6b7280); font-size: 12px; }
-.order-date i { font-size: 11px; margin-right: 4px; }
-.order-head-right { display: flex; align-items: center; gap: 12px; }
-.order-total { font-weight: 800; color: var(--pink-700, #a81b5d); font-size: 14px; }
+.order-head-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.order-code {
+  font-weight: 700;
+  color: var(--ink, #1f2937);
+  font-size: 14px;
+}
+.order-date {
+  color: var(--muted, #6b7280);
+  font-size: 12px;
+}
+.order-date i {
+  font-size: 11px;
+  margin-right: 4px;
+}
+.order-head-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.order-total {
+  font-weight: 800;
+  color: var(--pink-700, #a81b5d);
+  font-size: 14px;
+}
 .order-status {
   font-size: 11px;
   padding: 3px 10px;
   border-radius: 12px;
   font-weight: 600;
 }
-.order-head-right .fa { color: var(--muted, #6b7280); font-size: 12px; }
+.order-head-right .fa {
+  color: var(--muted, #6b7280);
+  font-size: 12px;
+}
 
 .order-detail {
   padding: 0 16px 16px;
@@ -702,8 +1172,12 @@ onMounted(() => { loadOrders(); });
   flex-direction: column;
   gap: 2px;
 }
-.order-detail-grid .info-label { font-size: 12px; }
-.order-detail-grid .info-value { font-size: 13px; }
+.order-detail-grid .info-label {
+  font-size: 12px;
+}
+.order-detail-grid .info-value {
+  font-size: 13px;
+}
 .order-detail-actions {
   display: flex;
   justify-content: flex-end;
@@ -716,11 +1190,21 @@ onMounted(() => { loadOrders(); });
   padding: 40px 20px;
   color: var(--muted, #6b7280);
 }
-.cdm-empty i { font-size: 32px; margin-bottom: 8px; opacity: 0.5; display: block; }
-.cdm-empty p { margin: 0; font-size: 13px; }
+.cdm-empty i {
+  font-size: 32px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+  display: block;
+}
+.cdm-empty p {
+  margin: 0;
+  font-size: 13px;
+}
 
 /* ═══ Chat tab ═══ */
-.chat-tab { padding: 0; }
+.chat-tab {
+  padding: 0;
+}
 .chat-window {
   background: var(--pink-50, #fff5f9);
   border: 1px solid var(--border-color-soft, #f1dbe6);
@@ -738,7 +1222,10 @@ onMounted(() => { loadOrders(); });
   background: #fff;
   border-bottom: 1px solid var(--border-color-soft, #f1dbe6);
 }
-.chat-avatar-mini { width: 40px; height: 40px; }
+.chat-avatar-mini {
+  width: 40px;
+  height: 40px;
+}
 .cdm-avatar-mini {
   width: 40px;
   height: 40px;
@@ -753,11 +1240,22 @@ onMounted(() => { loadOrders(); });
   border: 2px solid #fff;
   box-shadow: 0 2px 6px rgba(168, 27, 93, 0.2);
 }
-.cdm-avatar-mini--img img { width: 100%; height: 100%; object-fit: cover; }
-.chat-title { font-weight: 700; color: var(--ink, #1f2937); font-size: 14px; }
-.chat-sub { font-size: 11px; color: var(--success, #059669); }
+.cdm-avatar-mini--img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.chat-title {
+  font-weight: 700;
+  color: var(--ink, #1f2937);
+  font-size: 14px;
+}
+.chat-sub {
+  font-size: 11px;
+  color: var(--success, #059669);
+}
 .chat-sub::before {
-  content: '';
+  content: "";
   display: inline-block;
   width: 6px;
   height: 6px;
@@ -774,9 +1272,15 @@ onMounted(() => { loadOrders(); });
   flex-direction: column;
   gap: 10px;
 }
-.chat-message { display: flex; }
-.chat-message.right { justify-content: flex-end; }
-.chat-message.left { justify-content: flex-start; }
+.chat-message {
+  display: flex;
+}
+.chat-message.right {
+  justify-content: flex-end;
+}
+.chat-message.left {
+  justify-content: flex-start;
+}
 .chat-bubble {
   max-width: 70%;
   background: #fff;
@@ -790,10 +1294,28 @@ onMounted(() => { loadOrders(); });
   border-color: transparent;
 }
 .chat-message.right .chat-bubble-name,
-.chat-message.right .chat-bubble-time { color: rgba(255,255,255,0.85); }
-.chat-bubble-name { display: block; font-size: 11px; font-weight: 700; margin-bottom: 3px; color: var(--muted, #6b7280); }
-.chat-bubble-text { display: block; font-size: 13px; line-height: 1.4; }
-.chat-bubble-time { display: block; margin-top: 4px; font-size: 10px; color: var(--muted, #6b7280); text-align: right; }
+.chat-message.right .chat-bubble-time {
+  color: rgba(255, 255, 255, 0.85);
+}
+.chat-bubble-name {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 3px;
+  color: var(--muted, #6b7280);
+}
+.chat-bubble-text {
+  display: block;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.chat-bubble-time {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--muted, #6b7280);
+  text-align: right;
+}
 .chat-composer {
   display: flex;
   gap: 8px;
@@ -811,12 +1333,60 @@ onMounted(() => { loadOrders(); });
   font-size: 13px;
   resize: none;
 }
+.chat-composer textarea:disabled {
+  opacity: 0.6;
+}
+.chat-composer .cdm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.chat-body--center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chat-empty-text {
+  color: var(--text-muted, #9ca3af);
+  font-size: 13px;
+  text-align: center;
+}
+.chat-reload-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #9ca3af);
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+}
+.chat-reload-btn:hover {
+  color: var(--pink-500, #ec4899);
+  background: var(--pink-50, #fff5f9);
+}
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 /* ═══ Responsive ═══ */
 @media (max-width: 600px) {
-  .info-grid { grid-template-columns: 1fr; }
-  .order-detail-grid { grid-template-columns: 1fr; }
-  .cdm-name { font-size: 16px; }
-  .cdm-avatar { width: 50px; height: 50px; font-size: 18px; }
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  .order-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .cdm-name {
+    font-size: 16px;
+  }
+  .cdm-avatar {
+    width: 50px;
+    height: 50px;
+    font-size: 18px;
+  }
 }
 </style>

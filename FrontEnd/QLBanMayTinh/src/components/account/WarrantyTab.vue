@@ -131,7 +131,7 @@ onMounted(async () => { await Promise.all([loadOrdersAndProducts(), loadClaims()
               <div class="table-meta"><span v-if="item.maSku">SKU: {{ item.maSku }}</span><span v-if="item.soSerial">Serial: {{ item.soSerial }}</span></div>
             </div>
             <div class="col-order">
-              <div class="order-link">#{{ item.maDon || item.donHangId }}</div>
+              <div class="order-link">#{{ item.maDonHang || item.maDon || item.donHangId }}</div>
               <div class="order-date">{{ formatDate(item.ngayDat) }}</div>
             </div>
             <div class="col-bh">

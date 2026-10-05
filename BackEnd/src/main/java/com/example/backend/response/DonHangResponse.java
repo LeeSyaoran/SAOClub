@@ -39,4 +39,26 @@ public class DonHangResponse {
     private String khachHangHoTen;
     private String khachHangSdt;
     private String khachHangDiaChi;
+
+    // Cancellation request info
+    private Boolean yeuCauHuy;
+    private String lyDoHuy;
+    private LocalDateTime ngayYeuCauHuy;
+
+    // Constructor 25 tham số tương thích ngược
+    public DonHangResponse(
+            Integer donHangId, String maDonHang, Integer khachHangId, Integer nhanVienId,
+            Integer khuyenMaiId, Integer diaChiGiaoHangId, String diaChiGiaoHangText,
+            String nguoiNhan, String sdtNguoiNhan, BigDecimal tongTien, BigDecimal giamGia,
+            BigDecimal phiVanChuyen, BigDecimal thanhTien, LocalDateTime ngayDat,
+            LocalDateTime ngayGiaoDuKien, LocalDateTime ngayGiaoThucTe, String trangThaiDonHang,
+            String trangThaiThanhToan, String kenhBan, String ghiChu, String maVanDon,
+            String phuongThucThanhToan, String khachHangHoTen, String khachHangSdt, String khachHangDiaChi
+    ) {
+        this(donHangId, maDonHang, khachHangId, nhanVienId, khuyenMaiId, diaChiGiaoHangId,
+                diaChiGiaoHangText, nguoiNhan, sdtNguoiNhan, tongTien, giamGia, phiVanChuyen,
+                thanhTien, ngayDat, ngayGiaoDuKien, ngayGiaoThucTe, trangThaiDonHang,
+                trangThaiThanhToan, kenhBan, ghiChu, maVanDon, phuongThucThanhToan,
+                khachHangHoTen, khachHangSdt, khachHangDiaChi, false, null, null);
+    }
 }

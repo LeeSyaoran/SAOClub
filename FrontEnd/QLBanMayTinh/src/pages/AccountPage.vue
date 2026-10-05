@@ -23,7 +23,6 @@ import ProductDetail from "../components/product/ProductDetail.vue";
 import Skeleton from "../components/common/Skeleton.vue";
 import LuckyWheelPanel from "../components/account/LuckyWheelPanel.vue";
 import WarrantyTab from "../components/account/WarrantyTab.vue";
-import WarrantyPlanTab from "../components/account/WarrantyPlanTab.vue";
 import ChatWidget from "../components/account/ChatWidget.vue";
 import {Clock,
   Truck,
@@ -98,12 +97,7 @@ const handleLogout = () => {
 const auth = AuthStore;
 const activeTab = ref('overview'); // Default to overview (no separate 'account' tab)
 
-const warrantySubTab = ref('claims');
-const warrantySubTabs = computed(() => [
-  { id: 'claims', icon: Shield, label: 'Phiếu bảo hành', badge: warrantyClaimsCount.value },
-  { id: 'plans',  icon: ShieldPlus, label: 'Gói bảo hành mở rộng' },
-]);
-const warrantyClaimsCount = ref(0);
+
 const activeHistoryTab = ref("pending");
 const sidebarOpen = ref(false);
 
@@ -316,6 +310,73 @@ const confirmReceived = async (o) => {
     }
   } finally {
     confirmingOrderId.value = null;
+  }
+};
+
+// ── Yêu cầu hủy đơn hàng ──────────────────────────────────────────
+const cancelModalOrder = ref(null);
+const cancelReasonType = ref("change_mind");
+const customCancelReason = ref("");
+const cancelSubmitting = ref(false);
+
+const CANCEL_REASONS = [
+  { id: "change_mind", label: "Tôi không còn nhu cầu mua nữa" },
+  { id: "wrong_product", label: "Tôi đặt nhầm sản phẩm hoặc số lượng" },
+  { id: "change_address", label: "Tôi muốn thay đổi thông tin nhận hàng" },
+  { id: "change_payment", label: "Tôi muốn thay đổi phương thức thanh toán" },
+  { id: "better_price", label: "Tìm thấy giá tốt hơn ở nơi khác" },
+  { id: "other", label: "Lý do khác" }
+];
+
+const openCancelModal = (order) => {
+  cancelModalOrder.value = order;
+  cancelReasonType.value = "change_mind";
+  customCancelReason.value = "";
+};
+
+const closeCancelModal = () => {
+  cancelModalOrder.value = null;
+  cancelReasonType.value = "change_mind";
+  customCancelReason.value = "";
+};
+
+const submitCancelRequest = async () => {
+  if (!cancelModalOrder.value) return;
+  const oId = cancelModalOrder.value.donHangId || cancelModalOrder.value.id;
+  let reason = "";
+  if (cancelReasonType.value === "other") {
+    reason = customCancelReason.value.trim();
+    if (!reason) {
+      emit("toast", "Vui lòng nhập lý do hủy đơn hàng", "warning");
+      return;
+    }
+  } else {
+    const found = CANCEL_REASONS.find(r => r.id === cancelReasonType.value);
+    reason = found ? found.label : "Khách yêu cầu hủy đơn";
+  }
+
+  cancelSubmitting.value = true;
+  try {
+    const res = await DonHangService.yeuCauHuy(oId, reason);
+    if (res?.error) {
+      emit("toast", res.error, "error");
+      return;
+    }
+    emit("toast", "Đã gửi yêu cầu hủy đơn hàng thành công. Cửa hàng sẽ sớm duyệt yêu cầu của bạn.", "success");
+    closeCancelModal();
+    await fetchData();
+    if (selectedOrderDetail.value && (selectedOrderDetail.value.donHangId === oId || selectedOrderDetail.value.id === oId)) {
+      selectedOrderDetail.value = {
+        ...selectedOrderDetail.value,
+        yeuCauHuy: true,
+        lyDoHuy: reason,
+        ngayYeuCauHuy: new Date().toISOString()
+      };
+    }
+  } catch (err) {
+    emit("toast", err.message || "Gửi yêu cầu hủy đơn thất bại", "error");
+  } finally {
+    cancelSubmitting.value = false;
   }
 };
 
@@ -791,7 +852,7 @@ const handleOutsideClick = (e) => {
                       <div class="overview-order-info">
                         <div class="overview-order-line1">
                           <span class="overview-order-label">Đơn hàng:</span>
-                          <strong class="overview-order-code">#{{ o.maDon || o.donHangId }}</strong>
+                          <strong class="overview-order-code">#{{ o.maDonHang || o.maDon || o.donHangId }}</strong>
                           <span class="overview-order-dot">•</span>
                           <span class="overview-order-date">Ngày đặt hàng: {{ formatDate(o.ngayDat || o.createdAt) }}</span>
                         </div>
@@ -938,7 +999,7 @@ const handleOutsideClick = (e) => {
                           <div class="order-info">
                             <div class="order-code">
                               <span class="order-code-label">Mã đơn</span>
-                              <span class="order-code-value">{{ o.maDon || o.donHangId }}</span>
+                              <span class="order-code-value">{{ o.maDonHang || o.maDon || o.donHangId }}</span>
                               <span
                                 v-if="isQrPayment(o)"
                                 class="badge d-inline-flex align-items-center gap-1 ms-1.5"
@@ -1001,6 +1062,36 @@ const handleOutsideClick = (e) => {
                             <button v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)" class="btn-outline-danger btn-sm" :disabled="o.trangThaiDonHang !== 'awaiting_confirmation' || confirmingOrderId === o.donHangId" @click="confirmReceived(o)">
                               <CheckCircle2 :size="14" /> Đã nhận hàng
                             </button>
+
+                            <!-- Nút Yêu cầu hủy đơn hoặc Trạng thái chờ duyệt hủy -->
+                            <template v-if="o.yeuCauHuy">
+                              <span
+                                class="badge d-inline-flex align-items-center gap-1 px-2.5 py-1.5 rounded-pill"
+                                style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-size:0.75rem;"
+                                :title="o.lyDoHuy ? 'Lý do: ' + o.lyDoHuy : 'Đang chờ cửa hàng duyệt hủy'"
+                              >
+                                <Clock :size="12" /> Chờ duyệt hủy
+                              </span>
+                            </template>
+                            <template v-else-if="['pending', 'confirmed'].includes(o.trangThaiDonHang)">
+                              <button
+                                class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
+                                style="font-size:0.78rem; border-radius:18px; padding:4px 12px;"
+                                @click.stop="openCancelModal(o)"
+                              >
+                                <XCircle :size="13" /> Yêu cầu hủy đơn
+                              </button>
+                            </template>
+                            <template v-else-if="['processing', 'shipping', 'out_for_delivery'].includes(o.trangThaiDonHang)">
+                              <button
+                                class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+                                style="font-size:0.78rem; border-radius:18px; padding:4px 12px; opacity:0.45; cursor:not-allowed;"
+                                disabled
+                                title="Đơn hàng đang đóng gói hoặc vận chuyển, không thể hủy"
+                              >
+                                <XCircle :size="13" /> Hủy đơn
+                              </button>
+                            </template>
                           </div>
                         </div>
                         <OrderTrackingLog v-if="['shipping', 'out_for_delivery', 'awaiting_confirmation'].includes(o.trangThaiDonHang)" :ma-van-don="o.maVanDon || ''" :history="historyByOrder[o.donHangId] || []" />
@@ -1019,7 +1110,7 @@ const handleOutsideClick = (e) => {
                           <div class="compact-info">
                             <div class="order-code">
                               <span class="order-code-label">Mã đơn</span>
-                              <span class="order-code-value">{{ o.maDon || o.donHangId }}</span>
+                              <span class="order-code-value">{{ o.maDonHang || o.maDon || o.donHangId }}</span>
                               <span
                                 v-if="isQrPayment(o)"
                                 class="badge d-inline-flex align-items-center gap-1 ms-1.5"
@@ -1087,38 +1178,20 @@ const handleOutsideClick = (e) => {
                 </div>
               </div>
 
-              <!-- ══════════════ TAB: BẢO HÀNH (Phiếu + Gói mở rộng) ══════════════ -->
+              <!-- ══════════════ TAB: BẢO HÀNH & PHIẾU BH ══════════════ -->
               <div v-else-if="activeTab === 'warranty'" class="panel-section">
                 <div class="panel-header">
                   <div class="panel-header-content">
                     <Shield :size="22" class="panel-header-icon" />
                     <div>
-                      <div class="panel-title">Bảo hành & Gói mở rộng</div>
-                      <div class="panel-subtitle">Theo dõi phiếu BH hoặc đăng ký gói gia hạn</div>
+                      <div class="panel-title">Bảo hành & Phiếu BH</div>
+                      <div class="panel-subtitle">Theo dõi sản phẩm bảo hành và các phiếu yêu cầu bảo hành</div>
                     </div>
                   </div>
                 </div>
 
-                <!-- Sub-tabs -->
-                <div class="sub-tabs">
-                  <button
-                    v-for="t in warrantySubTabs" :key="t.id"
-                    class="sub-tab"
-                    :class="{ 'is-active': warrantySubTab === t.id }"
-                    @click="warrantySubTab = t.id"
-                  >
-                    <component :is="t.icon" :size="14" />
-                    {{ t.label }}
-                    <span v-if="t.badge" class="sub-tab-badge">{{ t.badge }}</span>
-                  </button>
-                </div>
-
                 <div class="panel-content">
-                  <!-- Sub-tab 1: Phiếu bảo hành (WarrantyTab gốc) -->
-                  <WarrantyTab v-show="warrantySubTab === 'claims'" @toast="(m, ty) => emit('toast', m, ty)" @view-product="viewProductDetail" />
-
-                  <!-- Sub-tab 2: Gói bảo hành mở rộng (mới) -->
-                  <WarrantyPlanTab v-show="warrantySubTab === 'plans'" @toast="(m, ty) => emit('toast', m, ty)" />
+                  <WarrantyTab @toast="(m, ty) => emit('toast', m, ty)" @view-product="viewProductDetail" />
                 </div>
               </div>
 
@@ -1654,6 +1727,86 @@ const handleOutsideClick = (e) => {
       @close="returnModalOrder = null"
       @submitted="returnModalOrder = null; fetchData();"
     />
+
+    <!-- Modal Yêu cầu hủy đơn hàng -->
+    <div
+      v-if="cancelModalOrder"
+      class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+      style="background: rgba(15, 23, 42, 0.65); z-index: 1070; backdrop-filter: blur(4px);"
+      @click.self="closeCancelModal"
+    >
+      <div
+        class="bg-white rounded-4 shadow-xl overflow-hidden d-flex flex-column"
+        style="width: 480px; max-width: 95vw; border: 1px solid #fed7aa;"
+      >
+        <!-- Header -->
+        <div class="d-flex align-items-center justify-content-between px-4 py-3" style="background:#fff7ed; border-bottom:1px solid #ffedd5;">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px; height:36px; background:#fee2e2; color:#ef4444;">
+              <AlertTriangle :size="18" />
+            </div>
+            <div>
+              <div class="fw-bold" style="color:#0f172a; font-size:0.95rem;">Yêu cầu hủy đơn hàng</div>
+              <div class="text-secondary small" style="font-size:0.75rem;">
+                Mã đơn: #{{ cancelModalOrder.maDonHang || cancelModalOrder.donHangId }}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-sm" @click="closeCancelModal"></button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-4">
+          <div class="small text-secondary mb-3" style="font-size:0.82rem; line-height:1.45;">
+            Lưu ý: Đơn hàng chỉ có thể hủy khi đang ở trạng thái <strong>Chờ xác nhận</strong> hoặc <strong>Đã lên đơn</strong>. Khi đơn chuyển sang <strong>Đang đóng gói</strong>, bạn sẽ không thể hủy nữa.
+          </div>
+
+          <label class="form-label fw-semibold small mb-2" style="color:#1e293b;">
+            Vui lòng chọn lý do hủy đơn:
+          </label>
+          <div class="d-flex flex-column gap-2 mb-3">
+            <label
+              v-for="r in CANCEL_REASONS"
+              :key="r.id"
+              class="d-flex align-items-center gap-2.5 p-2.5 rounded-3 border"
+              :style="cancelReasonType === r.id ? 'border-color:#ea580c; background:#fff7ed;' : 'border-color:#e2e8f0; cursor:pointer;'"
+              @click="cancelReasonType = r.id"
+            >
+              <input type="radio" :value="r.id" v-model="cancelReasonType" style="accent-color:#ea580c;" />
+              <span style="font-size:0.83rem; color:#0f172a;">{{ r.label }}</span>
+            </label>
+          </div>
+
+          <div v-if="cancelReasonType === 'other'" class="mb-3">
+            <label class="form-label small text-secondary mb-1">Nhập lý do chi tiết:</label>
+            <textarea
+              v-model="customCancelReason"
+              class="form-control form-control-sm"
+              rows="3"
+              placeholder="Nhập lý do bạn muốn hủy đơn..."
+              style="font-size:0.82rem; resize:none;"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="d-flex align-items-center justify-content-end gap-2 px-4 py-3 bg-light border-top">
+          <button type="button" class="btn btn-sm btn-outline-secondary px-3" @click="closeCancelModal">
+            Đóng
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-danger px-3.5 fw-bold d-inline-flex align-items-center gap-1.5"
+            :disabled="cancelSubmitting"
+            @click="submitCancelRequest"
+          >
+            <Loader2 v-if="cancelSubmitting" :size="14" class="spin" />
+            <XCircle v-else :size="14" />
+            {{ cancelSubmitting ? "Đang gửi..." : "Gửi yêu cầu hủy" }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Floating chat widget — góc dưới bên phải, dùng chung cho cả khách đã đăng nhập -->

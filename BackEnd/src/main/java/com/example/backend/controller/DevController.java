@@ -1,12 +1,21 @@
 package com.example.backend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.Statement;
 
+/**
+ * Công cụ migration thủ công — CHỈ dùng khi phát triển.
+ * Bean chỉ được tạo khi chạy profile "dev" và yêu cầu quyền ADMIN.
+ * Các cột Firebase đã có trong Database/QLBanMayTinh.sql nên bình thường không cần gọi.
+ */
+@Profile("dev")
+@PreAuthorize("hasRole('ADMIN')")
 @RestController
 @RequestMapping("/api/dev")
 public class DevController {
@@ -46,3 +55,4 @@ public class DevController {
         }
     }
 }
+

@@ -338,6 +338,14 @@ public class DonHangService {
                         chiTietDonHangSerialRepository.save(link);
                     }
                 }
+                List<ChiTietDonHangSerial> links = chiTietDonHangSerialRepository.findByChiTietDonHang_Id(item.getId());
+                for (ChiTietDonHangSerial link : links) {
+                    ChiTietSanPham s = link.getChiTietSanPham();
+                    if (s != null && !"da_ban".equals(s.getTrangThai())) {
+                        s.setTrangThai("da_ban");
+                        chiTietSanPhamRepository.save(s);
+                    }
+                }
             }
         }
         BeanUtils.copyProperties(request, entity,
@@ -398,6 +406,78 @@ public class DonHangService {
         donHang.setNgayGiaoThucTe(ngayGiaoThucTe != null ? ngayGiaoThucTe : LocalDateTime.now());
         DonHang saved = donHangRepository.save(donHang);
         kichHoatBaoHanhTuDong(saved);
+        sseService.notifyOrderUpdate(id);
+        return saved;
+    }
+
+    @Transactional
+    public void yeuCauHuyDon(Integer id, String lyDoHuy) {
+        DonHang donHang = getById(id);
+        if (!isStaffOrOwner(donHang.getKhachHang().getKhachHangId())) {
+            throw new AccessDeniedException("Không có quyền yêu cầu hủy đơn hàng này");
+        }
+        String status = donHang.getTrangThaiDonHang();
+        if (!"pending".equals(status) && !"confirmed".equals(status)) {
+            throw new IllegalArgumentException("Chỉ có thể yêu cầu hủy đơn khi đơn hàng đang ở trạng thái 'Chờ xác nhận' hoặc 'Đã lên đơn'. Từ trạng thái 'Đang đóng gói' trở đi không thể hủy.");
+        }
+        if (Boolean.TRUE.equals(donHang.getYeuCauHuy())) {
+            throw new IllegalArgumentException("Đơn hàng này đã có yêu cầu hủy đang chờ duyệt.");
+        }
+        donHang.setYeuCauHuy(true);
+        donHang.setLyDoHuy(lyDoHuy != null && !lyDoHuy.isBlank() ? lyDoHuy.trim() : "Khách hàng yêu cầu hủy đơn");
+        donHang.setNgayYeuCauHuy(LocalDateTime.now());
+        donHangRepository.save(donHang);
+        sseService.notifyOrderUpdate(id);
+    }
+
+    @Transactional
+    public DonHang duyetHuyDon(Integer id, String ghiChu) {
+        DonHang donHang = getById(id);
+        String oldStatus = donHang.getTrangThaiDonHang();
+        if ("cancelled".equals(oldStatus)) {
+            throw new IllegalArgumentException("Đơn hàng đã ở trạng thái đã hủy");
+        }
+        if (!"pending".equals(oldStatus) && !"confirmed".equals(oldStatus)) {
+            throw new IllegalArgumentException("Đơn hàng đã chuyển sang trạng thái '" + oldStatus + "', không thể duyệt hủy.");
+        }
+
+        donHang.setTrangThaiDonHang("cancelled");
+        donHang.setYeuCauHuy(false);
+        if (ghiChu != null && !ghiChu.isBlank()) {
+            String currentNote = donHang.getGhiChu() != null ? donHang.getGhiChu() : "";
+            donHang.setGhiChu((currentNote + " [Đã duyệt hủy: " + ghiChu.trim() + "]").trim());
+        }
+
+        DonHang saved = donHangRepository.save(donHang);
+
+        // Trả serial và hoàn khuyến mãi
+        releaseSerialsToStock(id, true);
+        giaiPhongKhuyenMaiVoucher(saved);
+
+        // Ghi lịch sử đơn hàng
+        LichSuDonHang lichSu = new LichSuDonHang();
+        lichSu.setDonHangId(id);
+        lichSu.setTrangThaiCu(oldStatus);
+        lichSu.setTrangThaiMoi("cancelled");
+        lichSu.setThoiGian(LocalDateTime.now());
+        lichSuDonHangRepository.save(lichSu);
+
+        sseService.notifyOrderUpdate(id);
+        return saved;
+    }
+
+    @Transactional
+    public DonHang tuChoiHuyDon(Integer id, String lyDoTuChoi) {
+        DonHang donHang = getById(id);
+        if (!Boolean.TRUE.equals(donHang.getYeuCauHuy())) {
+            throw new IllegalArgumentException("Đơn hàng không có yêu cầu hủy nào đang chờ duyệt");
+        }
+        donHang.setYeuCauHuy(false);
+        if (lyDoTuChoi != null && !lyDoTuChoi.isBlank()) {
+            String currentNote = donHang.getGhiChu() != null ? donHang.getGhiChu() : "";
+            donHang.setGhiChu((currentNote + " [Từ chối hủy: " + lyDoTuChoi.trim() + "]").trim());
+        }
+        DonHang saved = donHangRepository.save(donHang);
         sseService.notifyOrderUpdate(id);
         return saved;
     }

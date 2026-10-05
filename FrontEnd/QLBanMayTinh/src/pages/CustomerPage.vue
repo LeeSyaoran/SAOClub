@@ -18,7 +18,7 @@ import {
   inject,
 } from "vue";
 import { useRouter } from "vue-router";
-import { Laptop, Gamepad2, Zap, Apple, Star, Wrench, Flame, ShoppingCart, X, ShoppingBag, GraduationCap, RefreshCw, SlidersHorizontal, ChevronLeft, ChevronRight, Sparkles, Cpu, Headphones, ShieldCheck, Tag, Heart, Truck, HardDrive } from '@lucide/vue';
+import { Laptop, Gamepad2, Zap, Apple, Star, Wrench, Flame, ShoppingCart, X, ShoppingBag, GraduationCap, RefreshCw, SlidersHorizontal, ChevronLeft, ChevronRight, Sparkles, Cpu, Headphones, ShieldCheck, Tag, Heart, Truck, HardDrive, Eye } from '@lucide/vue';
 import * as SanPhamService from "../services/SanPhamService.js";
 import * as DanhMucService from "../services/DanhMucService.js";
 import { t } from "../i18n/index.js";
@@ -1307,13 +1307,13 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     >Đồ họa</span>
                   </div>
 
-                  <!-- Nút Thêm vào giỏ -->
+                  <!-- Nút Xem chi tiết -->
                   <button
                     class="btn-3d-blue w-100 mb-2"
                     style="font-size:13px; padding:9px 12px;"
-                    @click.stop="handleQuickAdd(product)"
+                    @click.stop="openProduct(product)"
                   >
-                    <ShoppingCart :size="14" style="vertical-align:-2px;" /> Thêm vào giỏ
+                    <Eye :size="14" style="vertical-align:-2px;" /> Xem chi tiết
                   </button>
 
                   <!-- So sánh -->
@@ -1528,11 +1528,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold"
                       style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -1642,11 +1642,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#dc2626; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #991b1b; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #991b1b'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #991b1b'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -1676,11 +1676,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#dc2626; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #991b1b; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #991b1b'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #991b1b'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -1758,11 +1758,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#7c3aed; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #5b21b6; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #5b21b6'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #5b21b6'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -1792,11 +1792,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#7c3aed; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #5b21b6; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #5b21b6'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #5b21b6'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -1896,11 +1896,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#334155; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #94a3b8 0%, #64748b 50%, #475569 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #334155; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #334155'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #334155'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -1930,11 +1930,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#334155; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #94a3b8 0%, #64748b 50%, #475569 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #334155; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #334155'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #334155'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2034,11 +2034,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#d97706; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #92400e; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #92400e'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #92400e'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2068,11 +2068,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#d97706; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #92400e; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #92400e'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #92400e'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2172,11 +2172,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2206,11 +2206,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2309,11 +2309,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2343,11 +2343,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2434,11 +2434,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2468,11 +2468,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2559,11 +2559,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2593,11 +2593,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2684,11 +2684,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2718,11 +2718,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2809,11 +2809,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -2843,11 +2843,11 @@ const lgProducts = computed(() => locTheoTuKhoa(["lg"]).slice(0, 8));
                     <p class="fw-black mb-1" style="font-size:18px; color:#be185d; line-height:1;">{{ formatPrice(product.giaBan) }}</p>
                     <button
                       class="btn w-100 d-flex align-items-center justify-content-center gap-1 fw-bold" style="font-size:12px; padding:9px 12px; background:linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%); color:#ffffff; border:none; border-radius:8px; box-shadow:0 3px 0 #9d174d; transition:all 0.15s;"
-                      @click.stop="handleQuickAdd(product)"
+                      @click.stop="openProduct(product)"
                       @mouseenter="(e) => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 5px 0 #9d174d'; }"
                       @mouseleave="(e) => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 3px 0 #9d174d'; }"
                     >
-                      <ShoppingCart :size="13" /> Thêm vào giỏ
+                      <Eye :size="13" /> Xem chi tiết
                     </button>
                   </div>
                 </div>

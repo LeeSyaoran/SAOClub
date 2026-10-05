@@ -1,0 +1,1 @@
+{"model":"llama3.2","messages":[{"role":"user","content":"xin chao"}],"stream":false,"options":{"num_ctx":2048,"num_predict":200,"num_gpu":0}}

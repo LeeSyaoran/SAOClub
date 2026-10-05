@@ -1,15 +1,11 @@
 package com.example.backend.service;
 
-import com.example.backend.entity.BienTheSanPham;
-import com.example.backend.entity.NhanVien;
-import com.example.backend.entity.SanPham;
-import com.example.backend.entity.SanPhamHinhAnh;
-import com.example.backend.entity.TonKho;
-import com.example.backend.repository.*;
-import com.example.backend.request.SanPhamRequest;
-import com.example.backend.response.SanPhamCreatedResponse;
-import com.example.backend.response.SanPhamChiTietResponse;
-import com.example.backend.response.SanPhamResponse;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -19,13 +15,28 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
+import com.example.backend.entity.BienTheSanPham;
+import com.example.backend.entity.NhanVien;
+import com.example.backend.entity.SanPham;
+import com.example.backend.entity.SanPhamHinhAnh;
+import com.example.backend.entity.TonKho;
+import com.example.backend.repository.BienTheSanPhamRepository;
+import com.example.backend.repository.DanhMucRepository;
+import com.example.backend.repository.DmCpuRepository;
+import com.example.backend.repository.DmGpuRepository;
+import com.example.backend.repository.DmOcungRepository;
+import com.example.backend.repository.DmRamRepository;
+import com.example.backend.repository.NhaCungCapRepository;
+import com.example.backend.repository.SanPhamHinhAnhRepository;
+import com.example.backend.repository.SanPhamRepository;
+import com.example.backend.repository.ThuongHieuRepository;
+import com.example.backend.repository.TonKhoRepository;
+import com.example.backend.request.SanPhamRequest;
+import com.example.backend.response.SanPhamChiTietResponse;
+import com.example.backend.response.SanPhamCreatedResponse;
+import com.example.backend.response.SanPhamResponse;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
+import jakarta.persistence.EntityManager;
 
 @Service
 public class SanPhamService {
@@ -206,12 +217,20 @@ public class SanPhamService {
     // Tạo sản phẩm và biến thể mặc định
     @Transactional
     public SanPhamCreatedResponse createSanPham(SanPhamRequest request) {
+        kiemTraDuLieuTaoMoi(request);
+
         String maSanPham = chuanHoa(request.getMaSanPham());
         kiemTraTrungMaSanPham(maSanPham, null);
 
         // Kiểm tra trùng mã vạch biến thể
         String barcodeBienThe = chuanHoa(request.getBarcodeBienThe());
         kiemTraTrungBarcodeBienThe(barcodeBienThe, null);
+
+        // Kiểm tra trùng mã SKU biến thể đầu tiên
+        String maSkuReq = chuanHoa(request.getMaSku());
+        if (maSkuReq != null) {
+            kiemTraTrungMaSku(maSkuReq, null);
+        }
 
         SanPham sanPham = new SanPham();
         BeanUtils.copyProperties(request, sanPham, "sanPhamId", "bienTheId", "ngayTao", "maSanPham");
@@ -254,10 +273,11 @@ public class SanPhamService {
         bt.setSanPham(saved);
         bt.setTrangThai(trangThaiBienThe(request.getTrangThai()));
         bt.setBarcode(barcodeBienThe);
-        String maSku = chuanHoa(request.getMaSku());
+        String maSku = maSkuReq;
         if (maSku == null) {
             String prefix = (maSanPham != null ? maSanPham : "SP" + saved.getSanPhamId()).toUpperCase();
             maSku = prefix + "-001";
+            kiemTraTrungMaSku(maSku, null);
         }
         bt.setMaSku(maSku);
         if (bt.getGiaBan() == null) bt.setGiaBan(BigDecimal.ZERO);
@@ -377,7 +397,15 @@ public class SanPhamService {
             if (request.getKichThuocManHinh() != null) bt.setKichThuocManHinh(request.getKichThuocManHinh());
             if (request.getHeDieuHanh() != null) bt.setHeDieuHanh(request.getHeDieuHanh());
             if (request.getPin() != null) bt.setPin(request.getPin());
-            if (request.getTrongLuongKg() != null) bt.setTrongLuongKg(request.getTrongLuongKg());
+            if (request.getTrongLuongKg() != null) {
+                if (request.getTrongLuongKg().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new IllegalArgumentException("Trọng lượng (kg) phải lớn hơn 0");
+                }
+                if (request.getTrongLuongKg().compareTo(new BigDecimal("5")) > 0) {
+                    throw new IllegalArgumentException("Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)");
+                }
+                bt.setTrongLuongKg(request.getTrongLuongKg());
+            }
             if (request.getHinhAnhBienThe() != null) bt.setHinhAnhBienThe(request.getHinhAnhBienThe());
             if (request.getPhanLoaiTags() != null) bt.setPhanLoaiTags(request.getPhanLoaiTags());
             if (request.getPhanLoaiTen() != null) bt.setPhanLoaiTen(request.getPhanLoaiTen());
@@ -510,5 +538,75 @@ public class SanPhamService {
                 ? bienTheSanPhamRepository.existsByMaSku(maSku.trim())
                 : bienTheSanPhamRepository.existsByMaSkuAndBienTheIdNot(maSku.trim(), boQuaBienTheId);
         if (trung) throw new IllegalArgumentException("Mã SKU '" + maSku.trim() + "' đã được dùng");
+    }
+
+    /** Kiểm tra đầy đủ thông tin sản phẩm + tối thiểu 1 biến thể hợp lệ khi tạo mới */
+    private void kiemTraDuLieuTaoMoi(SanPhamRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Dữ liệu sản phẩm không được để trống");
+        }
+        if (chuanHoa(request.getTenSanPham()) == null) {
+            throw new IllegalArgumentException("Vui lòng nhập tên sản phẩm");
+        }
+        if (request.getThuongHieuId() == null) {
+            throw new IllegalArgumentException("Vui lòng chọn thương hiệu");
+        }
+        if (request.getDanhMucId() == null) {
+            throw new IllegalArgumentException("Vui lòng chọn danh mục");
+        }
+        if (request.getNhaCungCapId() == null) {
+            throw new IllegalArgumentException("Vui lòng chọn nhà cung cấp");
+        }
+        if (chuanHoa(request.getLoaiSanPham()) == null) {
+            throw new IllegalArgumentException("Vui lòng chọn loại sản phẩm");
+        }
+        boolean coAnh = chuanHoa(request.getHinhAnhChinh()) != null
+                || (request.getHinhAnhList() != null && request.getHinhAnhList().stream().anyMatch(s -> chuanHoa(s) != null));
+        if (!coAnh) {
+            throw new IllegalArgumentException("Vui lòng tải lên ít nhất 1 ảnh sản phẩm");
+        }
+        if (request.getBaoHanhThang() == null || request.getBaoHanhThang() <= 0) {
+            throw new IllegalArgumentException("Bảo hành (tháng) phải lớn hơn 0");
+        }
+        if (chuanHoa(request.getKichThuocManHinh()) == null) {
+            throw new IllegalArgumentException("Vui lòng nhập thông số màn hình");
+        }
+        if (chuanHoa(request.getHeDieuHanh()) == null) {
+            throw new IllegalArgumentException("Vui lòng nhập hệ điều hành");
+        }
+        if (chuanHoa(request.getPin()) == null) {
+            throw new IllegalArgumentException("Vui lòng nhập thông số pin");
+        }
+        if (request.getTrongLuongKg() == null || request.getTrongLuongKg().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Trọng lượng (kg) phải lớn hơn 0");
+        }
+        if (request.getTrongLuongKg().compareTo(new BigDecimal("5")) > 0) {
+            throw new IllegalArgumentException("Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)");
+        }
+        // Kiểm tra biến thể đầu tiên (bắt buộc tối thiểu 1 biến thể khi tạo mới sản phẩm)
+        if (chuanHoa(request.getMauSac()) == null) {
+            throw new IllegalArgumentException("Phiên bản phải có màu sắc");
+        }
+        if (request.getCpuId() == null) {
+            throw new IllegalArgumentException("Phiên bản phải chọn CPU");
+        }
+        if (request.getRamId() == null) {
+            throw new IllegalArgumentException("Phiên bản phải chọn RAM");
+        }
+        if (request.getOCungId() == null) {
+            throw new IllegalArgumentException("Phiên bản phải chọn ổ cứng");
+        }
+        if (request.getGpuId() == null) {
+            throw new IllegalArgumentException("Phiên bản phải chọn GPU");
+        }
+        if (request.getGiaNhap() == null || request.getGiaNhap().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Giá vốn của phiên bản phải lớn hơn 0");
+        }
+        if (request.getGiaBan() == null || request.getGiaBan().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Giá bán của phiên bản phải lớn hơn 0");
+        }
+        if (request.getGiaBan().compareTo(request.getGiaNhap()) < 0) {
+            throw new IllegalArgumentException("Giá bán của phiên bản không được nhỏ hơn giá vốn");
+        }
     }
 }

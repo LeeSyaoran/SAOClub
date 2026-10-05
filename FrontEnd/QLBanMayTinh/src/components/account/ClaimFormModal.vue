@@ -66,25 +66,48 @@ const submit = async () => {
   submitting.value = true;
   try {
     const payload = {
-      khachHangId: auth.user?.id,
+      khachHangId: auth.user?.khachHangId || auth.user?.id || props.product.khachHangId,
       chiTietId: props.product.chiTietId,
+      bienTheId: props.product.bienTheId,
       donHangId: props.product.donHangId,
+      ngayMua: props.product.ngayGiaoThucTe || props.product.ngayDat || new Date().toISOString(),
+      ngayHetBh: props.product.ngayHetBaoHanh || null,
       moTaLoi: moTaLoi.value.trim(),
       phuongThuc: phuongThuc.value,
       diaChiLayHang: phuongThuc.value === 'giao_tan_noi' ? diaChiLayHang.value.trim() : null,
+      chiPhiPhatSinh: 0,
       trangThai: 'cho_xu_ly',
     };
     const res = await PhieuBaoHanhService.create(payload);
-    if (!res.ok) throw new Error(await res.text());
-    const baoHanhId = await res.json();
+    const text = await res.text();
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+
+    if (!res.ok) {
+      let errorMsg = 'Gửi yêu cầu thất bại';
+      if (data && typeof data === 'object') {
+        errorMsg = data.message || Object.values(data).join('; ') || errorMsg;
+      } else if (typeof data === 'string' && data.trim()) {
+        errorMsg = data.trim();
+      }
+      throw new Error(errorMsg);
+    }
+
+    const baoHanhId = data?.baoHanhId || data?.id || data;
     
     // Upload images
-    for (const f of hinhAnhFiles.value) {
-      const formData = new FormData();
-      formData.append('file', f.file);
-      formData.append('loai', f.loai);
-      formData.append('tenFile', f.tenFile);
-      await HinhAnhBaoHanhService.upload(baoHanhId, formData).catch(() => {});
+    if (baoHanhId && hinhAnhFiles.value.length > 0) {
+      for (const f of hinhAnhFiles.value) {
+        const formData = new FormData();
+        formData.append('file', f.file);
+        formData.append('loai', f.loai);
+        formData.append('tenFile', f.tenFile);
+        await HinhAnhBaoHanhService.upload(baoHanhId, formData).catch(() => {});
+      }
     }
     emit('submitted');
   } catch (e) {
@@ -125,7 +148,7 @@ const submit = async () => {
             <div class="product-warranty">
               <Calendar :size="12" />
               Hết hạn bảo hành: <strong>{{ formatDate(product.ngayHetBaoHanh) }}</strong>
-              · Đơn hàng <strong>#{{ product.maDon || product.donHangId }}</strong>
+              · Đơn hàng <strong>#{{ product.maDonHang || product.maDon || product.donHangId }}</strong>
             </div>
           </div>
         </div>

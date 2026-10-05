@@ -713,7 +713,143 @@
                 </div>
               </div>
             </div>
+
+            <!-- Khu vực hành động Hủy đơn hàng -->
+            <div class="mt-3 pt-3 border-top" style="border-color: #e2e8f0 !important">
+              <!-- Trường hợp 1: Đã gửi yêu cầu hủy và đang chờ admin duyệt -->
+              <div
+                v-if="order.yeuCauHuy"
+                class="p-2.5 rounded-3 d-flex align-items-start gap-2"
+                style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e"
+              >
+                <Clock :size="16" class="flex-shrink-0 mt-0.5" style="color: #b45309" />
+                <div style="font-size: 0.78rem">
+                  <div class="fw-bold text-amber-900" style="color: #92400e">
+                    Đang chờ cửa hàng duyệt hủy
+                  </div>
+                  <div v-if="order.lyDoHuy" class="mt-0.5 text-secondary" style="font-size: 0.74rem">
+                    Lý do: {{ order.lyDoHuy }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Trường hợp 2: Đang ở trạng thái pending hoặc confirmed -> Được phép gửi yêu cầu hủy -->
+              <template v-else-if="['pending', 'confirmed'].includes(order.trangThaiDonHang)">
+                <button
+                  type="button"
+                  class="btn btn-outline-danger btn-sm w-100 py-2 d-inline-flex align-items-center justify-content-center gap-1.5 fw-semibold"
+                  style="border-radius: 10px; font-size: 0.82rem"
+                  @click="openCancelDialog"
+                >
+                  <XCircle :size="15" />
+                  <span>Yêu cầu hủy đơn hàng</span>
+                </button>
+              </template>
+
+              <!-- Trường hợp 3: Đã từ processing trở đi -> Nút mờ (disabled) theo đúng yêu cầu -->
+              <template
+                v-else-if="
+                  ['processing', 'shipping', 'out_for_delivery', 'awaiting_confirmation', 'delivered'].includes(
+                    order.trangThaiDonHang
+                  )
+                "
+              >
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm w-100 py-2 d-inline-flex align-items-center justify-content-center gap-1.5 fw-semibold opacity-50"
+                  style="border-radius: 10px; font-size: 0.82rem; cursor: not-allowed"
+                  disabled
+                  title="Đơn hàng đã bắt đầu đóng gói / giao hàng, không thể hủy"
+                >
+                  <XCircle :size="15" />
+                  <span>Hủy đơn hàng (Đang xử lý/giao)</span>
+                </button>
+                <div class="text-muted text-center mt-1" style="font-size: 0.7rem">
+                  Đơn đã đóng gói/vận chuyển không thể hủy
+                </div>
+              </template>
+            </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Yêu cầu hủy đơn hàng (Customer) -->
+    <div
+      v-if="showCancelModal"
+      class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+      style="background: rgba(15, 23, 42, 0.65); z-index: 1075; backdrop-filter: blur(4px);"
+      @click.self="closeCancelDialog"
+    >
+      <div
+        class="bg-white rounded-4 shadow-xl overflow-hidden d-flex flex-column"
+        style="width: 480px; max-width: 95vw; border: 1px solid #fed7aa;"
+      >
+        <!-- Header -->
+        <div class="d-flex align-items-center justify-content-between px-4 py-3" style="background:#fff7ed; border-bottom:1px solid #ffedd5;">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px; height:36px; background:#fee2e2; color:#ef4444;">
+              <AlertTriangle :size="18" />
+            </div>
+            <div>
+              <div class="fw-bold" style="color:#0f172a; font-size:0.95rem;">Yêu cầu hủy đơn hàng</div>
+              <div class="text-secondary small" style="font-size:0.75rem;">
+                Mã đơn: #{{ displayOrderCode }}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-sm" @click="closeCancelDialog"></button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-4">
+          <div class="small text-secondary mb-3" style="font-size:0.82rem; line-height:1.45;">
+            Lưu ý: Đơn hàng chỉ có thể hủy khi đang ở trạng thái <strong>Chờ xác nhận</strong> hoặc <strong>Đã lên đơn</strong>. Khi đơn chuyển sang <strong>Đang đóng gói</strong>, bạn sẽ không thể hủy nữa.
+          </div>
+
+          <label class="form-label fw-semibold small mb-2" style="color:#1e293b;">
+            Vui lòng chọn lý do hủy đơn:
+          </label>
+          <div class="d-flex flex-column gap-2 mb-3">
+            <label
+              v-for="r in CANCEL_REASONS"
+              :key="r.id"
+              class="d-flex align-items-center gap-2.5 p-2.5 rounded-3 border"
+              :style="cancelReasonType === r.id ? 'border-color:#ea580c; background:#fff7ed;' : 'border-color:#e2e8f0; cursor:pointer;'"
+              @click="cancelReasonType = r.id"
+            >
+              <input type="radio" :value="r.id" v-model="cancelReasonType" style="accent-color:#ea580c;" />
+              <span style="font-size:0.83rem; color:#0f172a;">{{ r.label }}</span>
+            </label>
+          </div>
+
+          <div v-if="cancelReasonType === 'other'" class="mb-3">
+            <label class="form-label small text-secondary mb-1">Nhập lý do chi tiết:</label>
+            <textarea
+              v-model="customCancelReason"
+              class="form-control form-control-sm"
+              rows="3"
+              placeholder="Nhập lý do bạn muốn hủy đơn..."
+              style="font-size:0.82rem; resize:none;"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="d-flex align-items-center justify-content-end gap-2 px-4 py-3 bg-light border-top">
+          <button type="button" class="btn btn-sm btn-outline-secondary px-3" @click="closeCancelDialog">
+            Đóng
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-danger px-3.5 fw-bold d-inline-flex align-items-center gap-1.5"
+            :disabled="cancelSubmitting"
+            @click="submitCancelOrder"
+          >
+            <Loader2 v-if="cancelSubmitting" :size="14" class="spin" />
+            <XCircle v-else :size="14" />
+            {{ cancelSubmitting ? "Đang gửi..." : "Gửi yêu cầu hủy" }}
+          </button>
         </div>
       </div>
     </div>
@@ -787,6 +923,9 @@ import {
   FileText,
   QrCode,
   Banknote,
+  XCircle,
+  AlertTriangle,
+  Loader2,
 } from "@lucide/vue";
 
 const props = defineProps({
@@ -809,6 +948,70 @@ const localItems = ref([]);
 const payments = ref([]);
 const loading = ref(false);
 let customerOrderEventSource = null;
+
+// ── Yêu cầu hủy đơn hàng ──────────────────────────────────────────
+const showCancelModal = ref(false);
+const cancelReasonType = ref("change_mind");
+const customCancelReason = ref("");
+const cancelSubmitting = ref(false);
+
+const CANCEL_REASONS = [
+  { id: "change_mind", label: "Tôi không còn nhu cầu mua nữa" },
+  { id: "wrong_product", label: "Tôi đặt nhầm sản phẩm hoặc số lượng" },
+  { id: "change_address", label: "Tôi muốn thay đổi thông tin nhận hàng" },
+  { id: "change_payment", label: "Tôi muốn thay đổi phương thức thanh toán" },
+  { id: "better_price", label: "Tìm thấy giá tốt hơn ở nơi khác" },
+  { id: "other", label: "Lý do khác" }
+];
+
+const openCancelDialog = () => {
+  showCancelModal.value = true;
+  cancelReasonType.value = "change_mind";
+  customCancelReason.value = "";
+};
+
+const closeCancelDialog = () => {
+  showCancelModal.value = false;
+  cancelReasonType.value = "change_mind";
+  customCancelReason.value = "";
+};
+
+const submitCancelOrder = async () => {
+  const oId = props.order?.donHangId || props.order?.id;
+  if (!oId) return;
+
+  let reason = "";
+  if (cancelReasonType.value === "other") {
+    reason = customCancelReason.value.trim();
+    if (!reason) {
+      alert("Vui lòng nhập lý do hủy đơn hàng");
+      return;
+    }
+  } else {
+    const found = CANCEL_REASONS.find(r => r.id === cancelReasonType.value);
+    reason = found ? found.label : "Khách yêu cầu hủy đơn";
+  }
+
+  cancelSubmitting.value = true;
+  try {
+    const res = await DonHangService.yeuCauHuy(oId, reason);
+    if (res?.error) {
+      alert(res.error);
+      return;
+    }
+    showCancelModal.value = false;
+    emit("order-updated", {
+      ...props.order,
+      yeuCauHuy: true,
+      lyDoHuy: reason,
+      ngayYeuCauHuy: new Date().toISOString()
+    });
+  } catch (err) {
+    alert(err.message || "Gửi yêu cầu hủy đơn thất bại");
+  } finally {
+    cancelSubmitting.value = false;
+  }
+};
 
 const displayOrderCode = computed(() => {
   return (
@@ -1000,11 +1203,8 @@ const openQrPaymentModal = () => {
 };
 
 const onPaymentSuccess = () => {
-  props.order.trangThaiThanhToan = "paid";
-  // Với đơn QR: sau khi thanh toán thành công chuyển vào bước 3 "Chờ xử lý" (pending)
-  if (props.order.trangThaiDonHang === "pending") {
-    // giữ pending tương ứng với bước Chờ xử lý để nhân viên cửa hàng lên đơn
-  }
+  // Không tự đặt trangThaiThanhToan = "paid" ở client: nhân viên sẽ xác nhận khi nhận được tiền,
+  // trạng thái thật được đồng bộ lại từ server.
   emit("order-updated", props.order);
 };
 

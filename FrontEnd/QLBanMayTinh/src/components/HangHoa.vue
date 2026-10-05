@@ -5,18 +5,33 @@
       <!-- ══════════════ TOOLBAR ══════════════ -->
       <div class="hh-toolbar">
         <div class="hh-toolbar__left">
-          <span class="hh-toolbar__count">{{ groupsDaLoc.length }} sản phẩm · {{ bienTheDaLoc.length }} phiên bản</span>
+          <span class="hh-toolbar__count"
+            >{{ groupsDaLoc.length }} sản phẩm · {{ bienTheDaLoc.length }} phiên bản</span
+          >
           <div class="hh-search">
             <Search :size="14" class="hh-search__icon" />
-            <input v-model="searchKeyword" type="text" placeholder="Tìm theo mã sản phẩm, tên, SKU, mã vạch" />
-            <button v-if="searchKeyword" class="hh-search__clear" title="Xóa tìm kiếm" @click="searchKeyword = ''">
+            <input
+              v-model="searchKeyword"
+              type="text"
+              placeholder="Tìm theo mã sản phẩm, tên, SKU, mã vạch"
+            />
+            <button
+              v-if="searchKeyword"
+              class="hh-search__clear"
+              title="Xóa tìm kiếm"
+              @click="searchKeyword = ''"
+            >
               <X :size="13" />
             </button>
           </div>
         </div>
 
         <div class="hh-toolbar__right">
-          <button class="hh-btn hh-btn--ghost" :class="{ 'is-on': isFilterOpen }" @click="isFilterOpen = !isFilterOpen">
+          <button
+            class="hh-btn hh-btn--ghost"
+            :class="{ 'is-on': isFilterOpen }"
+            @click="isFilterOpen = !isFilterOpen"
+          >
             <Filter :size="14" />
             <span>Bộ lọc</span>
             <span v-if="soBoLocDangDung" class="hh-chip">{{ soBoLocDangDung }}</span>
@@ -27,7 +42,11 @@
             <Plus :size="14" /> Tạo mới
           </button>
 
-          <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDaLoc.length" @click="openExportModal">
+          <button
+            class="hh-btn hh-btn--ghost"
+            :disabled="!bienTheDaLoc.length"
+            @click="openExportModal"
+          >
             <Download :size="14" /> Xuất file
           </button>
 
@@ -45,7 +64,9 @@
               <span>Trạng thái</span>
               <select v-model="filters.trangThai">
                 <option value="">Tất cả</option>
-                <option v-for="t in TRANG_THAI_SAN_PHAM" :key="t.value" :value="t.value">{{ t.label }}</option>
+                <option v-for="t in TRANG_THAI_SAN_PHAM" :key="t.value" :value="t.value">
+                  {{ t.label }}
+                </option>
               </select>
             </label>
 
@@ -53,7 +74,11 @@
               <span>Thương hiệu</span>
               <select v-model="filters.thuongHieuId">
                 <option value="">Tất cả</option>
-                <option v-for="th in danhSachThuongHieu" :key="idOf(th, 'thuongHieuId')" :value="idOf(th, 'thuongHieuId')">
+                <option
+                  v-for="th in danhSachThuongHieu"
+                  :key="idOf(th, 'thuongHieuId')"
+                  :value="idOf(th, 'thuongHieuId')"
+                >
                   {{ th.tenThuongHieu }}
                 </option>
               </select>
@@ -63,7 +88,11 @@
               <span>Nhà cung cấp</span>
               <select v-model="filters.nhaCungCapId">
                 <option value="">Tất cả</option>
-                <option v-for="ncc in danhSachNhaCungCap" :key="idOf(ncc, 'nhaCungCapId')" :value="idOf(ncc, 'nhaCungCapId')">
+                <option
+                  v-for="ncc in danhSachNhaCungCap"
+                  :key="idOf(ncc, 'nhaCungCapId')"
+                  :value="idOf(ncc, 'nhaCungCapId')"
+                >
                   {{ ncc.tenNhaCungCap }}
                 </option>
               </select>
@@ -73,7 +102,9 @@
               <span>Phân loại</span>
               <select v-model="filters.phanLoai">
                 <option value="">Tất cả</option>
-                <option v-for="pl in phanLoaiOptions" :key="pl.maPhanLoai" :value="pl.maPhanLoai">{{ pl.tenPhanLoai }}</option>
+                <option v-for="pl in phanLoaiOptions" :key="pl.maPhanLoai" :value="pl.maPhanLoai">
+                  {{ pl.tenPhanLoai }}
+                </option>
               </select>
             </label>
 
@@ -81,7 +112,13 @@
               <span>CPU</span>
               <select v-model="filters.cpuId">
                 <option value="">Tất cả</option>
-                <option v-for="cpu in danhSachCpu" :key="idOf(cpu, 'cpuId')" :value="idOf(cpu, 'cpuId')">{{ cpu.tenCpu }}</option>
+                <option
+                  v-for="cpu in danhSachCpu"
+                  :key="idOf(cpu, 'cpuId')"
+                  :value="idOf(cpu, 'cpuId')"
+                >
+                  {{ cpu.tenCpu }}
+                </option>
               </select>
             </label>
 
@@ -89,7 +126,11 @@
               <span>RAM</span>
               <select v-model="filters.ramId">
                 <option value="">Tất cả</option>
-                <option v-for="ram in danhSachRam" :key="idOf(ram, 'ramId')" :value="idOf(ram, 'ramId')">
+                <option
+                  v-for="ram in danhSachRam"
+                  :key="idOf(ram, 'ramId')"
+                  :value="idOf(ram, 'ramId')"
+                >
                   {{ ram.dungLuong || ram.tenRam }}
                 </option>
               </select>
@@ -110,7 +151,13 @@
 
             <label class="hh-field">
               <span>Giá bán đến</span>
-              <input v-model="filters.giaDen" type="number" min="0" step="100000" placeholder="Không giới hạn" />
+              <input
+                v-model="filters.giaDen"
+                type="number"
+                min="0"
+                step="100000"
+                placeholder="Không giới hạn"
+              />
             </label>
 
             <label class="hh-field">
@@ -126,8 +173,12 @@
 
           <div class="hh-filter__foot">
             <div class="hh-filter__btns">
-              <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters"><Eraser :size="14" /> Xóa lọc</button>
-              <button class="hh-btn hh-btn--primary hh-btn--sm" @click="isFilterOpen = false">Xong</button>
+              <button class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters">
+                <Eraser :size="14" /> Xóa lọc
+              </button>
+              <button class="hh-btn hh-btn--primary hh-btn--sm" @click="isFilterOpen = false">
+                Xong
+              </button>
             </div>
           </div>
         </div>
@@ -143,23 +194,54 @@
         <table class="hh-table">
           <thead>
             <tr>
-              <th class="hh-col-ma" style="width: 12%;"><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã sản phẩm</span></th>
-              <th class="hh-col-ten" style="width: 30%;"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> Tên sản phẩm</span></th>
-              <th class="ta-r" style="width: 13%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> Giá bán</span></th>
-              <th class="ta-r" style="width: 13%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> Giá vốn</span></th>
-              <th class="ta-c" style="width: 10%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> Trạng thái</span></th>
-              <th class="ta-c" style="width: 10%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> Ngày tạo</span></th>
-              <th class="ta-c" style="width: 10%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><CalendarCheck :size="12" /> Ngày cập nhật</span></th>
-              <th class="hh-col-go ta-c" style="width: 2%; text-align: center;"></th>
+              <th class="hh-col-ma" style="width: 12%">
+                <span class="d-inline-flex align-items-center gap-1.5"
+                  ><Tag :size="12" /> Mã sản phẩm</span
+                >
+              </th>
+              <th class="hh-col-ten" style="width: 30%">
+                <span class="d-inline-flex align-items-center gap-1.5"
+                  ><Laptop :size="12" /> Tên sản phẩm</span
+                >
+              </th>
+              <th class="ta-r" style="width: 13%">
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
+                  ><DollarSign :size="12" /> Giá bán</span
+                >
+              </th>
+              <th class="ta-r" style="width: 13%">
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
+                  ><Coins :size="12" /> Giá vốn</span
+                >
+              </th>
+              <th class="ta-c" style="width: 10%; text-align: center">
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                  ><Activity :size="12" /> Trạng thái</span
+                >
+              </th>
+              <th class="ta-c" style="width: 10%; text-align: center">
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                  ><Calendar :size="12" /> Ngày tạo</span
+                >
+              </th>
+              <th class="ta-c" style="width: 10%; text-align: center">
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                  ><CalendarCheck :size="12" /> Ngày cập nhật</span
+                >
+              </th>
+              <th class="hh-col-go ta-c" style="width: 2%; text-align: center"></th>
             </tr>
           </thead>
 
           <tbody>
             <tr
-              v-for="group in pagedGroups" :key="group.sanPhamId"
-              class="hh-row" tabindex="0"
+              v-for="group in pagedGroups"
+              :key="group.sanPhamId"
+              class="hh-row"
+              tabindex="0"
               :title="'Xem chi tiết ' + group.tenSanPham"
-              @click="moChiTiet(group)" @keydown.enter.prevent="moChiTiet(group)"
+              @click="moChiTiet(group)"
+              @keydown.enter.prevent="moChiTiet(group)"
             >
               <td class="hh-td-ma">
                 <span class="hh-code__main">{{ group.maSanPham }}</span>
@@ -170,7 +252,10 @@
                   <div class="hh-name__text">
                     <div class="hh-name__main">{{ group.tenSanPham }}</div>
                     <div class="hh-name__sub">
-                      {{ group.tenThuongHieu || '—' }}<template v-if="group.variants.length"> · {{ group.variants.length }} phiên bản</template>
+                      {{ group.tenThuongHieu || "—"
+                      }}<template v-if="group.variants.length">
+                        · {{ group.variants.length }} phiên bản</template
+                      >
                     </div>
                   </div>
                 </div>
@@ -178,7 +263,9 @@
               <td class="ta-r hh-td-gia">{{ group.khoangGia }}</td>
               <td class="ta-r hh-td-gia hh-muted">{{ group.khoangGiaVon }}</td>
               <td class="ta-c">
-                <span class="hh-tag" :class="tagClass(group.trangThaiHienThi || group.trangThai)">{{ nhanTrangThai(group.trangThaiHienThi || group.trangThai) }}</span>
+                <span class="hh-tag" :class="tagClass(group.trangThaiHienThi || group.trangThai)">{{
+                  nhanTrangThai(group.trangThaiHienThi || group.trangThai)
+                }}</span>
               </td>
               <td class="ta-c hh-muted hh-td-ngay">{{ formatDate(group.ngayTao) }}</td>
               <td class="ta-c hh-muted hh-td-ngay">{{ formatDate(group.ngayCapNhat) }}</td>
@@ -194,13 +281,18 @@
         <Inbox :size="48" />
         <p v-if="coBoLoc">Không có sản phẩm nào khớp với bộ lọc hiện tại.</p>
         <p v-else>Chưa có sản phẩm nào. Bấm "Tạo mới" để thêm sản phẩm đầu tiên.</p>
-        <button v-if="coBoLoc" class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters">Xóa lọc</button>
-        <button v-else class="hh-btn hh-btn--primary hh-btn--sm" @click="openCreate">Tạo mới</button>
+        <button v-if="coBoLoc" class="hh-btn hh-btn--ghost hh-btn--sm" @click="resetFilters">
+          Xóa lọc
+        </button>
+        <button v-else class="hh-btn hh-btn--primary hh-btn--sm" @click="openCreate">
+          Tạo mới
+        </button>
       </div>
 
       <footer v-if="groupsDaLoc.length" class="hh-pager">
         <span class="hh-pager__info">
-          {{ (page - 1) * pageSize + 1 }}–{{ Math.min(page * pageSize, groupsDaLoc.length) }} trên {{ groupsDaLoc.length }} sản phẩm
+          {{ (page - 1) * pageSize + 1 }}–{{ Math.min(page * pageSize, groupsDaLoc.length) }} trên
+          {{ groupsDaLoc.length }} sản phẩm
         </span>
         <div class="hh-pager__nav">
           <select v-model.number="pageSize" class="hh-pager__size">
@@ -208,9 +300,13 @@
             <option :value="20">20 / trang</option>
             <option :value="50">50 / trang</option>
           </select>
-          <button class="hh-icon-btn" :disabled="page === 1" @click="page--"><ChevronLeft :size="14" /></button>
+          <button class="hh-icon-btn" :disabled="page === 1" @click="page--">
+            <ChevronLeft :size="14" />
+          </button>
           <span class="hh-pager__page">{{ page }} / {{ totalPages || 1 }}</span>
-          <button class="hh-icon-btn" :disabled="page >= totalPages" @click="page++"><ChevronRight :size="14" /></button>
+          <button class="hh-icon-btn" :disabled="page >= totalPages" @click="page++">
+            <ChevronRight :size="14" />
+          </button>
         </div>
       </footer>
     </div>
@@ -225,20 +321,34 @@
               <p>
                 <span class="hh-tag hh-tag--soft">{{ chiTiet.maSanPham }}</span>
                 <span class="hh-head-path">
-                  Nhóm hàng: {{ chiTiet.tenDanhMuc || 'Chưa phân nhóm' }} » {{ chiTiet.tenThuongHieu || 'Chưa có thương hiệu' }}
+                  Nhóm hàng: {{ chiTiet.tenDanhMuc || "Chưa phân nhóm" }} »
+                  {{ chiTiet.tenThuongHieu || "Chưa có thương hiệu" }}
                 </span>
               </p>
             </div>
-            <button class="hh-icon-btn" aria-label="Đóng" @click="dongChiTiet"><X :size="14" /></button>
+            <button class="hh-icon-btn" aria-label="Đóng" @click="dongChiTiet">
+              <X :size="14" />
+            </button>
           </header>
 
           <nav class="hh-tabs">
-            <button class="hh-tab" :class="{ 'is-on': tabCT === 'info' }" @click="tabCT = 'info'">Thông tin</button>
-            <button class="hh-tab" :class="{ 'is-on': tabCT === 'bienthe' }" @click="tabCT = 'bienthe'">
+            <button class="hh-tab" :class="{ 'is-on': tabCT === 'info' }" @click="tabCT = 'info'">
+              Thông tin
+            </button>
+            <button
+              class="hh-tab"
+              :class="{ 'is-on': tabCT === 'bienthe' }"
+              @click="tabCT = 'bienthe'"
+            >
               Biến thể <span class="hh-chip">{{ chiTiet?.variants?.length ?? 0 }}</span>
             </button>
-            <button class="hh-tab" :class="{ 'is-on': tabCT === 'lichsu' }" @click="tabCT = 'lichsu'">
-              Lịch sử thay đổi <span v-if="lichSuHienTai.length" class="hh-chip">{{ lichSuHienTai.length }}</span>
+            <button
+              class="hh-tab"
+              :class="{ 'is-on': tabCT === 'lichsu' }"
+              @click="tabCT = 'lichsu'"
+            >
+              Lịch sử thay đổi
+              <span v-if="lichSuHienTai.length" class="hh-chip">{{ lichSuHienTai.length }}</span>
             </button>
           </nav>
 
@@ -250,8 +360,12 @@
                   <img :src="anhDangXem" class="hh-ct-media__main" alt="" @error="onImgError" />
                   <div v-if="anhSanPham.length > 1" class="hh-ct-media__strip">
                     <button
-                      v-for="(a, i) in anhSanPham" :key="i" type="button"
-                      class="hh-ct-media__thumb" :class="{ 'is-on': a === anhDangXem }" @click="anhDangXem = a"
+                      v-for="(a, i) in anhSanPham"
+                      :key="i"
+                      type="button"
+                      class="hh-ct-media__thumb"
+                      :class="{ 'is-on': a === anhDangXem }"
+                      @click="anhDangXem = a"
                     >
                       <img :src="a" alt="" @error="onImgError" />
                     </button>
@@ -260,21 +374,60 @@
 
                 <div class="hh-ct-main">
                   <div class="hh-ct-tags">
-                    <span class="hh-tag" :class="tagClass(chiTiet.trangThaiHienThi || chiTiet.trangThai)">{{ nhanTrangThai(chiTiet.trangThaiHienThi || chiTiet.trangThai) }}</span>
-                    <span class="hh-tag hh-tag--soft">{{ nhanLoaiSanPham(chiTiet.loaiSanPham) }}</span>
-                    <span v-for="ma in chiTiet.phanLoai" :key="ma" class="hh-tag hh-tag--outline">{{ tenTheoMaPhanLoai(ma) }}</span>
+                    <span
+                      class="hh-tag"
+                      :class="tagClass(chiTiet.trangThaiHienThi || chiTiet.trangThai)"
+                      >{{ nhanTrangThai(chiTiet.trangThaiHienThi || chiTiet.trangThai) }}</span
+                    >
+                    <span class="hh-tag hh-tag--soft">{{
+                      nhanLoaiSanPham(chiTiet.loaiSanPham)
+                    }}</span>
+                    <span v-for="ma in chiTiet.phanLoai" :key="ma" class="hh-tag hh-tag--outline">{{
+                      tenTheoMaPhanLoai(ma)
+                    }}</span>
                   </div>
 
                   <dl class="hh-ct-grid">
-                    <div class="hh-ct-item"><dt>Mã sản phẩm</dt><dd>{{ chiTiet.maSanPham }}</dd></div>
-                    <div class="hh-ct-item"><dt>Số phiên bản</dt><dd>{{ chiTiet?.variants?.length ?? 0 }}</dd></div>
-                    <div class="hh-ct-item"><dt>Giá bán</dt><dd class="hh-ct-item__manh">{{ chiTiet.khoangGia ? chiTiet.khoangGia + ' ₫' : 'Liên hệ' }}</dd></div>
-                    <div class="hh-ct-item"><dt>Thương hiệu</dt><dd>{{ chiTiet.tenThuongHieu || 'Chưa có' }}</dd></div>
-                    <div class="hh-ct-item"><dt>Nhà cung cấp</dt><dd>{{ chiTiet.tenNhaCungCap || 'Chưa có' }}</dd></div>
-                    <div class="hh-ct-item"><dt>Danh mục</dt><dd>{{ chiTiet.tenDanhMuc || 'Chưa có' }}</dd></div>
-                    <div class="hh-ct-item"><dt>Bảo hành</dt><dd>{{ chiTiet.baoHanhThang ? chiTiet.baoHanhThang + ' tháng' : 'Chưa có' }}</dd></div>
-                    <div class="hh-ct-item"><dt>Ngày tạo</dt><dd>{{ formatDate(chiTiet.ngayTao) }}</dd></div>
-                    <div class="hh-ct-item"><dt>Ngày cập nhật</dt><dd>{{ formatDate(chiTiet.ngayCapNhat) }}</dd></div>
+                    <div class="hh-ct-item">
+                      <dt>Mã sản phẩm</dt>
+                      <dd>{{ chiTiet.maSanPham }}</dd>
+                    </div>
+                    <div class="hh-ct-item">
+                      <dt>Số phiên bản</dt>
+                      <dd>{{ chiTiet?.variants?.length ?? 0 }}</dd>
+                    </div>
+                    <div class="hh-ct-item">
+                      <dt>Giá bán</dt>
+                      <dd class="hh-ct-item__manh">
+                        {{ chiTiet.khoangGia ? chiTiet.khoangGia + " ₫" : "Liên hệ" }}
+                      </dd>
+                    </div>
+                    <div class="hh-ct-item">
+                      <dt>Thương hiệu</dt>
+                      <dd>{{ chiTiet.tenThuongHieu || "Chưa có" }}</dd>
+                    </div>
+                    <div class="hh-ct-item">
+                      <dt>Nhà cung cấp</dt>
+                      <dd>{{ chiTiet.tenNhaCungCap || "Chưa có" }}</dd>
+                    </div>
+                    <div class="hh-ct-item">
+                      <dt>Danh mục</dt>
+                      <dd>{{ chiTiet.tenDanhMuc || "Chưa có" }}</dd>
+                    </div>
+                    <div class="hh-ct-item">
+                      <dt>Bảo hành</dt>
+                      <dd>
+                        {{ chiTiet.baoHanhThang ? chiTiet.baoHanhThang + " tháng" : "Chưa có" }}
+                      </dd>
+                    </div>
+                    <div class="hh-ct-item">
+                      <dt>Ngày tạo</dt>
+                      <dd>{{ formatDate(chiTiet.ngayTao) }}</dd>
+                    </div>
+                    <div class="hh-ct-item">
+                      <dt>Ngày cập nhật</dt>
+                      <dd>{{ formatDate(chiTiet.ngayCapNhat) }}</dd>
+                    </div>
                   </dl>
                 </div>
               </div>
@@ -282,13 +435,29 @@
               <section class="hh-ct-block">
                 <h3>Thông số chung</h3>
                 <dl class="hh-ct-grid">
-                  <div class="hh-ct-item"><dt>Màn hình</dt><dd>{{ chiTiet.kichThuocManHinh || 'Chưa có' }}</dd></div>
-                  <div class="hh-ct-item"><dt>Hệ điều hành</dt><dd>{{ chiTiet.heDieuHanh || 'Chưa có' }}</dd></div>
-                  <div class="hh-ct-item"><dt>Pin</dt><dd>{{ chiTiet.pin || 'Chưa có' }}</dd></div>
-                  <div class="hh-ct-item"><dt>Trọng lượng</dt><dd>{{ chiTiet.trongLuongKg ? chiTiet.trongLuongKg + ' kg' : 'Chưa có' }}</dd></div>
-                  <div v-for="attr in dynamicCustomAttrs" :key="attr.thuocTinhId" class="hh-ct-item">
+                  <div class="hh-ct-item">
+                    <dt>Màn hình</dt>
+                    <dd>{{ chiTiet.kichThuocManHinh || "Chưa có" }}</dd>
+                  </div>
+                  <div class="hh-ct-item">
+                    <dt>Hệ điều hành</dt>
+                    <dd>{{ chiTiet.heDieuHanh || "Chưa có" }}</dd>
+                  </div>
+                  <div class="hh-ct-item">
+                    <dt>Pin</dt>
+                    <dd>{{ chiTiet.pin || "Chưa có" }}</dd>
+                  </div>
+                  <div class="hh-ct-item">
+                    <dt>Trọng lượng</dt>
+                    <dd>{{ chiTiet.trongLuongKg ? chiTiet.trongLuongKg + " kg" : "Chưa có" }}</dd>
+                  </div>
+                  <div
+                    v-for="attr in dynamicCustomAttrs"
+                    :key="attr.thuocTinhId"
+                    class="hh-ct-item"
+                  >
                     <dt>{{ attr.tenHienThi }}</dt>
-                    <dd>{{ chiTietThuocTinh[attr.tenTruong] || 'Chưa có' }}</dd>
+                    <dd>{{ chiTietThuocTinh[attr.tenTruong] || "Chưa có" }}</dd>
                   </div>
                 </dl>
               </section>
@@ -311,63 +480,121 @@
                 <table class="hh-vt">
                   <thead>
                     <tr>
-                      <th><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã SKU</span></th>
-                      <th><span class="d-inline-flex align-items-center gap-1.5"><Barcode :size="12" /> Mã vạch</span></th>
-                      <th><span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> Cấu hình</span></th>
-                      <th class="ta-r"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> Giá vốn</span></th>
-                      <th class="ta-r"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> Giá bán</span></th>
-                      <th><span class="d-inline-flex align-items-center gap-1.5"><Activity :size="12" /> Trạng thái</span></th>
+                      <th>
+                        <span class="d-inline-flex align-items-center gap-1.5"
+                          ><Tag :size="12" /> Mã SKU</span
+                        >
+                      </th>
+                      <th>
+                        <span class="d-inline-flex align-items-center gap-1.5"
+                          ><Barcode :size="12" /> Mã vạch</span
+                        >
+                      </th>
+                      <th>
+                        <span class="d-inline-flex align-items-center gap-1.5"
+                          ><Cpu :size="12" /> Cấu hình</span
+                        >
+                      </th>
+                      <th class="ta-r">
+                        <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
+                          ><Coins :size="12" /> Giá vốn</span
+                        >
+                      </th>
+                      <th class="ta-r">
+                        <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
+                          ><DollarSign :size="12" /> Giá bán</span
+                        >
+                      </th>
+                      <th>
+                        <span class="d-inline-flex align-items-center gap-1.5"
+                          ><Activity :size="12" /> Trạng thái</span
+                        >
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
-                      v-for="v in (chiTiet?.variants ?? [])" :key="v.bienTheId"
-                      class="hh-vt__row" :class="{ 'is-on': String(v.bienTheId) === String(bienTheChonId) }"
+                      v-for="v in chiTiet?.variants ?? []"
+                      :key="v.bienTheId"
+                      class="hh-vt__row"
+                      :class="{ 'is-on': String(v.bienTheId) === String(bienTheChonId) }"
                       @click="bienTheChonId = v.bienTheId"
                     >
                       <td class="hh-vt__sku">{{ v.maSku }}</td>
                       <td class="hh-vt__barcode">
-                        <div v-if="v.barcode" class="hh-barcode-card" :title="'Mã vạch: ' + v.barcode">
+                        <div
+                          v-if="v.barcode"
+                          class="hh-barcode-card"
+                          :title="'Mã vạch: ' + v.barcode"
+                        >
                           <svg :key="v.barcode" :ref="(el) => renderBarcode(el, v.barcode)"></svg>
                         </div>
                         <span v-else class="hh-muted">Chưa có</span>
                       </td>
                       <td class="hh-vt__cfg">
                         <div v-if="coThongSoBienThe(v)" class="hh-cfg-chips">
-                          <span v-if="layCpu(v)" class="hh-cfg-chip hh-cfg-chip--cpu" :title="'CPU: ' + layCpu(v)">
+                          <span
+                            v-if="layCpu(v)"
+                            class="hh-cfg-chip hh-cfg-chip--cpu"
+                            :title="'CPU: ' + layCpu(v)"
+                          >
                             <Cpu :size="12" />
                             <span>{{ layCpu(v) }}</span>
                           </span>
-                          <span v-if="layRam(v)" class="hh-cfg-chip hh-cfg-chip--ram" :title="'RAM: ' + layRam(v)">
+                          <span
+                            v-if="layRam(v)"
+                            class="hh-cfg-chip hh-cfg-chip--ram"
+                            :title="'RAM: ' + layRam(v)"
+                          >
                             <MemoryStick :size="12" />
                             <span>{{ layRam(v) }}</span>
                           </span>
-                          <span v-if="layOCung(v)" class="hh-cfg-chip hh-cfg-chip--disk" :title="'Ổ cứng: ' + layOCung(v)">
+                          <span
+                            v-if="layOCung(v)"
+                            class="hh-cfg-chip hh-cfg-chip--disk"
+                            :title="'Ổ cứng: ' + layOCung(v)"
+                          >
                             <HardDrive :size="12" />
                             <span>{{ layOCung(v) }}</span>
                           </span>
-                          <span v-if="layGpu(v)" class="hh-cfg-chip hh-cfg-chip--gpu" :title="'Card đồ họa: ' + layGpu(v)">
+                          <span
+                            v-if="layGpu(v)"
+                            class="hh-cfg-chip hh-cfg-chip--gpu"
+                            :title="'Card đồ họa: ' + layGpu(v)"
+                          >
                             <Monitor :size="12" />
                             <span>{{ layGpu(v) }}</span>
                           </span>
-                          <span v-if="v.mauSac" class="hh-cfg-chip hh-cfg-chip--color" :title="'Màu sắc: ' + v.mauSac">
+                          <span
+                            v-if="v.mauSac"
+                            class="hh-cfg-chip hh-cfg-chip--color"
+                            :title="'Màu sắc: ' + v.mauSac"
+                          >
                             <Palette :size="12" />
                             <span>{{ v.mauSac }}</span>
                           </span>
                         </div>
-                        <span v-else class="hh-muted">{{ moTaBienThe(v) || 'Phiên bản tiêu chuẩn' }}</span>
+                        <span v-else class="hh-muted">{{
+                          moTaBienThe(v) || "Phiên bản tiêu chuẩn"
+                        }}</span>
                       </td>
                       <td class="ta-r hh-muted">{{ formatNumber(v.giaNhap) }}</td>
                       <td class="ta-r hh-vt__gia">{{ formatNumber(v.giaBan) }}</td>
                       <td>
-                        <span class="hh-tag" :class="tagClass(v.trangThaiHienThi || v.trangThai)">{{ nhanTrangThai(v.trangThaiHienThi || v.trangThai) }}</span>
+                        <span class="hh-tag" :class="tagClass(v.trangThaiHienThi || v.trangThai)">{{
+                          nhanTrangThai(v.trangThaiHienThi || v.trangThai)
+                        }}</span>
                       </td>
                     </tr>
                     <tr v-if="!chiTiet?.variants?.length" class="hh-vt__empty">
                       <td colspan="6">
                         <div class="hh-empty">
                           <Layers :size="14" />
-                          <p>Sản phẩm này chưa có biến thể nào. Bấm <strong>“Thêm phiên bản”</strong> ở thanh dưới cùng để tạo phiên bản đầu tiên.</p>
+                          <p>
+                            Sản phẩm này chưa có biến thể nào. Bấm
+                            <strong>“Thêm phiên bản”</strong> ở thanh dưới cùng để tạo phiên bản đầu
+                            tiên.
+                          </p>
                         </div>
                       </td>
                     </tr>
@@ -386,7 +613,10 @@
                 <li v-for="(m, i) in lichSuHienTai" :key="i" class="hh-ls__item">
                   <span
                     class="hh-ls__dot"
-                    :class="{ 'is-them': m.doiTuong === 'bien_the', 'is-tao': m.doiTuong === 'san_pham' && m.giaTriCu === null }"
+                    :class="{
+                      'is-them': m.doiTuong === 'bien_the',
+                      'is-tao': m.doiTuong === 'san_pham' && m.giaTriCu === null,
+                    }"
                   ></span>
                   <div class="hh-ls__body">
                     <div class="hh-ls__head">
@@ -396,13 +626,15 @@
                     <div v-if="m.maSku" class="hh-ls__target">Phiên bản {{ m.maSku }}</div>
                     <ul class="hh-ls__changes">
                       <li>
-                        <span class="hh-ls__field">{{ TEN_TRUONG_LABEL[m.tenTruong] || m.tenTruong }}</span>
+                        <span class="hh-ls__field">{{
+                          TEN_TRUONG_LABEL[m.tenTruong] || m.tenTruong
+                        }}</span>
                         <em>{{ formatGiaTriLichSu(m.tenTruong, m.giaTriCu) }}</em>
                         <ArrowRight :size="14" />
                         <b>{{ formatGiaTriLichSu(m.tenTruong, m.giaTriMoi) }}</b>
                       </li>
                     </ul>
-                    <div class="hh-ls__by">Người thực hiện: {{ m.tenNhanVien || '—' }}</div>
+                    <div class="hh-ls__by">Người thực hiện: {{ m.tenNhanVien || "—" }}</div>
                   </div>
                 </li>
               </ol>
@@ -417,33 +649,58 @@
           <footer class="hh-modal__foot">
             <div class="hh-modal__foot-left">
               <button class="hh-btn hh-btn--ghost" @click="dongChiTiet">Đóng</button>
-              <button v-if="tabCT === 'bienthe'" class="hh-btn hh-btn--ghost" @click="themPhienBan(chiTiet)">
+              <button
+                v-if="tabCT === 'bienthe'"
+                class="hh-btn hh-btn--ghost"
+                @click="themPhienBan(chiTiet)"
+              >
                 <Plus :size="14" /> Thêm phiên bản
               </button>
             </div>
 
             <div class="hh-modal__foot-right">
               <template v-if="tabCT === 'info'">
-                <button class="hh-btn hh-btn--soft" @click="saoChepSanPham(chiTiet)"><Copy :size="14" /> Sao chép</button>
-                <button class="hh-btn hh-btn--primary" @click="suaSanPham(chiTiet)"><Pencil :size="14" /> Chỉnh sửa</button>
+                <button class="hh-btn hh-btn--soft" @click="saoChepSanPham(chiTiet)">
+                  <Copy :size="14" /> Sao chép
+                </button>
+                <button class="hh-btn hh-btn--primary" @click="suaSanPham(chiTiet)">
+                  <Pencil :size="14" /> Chỉnh sửa
+                </button>
               </template>
 
               <template v-else-if="tabCT === 'bienthe'">
-                <span v-if="bienTheDangChon" class="hh-foot-hint">Đang chọn: <b>{{ bienTheDangChon.maSku }}</b></span>
+                <span v-if="bienTheDangChon" class="hh-foot-hint"
+                  >Đang chọn: <b>{{ bienTheDangChon.maSku }}</b></span
+                >
                 <span v-else class="hh-foot-hint">Chọn một phiên bản để thao tác</span>
-                <button class="hh-btn hh-btn--ghost" :disabled="!bienTheDangChon" @click="inTemMa(bienTheDangChon)">
+                <button
+                  class="hh-btn hh-btn--ghost"
+                  :disabled="!bienTheDangChon"
+                  @click="inTemMa(bienTheDangChon)"
+                >
                   <Barcode :size="14" /> In tem mã
                 </button>
-                <button class="hh-btn hh-btn--soft" :disabled="!bienTheDangChon || dangSaoChepBienThe" @click="saoChepBienThe(bienTheDangChon)">
-                  <Copy :size="14" /> {{ dangSaoChepBienThe ? 'Đang sao chép…' : 'Sao chép' }}
+                <button
+                  class="hh-btn hh-btn--soft"
+                  :disabled="!bienTheDangChon || dangSaoChepBienThe"
+                  @click="saoChepBienThe(bienTheDangChon)"
+                >
+                  <Copy :size="14" /> {{ dangSaoChepBienThe ? "Đang sao chép…" : "Sao chép" }}
                 </button>
-                <button class="hh-btn hh-btn--primary" :disabled="!bienTheDangChon" @click="suaBienTheTuChiTiet(bienTheDangChon)">
+                <button
+                  class="hh-btn hh-btn--primary"
+                  :disabled="!bienTheDangChon"
+                  @click="suaBienTheTuChiTiet(bienTheDangChon)"
+                >
                   <Pencil :size="14" /> Chỉnh sửa
                 </button>
               </template>
 
               <template v-else>
-                <span class="hh-foot-hint">Nhật ký thay đổi được hệ thống ghi tự động mỗi lần lưu sản phẩm hoặc phiên bản.</span>
+                <span class="hh-foot-hint"
+                  >Nhật ký thay đổi được hệ thống ghi tự động mỗi lần lưu sản phẩm hoặc phiên
+                  bản.</span
+                >
               </template>
             </div>
           </footer>
@@ -459,17 +716,36 @@
             <div class="hh-head-main">
               <h2>{{ tieuDeModal }}</h2>
               <p>
-                <span class="hh-tag hh-tag--soft">{{ form.maSanPham || 'Chưa có mã' }}</span>
+                <span class="hh-tag hh-tag--soft">{{ form.maSanPham || "Chưa có mã" }}</span>
                 <span v-if="form.tenSanPham" class="hh-head-path">{{ form.tenSanPham }}</span>
               </p>
             </div>
-            <button class="hh-icon-btn" aria-label="Đóng" @click="closeModal"><X :size="14" /></button>
+            <button class="hh-icon-btn" aria-label="Đóng" @click="closeModal">
+              <X :size="14" />
+            </button>
           </header>
 
           <nav class="hh-tabs">
-            <button v-for="t in tabs" :key="t.key" class="hh-tab" :class="{ 'is-on': tab === t.key }" @click="tab = t.key">
+            <button
+              v-for="t in tabs"
+              :key="t.key"
+              class="hh-tab"
+              :class="{ 'is-on': tab === t.key }"
+              @click="tab = t.key"
+            >
               {{ t.label }}
-              <span v-if="t.key === 'bienthe' && soPhienBan" class="hh-chip">{{ soPhienBan }}</span>
+              <span
+                v-if="t.key === 'info' && soLoiTabInfo > 0"
+                class="hh-chip hh-chip--err"
+                :title="soLoiTabInfo + ' mục cần bổ sung'"
+                >!</span
+              >
+              <span
+                v-if="t.key === 'bienthe' && soPhienBan"
+                class="hh-chip"
+                :class="{ 'hh-chip--err': soLoiTabBienThe > 0 }"
+                >{{ soPhienBan }}</span
+              >
             </button>
           </nav>
 
@@ -485,20 +761,30 @@
                   <label class="hh-field">
                     <span>Mã sản phẩm</span>
                     <input v-model.trim="form.maSanPham" disabled />
-                    <em class="hh-hint">Hệ thống tự sinh, không sửa tay. Mã vạch nằm ở từng phiên bản.</em>
+                    <em class="hh-hint"
+                      >Hệ thống tự sinh, không sửa tay. Mã vạch nằm ở từng phiên bản.</em
+                    >
                   </label>
 
                   <label class="hh-field hh-field--wide">
                     <span>Tên sản phẩm <b>*</b></span>
-                    <input v-model.trim="form.tenSanPham" placeholder="VD: Dell Inspiron 15 3520" />
+                    <input
+                      v-model.trim="form.tenSanPham"
+                      :class="{ 'is-err': errors.tenSanPham }"
+                      placeholder="VD: Dell Inspiron 15 3520"
+                    />
                     <em v-if="errors.tenSanPham" class="hh-err">{{ errors.tenSanPham }}</em>
                   </label>
 
                   <label class="hh-field">
                     <span>Thương hiệu <b>*</b></span>
-                    <select v-model="form.thuongHieuId">
+                    <select v-model="form.thuongHieuId" :class="{ 'is-err': errors.thuongHieuId }">
                       <option value="">-- Chọn thương hiệu --</option>
-                      <option v-for="th in danhSachThuongHieu" :key="idOf(th, 'thuongHieuId')" :value="idOf(th, 'thuongHieuId')">
+                      <option
+                        v-for="th in danhSachThuongHieu"
+                        :key="idOf(th, 'thuongHieuId')"
+                        :value="idOf(th, 'thuongHieuId')"
+                      >
                         {{ th.tenThuongHieu }}
                       </option>
                     </select>
@@ -507,9 +793,13 @@
 
                   <label class="hh-field">
                     <span>Danh mục <b>*</b></span>
-                    <select v-model="form.danhMucId">
+                    <select v-model="form.danhMucId" :class="{ 'is-err': errors.danhMucId }">
                       <option value="">-- Chọn danh mục --</option>
-                      <option v-for="dm in danhSachDanhMuc" :key="idOf(dm, 'danhMucId')" :value="idOf(dm, 'danhMucId')">
+                      <option
+                        v-for="dm in danhSachDanhMuc"
+                        :key="idOf(dm, 'danhMucId')"
+                        :value="idOf(dm, 'danhMucId')"
+                      >
                         {{ dm.tenDanhMuc }}
                       </option>
                     </select>
@@ -517,68 +807,118 @@
                   </label>
 
                   <label class="hh-field">
-                    <span>Nhà cung cấp</span>
-                    <select v-model="form.nhaCungCapId">
-                      <option value="">-- Không chọn --</option>
-                      <option v-for="ncc in danhSachNhaCungCap" :key="idOf(ncc, 'nhaCungCapId')" :value="idOf(ncc, 'nhaCungCapId')">
+                    <span>Nhà cung cấp <b v-if="modalMode === 'create'">*</b></span>
+                    <select v-model="form.nhaCungCapId" :class="{ 'is-err': errors.nhaCungCapId }">
+                      <option value="">
+                        {{
+                          modalMode === "create" ? "-- Chọn nhà cung cấp --" : "-- Không chọn --"
+                        }}
+                      </option>
+                      <option
+                        v-for="ncc in danhSachNhaCungCap"
+                        :key="idOf(ncc, 'nhaCungCapId')"
+                        :value="idOf(ncc, 'nhaCungCapId')"
+                      >
                         {{ ncc.tenNhaCungCap }}
                       </option>
                     </select>
+                    <em v-if="errors.nhaCungCapId" class="hh-err">{{ errors.nhaCungCapId }}</em>
                   </label>
 
                   <label class="hh-field">
                     <span>Loại sản phẩm <b>*</b></span>
-                    <select v-model="form.loaiSanPham">
-                      <option v-for="l in LOAI_SAN_PHAM" :key="l.value" :value="l.value">{{ l.label }}</option>
+                    <select v-model="form.loaiSanPham" :class="{ 'is-err': errors.loaiSanPham }">
+                      <option v-for="l in LOAI_SAN_PHAM" :key="l.value" :value="l.value">
+                        {{ l.label }}
+                      </option>
                     </select>
+                    <em v-if="errors.loaiSanPham" class="hh-err">{{ errors.loaiSanPham }}</em>
                   </label>
 
                   <label class="hh-field">
                     <span>Trạng thái</span>
-                    <select v-model="form.trangThaiSanPham">
-                      <option v-for="t in TRANG_THAI_SAN_PHAM" :key="t.value" :value="t.value">{{ t.label }}</option>
+                    <select v-model="form.trangThaiSanPham" :disabled="modalMode === 'create'">
+                      <option v-for="t in danhSachTrangThaiSanPham" :key="t.value" :value="t.value">
+                        {{ t.label }}
+                      </option>
                     </select>
-                    <em class="hh-hint">Áp dụng cho cả sản phẩm và các phiên bản của nó.</em>
+                    <em class="hh-hint">
+                      {{
+                        modalMode === "create"
+                          ? "Sản phẩm mới mặc định ở trạng thái Chờ nhập hàng (không thể thay đổi)."
+                          : "Áp dụng cho cả sản phẩm và các phiên bản của nó."
+                      }}
+                    </em>
                   </label>
 
                   <div class="hh-field hh-field--wide">
-                    <span>Phân loại sử dụng</span>
+                    <span>Phân loại sử dụng <b v-if="modalMode === 'create'">*</b></span>
                     <div class="hh-chip-select">
                       <button
-                        v-for="pl in phanLoaiOptions" :key="pl.phanLoaiId" type="button"
-                        class="hh-chip-toggle" :class="{ 'is-on': form.phanLoaiIds.includes(pl.phanLoaiId) }"
+                        v-for="pl in phanLoaiOptions"
+                        :key="pl.phanLoaiId"
+                        type="button"
+                        class="hh-chip-toggle"
+                        :class="{ 'is-on': form.phanLoaiIds.includes(pl.phanLoaiId) }"
                         @click="togglePhanLoai(pl.phanLoaiId)"
                       >
                         {{ tenPhanLoai(pl.phanLoaiId) }}
                       </button>
                     </div>
+                    <em v-if="errors.phanLoaiIds" class="hh-err">{{ errors.phanLoaiIds }}</em>
                   </div>
 
                   <div class="hh-field hh-field--wide">
-                    <span>Ảnh sản phẩm</span>
+                    <span>Ảnh sản phẩm <b v-if="modalMode === 'create'">*</b></span>
                     <div class="hh-gallery">
-                      <div v-for="(url, i) in form.hinhAnhList" :key="i" class="hh-gallery__item">
-                        <img :src="url" alt="" @error="onImgError" />
+                      <div
+                        v-for="(url, i) in form.hinhAnhList"
+                        :key="url || i"
+                        class="hh-gallery__item"
+                      >
+                        <img
+                          :src="anhPreviewMap[url] || url"
+                          alt=""
+                          @error="(e) => onFormImgError(e, url)"
+                        />
                         <span v-if="i === 0" class="hh-gallery__badge">Ảnh chính</span>
                         <div class="hh-gallery__actions">
-                          <button type="button" class="hh-icon-btn hh-icon-btn--sm" title="Xóa ảnh" @click="xoaAnhTaiViTri(i)">
+                          <button
+                            type="button"
+                            class="hh-icon-btn hh-icon-btn--sm"
+                            title="Xóa ảnh"
+                            @click="xoaAnhTaiViTri(i)"
+                          >
                             <Trash2 :size="14" />
                           </button>
                         </div>
                       </div>
-                      <label v-if="form.hinhAnhList.length === 0" class="hh-gallery__add">
-                        <input type="file" accept="image/*" class="hh-hidden" @change="chonAnhSanPham" />
+                      <label
+                        v-if="form.hinhAnhList.length === 0"
+                        class="hh-gallery__add"
+                        :class="{ 'is-err': errors.hinhAnhList }"
+                      >
+                        <input
+                          type="file"
+                          accept="image/*"
+                          class="hh-hidden"
+                          @change="chonAnhSanPham"
+                        />
                         <i class="fa" :class="dangTaiAnh ? 'fa-spinner fa-spin' : 'fa-plus'"></i>
-                        <span>{{ dangTaiAnh ? 'Đang tải…' : 'Thêm ảnh' }}</span>
+                        <span>{{ dangTaiAnh ? "Đang tải…" : "Thêm ảnh" }}</span>
                       </label>
                     </div>
-                    <em class="hh-hint">Chỉ upload 1 ảnh đại diện. Xóa ảnh hiện tại để thay bằng ảnh khác.</em>
+                    <em v-if="errors.hinhAnhList" class="hh-err">{{ errors.hinhAnhList }}</em>
+                    <em class="hh-hint"
+                      >Chỉ upload 1 ảnh đại diện. Xóa ảnh hiện tại để thay bằng ảnh khác.</em
+                    >
                   </div>
                 </div>
 
                 <p class="hh-note">
                   <Clock :size="14" />
-                  Ngày tạo và ngày cập nhật do hệ thống tự ghi tại thời điểm bấm Lưu — hiện là {{ dongHo }}.
+                  Ngày tạo và ngày cập nhật do hệ thống tự ghi tại thời điểm bấm Lưu — hiện là
+                  {{ dongHo }}.
                 </p>
               </fieldset>
 
@@ -587,52 +927,162 @@
                 <div class="hh-grid">
                   <label class="hh-field">
                     <span>Bảo hành (tháng) <b>*</b></span>
-                    <select v-model.number="form.baoHanhThang">
-                      <option v-for="n in [6,12,18,24,36,48,60]" :key="n" :value="n">{{ n }} tháng</option>
+                    <select
+                      v-model.number="form.baoHanhThang"
+                      :class="{ 'is-err': errors.baoHanhThang }"
+                    >
+                      <option v-for="n in [6, 12, 18, 24, 36, 48, 60]" :key="n" :value="n">
+                        {{ n }} tháng
+                      </option>
                     </select>
                     <em v-if="errors.baoHanhThang" class="hh-err">{{ errors.baoHanhThang }}</em>
                   </label>
 
                   <label class="hh-field">
-                    <span>Màn hình</span>
-                    <input v-model.trim="form.kichThuocManHinh" placeholder="VD: 15.6 inch FHD 144Hz" />
-                  </label>
-
-                  <label class="hh-field">
-                    <span>Hệ điều hành</span>
-                    <input v-model.trim="form.heDieuHanh" placeholder="VD: Windows 11 Home" />
-                  </label>
-
-                  <label class="hh-field">
-                    <span>Pin</span>
-                    <input v-model.trim="form.pin" placeholder="VD: 52Wh" />
-                  </label>
-
-                  <label class="hh-field">
-                    <span>Trọng lượng (kg)</span>
+                    <span>Màn hình <b v-if="modalMode === 'create'">*</b></span>
+                    <select
+                      v-if="laKieuChonHeThong('man_hinh')"
+                      v-model="form.kichThuocManHinh"
+                      :class="{ 'is-err': errors.kichThuocManHinh }"
+                    >
+                      <option value="">-- Chọn màn hình --</option>
+                      <option
+                        v-if="
+                          form.kichThuocManHinh && !MAN_HINH_GOI_Y.includes(form.kichThuocManHinh)
+                        "
+                        :value="form.kichThuocManHinh"
+                      >
+                        {{ form.kichThuocManHinh }}
+                      </option>
+                      <option v-for="mh in MAN_HINH_GOI_Y" :key="mh" :value="mh">
+                        {{ mh }}
+                      </option>
+                    </select>
                     <input
-                      type="number" step="0.01" min="0"
-                      v-model.number="form.trongLuongKg"
-                      placeholder="VD: 1.7"
+                      v-else
+                      v-model.trim="form.kichThuocManHinh"
+                      :class="{ 'is-err': errors.kichThuocManHinh }"
+                      placeholder="VD: 15.6 inch FHD 144Hz"
                     />
+                    <em v-if="errors.kichThuocManHinh" class="hh-err">{{
+                      errors.kichThuocManHinh
+                    }}</em>
+                  </label>
+
+                  <label class="hh-field">
+                    <span>Hệ điều hành <b v-if="modalMode === 'create'">*</b></span>
+                    <select
+                      v-if="laKieuChonHeThong('he_dieu_hanh')"
+                      v-model="form.heDieuHanh"
+                      :class="{ 'is-err': errors.heDieuHanh }"
+                    >
+                      <option value="">-- Chọn hệ điều hành --</option>
+                      <option
+                        v-if="form.heDieuHanh && !HDH_GOI_Y.includes(form.heDieuHanh)"
+                        :value="form.heDieuHanh"
+                      >
+                        {{ form.heDieuHanh }}
+                      </option>
+                      <option v-for="hdh in HDH_GOI_Y" :key="hdh" :value="hdh">
+                        {{ hdh }}
+                      </option>
+                    </select>
+                    <input
+                      v-else
+                      v-model.trim="form.heDieuHanh"
+                      :class="{ 'is-err': errors.heDieuHanh }"
+                      placeholder="VD: Windows 11 Home"
+                    />
+                    <em v-if="errors.heDieuHanh" class="hh-err">{{ errors.heDieuHanh }}</em>
+                  </label>
+
+                  <label class="hh-field">
+                    <span>Pin <b v-if="modalMode === 'create'">*</b></span>
+                    <select
+                      v-if="laKieuChonHeThong('pin')"
+                      v-model="form.pin"
+                      :class="{ 'is-err': errors.pin }"
+                    >
+                      <option value="">-- Chọn thông số pin --</option>
+                      <option v-if="form.pin && !PIN_GOI_Y.includes(form.pin)" :value="form.pin">
+                        {{ form.pin }}
+                      </option>
+                      <option v-for="p in PIN_GOI_Y" :key="p" :value="p">
+                        {{ p }}
+                      </option>
+                    </select>
+                    <input
+                      v-else
+                      v-model.trim="form.pin"
+                      :class="{ 'is-err': errors.pin }"
+                      placeholder="VD: 52Wh"
+                    />
+                    <em v-if="errors.pin" class="hh-err">{{ errors.pin }}</em>
+                  </label>
+
+                  <label class="hh-field">
+                    <span>Trọng lượng (kg) <b v-if="modalMode === 'create'">*</b></span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="5"
+                      v-model.number="form.trongLuongKg"
+                      :class="{ 'is-err': errors.trongLuongKg || loiTrongLuongTucThoi }"
+                      placeholder="VD: 1.7 (tối đa 5 kg)"
+                    />
+                    <em v-if="errors.trongLuongKg || loiTrongLuongTucThoi" class="hh-err">{{
+                      errors.trongLuongKg || loiTrongLuongTucThoi
+                    }}</em>
                   </label>
 
                   <!-- Thuộc tính bổ sung từ tab Thuộc tính -->
-                  <label v-for="attr in dynamicCustomAttrs" :key="attr.thuocTinhId" class="hh-field">
-                    <span>{{ attr.tenHienThi }} <b v-if="attr.batBuoc">*</b></span>
+                  <label
+                    v-for="attr in dynamicCustomAttrs"
+                    :key="attr.thuocTinhId"
+                    class="hh-field"
+                  >
+                    <span
+                      >{{ attr.tenHienThi }}
+                      <b v-if="modalMode === 'create' || attr.batBuoc">*</b></span
+                    >
                     <select
-                      v-if="attr.loaiDuLieu === 'select' && attr.giaTriList && attr.giaTriList.length > 0"
+                      v-if="laKieuChon(attr)"
                       v-model="formThuocTinh[attr.tenTruong]"
+                      :class="{ 'is-err': errors[attr.tenTruong] }"
                     >
                       <option value="">-- Chọn {{ attr.tenHienThi }} --</option>
-                      <option v-for="gv in attr.giaTriList" :key="gv.giaTriId" :value="gv.giaTri">{{ gv.giaTri }}</option>
+                      <option
+                        v-if="!attr.giaTriList || attr.giaTriList.length === 0"
+                        value=""
+                        disabled
+                      >
+                        -- Chưa có giá trị (thêm ở mục Thuộc tính) --
+                      </option>
+                      <option
+                        v-if="
+                          formThuocTinh[attr.tenTruong] &&
+                          !(attr.giaTriList || []).some(
+                            (g) => g.giaTri === formThuocTinh[attr.tenTruong],
+                          )
+                        "
+                        :value="formThuocTinh[attr.tenTruong]"
+                      >
+                        {{ formThuocTinh[attr.tenTruong] }}
+                      </option>
+                      <option v-for="gv in attr.giaTriList" :key="gv.giaTriId" :value="gv.giaTri">
+                        {{ gv.giaTri }}
+                      </option>
                     </select>
                     <input
                       v-else
                       v-model.trim="formThuocTinh[attr.tenTruong]"
+                      :class="{ 'is-err': errors[attr.tenTruong] }"
                       :placeholder="'Nhập ' + attr.tenHienThi"
                     />
-                    <em v-if="errors[attr.tenTruong]" class="hh-err">{{ errors[attr.tenTruong] }}</em>
+                    <em v-if="errors[attr.tenTruong]" class="hh-err">{{
+                      errors[attr.tenTruong]
+                    }}</em>
                   </label>
                 </div>
               </fieldset>
@@ -655,7 +1105,9 @@
                     >
                       <div class="hh-bienthe-item__info">
                         <span class="hh-bienthe-item__sku">{{ v.maSku }}</span>
-                        <span class="hh-bienthe-item__cfg">{{ moTaBienThe(v) || 'Phiên bản tiêu chuẩn' }}</span>
+                        <span class="hh-bienthe-item__cfg">{{
+                          moTaBienThe(v) || "Phiên bản tiêu chuẩn"
+                        }}</span>
                       </div>
                       <div class="hh-bienthe-item__price">{{ formatNumber(v.giaBan) }} đ</div>
                     </div>
@@ -675,7 +1127,12 @@
                       <span>Mã vạch</span>
                       <div class="hh-inline">
                         <input v-model.trim="form.barcode" placeholder="8–13 chữ số" />
-                        <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" title="Sinh mã vạch EAN-13" @click="form.barcode = sinhBarcode(barcodeDaDung)">
+                        <button
+                          type="button"
+                          class="hh-btn hh-btn--ghost hh-btn--sm"
+                          title="Sinh mã vạch EAN-13"
+                          @click="form.barcode = sinhBarcode(barcodeDaDung)"
+                        >
                           <RefreshCw :size="14" />
                         </button>
                       </div>
@@ -683,23 +1140,56 @@
                     </label>
                     <label class="hh-field">
                       <span>Màu sắc</span>
-                      <SearchSelect v-model="form.mauSac" :options="optMauSacSelect" placeholder="VD: Đen" />
+                      <select v-if="laKieuChonHeThong('mau_sac')" v-model="form.mauSac">
+                        <option value="">-- Chọn màu sắc --</option>
+                        <option
+                          v-if="form.mauSac && !optMauSac.value.includes(form.mauSac)"
+                          :value="form.mauSac"
+                        >
+                          {{ form.mauSac }}
+                        </option>
+                        <option v-for="m in optMauSac.value" :key="m" :value="m">
+                          {{ m }}
+                        </option>
+                      </select>
+                      <SearchSelect
+                        v-else
+                        v-model="form.mauSac"
+                        :options="optMauSacSelect"
+                        placeholder="VD: Đen"
+                      />
                     </label>
                     <label class="hh-field">
                       <span>CPU</span>
-                      <SearchSelect v-model="form.cpuId" :options="cpuOptionsSel" placeholder="-- Không chọn --" />
+                      <SearchSelect
+                        v-model="form.cpuId"
+                        :options="cpuOptionsSel"
+                        placeholder="-- Không chọn --"
+                      />
                     </label>
                     <label class="hh-field">
                       <span>RAM</span>
-                      <SearchSelect v-model="form.ramId" :options="ramOptionsSel" placeholder="-- Không chọn --" />
+                      <SearchSelect
+                        v-model="form.ramId"
+                        :options="ramOptionsSel"
+                        placeholder="-- Không chọn --"
+                      />
                     </label>
                     <label class="hh-field">
                       <span>Ổ cứng</span>
-                      <SearchSelect v-model="form.oCungId" :options="oCungOptionsSel" placeholder="-- Không chọn --" />
+                      <SearchSelect
+                        v-model="form.oCungId"
+                        :options="oCungOptionsSel"
+                        placeholder="-- Không chọn --"
+                      />
                     </label>
                     <label class="hh-field">
                       <span>GPU</span>
-                      <SearchSelect v-model="form.gpuId" :options="gpuOptionsSel" placeholder="-- Không chọn --" />
+                      <SearchSelect
+                        v-model="form.gpuId"
+                        :options="gpuOptionsSel"
+                        placeholder="-- Không chọn --"
+                      />
                     </label>
                     <label class="hh-field">
                       <span>Giá nhập (₫) <b>*</b></span>
@@ -713,14 +1203,38 @@
                     </label>
 
                     <!-- Thuộc tính bổ sung của Biến thể (phamVi === 'bien_the') -->
-                    <label v-for="attr in variantCustomAttrs" :key="attr.thuocTinhId" class="hh-field">
+                    <label
+                      v-for="attr in variantCustomAttrs"
+                      :key="attr.thuocTinhId"
+                      class="hh-field"
+                    >
                       <span>{{ attr.tenHienThi }} <b v-if="attr.batBuoc">*</b></span>
                       <select
-                        v-if="attr.loaiDuLieu === 'select' && attr.giaTriList && attr.giaTriList.length > 0"
+                        v-if="laKieuChon(attr)"
                         v-model="formThuocTinhBienThe[attr.tenTruong]"
                       >
                         <option value="">-- Chọn {{ attr.tenHienThi }} --</option>
-                        <option v-for="gv in attr.giaTriList" :key="gv.giaTriId" :value="gv.giaTri">{{ gv.giaTri }}</option>
+                        <option
+                          v-if="!attr.giaTriList || attr.giaTriList.length === 0"
+                          value=""
+                          disabled
+                        >
+                          -- Chưa có giá trị (thêm ở mục Thuộc tính) --
+                        </option>
+                        <option
+                          v-if="
+                            formThuocTinhBienThe[attr.tenTruong] &&
+                            !(attr.giaTriList || []).some(
+                              (g) => g.giaTri === formThuocTinhBienThe[attr.tenTruong],
+                            )
+                          "
+                          :value="formThuocTinhBienThe[attr.tenTruong]"
+                        >
+                          {{ formThuocTinhBienThe[attr.tenTruong] }}
+                        </option>
+                        <option v-for="gv in attr.giaTriList" :key="gv.giaTriId" :value="gv.giaTri">
+                          {{ gv.giaTri }}
+                        </option>
                       </select>
                       <input
                         v-else
@@ -730,135 +1244,277 @@
                     </label>
                   </div>
                 </fieldset>
-                <p v-else class="hh-note"><MousePointer2 :size="14" /> Chọn một phiên bản trong danh sách bên trái để sửa.</p>
+                <p v-else class="hh-note">
+                  <MousePointer2 :size="14" /> Chọn một phiên bản trong danh sách bên trái để sửa.
+                </p>
               </template>
 
               <!-- Sinh nhiều phiên bản (khi modalMode === 'create' hoặc 'variant') -->
               <template v-else>
                 <fieldset class="hh-block">
-                  <legend>Phiên bản <span class="hh-chip">{{ bienTheRows.length }}</span></legend>
+                  <legend>
+                    Phiên bản <span class="hh-chip">{{ bienTheRows.length }}</span>
+                  </legend>
                   <p class="hh-note hh-note--plain">
-                    Mỗi dòng là một phiên bản hoàn chỉnh. Bấm <b>"+ Thêm dòng"</b> để tạo thêm.
+                    Bắt buộc tối thiểu <b>1 phiên bản</b> với đầy đủ
+                    <b
+                      >Màu sắc, CPU, RAM, Ổ cứng, GPU, Giá vốn (&gt; 0) và Giá bán (&gt;= Giá
+                      vốn)</b
+                    >. Bấm <b>"+ Thêm phiên bản"</b> để tạo thêm.
                   </p>
 
-                  <em v-if="errors.bienThe" class="hh-err hh-mb8">{{ errors.bienThe }}</em>
+                  <div
+                    v-if="errors.bienTheList && errors.bienTheList.length"
+                    class="hh-err-box hh-mb8"
+                  >
+                    <div v-for="(errMsg, idx) in errors.bienTheList" :key="idx" class="hh-err">
+                      • {{ errMsg }}
+                    </div>
+                  </div>
+                  <em v-else-if="errors.bienThe" class="hh-err hh-mb8">{{ errors.bienThe }}</em>
 
-                  <div class="hh-rows-wrap">
-                    <table class="hh-rows">
-                      <thead>
-                        <tr>
-                          <th class="hh-rows__stt">#</th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã SKU</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><Barcode :size="12" /> Mã vạch</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><Palette :size="12" /> Màu sắc</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> CPU</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><MemoryStick :size="12" /> RAM</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><HardDrive :size="12" /> Ổ cứng</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><Monitor :size="12" /> GPU</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><DollarSign :size="12" /> Giá vốn (₫)</span></th>
-                          <th><span class="d-inline-flex align-items-center gap-1.5"><Coins :size="12" /> Giá bán (₫)</span></th>
-                          <!-- Cột thuộc tính động của Biến thể -->
-                          <th v-for="vAttr in variantCustomAttrs" :key="vAttr.thuocTinhId">
-                            <span class="d-inline-flex align-items-center gap-1.5">{{ vAttr.tenHienThi }}</span>
-                          </th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="(row, i) in bienTheRows" :key="row._key">
-                          <td class="hh-muted hh-rows__stt">{{ i + 1 }}</td>
-                          <td><input :value="row.maSku" :title="row.maSku" class="hh-cell hh-cell--sku" placeholder="Tự sinh khi nhập đủ thông tin" disabled style="opacity:0.75;cursor:not-allowed;background:var(--bg-input-disabled,#f5f5f5)" /></td>
-                          <td><input :value="row.barcode" :title="row.barcode" class="hh-cell hh-cell--ma" placeholder="Tự sinh" disabled style="opacity:0.75;cursor:not-allowed;background:var(--bg-input-disabled,#f5f5f5)" /></td>
-                          <td>
-                            <select v-model="row.mauSac" class="hh-cell hh-cell--sel">
-                              <option value="">— Không —</option>
-                              <option v-for="m in optMauSac.value" :key="m" :value="m">{{ m }}</option>
-                            </select>
-                          </td>
-                          <td>
-                            <select v-model="row.cpuId" class="hh-cell hh-cell--sel">
-                              <option value="">— Không —</option>
-                              <option v-for="c in danhSachCpu" :key="idOf(c,'cpuId')" :value="idOf(c,'cpuId')">{{ c.tenCpu }}</option>
-                            </select>
-                          </td>
-                          <td>
-                            <select v-model="row.ramId" class="hh-cell hh-cell--sel">
-                              <option value="">— Không —</option>
-                              <option v-for="r in danhSachRam" :key="idOf(r,'ramId')" :value="idOf(r,'ramId')">{{ r.dungLuong || r.tenRam }}</option>
-                            </select>
-                          </td>
-                          <td>
-                            <select v-model="row.oCungId" class="hh-cell hh-cell--sel">
-                              <option value="">— Không —</option>
-                              <option v-for="o in danhSachOCung" :key="idOf(o,'oCungId')" :value="idOf(o,'oCungId')">{{ tenOCung(o) }}</option>
-                            </select>
-                          </td>
-                          <td>
-                            <select v-model="row.gpuId" class="hh-cell hh-cell--sel">
-                              <option value="">— Không —</option>
-                              <option v-for="g in danhSachGpu" :key="idOf(g,'gpuId')" :value="idOf(g,'gpuId')">{{ g.tenGpu }}</option>
-                            </select>
-                          </td>
-                          <td>
-                            <input
-                              v-model.number="row.giaNhap"
-                              type="number"
-                              min="0"
-                              class="hh-cell"
-                              placeholder="0"
-                              style="min-width: 95px; text-align: right;"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              v-model.number="row.giaBan"
-                              type="number"
-                              min="0"
-                              class="hh-cell"
-                              placeholder="0"
-                              style="min-width: 95px; text-align: right;"
-                            />
-                          </td>
-                          <!-- Thuộc tính động của biến thể -->
-                          <td v-for="vAttr in variantCustomAttrs" :key="vAttr.thuocTinhId">
-                            <select
-                              v-if="vAttr.loaiDuLieu === 'select' && vAttr.giaTriList && vAttr.giaTriList.length > 0"
-                              v-model="row[vAttr.tenTruong]"
-                              class="hh-cell hh-cell--sel"
+                  <div class="hh-variant-cards">
+                    <div
+                      v-for="(row, i) in bienTheRows"
+                      :key="row._key"
+                      class="hh-variant-card"
+                      :class="{
+                        'is-err': rowErrors[i] && Object.keys(rowErrors[i]).length > 0,
+                      }"
+                    >
+                      <div class="hh-variant-card__head">
+                        <div class="hh-variant-card__title">
+                          <span class="hh-variant-card__badge">Phiên bản #{{ i + 1 }}</span>
+                          <span v-if="row.maSku" class="hh-variant-card__meta">
+                            <Tag :size="12" /> {{ row.maSku }}
+                          </span>
+                          <span v-if="row.barcode" class="hh-variant-card__meta">
+                            <Barcode :size="12" /> {{ row.barcode }}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          class="hh-variant-card__del"
+                          :disabled="bienTheRows.length <= 1"
+                          :title="
+                            bienTheRows.length <= 1
+                              ? 'Bắt buộc tối thiểu 1 phiên bản'
+                              : 'Xóa phiên bản này'
+                          "
+                          @click="xoaDong(row._key)"
+                        >
+                          <Trash2 :size="14" />
+                          <span>Xóa</span>
+                        </button>
+                      </div>
+
+                      <div class="hh-variant-card__grid">
+                        <label class="hh-field">
+                          <span class="d-inline-flex align-items-center gap-1.5">
+                            <Tag :size="13" /> Mã SKU
+                          </span>
+                          <input
+                            :value="row.maSku"
+                            :title="row.maSku"
+                            placeholder="Tự sinh khi chọn đủ cấu hình"
+                            disabled
+                            class="hh-input-mono"
+                          />
+                        </label>
+
+                        <label class="hh-field">
+                          <span class="d-inline-flex align-items-center gap-1.5">
+                            <Barcode :size="13" /> Mã vạch (EAN-13)
+                          </span>
+                          <input
+                            :value="row.barcode"
+                            :title="row.barcode"
+                            placeholder="Tự sinh ngẫu nhiên"
+                            disabled
+                            class="hh-input-mono"
+                          />
+                        </label>
+
+                        <label class="hh-field">
+                          <span class="d-inline-flex align-items-center gap-1.5">
+                            <Palette :size="13" /> Màu sắc <b class="hh-req">*</b>
+                          </span>
+                          <select
+                            v-if="laKieuChonHeThong('mau_sac')"
+                            v-model="row.mauSac"
+                            :class="{ 'is-err': rowErrors[i]?.mauSac }"
+                          >
+                            <option value="">-- Chọn màu sắc --</option>
+                            <option v-for="m in optMauSac.value" :key="m" :value="m">
+                              {{ m }}
+                            </option>
+                          </select>
+                          <input
+                            v-else
+                            v-model.trim="row.mauSac"
+                            :class="{ 'is-err': rowErrors[i]?.mauSac }"
+                            placeholder="Nhập màu sắc"
+                          />
+                        </label>
+
+                        <label class="hh-field">
+                          <span class="d-inline-flex align-items-center gap-1.5">
+                            <Cpu :size="13" /> CPU <b class="hh-req">*</b>
+                          </span>
+                          <select v-model="row.cpuId" :class="{ 'is-err': rowErrors[i]?.cpuId }">
+                            <option value="">-- Chọn CPU --</option>
+                            <option
+                              v-for="c in danhSachCpu"
+                              :key="idOf(c, 'cpuId')"
+                              :value="idOf(c, 'cpuId')"
                             >
-                              <option value="">— Chọn —</option>
-                              <option v-for="gv in vAttr.giaTriList" :key="gv.giaTriId" :value="gv.giaTri">{{ gv.giaTri }}</option>
-                            </select>
-                            <input
-                              v-else
-                              v-model.trim="row[vAttr.tenTruong]"
-                              class="hh-cell"
-                              :placeholder="vAttr.tenHienThi"
-                            />
-                          </td>
-                          <td class="ta-c">
-                            <button type="button" class="hh-icon-btn" title="Xóa dòng này" @click="xoaDong(row._key)">
-                              <X :size="14" />
-                            </button>
-                          </td>
-                        </tr>
-                        <tr v-if="!bienTheRows.length">
-                          <td :colspan="11 + variantCustomAttrs.length" class="hh-rows__empty">Chưa có phiên bản nào — bấm "+ Thêm dòng" để tạo.</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                              {{ c.tenCpu }}
+                            </option>
+                          </select>
+                        </label>
+
+                        <label class="hh-field">
+                          <span class="d-inline-flex align-items-center gap-1.5">
+                            <MemoryStick :size="13" /> RAM <b class="hh-req">*</b>
+                          </span>
+                          <select v-model="row.ramId" :class="{ 'is-err': rowErrors[i]?.ramId }">
+                            <option value="">-- Chọn RAM --</option>
+                            <option
+                              v-for="r in danhSachRam"
+                              :key="idOf(r, 'ramId')"
+                              :value="idOf(r, 'ramId')"
+                            >
+                              {{ r.dungLuong || r.tenRam }}
+                            </option>
+                          </select>
+                        </label>
+
+                        <label class="hh-field">
+                          <span class="d-inline-flex align-items-center gap-1.5">
+                            <HardDrive :size="13" /> Ổ cứng <b class="hh-req">*</b>
+                          </span>
+                          <select
+                            v-model="row.oCungId"
+                            :class="{ 'is-err': rowErrors[i]?.oCungId }"
+                          >
+                            <option value="">-- Chọn ổ cứng --</option>
+                            <option
+                              v-for="o in danhSachOCung"
+                              :key="idOf(o, 'oCungId')"
+                              :value="idOf(o, 'oCungId')"
+                            >
+                              {{ tenOCung(o) }}
+                            </option>
+                          </select>
+                        </label>
+
+                        <label class="hh-field">
+                          <span class="d-inline-flex align-items-center gap-1.5">
+                            <Monitor :size="13" /> Card đồ họa (GPU) <b class="hh-req">*</b>
+                          </span>
+                          <select v-model="row.gpuId" :class="{ 'is-err': rowErrors[i]?.gpuId }">
+                            <option value="">-- Chọn GPU --</option>
+                            <option
+                              v-for="g in danhSachGpu"
+                              :key="idOf(g, 'gpuId')"
+                              :value="idOf(g, 'gpuId')"
+                            >
+                              {{ g.tenGpu }}
+                            </option>
+                          </select>
+                        </label>
+
+                        <label class="hh-field">
+                          <span class="d-inline-flex align-items-center gap-1.5">
+                            <DollarSign :size="13" /> Giá vốn (₫) <b class="hh-req">*</b>
+                          </span>
+                          <input
+                            v-model.number="row.giaNhap"
+                            type="number"
+                            min="0"
+                            step="1000"
+                            :class="{ 'is-err': rowErrors[i]?.giaNhap }"
+                            placeholder="Nhập giá vốn (> 0)"
+                          />
+                        </label>
+
+                        <label class="hh-field">
+                          <span class="d-inline-flex align-items-center gap-1.5">
+                            <Coins :size="13" /> Giá bán (₫) <b class="hh-req">*</b>
+                          </span>
+                          <input
+                            v-model.number="row.giaBan"
+                            type="number"
+                            min="0"
+                            step="1000"
+                            :class="{ 'is-err': rowErrors[i]?.giaBan }"
+                            placeholder="Nhập giá bán (>= Giá vốn)"
+                          />
+                        </label>
+
+                        <!-- Thuộc tính động của biến thể (tự động dàn đều theo lưới) -->
+                        <label
+                          v-for="vAttr in variantCustomAttrs"
+                          :key="vAttr.thuocTinhId"
+                          class="hh-field"
+                        >
+                          <span>
+                            {{ vAttr.tenHienThi }}
+                            <b v-if="vAttr.batBuoc" class="hh-req">*</b>
+                          </span>
+                          <select
+                            v-if="laKieuChon(vAttr)"
+                            v-model="row[vAttr.tenTruong]"
+                            :class="{ 'is-err': rowErrors[i]?.[vAttr.tenTruong] }"
+                          >
+                            <option value="">-- Chọn {{ vAttr.tenHienThi }} --</option>
+                            <option
+                              v-if="!vAttr.giaTriList || vAttr.giaTriList.length === 0"
+                              value=""
+                              disabled
+                            >
+                              -- Chưa có giá trị (thêm ở mục Thuộc tính) --
+                            </option>
+                            <option
+                              v-for="gv in vAttr.giaTriList"
+                              :key="gv.giaTriId"
+                              :value="gv.giaTri"
+                            >
+                              {{ gv.giaTri }}
+                            </option>
+                          </select>
+                          <input
+                            v-else
+                            v-model.trim="row[vAttr.tenTruong]"
+                            :class="{ 'is-err': rowErrors[i]?.[vAttr.tenTruong] }"
+                            :placeholder="'Nhập ' + vAttr.tenHienThi"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div v-if="!bienTheRows.length" class="hh-rows__empty">
+                      Chưa có phiên bản nào — bấm "+ Thêm phiên bản" để tạo.
+                    </div>
                   </div>
 
-                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2" style="margin-top:10px">
+                  <div
+                    class="d-flex align-items-center justify-content-between flex-wrap gap-2"
+                    style="margin-top: 14px"
+                  >
                     <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" @click="themDong">
-                      <Plus :size="14" /> Thêm dòng
+                      <Plus :size="14" /> Thêm phiên bản
                     </button>
-                    <span class="hh-muted" style="font-size:12px"><Info :size="13" style="vertical-align:-2px" /> Mã SKU tự sinh theo tên sản phẩm & cấu hình; mã vạch tự sinh ngẫu nhiên không trùng.</span>
+                    <span class="hh-muted" style="font-size: 12px"
+                      ><Info :size="13" style="vertical-align: -2px" /> Mã SKU tự sinh theo tên sản
+                      phẩm & cấu hình; mã vạch tự sinh ngẫu nhiên không trùng.</span
+                    >
                   </div>
 
                   <p class="hh-note" style="margin-top: 12px">
                     <Info :size="14" />
-                    Nhập giá vốn và giá bán cho từng phiên bản. Phiên bản mới tạo sẽ ở trạng thái chờ nhập hàng cho đến khi nhập serial.
+                    Nhập giá vốn và giá bán cho từng phiên bản. Phiên bản mới tạo sẽ ở trạng thái
+                    chờ nhập hàng cho đến khi nhập serial.
                   </p>
                 </fieldset>
               </template>
@@ -872,14 +1528,34 @@
                 <div class="hh-editor">
                   <div class="hh-editor__bar">
                     <button type="button" title="In đậm" @click="dinhDang('bold')"><b>B</b></button>
-                    <button type="button" title="In nghiêng" @click="dinhDang('italic')"><i>I</i></button>
-                    <button type="button" title="Gạch chân" @click="dinhDang('underline')"><u>U</u></button>
+                    <button type="button" title="In nghiêng" @click="dinhDang('italic')">
+                      <i>I</i>
+                    </button>
+                    <button type="button" title="Gạch chân" @click="dinhDang('underline')">
+                      <u>U</u>
+                    </button>
                     <span class="hh-editor__sep"></span>
-                    <button type="button" title="Danh sách chấm" @click="dinhDang('insertUnorderedList')"><ListIcon :size="14" /></button>
-                    <button type="button" title="Danh sách số" @click="dinhDang('insertOrderedList')"><ListOrdered :size="14" /></button>
+                    <button
+                      type="button"
+                      title="Danh sách chấm"
+                      @click="dinhDang('insertUnorderedList')"
+                    >
+                      <ListIcon :size="14" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Danh sách số"
+                      @click="dinhDang('insertOrderedList')"
+                    >
+                      <ListOrdered :size="14" />
+                    </button>
                     <span class="hh-editor__sep"></span>
-                    <button type="button" title="Chèn liên kết" @click="chenLink"><Link :size="14" /></button>
-                    <button type="button" title="Xóa định dạng" @click="dinhDang('removeFormat')"><Eraser :size="14" /></button>
+                    <button type="button" title="Chèn liên kết" @click="chenLink">
+                      <Link :size="14" />
+                    </button>
+                    <button type="button" title="Xóa định dạng" @click="dinhDang('removeFormat')">
+                      <Eraser :size="14" />
+                    </button>
                   </div>
                   <div
                     ref="moTaEl"
@@ -896,15 +1572,26 @@
           <footer class="hh-modal__foot">
             <div class="hh-modal__foot-left">
               <button type="button" class="hh-btn hh-btn--ghost" @click="closeModal">Bỏ qua</button>
+              <span v-if="saveError || loiDuLieuTucThoi" class="hh-foot-err">
+                <AlertCircle :size="14" style="flex-shrink: 0" />
+                <span>{{ saveError || loiDuLieuTucThoi }}</span>
+              </span>
             </div>
             <div class="hh-modal__foot-right">
               <button
-                type="button" class="hh-btn hh-btn--primary"
-                :disabled="isSaving || !formHopLe" :title="!formHopLe ? 'Điền đủ các ô bắt buộc (*) để lưu' : ''"
+                type="button"
+                class="hh-btn hh-btn--primary"
+                :disabled="isSaving || !formHopLe"
+                :title="
+                  !formHopLe
+                    ? loiDuLieuTucThoi ||
+                      'Vui lòng nhập đầy đủ thông tin bắt buộc và ít nhất 1 phiên bản hợp lệ để lưu'
+                    : ''
+                "
                 @click="submitForm"
               >
                 <i class="fa" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
-                {{ isSaving ? 'Đang lưu…' : 'Lưu' }}
+                {{ isSaving ? "Đang lưu…" : "Lưu" }}
               </button>
             </div>
           </footer>
@@ -921,7 +1608,9 @@
               <h2>Xuất file</h2>
               <p><span class="hh-head-path">Chọn sản phẩm / phiên bản muốn xuất</span></p>
             </div>
-            <button class="hh-icon-btn" aria-label="Đóng" @click="showExportModal = false"><X :size="14" /></button>
+            <button class="hh-icon-btn" aria-label="Đóng" @click="showExportModal = false">
+              <X :size="14" />
+            </button>
           </header>
 
           <div class="hh-modal__body">
@@ -929,7 +1618,9 @@
               <label class="hh-export-checkall">
                 <input type="checkbox" :checked="allChecked" @change="toggleAll" />
                 <span>Chọn tất cả</span>
-                <span class="hh-export-count">{{ selectedIds.length }}/{{ bienTheDaLoc.length }}</span>
+                <span class="hh-export-count"
+                  >{{ selectedIds.length }}/{{ bienTheDaLoc.length }}</span
+                >
               </label>
               <div class="hh-search hh-export-search">
                 <Search :size="14" class="hh-search__icon" />
@@ -946,30 +1637,56 @@
                     :checked="isGroupChecked(group)"
                     @change="toggleGroupCheck(group)"
                   />
-                  <img :src="group.hinhAnh" class="hh-export-group__thumb" alt="" @error="onImgError" />
+                  <img
+                    :src="group.hinhAnh"
+                    class="hh-export-group__thumb"
+                    alt=""
+                    @error="onImgError"
+                  />
                   <div class="hh-export-group__info">
                     <div class="hh-export-group__name">{{ group.tenSanPham }}</div>
-                    <div class="hh-export-group__meta">{{ group.maSanPham }} · {{ group.variants.length }} phiên bản</div>
+                    <div class="hh-export-group__meta">
+                      {{ group.maSanPham }} · {{ group.variants.length }} phiên bản
+                    </div>
                   </div>
                   <div class="hh-export-group__price">{{ group.khoangGia }}</div>
                 </label>
-                <label v-for="item in group.variants" :key="item.bienTheId" class="hh-export-variant">
-                  <input type="checkbox" :checked="selectedIds.includes(item.bienTheId)" @change="toggleVariantCheck(item.bienTheId)" />
+                <label
+                  v-for="item in group.variants"
+                  :key="item.bienTheId"
+                  class="hh-export-variant"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="selectedIds.includes(item.bienTheId)"
+                    @change="toggleVariantCheck(item.bienTheId)"
+                  />
                   <span class="hh-export-variant__sku">{{ item.maSku }}</span>
-                  <span class="hh-export-variant__spec">{{ [item.mauSac, item.tenCpu, item.tenRam].filter(Boolean).join(' · ') || '—' }}</span>
+                  <span class="hh-export-variant__spec">{{
+                    [item.mauSac, item.tenCpu, item.tenRam].filter(Boolean).join(" · ") || "—"
+                  }}</span>
                   <span class="hh-export-variant__price">{{ formatNumber(item.giaBan) }} ₫</span>
                 </label>
               </div>
-              <div v-if="!exportGroups.length" class="hh-empty-cell">Không tìm thấy sản phẩm/phiên bản nào khớp</div>
+              <div v-if="!exportGroups.length" class="hh-empty-cell">
+                Không tìm thấy sản phẩm/phiên bản nào khớp
+              </div>
             </div>
           </div>
 
           <footer class="hh-modal__foot">
             <div class="hh-modal__foot-left">
-              <button type="button" class="hh-btn hh-btn--ghost" @click="showExportModal = false">Hủy</button>
+              <button type="button" class="hh-btn hh-btn--ghost" @click="showExportModal = false">
+                Hủy
+              </button>
             </div>
             <div class="hh-modal__foot-right">
-              <button type="button" class="hh-btn hh-btn--primary" :disabled="!selectedIds.length" @click="exportCsv">
+              <button
+                type="button"
+                class="hh-btn hh-btn--primary"
+                :disabled="!selectedIds.length"
+                @click="exportCsv"
+              >
                 <Download :size="14" /> Xuất file ({{ selectedIds.length }})
               </button>
             </div>
@@ -979,793 +1696,1129 @@
     </teleport>
 
     <teleport to="body">
-      <div v-if="toast" class="hh-toast">{{ toast }}</div>
+      <div v-if="toast" class="hh-toast" :class="{ 'hh-toast--err': toastType === 'error' }">
+        {{ toast }}
+      </div>
     </teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 
-import { useAutoHideOnScroll } from '@/composables/useAutoHideOnScroll.js'
-import SearchSelect from '@/components/common/SearchSelect.vue'
-import TagComboInput from '@/components/common/TagComboInput.vue'
-import { get, put, authHeaders } from '@/services/api.js'
-import { ProductsStore, refreshProducts as lamMoiKhoDuLieuChung } from '@/stores/products.js'
-import { refreshInventory as lamMoiTonKhoDuLieuChung } from '@/stores/inventory.js'
-import { getThuongHieu, getNhaCungCap, getCpu, getRam, getOCung, getGpu } from '@/services/DmService.js'
-import { ThuocTinhService } from '@/services/ThuocTinhService.js'
-import * as bienTheApi from '@/services/bienTheSanPhamService.js'
-import * as sanPhamApi from '@/services/sanPhamService.js'
-import { getLichSu } from '@/services/SanPhamService.js'
-import { Cpu, MemoryStick, HardDrive, Palette, Monitor, Barcode, Search, X, Filter, ChevronDown, Plus, Download, RefreshCw, ChevronLeft, ChevronRight, Inbox, Hand, Edit, Pencil, Trash2, Copy, History, Star, BarChart2, Loader2, Save, ExternalLink, Clock, ArrowRight, Eraser, ShoppingBag, Phone, Mail, MapPin, Building2, Tag, Briefcase, FileText, Settings, ToggleLeft, User, IdCard, Headphones, Send, AlertCircle, Info, Link, ListOrdered, ListIcon, MousePointer2, Laptop, DollarSign, Coins, Activity, Calendar, CalendarCheck, Hash, Layers } from '@lucide/vue'
-import JsBarcode from 'jsbarcode'
+import { useAutoHideOnScroll } from "@/composables/useAutoHideOnScroll.js";
+import SearchSelect from "@/components/common/SearchSelect.vue";
+import TagComboInput from "@/components/common/TagComboInput.vue";
+import { get, put, authHeaders } from "@/services/api.js";
+import { ProductsStore, refreshProducts as lamMoiKhoDuLieuChung } from "@/stores/products.js";
+import { refreshInventory as lamMoiTonKhoDuLieuChung } from "@/stores/inventory.js";
+import {
+  getThuongHieu,
+  getNhaCungCap,
+  getCpu,
+  getRam,
+  getOCung,
+  getGpu,
+} from "@/services/DmService.js";
+import { ThuocTinhService } from "@/services/ThuocTinhService.js";
+import * as bienTheApi from "@/services/bienTheSanPhamService.js";
+import * as sanPhamApi from "@/services/sanPhamService.js";
+import { getLichSu } from "@/services/SanPhamService.js";
+import {
+  Cpu,
+  MemoryStick,
+  HardDrive,
+  Palette,
+  Monitor,
+  Barcode,
+  Search,
+  X,
+  Filter,
+  ChevronDown,
+  Plus,
+  Download,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Inbox,
+  Hand,
+  Edit,
+  Pencil,
+  Trash2,
+  Copy,
+  History,
+  Star,
+  BarChart2,
+  Loader2,
+  Save,
+  ExternalLink,
+  Clock,
+  ArrowRight,
+  Eraser,
+  ShoppingBag,
+  Phone,
+  Mail,
+  MapPin,
+  Building2,
+  Tag,
+  Briefcase,
+  FileText,
+  Settings,
+  ToggleLeft,
+  User,
+  IdCard,
+  Headphones,
+  Send,
+  AlertCircle,
+  Info,
+  Link,
+  ListOrdered,
+  ListIcon,
+  MousePointer2,
+  Laptop,
+  DollarSign,
+  Coins,
+  Activity,
+  Calendar,
+  CalendarCheck,
+  Hash,
+  Layers,
+} from "@lucide/vue";
+import JsBarcode from "jsbarcode";
 
 // Gọi hàm API tương ứng của service
 const timHam = (api, ...tenList) => {
-  for (const ten of tenList) if (typeof api?.[ten] === 'function') return api[ten]
-  return null
-}
+  for (const ten of tenList) if (typeof api?.[ten] === "function") return api[ten];
+  return null;
+};
 
 const goiTao = (api, payload, tenApi) => {
-  const fn = timHam(api, 'create', 'add', 'insert', 'post')
-  if (fn) return fn(payload)
-  const save = timHam(api, 'save')
-  if (save) return save.length >= 2 ? save(null, payload) : save(payload)
-  throw new Error(`${tenApi} không có hàm tạo mới (create / add / save)`)
-}
+  const fn = timHam(api, "create", "add", "insert", "post");
+  if (fn) return fn(payload);
+  const save = timHam(api, "save");
+  if (save) return save.length >= 2 ? save(null, payload) : save(payload);
+  throw new Error(`${tenApi} không có hàm tạo mới (create / add / save)`);
+};
 
 const goiSua = (api, id, payload, tenApi) => {
-  const fn = timHam(api, 'update', 'put', 'edit', 'save')
-  console.log('[DEBUG goiSua] api keys:', Object.keys(api || {}), 'fn found:', typeof fn, 'fn.length:', fn?.length)
-  if (fn) return fn.length >= 2 ? fn(id, payload) : fn(payload)
-  throw new Error(`${tenApi} không có hàm cập nhật (update / save)`)
-}
+  const fn = timHam(api, "update", "put", "edit", "save");
+  console.log(
+    "[DEBUG goiSua] api keys:",
+    Object.keys(api || {}),
+    "fn found:",
+    typeof fn,
+    "fn.length:",
+    fn?.length,
+  );
+  if (fn) return fn.length >= 2 ? fn(id, payload) : fn(payload);
+  throw new Error(`${tenApi} không có hàm cập nhật (update / save)`);
+};
 
-const apiTaoSanPham = (payload) => goiTao(sanPhamApi, payload, 'sanPhamService')
-const apiSuaSanPham = (id, payload) => goiSua(sanPhamApi, id, payload, 'sanPhamService')
-const apiTaoBienThe = (payload) => goiTao(bienTheApi, payload, 'bienTheSanPhamService')
+const apiTaoSanPham = (payload) => goiTao(sanPhamApi, payload, "sanPhamService");
+const apiSuaSanPham = (id, payload) => goiSua(sanPhamApi, id, payload, "sanPhamService");
+const apiTaoBienThe = (payload) => goiTao(bienTheApi, payload, "bienTheSanPhamService");
 
 // Tải ảnh sản phẩm lên server
-const UPLOAD_URL = '/api/upload/image'
-const THU_MUC_ANH = '/images/'
+const UPLOAD_URL = "/api/upload/image";
+const THU_MUC_ANH = "/images/";
 
 // Trạng thái kinh doanh sản phẩm
 const TRANG_THAI_SAN_PHAM = [
-  { value: 'active', label: 'Đang bán' },
-  { value: 'cho_nhap_hang', label: 'Chờ nhập hàng' },
-  { value: 'het_hang', label: 'Hết hàng' },
-  { value: 'inactive', label: 'Ngừng kinh doanh' }
-]
+  { value: "active", label: "Đang bán" },
+  { value: "cho_nhap_hang", label: "Chờ nhập hàng" },
+  { value: "het_hang", label: "Hết hàng" },
+  { value: "inactive", label: "Ngừng kinh doanh" },
+];
+
+// Danh sách trạng thái hiển thị trong modal thêm/sửa sản phẩm
+const danhSachTrangThaiSanPham = computed(() => {
+  if (modalMode.value === "create") {
+    return [{ value: "cho_nhap_hang", label: "Chờ nhập hàng" }];
+  }
+  const list = [
+    { value: "active", label: "Kinh doanh" },
+    { value: "inactive", label: "Ngừng kinh doanh" },
+  ];
+  if (form.value?.trangThaiSanPham === "cho_nhap_hang") {
+    list.unshift({ value: "cho_nhap_hang", label: "Chờ nhập hàng" });
+  } else if (form.value?.trangThaiSanPham === "het_hang") {
+    list.unshift({ value: "het_hang", label: "Hết hàng" });
+  }
+  return list;
+});
 const LOAI_SAN_PHAM = [
-  { value: 'LAPTOP', label: 'Laptop' },
-  { value: 'PHU_KIEN', label: 'Phụ kiện' },
-  { value: 'DIEN_THOAI', label: 'Điện thoại' }
-]
+  { value: "LAPTOP", label: "Laptop" },
+  { value: "PHU_KIEN", label: "Phụ kiện" },
+  { value: "DIEN_THOAI", label: "Điện thoại" },
+];
 const PHAN_LOAI_DU_PHONG = [
-  { phanLoaiId: 1, maPhanLoai: 'van_phong', tenPhanLoai: 'Văn phòng' },
-  { phanLoaiId: 2, maPhanLoai: 'sinh_vien', tenPhanLoai: 'Sinh viên' },
-  { phanLoaiId: 3, maPhanLoai: 'gaming', tenPhanLoai: 'Gaming' },
-  { phanLoaiId: 4, maPhanLoai: 'do_hoa', tenPhanLoai: 'Đồ họa' },
-  { phanLoaiId: 5, maPhanLoai: 'ky_thuat', tenPhanLoai: 'Kỹ thuật - AI' },
-  { phanLoaiId: 6, maPhanLoai: 'macbook', tenPhanLoai: 'MacBook' },
-  { phanLoaiId: 7, maPhanLoai: 'laptop_cu', tenPhanLoai: 'Laptop cũ' }
-]
+  { phanLoaiId: 1, maPhanLoai: "van_phong", tenPhanLoai: "Văn phòng" },
+  { phanLoaiId: 2, maPhanLoai: "sinh_vien", tenPhanLoai: "Sinh viên" },
+  { phanLoaiId: 3, maPhanLoai: "gaming", tenPhanLoai: "Gaming" },
+  { phanLoaiId: 4, maPhanLoai: "do_hoa", tenPhanLoai: "Đồ họa" },
+  { phanLoaiId: 5, maPhanLoai: "ky_thuat", tenPhanLoai: "Kỹ thuật - AI" },
+  { phanLoaiId: 6, maPhanLoai: "macbook", tenPhanLoai: "MacBook" },
+  { phanLoaiId: 7, maPhanLoai: "laptop_cu", tenPhanLoai: "Laptop cũ" },
+];
 
 // Thuộc tính từ API (P3 - động thay hardcoded)
 const HE_THONG_THUOC_TINH = {
   mau_sac: {
-    field: 'mauSac',
-    default: ['Đen', 'Trắng', 'Bạc', 'Xám', 'Xanh Dương', 'Xanh Lá', 'Đỏ', 'Vàng', 'Hồng', 'Tím', 'Cam', 'Nâu']
+    field: "mauSac",
+    default: [
+      "Đen",
+      "Trắng",
+      "Bạc",
+      "Xám",
+      "Xanh Dương",
+      "Xanh Lá",
+      "Đỏ",
+      "Vàng",
+      "Hồng",
+      "Tím",
+      "Cam",
+      "Nâu",
+    ],
   },
   man_hinh: {
-    field: 'kichThuocManHinh',
-    default: ['15.6" FHD 60Hz', '15.6" FHD 144Hz', '15.6" QHD 240Hz', '16" 2.5K 120Hz', '16" FHD 165Hz', '16" WQXGA 165Hz', '16" 2.8K OLED 120Hz']
+    field: "kichThuocManHinh",
+    default: [
+      '15.6" FHD 60Hz',
+      '15.6" FHD 144Hz',
+      '15.6" QHD 240Hz',
+      '16" 2.5K 120Hz',
+      '16" FHD 165Hz',
+      '16" WQXGA 165Hz',
+      '16" 2.8K OLED 120Hz',
+    ],
   },
   pin: {
-    field: 'pin',
-    default: ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh', '86Wh', '90Wh']
+    field: "pin",
+    default: ["41Wh", "48Wh", "50Wh", "52Wh", "54Wh", "57Wh", "75Wh", "80Wh", "86Wh", "90Wh"],
   },
   he_dieu_hanh: {
-    field: 'heDieuHanh',
-    default: ['Windows 11 Home', 'Windows 11 Pro', 'macOS', 'Không kèm HĐH']
-  }
-}
-const BAO_HANH_GOI_Y = [6, 12, 18, 24, 36]
-const TRONG_LUONG_GOI_Y = [1.2, 1.3, 1.5, 1.7, 1.8, 2.0, 2.3, 2.5]
+    field: "heDieuHanh",
+    default: ["Windows 11 Home", "Windows 11 Pro", "macOS", "Không kèm HĐH"],
+  },
+};
+const BAO_HANH_GOI_Y = [6, 12, 18, 24, 36];
+const TRONG_LUONG_GOI_Y = [1.2, 1.3, 1.5, 1.7, 1.8, 2.0, 2.3, 2.5];
 
 // Cache thuộc tính động từ API
-const thuocTinhDong = ref({})
-const allThuocTinhList = ref([])
-const formThuocTinh = reactive({})
-const chiTietThuocTinh = ref({})
+const thuocTinhDong = ref({});
+const allThuocTinhList = ref([]);
+const formThuocTinh = reactive({});
+const chiTietThuocTinh = ref({});
 
-const STANDARD_ATTR_FIELDS = new Set(['mau_sac', 'man_hinh', 'pin', 'he_dieu_hanh', 'trong_luong'])
+const STANDARD_ATTR_FIELDS = new Set(["mau_sac", "man_hinh", "pin", "he_dieu_hanh", "trong_luong"]);
 
 // Thuộc tính tùy chỉnh cấp Sản phẩm (phạm vi: san_pham)
 const productCustomAttrs = computed(() => {
   return (allThuocTinhList.value || []).filter(
-    tt => (tt.phamVi || 'san_pham') === 'san_pham' && !STANDARD_ATTR_FIELDS.has(tt.tenTruong) && (tt.trangThai || 'active') === 'active'
-  )
-})
+    (tt) =>
+      (tt.phamVi || "san_pham") === "san_pham" &&
+      !STANDARD_ATTR_FIELDS.has(tt.tenTruong) &&
+      (tt.trangThai || "active") === "active",
+  );
+});
 
 // Thuộc tính tùy chỉnh cấp Biến thể (phạm vi: bien_the)
 const variantCustomAttrs = computed(() => {
   return (allThuocTinhList.value || []).filter(
-    tt => tt.phamVi === 'bien_the' && !STANDARD_ATTR_FIELDS.has(tt.tenTruong) && (tt.trangThai || 'active') === 'active'
-  )
-})
+    (tt) =>
+      tt.phamVi === "bien_the" &&
+      !STANDARD_ATTR_FIELDS.has(tt.tenTruong) &&
+      (tt.trangThai || "active") === "active",
+  );
+});
 
-const dynamicCustomAttrs = productCustomAttrs
-const formThuocTinhBienThe = reactive({})
+const dynamicCustomAttrs = productCustomAttrs;
+const formThuocTinhBienThe = reactive({});
+
+const laKieuChon = (attr) => {
+  return (
+    String(attr?.loaiDuLieu || "select")
+      .trim()
+      .toLowerCase() !== "text"
+  );
+};
+const laKieuChonHeThong = (key) => {
+  const cfg = thuocTinhDong.value?.[key];
+  if (!cfg) return true;
+  return (
+    String(cfg.loaiDuLieu || "select")
+      .trim()
+      .toLowerCase() !== "text"
+  );
+};
 
 const getAttrOptions = (attr) => {
-  return (attr.giaTriList || []).map(g => ({ label: g.giaTri, value: g.giaTri }))
-}
+  return (attr.giaTriList || []).map((g) => ({ label: g.giaTri, value: g.giaTri }));
+};
 
 // Regex và helper gán/trích xuất metadata thuộc tính động vào moTa
-const METADATA_TAG_REGEX = /<!--METADATA_THUOC_TINH:([\s\S]*?)-->/
+const METADATA_TAG_REGEX = /<!--METADATA_THUOC_TINH:([\s\S]*?)-->/;
 const tríchXuatThuocTinhTuMoTa = (moTaStr) => {
-  if (!moTaStr) return {}
-  const match = String(moTaStr).match(METADATA_TAG_REGEX)
+  if (!moTaStr) return {};
+  const match = String(moTaStr).match(METADATA_TAG_REGEX);
   if (match && match[1]) {
     try {
-      return JSON.parse(match[1]) || {}
+      return JSON.parse(match[1]) || {};
     } catch (e) {
-      console.warn('[HangHoa] Lỗi parse metadata thuộc tính từ mô tả', e)
+      console.warn("[HangHoa] Lỗi parse metadata thuộc tính từ mô tả", e);
     }
   }
-  return {}
-}
+  return {};
+};
 const loaiBoMetadataTuMoTa = (moTaStr) => {
-  if (!moTaStr) return ''
-  return String(moTaStr).replace(METADATA_TAG_REGEX, '').trim()
-}
+  if (!moTaStr) return "";
+  return String(moTaStr).replace(METADATA_TAG_REGEX, "").trim();
+};
 const ganMetadataVaoMoTa = (moTaStr, thuocTinhObj) => {
-  const baseMoTa = loaiBoMetadataTuMoTa(moTaStr)
-  const hasValues = thuocTinhObj && Object.values(thuocTinhObj).some(v => v !== '' && v !== null && v !== undefined)
-  if (!hasValues) return baseMoTa
-  return `${baseMoTa}\n<!--METADATA_THUOC_TINH:${JSON.stringify(thuocTinhObj)}-->`
-}
+  const baseMoTa = loaiBoMetadataTuMoTa(moTaStr);
+  const hasValues =
+    thuocTinhObj &&
+    Object.values(thuocTinhObj).some((v) => v !== "" && v !== null && v !== undefined);
+  if (!hasValues) return baseMoTa;
+  return `${baseMoTa}\n<!--METADATA_THUOC_TINH:${JSON.stringify(thuocTinhObj)}-->`;
+};
 
 const moTaHienThi = computed(() => {
-  return loaiBoMetadataTuMoTa(chiTiet.value?.moTa || '')
-})
+  return loaiBoMetadataTuMoTa(chiTiet.value?.moTa || "");
+});
 
 const loadThuocTinh = async () => {
   try {
-    const list = await ThuocTinhService.getAll()
-    allThuocTinhList.value = Array.isArray(list) ? list.sort((a, b) => (a.thuTuHienThi ?? 0) - (b.thuTuHienThi ?? 0)) : []
-    const map = {}
+    const list = await ThuocTinhService.getAll();
+    allThuocTinhList.value = Array.isArray(list)
+      ? list.sort((a, b) => (a.thuTuHienThi ?? 0) - (b.thuTuHienThi ?? 0))
+      : [];
+    const map = {};
     for (const tt of allThuocTinhList.value) {
-      const cfg = HE_THONG_THUOC_TINH[tt.tenTruong]
+      const cfg = HE_THONG_THUOC_TINH[tt.tenTruong];
       if (cfg) {
-        // Gộp giá trị API + giá trị đã có trong data + default
-        const apiValues = (tt.giaTriList || []).map(g => g.giaTri)
-        const existingValues = (bienTheChuan.value || []).map(v => v[cfg.field]).filter(Boolean)
+        const apiValues = (tt.giaTriList || []).map((g) => g.giaTri).filter(Boolean);
+        const baseValues = apiValues.length > 0 ? apiValues : cfg.default;
         map[tt.tenTruong] = {
           field: cfg.field,
           tenHienThi: tt.tenHienThi,
           loaiDuLieu: tt.loaiDuLieu,
           batBuoc: tt.batBuoc,
-          values: [...new Set([...cfg.default, ...existingValues, ...apiValues])].sort()
-        }
+          values: [...new Set(baseValues)],
+        };
       }
     }
-    thuocTinhDong.value = map
+    thuocTinhDong.value = map;
   } catch (e) {
     // Fallback to hardcoded
-    console.warn('Không load được thuộc tính từ API, dùng mặc định', e)
+    console.warn("Không load được thuộc tính từ API, dùng mặc định", e);
   }
-}
+};
 onMounted(async () => {
-  dongHo.value = bayGio()
-  await fetchMasterData()
-  await fetchData()
-  loadThuocTinh()
-})
+  dongHo.value = bayGio();
+  await fetchMasterData();
+  await fetchData();
+  loadThuocTinh();
+});
 
-const MAN_HINH_GOI_Y = computed(() => thuocTinhDong.value.man_hinh?.values || ['15.6" FHD 60Hz', '15.6" FHD 144Hz', '15.6" QHD 240Hz', '16" 2.5K 120Hz', '16" FHD 165Hz', '16" WQXGA 165Hz', '16" 2.8K OLED 120Hz'])
-const PIN_GOI_Y = computed(() => thuocTinhDong.value.pin?.values || ['41Wh', '48Wh', '50Wh', '52Wh', '54Wh', '57Wh', '75Wh', '80Wh', '86Wh', '90Wh'])
-const HDH_GOI_Y = computed(() => thuocTinhDong.value.he_dieu_hanh?.values || ['Windows 11 Home', 'Windows 11 Pro', 'macOS', 'Không kèm HĐH'])
-const MAU_SAC_GOI_Y = computed(() => thuocTinhDong.value.mau_sac?.values || ['Đen', 'Trắng', 'Bạc', 'Xám', 'Xanh Dương', 'Xanh Lá', 'Đỏ', 'Vàng', 'Hồng', 'Tím', 'Cam', 'Nâu'])
+const MAN_HINH_GOI_Y = computed(
+  () =>
+    thuocTinhDong.value.man_hinh?.values || [
+      '15.6" FHD 60Hz',
+      '15.6" FHD 144Hz',
+      '15.6" QHD 240Hz',
+      '16" 2.5K 120Hz',
+      '16" FHD 165Hz',
+      '16" WQXGA 165Hz',
+      '16" 2.8K OLED 120Hz',
+    ],
+);
+const PIN_GOI_Y = computed(
+  () =>
+    thuocTinhDong.value.pin?.values || [
+      "41Wh",
+      "48Wh",
+      "50Wh",
+      "52Wh",
+      "54Wh",
+      "57Wh",
+      "75Wh",
+      "80Wh",
+      "86Wh",
+      "90Wh",
+    ],
+);
+const HDH_GOI_Y = computed(
+  () =>
+    thuocTinhDong.value.he_dieu_hanh?.values || [
+      "Windows 11 Home",
+      "Windows 11 Pro",
+      "macOS",
+      "Không kèm HĐH",
+    ],
+);
+const MAU_SAC_GOI_Y = computed(
+  () =>
+    thuocTinhDong.value.mau_sac?.values || [
+      "Đen",
+      "Trắng",
+      "Bạc",
+      "Xám",
+      "Xanh Dương",
+      "Xanh Lá",
+      "Đỏ",
+      "Vàng",
+      "Hồng",
+      "Tím",
+      "Cam",
+      "Nâu",
+    ],
+);
 
-const ANH_MAC_DINH = 'https://cdn-icons-png.flaticon.com/512/664/664457.png'
-const TOI_DA_BIEN_THE = 60
+const ANH_MAC_DINH = "https://cdn-icons-png.flaticon.com/512/664/664457.png";
+const TOI_DA_BIEN_THE = 60;
 
 /* ─── Tiện ích ─── */
-const toArray = (res) => (Array.isArray(res) ? res : (res?.content ?? res?.data?.content ?? res?.data ?? []))
+const toArray = (res) =>
+  Array.isArray(res) ? res : (res?.content ?? res?.data?.content ?? res?.data ?? []);
 
 const idOf = (obj, ...keys) => {
   const allKeys = [...keys];
-  if (keys.includes('oCungId') && !keys.includes('ocungId')) allKeys.push('ocungId');
-  if (keys.includes('ocungId') && !keys.includes('oCungId')) allKeys.push('oCungId');
-  for (const k of [...allKeys, 'id']) if (obj?.[k] != null) return obj[k]
-  return null
-}
-const soHoacNull = (v) => (v === '' || v === null || v === undefined ? null : Number(v))
-const formatNumber = (n) => Number(n || 0).toLocaleString('vi-VN')
+  if (keys.includes("oCungId") && !keys.includes("ocungId")) allKeys.push("ocungId");
+  if (keys.includes("ocungId") && !keys.includes("oCungId")) allKeys.push("oCungId");
+  for (const k of [...allKeys, "id"]) if (obj?.[k] != null) return obj[k];
+  return null;
+};
+const soHoacNull = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
+const formatNumber = (n) => Number(n || 0).toLocaleString("vi-VN");
 const formatDate = (v) => {
-  if (!v) return '—'
-  const d = new Date(v)
+  if (!v) return "—";
+  const d = new Date(v);
   return Number.isNaN(d.getTime())
-    ? '—'
-    : d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-}
-const nhanTrangThai = (tt) => ({
-  active: 'Đang bán',
-  cho_nhap_hang: 'Chờ nhập hàng',
-  pending: 'Chờ nhập hàng',
-  het_hang: 'Hết hàng',
-  out: 'Hết hàng',
-  inactive: 'Tạm ngừng',
-  ngung_kinh_doanh: 'Ngừng KD'
-}[tt] || tt || '—')
-const nhanLoaiSanPham = (l) => LOAI_SAN_PHAM.find((x) => x.value === l)?.label || l || '—'
+    ? "—"
+    : d.toLocaleDateString("vi-VN") +
+        " " +
+        d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+};
+const nhanTrangThai = (tt) =>
+  ({
+    active: "Đang bán",
+    cho_nhap_hang: "Chờ nhập hàng",
+    pending: "Chờ nhập hàng",
+    het_hang: "Hết hàng",
+    out: "Hết hàng",
+    inactive: "Tạm ngừng",
+    ngung_kinh_doanh: "Ngừng KD",
+  })[tt] ||
+  tt ||
+  "—";
+const nhanLoaiSanPham = (l) => LOAI_SAN_PHAM.find((x) => x.value === l)?.label || l || "—";
 const tagClass = (tt) => {
-  if (tt === 'active') return 'hh-tag--ok'
-  if (tt === 'cho_nhap_hang' || tt === 'pending') return 'hh-tag--wait'
-  if (tt === 'het_hang' || tt === 'out') return 'hh-tag--out'
-  return 'hh-tag--off'
-}
-const onImgError = (e) => { e.target.src = ANH_MAC_DINH }
+  if (tt === "active") return "hh-tag--ok";
+  if (tt === "cho_nhap_hang" || tt === "pending") return "hh-tag--wait";
+  if (tt === "het_hang" || tt === "out") return "hh-tag--out";
+  return "hh-tag--off";
+};
+const onImgError = (e) => {
+  e.target.src = ANH_MAC_DINH;
+};
 const khongDau = (s) =>
-  String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase()
-const vietTat = (s, n = 4) => khongDau(s).replace(/[^a-z0-9]/g, '').toUpperCase().slice(0, n)
-const tenOCung = (oc) => oc?.loaiOCung || oc?.loaiOcung || oc?.ten || ''
-const chuThuong = (s) => String(s || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  String(s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .toLowerCase();
+const vietTat = (s, n = 4) =>
+  khongDau(s)
+    .replace(/[^a-z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, n);
+const tenOCung = (oc) => oc?.loaiOCung || oc?.loaiOcung || oc?.ten || "";
+const chuThuong = (s) =>
+  String(s || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 /* ─── Mã vạch EAN-13: chữ số kiểm tra + bộ sinh mã ─── */
 const chuSoKiemTra = (base12) => {
-  let tong = 0
-  for (let i = 0; i < 12; i++) tong += Number(base12[i] || 0) * (i % 2 === 0 ? 1 : 3)
-  return String((10 - (tong % 10)) % 10)
-}
+  let tong = 0;
+  for (let i = 0; i < 12; i++) tong += Number(base12[i] || 0) * (i % 2 === 0 ? 1 : 3);
+  return String((10 - (tong % 10)) % 10);
+};
 const sinhBarcode = (daDung = new Set()) => {
   for (let i = 0; i < 60; i++) {
-    const base = '893' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0')
-    const ma = base + chuSoKiemTra(base)
-    if (!daDung.has(ma)) { daDung.add(ma); return ma }
+    const base = "893" + String(Math.floor(Math.random() * 1e9)).padStart(9, "0");
+    const ma = base + chuSoKiemTra(base);
+    if (!daDung.has(ma)) {
+      daDung.add(ma);
+      return ma;
+    }
   }
-  return ''
-}
+  return "";
+};
 
 // Lấy mốc thời gian hiện tại
 const bayGio = () => {
-  const d = new Date()
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
-}
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+};
 
 /* ─── Trạng thái màn hình ─── */
 // Computed: nhóm sản phẩm đã lọc — dùng arrow function để Vue track tốt hơn
 const groupsDaLoc = computed(() => {
   // Ép reactive access bằng IIFE để đảm bảo Vue track tất cả filter properties
   return (() => {
-    let ds = [...danhSachSanPham.value]
+    let ds = [...danhSachSanPham.value];
     // Search keyword
     if (searchKeyword.value) {
-      const kw = khongDau(searchKeyword.value)
-      ds = ds.filter(p =>
-        khongDau(p.maSanPham).includes(kw) ||
-        khongDau(p.tenSanPham).includes(kw) ||
-        (p.variants || []).some(v =>
-          khongDau(v.maSku || '').includes(kw) ||
-          khongDau(v.barcode || '').includes(kw)
-        )
-      )
+      const kw = khongDau(searchKeyword.value);
+      ds = ds.filter(
+        (p) =>
+          khongDau(p.maSanPham).includes(kw) ||
+          khongDau(p.tenSanPham).includes(kw) ||
+          (p.variants || []).some(
+            (v) => khongDau(v.maSku || "").includes(kw) || khongDau(v.barcode || "").includes(kw),
+          ),
+      );
     }
     // Filter: trạng thái
-    const fTrangThai = filters.trangThai
-    if (fTrangThai) ds = ds.filter(p => (p.trangThaiHienThi || p.trangThai) === fTrangThai || p.trangThai === fTrangThai)
+    const fTrangThai = filters.trangThai;
+    if (fTrangThai)
+      ds = ds.filter(
+        (p) => (p.trangThaiHienThi || p.trangThai) === fTrangThai || p.trangThai === fTrangThai,
+      );
     // Filter: thương hiệu
-    const fThuongHieu = filters.thuongHieuId
-    if (fThuongHieu) ds = ds.filter(p => String(idOf(p, 'thuongHieuId')) === String(fThuongHieu))
+    const fThuongHieu = filters.thuongHieuId;
+    if (fThuongHieu) ds = ds.filter((p) => String(idOf(p, "thuongHieuId")) === String(fThuongHieu));
     // Filter: nhà cung cấp
-    const fNCC = filters.nhaCungCapId
-    if (fNCC) ds = ds.filter(p => String(idOf(p, 'nhaCungCapId')) === String(fNCC))
+    const fNCC = filters.nhaCungCapId;
+    if (fNCC) ds = ds.filter((p) => String(idOf(p, "nhaCungCapId")) === String(fNCC));
     // Filter: phân loại
-    const fPhanLoai = filters.phanLoai
-    if (fPhanLoai) ds = ds.filter(p => (p.phanLoai || []).includes(fPhanLoai))
+    const fPhanLoai = filters.phanLoai;
+    if (fPhanLoai) ds = ds.filter((p) => (p.phanLoai || []).includes(fPhanLoai));
     // Filter: CPU
-    const fCpu = filters.cpuId
-    if (fCpu) ds = ds.filter(p => (p.variants || []).some(v => String(idOf(v, 'cpuId')) === String(fCpu)))
+    const fCpu = filters.cpuId;
+    if (fCpu)
+      ds = ds.filter((p) =>
+        (p.variants || []).some((v) => String(idOf(v, "cpuId")) === String(fCpu)),
+      );
     // Filter: RAM
-    const fRam = filters.ramId
-    if (fRam) ds = ds.filter(p => (p.variants || []).some(v => String(idOf(v, 'ramId')) === String(fRam)))
+    const fRam = filters.ramId;
+    if (fRam)
+      ds = ds.filter((p) =>
+        (p.variants || []).some((v) => String(idOf(v, "ramId")) === String(fRam)),
+      );
     // Filter: màu sắc
-    const fMauSac = filters.mauSac
-    if (fMauSac) ds = ds.filter(p => (p.variants || []).some(v => v.mauSac === fMauSac))
+    const fMauSac = filters.mauSac;
+    if (fMauSac) ds = ds.filter((p) => (p.variants || []).some((v) => v.mauSac === fMauSac));
     // Filter: giá
-    const fGiaTu = filters.giaTu
-    if (fGiaTu) ds = ds.filter(p => (p.giaBanMin || 0) >= Number(fGiaTu))
-    const fGiaDen = filters.giaDen
-    if (fGiaDen) ds = ds.filter(p => (p.giaBanMax || Infinity) <= Number(fGiaDen))
+    const fGiaTu = filters.giaTu;
+    if (fGiaTu) ds = ds.filter((p) => (p.giaBanMin || 0) >= Number(fGiaTu));
+    const fGiaDen = filters.giaDen;
+    if (fGiaDen) ds = ds.filter((p) => (p.giaBanMax || Infinity) <= Number(fGiaDen));
     // Sort
-    if (sortKey.value === 'name_asc') ds.sort((a, b) => a.tenSanPham.localeCompare(b.tenSanPham))
-    if (sortKey.value === 'name_desc') ds.sort((a, b) => b.tenSanPham.localeCompare(a.tenSanPham))
-    if (sortKey.value === 'stt_asc') ds.sort((a, b) => (a.sanPhamId || 0) - (b.sanPhamId || 0))
-    if (sortKey.value === 'stt_desc') ds.sort((a, b) => (b.sanPhamId || 0) - (a.sanPhamId || 0))
-    return ds
-  })()
-})
+    if (sortKey.value === "name_asc") ds.sort((a, b) => a.tenSanPham.localeCompare(b.tenSanPham));
+    if (sortKey.value === "name_desc") ds.sort((a, b) => b.tenSanPham.localeCompare(a.tenSanPham));
+    if (sortKey.value === "stt_asc") ds.sort((a, b) => (a.sanPhamId || 0) - (b.sanPhamId || 0));
+    if (sortKey.value === "stt_desc") ds.sort((a, b) => (b.sanPhamId || 0) - (a.sanPhamId || 0));
+    return ds;
+  })();
+});
 
 // Computed: tất cả biến thể đã lọc
 const bienTheDaLoc = computed(() => {
-  return groupsDaLoc.value.flatMap(g => (g.variants || []).map(v => ({ ...v, sanPhamId: g.sanPhamId, tenSanPham: g.tenSanPham })))
-})
+  return groupsDaLoc.value.flatMap((g) =>
+    (g.variants || []).map((v) => ({ ...v, sanPhamId: g.sanPhamId, tenSanPham: g.tenSanPham })),
+  );
+});
 
 // Ref: biến thể "chuẩn" dùng để lấy existing values khi load thuộc tính
-const bienTheChuan = computed(() => bienThe.value.length ? bienThe.value : bienTheDaLoc.value)
+const bienTheChuan = computed(() => (bienThe.value.length ? bienThe.value : bienTheDaLoc.value));
 
 // Computed: phân trang
 const pagedGroups = computed(() => {
-  const start = (page.value - 1) * pageSize.value
-  return groupsDaLoc.value.slice(start, start + pageSize.value)
-})
-const totalPages = computed(() => Math.ceil(groupsDaLoc.value.length / pageSize.value) || 1)
+  const start = (page.value - 1) * pageSize.value;
+  return groupsDaLoc.value.slice(start, start + pageSize.value);
+});
+const totalPages = computed(() => Math.ceil(groupsDaLoc.value.length / pageSize.value) || 1);
 const coBoLoc = computed(() => {
-  const f = filters
-  return !!(f.trangThai || f.thuongHieuId || f.nhaCungCapId || f.phanLoai || f.cpuId || f.ramId || f.mauSac || f.giaTu || f.giaDen)
-})
+  const f = filters;
+  return !!(
+    f.trangThai ||
+    f.thuongHieuId ||
+    f.nhaCungCapId ||
+    f.phanLoai ||
+    f.cpuId ||
+    f.ramId ||
+    f.mauSac ||
+    f.giaTu ||
+    f.giaDen
+  );
+});
 const soBoLocDangDung = computed(() => {
-  const f = filters
-  let n = 0
-  if (f.trangThai) n++
-  if (f.thuongHieuId) n++
-  if (f.nhaCungCapId) n++
-  if (f.phanLoai) n++
-  if (f.cpuId) n++
-  if (f.ramId) n++
-  if (f.mauSac) n++
-  if (f.giaTu) n++
-  if (f.giaDen) n++
-  return n
-})
+  const f = filters;
+  let n = 0;
+  if (f.trangThai) n++;
+  if (f.thuongHieuId) n++;
+  if (f.nhaCungCapId) n++;
+  if (f.phanLoai) n++;
+  if (f.cpuId) n++;
+  if (f.ramId) n++;
+  if (f.mauSac) n++;
+  if (f.giaTu) n++;
+  if (f.giaDen) n++;
+  return n;
+});
 
 // Phân loại options
 const phanLoaiOptions = computed(() => {
-  const fromApi = danhSachPhanLoai.value || []
-  if (fromApi.length) return fromApi
-  return PHAN_LOAI_DU_PHONG
-})
+  const fromApi = danhSachPhanLoai.value || [];
+  if (fromApi.length) return fromApi;
+  return PHAN_LOAI_DU_PHONG;
+});
 
 // Màu sắc options
-const danhSachMauSac = computed(() => MAU_SAC_GOI_Y.value || [])
-const optMauSac = computed(() => ({ value: MAU_SAC_GOI_Y.value || [] }))
-const optMauSacSelect = computed(() => (MAU_SAC_GOI_Y.value || []).map(v => ({ label: v, value: v })))
+const danhSachMauSac = computed(() => MAU_SAC_GOI_Y.value || []);
+const optMauSac = computed(() => ({ value: MAU_SAC_GOI_Y.value || [] }));
+const optMauSacSelect = computed(() =>
+  (MAU_SAC_GOI_Y.value || []).map((v) => ({ label: v, value: v })),
+);
 
 // Thuộc tính select options
-const optManHinhSelect = computed(() => MAN_HINH_GOI_Y.value.map(v => ({ label: v, value: v })))
-const optPinSelect = computed(() => PIN_GOI_Y.value.map(v => ({ label: v, value: v })))
-const optHeDieuHanhSelect = computed(() => HDH_GOI_Y.value.map(v => ({ label: v, value: v })))
-const optTrongLuongSelect = computed(() => TRONG_LUONG_GOI_Y.map(v => ({ label: v + ' kg', value: v })))
-const optBaoHanhSelect = computed(() => BAO_HANH_GOI_Y.map(v => ({ label: v + ' tháng', value: v })))
+const optManHinhSelect = computed(() => MAN_HINH_GOI_Y.value.map((v) => ({ label: v, value: v })));
+const optPinSelect = computed(() => PIN_GOI_Y.value.map((v) => ({ label: v, value: v })));
+const optHeDieuHanhSelect = computed(() => HDH_GOI_Y.value.map((v) => ({ label: v, value: v })));
+const optTrongLuongSelect = computed(() =>
+  TRONG_LUONG_GOI_Y.map((v) => ({ label: v + " kg", value: v })),
+);
+const optBaoHanhSelect = computed(() =>
+  BAO_HANH_GOI_Y.map((v) => ({ label: v + " tháng", value: v })),
+);
 
 // CPU/RAM/GPU select options
-const cpuOptionsSel = computed(() => (danhSachCpu.value || []).map(c => ({ label: c.tenCpu, value: idOf(c, 'cpuId') })))
-const ramOptionsSel = computed(() => (danhSachRam.value || []).map(r => ({ label: r.dungLuong || r.tenRam, value: idOf(r, 'ramId') })))
-const oCungOptionsSel = computed(() => (danhSachOCung.value || []).map(o => ({ label: tenOCung(o), value: idOf(o, 'oCungId') })))
-const gpuOptionsSel = computed(() => (danhSachGpu.value || []).map(g => ({ label: g.tenGpu, value: idOf(g, 'gpuId') })))
+const cpuOptionsSel = computed(() =>
+  (danhSachCpu.value || []).map((c) => ({ label: c.tenCpu, value: idOf(c, "cpuId") })),
+);
+const ramOptionsSel = computed(() =>
+  (danhSachRam.value || []).map((r) => ({
+    label: r.dungLuong || r.tenRam,
+    value: idOf(r, "ramId"),
+  })),
+);
+const oCungOptionsSel = computed(() =>
+  (danhSachOCung.value || []).map((o) => ({ label: tenOCung(o), value: idOf(o, "oCungId") })),
+);
+const gpuOptionsSel = computed(() =>
+  (danhSachGpu.value || []).map((g) => ({ label: g.tenGpu, value: idOf(g, "gpuId") })),
+);
 
 // Reverse lookup: tên -> id (vì API trả tên, form cần id)
 const cpuIdByName = computed(() => {
-  const m = {}
-  for (const c of (danhSachCpu.value || [])) {
-    const id = idOf(c, 'cpuId')
-    if (id != null) m[c.tenCpu?.trim()] = id
+  const m = {};
+  for (const c of danhSachCpu.value || []) {
+    const id = idOf(c, "cpuId");
+    if (id != null) m[c.tenCpu?.trim()] = id;
   }
-  return m
-})
+  return m;
+});
 const ramIdByName = computed(() => {
-  const m = {}
-  for (const r of (danhSachRam.value || [])) {
-    const id = idOf(r, 'ramId')
-    if (id != null) m[(r.dungLuong || r.tenRam)?.trim()] = id
+  const m = {};
+  for (const r of danhSachRam.value || []) {
+    const id = idOf(r, "ramId");
+    if (id != null) m[(r.dungLuong || r.tenRam)?.trim()] = id;
   }
-  return m
-})
+  return m;
+});
 const oCungIdByName = computed(() => {
-  const m = {}
-  for (const o of (danhSachOCung.value || [])) {
-    const id = idOf(o, 'oCungId')
-    if (id != null) m[tenOCung(o)?.trim()] = id
+  const m = {};
+  for (const o of danhSachOCung.value || []) {
+    const id = idOf(o, "oCungId");
+    if (id != null) m[tenOCung(o)?.trim()] = id;
   }
-  return m
-})
+  return m;
+});
 const gpuIdByName = computed(() => {
-  const m = {}
-  for (const g of (danhSachGpu.value || [])) {
-    const id = idOf(g, 'gpuId')
-    if (id != null) m[g.tenGpu?.trim()] = id
+  const m = {};
+  for (const g of danhSachGpu.value || []) {
+    const id = idOf(g, "gpuId");
+    if (id != null) m[g.tenGpu?.trim()] = id;
   }
-  return m
-})
+  return m;
+});
 
-const isSaving = ref(false)
-const saveError = ref('')
-const dongHo = ref(bayGio())
+const isSaving = ref(false);
+const saveError = ref("");
+const dongHo = ref(bayGio());
 
 // Modal chi tiết
-const showDetail = ref(false)
-const chiTiet = ref(null)
-const tabCT = ref('info')
-const bienTheChonId = ref(null)
-const bienTheDangChon = computed(() => chiTiet.value?.variants?.find(v => String(v.bienTheId) === String(bienTheChonId.value)))
-const lichSuHienTai = ref([])
-const nhatKyLoading = ref(false)
-const moLaiChiTiet = ref(null)
+const showDetail = ref(false);
+const chiTiet = ref(null);
+const tabCT = ref("info");
+const bienTheChonId = ref(null);
+const bienTheDangChon = computed(() =>
+  chiTiet.value?.variants?.find((v) => String(v.bienTheId) === String(bienTheChonId.value)),
+);
+const lichSuHienTai = ref([]);
+const nhatKyLoading = ref(false);
+const moLaiChiTiet = ref(null);
 
 // Modal form
-const showModal = ref(false)
-const modalMode = ref('create') // 'create' | 'edit' | 'variant'
-const tieuDeModal = ref('')
-const tab = ref('info')
+const showModal = ref(false);
+const modalMode = ref("create"); // 'create' | 'edit' | 'variant'
+const tieuDeModal = ref("");
+const tab = ref("info");
 const tabs = [
-  { key: 'info', label: 'Thông tin' },
-  { key: 'bienthe', label: 'Phiên bản' },
-  { key: 'mota', label: 'Mô tả' }
-]
-const soPhienBan = computed(() => bienTheRows.value.length || (chiTiet.value?.variants?.length || 0))
+  { key: "info", label: "Thông tin" },
+  { key: "bienthe", label: "Phiên bản" },
+  { key: "mota", label: "Mô tả" },
+];
+const soPhienBan = computed(() => bienTheRows.value.length || chiTiet.value?.variants?.length || 0);
 
 // Form data
 const form = ref({
-  sanPhamId: null, maSanPham: '', tenSanPham: '',
-  thuongHieuId: '', danhMucId: '', nhaCungCapId: '',
-  loaiSanPham: 'LAPTOP', trangThaiSanPham: 'active',
-  phanLoaiIds: [], phanLoaiTags: null, phanLoaiTen: null,
-  hinhAnhList: [], moTa: '',
-  baoHanhThang: 12, kichThuocManHinh: '', pin: '', heDieuHanh: '', trongLuongKg: '',
-  skuPrefix: '',
+  sanPhamId: null,
+  maSanPham: "",
+  tenSanPham: "",
+  thuongHieuId: "",
+  danhMucId: "",
+  nhaCungCapId: "",
+  loaiSanPham: "LAPTOP",
+  trangThaiSanPham: "cho_nhap_hang",
+  phanLoaiIds: [],
+  phanLoaiTags: null,
+  phanLoaiTen: null,
+  hinhAnhList: [],
+  moTa: "",
+  baoHanhThang: 12,
+  kichThuocManHinh: "",
+  pin: "",
+  heDieuHanh: "",
+  trongLuongKg: "",
+  skuPrefix: "",
   // bien the single edit
-  bienTheId: null, maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
-  giaNhap: 0, giaBan: 0, hinhAnhBienThe: null
-})
+  bienTheId: null,
+  maSku: "",
+  barcode: "",
+  mauSac: "",
+  cpuId: "",
+  ramId: "",
+  oCungId: "",
+  gpuId: "",
+  giaNhap: 0,
+  giaBan: 0,
+  hinhAnhBienThe: null,
+});
 
-const bienTheRows = ref([])
-const errors = ref({})
-const barcodeDaDung = ref(new Set())
+const bienTheRows = ref([]);
+const errors = ref({});
+const rowErrors = ref([]);
+const daBamLuu = ref(false);
+const barcodeDaDung = ref(new Set());
+
+const BIEN_THE_ERROR_KEYS = new Set([
+  "bienThe",
+  "bienTheList",
+  "maSku",
+  "barcode",
+  "giaBan",
+  "giaNhap",
+]);
+const soLoiTabInfo = computed(
+  () => Object.keys(errors.value || {}).filter((k) => !BIEN_THE_ERROR_KEYS.has(k)).length,
+);
+const soLoiTabBienThe = computed(() => {
+  if (errors.value?.bienTheList?.length) return errors.value.bienTheList.length;
+  return Object.keys(errors.value || {}).filter((k) => BIEN_THE_ERROR_KEYS.has(k)).length;
+});
 
 // Ảnh
-const anhSanPham = ref([])
-const anhDangXem = ref('')
-const dangTaiAnh = ref(false)
-const ghiChuAnh = ref('Ảnh đầu tiên là ảnh chính. Kéo thả để đổi thứ tự.')
+const anhSanPham = ref([]);
+const anhDangXem = ref("");
+const dangTaiAnh = ref(false);
+const ghiChuAnh = ref("Ảnh đầu tiên là ảnh chính. Kéo thả để đổi thứ tự.");
+const anhPreviewMap = reactive({});
+
+const xoaTatCaAnhPreview = () => {
+  Object.keys(anhPreviewMap).forEach((k) => {
+    if (anhPreviewMap[k] && String(anhPreviewMap[k]).startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(anhPreviewMap[k]);
+      } catch {}
+    }
+    delete anhPreviewMap[k];
+  });
+};
+
+const onFormImgError = (e, url) => {
+  if (url && anhPreviewMap[url] && e.target.src !== anhPreviewMap[url]) {
+    e.target.src = anhPreviewMap[url];
+    return;
+  }
+  e.target.src = ANH_MAC_DINH;
+};
 
 // Nhật ký
-const banGoc = ref(null)
-const banGocBienThe = ref([])
-const moTaEl = ref(null)
+const banGoc = ref(null);
+const banGocBienThe = ref([]);
+const moTaEl = ref(null);
 
 // Export
-const showExportModal = ref(false)
-const exportSearch = ref('')
+const showExportModal = ref(false);
+const exportSearch = ref("");
 const exportGroups = computed(() => {
-  let ds = groupsDaLoc.value
+  let ds = groupsDaLoc.value;
   if (exportSearch.value) {
-    const kw = khongDau(exportSearch.value)
-    ds = ds.filter(g =>
-      khongDau(g.tenSanPham).includes(kw) ||
-      khongDau(g.maSanPham).includes(kw) ||
-      (g.variants || []).some(v => khongDau(v.maSku || '').includes(kw))
-    )
+    const kw = khongDau(exportSearch.value);
+    ds = ds.filter(
+      (g) =>
+        khongDau(g.tenSanPham).includes(kw) ||
+        khongDau(g.maSanPham).includes(kw) ||
+        (g.variants || []).some((v) => khongDau(v.maSku || "").includes(kw)),
+    );
   }
-  return ds
-})
-const allChecked = computed(() => bienTheDaLoc.value.length > 0 && selectedIds.value.length === bienTheDaLoc.value.length)
+  return ds;
+});
+const allChecked = computed(
+  () => bienTheDaLoc.value.length > 0 && selectedIds.value.length === bienTheDaLoc.value.length,
+);
 
-const isLoading = ref(false)
-const loadError = ref('')
-const toast = ref('')
+const isLoading = ref(false);
+const loadError = ref("");
+const toast = ref("");
+const toastType = ref("ok");
+let toastTimer = null;
 
-const danhSachSanPham = ref([])
-const bienThe = ref([])
-const danhSachThuongHieu = ref([])
-const danhSachDanhMuc = ref([])
-const danhSachNhaCungCap = ref([])
-const danhSachCpu = ref([])
-const danhSachRam = ref([])
-const danhSachOCung = ref([])
-const danhSachGpu = ref([])
-const danhSachPhanLoai = ref([])
+const danhSachSanPham = ref([]);
+const bienThe = ref([]);
+const danhSachThuongHieu = ref([]);
+const danhSachDanhMuc = ref([]);
+const danhSachNhaCungCap = ref([]);
+const danhSachCpu = ref([]);
+const danhSachRam = ref([]);
+const danhSachOCung = ref([]);
+const danhSachGpu = ref([]);
+const danhSachPhanLoai = ref([]);
 
-const searchKeyword = ref('')
-const isFilterOpen = ref(false)
+const searchKeyword = ref("");
+const isFilterOpen = ref(false);
 
 const filters = reactive({
-  trangThai: '', thuongHieuId: '', nhaCungCapId: '', phanLoai: '',
-  cpuId: '', ramId: '', mauSac: '', giaTu: '', giaDen: ''
-})
+  trangThai: "",
+  thuongHieuId: "",
+  nhaCungCapId: "",
+  phanLoai: "",
+  cpuId: "",
+  ramId: "",
+  mauSac: "",
+  giaTu: "",
+  giaDen: "",
+});
 
-const selectedIds = ref([])
-const page = ref(1)
-const pageSize = ref(10)
-const sortKey = ref('stt_desc') // 'stt_desc' | 'stt_asc' | 'name_asc' | 'name_desc'
+const selectedIds = ref([]);
+const page = ref(1);
+const pageSize = ref(10);
+const sortKey = ref("stt_desc"); // 'stt_desc' | 'stt_asc' | 'name_asc' | 'name_desc'
 
-const hienToast = (msg) => {
-  toast.value = msg
-  setTimeout(() => (toast.value = ''), 3000)
-}
+const hienToast = (msg, loai = "ok") => {
+  toast.value = msg;
+  toastType.value = loai;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(
+    () => {
+      toast.value = "";
+      toastType.value = "ok";
+    },
+    loai === "error" ? 5000 : 3000,
+  );
+};
 
 /* ════════════ HÀM THAO TÁC ════════════ */
 const resetFilters = () => {
-  filters.trangThai = ''
-  filters.thuongHieuId = ''
-  filters.nhaCungCapId = ''
-  filters.phanLoai = ''
-  filters.cpuId = ''
-  filters.ramId = ''
-  filters.mauSac = ''
-  filters.giaTu = ''
-  filters.giaDen = ''
-  searchKeyword.value = ''
-  page.value = 1
-}
+  filters.trangThai = "";
+  filters.thuongHieuId = "";
+  filters.nhaCungCapId = "";
+  filters.phanLoai = "";
+  filters.cpuId = "";
+  filters.ramId = "";
+  filters.mauSac = "";
+  filters.giaTu = "";
+  filters.giaDen = "";
+  searchKeyword.value = "";
+  page.value = 1;
+};
 
 /* ─── Sinh mã sản phẩm tự động (SP0001, SP0002, ...) ─── */
 const sinhMaSanPham = () => {
   const soTuMa = danhSachSanPham.value
-    .map((p) => Number(String(p.maSanPham || '').replace(/\D/g, '')))
-    .filter((n) => !Number.isNaN(n) && n > 0)
+    .map((p) => Number(String(p.maSanPham || "").replace(/\D/g, "")))
+    .filter((n) => !Number.isNaN(n) && n > 0);
   const soTuId = danhSachSanPham.value
-    .map((p) => Number(idOf(p, 'sanPhamId')))
-    .filter((n) => !Number.isNaN(n) && n > 0)
+    .map((p) => Number(idOf(p, "sanPhamId")))
+    .filter((n) => !Number.isNaN(n) && n > 0);
   const soTuStore = (ProductsStore.items || [])
-    .map((p) => Number(String(p.maSanPham || '').replace(/\D/g, '')))
-    .filter((n) => !Number.isNaN(n) && n > 0)
-  const max = Math.max(0, ...soTuMa, ...soTuId, ...soTuStore)
-  return 'SP' + String(max + 1).padStart(4, '0')
-}
+    .map((p) => Number(String(p.maSanPham || "").replace(/\D/g, "")))
+    .filter((n) => !Number.isNaN(n) && n > 0);
+  const max = Math.max(0, ...soTuMa, ...soTuId, ...soTuStore);
+  return "SP" + String(max + 1).padStart(4, "0");
+};
 
 /* ─── Sinh SKU tự động theo quy tắc mẫu (VD: ACER-NV15-I5-8G-BLK, MSI-STL15-RTX4050-SLV) ─── */
 const MAP_THUONG_HIEU_SKU = {
-  dell: 'DELL',
-  asus: 'ASUS',
-  lenovo: 'LENO',
-  hp: 'HP',
-  msi: 'MSI',
-  acer: 'ACER',
-  apple: 'APPL',
-  macbook: 'MAC',
-  gigabyte: 'GIGA',
-  lg: 'LG',
-  samsung: 'SAMS',
-  microsoft: 'MSFT',
-  huawei: 'HUAW',
-  razer: 'RAZR',
-  logitech: 'LOGI'
-}
+  dell: "DELL",
+  asus: "ASUS",
+  lenovo: "LENO",
+  hp: "HP",
+  msi: "MSI",
+  acer: "ACER",
+  apple: "APPL",
+  macbook: "MAC",
+  gigabyte: "GIGA",
+  lg: "LG",
+  samsung: "SAMS",
+  microsoft: "MSFT",
+  huawei: "HUAW",
+  razer: "RAZR",
+  logitech: "LOGI",
+};
 
 const MAP_DONG_MAY_SKU = {
-  stealth: 'STL',
-  pavilion: 'PAV',
-  envy: 'ENVY',
-  omen: 'OMEN',
-  victus: 'VICT',
-  spectre: 'SPEC',
-  vivobook: 'VIVO',
-  zenbook: 'ZEN',
-  tuf: 'TUF',
-  rog: 'ROG',
-  strix: 'STRX',
-  zephyrus: 'ZEPH',
-  inspiron: 'INSP',
-  latitude: 'LAT',
-  vostro: 'VOST',
-  alienware: 'ALW',
-  xps: 'XPS',
-  ideapad: 'IP',
-  thinkpad: 'TP',
-  thinkbook: 'TB',
-  legion: 'LEGI',
-  yoga: 'YOGA',
-  loq: 'LOQ',
-  aspire: 'ASP',
-  nitro: 'N',
-  swift: 'SWF',
-  predator: 'PRED',
-  katana: 'KTN',
-  cyborg: 'CYB',
-  prestige: 'PRST',
-  modern: 'MDN',
-  raider: 'RDR',
-  titan: 'TTN',
-  macbook: 'MB'
-}
+  stealth: "STL",
+  pavilion: "PAV",
+  envy: "ENVY",
+  omen: "OMEN",
+  victus: "VICT",
+  spectre: "SPEC",
+  vivobook: "VIVO",
+  zenbook: "ZEN",
+  tuf: "TUF",
+  rog: "ROG",
+  strix: "STRX",
+  zephyrus: "ZEPH",
+  inspiron: "INSP",
+  latitude: "LAT",
+  vostro: "VOST",
+  alienware: "ALW",
+  xps: "XPS",
+  ideapad: "IP",
+  thinkpad: "TP",
+  thinkbook: "TB",
+  legion: "LEGI",
+  yoga: "YOGA",
+  loq: "LOQ",
+  aspire: "ASP",
+  nitro: "N",
+  swift: "SWF",
+  predator: "PRED",
+  katana: "KTN",
+  cyborg: "CYB",
+  prestige: "PRST",
+  modern: "MDN",
+  raider: "RDR",
+  titan: "TTN",
+  macbook: "MB",
+};
 
 const MAP_MAU_SKU = [
-  ['bach kim', 'PLT'],
-  ['platinum', 'PLT'],
-  ['xanh duong', 'BLU'],
-  ['xanh la', 'GRN'],
-  ['xanh luc', 'GRN'],
-  ['do', 'RED'],
-  ['den', 'BLK'],
-  ['bac', 'SLV'],
-  ['trang', 'WHT'],
-  ['xam', 'GRY'],
-  ['vang', 'GLD'],
-  ['hong', 'PNK'],
-  ['tim', 'PUR'],
-  ['cam', 'ORG'],
-  ['nau', 'BRN'],
-  ['black', 'BLK'],
-  ['silver', 'SLV'],
-  ['white', 'WHT'],
-  ['grey', 'GRY'],
-  ['gray', 'GRY'],
-  ['blue', 'BLU'],
-  ['red', 'RED'],
-  ['gold', 'GLD'],
-  ['pink', 'PNK'],
-  ['green', 'GRN']
-]
+  ["bach kim", "PLT"],
+  ["platinum", "PLT"],
+  ["xanh duong", "BLU"],
+  ["xanh la", "GRN"],
+  ["xanh luc", "GRN"],
+  ["do", "RED"],
+  ["den", "BLK"],
+  ["bac", "SLV"],
+  ["trang", "WHT"],
+  ["xam", "GRY"],
+  ["vang", "GLD"],
+  ["hong", "PNK"],
+  ["tim", "PUR"],
+  ["cam", "ORG"],
+  ["nau", "BRN"],
+  ["black", "BLK"],
+  ["silver", "SLV"],
+  ["white", "WHT"],
+  ["grey", "GRY"],
+  ["gray", "GRY"],
+  ["blue", "BLU"],
+  ["red", "RED"],
+  ["gold", "GLD"],
+  ["pink", "PNK"],
+  ["green", "GRN"],
+];
 
 const taoTienToSanPham = (tenSanPham, thuongHieuId) => {
-  const tenClean = khongDau(tenSanPham || '').trim()
-  if (!tenClean) return ''
+  const tenClean = khongDau(tenSanPham || "").trim();
+  if (!tenClean) return "";
 
-  const words = tenClean.toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean)
-  if (!words.length) return ''
+  const words = tenClean
+    .toUpperCase()
+    .split(/[^A-Z0-9]+/)
+    .filter(Boolean);
+  if (!words.length) return "";
 
   // Xác định mã thương hiệu từ thuongHieuId hoặc từ chữ đầu của tên sản phẩm
   const thObj = (danhSachThuongHieu.value || []).find(
-    (t) => String(idOf(t, 'thuongHieuId')) === String(thuongHieuId)
-  )
-  const tenThClean = khongDau(thObj?.tenThuongHieu || '').trim()
-  const firstWordLower = words[0].toLowerCase()
+    (t) => String(idOf(t, "thuongHieuId")) === String(thuongHieuId),
+  );
+  const tenThClean = khongDau(thObj?.tenThuongHieu || "").trim();
+  const firstWordLower = words[0].toLowerCase();
 
-  let brandCode = ''
+  let brandCode = "";
   if (tenThClean) {
-    brandCode = MAP_THUONG_HIEU_SKU[tenThClean] || vietTat(tenThClean, 4)
+    brandCode = MAP_THUONG_HIEU_SKU[tenThClean] || vietTat(tenThClean, 4);
   } else if (MAP_THUONG_HIEU_SKU[firstWordLower]) {
-    brandCode = MAP_THUONG_HIEU_SKU[firstWordLower]
+    brandCode = MAP_THUONG_HIEU_SKU[firstWordLower];
   } else if (words.length >= 2) {
-    brandCode = words[0].slice(0, 4)
+    brandCode = words[0].slice(0, 4);
   }
 
   // Bỏ từ đầu nếu trùng tên thương hiệu
-  let rest = [...words]
+  let rest = [...words];
   if (
     rest.length > 1 &&
     ((tenThClean && firstWordLower === tenThClean.split(/\s+/)[0]) ||
       MAP_THUONG_HIEU_SKU[firstWordLower] ||
       rest[0].slice(0, 4) === brandCode)
   ) {
-    rest.shift()
+    rest.shift();
   }
 
-  if (!rest.length) return brandCode || words[0].slice(0, 6)
+  if (!rest.length) return brandCode || words[0].slice(0, 6);
 
   // Tìm mã dòng máy (model code)
-  let modelCode = ''
-  const w0Lower = rest[0].toLowerCase()
+  let modelCode = "";
+  const w0Lower = rest[0].toLowerCase();
 
   // Trường hợp có mã model chuyên biệt kiểu X1504VA -> X1504, A515-58 -> A515, G614 -> G614
-  const alphaNumModel = rest.find((w, idx) => idx > 0 && /^[A-Z]\d{3,4}[A-Z0-9]*$/.test(w))
+  const alphaNumModel = rest.find((w, idx) => idx > 0 && /^[A-Z]\d{3,4}[A-Z0-9]*$/.test(w));
   // Trường hợp mã model 4 chữ số cuối kiểu Inspiron 15 3520 -> 3520 (không phải năm 2020-2029)
-  const fourDigitModel = rest.find((w, idx) => idx > 0 && /^\d{4}$/.test(w) && !/^202\d$/.test(w))
+  const fourDigitModel = rest.find((w, idx) => idx > 0 && /^\d{4}$/.test(w) && !/^202\d$/.test(w));
 
   if (alphaNumModel) {
-    const m = alphaNumModel.match(/^[A-Z]\d{3,4}/)
-    modelCode = m ? m[0] : alphaNumModel.slice(0, 5)
-  } else if (fourDigitModel && w0Lower !== 'xps') {
-    modelCode = fourDigitModel
-  } else if (rest.length >= 3 && (w0Lower === 'nitro' || w0Lower === 'ideapad' || w0Lower === 'legion' || w0Lower === 'thinkpad')) {
+    const m = alphaNumModel.match(/^[A-Z]\d{3,4}/);
+    modelCode = m ? m[0] : alphaNumModel.slice(0, 5);
+  } else if (fourDigitModel && w0Lower !== "xps") {
+    modelCode = fourDigitModel;
+  } else if (
+    rest.length >= 3 &&
+    (w0Lower === "nitro" || w0Lower === "ideapad" || w0Lower === "legion" || w0Lower === "thinkpad")
+  ) {
     // VD: Nitro V 15 -> NV15, IdeaPad 5 Pro -> IP5P
-    const p0 = MAP_DONG_MAY_SKU[w0Lower] || rest[0][0]
-    const p1 = rest[1].length <= 2 ? rest[1] : rest[1][0]
-    const p2 = /^\d+/.test(rest[2]) ? rest[2].match(/^\d+/)[0] : rest[2][0]
-    modelCode = `${p0}${p1}${p2}`
+    const p0 = MAP_DONG_MAY_SKU[w0Lower] || rest[0][0];
+    const p1 = rest[1].length <= 2 ? rest[1] : rest[1][0];
+    const p2 = /^\d+/.test(rest[2]) ? rest[2].match(/^\d+/)[0] : rest[2][0];
+    modelCode = `${p0}${p1}${p2}`;
   } else {
-    const baseSeries = MAP_DONG_MAY_SKU[w0Lower] || rest[0].slice(0, 4)
-    const numToken = rest.slice(1).find((w) => /^\d{1,2}[A-Z]?$/.test(w))
-    const digits = numToken ? (numToken.match(/^\d+/)?.[0] || '') : ''
-    modelCode = `${baseSeries}${digits}`
+    const baseSeries = MAP_DONG_MAY_SKU[w0Lower] || rest[0].slice(0, 4);
+    const numToken = rest.slice(1).find((w) => /^\d{1,2}[A-Z]?$/.test(w));
+    const digits = numToken ? numToken.match(/^\d+/)?.[0] || "" : "";
+    modelCode = `${baseSeries}${digits}`;
   }
 
-  return [brandCode, modelCode].filter(Boolean).join('-')
-}
+  return [brandCode, modelCode].filter(Boolean).join("-");
+};
 
 const maCpuTuId = (cpuId) => {
-  if (!cpuId) return ''
-  const c = (danhSachCpu.value || []).find((x) => String(idOf(x, 'cpuId')) === String(cpuId))
-  const ten = c?.tenCpu || ''
-  if (!ten) return ''
-  const mCore = ten.match(/\b(i[3579])\b/i)
-  if (mCore) return mCore[1].toUpperCase()
-  const mRyzen = ten.match(/ryzen\s*([3579])/i)
-  if (mRyzen) return 'R' + mRyzen[1]
-  const mUltra = ten.match(/ultra\s*([579])/i)
-  if (mUltra) return 'U' + mUltra[1]
-  const mApple = ten.match(/\b(m[1234](?:\s*(?:pro|max|ultra))?)\b/i)
-  if (mApple) return mApple[1].replace(/\s+/g, '').toUpperCase()
-  return vietTat(ten.split(' ').pop(), 5)
-}
+  if (!cpuId) return "";
+  const c = (danhSachCpu.value || []).find((x) => String(idOf(x, "cpuId")) === String(cpuId));
+  const ten = c?.tenCpu || "";
+  if (!ten) return "";
+  const mCore = ten.match(/\b(i[3579])\b/i);
+  if (mCore) return mCore[1].toUpperCase();
+  const mRyzen = ten.match(/ryzen\s*([3579])/i);
+  if (mRyzen) return "R" + mRyzen[1];
+  const mUltra = ten.match(/ultra\s*([579])/i);
+  if (mUltra) return "U" + mUltra[1];
+  const mApple = ten.match(/\b(m[1234](?:\s*(?:pro|max|ultra))?)\b/i);
+  if (mApple) return mApple[1].replace(/\s+/g, "").toUpperCase();
+  return vietTat(ten.split(" ").pop(), 5);
+};
 
 const maRamTuId = (ramId) => {
-  if (!ramId) return ''
-  const r = (danhSachRam.value || []).find((x) => String(idOf(x, 'ramId')) === String(ramId))
-  const ten = r?.dungLuong || r?.tenRam || ''
-  if (!ten) return ''
-  const mGb = ten.match(/(\d+)\s*GB/i)
-  if (mGb) return `${mGb[1]}G`
-  return vietTat(ten, 4)
-}
+  if (!ramId) return "";
+  const r = (danhSachRam.value || []).find((x) => String(idOf(x, "ramId")) === String(ramId));
+  const ten = r?.dungLuong || r?.tenRam || "";
+  if (!ten) return "";
+  const mGb = ten.match(/(\d+)\s*GB/i);
+  if (mGb) return `${mGb[1]}G`;
+  return vietTat(ten, 4);
+};
 
 const maOCungTuId = (oCungId) => {
-  if (!oCungId) return ''
-  const o = (danhSachOCung.value || []).find((x) => String(idOf(x, 'oCungId')) === String(oCungId))
-  const ten = o ? tenOCung(o) : ''
-  if (!ten) return ''
-  const mTb = ten.match(/(\d+)\s*TB/i)
-  if (mTb) return `${mTb[1]}TB`
-  const mGb = ten.match(/(\d+)\s*GB/i)
-  if (mGb) return `${mGb[1]}G`
-  return vietTat(ten, 4)
-}
+  if (!oCungId) return "";
+  const o = (danhSachOCung.value || []).find((x) => String(idOf(x, "oCungId")) === String(oCungId));
+  const ten = o ? tenOCung(o) : "";
+  if (!ten) return "";
+  const mTb = ten.match(/(\d+)\s*TB/i);
+  if (mTb) return `${mTb[1]}TB`;
+  const mGb = ten.match(/(\d+)\s*GB/i);
+  if (mGb) return `${mGb[1]}G`;
+  return vietTat(ten, 4);
+};
 
 const maGpuTuId = (gpuId) => {
-  if (!gpuId) return ''
-  const g = (danhSachGpu.value || []).find((x) => String(idOf(x, 'gpuId')) === String(gpuId))
-  const ten = g?.tenGpu || ''
-  if (!ten) return ''
-  const mRtx = ten.match(/((?:RTX|GTX|RX|MX)\s*\d+[A-Z]*)/i)
-  if (mRtx) return mRtx[1].replace(/\s+/g, '').toUpperCase()
-  const mRadeon = ten.match(/radeon\s*(\d+[a-z]*)/i)
-  if (mRadeon) return 'R' + mRadeon[1].toUpperCase()
-  if (/iris\s*xe/i.test(ten)) return 'IRIS'
-  if (/uhd/i.test(ten)) return 'UHD'
-  return vietTat(ten.replace(/^(nvidia|amd|intel|geforce|radeon)\s+/gi, ''), 6)
-}
+  if (!gpuId) return "";
+  const g = (danhSachGpu.value || []).find((x) => String(idOf(x, "gpuId")) === String(gpuId));
+  const ten = g?.tenGpu || "";
+  if (!ten) return "";
+  const mRtx = ten.match(/((?:RTX|GTX|RX|MX)\s*\d+[A-Z]*)/i);
+  if (mRtx) return mRtx[1].replace(/\s+/g, "").toUpperCase();
+  const mRadeon = ten.match(/radeon\s*(\d+[a-z]*)/i);
+  if (mRadeon) return "R" + mRadeon[1].toUpperCase();
+  if (/iris\s*xe/i.test(ten)) return "IRIS";
+  if (/uhd/i.test(ten)) return "UHD";
+  return vietTat(ten.replace(/^(nvidia|amd|intel|geforce|radeon)\s+/gi, ""), 6);
+};
 
 const maMauTuTen = (mauSac) => {
-  if (!mauSac || !String(mauSac).trim()) return ''
-  const norm = khongDau(mauSac).trim()
+  if (!mauSac || !String(mauSac).trim()) return "";
+  const norm = khongDau(mauSac).trim();
   for (const [k, code] of MAP_MAU_SKU) {
-    if (norm === k || norm.includes(k)) return code
+    if (norm === k || norm.includes(k)) return code;
   }
-  return vietTat(mauSac, 3)
-}
+  return vietTat(mauSac, 3);
+};
 
 const sinhSkuChoDong = (row) => {
-  if (!row) return ''
-  const prefix = taoTienToSanPham(form.value.tenSanPham, form.value.thuongHieuId)
-  const maCpu = maCpuTuId(row.cpuId)
-  const maRam = maRamTuId(row.ramId)
-  const maOCung = maOCungTuId(row.oCungId ?? row.ocungId)
-  const maGpu = maGpuTuId(row.gpuId)
-  const maMau = maMauTuTen(row.mauSac)
+  if (!row) return "";
+  const prefix = taoTienToSanPham(form.value.tenSanPham, form.value.thuongHieuId);
+  const maCpu = maCpuTuId(row.cpuId);
+  const maRam = maRamTuId(row.ramId);
+  const maOCung = maOCungTuId(row.oCungId ?? row.ocungId);
+  const maGpu = maGpuTuId(row.gpuId);
+  const maMau = maMauTuTen(row.mauSac);
 
-  return [prefix, maCpu, maRam, maOCung, maGpu, maMau].filter(Boolean).join('-')
-}
+  return [prefix, maCpu, maRam, maOCung, maGpu, maMau].filter(Boolean).join("-");
+};
 
 const skuKhongTrung = (goc, daDung) => {
-  if (!goc) return ''
-  let ma = goc
-  let i = 2
+  if (!goc) return "";
+  let ma = goc;
+  let i = 2;
   while (daDung.has(ma)) {
-    ma = `${goc}-${i}`
-    i++
+    ma = `${goc}-${i}`;
+    i++;
   }
-  daDung.add(ma)
-  return ma
-}
+  daDung.add(ma);
+  return ma;
+};
 
 const capNhatSkuCacDong = () => {
-  if (modalMode.value !== 'create' && modalMode.value !== 'variant') return
+  if (modalMode.value !== "create" && modalMode.value !== "variant") return;
   const skuDaDung = new Set(
-    (bienTheChuan.value || []).map((v) => v.maSku).filter((s) => s && s !== '—')
-  )
+    (bienTheChuan.value || []).map((v) => v.maSku).filter((s) => s && s !== "—"),
+  );
   bienTheRows.value.forEach((row) => {
     if (row.bienTheId) {
-      if (row.maSku) skuDaDung.add(row.maSku)
-      return
+      if (row.maSku) skuDaDung.add(row.maSku);
+      return;
     }
-    const base = sinhSkuChoDong(row)
-    row.maSku = base ? skuKhongTrung(base, skuDaDung) : ''
-  })
-}
+    const base = sinhSkuChoDong(row);
+    row.maSku = base ? skuKhongTrung(base, skuDaDung) : "";
+  });
+};
 
 // Tự động cập nhật SKU khi tên sản phẩm, thương hiệu hoặc cấu hình dòng phiên bản thay đổi
 watch(
@@ -1773,275 +2826,336 @@ watch(
     form.value.tenSanPham,
     form.value.thuongHieuId,
     ...bienTheRows.value.map(
-      (r) => `${r._key}|${r.mauSac || ''}|${r.cpuId || ''}|${r.ramId || ''}|${r.oCungId || ''}|${r.gpuId || ''}`
-    )
+      (r) =>
+        `${r._key}|${r.mauSac || ""}|${r.cpuId || ""}|${r.ramId || ""}|${r.oCungId || ""}|${r.gpuId || ""}`,
+    ),
   ],
   () => {
-    capNhatSkuCacDong()
-  }
-)
+    capNhatSkuCacDong();
+  },
+);
 
 // Lấy tập barcode đã có trong hệ thống (để tránh trùng)
 const barcodeDaCoTrongHe = computed(() => {
-  const s = new Set()
+  const s = new Set();
   for (const sp of danhSachSanPham.value) {
-    for (const v of (sp.variants || [])) {
-      if (v.barcode) s.add(v.barcode)
+    for (const v of sp.variants || []) {
+      if (v.barcode) s.add(v.barcode);
     }
   }
-  for (const v of (bienThe.value || [])) {
-    if (v.barcode) s.add(v.barcode)
+  for (const v of bienThe.value || []) {
+    if (v.barcode) s.add(v.barcode);
   }
   for (const r of bienTheRows.value) {
-    if (r.barcode) s.add(r.barcode)
+    if (r.barcode) s.add(r.barcode);
   }
-  return s
-})
+  return s;
+});
 
-const sinhBarcodeKhongTrung = () => sinhBarcode(barcodeDaCoTrongHe.value)
+const sinhBarcodeKhongTrung = () => sinhBarcode(barcodeDaCoTrongHe.value);
 
 const taoDongBienThe = () => {
   const row = {
-    _key: Date.now() + Math.random(), bienTheId: null,
-    maSku: '', barcode: sinhBarcodeKhongTrung(),
-    mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
-    giaNhap: 0, giaBan: 0
-  }
-  variantCustomAttrs.value.forEach(attr => {
-    row[attr.tenTruong] = ''
-  })
-  row.maSku = sinhSkuChoDong(row)
-  return row
-}
+    _key: Date.now() + Math.random(),
+    bienTheId: null,
+    maSku: "",
+    barcode: sinhBarcodeKhongTrung(),
+    mauSac: "",
+    cpuId: "",
+    ramId: "",
+    oCungId: "",
+    gpuId: "",
+    giaNhap: "",
+    giaBan: "",
+  };
+  variantCustomAttrs.value.forEach((attr) => {
+    row[attr.tenTruong] = "";
+  });
+  row.maSku = sinhSkuChoDong(row);
+  return row;
+};
 
 const openCreate = async () => {
-  modalMode.value = 'create'
-  tieuDeModal.value = 'Tạo sản phẩm mới'
-  tab.value = 'info'
+  modalMode.value = "create";
+  tieuDeModal.value = "Tạo sản phẩm mới";
+  tab.value = "info";
   if (!danhSachSanPham.value.length) {
-    await fetchData().catch(() => {})
+    await fetchData().catch(() => {});
   }
-  await loadThuocTinh().catch(() => {})
-  resetForm()
-  showModal.value = true
-}
+  await loadThuocTinh().catch(() => {});
+  resetForm();
+  showModal.value = true;
+};
 
 const resetForm = () => {
+  xoaTatCaAnhPreview();
   form.value = {
-    sanPhamId: null, maSanPham: sinhMaSanPham(), tenSanPham: '',
-    thuongHieuId: '', danhMucId: '', nhaCungCapId: '',
-    loaiSanPham: 'LAPTOP', trangThaiSanPham: 'cho_nhap_hang',
-    phanLoaiIds: [], phanLoaiTags: null, phanLoaiTen: null,
-    hinhAnhList: [], moTa: '',
-    baoHanhThang: 12, kichThuocManHinh: '', pin: '', heDieuHanh: '', trongLuongKg: '',
-    skuPrefix: '',
-    bienTheId: null, maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
-    giaNhap: 0, giaBan: 0, hinhAnhBienThe: null
-  }
-  Object.keys(formThuocTinh).forEach(k => delete formThuocTinh[k])
-  productCustomAttrs.value.forEach(attr => {
-    formThuocTinh[attr.tenTruong] = ''
-  })
-  Object.keys(formThuocTinhBienThe).forEach(k => delete formThuocTinhBienThe[k])
-  variantCustomAttrs.value.forEach(attr => {
-    formThuocTinhBienThe[attr.tenTruong] = ''
-  })
-  bienTheRows.value = [taoDongBienThe()]
-  errors.value = {}
-  saveError.value = ''
-  moTaEl.value = null
-  setTimeout(() => { if (moTaEl.value) moTaEl.value.innerHTML = '' }, 50)
-}
+    sanPhamId: null,
+    maSanPham: sinhMaSanPham(),
+    tenSanPham: "",
+    thuongHieuId: "",
+    danhMucId: "",
+    nhaCungCapId: "",
+    loaiSanPham: "LAPTOP",
+    trangThaiSanPham: "cho_nhap_hang",
+    phanLoaiIds: [],
+    phanLoaiTags: null,
+    phanLoaiTen: null,
+    hinhAnhList: [],
+    moTa: "",
+    baoHanhThang: 12,
+    kichThuocManHinh: "",
+    pin: "",
+    heDieuHanh: "",
+    trongLuongKg: "",
+    skuPrefix: "",
+    bienTheId: null,
+    maSku: "",
+    barcode: "",
+    mauSac: "",
+    cpuId: "",
+    ramId: "",
+    oCungId: "",
+    gpuId: "",
+    giaNhap: "",
+    giaBan: "",
+    hinhAnhBienThe: null,
+  };
+  Object.keys(formThuocTinh).forEach((k) => delete formThuocTinh[k]);
+  productCustomAttrs.value.forEach((attr) => {
+    formThuocTinh[attr.tenTruong] = "";
+  });
+  Object.keys(formThuocTinhBienThe).forEach((k) => delete formThuocTinhBienThe[k]);
+  variantCustomAttrs.value.forEach((attr) => {
+    formThuocTinhBienThe[attr.tenTruong] = "";
+  });
+  bienTheRows.value = [taoDongBienThe()];
+  errors.value = {};
+  rowErrors.value = [];
+  daBamLuu.value = false;
+  saveError.value = "";
+  moTaEl.value = null;
+  setTimeout(() => {
+    if (moTaEl.value) moTaEl.value.innerHTML = "";
+  }, 50);
+};
 
 const moChiTiet = async (group) => {
-  chiTiet.value = null
-  showDetail.value = true
-  tabCT.value = 'info'
-  bienTheChonId.value = null
-  lichSuHienTai.value = []
+  chiTiet.value = null;
+  showDetail.value = true;
+  tabCT.value = "info";
+  bienTheChonId.value = null;
+  lichSuHienTai.value = [];
   try {
-    loadThuocTinh().catch(() => {})
-    const spRes = await get(`/api/san-pham/${group.sanPhamId}`)
-    chiTiet.value = spRes.data || spRes
-    chiTiet.value.trangThaiHienThi = group.trangThaiHienThi || (group.tongTonKho > 0 ? 'active' : 'cho_nhap_hang')
+    loadThuocTinh().catch(() => {});
+    const spRes = await get(`/api/san-pham/${group.sanPhamId}`);
+    chiTiet.value = spRes.data || spRes;
+    chiTiet.value.trangThaiHienThi =
+      group.trangThaiHienThi || (group.tongTonKho > 0 ? "active" : "cho_nhap_hang");
     // Trích xuất thuộc tính động từ moTa hoặc trường dữ liệu chiTiet
-    const saved = tríchXuatThuocTinhTuMoTa(chiTiet.value?.moTa)
-    chiTietThuocTinh.value = { ...saved }
-    productCustomAttrs.value.forEach(attr => {
+    const saved = tríchXuatThuocTinhTuMoTa(chiTiet.value?.moTa);
+    chiTietThuocTinh.value = { ...saved };
+    productCustomAttrs.value.forEach((attr) => {
       if (!chiTietThuocTinh.value[attr.tenTruong] && chiTiet.value?.[attr.tenTruong]) {
-        chiTietThuocTinh.value[attr.tenTruong] = chiTiet.value[attr.tenTruong]
+        chiTietThuocTinh.value[attr.tenTruong] = chiTiet.value[attr.tenTruong];
       }
-    })
+    });
     // Trích xuất thuộc tính động và đồng bộ trạng thái hiển thị của từng biến thể
-    ;(chiTiet.value?.variants || []).forEach(v => {
-      const matched = (group.variants || []).find(gv => String(gv.bienTheId) === String(v.bienTheId))
-        || (bienThe.value || []).find(bt => String(bt.bienTheId) === String(v.bienTheId))
+    (chiTiet.value?.variants || []).forEach((v) => {
+      const matched =
+        (group.variants || []).find((gv) => String(gv.bienTheId) === String(v.bienTheId)) ||
+        (bienThe.value || []).find((bt) => String(bt.bienTheId) === String(v.bienTheId));
       if (matched) {
-        v.trangThaiHienThi = matched.trangThaiHienThi
-        v.soLuongTon = matched.soLuongTon
-        v.tongSerial = matched.tongSerial
-        v.soLuongDaBan = matched.soLuongDaBan
+        v.trangThaiHienThi = matched.trangThaiHienThi;
+        v.soLuongTon = matched.soLuongTon;
+        v.tongSerial = matched.tongSerial;
+        v.soLuongDaBan = matched.soLuongDaBan;
       } else {
-        const ton = Number(v.soLuongTon ?? 0)
-        const daTungCoHang = Number(v.tongSerial ?? 0) > 0 || Number(v.soLuongDaBan ?? 0) > 0
-        if (v.trangThai === 'inactive' || v.trangThai === 'ngung_kinh_doanh') {
-          v.trangThaiHienThi = v.trangThai
+        const ton = Number(v.soLuongTon ?? 0);
+        const daTungCoHang = Number(v.tongSerial ?? 0) > 0 || Number(v.soLuongDaBan ?? 0) > 0;
+        if (v.trangThai === "inactive" || v.trangThai === "ngung_kinh_doanh") {
+          v.trangThaiHienThi = v.trangThai;
         } else if (ton > 0) {
-          v.trangThaiHienThi = 'active'
+          v.trangThaiHienThi = "active";
         } else if (daTungCoHang) {
-          v.trangThaiHienThi = 'het_hang'
+          v.trangThaiHienThi = "het_hang";
         } else {
-          v.trangThaiHienThi = 'cho_nhap_hang'
+          v.trangThaiHienThi = "cho_nhap_hang";
         }
       }
-      const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa)
-      variantCustomAttrs.value.forEach(attr => {
+      const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa);
+      variantCustomAttrs.value.forEach((attr) => {
         if (!v[attr.tenTruong] && vMeta[attr.tenTruong]) {
-          v[attr.tenTruong] = vMeta[attr.tenTruong]
+          v[attr.tenTruong] = vMeta[attr.tenTruong];
         }
-      })
-    })
+      });
+    });
     // Load images
-    anhSanPham.value = []
-    if (chiTiet.value.hinhAnhChinh) anhSanPham.value.push(chiTiet.value.hinhAnhChinh)
+    anhSanPham.value = [];
+    if (chiTiet.value.hinhAnhChinh) anhSanPham.value.push(chiTiet.value.hinhAnhChinh);
     if (chiTiet.value.hinhAnhList) {
-      for (const url of chiTiet.value.hinhAnhList) if (!anhSanPham.value.includes(url)) anhSanPham.value.push(url)
+      for (const url of chiTiet.value.hinhAnhList)
+        if (!anhSanPham.value.includes(url)) anhSanPham.value.push(url);
     }
-    if (!anhSanPham.value.length) anhSanPham.value.push(ANH_MAC_DINH)
-    anhDangXem.value = anhSanPham.value[0]
+    if (!anhSanPham.value.length) anhSanPham.value.push(ANH_MAC_DINH);
+    anhDangXem.value = anhSanPham.value[0];
     // Load history
-    nhatKyLoading.value = true
-    const ls = await getLichSu(group.sanPhamId)
-    lichSuHienTai.value = Array.isArray(ls) ? ls : (ls?.content || [])
+    nhatKyLoading.value = true;
+    const ls = await getLichSu(group.sanPhamId);
+    lichSuHienTai.value = Array.isArray(ls) ? ls : ls?.content || [];
   } catch (e) {
-    console.error('[HangHoa] loi mo chi tiet', e)
+    console.error("[HangHoa] loi mo chi tiet", e);
   } finally {
-    nhatKyLoading.value = false
+    nhatKyLoading.value = false;
   }
-}
+};
 
-const dongChiTiet = () => { showDetail.value = false; chiTiet.value = null }
+const dongChiTiet = () => {
+  showDetail.value = false;
+  chiTiet.value = null;
+};
 
-const openExportModal = () => { selectedIds.value = []; showExportModal.value = true }
+const openExportModal = () => {
+  selectedIds.value = [];
+  showExportModal.value = true;
+};
 
 const suaSanPham = async (sp) => {
-  modalMode.value = 'edit'
-  tieuDeModal.value = 'Sửa sản phẩm'
-  tab.value = 'info'
-  form.value.bienTheId = null
+  modalMode.value = "edit";
+  tieuDeModal.value = "Sửa sản phẩm";
+  tab.value = "info";
+  form.value.bienTheId = null;
 
   // Tải lại danh sách thuộc tính động mới nhất
-  await loadThuocTinh().catch(() => {})
+  await loadThuocTinh().catch(() => {});
 
   // Luôn fetch fresh data từ API để tránh stale cache
-  let data
+  let data;
   try {
-    const res = await get(`/api/san-pham/${sp.sanPhamId}`)
-    data = res.data || res
+    const res = await get(`/api/san-pham/${sp.sanPhamId}`);
+    data = res.data || res;
   } catch (e) {
-    console.error('[HangHoa] suaSanPham fetch error:', e)
-    return
+    console.error("[HangHoa] suaSanPham fetch error:", e);
+    return;
   }
 
   // Fill form từ API response (data mới nhất từ DB)
-  form.value.sanPhamId = data.sanPhamId
-  form.value.maSanPham = data.maSanPham
-  form.value.tenSanPham = data.tenSanPham
-  form.value.thuongHieuId = data.thuongHieuId
-  form.value.danhMucId = data.danhMucId
-  form.value.nhaCungCapId = data.nhaCungCapId
-  form.value.loaiSanPham = data.loaiSanPham || 'LAPTOP'
-  form.value.trangThaiSanPham = data.trangThai || 'active'
-  form.value.hinhAnhList = data.hinhAnhList || (data.hinhAnhChinh ? [data.hinhAnhChinh] : [])
-  const rawMoTa = data.moTa || ''
-  const savedAttrs = tríchXuatThuocTinhTuMoTa(rawMoTa)
-  form.value.moTa = loaiBoMetadataTuMoTa(rawMoTa)
+  form.value.sanPhamId = data.sanPhamId;
+  form.value.maSanPham = data.maSanPham;
+  form.value.tenSanPham = data.tenSanPham;
+  form.value.thuongHieuId = data.thuongHieuId;
+  form.value.danhMucId = data.danhMucId;
+  form.value.nhaCungCapId = data.nhaCungCapId;
+  form.value.loaiSanPham = data.loaiSanPham || "LAPTOP";
+  form.value.trangThaiSanPham = data.trangThai || "active";
+  form.value.hinhAnhList = data.hinhAnhList || (data.hinhAnhChinh ? [data.hinhAnhChinh] : []);
+  const rawMoTa = data.moTa || "";
+  const savedAttrs = tríchXuatThuocTinhTuMoTa(rawMoTa);
+  form.value.moTa = loaiBoMetadataTuMoTa(rawMoTa);
   // Fill formThuocTinh (Sản phẩm)
-  Object.keys(formThuocTinh).forEach(k => delete formThuocTinh[k])
-  productCustomAttrs.value.forEach(attr => {
-    formThuocTinh[attr.tenTruong] = savedAttrs[attr.tenTruong] ?? data[attr.tenTruong] ?? ''
-  })
-  form.value.phanLoaiIds = data.phanLoaiIds || []
-  form.value.baoHanhThang = data.baoHanhThang ?? 12
-  form.value.kichThuocManHinh = data.kichThuocManHinh || ''
-  form.value.pin = data.pin || ''
-  form.value.heDieuHanh = data.heDieuHanh || ''
-  form.value.trongLuongKg = data.trongLuongKg != null ? data.trongLuongKg : ''
+  Object.keys(formThuocTinh).forEach((k) => delete formThuocTinh[k]);
+  productCustomAttrs.value.forEach((attr) => {
+    formThuocTinh[attr.tenTruong] = savedAttrs[attr.tenTruong] ?? data[attr.tenTruong] ?? "";
+  });
+  form.value.phanLoaiIds = data.phanLoaiIds || [];
+  form.value.baoHanhThang = data.baoHanhThang ?? 12;
+  form.value.kichThuocManHinh = data.kichThuocManHinh || "";
+  form.value.pin = data.pin || "";
+  form.value.heDieuHanh = data.heDieuHanh || "";
+  form.value.trongLuongKg = data.trongLuongKg != null ? data.trongLuongKg : "";
 
   // Bien the — ưu tiên lấy trực tiếp ID từ backend response nếu có, fallback reverse lookup theo tên
-  bienTheRows.value = (data.variants || []).map(v => {
-    const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa)
+  bienTheRows.value = (data.variants || []).map((v) => {
+    const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa);
     const row = {
       bienTheId: v.bienTheId,
       maSku: v.maSku,
       barcode: v.barcode,
       mauSac: v.mauSac,
-      cpuId: v.cpuId ?? idOf(v, 'cpuId') ?? (v.cpu ? cpuIdByName.value[v.cpu.trim()] : null),
-      ramId: v.ramId ?? idOf(v, 'ramId') ?? (v.ram ? ramIdByName.value[v.ram.trim()] : null),
-      oCungId: v.oCungId ?? v.ocungId ?? idOf(v, 'oCungId') ?? (v.oCung ? oCungIdByName.value[v.oCung.trim()] : null),
-      gpuId: v.gpuId ?? idOf(v, 'gpuId') ?? (v.gpu ? gpuIdByName.value[v.gpu.trim()] : null),
+      cpuId: v.cpuId ?? idOf(v, "cpuId") ?? (v.cpu ? cpuIdByName.value[v.cpu.trim()] : null),
+      ramId: v.ramId ?? idOf(v, "ramId") ?? (v.ram ? ramIdByName.value[v.ram.trim()] : null),
+      oCungId:
+        v.oCungId ??
+        v.ocungId ??
+        idOf(v, "oCungId") ??
+        (v.oCung ? oCungIdByName.value[v.oCung.trim()] : null),
+      gpuId: v.gpuId ?? idOf(v, "gpuId") ?? (v.gpu ? gpuIdByName.value[v.gpu.trim()] : null),
       giaNhap: v.giaNhap,
       giaBan: v.giaBan,
       hinhAnhBienThe: v.hinhAnhBienThe,
       moTa: v.moTa,
-      _key: v.bienTheId || Date.now() + Math.random()
-    }
-    variantCustomAttrs.value.forEach(attr => {
-      row[attr.tenTruong] = vMeta[attr.tenTruong] ?? v[attr.tenTruong] ?? ''
-    })
-    return row
-  })
-  banGocBienThe.value = JSON.parse(JSON.stringify(bienTheRows.value))
+      _key: v.bienTheId || Date.now() + Math.random(),
+    };
+    variantCustomAttrs.value.forEach((attr) => {
+      row[attr.tenTruong] = vMeta[attr.tenTruong] ?? v[attr.tenTruong] ?? "";
+    });
+    return row;
+  });
+  banGocBienThe.value = JSON.parse(JSON.stringify(bienTheRows.value));
 
   if (bienTheRows.value.length > 0 && !form.value.bienTheId) {
-    suaBienThe(bienTheRows.value[0])
+    suaBienThe(bienTheRows.value[0]);
   } else if (bienTheRows.value.length === 0) {
-    form.value.bienTheId = null
-    form.value.maSku = ''
-    form.value.barcode = ''
-    form.value.mauSac = ''
-    form.value.cpuId = ''
-    form.value.ramId = ''
-    form.value.oCungId = ''
-    form.value.gpuId = ''
-    form.value.giaNhap = 0
-    form.value.giaBan = 0
-    form.value.hinhAnhBienThe = null
+    form.value.bienTheId = null;
+    form.value.maSku = "";
+    form.value.barcode = "";
+    form.value.mauSac = "";
+    form.value.cpuId = "";
+    form.value.ramId = "";
+    form.value.oCungId = "";
+    form.value.gpuId = "";
+    form.value.giaNhap = 0;
+    form.value.giaBan = 0;
+    form.value.hinhAnhBienThe = null;
   }
-  banGoc.value = anhChupForm()
-  errors.value = {}
-  saveError.value = ''
-  showModal.value = true
-  moLaiChiTiet.value = data.sanPhamId
+  banGoc.value = anhChupForm();
+  errors.value = {};
+  rowErrors.value = [];
+  daBamLuu.value = false;
+  saveError.value = "";
+  showModal.value = true;
+  moLaiChiTiet.value = data.sanPhamId;
   // Set moTa editor sạch sẽ
-  setTimeout(() => { if (moTaEl.value) moTaEl.value.innerHTML = form.value.moTa || '' }, 50)
-}
+  setTimeout(() => {
+    if (moTaEl.value) moTaEl.value.innerHTML = form.value.moTa || "";
+  }, 50);
+};
 
 const suaBienThe = (v) => {
-  if (!v) return
-  form.value.bienTheId = v.bienTheId
-  form.value.maSku = v.maSku || ''
-  form.value.barcode = v.barcode || ''
-  form.value.mauSac = v.mauSac || ''
-  form.value.cpuId = v.cpuId ?? idOf(v, 'cpuId') ?? (v.cpu ? cpuIdByName.value[v.cpu?.trim()] : '') ?? ''
-  form.value.ramId = v.ramId ?? idOf(v, 'ramId') ?? (v.ram ? ramIdByName.value[(v.ram || '')?.trim()] : '') ?? ''
-  form.value.oCungId = v.oCungId ?? v.ocungId ?? idOf(v, 'oCungId') ?? (v.oCung ? oCungIdByName.value[(v.oCung || '')?.trim()] : '') ?? ''
-  form.value.gpuId = v.gpuId ?? idOf(v, 'gpuId') ?? (v.gpu ? gpuIdByName.value[v.gpu?.trim()] : '') ?? ''
-  form.value.giaNhap = v.giaNhap || 0
-  form.value.giaBan = v.giaBan || 0
-  form.value.hinhAnhBienThe = v.hinhAnhBienThe || null
+  if (!v) return;
+  form.value.bienTheId = v.bienTheId;
+  form.value.maSku = v.maSku || "";
+  form.value.barcode = v.barcode || "";
+  form.value.mauSac = v.mauSac || "";
+  form.value.cpuId =
+    v.cpuId ?? idOf(v, "cpuId") ?? (v.cpu ? cpuIdByName.value[v.cpu?.trim()] : "") ?? "";
+  form.value.ramId =
+    v.ramId ?? idOf(v, "ramId") ?? (v.ram ? ramIdByName.value[(v.ram || "")?.trim()] : "") ?? "";
+  form.value.oCungId =
+    v.oCungId ??
+    v.ocungId ??
+    idOf(v, "oCungId") ??
+    (v.oCung ? oCungIdByName.value[(v.oCung || "")?.trim()] : "") ??
+    "";
+  form.value.gpuId =
+    v.gpuId ?? idOf(v, "gpuId") ?? (v.gpu ? gpuIdByName.value[v.gpu?.trim()] : "") ?? "";
+  form.value.giaNhap = v.giaNhap || 0;
+  form.value.giaBan = v.giaBan || 0;
+  form.value.hinhAnhBienThe = v.hinhAnhBienThe || null;
 
   // Fill formThuocTinhBienThe
-  Object.keys(formThuocTinhBienThe).forEach(k => delete formThuocTinhBienThe[k])
-  const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa)
-  variantCustomAttrs.value.forEach(attr => {
-    formThuocTinhBienThe[attr.tenTruong] = vMeta[attr.tenTruong] ?? v[attr.tenTruong] ?? ''
-  })
-}
+  Object.keys(formThuocTinhBienThe).forEach((k) => delete formThuocTinhBienThe[k]);
+  const vMeta = tríchXuatThuocTinhTuMoTa(v.moTa);
+  variantCustomAttrs.value.forEach((attr) => {
+    formThuocTinhBienThe[attr.tenTruong] = vMeta[attr.tenTruong] ?? v[attr.tenTruong] ?? "";
+  });
+};
 
 const chonBienTheDeSua = (v) => {
   if (form.value.bienTheId) {
-    const prevIdx = bienTheRows.value.findIndex(r => String(r.bienTheId) === String(form.value.bienTheId))
+    const prevIdx = bienTheRows.value.findIndex(
+      (r) => String(r.bienTheId) === String(form.value.bienTheId),
+    );
     if (prevIdx !== -1) {
       const updatedRow = {
         ...bienTheRows.value[prevIdx],
@@ -2054,558 +3168,991 @@ const chonBienTheDeSua = (v) => {
         gpuId: form.value.gpuId,
         giaNhap: form.value.giaNhap,
         giaBan: form.value.giaBan,
-        hinhAnhBienThe: form.value.hinhAnhBienThe
-      }
-      variantCustomAttrs.value.forEach(attr => {
-        updatedRow[attr.tenTruong] = formThuocTinhBienThe[attr.tenTruong] || ''
-      })
-      bienTheRows.value[prevIdx] = updatedRow
+        hinhAnhBienThe: form.value.hinhAnhBienThe,
+      };
+      variantCustomAttrs.value.forEach((attr) => {
+        updatedRow[attr.tenTruong] = formThuocTinhBienThe[attr.tenTruong] || "";
+      });
+      bienTheRows.value[prevIdx] = updatedRow;
     }
   }
-  suaBienThe(v)
-}
+  suaBienThe(v);
+};
 
 const suaBienTheTuChiTiet = async (v) => {
-  if (!chiTiet.value || !v) return
-  await suaSanPham(chiTiet.value)
-  tab.value = 'bienthe'
-  const freshV = bienTheRows.value.find(r => String(r.bienTheId) === String(v.bienTheId)) || v
-  suaBienThe(freshV)
-}
+  if (!chiTiet.value || !v) return;
+  await suaSanPham(chiTiet.value);
+  tab.value = "bienthe";
+  const freshV = bienTheRows.value.find((r) => String(r.bienTheId) === String(v.bienTheId)) || v;
+  suaBienThe(freshV);
+};
 
 const themPhienBan = (sp) => {
-  modalMode.value = 'variant'
-  tieuDeModal.value = 'Thêm phiên bản'
-  tab.value = 'bienthe'
-  form.value.sanPhamId = sp.sanPhamId
-  form.value.maSanPham = sp.maSanPham
-  form.value.tenSanPham = sp.tenSanPham || ''
-  form.value.thuongHieuId = idOf(sp, 'thuongHieuId')
-  form.value.danhMucId = idOf(sp, 'danhMucId')
-  form.value.nhaCungCapId = idOf(sp, 'nhaCungCapId')
-  form.value.loaiSanPham = sp.loaiSanPham || 'LAPTOP'
-  form.value.trangThaiSanPham = sp.trangThai || 'active'
-  form.value.hinhAnhList = sp.hinhAnhList || (sp.hinhAnhChinh ? [sp.hinhAnhChinh] : [])
-  form.value.moTa = sp.moTa || ''
-  form.value.phanLoaiIds = sp.phanLoaiIds || sp.phanLoai || []
-  form.value.baoHanhThang = sp.baoHanhThang ?? 12
-  form.value.kichThuocManHinh = sp.kichThuocManHinh || ''
-  form.value.pin = sp.pin || ''
-  form.value.heDieuHanh = sp.heDieuHanh || ''
-  form.value.trongLuongKg = sp.trongLuongKg != null ? sp.trongLuongKg : ''
-  bienTheRows.value = [taoDongBienThe()]
-  errors.value = {}
-  saveError.value = ''
-  showModal.value = true
-}
+  modalMode.value = "variant";
+  tieuDeModal.value = "Thêm phiên bản";
+  tab.value = "bienthe";
+  form.value.sanPhamId = sp.sanPhamId;
+  form.value.maSanPham = sp.maSanPham;
+  form.value.tenSanPham = sp.tenSanPham || "";
+  form.value.thuongHieuId = idOf(sp, "thuongHieuId");
+  form.value.danhMucId = idOf(sp, "danhMucId");
+  form.value.nhaCungCapId = idOf(sp, "nhaCungCapId");
+  form.value.loaiSanPham = sp.loaiSanPham || "LAPTOP";
+  form.value.trangThaiSanPham = sp.trangThai || "active";
+  form.value.hinhAnhList = sp.hinhAnhList || (sp.hinhAnhChinh ? [sp.hinhAnhChinh] : []);
+  form.value.moTa = sp.moTa || "";
+  form.value.phanLoaiIds = sp.phanLoaiIds || sp.phanLoai || [];
+  form.value.baoHanhThang = sp.baoHanhThang ?? 12;
+  form.value.kichThuocManHinh = sp.kichThuocManHinh || "";
+  form.value.pin = sp.pin || "";
+  form.value.heDieuHanh = sp.heDieuHanh || "";
+  form.value.trongLuongKg = sp.trongLuongKg != null ? sp.trongLuongKg : "";
+  bienTheRows.value = [taoDongBienThe()];
+  errors.value = {};
+  rowErrors.value = [];
+  daBamLuu.value = false;
+  saveError.value = "";
+  showModal.value = true;
+};
 
 const saoChepSanPham = (sp) => {
-  modalMode.value = 'create'
-  tieuDeModal.value = 'Sao chép sản phẩm'
-  tab.value = 'info'
-  const firstImg = sp.hinhAnhList?.[0] || sp.hinhAnhChinh
+  modalMode.value = "create";
+  tieuDeModal.value = "Sao chép sản phẩm";
+  tab.value = "info";
+  const firstImg = sp.hinhAnhList?.[0] || sp.hinhAnhChinh;
   form.value = {
-    sanPhamId: null, maSanPham: sinhMaSanPham(), tenSanPham: sp.tenSanPham + ' (Copy)',
-    thuongHieuId: idOf(sp, 'thuongHieuId'), danhMucId: idOf(sp, 'danhMucId'),
-    nhaCungCapId: idOf(sp, 'nhaCungCapId'),
-    loaiSanPham: sp.loaiSanPham || 'LAPTOP', trangThaiSanPham: 'active',
-    phanLoaiIds: sp.phanLoaiIds || sp.phanLoai || [], phanLoaiTags: null, phanLoaiTen: null,
+    sanPhamId: null,
+    maSanPham: sinhMaSanPham(),
+    tenSanPham: sp.tenSanPham + " (Copy)",
+    thuongHieuId: idOf(sp, "thuongHieuId") || "",
+    danhMucId: idOf(sp, "danhMucId") || "",
+    nhaCungCapId: idOf(sp, "nhaCungCapId") || "",
+    loaiSanPham: sp.loaiSanPham || "LAPTOP",
+    trangThaiSanPham: "cho_nhap_hang",
+    phanLoaiIds: sp.phanLoaiIds || sp.phanLoai || [],
+    phanLoaiTags: null,
+    phanLoaiTen: null,
     hinhAnhList: firstImg ? [firstImg] : [],
-    moTa: sp.moTa || '', baoHanhThang: 12, kichThuocManHinh: '', pin: '', heDieuHanh: '', trongLuongKg: '', skuPrefix: '',
-    bienTheId: null, maSku: '', barcode: '', mauSac: '', cpuId: '', ramId: '', oCungId: '', gpuId: '',
-    giaNhap: 0, giaBan: 0, hinhAnhBienThe: null
-  }
-  bienTheRows.value = (sp.variants || []).map(v => ({
-    ...v, _key: Date.now() + Math.random(), bienTheId: null,
+    moTa: sp.moTa || "",
+    baoHanhThang: sp.baoHanhThang ?? 12,
+    kichThuocManHinh: sp.kichThuocManHinh || "",
+    pin: sp.pin || "",
+    heDieuHanh: sp.heDieuHanh || "",
+    trongLuongKg: sp.trongLuongKg != null ? sp.trongLuongKg : "",
+    skuPrefix: "",
+    bienTheId: null,
+    maSku: "",
+    barcode: "",
+    mauSac: "",
+    cpuId: "",
+    ramId: "",
+    oCungId: "",
+    gpuId: "",
+    giaNhap: "",
+    giaBan: "",
+    hinhAnhBienThe: null,
+  };
+  const copiedRows = (sp.variants || []).map((v) => ({
+    ...v,
+    _key: Date.now() + Math.random(),
+    bienTheId: null,
     barcode: sinhBarcodeKhongTrung(),
-    cpuId: v.cpuId ?? idOf(v, 'cpuId'), ramId: v.ramId ?? idOf(v, 'ramId'),
-    oCungId: v.oCungId ?? v.ocungId ?? idOf(v, 'oCungId'), gpuId: v.gpuId ?? idOf(v, 'gpuId')
-  }))
-  capNhatSkuCacDong()
-  errors.value = {}
-  saveError.value = ''
-  showModal.value = true
-}
+    mauSac: v.mauSac || "",
+    cpuId: v.cpuId ?? idOf(v, "cpuId") ?? "",
+    ramId: v.ramId ?? idOf(v, "ramId") ?? "",
+    oCungId: v.oCungId ?? v.ocungId ?? idOf(v, "oCungId") ?? "",
+    gpuId: v.gpuId ?? idOf(v, "gpuId") ?? "",
+  }));
+  bienTheRows.value = copiedRows.length ? copiedRows : [taoDongBienThe()];
+  capNhatSkuCacDong();
+  errors.value = {};
+  rowErrors.value = [];
+  daBamLuu.value = false;
+  saveError.value = "";
+  showModal.value = true;
+};
 
-const dangSaoChepBienThe = ref(false)
+const dangSaoChepBienThe = ref(false);
 const saoChepBienThe = async (v) => {
-  if (!v) return
-  dangSaoChepBienThe.value = true
+  if (!v) return;
+  dangSaoChepBienThe.value = true;
   try {
-    const payload = { ...payloadBienThe(chiTiet.value.sanPhamId, { ...v, _key: Date.now(), bienTheId: null, maSku: '' }) }
-    payload.maSku = v.maSku + '-copy'
-    const res = await apiTaoBienThe(payload)
+    const payload = {
+      ...payloadBienThe(chiTiet.value.sanPhamId, {
+        ...v,
+        _key: Date.now(),
+        bienTheId: null,
+        maSku: "",
+      }),
+    };
+    payload.maSku = v.maSku + "-copy";
+    const res = await apiTaoBienThe(payload);
     if (res.ok) {
-      hienToast('Đã sao chép phiên bản')
-      await fetchData()
-      if (chiTiet.value) moChiTiet({ sanPhamId: chiTiet.value.sanPhamId })
+      hienToast("Đã sao chép phiên bản");
+      await fetchData();
+      if (chiTiet.value) moChiTiet({ sanPhamId: chiTiet.value.sanPhamId });
     }
   } catch (e) {
-    hienToast('Lỗi: ' + thongBaoLoi(e))
+    hienToast("Lỗi: " + thongBaoLoi(e));
   } finally {
-    dangSaoChepBienThe.value = false
+    dangSaoChepBienThe.value = false;
   }
-}
+};
 
 // Barcode rendering with EAN13 & CODE128 fallback
-const barcodeFormat = (v) => (/^\d{13}$/.test(String(v ?? '')) ? 'EAN13' : 'CODE128')
+const barcodeFormat = (v) => (/^\d{13}$/.test(String(v ?? "")) ? "EAN13" : "CODE128");
 const drawBarcode = (el, value, opts = {}) => {
-  if (!el || !value) return
-  const str = String(value).trim()
-  const base = { height: 28, width: 1.15, displayValue: true, fontSize: 10.5, font: 'monospace', textMargin: 3, margin: 2, background: '#ffffff', lineColor: '#111827', ...opts }
+  if (!el || !value) return;
+  const str = String(value).trim();
+  const base = {
+    height: 28,
+    width: 1.15,
+    displayValue: true,
+    fontSize: 10.5,
+    font: "monospace",
+    textMargin: 3,
+    margin: 2,
+    background: "#ffffff",
+    lineColor: "#111827",
+    ...opts,
+  };
   try {
-    JsBarcode(el, str, { format: barcodeFormat(str), ...base })
+    JsBarcode(el, str, { format: barcodeFormat(str), ...base });
   } catch {
-    try { JsBarcode(el, str, { format: 'CODE128', ...base }) } catch {}
+    try {
+      JsBarcode(el, str, { format: "CODE128", ...base });
+    } catch {}
   }
-}
-const renderBarcode = (el, code) => drawBarcode(el, code)
+};
+const renderBarcode = (el, code) => drawBarcode(el, code);
 
 const inTemMa = (v) => {
-  if (!v) return
-  const w = window.open('', '_blank')
-  if (!w) return
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  if (!v) return;
+  const w = window.open("", "_blank");
+  if (!w) return;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   try {
-    drawBarcode(svg, v.barcode || v.maSku, { height: 50, width: 1.8, displayValue: true, fontSize: 13, margin: 8 })
-    w.document.write(`<html><head><title>Tem mã: ${v.maSku}</title></head><body style="text-align:center;padding:20px;font-family:sans-serif">${svg.outerHTML}<p style="margin-top:10px">${v.maSku}</p></body></html>`)
-    w.document.close()
-    setTimeout(() => w.print(), 300)
+    drawBarcode(svg, v.barcode || v.maSku, {
+      height: 50,
+      width: 1.8,
+      displayValue: true,
+      fontSize: 13,
+      margin: 8,
+    });
+    w.document.write(
+      `<html><head><title>Tem mã: ${v.maSku}</title></head><body style="text-align:center;padding:20px;font-family:sans-serif">${svg.outerHTML}<p style="margin-top:10px">${v.maSku}</p></body></html>`,
+    );
+    w.document.close();
+    setTimeout(() => w.print(), 300);
   } catch (e) {
-    w.document.write(`<p>Không tạo được mã vạch: ${e.message}</p>`)
-    w.document.close()
+    w.document.write(`<p>Không tạo được mã vạch: ${e.message}</p>`);
+    w.document.close();
   }
-}
+};
 
 // Validate form
 const validate = () => {
-  errors.value = {}
-  if (!form.value.tenSanPham) errors.value.tenSanPham = 'Tên sản phẩm bắt buộc'
-  if (!form.value.thuongHieuId) errors.value.thuongHieuId = 'Chọn thương hiệu'
-  if (!form.value.danhMucId) errors.value.danhMucId = 'Chọn danh mục'
-  if (!form.value.baoHanhThang) errors.value.baoHanhThang = 'Chọn thời gian bảo hành'
+  const errs = {};
+  const rErrs = [];
 
-  if (dynamicCustomAttrs.value) {
-    for (const attr of dynamicCustomAttrs.value) {
-      if (attr.batBuoc && (!formThuocTinh[attr.tenTruong] || !String(formThuocTinh[attr.tenTruong]).trim())) {
-        errors.value[attr.tenTruong] = `${attr.tenHienThi} bắt buộc`
+  if (modalMode.value !== "variant") {
+    if (!String(form.value.tenSanPham || "").trim()) errs.tenSanPham = "Vui lòng nhập tên sản phẩm";
+    if (!form.value.thuongHieuId) errs.thuongHieuId = "Vui lòng chọn thương hiệu";
+    if (!form.value.danhMucId) errs.danhMucId = "Vui lòng chọn danh mục";
+    if (!form.value.loaiSanPham) errs.loaiSanPham = "Vui lòng chọn loại sản phẩm";
+    if (!form.value.baoHanhThang || Number(form.value.baoHanhThang) <= 0)
+      errs.baoHanhThang = "Vui lòng chọn thời gian bảo hành";
+
+    const tl = form.value.trongLuongKg;
+    if (modalMode.value === "create") {
+      if (!form.value.nhaCungCapId) errs.nhaCungCapId = "Vui lòng chọn nhà cung cấp";
+      if (!Array.isArray(form.value.phanLoaiIds) || form.value.phanLoaiIds.length === 0) {
+        errs.phanLoaiIds = "Vui lòng chọn ít nhất 1 phân loại sử dụng";
+      }
+      if (!Array.isArray(form.value.hinhAnhList) || form.value.hinhAnhList.length === 0) {
+        errs.hinhAnhList = "Vui lòng tải lên ảnh đại diện sản phẩm";
+      }
+      if (!String(form.value.kichThuocManHinh || "").trim()) {
+        errs.kichThuocManHinh = "Vui lòng nhập thông số màn hình";
+      }
+      if (!String(form.value.heDieuHanh || "").trim()) {
+        errs.heDieuHanh = "Vui lòng nhập hệ điều hành";
+      }
+      if (!String(form.value.pin || "").trim()) {
+        errs.pin = "Vui lòng nhập thông số pin";
+      }
+      if (
+        tl === "" ||
+        tl === null ||
+        tl === undefined ||
+        Number.isNaN(Number(tl)) ||
+        Number(tl) <= 0
+      ) {
+        errs.trongLuongKg = "Vui lòng nhập trọng lượng hợp lệ (> 0 kg)";
+      } else if (Number(tl) > 5) {
+        errs.trongLuongKg =
+          "Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)";
+      }
+    } else if (tl !== "" && tl !== null && tl !== undefined) {
+      if (Number.isNaN(Number(tl)) || Number(tl) <= 0) {
+        errs.trongLuongKg = "Trọng lượng (kg) phải lớn hơn 0";
+      } else if (Number(tl) > 5) {
+        errs.trongLuongKg =
+          "Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)";
+      }
+    }
+
+    if (dynamicCustomAttrs.value) {
+      for (const attr of dynamicCustomAttrs.value) {
+        const isReq = modalMode.value === "create" || attr.batBuoc;
+        if (
+          isReq &&
+          (!formThuocTinh[attr.tenTruong] || !String(formThuocTinh[attr.tenTruong]).trim())
+        ) {
+          errs[attr.tenTruong] = `Vui lòng nhập ${attr.tenHienThi}`;
+        }
       }
     }
   }
 
-  // Validate bien the
-  if (modalMode.value === 'edit') {
+  // Validate biến thể
+  if (modalMode.value === "edit") {
     if (form.value.bienTheId) {
-      if (!form.value.maSku?.trim()) errors.value.maSku = 'Mã SKU bắt buộc'
-      if (form.value.giaBan === '' || form.value.giaBan == null) errors.value.giaBan = 'Giá bán bắt buộc'
-      if (form.value.giaNhap === '' || form.value.giaNhap == null) errors.value.giaNhap = 'Giá nhập bắt buộc'
-      if (Number(form.value.giaBan) < 0) errors.value.giaBan = 'Giá bán không được âm'
-      if (Number(form.value.giaNhap) < 0) errors.value.giaNhap = 'Giá nhập không được âm'
+      if (!form.value.maSku?.trim()) errs.maSku = "Mã SKU bắt buộc";
+      if (
+        form.value.giaBan === "" ||
+        form.value.giaBan == null ||
+        Number.isNaN(Number(form.value.giaBan)) ||
+        Number(form.value.giaBan) < 0
+      ) {
+        errs.giaBan = "Giá bán không hợp lệ";
+      } else if (Number(form.value.giaBan) > 999999999999) {
+        errs.giaBan = "Giá bán vượt quá giới hạn cho phép";
+      }
+      if (
+        form.value.giaNhap === "" ||
+        form.value.giaNhap == null ||
+        Number.isNaN(Number(form.value.giaNhap)) ||
+        Number(form.value.giaNhap) < 0
+      ) {
+        errs.giaNhap = "Giá nhập không hợp lệ";
+      } else if (Number(form.value.giaNhap) > 999999999999) {
+        errs.giaNhap = "Giá nhập vượt quá giới hạn cho phép";
+      }
     }
   } else {
-    if (bienTheRows.value.length === 0) {
-      errors.value.bienThe = 'Phải có ít nhất 1 phiên bản'
+    const btMessages = [];
+    if (!Array.isArray(bienTheRows.value) || bienTheRows.value.length === 0) {
+      errs.bienThe = "Phải có tối thiểu 1 biến thể sản phẩm";
+      btMessages.push("Phải có tối thiểu 1 biến thể sản phẩm");
+    } else {
+      const seenConfigs = new Map();
+      for (let i = 0; i < bienTheRows.value.length; i++) {
+        const row = bienTheRows.value[i];
+        const cellErr = {};
+        const missingFields = [];
+
+        if (!String(row.mauSac || "").trim()) {
+          cellErr.mauSac = true;
+          missingFields.push("Màu sắc");
+        }
+        if (!row.cpuId) {
+          cellErr.cpuId = true;
+          missingFields.push("CPU");
+        }
+        if (!row.ramId) {
+          cellErr.ramId = true;
+          missingFields.push("RAM");
+        }
+        if (!(row.oCungId ?? row.ocungId)) {
+          cellErr.oCungId = true;
+          missingFields.push("Ổ cứng");
+        }
+        if (!row.gpuId) {
+          cellErr.gpuId = true;
+          missingFields.push("GPU");
+        }
+
+        const gn = row.giaNhap;
+        if (
+          gn === "" ||
+          gn === null ||
+          gn === undefined ||
+          Number.isNaN(Number(gn)) ||
+          Number(gn) <= 0
+        ) {
+          cellErr.giaNhap = true;
+          missingFields.push("Giá vốn (> 0)");
+        } else if (Number(gn) > 999999999999) {
+          cellErr.giaNhap = true;
+          missingFields.push("Giá vốn vượt giới hạn");
+        }
+
+        const gb = row.giaBan;
+        if (
+          gb === "" ||
+          gb === null ||
+          gb === undefined ||
+          Number.isNaN(Number(gb)) ||
+          Number(gb) <= 0
+        ) {
+          cellErr.giaBan = true;
+          missingFields.push("Giá bán (> 0)");
+        } else if (Number(gb) > 999999999999) {
+          cellErr.giaBan = true;
+          missingFields.push("Giá bán vượt giới hạn");
+        } else if (!cellErr.giaNhap && Number(gb) < Number(gn)) {
+          cellErr.giaBan = true;
+          missingFields.push("Giá bán phải >= Giá vốn");
+        }
+
+        if (variantCustomAttrs.value) {
+          for (const vAttr of variantCustomAttrs.value) {
+            if (vAttr.batBuoc && (!row[vAttr.tenTruong] || !String(row[vAttr.tenTruong]).trim())) {
+              cellErr[vAttr.tenTruong] = true;
+              missingFields.push(vAttr.tenHienThi);
+            }
+          }
+        }
+
+        if (
+          !cellErr.mauSac &&
+          !cellErr.cpuId &&
+          !cellErr.ramId &&
+          !cellErr.oCungId &&
+          !cellErr.gpuId
+        ) {
+          const cfgKey = [
+            khongDau(row.mauSac).trim(),
+            String(row.cpuId),
+            String(row.ramId),
+            String(row.oCungId ?? row.ocungId),
+            String(row.gpuId),
+          ].join("|");
+          if (seenConfigs.has(cfgKey)) {
+            const firstIdx = seenConfigs.get(cfgKey);
+            cellErr.mauSac = true;
+            cellErr.cpuId = true;
+            cellErr.ramId = true;
+            cellErr.oCungId = true;
+            cellErr.gpuId = true;
+            missingFields.push(`Trùng cấu hình với phiên bản #${firstIdx + 1}`);
+          } else {
+            seenConfigs.set(cfgKey, i);
+          }
+        }
+
+        rErrs[i] = cellErr;
+        if (missingFields.length > 0) {
+          btMessages.push(`Phiên bản #${i + 1}: Thiếu/chưa hợp lệ (${missingFields.join(", ")})`);
+        }
+      }
     }
-    for (let i = 0; i < bienTheRows.value.length; i++) {
-      const row = bienTheRows.value[i]
-      if (row.giaBan === '' || row.giaBan == null || isNaN(row.giaBan)) {
-        errors.value.giaBan = `Phiên bản #${i + 1}: Giá bán bắt buộc`
-        break
-      }
-      if (Number(row.giaBan) < 0) {
-        errors.value.giaBan = `Phiên bản #${i + 1}: Giá bán không được âm`
-        break
-      }
-      if (row.giaNhap !== '' && row.giaNhap != null && Number(row.giaNhap) < 0) {
-        errors.value.giaNhap = `Phiên bản #${i + 1}: Giá nhập không được âm`
-        break
-      }
+
+    if (btMessages.length > 0) {
+      errs.bienThe = btMessages[0];
+      errs.bienTheList = btMessages;
     }
   }
-  return Object.keys(errors.value).length === 0
-}
+
+  errors.value = errs;
+  rowErrors.value = rErrs;
+  return Object.keys(errs).length === 0;
+};
+
+// Tổng hợp danh sách lỗi cụ thể để hiển thị rõ ràng cho người dùng
+const taoThongBaoLoiValidate = () => {
+  const ds = [];
+  for (const [k, v] of Object.entries(errors.value || {})) {
+    if (k === "bienTheList" && Array.isArray(v)) {
+      ds.push(...v);
+    } else if (k !== "bienThe" && k !== "bienTheList" && typeof v === "string" && v) {
+      ds.push(v);
+    }
+  }
+  if (!ds.length && errors.value?.bienThe) {
+    ds.push(errors.value.bienThe);
+  }
+  if (!ds.length) return "";
+  if (ds.length <= 3) {
+    return `Không thể lưu: ${ds.join(" · ")}`;
+  }
+  return `Không thể lưu (${ds.length} mục chưa hợp lệ): ${ds.slice(0, 3).join(" · ")} (và ${ds.length - 3} mục khác)`;
+};
+
+// Tự động kiểm tra lại khi người dùng đang sửa lỗi sau khi đã bấm Lưu
+watch(
+  [form, formThuocTinh, formThuocTinhBienThe, bienTheRows],
+  () => {
+    if (!daBamLuu.value) return;
+    if (validate()) {
+      saveError.value = "";
+    } else {
+      saveError.value = taoThongBaoLoiValidate();
+    }
+  },
+  { deep: true },
+);
 
 const closeModal = (keepDetail = false) => {
-  showModal.value = false
-  form.value.sanPhamId = null
-  bienTheRows.value = []
-  errors.value = {}
-  saveError.value = ''
+  showModal.value = false;
+  xoaTatCaAnhPreview();
+  form.value.sanPhamId = null;
+  bienTheRows.value = [];
+  errors.value = {};
+  rowErrors.value = [];
+  daBamLuu.value = false;
+  saveError.value = "";
   // Chỉ reset moLaiChiTiet khi không giữ lại (tức là đóng hẳn, không phải sau khi lưu)
   if (!keepDetail) {
-    moLaiChiTiet.value = null
+    moLaiChiTiet.value = null;
   }
-}
+};
 
-const themDong = () => bienTheRows.value.push(taoDongBienThe())
-const xoaDong = (key) => { bienTheRows.value = bienTheRows.value.filter(r => r._key !== key) }
+const themDong = () => bienTheRows.value.push(taoDongBienThe());
+const xoaDong = (key) => {
+  if (bienTheRows.value.length <= 1) {
+    hienToast("Bắt buộc có tối thiểu 1 phiên bản biến thể");
+    return;
+  }
+  bienTheRows.value = bienTheRows.value.filter((r) => r._key !== key);
+};
 
 // Toggle phan loai
 const togglePhanLoai = (id) => {
-  const idx = form.value.phanLoaiIds.indexOf(id)
-  if (idx === -1) form.value.phanLoaiIds.push(id)
-  else form.value.phanLoaiIds.splice(idx, 1)
-}
-const tenPhanLoai = (id) => phanLoaiOptions.value.find(p => p.phanLoaiId == id)?.tenPhanLoai || ''
-const tenTheoMaPhanLoai = (ma) => phanLoaiOptions.value.find(p => p.maPhanLoai === ma)?.tenPhanLoai || ma
+  const idx = form.value.phanLoaiIds.indexOf(id);
+  if (idx === -1) form.value.phanLoaiIds.push(id);
+  else form.value.phanLoaiIds.splice(idx, 1);
+};
+const tenPhanLoai = (id) =>
+  phanLoaiOptions.value.find((p) => p.phanLoaiId == id)?.tenPhanLoai || "";
+const tenTheoMaPhanLoai = (ma) =>
+  phanLoaiOptions.value.find((p) => p.maPhanLoai === ma)?.tenPhanLoai || ma;
 
 // Ảnh (chỉ cho phép upload 1 ảnh đại diện duy nhất)
 const chonAnhSanPham = async (e) => {
-  const file = (e.target.files || [])[0]
-  if (!file) return
-  dangTaiAnh.value = true
+  const file = (e.target.files || [])[0];
+  if (!file) return;
+  xoaTatCaAnhPreview();
+  const localBlobUrl = URL.createObjectURL(file);
+  anhPreviewMap[localBlobUrl] = localBlobUrl;
+  form.value.hinhAnhList = [localBlobUrl];
+  dangTaiAnh.value = true;
   try {
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await fetch(UPLOAD_URL, { method: 'POST', headers: authHeaders(), body: fd })
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(UPLOAD_URL, { method: "POST", headers: authHeaders(), body: fd });
     if (res.ok) {
-      const data = await res.json()
-      const url = data.url || data.path || data.filename || (THU_MUC_ANH + data.name)
-      form.value.hinhAnhList = [url]
+      const data = await res.json();
+      const url = data.url || data.path || data.filename || THU_MUC_ANH + data.name;
+      anhPreviewMap[url] = localBlobUrl;
+      delete anhPreviewMap[localBlobUrl];
+      form.value.hinhAnhList = [url];
     } else {
-      form.value.hinhAnhList = [THU_MUC_ANH + file.name]
+      const fallbackUrl = THU_MUC_ANH + file.name;
+      anhPreviewMap[fallbackUrl] = localBlobUrl;
+      delete anhPreviewMap[localBlobUrl];
+      form.value.hinhAnhList = [fallbackUrl];
     }
   } catch (e) {
-    console.error('[HangHoa] loi tai anh', e)
-    form.value.hinhAnhList = [THU_MUC_ANH + file.name]
+    console.error("[HangHoa] loi tai anh", e);
+    const fallbackUrl = THU_MUC_ANH + file.name;
+    anhPreviewMap[fallbackUrl] = localBlobUrl;
+    delete anhPreviewMap[localBlobUrl];
+    form.value.hinhAnhList = [fallbackUrl];
   } finally {
-    dangTaiAnh.value = false
-    e.target.value = ''
+    dangTaiAnh.value = false;
+    e.target.value = "";
   }
-}
-const xoaAnhTaiViTri = (i) => form.value.hinhAnhList.splice(i, 1)
+};
+const xoaAnhTaiViTri = (i) => {
+  const removed = form.value.hinhAnhList[i];
+  if (removed && anhPreviewMap[removed]) {
+    try {
+      URL.revokeObjectURL(anhPreviewMap[removed]);
+    } catch {}
+    delete anhPreviewMap[removed];
+  }
+  form.value.hinhAnhList.splice(i, 1);
+};
 
 // Bien the helper
-const coThongSoBienThe = (v) => v?.mauSac || layCpu(v) || layRam(v) || layOCung(v) || layGpu(v)
-const layCpu = (v) => danhSachCpu.value.find(c => idOf(c, 'cpuId') == v?.cpuId)?.tenCpu || ''
-const layRam = (v) => danhSachRam.value.find(r => idOf(r, 'ramId') == v?.ramId)?.dungLuong || ''
+const coThongSoBienThe = (v) => v?.mauSac || layCpu(v) || layRam(v) || layOCung(v) || layGpu(v);
+const layCpu = (v) => danhSachCpu.value.find((c) => idOf(c, "cpuId") == v?.cpuId)?.tenCpu || "";
+const layRam = (v) => danhSachRam.value.find((r) => idOf(r, "ramId") == v?.ramId)?.dungLuong || "";
 const layOCung = (v) => {
-  const vId = v?.oCungId ?? v?.ocungId
-  const o = danhSachOCung.value.find(o => idOf(o, 'oCungId') == vId)
-  return o ? tenOCung(o) : (v?.oCung || v?.ocung || '')
-}
-const layGpu = (v) => danhSachGpu.value.find(g => idOf(g, 'gpuId') == v?.gpuId)?.tenGpu || ''
-const moTaBienThe = (v) => [layCpu(v), layRam(v), layOCung(v), v?.mauSac].filter(Boolean).join(' · ')
+  const vId = v?.oCungId ?? v?.ocungId;
+  const o = danhSachOCung.value.find((o) => idOf(o, "oCungId") == vId);
+  return o ? tenOCung(o) : v?.oCung || v?.ocung || "";
+};
+const layGpu = (v) => danhSachGpu.value.find((g) => idOf(g, "gpuId") == v?.gpuId)?.tenGpu || "";
+const moTaBienThe = (v) =>
+  [layCpu(v), layRam(v), layOCung(v), v?.mauSac].filter(Boolean).join(" · ");
 
 // Rich text
 const dinhDang = (cmd) => {
-  if (!moTaEl.value) return
-  moTaEl.value.focus()
-  document.execCommand(cmd, false, null)
-}
+  if (!moTaEl.value) return;
+  moTaEl.value.focus();
+  document.execCommand(cmd, false, null);
+};
 const chenLink = () => {
-  const url = prompt('Nhập URL:')
-  if (url) dinhDang('createLink', url)
-}
+  const url = prompt("Nhập URL:");
+  if (url) dinhDang("createLink", url);
+};
 
 // (renderBarcode and drawBarcode are defined above inTemMa)
 
 // Nhat ky: backend đã tự ghi log qua LichSuThayDoiSanPhamService khi SanPhamService.updateSanPham
 // nên FE chỉ cần đọc, không cần ghi/xóa.
 // Giữ stub ghiNhatKy() để các chỗ gọi cũ không phải sửa; nó không gọi API nào cả.
-const ghiNhatKy = async () => {}
+const ghiNhatKy = async () => {};
 
 // Bản đồ tên trường backend -> tiếng Việt hiển thị
 const TEN_TRUONG_LABEL = {
-  tenSanPham: 'Tên sản phẩm',
-  thuongHieuId: 'Thương hiệu',
-  danhMucId: 'Danh mục',
-  nhaCungCapId: 'Nhà cung cấp',
-  loaiSanPham: 'Loại sản phẩm',
-  moTa: 'Mô tả',
-  hinhAnhChinh: 'Ảnh đại diện',
-  trangThai: 'Trạng thái',
-  giaNhap: 'Giá nhập',
-  giaBan: 'Giá bán',
-  barcode: 'Mã vạch',
-  maSku: 'Mã SKU',
-  mauSac: 'Màu sắc',
-  cpuId: 'CPU',
-  ramId: 'RAM',
-  oCungId: 'Ổ cứng',
-  ocungId: 'Ổ cứng',
-  gpuId: 'Card đồ họa (GPU)',
-  kichThuocManHinh: 'Màn hình',
-  heDieuHanh: 'Hệ điều hành',
-  pin: 'Pin',
-  trongLuongKg: 'Trọng lượng (kg)',
-  baoHanhThang: 'Bảo hành (tháng)',
-  hinhAnhBienThe: 'Ảnh phiên bản',
-  moTaBienThe: 'Mô tả phiên bản'
-}
+  tenSanPham: "Tên sản phẩm",
+  thuongHieuId: "Thương hiệu",
+  danhMucId: "Danh mục",
+  nhaCungCapId: "Nhà cung cấp",
+  loaiSanPham: "Loại sản phẩm",
+  moTa: "Mô tả",
+  hinhAnhChinh: "Ảnh đại diện",
+  trangThai: "Trạng thái",
+  giaNhap: "Giá nhập",
+  giaBan: "Giá bán",
+  barcode: "Mã vạch",
+  maSku: "Mã SKU",
+  mauSac: "Màu sắc",
+  cpuId: "CPU",
+  ramId: "RAM",
+  oCungId: "Ổ cứng",
+  ocungId: "Ổ cứng",
+  gpuId: "Card đồ họa (GPU)",
+  kichThuocManHinh: "Màn hình",
+  heDieuHanh: "Hệ điều hành",
+  pin: "Pin",
+  trongLuongKg: "Trọng lượng (kg)",
+  baoHanhThang: "Bảo hành (tháng)",
+  hinhAnhBienThe: "Ảnh phiên bản",
+  moTaBienThe: "Mô tả phiên bản",
+};
 
 // Định dạng giá trị hiển thị trong lịch sử
 const formatGiaTriLichSu = (tenTruong, val) => {
-  if (val === null || val === undefined || val === '') return '—'
-  if (tenTruong === 'giaBan' || tenTruong === 'giaNhap') return formatNumber(val) + ' ₫'
-  if (tenTruong === 'oCungId' || tenTruong === 'ocungId') {
-    const o = (danhSachOCung.value || []).find(x => String(idOf(x, 'oCungId')) === String(val))
-    return o ? tenOCung(o) : val
+  if (val === null || val === undefined || val === "") return "—";
+  if (tenTruong === "giaBan" || tenTruong === "giaNhap") return formatNumber(val) + " ₫";
+  if (tenTruong === "oCungId" || tenTruong === "ocungId") {
+    const o = (danhSachOCung.value || []).find((x) => String(idOf(x, "oCungId")) === String(val));
+    return o ? tenOCung(o) : val;
   }
-  if (tenTruong === 'cpuId') {
-    const c = (danhSachCpu.value || []).find(x => String(idOf(x, 'cpuId')) === String(val))
-    return c ? (c.tenCpu || val) : val
+  if (tenTruong === "cpuId") {
+    const c = (danhSachCpu.value || []).find((x) => String(idOf(x, "cpuId")) === String(val));
+    return c ? c.tenCpu || val : val;
   }
-  if (tenTruong === 'ramId') {
-    const r = (danhSachRam.value || []).find(x => String(idOf(x, 'ramId')) === String(val))
-    return r ? (r.dungLuong || r.tenRam || val) : val
+  if (tenTruong === "ramId") {
+    const r = (danhSachRam.value || []).find((x) => String(idOf(x, "ramId")) === String(val));
+    return r ? r.dungLuong || r.tenRam || val : val;
   }
-  if (tenTruong === 'gpuId') {
-    const g = (danhSachGpu.value || []).find(x => String(idOf(x, 'gpuId')) === String(val))
-    return g ? (g.tenGpu || val) : val
+  if (tenTruong === "gpuId") {
+    const g = (danhSachGpu.value || []).find((x) => String(idOf(x, "gpuId")) === String(val));
+    return g ? g.tenGpu || val : val;
   }
-  if (tenTruong === 'thuongHieuId') {
-    const th = (danhSachThuongHieu.value || []).find(x => String(idOf(x, 'thuongHieuId')) === String(val))
-    return th ? (th.tenThuongHieu || val) : val
+  if (tenTruong === "thuongHieuId") {
+    const th = (danhSachThuongHieu.value || []).find(
+      (x) => String(idOf(x, "thuongHieuId")) === String(val),
+    );
+    return th ? th.tenThuongHieu || val : val;
   }
-  if (tenTruong === 'danhMucId') {
-    const dm = (danhSachDanhMuc.value || []).find(x => String(idOf(x, 'danhMucId')) === String(val))
-    return dm ? (dm.tenDanhMuc || val) : val
+  if (tenTruong === "danhMucId") {
+    const dm = (danhSachDanhMuc.value || []).find(
+      (x) => String(idOf(x, "danhMucId")) === String(val),
+    );
+    return dm ? dm.tenDanhMuc || val : val;
   }
-  if (tenTruong === 'nhaCungCapId') {
-    const ncc = (danhSachNhaCungCap.value || []).find(x => String(idOf(x, 'nhaCungCapId')) === String(val))
-    return ncc ? (ncc.tenNhaCungCap || val) : val
+  if (tenTruong === "nhaCungCapId") {
+    const ncc = (danhSachNhaCungCap.value || []).find(
+      (x) => String(idOf(x, "nhaCungCapId")) === String(val),
+    );
+    return ncc ? ncc.tenNhaCungCap || val : val;
   }
-  if (tenTruong === 'trongLuongKg') return `${val} kg`
-  if (tenTruong === 'baoHanhThang') return `${val} tháng`
-  if (tenTruong === 'trangThai') return nhanTrangThai(val)
-  if (tenTruong === 'moTa' || tenTruong === 'moTaBienThe') return loaiBoMetadataTuMoTa(val) || val
-  return val
-}
+  if (tenTruong === "trongLuongKg") return `${val} kg`;
+  if (tenTruong === "baoHanhThang") return `${val} tháng`;
+  if (tenTruong === "trangThai") return nhanTrangThai(val);
+  if (tenTruong === "moTa" || tenTruong === "moTaBienThe") return loaiBoMetadataTuMoTa(val) || val;
+  return val;
+};
 
 // Sinh câu mô tả hành động dựa trên đối tượng + trường thay đổi
 const tenHanhDong = (m) => {
-  if (!m) return '—'
-  const doiTuong = m.doiTuong === 'bien_the' ? 'phiên bản' : 'sản phẩm'
-  const truong = TEN_TRUONG_LABEL[m.tenTruong] || m.tenTruong || 'trường'
+  if (!m) return "—";
+  const doiTuong = m.doiTuong === "bien_the" ? "phiên bản" : "sản phẩm";
+  const truong = TEN_TRUONG_LABEL[m.tenTruong] || m.tenTruong || "trường";
   // Tạo sản phẩm: giaTriCu rỗng/null
-  const isCreate = m.doiTuong === 'san_pham' && (m.giaTriCu === null || m.giaTriCu === '')
-  if (isCreate) return `Tạo ${doiTuong} - ${truong}`
-  return `Cập nhật ${doiTuong} - ${truong}`
-}
+  const isCreate = m.doiTuong === "san_pham" && (m.giaTriCu === null || m.giaTriCu === "");
+  if (isCreate) return `Tạo ${doiTuong} - ${truong}`;
+  return `Cập nhật ${doiTuong} - ${truong}`;
+};
 
 // Compare form snapshot
-const anhChupForm = () => ({ ...form.value })
+const anhChupForm = () => ({ ...form.value });
 const soSanhAnhChup = (a, b) => {
-  if (!a || !b) return []
-  const changes = []
-  const fields = ['tenSanPham', 'moTa', 'trangThaiSanPham']
+  if (!a || !b) return [];
+  const changes = [];
+  const fields = ["tenSanPham", "moTa", "trangThaiSanPham"];
   for (const f of fields) {
-    if (String(a[f] || '') !== String(b[f] || '')) {
-      changes.push({ truong: f, cu: a[f], moi: b[f] })
+    if (String(a[f] || "") !== String(b[f] || "")) {
+      changes.push({ truong: f, cu: a[f], moi: b[f] });
     }
   }
-  return changes
-}
+  return changes;
+};
 
 // Export
 const exportCsv = () => {
-  const rows = bienTheDaLoc.value.filter(v => selectedIds.value.includes(v.bienTheId))
-  if (!rows.length) return
+  const rows = bienTheDaLoc.value.filter((v) => selectedIds.value.includes(v.bienTheId));
+  if (!rows.length) return;
   const csv = [
-    ['Mã SP', 'Tên SP', 'SKU', 'Mã vạch', 'Màu sắc', 'CPU', 'RAM', 'Ổ cứng', 'Giá nhập', 'Giá bán', 'Trạng thái'].join(','),
-    ...rows.map(v => [v.maSanPham, v.tenSanPham, v.maSku, v.barcode, v.mauSac, layCpu(v), layRam(v), layOCung(v), v.giaNhap, v.giaBan, v.trangThai].map(x => `"${x || ''}"`).join(','))
-  ].join('\n')
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = 'hang_hoa.csv'
-  a.click()
-  URL.revokeObjectURL(a.href)
-  hienToast(`Đã xuất ${rows.length} dòng`)
-  showExportModal.value = false
-}
+    [
+      "Mã SP",
+      "Tên SP",
+      "SKU",
+      "Mã vạch",
+      "Màu sắc",
+      "CPU",
+      "RAM",
+      "Ổ cứng",
+      "Giá nhập",
+      "Giá bán",
+      "Trạng thái",
+    ].join(","),
+    ...rows.map((v) =>
+      [
+        v.maSanPham,
+        v.tenSanPham,
+        v.maSku,
+        v.barcode,
+        v.mauSac,
+        layCpu(v),
+        layRam(v),
+        layOCung(v),
+        v.giaNhap,
+        v.giaBan,
+        v.trangThai,
+      ]
+        .map((x) => `"${x || ""}"`)
+        .join(","),
+    ),
+  ].join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "hang_hoa.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  hienToast(`Đã xuất ${rows.length} dòng`);
+  showExportModal.value = false;
+};
 
 const isGroupChecked = (group) => {
-  const vIds = (group.variants || []).map(v => v.bienTheId)
-  return vIds.length > 0 && vIds.every(id => selectedIds.value.includes(id))
-}
+  const vIds = (group.variants || []).map((v) => v.bienTheId);
+  return vIds.length > 0 && vIds.every((id) => selectedIds.value.includes(id));
+};
 
 const toggleGroupCheck = (group) => {
-  const vIds = (group.variants || []).map(v => v.bienTheId)
-  const allOn = vIds.every(id => selectedIds.value.includes(id))
-  if (allOn) selectedIds.value = selectedIds.value.filter(id => !vIds.includes(id))
-  else selectedIds.value = [...new Set([...selectedIds.value, ...vIds])]
-}
+  const vIds = (group.variants || []).map((v) => v.bienTheId);
+  const allOn = vIds.every((id) => selectedIds.value.includes(id));
+  if (allOn) selectedIds.value = selectedIds.value.filter((id) => !vIds.includes(id));
+  else selectedIds.value = [...new Set([...selectedIds.value, ...vIds])];
+};
 
 const toggleVariantCheck = (id) => {
-  const idx = selectedIds.value.indexOf(id)
-  if (idx === -1) selectedIds.value.push(id)
-  else selectedIds.value.splice(idx, 1)
-}
+  const idx = selectedIds.value.indexOf(id);
+  if (idx === -1) selectedIds.value.push(id);
+  else selectedIds.value.splice(idx, 1);
+};
 
 const toggleAll = (e) => {
-  if (e.target.checked) selectedIds.value = bienTheDaLoc.value.map(v => v.bienTheId)
-  else selectedIds.value = []
-}
+  if (e.target.checked) selectedIds.value = bienTheDaLoc.value.map((v) => v.bienTheId);
+  else selectedIds.value = [];
+};
 
 const setIndeterminate = (el, group) => {
-  if (!el) return
-  const vIds = (group.variants || []).map(v => v.bienTheId)
-  const checked = vIds.filter(id => selectedIds.value.includes(id)).length
-  el.indeterminate = checked > 0 && checked < vIds.length
-}
+  if (!el) return;
+  const vIds = (group.variants || []).map((v) => v.bienTheId);
+  const checked = vIds.filter((id) => selectedIds.value.includes(id)).length;
+  el.indeterminate = checked > 0 && checked < vIds.length;
+};
 
-// formHopLe
-const formHopLe = computed(() => {
-  if (!form.value.tenSanPham) return false
-  if (!form.value.thuongHieuId) return false
-  if (!form.value.danhMucId) return false
-  if (!form.value.baoHanhThang) return false
-  if (dynamicCustomAttrs.value) {
-    for (const attr of dynamicCustomAttrs.value) {
-      if (attr.batBuoc && (!formThuocTinh[attr.tenTruong] || !String(formThuocTinh[attr.tenTruong]).trim())) {
-        return false
+// Cảnh báo tức thời khi người dùng nhập giá trị vượt giới hạn (VD: quá khối lượng > 5 kg, giá bán < giá vốn)
+const loiTrongLuongTucThoi = computed(() => {
+  if (modalMode.value === "variant") return "";
+  const tl = form.value.trongLuongKg;
+  if (tl === "" || tl === null || tl === undefined) return "";
+  const num = Number(tl);
+  if (Number.isNaN(num) || num <= 0) {
+    return "Trọng lượng (kg) phải lớn hơn 0";
+  }
+  if (num > 5) {
+    return "Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)";
+  }
+  return "";
+});
+
+const loiDuLieuTucThoi = computed(() => {
+  if (loiTrongLuongTucThoi.value) return loiTrongLuongTucThoi.value;
+  if (modalMode.value !== "edit" && Array.isArray(bienTheRows.value)) {
+    const seenConfigs = new Map();
+    for (let i = 0; i < bienTheRows.value.length; i++) {
+      const r = bienTheRows.value[i];
+      const gn = r.giaNhap;
+      const gb = r.giaBan;
+      if (gn !== "" && gn != null && Number(gn) > 999999999999) {
+        return `Phiên bản #${i + 1}: Giá vốn vượt quá giới hạn cho phép`;
+      }
+      if (gb !== "" && gb != null && Number(gb) > 999999999999) {
+        return `Phiên bản #${i + 1}: Giá bán vượt quá giới hạn cho phép`;
+      }
+      if (
+        gn !== "" &&
+        gn != null &&
+        gb !== "" &&
+        gb != null &&
+        Number(gn) > 0 &&
+        Number(gb) > 0 &&
+        Number(gb) < Number(gn)
+      ) {
+        return `Phiên bản #${i + 1}: Giá bán không được nhỏ hơn giá vốn`;
+      }
+      if (r.mauSac && r.cpuId && r.ramId && (r.oCungId ?? r.ocungId) && r.gpuId) {
+        const cfgKey = [
+          khongDau(r.mauSac).trim(),
+          String(r.cpuId),
+          String(r.ramId),
+          String(r.oCungId ?? r.ocungId),
+          String(r.gpuId),
+        ].join("|");
+        if (seenConfigs.has(cfgKey)) {
+          return `Phiên bản #${i + 1}: Trùng cấu hình với phiên bản #${seenConfigs.get(cfgKey) + 1}`;
+        }
+        seenConfigs.set(cfgKey, i);
       }
     }
   }
-  if (modalMode.value !== 'edit' && bienTheRows.value.length === 0) return false
-  return true
-})
+  return "";
+});
+
+// formHopLe
+const formHopLe = computed(() => {
+  if (loiDuLieuTucThoi.value) return false;
+  if (modalMode.value !== "variant") {
+    if (!form.value.tenSanPham || !String(form.value.tenSanPham).trim()) return false;
+    if (!form.value.thuongHieuId) return false;
+    if (!form.value.danhMucId) return false;
+    if (!form.value.baoHanhThang || Number(form.value.baoHanhThang) <= 0) return false;
+    if (modalMode.value === "create") {
+      if (!form.value.nhaCungCapId) return false;
+      if (!form.value.loaiSanPham) return false;
+      if (!form.value.phanLoaiIds || form.value.phanLoaiIds.length === 0) return false;
+      if (!form.value.hinhAnhList || form.value.hinhAnhList.length === 0) return false;
+      if (!form.value.kichThuocManHinh || !String(form.value.kichThuocManHinh).trim()) return false;
+      if (!form.value.heDieuHanh || !String(form.value.heDieuHanh).trim()) return false;
+      if (!form.value.pin || !String(form.value.pin).trim()) return false;
+      if (
+        !form.value.trongLuongKg ||
+        Number(form.value.trongLuongKg) <= 0 ||
+        Number(form.value.trongLuongKg) > 5
+      )
+        return false;
+    } else if (
+      form.value.trongLuongKg !== "" &&
+      form.value.trongLuongKg != null &&
+      (Number(form.value.trongLuongKg) <= 0 || Number(form.value.trongLuongKg) > 5)
+    ) {
+      return false;
+    }
+    if (dynamicCustomAttrs.value) {
+      for (const attr of dynamicCustomAttrs.value) {
+        const isReq = modalMode.value === "create" || attr.batBuoc;
+        if (
+          isReq &&
+          (!formThuocTinh[attr.tenTruong] || !String(formThuocTinh[attr.tenTruong]).trim())
+        ) {
+          return false;
+        }
+      }
+    }
+  }
+  if (modalMode.value !== "edit") {
+    if (!bienTheRows.value || bienTheRows.value.length === 0) return false;
+    for (const r of bienTheRows.value) {
+      if (!r.mauSac || !String(r.mauSac).trim()) return false;
+      if (!r.cpuId || !r.ramId || !(r.oCungId ?? r.ocungId) || !r.gpuId) return false;
+      if (!r.maSku || !String(r.maSku).trim()) return false;
+      if (Number(r.giaNhap) <= 0 || Number(r.giaBan) <= 0 || Number(r.giaBan) < Number(r.giaNhap))
+        return false;
+      if (variantCustomAttrs.value) {
+        for (const vAttr of variantCustomAttrs.value) {
+          if (vAttr.batBuoc && (!r[vAttr.tenTruong] || !String(r[vAttr.tenTruong]).trim())) {
+            return false;
+          }
+        }
+      }
+    }
+  }
+  return true;
+});
 
 /* ════════════ TẢI DỮ LIỆU ════════════ */
 const fetchData = async () => {
-  isLoading.value = true
-  loadError.value = ''
+  isLoading.value = true;
+  loadError.value = "";
   try {
     // Lấy sản phẩm, biến thể và thông tin tồn kho
     const [spRes, btRes, tkRes] = await Promise.all([
-      get('/api/san-pham/hien-thi?size=500'),
-      get('/api/bien-the-san-pham/staff'),
-      get('/api/ton-kho').catch(() => [])
-    ])
+      get("/api/san-pham/hien-thi?size=500"),
+      get("/api/bien-the-san-pham/staff"),
+      get("/api/ton-kho").catch(() => []),
+    ]);
     // Xử lý response
-    const spRaw = Array.isArray(spRes) ? spRes : (spRes?.content || [])
-    bienThe.value = Array.isArray(btRes) ? btRes : []
-    const tkList = Array.isArray(tkRes) ? tkRes : []
-    const tonKhoMap = {}
+    const spRaw = Array.isArray(spRes) ? spRes : spRes?.content || [];
+    bienThe.value = Array.isArray(btRes) ? btRes : [];
+    const tkList = Array.isArray(tkRes) ? tkRes : [];
+    const tonKhoMap = {};
     for (const tk of tkList) {
-      if (tk.bienTheId != null) tonKhoMap[tk.bienTheId] = tk
+      if (tk.bienTheId != null) tonKhoMap[tk.bienTheId] = tk;
     }
 
     // Gộp nhóm theo sanPhamId: backend /api/san-pham/hien-thi trả 1 dòng / biến thể
     // (vì JOIN BienTheSanPham), nên cần dedup để bảng chỉ hiển thị mỗi sản phẩm 1 dòng.
-    const seen = new Map()
+    const seen = new Map();
     for (const row of spRaw) {
-      const id = row.sanPhamId
-      if (id == null) continue
+      const id = row.sanPhamId;
+      if (id == null) continue;
       if (!seen.has(id)) {
         // Giữ nguyên dòng đầu tiên làm đại diện sản phẩm (mang thông tin chung)
-        seen.set(id, { ...row, _mauSacSet: row.mauSac ? new Set([row.mauSac]) : null })
+        seen.set(id, { ...row, _mauSacSet: row.mauSac ? new Set([row.mauSac]) : null });
       } else {
-        const existed = seen.get(id)
+        const existed = seen.get(id);
         // Gom màu sắc từ các biến thể
         if (row.mauSac) {
-          existed._mauSacSet = existed._mauSacSet || new Set()
-          existed._mauSacSet.add(row.mauSac)
+          existed._mauSacSet = existed._mauSacSet || new Set();
+          existed._mauSacSet.add(row.mauSac);
         }
       }
     }
     danhSachSanPham.value = Array.from(seen.values()).map((sp) => {
-      sp.mauSacList = sp._mauSacSet ? Array.from(sp._mauSacSet) : []
-      return sp
-    })
+      sp.mauSacList = sp._mauSacSet ? Array.from(sp._mauSacSet) : [];
+      return sp;
+    });
 
     // Map tồn kho theo biến thể từ spRaw và TonKho
-    const tonMap = {}
+    const tonMap = {};
     for (const r of spRaw) {
-      if (r.bienTheId != null) tonMap[r.bienTheId] = r.soLuongTon || 0
+      if (r.bienTheId != null) tonMap[r.bienTheId] = r.soLuongTon || 0;
     }
 
     // Merge variants vào groups
-    const btMap = {}
+    const btMap = {};
     for (const bt of bienThe.value) {
-      const spId = bt.sanPhamId
-      if (!btMap[spId]) btMap[spId] = []
-      const tk = tonKhoMap[bt.bienTheId]
-      const ton = tk ? (tk.soLuongTon ?? 0) : (tonMap[bt.bienTheId] ?? 0)
-      const tongSerial = tk ? (tk.tongSerial ?? 0) : 0
-      const daBan = tk ? (tk.soLuongDaBan ?? 0) : 0
-      const daTungCoHang = tongSerial > 0 || daBan > 0
+      const spId = bt.sanPhamId;
+      if (!btMap[spId]) btMap[spId] = [];
+      const tk = tonKhoMap[bt.bienTheId];
+      const ton = tk ? (tk.soLuongTon ?? 0) : (tonMap[bt.bienTheId] ?? 0);
+      const tongSerial = tk ? (tk.tongSerial ?? 0) : 0;
+      const daBan = tk ? (tk.soLuongDaBan ?? 0) : 0;
+      const daTungCoHang = tongSerial > 0 || daBan > 0;
 
-      bt.soLuongTon = ton
-      bt.tongSerial = tongSerial
-      bt.soLuongDaBan = daBan
-      bt.daTungCoHang = daTungCoHang
+      bt.soLuongTon = ton;
+      bt.tongSerial = tongSerial;
+      bt.soLuongDaBan = daBan;
+      bt.daTungCoHang = daTungCoHang;
 
-      if (bt.trangThai === 'inactive') {
-        bt.trangThaiHienThi = 'inactive'
+      if (bt.trangThai === "inactive") {
+        bt.trangThaiHienThi = "inactive";
       } else if (ton > 0) {
-        bt.trangThaiHienThi = 'active'
+        bt.trangThaiHienThi = "active";
       } else if (daTungCoHang) {
-        bt.trangThaiHienThi = 'het_hang'
+        bt.trangThaiHienThi = "het_hang";
       } else {
-        bt.trangThaiHienThi = 'cho_nhap_hang'
+        bt.trangThaiHienThi = "cho_nhap_hang";
       }
 
-      btMap[spId].push(bt)
+      btMap[spId].push(bt);
     }
     for (const sp of danhSachSanPham.value) {
-      sp.variants = btMap[sp.sanPhamId] || []
+      sp.variants = btMap[sp.sanPhamId] || [];
       // Tính khoang gia
-      const gias = sp.variants.map(v => v.giaBan).filter(Boolean)
+      const gias = sp.variants.map((v) => v.giaBan).filter(Boolean);
       if (gias.length) {
-        sp.giaBanMin = Math.min(...gias)
-        sp.giaBanMax = Math.max(...gias)
-        if (sp.giaBanMin === sp.giaBanMax) sp.khoangGia = formatNumber(sp.giaBanMin)
-        else sp.khoangGia = `${formatNumber(sp.giaBanMin)} – ${formatNumber(sp.giaBanMax)}`
+        sp.giaBanMin = Math.min(...gias);
+        sp.giaBanMax = Math.max(...gias);
+        if (sp.giaBanMin === sp.giaBanMax) sp.khoangGia = formatNumber(sp.giaBanMin);
+        else sp.khoangGia = `${formatNumber(sp.giaBanMin)} – ${formatNumber(sp.giaBanMax)}`;
       }
-      const giaVons = sp.variants.map(v => v.giaNhap).filter(Boolean)
+      const giaVons = sp.variants.map((v) => v.giaNhap).filter(Boolean);
       if (giaVons.length) {
-        const gvMin = Math.min(...giaVons), gvMax = Math.max(...giaVons)
-        if (gvMin === gvMax) sp.khoangGiaVon = formatNumber(gvMin)
-        else sp.khoangGiaVon = `${formatNumber(gvMin)} – ${formatNumber(gvMax)}`
+        const gvMin = Math.min(...giaVons),
+          gvMax = Math.max(...giaVons);
+        if (gvMin === gvMax) sp.khoangGiaVon = formatNumber(gvMin);
+        else sp.khoangGiaVon = `${formatNumber(gvMin)} – ${formatNumber(gvMax)}`;
       }
       // Lay mau sac
-      sp.mauSacList = [...new Set(sp.variants.map(v => v.mauSac).filter(Boolean))]
+      sp.mauSacList = [...new Set(sp.variants.map((v) => v.mauSac).filter(Boolean))];
       // Lay hinh anh
-      sp.hinhAnh = sp.hinhAnhChinh || (sp.variants[0]?.hinhAnhBienThe) || ANH_MAC_DINH
+      sp.hinhAnh = sp.hinhAnhChinh || sp.variants[0]?.hinhAnhBienThe || ANH_MAC_DINH;
 
       // Trạng thái hiển thị theo tồn kho serials thực tế
-      const tongTon = sp.variants.reduce((s, v) => s + (v.soLuongTon || 0), 0)
-      const coBienTheDaTungCoHang = sp.variants.some((v) => v.trangThaiHienThi === 'het_hang')
-      sp.tongTonKho = tongTon
-      if (sp.trangThai === 'inactive' || sp.trangThai === 'ngung_kinh_doanh') {
-        sp.trangThaiHienThi = sp.trangThai
+      const tongTon = sp.variants.reduce((s, v) => s + (v.soLuongTon || 0), 0);
+      const coBienTheDaTungCoHang = sp.variants.some((v) => v.trangThaiHienThi === "het_hang");
+      sp.tongTonKho = tongTon;
+      if (sp.trangThai === "inactive" || sp.trangThai === "ngung_kinh_doanh") {
+        sp.trangThaiHienThi = sp.trangThai;
       } else if (tongTon > 0) {
-        sp.trangThaiHienThi = 'active' // Đang bán khi có serial trong kho
+        sp.trangThaiHienThi = "active"; // Đang bán khi có serial trong kho
       } else if (coBienTheDaTungCoHang) {
-        sp.trangThaiHienThi = 'het_hang' // Đã bán hết
+        sp.trangThaiHienThi = "het_hang"; // Đã bán hết
       } else {
-        sp.trangThaiHienThi = 'cho_nhap_hang' // Chờ nhập hàng khi chưa có serial nào
+        sp.trangThaiHienThi = "cho_nhap_hang"; // Chờ nhập hàng khi chưa có serial nào
       }
     }
     // Cập nhật lại chiTiet nếu modal đang mở để biến thể và mã vạch đồng bộ ngay lập tức
     if (chiTiet.value && chiTiet.value.sanPhamId) {
-      const freshSp = danhSachSanPham.value.find(s => String(s.sanPhamId) === String(chiTiet.value.sanPhamId))
+      const freshSp = danhSachSanPham.value.find(
+        (s) => String(s.sanPhamId) === String(chiTiet.value.sanPhamId),
+      );
       if (freshSp) {
-        chiTiet.value = { ...chiTiet.value, ...freshSp, variants: freshSp.variants || [] }
+        chiTiet.value = { ...chiTiet.value, ...freshSp, variants: freshSp.variants || [] };
       }
     }
-    page.value = 1
+    page.value = 1;
   } catch (e) {
-    console.error('[HangHoa] fetchData error:', e)
-    loadError.value = 'Tải danh sách thất bại: ' + thongBaoLoi(e)
+    console.error("[HangHoa] fetchData error:", e);
+    loadError.value = "Tải danh sách thất bại: " + thongBaoLoi(e);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 
 const fetchMasterData = async () => {
-  const an = (p) => p.then((r) => r ?? []).catch(() => [])
+  const an = (p) => p.then((r) => r ?? []).catch(() => []);
   const [th, dm, ncc, cpu, ram, oc, gpu, pl] = await Promise.all([
-    an(getThuongHieu()), an(get('/api/danh-muc')), an(getNhaCungCap()),
-    an(getCpu()), an(getRam()), an(getOCung()), an(getGpu()), an(get('/api/phan-loai'))
-  ])
-  danhSachThuongHieu.value = toArray(th)
-  danhSachDanhMuc.value = toArray(dm)
-  danhSachNhaCungCap.value = toArray(ncc)
-  danhSachCpu.value = toArray(cpu)
-  danhSachRam.value = toArray(ram)
-  danhSachOCung.value = toArray(oc)
-  danhSachGpu.value = toArray(gpu)
-  danhSachPhanLoai.value = toArray(pl)
-}
+    an(getThuongHieu()),
+    an(get("/api/danh-muc")),
+    an(getNhaCungCap()),
+    an(getCpu()),
+    an(getRam()),
+    an(getOCung()),
+    an(getGpu()),
+    an(get("/api/phan-loai")),
+  ]);
+  danhSachThuongHieu.value = toArray(th);
+  danhSachDanhMuc.value = toArray(dm);
+  danhSachNhaCungCap.value = toArray(ncc);
+  danhSachCpu.value = toArray(cpu);
+  danhSachRam.value = toArray(ram);
+  danhSachOCung.value = toArray(oc);
+  danhSachGpu.value = toArray(gpu);
+  danhSachPhanLoai.value = toArray(pl);
+};
 
 // Gom nhóm danh sách biến thể theo sản phẩm
 
@@ -2618,17 +4165,24 @@ const phanChungBienThe = () => ({
   trongLuongKg: soHoacNull(form.value.trongLuongKg),
   phanLoaiTags: form.value.phanLoaiTags || null,
   phanLoaiTen: form.value.phanLoaiTen || null,
-  trangThai: form.value.trangThaiSanPham === 'cho_nhap_hang' ? 'active' : (form.value.trangThaiSanPham || 'active')
-})
+  trangThai:
+    form.value.trangThaiSanPham === "cho_nhap_hang"
+      ? "active"
+      : form.value.trangThaiSanPham || "active",
+});
 
 // Dữ liệu tạo sản phẩm và biến thể chính
 const payloadSanPham = (row) => {
-  const customRowBtMeta = {}
+  const customRowBtMeta = {};
   if (row) {
-    variantCustomAttrs.value.forEach(attr => {
-      const val = row[attr.tenTruong] ?? (String(form.value.bienTheId) === String(row.bienTheId) ? formThuocTinhBienThe[attr.tenTruong] : null)
-      if (val) customRowBtMeta[attr.tenTruong] = val
-    })
+    variantCustomAttrs.value.forEach((attr) => {
+      const val =
+        row[attr.tenTruong] ??
+        (String(form.value.bienTheId) === String(row.bienTheId)
+          ? formThuocTinhBienThe[attr.tenTruong]
+          : null);
+      if (val) customRowBtMeta[attr.tenTruong] = val;
+    });
   }
   return {
     ...(form.value.sanPhamId ? { sanPhamId: Number(form.value.sanPhamId) } : {}),
@@ -2661,19 +4215,23 @@ const payloadSanPham = (row) => {
           ocungId: soHoacNull(row.oCungId ?? row.ocungId),
           gpuId: soHoacNull(row.gpuId),
           hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null,
-          moTaBienThe: ganMetadataVaoMoTa(row.moTa || '', customRowBtMeta) || null
+          moTaBienThe: ganMetadataVaoMoTa(row.moTa || "", customRowBtMeta) || null,
         }
-      : {})
-  }
-}
+      : {}),
+  };
+};
 
 // Dữ liệu tạo các biến thể tiếp theo
 const payloadBienThe = (sanPhamId, row) => {
-  const customBtMeta = {}
-  variantCustomAttrs.value.forEach(attr => {
-    const val = row[attr.tenTruong] ?? (String(form.value.bienTheId) === String(row.bienTheId) ? formThuocTinhBienThe[attr.tenTruong] : null)
-    if (val) customBtMeta[attr.tenTruong] = val
-  })
+  const customBtMeta = {};
+  variantCustomAttrs.value.forEach((attr) => {
+    const val =
+      row[attr.tenTruong] ??
+      (String(form.value.bienTheId) === String(row.bienTheId)
+        ? formThuocTinhBienThe[attr.tenTruong]
+        : null);
+    if (val) customBtMeta[attr.tenTruong] = val;
+  });
   return {
     sanPhamId: soHoacNull(sanPhamId),
     maSku: row.maSku,
@@ -2687,91 +4245,175 @@ const payloadBienThe = (sanPhamId, row) => {
     ocungId: soHoacNull(row.oCungId ?? row.ocungId),
     gpuId: soHoacNull(row.gpuId),
     hinhAnhBienThe: row.hinhAnhBienThe || form.value.hinhAnhBienThe || null,
-    moTa: ganMetadataVaoMoTa(row.moTa || '', customBtMeta) || null,
+    moTa: ganMetadataVaoMoTa(row.moTa || "", customBtMeta) || null,
     ...phanChungBienThe(),
-    trangThai: row.trangThai === 'cho_nhap_hang' ? 'active' : (row.trangThai || (form.value.trangThaiSanPham === 'cho_nhap_hang' ? 'active' : form.value.trangThaiSanPham) || 'active')
-  }
-}
+    trangThai:
+      row.trangThai === "cho_nhap_hang"
+        ? "active"
+        : row.trangThai ||
+          (form.value.trangThaiSanPham === "cho_nhap_hang"
+            ? "active"
+            : form.value.trangThaiSanPham) ||
+          "active",
+  };
+};
 
-const layId = (res, key) => res?.[key] ?? res?.id ?? res?.data?.[key] ?? res?.data?.id ?? null
+const layId = (res, key) => res?.[key] ?? res?.id ?? res?.data?.[key] ?? res?.data?.id ?? null;
 
 // Tìm lại ID sản phẩm vừa tạo
 const timIdVuaTao = async () => {
   for (const kw of [form.value.maSanPham, form.value.tenSanPham]) {
-    if (!kw) continue
+    if (!kw) continue;
     try {
-      const rows = toArray(await sanPhamApi.getPage({ page: 0, size: 50, keyword: kw }))
+      const rows = toArray(await sanPhamApi.getPage({ page: 0, size: 50, keyword: kw }));
       const khop =
         rows.find((r) => r.maSanPham && r.maSanPham === form.value.maSanPham) ||
-        rows.find((r) => r.tenSanPham === form.value.tenSanPham)
-      if (khop) return idOf(khop, 'sanPhamId')
+        rows.find((r) => r.tenSanPham === form.value.tenSanPham);
+      if (khop) return idOf(khop, "sanPhamId");
     } catch (e) {
-      console.warn('[Hàng hóa] không tra lại được sanPhamId:', e)
+      console.warn("[Hàng hóa] không tra lại được sanPhamId:", e);
     }
   }
-  return null
-}
+  return null;
+};
 
 /* ─── Đọc lỗi từ backend cho ra tiếng người ─── */
+const giaiMaJsonLoi = (rawText) => {
+  if (!rawText) return "";
+  try {
+    const json = typeof rawText === "string" ? JSON.parse(rawText) : rawText;
+    if (typeof json === "string") return json;
+    if (json && typeof json === "object") {
+      if (json.message) return json.message;
+      if (json.error && typeof json.error === "string" && json.error !== "Bad Request")
+        return json.error;
+      if (json.detail) return json.detail;
+      if (Array.isArray(json.errors)) {
+        const arr = json.errors.map((x) => x.defaultMessage || x.message || x).filter(Boolean);
+        if (arr.length) return arr.join("; ");
+      }
+      const fieldVals = Object.entries(json)
+        .filter(
+          ([k, v]) =>
+            k !== "status" && k !== "timestamp" && k !== "path" && typeof v === "string" && v,
+        )
+        .map(([, v]) => v);
+      if (fieldVals.length) return fieldVals.join("; ");
+    }
+  } catch {}
+  return typeof rawText === "string" ? rawText : "";
+};
+
+const docChiTietLoiResponse = async (res) => {
+  if (!res) return "Không nhận được phản hồi từ máy chủ";
+  const errText = await res.text().catch(() => "");
+  const msg = giaiMaJsonLoi(errText) || res.statusText || "Yêu cầu không hợp lệ";
+  return msg;
+};
+
 const thongBaoLoi = (e) => {
-  const res = e?.response
-  const d = res?.data
+  const res = e?.response;
+  const d = res?.data;
   const chiTietLoi =
-    (typeof d === 'string' && d) ||
-    d?.message || d?.error || d?.detail ||
-    (Array.isArray(d?.errors) ? d.errors.map((x) => x.defaultMessage || x.message).join('; ') : '') ||
-    e?.message || 'Không rõ nguyên nhân'
-  return (res?.status ? `HTTP ${res.status} — ` : '') + chiTietLoi
-}
+    giaiMaJsonLoi(d) || giaiMaJsonLoi(e?.message) || e?.message || "Không rõ nguyên nhân";
+  return (res?.status ? `HTTP ${res.status} — ` : "") + chiTietLoi;
+};
 
 /** Dịch lỗi SQL/JPA hay gặp thành việc cần làm. */
 const goiYSua = (msg) => {
-  const m = khongDau(msg)
-  if (m.includes('401') || m.includes('403') || m.includes('unauthorized') || m.includes('denied'))
-    return 'API tạo sản phẩm yêu cầu quyền ADMIN / NHAN_VIEN / QUAN_KHO — đăng nhập lại bằng tài khoản nhân viên.'
-  if (m.includes('ma_sku')) return 'Mã SKU trống hoặc trùng — mỗi phiên bản phải có SKU riêng.'
-  if (m.includes('barcode')) return 'Mã vạch trùng với phiên bản khác (cột bien_the_san_pham.barcode là duy nhất).'
-  if (m.includes('gia_nhap') || m.includes('gia_ban')) return 'Giá nhập/giá bán chưa được gửi lên hoặc âm.'
-  if (m.includes('ck_bt_giaban_hop_ly')) return 'Giá bán phải ≥ 50% giá nhập.'
-  if (m.includes('ck_sp_loaisanpham')) return 'Loại sản phẩm chỉ nhận LAPTOP, PHU_KIEN, DIEN_THOAI.'
-  if (m.includes('trangthai')) return 'Trạng thái biến thể chỉ nhận active hoặc inactive.'
-  if (m.includes('unique') || m.includes('duplicate')) return 'Mã sản phẩm, mã vạch hoặc SKU bị trùng với bản ghi đã có.'
-  if (m.includes('lazy') || m.includes('proxy') || m.includes('bytebuddy'))
-    return 'Controller đang trả entity có quan hệ LAZY nên Jackson vỡ khi ghi body — cho create() trả về DTO thay vì entity.'
-  return ''
-}
+  const m = khongDau(msg);
+  if (m.includes("401") || m.includes("403") || m.includes("unauthorized") || m.includes("denied"))
+    return "API tạo sản phẩm yêu cầu quyền ADMIN / NHAN_VIEN / QUAN_KHO — đăng nhập lại bằng tài khoản nhân viên.";
+  if (m.includes("trong luong") || m.includes("trong_luong") || m.includes("arithmetic overflow"))
+    return "Trọng lượng (kg) tối đa 5 kg (nhập theo đơn vị kg, VD: 1.7 thay vì 1700g).";
+  if (m.includes("ma_sku")) return "Mã SKU trống hoặc trùng — mỗi phiên bản phải có SKU riêng.";
+  if (m.includes("barcode"))
+    return "Mã vạch trùng với phiên bản khác (cột bien_the_san_pham.barcode là duy nhất).";
+  if (m.includes("gia_nhap") || m.includes("gia_ban"))
+    return "Giá nhập/giá bán chưa được gửi lên hoặc âm.";
+  if (m.includes("ck_bt_giaban_hop_ly")) return "Giá bán phải ≥ 50% giá nhập.";
+  if (m.includes("ck_sp_loaisanpham"))
+    return "Loại sản phẩm chỉ nhận LAPTOP, PHU_KIEN, DIEN_THOAI.";
+  if (m.includes("trangthai")) return "Trạng thái biến thể chỉ nhận active hoặc inactive.";
+  if (m.includes("unique") || m.includes("duplicate"))
+    return "Mã sản phẩm, mã vạch hoặc SKU bị trùng với bản ghi đã có.";
+  if (m.includes("lazy") || m.includes("proxy") || m.includes("bytebuddy"))
+    return "Controller đang trả entity có quan hệ LAZY nên Jackson vỡ khi ghi body — cho create() trả về DTO thay vì entity.";
+  return "";
+};
+
+const cuonLenDauModal = () => {
+  nextTick(() => {
+    const bodyEl = document.querySelector(".hh-modal__body");
+    if (!bodyEl) return;
+    const firstErr = bodyEl.querySelector(".is-err");
+    if (firstErr && typeof firstErr.scrollIntoView === "function") {
+      firstErr.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      bodyEl.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  });
+};
 
 // Cập nhật bảng liên kết phân loại sản phẩm
 const luuPhanLoai = async (sanPhamId) => {
-  if (!sanPhamId) return
+  if (!sanPhamId) return;
   try {
-    await put(`/api/phan-loai/san-pham/${sanPhamId}`, (form.value.phanLoaiIds || []).map(Number))
+    await put(`/api/phan-loai/san-pham/${sanPhamId}`, (form.value.phanLoaiIds || []).map(Number));
   } catch (e) {
-    console.warn('[Hàng hóa] không lưu được phân loại:', e?.response?.data ?? e)
+    console.warn("[Hàng hóa] không lưu được phân loại:", e?.response?.data ?? e);
   }
-}
+};
 
 // Lưu thông tin sản phẩm và các biến thể
 const submitForm = async () => {
-  saveError.value = ''
-  console.log('[DEBUG submitForm] mode=', modalMode.value, 'formHopLe=', formHopLe.value, 'sanPhamId=', form.value.sanPhamId, 'bienTheId=', form.value.bienTheId, 'nhaCungCapId=', form.value.nhaCungCapId)
+  saveError.value = "";
+  daBamLuu.value = true;
+  console.log(
+    "[DEBUG submitForm] mode=",
+    modalMode.value,
+    "formHopLe=",
+    formHopLe.value,
+    "sanPhamId=",
+    form.value.sanPhamId,
+    "bienTheId=",
+    form.value.bienTheId,
+    "nhaCungCapId=",
+    form.value.nhaCungCapId,
+  );
   if (!validate()) {
-    console.log('[DEBUG submitForm] validate fail', errors.value)
-    saveError.value = 'Vui lòng sửa các ô được đánh dấu.'
-    tab.value = errors.value.bienThe || errors.value.maSku || errors.value.barcode || errors.value.giaBan || errors.value.giaNhap ? 'bienthe' : 'info'
-    return
+    console.log("[DEBUG submitForm] validate fail", errors.value);
+    const coLoiInfo = soLoiTabInfo.value > 0;
+    const coLoiBienThe = soLoiTabBienThe.value > 0;
+    saveError.value =
+      taoThongBaoLoiValidate() ||
+      "Vui lòng kiểm tra và điền đầy đủ các thông tin bắt buộc được đánh dấu đỏ.";
+    if (modalMode.value === "variant") {
+      tab.value = "bienthe";
+    } else if (tab.value === "info" && !coLoiInfo && coLoiBienThe) {
+      tab.value = "bienthe";
+    } else if (tab.value === "bienthe" && !coLoiBienThe && coLoiInfo) {
+      tab.value = "info";
+    } else if (tab.value === "mota") {
+      tab.value = coLoiInfo ? "info" : "bienthe";
+    }
+    hienToast(saveError.value, "error");
+    cuonLenDauModal();
+    return;
   }
 
-  isSaving.value = true
-  let buoc = 'chuẩn bị dữ liệu'
-  let daTao = 0
+  isSaving.value = true;
+  let buoc = "chuẩn bị dữ liệu";
+  let daTao = 0;
 
   try {
-    if (modalMode.value === 'edit') {
-      buoc = 'cập nhật sản phẩm'
+    if (modalMode.value === "edit") {
+      buoc = "cập nhật sản phẩm";
       // Đồng bộ biến thể đang chỉnh sửa trên form vào bienTheRows
       if (form.value.bienTheId) {
-        const curIdx = bienTheRows.value.findIndex(r => String(r.bienTheId) === String(form.value.bienTheId))
+        const curIdx = bienTheRows.value.findIndex(
+          (r) => String(r.bienTheId) === String(form.value.bienTheId),
+        );
         if (curIdx !== -1) {
           bienTheRows.value[curIdx] = {
             ...bienTheRows.value[curIdx],
@@ -2784,8 +4426,8 @@ const submitForm = async () => {
             gpuId: form.value.gpuId,
             giaNhap: form.value.giaNhap,
             giaBan: form.value.giaBan,
-            hinhAnhBienThe: form.value.hinhAnhBienThe
-          }
+            hinhAnhBienThe: form.value.hinhAnhBienThe,
+          };
         }
       }
 
@@ -2801,64 +4443,80 @@ const submitForm = async () => {
             gpuId: form.value.gpuId,
             giaNhap: form.value.giaNhap,
             giaBan: form.value.giaBan,
-            hinhAnhBienThe: form.value.hinhAnhBienThe
+            hinhAnhBienThe: form.value.hinhAnhBienThe,
           }
-        : (bienTheRows.value[0] || {})
+        : bienTheRows.value[0] || {};
 
-      const payload = payloadSanPham(rowBienThe)
-      console.log('[DEBUG submitForm] PUT payload', JSON.stringify(payload, null, 2))
-      let resSp
+      const payload = payloadSanPham(rowBienThe);
+      console.log("[DEBUG submitForm] PUT payload", JSON.stringify(payload, null, 2));
+      let resSp;
       try {
-        resSp = await apiSuaSanPham(form.value.sanPhamId, payload)
-        console.log('[DEBUG submitForm] PUT response ok=', resSp?.ok, 'status=', resSp?.status, 'body type=', typeof resSp?.json, typeof resSp?.text)
-      } catch(e) {
-        console.error('[DEBUG submitForm] PUT error:', e)
-        throw e
+        resSp = await apiSuaSanPham(form.value.sanPhamId, payload);
+        console.log(
+          "[DEBUG submitForm] PUT response ok=",
+          resSp?.ok,
+          "status=",
+          resSp?.status,
+          "body type=",
+          typeof resSp?.json,
+          typeof resSp?.text,
+        );
+      } catch (e) {
+        console.error("[DEBUG submitForm] PUT error:", e);
+        throw e;
       }
-      console.log('[DEBUG submitForm] after check')
-      if (resSp && typeof resSp.ok === 'boolean' && !resSp.ok) {
-        const errText = await resSp.text().catch(() => '')
-        let msg = errText
-        try {
-          const json = JSON.parse(errText)
-          msg = json.message || json.error || json.detail || (Array.isArray(json.errors) ? json.errors.map(x => x.defaultMessage || x.message).join('; ') : '') || errText
-        } catch {}
-        throw new Error(`HTTP ${resSp.status}: ${msg || resSp.statusText}`)
+      console.log("[DEBUG submitForm] after check");
+      if (resSp && typeof resSp.ok === "boolean" && !resSp.ok) {
+        const msg = await docChiTietLoiResponse(resSp);
+        throw new Error(msg);
       }
 
       // Cập nhật các biến thể còn lại trong danh sách nếu thực sự có thay đổi
       for (const row of bienTheRows.value) {
         if (row.bienTheId && String(row.bienTheId) !== String(rowBienThe.bienTheId)) {
-          const goc = banGocBienThe.value?.find(g => String(g.bienTheId) === String(row.bienTheId))
-          const coThayDoi = !goc ||
-            String(row.maSku || '') !== String(goc.maSku || '') ||
-            String(row.barcode || '') !== String(goc.barcode || '') ||
-            String(row.mauSac || '') !== String(goc.mauSac || '') ||
-            String(row.cpuId ?? '') !== String(goc.cpuId ?? '') ||
-            String(row.ramId ?? '') !== String(goc.ramId ?? '') ||
-            String(row.oCungId ?? '') !== String(goc.oCungId ?? '') ||
-            String(row.gpuId ?? '') !== String(goc.gpuId ?? '') ||
+          const goc = banGocBienThe.value?.find(
+            (g) => String(g.bienTheId) === String(row.bienTheId),
+          );
+          const coThayDoi =
+            !goc ||
+            String(row.maSku || "") !== String(goc.maSku || "") ||
+            String(row.barcode || "") !== String(goc.barcode || "") ||
+            String(row.mauSac || "") !== String(goc.mauSac || "") ||
+            String(row.cpuId ?? "") !== String(goc.cpuId ?? "") ||
+            String(row.ramId ?? "") !== String(goc.ramId ?? "") ||
+            String(row.oCungId ?? "") !== String(goc.oCungId ?? "") ||
+            String(row.gpuId ?? "") !== String(goc.gpuId ?? "") ||
             Number(row.giaNhap || 0) !== Number(goc.giaNhap || 0) ||
             Number(row.giaBan || 0) !== Number(goc.giaBan || 0) ||
-            String(form.value.baoHanhThang || '') !== String(banGoc.value?.baoHanhThang || '') ||
-            String(form.value.kichThuocManHinh || '') !== String(banGoc.value?.kichThuocManHinh || '') ||
-            String(form.value.pin || '') !== String(banGoc.value?.pin || '') ||
-            String(form.value.heDieuHanh || '') !== String(banGoc.value?.heDieuHanh || '') ||
-            String(form.value.trongLuongKg || '') !== String(banGoc.value?.trongLuongKg || '')
+            String(form.value.baoHanhThang || "") !== String(banGoc.value?.baoHanhThang || "") ||
+            String(form.value.kichThuocManHinh || "") !==
+              String(banGoc.value?.kichThuocManHinh || "") ||
+            String(form.value.pin || "") !== String(banGoc.value?.pin || "") ||
+            String(form.value.heDieuHanh || "") !== String(banGoc.value?.heDieuHanh || "") ||
+            String(form.value.trongLuongKg || "") !== String(banGoc.value?.trongLuongKg || "");
 
           if (coThayDoi) {
-            buoc = `cập nhật phiên bản ${row.maSku || ''}`
-            await bienTheApi.update(row.bienTheId, payloadBienThe(form.value.sanPhamId, row))
+            buoc = `cập nhật phiên bản ${row.maSku || ""}`;
+            const resBtUpdate = await bienTheApi.update(
+              row.bienTheId,
+              payloadBienThe(form.value.sanPhamId, row),
+            );
+            if (resBtUpdate && typeof resBtUpdate.ok === "boolean" && !resBtUpdate.ok) {
+              const msg = await docChiTietLoiResponse(resBtUpdate);
+              throw new Error(msg);
+            }
           }
         }
       }
 
-      console.log('[DEBUG submitForm] Saving to DB, calling luuPhanLoai')
-      await luuPhanLoai(form.value.sanPhamId)
-      console.log('[DEBUG submitForm] luuPhanLoai done')
+      console.log("[DEBUG submitForm] Saving to DB, calling luuPhanLoai");
+      await luuPhanLoai(form.value.sanPhamId);
+      console.log("[DEBUG submitForm] luuPhanLoai done");
 
       // Cập nhật lại bienTheRows sau khi lưu
-      const idx = bienTheRows.value.findIndex(r => String(r.bienTheId) === String(form.value.bienTheId))
+      const idx = bienTheRows.value.findIndex(
+        (r) => String(r.bienTheId) === String(form.value.bienTheId),
+      );
       if (idx !== -1) {
         bienTheRows.value[idx] = {
           ...bienTheRows.value[idx],
@@ -2871,159 +4529,187 @@ const submitForm = async () => {
           gpuId: form.value.gpuId,
           giaNhap: form.value.giaNhap,
           giaBan: form.value.giaBan,
-          hinhAnhBienThe: form.value.hinhAnhBienThe
-        }
+          hinhAnhBienThe: form.value.hinhAnhBienThe,
+        };
       }
 
-      const thayDoi = soSanhAnhChup(banGoc.value, anhChupForm())
+      const thayDoi = soSanhAnhChup(banGoc.value, anhChupForm());
       ghiNhatKy(form.value.sanPhamId, {
-        loai: 'sua',
-        hanhDong: thayDoi.length ? 'Cập nhật sản phẩm' : 'Lưu lại (không đổi nội dung)',
-        doiTuong: `Phiên bản ${form.value.maSku || (rowBienThe && rowBienThe.maSku) || ''}`,
-        thayDoi
-      })
-      console.log('[DEBUG submitForm] Calling hienToast and closeModal')
-      hienToast('Đã lưu thay đổi')
+        loai: "sua",
+        hanhDong: thayDoi.length ? "Cập nhật sản phẩm" : "Lưu lại (không đổi nội dung)",
+        doiTuong: `Phiên bản ${form.value.maSku || (rowBienThe && rowBienThe.maSku) || ""}`,
+        thayDoi,
+      });
+      console.log("[DEBUG submitForm] Calling hienToast and closeModal");
+      hienToast("Đã lưu thay đổi");
       // Giữ moLaiChiTiet để fetchData xong rồi mở lại chi tiết
-      const sanPhamIdVuaLuu = moLaiChiTiet.value
-      closeModal()
+      const sanPhamIdVuaLuu = moLaiChiTiet.value;
+      closeModal();
       // Sau khi fetch data thành công, mở lại chi tiết
-      moLaiChiTiet.value = sanPhamIdVuaLuu
-    } else if (modalMode.value === 'variant') {
+      moLaiChiTiet.value = sanPhamIdVuaLuu;
+    } else if (modalMode.value === "variant") {
       // Đảm bảo mỗi dòng có SKU và barcode hợp lệ, không trùng
-      capNhatSkuCacDong()
+      capNhatSkuCacDong();
       bienTheRows.value.forEach((row, i) => {
         if (!row.maSku) {
-          const prefix = taoTienToSanPham(form.value.tenSanPham, form.value.thuongHieuId) || form.value.maSanPham || 'SP'
-          row.maSku = `${prefix}-${String(i + 1).padStart(3, '0')}`
+          const prefix =
+            taoTienToSanPham(form.value.tenSanPham, form.value.thuongHieuId) ||
+            form.value.maSanPham ||
+            "SP";
+          row.maSku = `${prefix}-${String(i + 1).padStart(3, "0")}`;
         }
-        if (!row.barcode) row.barcode = sinhBarcodeKhongTrung()
-      })
-      const dsSku = []
+        if (!row.barcode) row.barcode = sinhBarcodeKhongTrung();
+      });
+      const dsSku = [];
       for (const row of bienTheRows.value) {
-        buoc = `thêm phiên bản ${row.maSku}`
-        const resBt = await apiTaoBienThe(payloadBienThe(form.value.sanPhamId, row))
+        buoc = `thêm phiên bản ${row.maSku}`;
+        const resBt = await apiTaoBienThe(payloadBienThe(form.value.sanPhamId, row));
         if (!resBt.ok) {
-          throw new Error(`HTTP ${resBt.status}: ${await resBt.text().catch(() => resBt.statusText)}`)
+          const msg = await docChiTietLoiResponse(resBt);
+          throw new Error(msg);
         }
-        dsSku.push(row.maSku)
-        daTao++
+        dsSku.push(row.maSku);
+        daTao++;
       }
       ghiNhatKy(form.value.sanPhamId, {
-        loai: 'them',
+        loai: "them",
         hanhDong: `Thêm ${daTao} phiên bản`,
-        doiTuong: dsSku.join(', ')
-      })
-      hienToast(`Đã thêm ${daTao} phiên bản`)
-      closeModal()
-      moLaiChiTiet.value = null // Đảm bảo reset cho variant mode
+        doiTuong: dsSku.join(", "),
+      });
+      hienToast(`Đã thêm ${daTao} phiên bản`);
+      closeModal();
+      moLaiChiTiet.value = null; // Đảm bảo reset cho variant mode
     } else {
       // Đảm bảo mã sản phẩm, SKU và barcode hợp lệ trước khi lưu
-      if (!form.value.maSanPham) form.value.maSanPham = sinhMaSanPham()
-      capNhatSkuCacDong()
+      if (!form.value.maSanPham) form.value.maSanPham = sinhMaSanPham();
+      capNhatSkuCacDong();
       bienTheRows.value.forEach((row, i) => {
         if (!row.maSku) {
-          const prefix = taoTienToSanPham(form.value.tenSanPham, form.value.thuongHieuId) || form.value.maSanPham || 'SP'
-          row.maSku = `${prefix}-${String(i + 1).padStart(3, '0')}`
+          const prefix =
+            taoTienToSanPham(form.value.tenSanPham, form.value.thuongHieuId) ||
+            form.value.maSanPham ||
+            "SP";
+          row.maSku = `${prefix}-${String(i + 1).padStart(3, "0")}`;
         }
-        if (!row.barcode) row.barcode = sinhBarcodeKhongTrung()
-      })
-      const [dauTien, ...conLai] = bienTheRows.value
+        if (!row.barcode) row.barcode = sinhBarcodeKhongTrung();
+      });
+      const [dauTien, ...conLai] = bienTheRows.value;
 
-      buoc = 'tạo sản phẩm chính'
-      const resSp = await apiTaoSanPham(payloadSanPham(dauTien))
-      if (resSp && typeof resSp.ok === 'boolean' && !resSp.ok) {
-        const errText = await resSp.text().catch(() => '')
-        let msg = errText
-        try {
-          const json = JSON.parse(errText)
-          msg = json.message || json.error || json.detail || (Array.isArray(json.errors) ? json.errors.map(x => x.defaultMessage || x.message).join('; ') : '') || errText
-        } catch {}
-        throw new Error(`HTTP ${resSp.status}: ${msg || resSp.statusText}`)
+      buoc = "tạo sản phẩm chính";
+      const resSp = await apiTaoSanPham(payloadSanPham(dauTien));
+      if (resSp && typeof resSp.ok === "boolean" && !resSp.ok) {
+        const msg = await docChiTietLoiResponse(resSp);
+        throw new Error(msg);
       }
-      const spMoi = resSp && typeof resSp.json === 'function' ? await resSp.json() : resSp
-      daTao = 1
+      const spMoi = resSp && typeof resSp.json === "function" ? await resSp.json() : resSp;
+      daTao = 1;
 
-      let spId = layId(spMoi, 'sanPhamId')
+      let spId = layId(spMoi, "sanPhamId");
       if (!spId && (conLai.length || form.value.phanLoaiIds.length)) {
-        buoc = 'tra lại mã sản phẩm vừa tạo'
-        spId = await timIdVuaTao()
+        buoc = "tra lại mã sản phẩm vừa tạo";
+        spId = await timIdVuaTao();
         if (!spId && conLai.length) {
           throw new Error(
-            'Sản phẩm và phiên bản đầu tiên đã lưu, nhưng không lấy được sanPhamId nên các phiên bản ' +
-            'còn lại chưa tạo được. Mở lại sản phẩm rồi dùng nút "Thêm phiên bản" để bổ sung, ' +
-            'hoặc sửa SanPhamController.create() cho trả về DTO thay vì entity.'
-          )
+            "Sản phẩm và phiên bản đầu tiên đã lưu, nhưng không lấy được sanPhamId nên các phiên bản " +
+              'còn lại chưa tạo được. Mở lại sản phẩm rồi dùng nút "Thêm phiên bản" để bổ sung, ' +
+              "hoặc sửa SanPhamController.create() cho trả về DTO thay vì entity.",
+          );
         }
       }
 
       for (const row of conLai) {
-        buoc = `tạo phiên bản ${row.maSku}`
-        const resBt = await apiTaoBienThe(payloadBienThe(spId, row))
+        buoc = `tạo phiên bản ${row.maSku}`;
+        const resBt = await apiTaoBienThe(payloadBienThe(spId, row));
         if (!resBt.ok) {
-          throw new Error(`HTTP ${resBt.status}: ${await resBt.text().catch(() => resBt.statusText)}`)
+          const msg = await docChiTietLoiResponse(resBt);
+          throw new Error(msg);
         }
-        daTao++
+        daTao++;
       }
 
-      await luuPhanLoai(spId)
+      await luuPhanLoai(spId);
       ghiNhatKy(spId, {
-        loai: 'tao',
-        hanhDong: 'Tạo sản phẩm mới',
+        loai: "tao",
+        hanhDong: "Tạo sản phẩm mới",
         doiTuong: `${form.value.maSanPham} · ${daTao} phiên bản`,
-        thayDoi: [{ truong: 'Tên sản phẩm', cu: '', moi: form.value.tenSanPham }]
-      })
+        thayDoi: [{ truong: "Tên sản phẩm", cu: "", moi: form.value.tenSanPham }],
+      });
       // Đóng cửa sổ chi tiết sau khi tạo mới
-      hienToast(`Đã lưu sản phẩm cùng ${daTao} phiên bản`)
-      closeModal()
+      hienToast(`Đã lưu sản phẩm cùng ${daTao} phiên bản`);
+      closeModal();
     }
 
-    await fetchData()
+    await fetchData();
 
     // Mở lại cửa sổ chi tiết để xem ngay kết quả vừa lưu
     if (moLaiChiTiet.value) {
-      const g = danhSachSanPham.value.find((x) => String(x.sanPhamId) === String(moLaiChiTiet.value))
+      const g = danhSachSanPham.value.find(
+        (x) => String(x.sanPhamId) === String(moLaiChiTiet.value),
+      );
       if (g) {
-        moChiTiet(g)
+        moChiTiet(g);
         // ponytail: mở lại đúng tab user vừa sửa (info/bienthe) thay vì ép 'lichsu'
-        tabCT.value = tab.value === 'bienthe' ? 'bienthe' : 'info'
+        tabCT.value = tab.value === "bienthe" ? "bienthe" : "info";
       }
-      moLaiChiTiet.value = null
+      moLaiChiTiet.value = null;
     }
 
     // Đồng bộ dữ liệu vào ProductsStore và InventoryStore
     await Promise.all([
       lamMoiKhoDuLieuChung().catch(() => {}),
-      lamMoiTonKhoDuLieuChung().catch(() => {})
-    ])
+      lamMoiTonKhoDuLieuChung().catch(() => {}),
+    ]);
   } catch (e) {
-    console.error(`[Hàng hóa] lỗi ở bước "${buoc}":`, e?.response?.data ?? e)
-    const chiTietLoi = thongBaoLoi(e)
-    const goiY = goiYSua(chiTietLoi)
+    console.error(`[Hàng hóa] lỗi ở bước "${buoc}":`, e?.response?.data ?? e);
+    const chiTietLoi = thongBaoLoi(e);
+    const goiY = goiYSua(chiTietLoi);
     saveError.value =
-      `Lưu thất bại ở bước ${buoc}: ${chiTietLoi}` +
-      (goiY ? ` → ${goiY}` : '') +
-      (daTao ? ` (đã lưu được ${daTao} bản ghi trước đó)` : '')
-    if (buoc.includes('phiên bản')) tab.value = 'bienthe'
-    await fetchData()
-    if (daTao) { lamMoiKhoDuLieuChung().catch(() => {}); lamMoiTonKhoDuLieuChung().catch(() => {}) }
+      `Lưu thất bại (${buoc}): ${chiTietLoi}` +
+      (goiY ? ` → ${goiY}` : "") +
+      (daTao ? ` (đã lưu được ${daTao} bản ghi trước đó)` : "");
+
+    const lowerErr = khongDau(chiTietLoi);
+    if (lowerErr.includes("trong luong") || lowerErr.includes("khoi luong")) {
+      errors.value = { ...errors.value, trongLuongKg: chiTietLoi };
+      tab.value = "info";
+    } else if (
+      buoc.includes("phiên bản") ||
+      lowerErr.includes("sku") ||
+      lowerErr.includes("barcode") ||
+      lowerErr.includes("ma vach") ||
+      lowerErr.includes("phien ban")
+    ) {
+      tab.value = "bienthe";
+    }
+    hienToast(saveError.value, "error");
+    cuonLenDauModal();
+    await fetchData();
+    if (daTao) {
+      lamMoiKhoDuLieuChung().catch(() => {});
+      lamMoiTonKhoDuLieuChung().catch(() => {});
+    }
   } finally {
-    isSaving.value = false
+    isSaving.value = false;
   }
-}
+};
 
 // Tự động đồng bộ lại dữ liệu khi ProductsStore có cập nhật từ tab Biến thể
-watch(() => ProductsStore.version, () => {
-  if (!isSaving.value) {
-    fetchData()
-  }
-})
+watch(
+  () => ProductsStore.version,
+  () => {
+    if (!isSaving.value) {
+      fetchData();
+    }
+  },
+);
 </script>
 
 <style scoped>
 /* ═══════════ BẢNG MÀU (tông hồng) ═══════════ */
-.hh, .hh-modal-mask, .hh-toast {
-  --pink-50:  #fff5f9;
+.hh,
+.hh-modal-mask,
+.hh-toast {
+  --pink-50: #fff5f9;
   --pink-100: #ffe6f0;
   --pink-200: #ffcfe1;
   --pink-300: #f7a8c8;
@@ -3031,124 +4717,269 @@ watch(() => ProductsStore.version, () => {
   --pink-600: #db2777;
   --pink-700: #a81b5d;
 
-  --ink:     #1f2937;
-  --ink-2:   #374151;
-  --muted:   #6b7280;
-  --line:    #f1dbe6;
-  --line-2:  #ead0dd;
-  --field:   #d9b3c6;
-  --danger:  #dc2626;
-  --ok-bg:   #ecfdf5;
+  --ink: #1f2937;
+  --ink-2: #374151;
+  --muted: #6b7280;
+  --line: #f1dbe6;
+  --line-2: #ead0dd;
+  --field: #d9b3c6;
+  --danger: #dc2626;
+  --ok-bg: #ecfdf5;
   --ok-text: #047857;
 
   /* 3D Shadow Variables */
-  --sh-1: 0 1px 2px rgba(168, 27, 93, .08), 0 1px 3px rgba(168, 27, 93, .05);
-  --sh-2: 0 4px 6px rgba(168, 27, 93, .1), 0 2px 4px rgba(168, 27, 93, .06);
-  --sh-3: 0 10px 15px rgba(168, 27, 93, .12), 0 4px 6px rgba(168, 27, 93, .08);
+  --sh-1: 0 1px 2px rgba(168, 27, 93, 0.08), 0 1px 3px rgba(168, 27, 93, 0.05);
+  --sh-2: 0 4px 6px rgba(168, 27, 93, 0.1), 0 2px 4px rgba(168, 27, 93, 0.06);
+  --sh-3: 0 10px 15px rgba(168, 27, 93, 0.12), 0 4px 6px rgba(168, 27, 93, 0.08);
 }
-.hh { font-size: 14px; color: var(--ink); }
+.hh {
+  font-size: 14px;
+  color: var(--ink);
+}
 
-.ta-r { text-align: right; }
-.ta-c { text-align: center; }
-.hh-muted { color: var(--muted); }
-.hh-hidden { display: none; }
-.hh-mt6 { margin-top: 6px; }
-.hh-mb8 { margin-bottom: 8px; }
+.ta-r {
+  text-align: right;
+}
+.ta-c {
+  text-align: center;
+}
+.hh-muted {
+  color: var(--muted);
+}
+.hh-hidden {
+  display: none;
+}
+.hh-mt6 {
+  margin-top: 6px;
+}
+.hh-mb8 {
+  margin-bottom: 8px;
+}
 
 /* ═══════════ NÚT ═══════════ */
 .hh-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 14px; border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 13px; font-weight: 600; font-family: inherit;
-  cursor: pointer; white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
   transition: all 0.15s ease;
 }
-.hh-btn--sm { padding: 5px 11px; font-size: 12.5px; }
+.hh-btn--sm {
+  padding: 5px 11px;
+  font-size: 12.5px;
+}
 .hh-btn--primary {
-  background: var(--pink-600); color: #fff;
-  box-shadow: 0 3px 0 #9b1d5c, 0 4px 8px rgba(168, 27, 93, 0.3);
+  background: var(--pink-600);
+  color: #fff;
+  box-shadow:
+    0 3px 0 #9b1d5c,
+    0 4px 8px rgba(168, 27, 93, 0.3);
   border-bottom-width: 3px;
 }
 .hh-btn--primary:hover:not(:disabled) {
   background: var(--pink-700);
-  box-shadow: 0 4px 0 #7a1550, 0 6px 12px rgba(168, 27, 93, 0.35);
+  box-shadow:
+    0 4px 0 #7a1550,
+    0 6px 12px rgba(168, 27, 93, 0.35);
   transform: translateY(-1px);
 }
 .hh-btn--primary:active:not(:disabled) {
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   transform: translateY(1px);
 }
-.hh-btn--soft { background: var(--pink-100); color: var(--pink-700); border-color: var(--pink-200); }
+.hh-btn--soft {
+  background: var(--pink-100);
+  color: var(--pink-700);
+  border-color: var(--pink-200);
+}
 .hh-btn--soft:hover:not(:disabled) {
   background: var(--pink-200);
   box-shadow: 0 2px 4px rgba(168, 27, 93, 0.15);
 }
-.hh-btn--ghost { background: #fff; color: var(--pink-700); border-color: var(--pink-200); }
+.hh-btn--ghost {
+  background: #fff;
+  color: var(--pink-700);
+  border-color: var(--pink-200);
+}
 .hh-btn--ghost:hover:not(:disabled) {
-  background: var(--pink-50); border-color: var(--pink-300);
+  background: var(--pink-50);
+  border-color: var(--pink-300);
   box-shadow: 0 2px 4px rgba(168, 27, 93, 0.15);
 }
-.hh-btn--ghost.is-on { background: var(--pink-100); border-color: var(--pink-300); }
-.hh-btn:disabled { opacity: .45; cursor: not-allowed; }
-.hh-btn:focus-visible, .hh-icon-btn:focus-visible { outline: 2px solid var(--pink-500); outline-offset: 2px; }
+.hh-btn--ghost.is-on {
+  background: var(--pink-100);
+  border-color: var(--pink-300);
+}
+.hh-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.hh-btn:focus-visible,
+.hh-icon-btn:focus-visible {
+  outline: 2px solid var(--pink-500);
+  outline-offset: 2px;
+}
 
 .hh-icon-btn {
-  background: transparent; border: none; color: var(--muted);
-  width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
-  display: inline-grid; place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
 }
-.hh-icon-btn:hover:not(:disabled) { background: var(--pink-50); color: var(--pink-600); }
-.hh-icon-btn:disabled { opacity: .35; cursor: not-allowed; }
+.hh-icon-btn:hover:not(:disabled) {
+  background: var(--pink-50);
+  color: var(--pink-600);
+}
+.hh-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
 
-.hh-link { background: none; border: none; padding: 0 0 0 6px; color: var(--pink-700); text-decoration: underline; cursor: pointer; }
+.hh-link {
+  background: none;
+  border: none;
+  padding: 0 0 0 6px;
+  color: var(--pink-700);
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 .hh-chip {
-  background: var(--pink-600); color: #fff; border-radius: 999px;
-  padding: 0 6px; font-size: 11px; line-height: 17px; min-width: 17px; text-align: center;
+  background: var(--pink-600);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 17px;
+  min-width: 17px;
+  text-align: center;
 }
-.hh-caret { font-size: 10px; transition: transform .2s; }
-.hh-caret.is-open { transform: rotate(180deg); }
+.hh-caret {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+.hh-caret.is-open {
+  transform: rotate(180deg);
+}
 
 /* Thanh công cụ */
 .hh-sticky-head {
-  position: sticky; top: 0; z-index: 5;
-  transition: transform .25s ease;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  transition: transform 0.25s ease;
 }
-.hh-sticky-head.is-hidden { transform: translateY(-100%); }
+.hh-sticky-head.is-hidden {
+  transform: translateY(-100%);
+}
 
 .hh-bar {
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  background: #fff; border: 1px solid var(--line); border-radius: 14px;
-  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--sh-2);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--sh-2);
 }
-.hh-bar__left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.hh-bar__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
-.hh-title { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.2px; color: var(--pink-700); white-space: nowrap; }
+.hh-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.hh-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.hh-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: var(--pink-700);
+  white-space: nowrap;
+}
 
-.hh-search { position: relative; width: 320px; max-width: 100%; }
+.hh-search {
+  position: relative;
+  width: 320px;
+  max-width: 100%;
+}
 .hh-search input {
-  width: 100%; padding: 8px 32px 8px 34px;
-  border: 1px solid var(--pink-200); border-radius: 999px;
-  font-size: 13px; background: var(--pink-50); font-family: inherit; color: var(--ink);
+  width: 100%;
+  padding: 8px 32px 8px 34px;
+  border: 1px solid var(--pink-200);
+  border-radius: 999px;
+  font-size: 13px;
+  background: var(--pink-50);
+  font-family: inherit;
+  color: var(--ink);
   box-shadow: inset 0 2px 4px rgba(168, 27, 93, 0.1);
   transition: all 0.2s ease;
 }
 .hh-search input:focus {
-  outline: none; border-color: var(--pink-500); background: #fff;
-  box-shadow: inset 0 2px 4px rgba(168, 27, 93, 0.1), 0 0 0 3px var(--pink-100);
+  outline: none;
+  border-color: var(--pink-500);
+  background: #fff;
+  box-shadow:
+    inset 0 2px 4px rgba(168, 27, 93, 0.1),
+    0 0 0 3px var(--pink-100);
 }
-.hh-search__icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--pink-500); }
-.hh-search__clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; }
+.hh-search__icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pink-500);
+}
+.hh-search__clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+}
 
 /* ═══════════ BỘ LỌC (nằm trong card) ═══════════ */
-.hh-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
-.hh-filter.is-open { grid-template-rows: 1fr; }
-.hh-filter__panel {
-  overflow: hidden; background: var(--pink-50);
-  padding: 0 16px; transition: padding .25s ease;
+.hh-filter {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
 }
-.hh-filter.is-open .hh-filter__panel { padding: 14px 16px; }
+.hh-filter.is-open {
+  grid-template-rows: 1fr;
+}
+.hh-filter__panel {
+  overflow: hidden;
+  background: var(--pink-50);
+  padding: 0 16px;
+  transition: padding 0.25s ease;
+}
+.hh-filter.is-open .hh-filter__panel {
+  padding: 14px 16px;
+}
 
 /* Thanh tác vụ */
 .hh-toolbar {
@@ -3187,219 +5018,760 @@ watch(() => ProductsStore.version, () => {
 .hh-toolbar .hh-search {
   width: 260px;
 }
-.hh-filter.is-open .hh-filter__panel { padding: 16px; }
-.hh-filter__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
-.hh-filter__foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line);
+.hh-filter.is-open .hh-filter__panel {
+  padding: 16px;
 }
-.hh-filter__count { font-size: 12.5px; color: var(--muted); }
-.hh-filter__btns { display: flex; gap: 8px; }
+.hh-filter__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.hh-filter__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+.hh-filter__count {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.hh-filter__btns {
+  display: flex;
+  gap: 8px;
+}
 
 /* ═══════════ Ô NHẬP ═══════════ */
-.hh-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.hh-field > span { font-size: 12px; font-weight: 700; color: var(--pink-700); letter-spacing: .1px; }
-.hh-field > span b { color: var(--danger); }
+.hh-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.hh-field > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pink-700);
+  letter-spacing: 0.1px;
+}
+.hh-field > span b {
+  color: var(--danger);
+}
 .hh-field input,
 .hh-field select,
 .hh-field textarea,
 .hh-cell {
-  width: 100%; padding: 9px 11px;
-  border: 1px solid var(--field); border-radius: 9px;
-  font-size: 13px; color: var(--ink); background: #fff; font-family: inherit;
-  transition: border-color .15s, box-shadow .15s;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--field);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fff;
+  font-family: inherit;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
-.hh-field input::placeholder, .hh-cell::placeholder { color: #b9a3ae; }
-.hh-field input:hover, .hh-field select:hover, .hh-cell:hover { border-color: var(--pink-300); }
-.hh-field input:focus, .hh-field select:focus, .hh-field textarea:focus, .hh-cell:focus {
-  outline: none; border-color: var(--pink-500); box-shadow: 0 0 0 3px var(--pink-100);
+.hh-field input::placeholder,
+.hh-cell::placeholder {
+  color: #b9a3ae;
 }
-.hh-field input:disabled, .hh-field select:disabled { background: #f8f6f7; color: var(--muted); }
-.hh-combo { background: var(--pink-50); }
-.hh-inline { display: flex; gap: 6px; align-items: center; }
-.hh-inline > select, .hh-inline > input { flex: 1; min-width: 0; }
-.hh-err { font-size: 11.5px; color: var(--danger); font-style: normal; }
-.hh-hint { font-size: 11.5px; color: var(--muted); font-style: normal; line-height: 1.45; }
+.hh-field input:hover,
+.hh-field select:hover,
+.hh-cell:hover {
+  border-color: var(--pink-300);
+}
+.hh-field input:focus,
+.hh-field select:focus,
+.hh-field textarea:focus,
+.hh-cell:focus {
+  outline: none;
+  border-color: var(--pink-500);
+  box-shadow: 0 0 0 3px var(--pink-100);
+}
+.hh-field input:disabled,
+.hh-field select:disabled {
+  background: #f8f6f7;
+  color: var(--muted);
+}
+.hh-combo {
+  background: var(--pink-50);
+}
+.hh-inline {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.hh-inline > select,
+.hh-inline > input {
+  flex: 1;
+  min-width: 0;
+}
+.hh-err {
+  font-size: 11.5px;
+  color: var(--danger);
+  font-style: normal;
+  font-weight: 600;
+}
+.hh-err-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hh-req {
+  color: var(--danger);
+  font-weight: 800;
+}
+.hh-chip--err {
+  background: var(--danger);
+  color: #fff;
+  font-weight: 700;
+}
+.hh-field input.is-err,
+.hh-field select.is-err,
+.hh-field textarea.is-err,
+.hh-cell.is-err {
+  border-color: var(--danger) !important;
+  background-color: #fff5f5;
+}
+.hh-field input.is-err:focus,
+.hh-field select.is-err:focus,
+.hh-cell.is-err:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.16);
+}
+.hh-gallery__add.is-err {
+  border-color: var(--danger);
+  background: #fff5f5;
+  color: var(--danger);
+}
+.hh-hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-style: normal;
+  line-height: 1.45;
+}
 
 /* thẻ tag có nút xóa */
-.hh-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.hh-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
 .hh-tag-pill {
-  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
-  background: var(--pink-100); color: var(--pink-700);
-  border: 1px solid var(--pink-200); border-radius: 999px;
-  padding: 3px 6px 3px 11px; font-size: 12.5px; font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  background: var(--pink-100);
+  color: var(--pink-700);
+  border: 1px solid var(--pink-200);
+  border-radius: 999px;
+  padding: 3px 6px 3px 11px;
+  font-size: 12.5px;
+  font-weight: 600;
   word-break: break-word;
 }
 .hh-tag-pill button {
-  background: var(--pink-200); border: none; color: var(--pink-700);
-  width: 17px; height: 17px; border-radius: 50%; line-height: 1; flex-shrink: 0;
-  font-size: 13px; cursor: pointer; display: grid; place-items: center;
+  background: var(--pink-200);
+  border: none;
+  color: var(--pink-700);
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  line-height: 1;
+  flex-shrink: 0;
+  font-size: 13px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
 }
-.hh-tag-pill button:hover { background: var(--pink-600); color: #fff; }
+.hh-tag-pill button:hover {
+  background: var(--pink-600);
+  color: #fff;
+}
 
 /* ═══════════ BẢNG DANH SÁCH ═══════════ */
-.hh-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--sh-2); }
-.hh-table-wrap { position: relative; overflow-x: auto; min-height: 140px; }
-.hh-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+.hh-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--sh-2);
+}
+.hh-table-wrap {
+  position: relative;
+  overflow-x: auto;
+  min-height: 140px;
+}
+.hh-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
 .hh-table th {
-  background: var(--pink-50); color: var(--pink-700);
-  font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
-  padding: 11px 12px; white-space: nowrap; border-bottom: none;
+  background: var(--pink-50);
+  color: var(--pink-700);
+  font-size: 11.5px;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 11px 12px;
+  white-space: nowrap;
+  border-bottom: none;
 }
 /* Bo góc viền bảng */
-.hh-table thead th:first-child { border-top-left-radius: 13px; }
-.hh-table thead th:last-child { border-top-right-radius: 13px; }
-.hh-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
-.hh-table tbody tr:last-child td { border-bottom: none; }
+.hh-table thead th:first-child {
+  border-top-left-radius: 13px;
+}
+.hh-table thead th:last-child {
+  border-top-right-radius: 13px;
+}
+.hh-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.hh-table tbody tr:last-child td {
+  border-bottom: none;
+}
 
-.hh-row { cursor: pointer; transition: background-color .12s; }
-.hh-row:hover { background: var(--pink-50); }
-.hh-row:focus-visible { outline: 2px solid var(--pink-500); outline-offset: -2px; }
-.hh-row:hover .hh-col-go { color: var(--pink-600); }
+.hh-row {
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.hh-row:hover {
+  background: var(--pink-50);
+}
+.hh-row:focus-visible {
+  outline: 2px solid var(--pink-500);
+  outline-offset: -2px;
+}
+.hh-row:hover .hh-col-go {
+  color: var(--pink-600);
+}
 
-.hh-col-ma { width: 12%; }
-.hh-col-ten { width: 30%; }
-.hh-col-go { width: 2%; text-align: center; color: var(--pink-200); }
-.hh-td-ma { font-weight: 700; }
-.hh-td-gia { font-variant-numeric: tabular-nums; font-weight: 600; }
-.hh-td-ngay { font-size: 12.5px; }
+.hh-col-ma {
+  width: 12%;
+}
+.hh-col-ten {
+  width: 30%;
+}
+.hh-col-go {
+  width: 2%;
+  text-align: center;
+  color: var(--pink-200);
+}
+.hh-td-ma {
+  font-weight: 700;
+}
+.hh-td-gia {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.hh-td-ngay {
+  font-size: 12.5px;
+}
 
 /* tên dài thì xuống dòng, dãn tự nhiên theo khung */
-.hh-td-ten { white-space: normal; }
-.hh-code__main { color: var(--pink-700); font-weight: 700; letter-spacing: .3px; }
+.hh-td-ten {
+  white-space: normal;
+}
+.hh-code__main {
+  color: var(--pink-700);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
 
-.hh-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.hh-name__text { min-width: 0; }
-.hh-name__main { font-weight: 600; line-height: 1.35; word-break: break-word; }
-.hh-name__sub { font-size: 11.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
-.hh-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 9px; border: 1px solid var(--line); background: #fff; flex-shrink: 0; }
+.hh-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.hh-name__text {
+  min-width: 0;
+}
+.hh-name__main {
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.hh-name__sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 400;
+  margin-top: 2px;
+}
+.hh-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #fff;
+  flex-shrink: 0;
+}
 
-.hh-tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
-.hh-tag--ok { background: var(--ok-bg); color: var(--ok-text); }
-.hh-tag--off { background: #f3f4f6; color: var(--muted); }
-.hh-tag--soft { background: var(--pink-100); color: var(--pink-700); font-weight: 600; }
-.hh-tag--outline { background: #fff; color: var(--pink-700); border: 1px solid var(--pink-200); font-weight: 600; }
-.hh-tag--wait { background: #fef3c7; color: #92400e; }
-.hh-tag--out { background: #fee2e2; color: #dc2626; }
+.hh-tag {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.hh-tag--ok {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+.hh-tag--off {
+  background: #f3f4f6;
+  color: var(--muted);
+}
+.hh-tag--soft {
+  background: var(--pink-100);
+  color: var(--pink-700);
+  font-weight: 600;
+}
+.hh-tag--outline {
+  background: #fff;
+  color: var(--pink-700);
+  border: 1px solid var(--pink-200);
+  font-weight: 600;
+}
+.hh-tag--wait {
+  background: #fef3c7;
+  color: #92400e;
+}
+.hh-tag--out {
+  background: #fee2e2;
+  color: #dc2626;
+}
 
-.hh-ton { font-weight: 700; font-variant-numeric: tabular-nums; }
-.hh-ton.is-het { color: var(--danger); }
+.hh-ton {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hh-ton.is-het {
+  color: var(--danger);
+}
 
 /* ═══════════ RỖNG / LOADING / PHÂN TRANG ═══════════ */
-.hh-overlay { position: absolute; inset: 0; background: rgba(255,255,255,.65); display: flex; align-items: center; justify-content: center; }
-.hh-spinner { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--pink-200); border-top-color: var(--pink-600); animation: hh-spin .7s linear infinite; }
-@keyframes hh-spin { to { transform: rotate(360deg); } }
+.hh-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hh-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--pink-200);
+  border-top-color: var(--pink-600);
+  animation: hh-spin 0.7s linear infinite;
+}
+@keyframes hh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
-.hh-empty { padding: 44px 20px; text-align: center; color: var(--muted); }
-.hh-empty i { font-size: 32px; color: var(--pink-300); }
-.hh-empty p { margin: 12px 0; font-size: 13.5px; }
+.hh-empty {
+  padding: 44px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+.hh-empty i {
+  font-size: 32px;
+  color: var(--pink-300);
+}
+.hh-empty p {
+  margin: 12px 0;
+  font-size: 13.5px;
+}
 
-.hh-alert { margin: 0 0 12px; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 13px; border-radius: 9px; }
+.hh-alert {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 13px;
+  border-radius: 9px;
+}
 
-.hh-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--pink-50); flex-wrap: wrap; border-top: 1px solid var(--line); }
-.hh-pager__info { font-size: 12.5px; color: var(--muted); }
-.hh-pager__nav { display: flex; align-items: center; gap: 8px; }
-.hh-pager__page { font-size: 13px; font-weight: 700; min-width: 56px; text-align: center; }
-.hh-pager__size { padding: 5px 8px; border: 1px solid var(--field); border-radius: 8px; font-size: 12.5px; background: #fff; color: var(--ink); }
+.hh-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--pink-50);
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+}
+.hh-pager__info {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.hh-pager__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hh-pager__page {
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 56px;
+  text-align: center;
+}
+.hh-pager__size {
+  padding: 5px 8px;
+  border: 1px solid var(--field);
+  border-radius: 8px;
+  font-size: 12.5px;
+  background: #fff;
+  color: var(--ink);
+}
 
 /* ═══════════ MODAL ═══════════ */
 /* Căn lề trên cố định cho modal */
 .hh-modal-mask {
-  position: fixed; inset: 0; z-index: 1050;
-  background: rgba(31,41,55,.5); display: flex; align-items: flex-start; justify-content: center;
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(31, 41, 55, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   padding: 5vh 20px 20px;
-  font-size: 14px; color: var(--ink);
+  font-size: 14px;
+  color: var(--ink);
 }
 .hh-modal {
-  background: #fff; width: 1020px; max-width: 100%; max-height: 94vh;
-  border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;
+  background: #fff;
+  width: 1020px;
+  max-width: 100%;
+  max-height: 94vh;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: var(--sh-3);
 }
-.hh-modal--rong { width: 1100px; }
-.hh-modal--hep { width: 620px; }
+.hh-modal--rong {
+  width: 1100px;
+}
+.hh-modal--hep {
+  width: 620px;
+}
 .hh-modal__head {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-  padding: 16px 20px 12px; background: var(--pink-50); border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 12px;
+  background: var(--pink-50);
+  border-bottom: 1px solid var(--line);
 }
-.hh-head-main { min-width: 0; }
-.hh-modal__head h2 { margin: 0; font-size: 17px; font-weight: 800; color: var(--pink-700); line-height: 1.35; word-break: break-word; }
-.hh-modal__head p { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.hh-head-path { word-break: break-word; }
+.hh-head-main {
+  min-width: 0;
+}
+.hh-modal__head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--pink-700);
+  line-height: 1.35;
+  word-break: break-word;
+}
+.hh-modal__head p {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hh-head-path {
+  word-break: break-word;
+}
 
-.hh-tabs { display: flex; gap: 4px; padding: 0 20px; background: var(--pink-50); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.hh-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 20px;
+  background: var(--pink-50);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
 .hh-tab {
-  background: none; border: none; border-bottom: 2px solid transparent;
-  padding: 9px 14px; font-size: 13px; font-weight: 700; font-family: inherit;
-  color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
-.hh-tab:hover { color: var(--pink-600); }
-.hh-tab.is-on { color: var(--pink-700); border-bottom-color: var(--pink-600); }
+.hh-tab:hover {
+  color: var(--pink-600);
+}
+.hh-tab.is-on {
+  color: var(--pink-700);
+  border-bottom-color: var(--pink-600);
+}
 
-.hh-modal__body { padding: 20px; overflow-y: auto; background: #fffafc; }
-.hh-pane { display: flex; flex-direction: column; gap: 16px; }
+.hh-modal__body {
+  padding: 20px;
+  overflow-y: auto;
+  background: #fffafc;
+}
+.hh-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
 .hh-modal__foot {
-  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 14px 20px; border-top: 1px solid var(--line); background: var(--pink-50);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--pink-50);
 }
-.hh-modal__foot-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.hh-modal__foot-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.hh-foot-hint { font-size: 12.5px; color: var(--muted); margin-right: 4px; }
-.hh-foot-hint b { color: var(--pink-700); }
+.hh-modal__foot-left {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.hh-modal__foot-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.hh-foot-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-right: 4px;
+}
+.hh-foot-hint b {
+  color: var(--pink-700);
+}
+.hh-foot-err {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--err);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 5px 10px;
+  max-width: 520px;
+  line-height: 1.35;
+}
 
 /* ═══════════ MODAL CHI TIẾT ═══════════ */
-.hh-ct-top { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start; }
-.hh-ct-media { display: flex; flex-direction: column; gap: 10px; }
+.hh-ct-top {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.hh-ct-media {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .hh-ct-media__main {
-  width: 100%; aspect-ratio: 1 / 1; object-fit: cover;
-  border: 1px solid var(--line); border-radius: 14px; background: #fff;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
 }
-.hh-ct-media__strip { display: flex; gap: 8px; flex-wrap: wrap; }
+.hh-ct-media__strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .hh-ct-media__thumb {
-  width: 52px; height: 52px; padding: 0; overflow: hidden; cursor: pointer;
-  border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
 }
-.hh-ct-media__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.hh-ct-media__thumb.is-on { border-color: var(--pink-500); box-shadow: 0 0 0 2px var(--pink-100); }
+.hh-ct-media__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hh-ct-media__thumb.is-on {
+  border-color: var(--pink-500);
+  box-shadow: 0 0 0 2px var(--pink-100);
+}
 
-.hh-ct-main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-.hh-ct-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.hh-ct-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hh-ct-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 
-.hh-ct-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px 20px; margin: 0; }
-.hh-ct-item { min-width: 0; }
-.hh-ct-item dt { font-size: 11.5px; font-weight: 700; color: var(--pink-700); margin-bottom: 3px; }
+.hh-ct-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px 20px;
+  margin: 0;
+}
+.hh-ct-item {
+  min-width: 0;
+}
+.hh-ct-item dt {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--pink-700);
+  margin-bottom: 3px;
+}
 .hh-ct-item dd {
-  margin: 0; padding-bottom: 5px; font-size: 13.5px; color: var(--ink-2);
-  border-bottom: 1px solid var(--line); word-break: break-word;
+  margin: 0;
+  padding-bottom: 5px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--line);
+  word-break: break-word;
 }
-.hh-ct-item__manh { color: var(--pink-600); font-weight: 700; }
+.hh-ct-item__manh {
+  color: var(--pink-600);
+  font-weight: 700;
+}
 
-.hh-ct-block { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
-.hh-ct-block h3 {
-  margin: 0 0 12px; font-size: 12.5px; font-weight: 800; color: var(--pink-700);
-  text-transform: uppercase; letter-spacing: .5px;
+.hh-ct-block {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
 }
-.hh-ct-mota { font-size: 13.5px; line-height: 1.65; color: var(--ink-2); word-break: break-word; }
-.hh-ct-mota :deep(img) { max-width: 100%; height: auto; border-radius: 8px; }
+.hh-ct-block h3 {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--pink-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.hh-ct-mota {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  word-break: break-word;
+}
+.hh-ct-mota :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
 
 /* bảng biến thể trong chi tiết */
-.hh-vt-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: auto; background: #fff; }
-.hh-vt { width: 100%; border-collapse: collapse; }
-.hh-vt th {
-  position: sticky; top: 0; background: var(--pink-50); color: var(--pink-700);
-  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
-  text-align: left; padding: 10px 12px; white-space: nowrap; border-bottom: none;
+.hh-vt-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: auto;
+  background: #fff;
 }
-.hh-vt thead th:first-child { border-top-left-radius: 11px; }
-.hh-vt thead th:last-child { border-top-right-radius: 11px; }
-.hh-vt td { padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
-.hh-vt tbody tr:last-child td { border-bottom: none; }
-.hh-vt__row { cursor: pointer; transition: background-color .12s; }
-.hh-vt__row:hover { background: var(--pink-50); }
-.hh-vt__row.is-on { background: var(--pink-100); }
-.hh-vt__row.is-on td:first-child { box-shadow: inset 3px 0 0 var(--pink-600); }
-.hh-vt__sku { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-weight: 700; white-space: nowrap; }
-.hh-vt__barcode { white-space: nowrap; width: 140px; }
+.hh-vt {
+  width: 100%;
+  border-collapse: collapse;
+}
+.hh-vt th {
+  position: sticky;
+  top: 0;
+  background: var(--pink-50);
+  color: var(--pink-700);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  text-align: left;
+  padding: 10px 12px;
+  white-space: nowrap;
+  border-bottom: none;
+}
+.hh-vt thead th:first-child {
+  border-top-left-radius: 11px;
+}
+.hh-vt thead th:last-child {
+  border-top-right-radius: 11px;
+}
+.hh-vt td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  vertical-align: middle;
+}
+.hh-vt tbody tr:last-child td {
+  border-bottom: none;
+}
+.hh-vt__row {
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.hh-vt__row:hover {
+  background: var(--pink-50);
+}
+.hh-vt__row.is-on {
+  background: var(--pink-100);
+}
+.hh-vt__row.is-on td:first-child {
+  box-shadow: inset 3px 0 0 var(--pink-600);
+}
+.hh-vt__sku {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.hh-vt__barcode {
+  white-space: nowrap;
+  width: 140px;
+}
 .hh-barcode-card {
   display: inline-flex;
   flex-direction: column;
@@ -3410,7 +5782,10 @@ watch(() => ProductsStore.version, () => {
   border: 1px solid var(--pink-200);
   border-radius: 9px;
   box-shadow: 0 1px 2px rgba(168, 27, 93, 0.04);
-  transition: border-color .15s, box-shadow .15s, transform .12s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.12s;
   user-select: none;
 }
 .hh-barcode-card:hover {
@@ -3423,7 +5798,10 @@ watch(() => ProductsStore.version, () => {
   max-width: 100%;
   height: auto;
 }
-.hh-vt__cfg { color: var(--muted); min-width: 260px; }
+.hh-vt__cfg {
+  color: var(--muted);
+  min-width: 260px;
+}
 .hh-cfg-chips {
   display: flex;
   flex-wrap: wrap;
@@ -3443,7 +5821,9 @@ watch(() => ProductsStore.version, () => {
   font-weight: 600;
   line-height: 1.4;
   white-space: nowrap;
-  transition: background .15s, transform .12s;
+  transition:
+    background 0.15s,
+    transform 0.12s;
   user-select: none;
 }
 .hh-cfg-chip:hover {
@@ -3454,237 +5834,809 @@ watch(() => ProductsStore.version, () => {
   flex-shrink: 0;
   opacity: 0.9;
 }
-.hh-vt__gia { font-weight: 700; color: var(--pink-600); font-variant-numeric: tabular-nums; }
+.hh-vt__gia {
+  font-weight: 700;
+  color: var(--pink-600);
+  font-variant-numeric: tabular-nums;
+}
 
 /* nhật ký thay đổi */
-.hh-ls { list-style: none; margin: 0; padding: 0 0 0 6px; display: flex; flex-direction: column; }
-.hh-ls__item { position: relative; display: flex; gap: 14px; padding: 0 0 18px 0; }
+.hh-ls {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 6px;
+  display: flex;
+  flex-direction: column;
+}
+.hh-ls__item {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  padding: 0 0 18px 0;
+}
 .hh-ls__item::before {
-  content: ''; position: absolute; left: 5px; top: 16px; bottom: 0; width: 2px; background: var(--line-2);
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 16px;
+  bottom: 0;
+  width: 2px;
+  background: var(--line-2);
 }
-.hh-ls__item:last-child::before { display: none; }
+.hh-ls__item:last-child::before {
+  display: none;
+}
 .hh-ls__dot {
-  width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
-  background: var(--pink-500); box-shadow: 0 0 0 3px var(--pink-100);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+  background: var(--pink-500);
+  box-shadow: 0 0 0 3px var(--pink-100);
 }
-.hh-ls__dot.is-tao { background: #10b981; box-shadow: 0 0 0 3px #d1fae5; }
-.hh-ls__dot.is-them { background: #3b82f6; box-shadow: 0 0 0 3px #dbeafe; }
+.hh-ls__dot.is-tao {
+  background: #10b981;
+  box-shadow: 0 0 0 3px #d1fae5;
+}
+.hh-ls__dot.is-them {
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px #dbeafe;
+}
 .hh-ls__body {
-  flex: 1; min-width: 0; background: #fff; border: 1px solid var(--line);
-  border-radius: 12px; padding: 12px 14px;
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
 }
-.hh-ls__head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13.5px; }
-.hh-ls__head strong { color: var(--pink-700); }
-.hh-ls__target { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; word-break: break-word; }
-.hh-ls__changes { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.hh-ls__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+}
+.hh-ls__head strong {
+  color: var(--pink-700);
+}
+.hh-ls__target {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-top: 3px;
+  word-break: break-word;
+}
+.hh-ls__changes {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
 .hh-ls__changes li {
-  display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
-  font-size: 12.5px; background: var(--pink-50); border-radius: 8px; padding: 5px 9px;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  background: var(--pink-50);
+  border-radius: 8px;
+  padding: 5px 9px;
 }
-.hh-ls__field { font-weight: 700; color: var(--pink-700); }
-.hh-ls__changes em { font-style: normal; color: var(--muted); text-decoration: line-through; word-break: break-word; }
-.hh-ls__changes b { color: var(--ink); word-break: break-word; }
-.hh-ls__changes i { color: var(--pink-300); }
-.hh-ls__by { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+.hh-ls__field {
+  font-weight: 700;
+  color: var(--pink-700);
+}
+.hh-ls__changes em {
+  font-style: normal;
+  color: var(--muted);
+  text-decoration: line-through;
+  word-break: break-word;
+}
+.hh-ls__changes b {
+  color: var(--ink);
+  word-break: break-word;
+}
+.hh-ls__changes i {
+  color: var(--pink-300);
+}
+.hh-ls__by {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
 
 /* ═══════════ MODAL XUẤT FILE ═══════════ */
-.hh-export-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.hh-export-checkall { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink); }
-.hh-export-count { font-weight: 500; color: var(--muted); }
-.hh-export-search { width: 240px; }
-.hh-empty-cell { text-align: center; color: var(--muted); padding: 24px; font-size: 13px; }
+.hh-export-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.hh-export-checkall {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.hh-export-count {
+  font-weight: 500;
+  color: var(--muted);
+}
+.hh-export-search {
+  width: 240px;
+}
+.hh-empty-cell {
+  text-align: center;
+  color: var(--muted);
+  padding: 24px;
+  font-size: 13px;
+}
 
 .hh-export-list {
-  margin-top: 12px; max-height: 50vh; overflow-y: auto;
-  border: 1px solid var(--line); border-radius: 12px; background: #fff;
+  margin-top: 12px;
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
 }
-.hh-export-group { border-bottom: 1px solid var(--line); }
-.hh-export-group:last-child { border-bottom: none; }
+.hh-export-group {
+  border-bottom: 1px solid var(--line);
+}
+.hh-export-group:last-child {
+  border-bottom: none;
+}
 
 .hh-export-group__head {
-  display: flex; align-items: center; gap: 10px; cursor: pointer;
-  padding: 10px 12px; background: var(--pink-50);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 10px 12px;
+  background: var(--pink-50);
 }
-.hh-export-group__thumb { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: #fff; border: 1px solid var(--line); }
-.hh-export-group__info { flex: 1; min-width: 0; }
-.hh-export-group__name { font-weight: 700; font-size: 13.5px; color: var(--pink-700); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hh-export-group__meta { font-size: 12px; color: var(--muted); margin-top: 1px; }
-.hh-export-group__price { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.hh-export-group__thumb {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.hh-export-group__info {
+  flex: 1;
+  min-width: 0;
+}
+.hh-export-group__name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--pink-700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hh-export-group__meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.hh-export-group__price {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
 
 .hh-export-variant {
-  display: flex; align-items: center; gap: 10px; cursor: pointer;
-  padding: 8px 12px 8px 40px; border-top: 1px dashed var(--line); font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px 12px 8px 40px;
+  border-top: 1px dashed var(--line);
+  font-size: 13px;
 }
 .hh-export-variant__sku {
-  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; font-weight: 600;
-  min-width: 110px; color: var(--ink);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  min-width: 110px;
+  color: var(--ink);
 }
-.hh-export-variant__spec { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hh-export-variant__price { white-space: nowrap; color: var(--pink-600); font-weight: 600; }
+.hh-export-variant__spec {
+  flex: 1;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hh-export-variant__price {
+  white-space: nowrap;
+  color: var(--pink-600);
+  font-weight: 600;
+}
 
 .hh-export-group__head input,
 .hh-export-variant input,
-.hh-export-checkall input { flex-shrink: 0; accent-color: var(--pink-600); cursor: pointer; }
+.hh-export-checkall input {
+  flex-shrink: 0;
+  accent-color: var(--pink-600);
+  cursor: pointer;
+}
 
 /* ═══════════ FORM TRONG MODAL ═══════════ */
 .hh-block {
-  border: 1px solid var(--line); border-radius: 14px;
-  padding: 16px; margin: 0; background: #fff; min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 0;
+  background: #fff;
+  min-width: 0;
 }
-.hh-block:disabled { opacity: .75; }
+.hh-block:disabled {
+  opacity: 0.75;
+}
 .hh-block legend {
-  font-size: 12.5px; font-weight: 800; color: var(--pink-700);
-  background: var(--pink-100); border-radius: 999px; padding: 4px 12px;
-  display: inline-flex; align-items: center; gap: 8px; width: auto;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--pink-700);
+  background: var(--pink-100);
+  border-radius: 999px;
+  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
 }
-.hh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
-.hh-field--wide { grid-column: 1 / -1; }
+.hh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.hh-field--wide {
+  grid-column: 1 / -1;
+}
 
 .hh-note {
-  display: flex; align-items: flex-start; gap: 8px; margin: 14px 0 0;
-  padding: 9px 12px; background: var(--pink-50); border: 1px dashed var(--pink-200);
-  border-radius: 9px; font-size: 12.5px; color: var(--muted); line-height: 1.55;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 9px 12px;
+  background: var(--pink-50);
+  border: 1px dashed var(--pink-200);
+  border-radius: 9px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.55;
 }
-.hh-note--plain { margin: 0 0 14px; }
+.hh-note--plain {
+  margin: 0 0 14px;
+}
 
 /* Danh sách biến thể trong form sửa */
 .hh-bienthe-list {
-  display: flex; flex-direction: column; gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .hh-bienthe-list__title {
-  font-size: 12.5px; font-weight: 700; color: var(--pink-700);
-  text-transform: uppercase; letter-spacing: .5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--pink-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 .hh-bienthe-list__items {
-  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
 }
 .hh-bienthe-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 10px 14px; cursor: pointer; transition: background-color .12s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background-color 0.12s;
   border-bottom: 1px solid var(--line);
 }
-.hh-bienthe-item:last-child { border-bottom: none; }
-.hh-bienthe-item:hover { background: var(--pink-50); }
-.hh-bienthe-item.is-on { background: var(--pink-100); }
-.hh-bienthe-item.is-on .hh-bienthe-item__sku { color: var(--pink-700); }
-.hh-bienthe-item__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hh-bienthe-item:last-child {
+  border-bottom: none;
+}
+.hh-bienthe-item:hover {
+  background: var(--pink-50);
+}
+.hh-bienthe-item.is-on {
+  background: var(--pink-100);
+}
+.hh-bienthe-item.is-on .hh-bienthe-item__sku {
+  color: var(--pink-700);
+}
+.hh-bienthe-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
 .hh-bienthe-item__sku {
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: 12.5px; font-weight: 700; color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
 }
-.hh-bienthe-item__cfg { font-size: 11.5px; color: var(--muted); }
-.hh-bienthe-item__price { font-weight: 600; color: var(--ink); white-space: nowrap; font-size: 13px; }
-.hh-note b { color: var(--pink-700); }
+.hh-bienthe-item__cfg {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.hh-bienthe-item__price {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  font-size: 13px;
+}
+.hh-note b {
+  color: var(--pink-700);
+}
 
 /* chip bật/tắt — phân loại sử dụng (chọn nhiều) */
-.hh-chip-select { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
-.hh-chip-toggle {
-  padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: 12.5px; font-weight: 600;
-  background: #fff; border: 1px solid var(--pink-200); color: var(--muted); font-family: inherit;
-  transition: background-color .15s, border-color .15s, color .15s;
+.hh-chip-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
 }
-.hh-chip-toggle:hover { border-color: var(--pink-300); color: var(--pink-700); }
-.hh-chip-toggle.is-on { background: var(--pink-600); border-color: var(--pink-600); color: #fff; }
+.hh-chip-toggle {
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: #fff;
+  border: 1px solid var(--pink-200);
+  color: var(--muted);
+  font-family: inherit;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.hh-chip-toggle:hover {
+  border-color: var(--pink-300);
+  color: var(--pink-700);
+}
+.hh-chip-toggle.is-on {
+  background: var(--pink-600);
+  border-color: var(--pink-600);
+  color: #fff;
+}
 
 /* gallery nhiều ảnh */
-.hh-gallery { display: flex; flex-wrap: wrap; gap: 10px; }
-.hh-gallery__item {
-  position: relative; width: 92px; height: 92px; flex-shrink: 0;
-  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff;
+.hh-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
-.hh-gallery__item img { width: 100%; height: 100%; object-fit: cover; }
+.hh-gallery__item {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.hh-gallery__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .hh-gallery__badge {
-  position: absolute; left: 4px; bottom: 4px; background: var(--pink-600); color: #fff;
-  font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 999px; line-height: 1.4;
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  background: var(--pink-600);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  line-height: 1.4;
 }
 .hh-gallery__actions {
-  position: absolute; top: 0; right: 0; display: flex; gap: 2px; padding: 3px;
-  background: linear-gradient(180deg, rgba(0,0,0,.45), transparent);
-  opacity: 0; transition: opacity .15s;
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), transparent);
+  opacity: 0;
+  transition: opacity 0.15s;
 }
-.hh-gallery__item:hover .hh-gallery__actions { opacity: 1; }
-.hh-icon-btn--sm { width: 22px; height: 22px; background: rgba(255,255,255,.9); color: var(--pink-700); }
+.hh-gallery__item:hover .hh-gallery__actions {
+  opacity: 1;
+}
+.hh-icon-btn--sm {
+  width: 22px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--pink-700);
+}
 .hh-gallery__add {
-  width: 92px; height: 92px; flex-shrink: 0; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  border: 1px dashed var(--pink-300); border-radius: 12px; background: var(--pink-50);
-  color: var(--pink-600); font-size: 11px; font-weight: 600; text-align: center;
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px dashed var(--pink-300);
+  border-radius: 12px;
+  background: var(--pink-50);
+  color: var(--pink-600);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
 }
-.hh-gallery__add:hover { background: var(--pink-100); }
-.hh-gallery__add i { font-size: 18px; }
+.hh-gallery__add:hover {
+  background: var(--pink-100);
+}
+.hh-gallery__add i {
+  font-size: 18px;
+}
+
+/* Danh sách thẻ phiên bản thoáng, dễ nhìn và tự động co giãn khi thêm thuộc tính mới */
+.hh-variant-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hh-variant-card {
+  border: 1px solid var(--pink-200);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(168, 27, 93, 0.04);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.hh-variant-card:hover {
+  border-color: var(--pink-300);
+  box-shadow: 0 4px 14px rgba(168, 27, 93, 0.08);
+}
+.hh-variant-card.is-err {
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.08);
+}
+.hh-variant-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: var(--pink-50);
+  border-bottom: 1px solid var(--line);
+}
+.hh-variant-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hh-variant-card__badge {
+  background: var(--pink-600);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 11px;
+  border-radius: 999px;
+  letter-spacing: 0.2px;
+}
+.hh-variant-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pink-700);
+  background: #fff;
+  border: 1px solid var(--pink-200);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.hh-variant-card__del {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff;
+  border: 1px solid var(--pink-200);
+  color: var(--pink-700);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.hh-variant-card__del:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: var(--danger);
+}
+.hh-variant-card__del:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.hh-variant-card__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 14px 18px;
+  padding: 16px;
+}
+.hh-input-mono {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+}
 
 /* ma trận phiên bản */
 /* ma trận phiên thể (bảng mỗi dòng = 1 biến thể) */
-.hh-rows-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: 380px; }
-.hh-rows { width: 100%; border-collapse: collapse; }
+.hh-rows-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: auto;
+  max-height: 380px;
+}
+.hh-rows {
+  width: 100%;
+  border-collapse: collapse;
+}
 .hh-rows th {
-  position: sticky; top: 0; background: var(--pink-50); color: var(--pink-700); z-index: 1;
-  font-size: 11px; font-weight: 800; text-align: left; padding: 9px 10px; white-space: nowrap;
-  text-transform: uppercase; letter-spacing: .4px; border-bottom: none;
+  position: sticky;
+  top: 0;
+  background: var(--pink-50);
+  color: var(--pink-700);
+  z-index: 1;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: left;
+  padding: 9px 10px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: none;
 }
-.hh-rows thead th:first-child { border-top-left-radius: 11px; }
-.hh-rows thead th:last-child { border-top-right-radius: 11px; }
-.hh-rows td { padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
-.hh-rows tr:last-child td { border-bottom: none; }
-.hh-rows__stt { width: 36px; color: var(--muted); }
-.hh-rows__empty { text-align: center; color: var(--muted); padding: 28px; }
-.hh-cell--sel { padding: 6px 8px; font-size: 12.5px; }
+.hh-rows thead th:first-child {
+  border-top-left-radius: 11px;
+}
+.hh-rows thead th:last-child {
+  border-top-right-radius: 11px;
+}
+.hh-rows td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  vertical-align: middle;
+}
+.hh-rows tr:last-child td {
+  border-bottom: none;
+}
+.hh-rows__stt {
+  width: 36px;
+  color: var(--muted);
+}
+.hh-rows__empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 28px;
+}
+.hh-cell--sel {
+  padding: 6px 8px;
+  font-size: 12.5px;
+}
 
-.hh-matrix-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: 340px; }
-.hh-matrix { width: 100%; border-collapse: collapse; }
-.hh-matrix th {
-  position: sticky; top: 0; background: var(--pink-50); color: var(--pink-700); z-index: 1;
-  font-size: 11px; font-weight: 800; text-align: left; padding: 9px 10px; white-space: nowrap;
-  text-transform: uppercase; letter-spacing: .4px; border-bottom: none;
+.hh-matrix-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: auto;
+  max-height: 340px;
 }
-.hh-matrix thead th:first-child { border-top-left-radius: 11px; }
-.hh-matrix thead th:last-child { border-top-right-radius: 11px; }
-.hh-matrix td { padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
-.hh-matrix tr:last-child td { border-bottom: none; }
-.hh-matrix__stt { width: 38px; }
-.hh-matrix__cfg { color: var(--muted); font-size: 12.5px; min-width: 180px; white-space: normal; word-break: break-word; }
-.hh-matrix__empty { text-align: center; color: var(--muted); padding: 20px; }
-.hh-cell { padding: 6px 9px; font-size: 12.5px; }
-.hh-cell--sku { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; min-width: 240px; }
-.hh-cell--ma { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; min-width: 140px; }
+.hh-matrix {
+  width: 100%;
+  border-collapse: collapse;
+}
+.hh-matrix th {
+  position: sticky;
+  top: 0;
+  background: var(--pink-50);
+  color: var(--pink-700);
+  z-index: 1;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: left;
+  padding: 9px 10px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: none;
+}
+.hh-matrix thead th:first-child {
+  border-top-left-radius: 11px;
+}
+.hh-matrix thead th:last-child {
+  border-top-right-radius: 11px;
+}
+.hh-matrix td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  vertical-align: middle;
+}
+.hh-matrix tr:last-child td {
+  border-bottom: none;
+}
+.hh-matrix__stt {
+  width: 38px;
+}
+.hh-matrix__cfg {
+  color: var(--muted);
+  font-size: 12.5px;
+  min-width: 180px;
+  white-space: normal;
+  word-break: break-word;
+}
+.hh-matrix__empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 20px;
+}
+.hh-cell {
+  padding: 6px 9px;
+  font-size: 12.5px;
+}
+.hh-cell--sku {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  min-width: 240px;
+}
+.hh-cell--ma {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  min-width: 140px;
+}
 
 /* trình soạn mô tả */
-.hh-editor { border: 1px solid var(--field); border-radius: 12px; overflow: hidden; }
-.hh-editor__bar { display: flex; align-items: center; gap: 2px; padding: 6px 8px; background: var(--pink-50); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.hh-editor__bar button {
-  background: none; border: none; width: 30px; height: 28px; border-radius: 6px;
-  color: var(--pink-700); cursor: pointer; font-size: 13px;
+.hh-editor {
+  border: 1px solid var(--field);
+  border-radius: 12px;
+  overflow: hidden;
 }
-.hh-editor__bar button:hover { background: var(--pink-100); }
-.hh-editor__sep { width: 1px; height: 18px; background: var(--pink-200); margin: 0 5px; }
-.hh-editor__area { min-height: 220px; padding: 14px 16px; font-size: 13.5px; line-height: 1.6; outline: none; }
-.hh-editor__area:empty::before { content: attr(data-placeholder); color: #b9a3ae; }
-.hh-editor__area:focus { box-shadow: inset 0 0 0 2px var(--pink-100); }
+.hh-editor__bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--pink-50);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.hh-editor__bar button {
+  background: none;
+  border: none;
+  width: 30px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--pink-700);
+  cursor: pointer;
+  font-size: 13px;
+}
+.hh-editor__bar button:hover {
+  background: var(--pink-100);
+}
+.hh-editor__sep {
+  width: 1px;
+  height: 18px;
+  background: var(--pink-200);
+  margin: 0 5px;
+}
+.hh-editor__area {
+  min-height: 220px;
+  padding: 14px 16px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  outline: none;
+}
+.hh-editor__area:empty::before {
+  content: attr(data-placeholder);
+  color: #b9a3ae;
+}
+.hh-editor__area:focus {
+  box-shadow: inset 0 0 0 2px var(--pink-100);
+}
 
 /* ═══════════ TOAST ═══════════ */
 .hh-toast {
-  position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 1100;
-  background: var(--pink-700); color: #fff; padding: 10px 20px; border-radius: 999px;
-  font-size: 13px; box-shadow: 0 8px 22px rgba(168,27,93,.35); max-width: calc(100% - 40px); text-align: center;
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  background: var(--pink-700);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  box-shadow: 0 8px 22px rgba(168, 27, 93, 0.35);
+  max-width: calc(100% - 40px);
+  text-align: center;
+}
+.hh-toast--err {
+  background: #b91c1c;
+  box-shadow: 0 8px 22px rgba(185, 28, 28, 0.38);
 }
 
 /* ═══════════ MÀN HÌNH NHỎ ═══════════ */
 @media (max-width: 900px) {
-  .hh-ct-top { grid-template-columns: 1fr; }
-  .hh-ct-media__main { max-width: 260px; }
+  .hh-ct-top {
+    grid-template-columns: 1fr;
+  }
+  .hh-ct-media__main {
+    max-width: 260px;
+  }
 }
 @media (max-width: 768px) {
-  .hh-bar__actions { width: 100%; margin-left: 0; }
-  .hh-search { width: 100%; }
-  .hh-modal-mask { padding: 0; }
-  .hh-modal { max-height: 100vh; border-radius: 0; }
-  .hh-modal__foot { flex-direction: column-reverse; align-items: stretch; }
-  .hh-modal__foot-left, .hh-modal__foot-right { justify-content: flex-end; }
-  .hh-foot-hint { width: 100%; text-align: right; }
+  .hh-bar__actions {
+    width: 100%;
+    margin-left: 0;
+  }
+  .hh-search {
+    width: 100%;
+  }
+  .hh-modal-mask {
+    padding: 0;
+  }
+  .hh-modal {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .hh-modal__foot {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .hh-modal__foot-left,
+  .hh-modal__foot-right {
+    justify-content: flex-end;
+  }
+  .hh-foot-hint {
+    width: 100%;
+    text-align: right;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hh-btn, .hh-caret, .hh-filter, .hh-filter__panel, .hh-row, .hh-vt__row { transition: none; }
-  .hh-spinner { animation-duration: 2s; }
+  .hh-btn,
+  .hh-caret,
+  .hh-filter,
+  .hh-filter__panel,
+  .hh-row,
+  .hh-vt__row {
+    transition: none;
+  }
+  .hh-spinner {
+    animation-duration: 2s;
+  }
 }
 </style>

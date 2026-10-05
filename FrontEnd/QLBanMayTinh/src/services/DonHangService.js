@@ -45,6 +45,18 @@ export const xacNhan = (donHangId, body) => patch(`/api/don-hang/${donHangId}/xa
 // Khách hàng xác nhận đã nhận hàng
 export const xacNhanDaNhanHang = (donHangId) => patch(`/api/don-hang/${donHangId}/xac-nhan-nhan-hang`, {});
 
+// Khách hàng gửi yêu cầu hủy đơn
+export const yeuCauHuy = (donHangId, lyDoHuy) =>
+  post(`/api/don-hang/${donHangId}/yeu-cau-huy`, { lyDoHuy });
+
+// Admin duyệt hủy đơn
+export const duyetHuy = (donHangId, ghiChu) =>
+  post(`/api/don-hang/${donHangId}/duyet-huy`, { ghiChu });
+
+// Admin từ chối yêu cầu hủy đơn
+export const tuChoiHuy = (donHangId, lyDoTuChoi) =>
+  post(`/api/don-hang/${donHangId}/tu-choi-huy`, { lyDoTuChoi });
+
 // ── POS helpers ────────────────────────────────────────────────────────────────
 
 // Đơn hàng gần đây cho POS

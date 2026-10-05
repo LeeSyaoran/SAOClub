@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { t } from "../../i18n/index.js";
 import { nowLocalIso } from "../../utils/datetime.js";
 import * as SanPhamService from "../../services/SanPhamService.js";
@@ -48,10 +48,21 @@ const ensureProductRefData = () => {
     oCungList.value = oc;
     gpuList.value = gpu;
     suppliers.value = SuppliersStore.items ?? [];
-    const STANDARD_ATTR_FIELDS = new Set(["mau_sac", "man_hinh", "pin", "he_dieu_hanh", "trong_luong"]);
+    const STANDARD_ATTR_FIELDS = new Set([
+      "mau_sac",
+      "man_hinh",
+      "pin",
+      "he_dieu_hanh",
+      "trong_luong",
+    ]);
     dynamicAttrs.value = Array.isArray(attrs)
       ? attrs
-          .filter((a) => (a.phamVi || 'san_pham') === 'san_pham' && !STANDARD_ATTR_FIELDS.has(a.tenTruong) && (a.trangThai || 'active') === 'active')
+          .filter(
+            (a) =>
+              (a.phamVi || "san_pham") === "san_pham" &&
+              !STANDARD_ATTR_FIELDS.has(a.tenTruong) &&
+              (a.trangThai || "active") === "active",
+          )
           .sort((a, b) => (a.thuTuHienThi ?? 0) - (b.thuTuHienThi ?? 0))
       : [];
     // Khởi tạo giá trị mặc định cho thuộc tính động
@@ -78,15 +89,20 @@ const tríchXuatThuocTinhTuMoTa = (moTaStr) => {
   }
   return {};
 };
-const loaiBoMetadataTuMoTa = (moTaStr) => (moTaStr ? String(moTaStr).replace(METADATA_TAG_REGEX, "").trim() : "");
+const loaiBoMetadataTuMoTa = (moTaStr) =>
+  moTaStr ? String(moTaStr).replace(METADATA_TAG_REGEX, "").trim() : "";
 const ganMetadataVaoMoTa = (moTaStr, thuocTinhObj) => {
   const baseMoTa = loaiBoMetadataTuMoTa(moTaStr);
   const hasValues = thuocTinhObj && Object.values(thuocTinhObj).some((v) => v !== "" && v != null);
-  return hasValues ? `${baseMoTa}\n<!--METADATA_THUOC_TINH:${JSON.stringify(thuocTinhObj)}-->` : baseMoTa;
+  return hasValues
+    ? `${baseMoTa}\n<!--METADATA_THUOC_TINH:${JSON.stringify(thuocTinhObj)}-->`
+    : baseMoTa;
 };
 
 // Reset promise để load lại thuộc tính động mỗi lần mở modal
-const resetRefDataCache = () => { productRefDataPromise = null; };
+const resetRefDataCache = () => {
+  productRefDataPromise = null;
+};
 
 const formError = ref("");
 const saving = ref(false);
@@ -170,7 +186,9 @@ watch(
     resetImageState();
     // Reset tất cả thuocTinhValues
     Object.keys(thuocTinhValues).forEach((k) => delete thuocTinhValues[k]);
-    dynamicAttrs.value.forEach((attr) => { thuocTinhValues[attr.tenTruong] = ""; });
+    dynamicAttrs.value.forEach((attr) => {
+      thuocTinhValues[attr.tenTruong] = "";
+    });
 
     if (props.mode === "edit") {
       const variants = (ProductsStore.items ?? []).filter((p) => p.sanPhamId === props.sanPhamId);
@@ -180,12 +198,35 @@ watch(
         return;
       }
       // Khớp ID cấu hình nếu base chỉ có tên hiển thị từ SanPhamResponse
-      const resolvedCpuId = base.cpuId ?? cpuList.value.find((c) => (c.tenCpu ?? "").trim().toLowerCase() === (base.cpu ?? "").trim().toLowerCase())?.cpuId ?? null;
-      const resolvedRamId = base.ramId ?? ramList.value.find((r) => (r.dungLuong ?? "").trim().toLowerCase() === (base.ram ?? "").trim().toLowerCase())?.ramId ?? null;
+      const resolvedCpuId =
+        base.cpuId ??
+        cpuList.value.find(
+          (c) => (c.tenCpu ?? "").trim().toLowerCase() === (base.cpu ?? "").trim().toLowerCase(),
+        )?.cpuId ??
+        null;
+      const resolvedRamId =
+        base.ramId ??
+        ramList.value.find(
+          (r) => (r.dungLuong ?? "").trim().toLowerCase() === (base.ram ?? "").trim().toLowerCase(),
+        )?.ramId ??
+        null;
       const ocName = (base.oCung ?? base.ocung ?? "").trim().toLowerCase();
-      const matchedOc = oCungList.value.find((o) => (o.loaiOcung ?? o.loaiOCung ?? o.LoaiOcung ?? "").trim().toLowerCase() === ocName);
-      const resolvedOcungId = base.oCungId ?? base.ocungId ?? (matchedOc?.oCungId ?? matchedOc?.ocungId ?? matchedOc?.id ?? null);
-      const resolvedGpuId = base.gpuId ?? gpuList.value.find((g) => (g.tenGpu ?? "").trim().toLowerCase() === (base.gpu ?? "").trim().toLowerCase())?.gpuId ?? null;
+      const matchedOc = oCungList.value.find(
+        (o) => (o.loaiOcung ?? o.loaiOCung ?? o.LoaiOcung ?? "").trim().toLowerCase() === ocName,
+      );
+      const resolvedOcungId =
+        base.oCungId ??
+        base.ocungId ??
+        matchedOc?.oCungId ??
+        matchedOc?.ocungId ??
+        matchedOc?.id ??
+        null;
+      const resolvedGpuId =
+        base.gpuId ??
+        gpuList.value.find(
+          (g) => (g.tenGpu ?? "").trim().toLowerCase() === (base.gpu ?? "").trim().toLowerCase(),
+        )?.gpuId ??
+        null;
 
       Object.assign(form, {
         bienTheId: null,
@@ -216,7 +257,11 @@ watch(
       // Nạp giá trị thuộc tính động từ dữ liệu sản phẩm (nếu có)
       const savedAttrs = tríchXuatThuocTinhTuMoTa(base.moTa);
       dynamicAttrs.value.forEach((attr) => {
-        thuocTinhValues[attr.tenTruong] = savedAttrs[attr.tenTruong] ?? base[attr.tenTruong] ?? base.thuocTinhValues?.[attr.tenTruong] ?? "";
+        thuocTinhValues[attr.tenTruong] =
+          savedAttrs[attr.tenTruong] ??
+          base[attr.tenTruong] ??
+          base.thuocTinhValues?.[attr.tenTruong] ??
+          "";
       });
       imagePreview.value = base.hinhAnhChinh || "";
     } else {
@@ -234,9 +279,76 @@ const handleImageFile = (e) => {
 
 const close = () => emit("update:modelValue", false);
 
+const validateCreateForm = () => {
+  if (!form.tenSanPham || !String(form.tenSanPham).trim()) return "Vui lòng nhập tên sản phẩm";
+  if (!form.thuongHieuId) return "Vui lòng chọn thương hiệu";
+  if (!form.danhMucId) return "Vui lòng chọn danh mục";
+  if (props.mode === "create") {
+    if (!form.nhaCungCapId) return "Vui lòng chọn nhà cung cấp";
+    if (!form.loaiSanPham) return "Vui lòng chọn loại sản phẩm";
+    if (!form.phanLoaiTags || !String(form.phanLoaiTags).trim())
+      return "Vui lòng chọn ít nhất 1 phân loại sử dụng";
+    if (!imageFilePending.value && (!form.hinhAnhChinh || !String(form.hinhAnhChinh).trim())) {
+      return "Vui lòng chọn ảnh đại diện cho sản phẩm";
+    }
+    if (!form.baoHanhThang || Number(form.baoHanhThang) <= 0)
+      return "Bảo hành (tháng) phải lớn hơn 0";
+    if (!form.kichThuocManHinh || !String(form.kichThuocManHinh).trim())
+      return "Vui lòng nhập thông số màn hình";
+    if (!form.heDieuHanh || !String(form.heDieuHanh).trim()) return "Vui lòng nhập hệ điều hành";
+    if (!form.pin || !String(form.pin).trim()) return "Vui lòng nhập thông số pin";
+    if (!form.trongLuongKg || Number(form.trongLuongKg) <= 0)
+      return "Trọng lượng (kg) phải lớn hơn 0";
+    if (Number(form.trongLuongKg) > 5)
+      return "Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)";
+    for (const attr of dynamicAttrs.value) {
+      const val = thuocTinhValues[attr.tenTruong];
+      if (val == null || String(val).trim() === "") {
+        return `Vui lòng nhập ${attr.tenHienThi}`;
+      }
+    }
+    if (!form.mauSac || !String(form.mauSac).trim()) return "Vui lòng nhập màu sắc cho phiên bản";
+    if (!form.cpuId) return "Vui lòng chọn CPU cho phiên bản";
+    if (!form.ramId) return "Vui lòng chọn RAM cho phiên bản";
+    if (!form.oCungId) return "Vui lòng chọn ổ cứng cho phiên bản";
+    if (!form.gpuId) return "Vui lòng chọn GPU cho phiên bản";
+    if (!form.giaNhap || Number(form.giaNhap) <= 0) return "Giá vốn của phiên bản phải lớn hơn 0";
+    if (!form.giaBan || Number(form.giaBan) <= 0) return "Giá bán của phiên bản phải lớn hơn 0";
+    if (Number(form.giaBan) < Number(form.giaNhap)) return "Giá bán không được nhỏ hơn giá vốn";
+  } else if (form.trongLuongKg !== "" && form.trongLuongKg != null) {
+    if (Number(form.trongLuongKg) <= 0) return "Trọng lượng (kg) phải lớn hơn 0";
+    if (Number(form.trongLuongKg) > 5)
+      return "Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)";
+  }
+  return "";
+};
+
+const isFormHopLe = computed(() => validateCreateForm() === "");
+
+const docThongBaoLoiResponse = async (res) => {
+  const raw = await res.text().catch(() => "");
+  if (!raw) return `HTTP ${res.status}`;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === "string") return parsed;
+    if (parsed && typeof parsed === "object") {
+      if (parsed.message) return parsed.message;
+      if (parsed.error) return parsed.error;
+      const msgs = Object.values(parsed).filter((v) => typeof v === "string" && v.trim());
+      if (msgs.length) return msgs.join("; ");
+    }
+  } catch {}
+  return raw;
+};
+
 const save = async () => {
   formError.value = "";
   if (saving.value) return;
+  const errMsg = validateCreateForm();
+  if (errMsg) {
+    formError.value = errMsg;
+    return;
+  }
   saving.value = true;
   try {
     if (imageFilePending.value) {
@@ -271,7 +383,7 @@ const save = async () => {
       oCungId: form.oCungId ? Number(form.oCungId) : null,
       ocungId: form.oCungId ? Number(form.oCungId) : null,
       gpuId: form.gpuId ? Number(form.gpuId) : null,
-      trangThai: form.trangThai === 'cho_nhap_hang' ? 'active' : form.trangThai,
+      trangThai: form.trangThai === "cho_nhap_hang" ? "active" : form.trangThai,
       giaBan: Number(form.giaBan),
       giaNhap: Number(form.giaNhap),
       trongLuongKg: form.trongLuongKg ? Number(form.trongLuongKg) : null,
@@ -288,7 +400,11 @@ const save = async () => {
     try {
       const res = await SanPhamService.save(props.mode === "edit" ? props.sanPhamId : null, body);
       if (!res.ok) {
-        formError.value = t("admin.errors.saveFailed", { status: res.status, text: await res.text() });
+        const detailText = await docThongBaoLoiResponse(res);
+        formError.value = t("admin.errors.saveFailed", {
+          status: res.status,
+          text: detailText,
+        });
         return;
       }
 
@@ -341,9 +457,7 @@ const save = async () => {
         <div>
           <div class="fw-bold text-light" style="font-size: 1rem">
             {{
-              (mode === 'edit')
-                ? t("admin.productModal.titleEdit")
-                : t("admin.productModal.titleAdd")
+              mode === "edit" ? t("admin.productModal.titleEdit") : t("admin.productModal.titleAdd")
             }}
           </div>
         </div>
@@ -353,9 +467,9 @@ const save = async () => {
         <div v-if="formError" class="alert alert-danger small py-2 mb-3">
           {{ formError }}
         </div>
-        <div v-if="(mode === 'edit')" class="alert alert-info small py-2 mb-3">
-          Khi sửa sản phẩm, các trường biến thể (SKU, cấu hình, giá, màu, bảo
-          hành...) sẽ bị khóa và không thể thay đổi.
+        <div v-if="mode === 'edit'" class="alert alert-info small py-2 mb-3">
+          Khi sửa sản phẩm, các trường biến thể (SKU, cấu hình, giá, màu, bảo hành...) sẽ bị khóa và
+          không thể thay đổi.
         </div>
 
         <div
@@ -366,10 +480,7 @@ const save = async () => {
         </div>
         <div
           class="rounded-3 p-3 mb-3"
-          style="
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-          "
+          style="background: var(--bg-input); border: 1px solid var(--border-color)"
         >
           <div class="row g-3">
             <div class="col-8">
@@ -393,7 +504,7 @@ const save = async () => {
               }}</label>
               <input
                 v-model="form.maSku"
-                :disabled="(mode === 'edit')"
+                :disabled="mode === 'edit'"
                 class="form-control form-control-sm"
                 style="
                   background: var(--bg-input);
@@ -410,7 +521,7 @@ const save = async () => {
               }}</label>
               <select
                 v-model="form.loaiSanPham"
-                :disabled="(mode === 'edit')"
+                :disabled="mode === 'edit'"
                 class="form-select form-select-sm"
                 style="
                   background: var(--bg-input);
@@ -442,9 +553,7 @@ const save = async () => {
                   border-color: var(--border-color-strong);
                 "
               >
-                <option value="cho_nhap_hang">
-                  Chờ nhập hàng
-                </option>
+                <option value="cho_nhap_hang">Chờ nhập hàng</option>
                 <option value="active">
                   {{ t("admin.productModal.statusActive") }}
                 </option>
@@ -478,7 +587,7 @@ const save = async () => {
               <input
                 v-model="form.baoHanhThang"
                 type="number"
-                :disabled="(mode === 'edit')"
+                :disabled="mode === 'edit'"
                 class="form-control form-control-sm"
                 style="
                   background: var(--bg-input);
@@ -503,11 +612,7 @@ const save = async () => {
                 <option :value="null" disabled>
                   {{ t("admin.productModal.selectPlaceholder") }}
                 </option>
-                <option
-                  v-for="b in brands"
-                  :key="b.thuongHieuId"
-                  :value="b.thuongHieuId"
-                >
+                <option v-for="b in brands" :key="b.thuongHieuId" :value="b.thuongHieuId">
                   {{ b.tenThuongHieu }}
                 </option>
               </select>
@@ -549,11 +654,7 @@ const save = async () => {
                 <option :value="null">
                   {{ t("admin.productModal.noneOption") }}
                 </option>
-                <option
-                  v-for="s in suppliers"
-                  :key="s.nhaCungCapId"
-                  :value="s.nhaCungCapId"
-                >
+                <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">
                   {{ s.tenNhaCungCap }}
                 </option>
               </select>
@@ -569,10 +670,7 @@ const save = async () => {
         </div>
         <div
           class="rounded-3 p-3 mb-3"
-          style="
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-          "
+          style="background: var(--bg-input); border: 1px solid var(--border-color)"
         >
           <div class="row g-3">
             <div class="col-6">
@@ -716,6 +814,9 @@ const save = async () => {
                 v-model="form.trongLuongKg"
                 type="number"
                 step="0.1"
+                min="0"
+                max="5"
+                placeholder="VD: 1.7 (tối đa 5 kg)"
                 class="form-control form-control-sm"
                 style="
                   background: var(--bg-input);
@@ -735,10 +836,7 @@ const save = async () => {
         </div>
         <div
           class="rounded-3 p-3 mb-3"
-          style="
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-          "
+          style="background: var(--bg-input); border: 1px solid var(--border-color)"
         >
           <div class="row g-3">
             <div class="col-6">
@@ -782,10 +880,7 @@ const save = async () => {
         </div>
         <div
           class="rounded-3 p-3 mb-3"
-          style="
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-          "
+          style="background: var(--bg-input); border: 1px solid var(--border-color)"
         >
           <div class="row g-3">
             <div class="col-12">
@@ -815,18 +910,9 @@ const save = async () => {
                       t("admin.productModal.imageClickToChoose")
                     }}</span>
                   </template>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    class="d-none"
-                    @change="handleImageFile"
-                  />
+                  <input type="file" accept="image/*" class="d-none" @change="handleImageFile" />
                 </label>
-                <div
-                  v-if="imageFilePending"
-                  class="text-warning"
-                  style="font-size: 0.75rem"
-                >
+                <div v-if="imageFilePending" class="text-warning" style="font-size: 0.75rem">
                   {{ imageFilePending.name }}
                 </div>
                 <div v-else class="text-secondary" style="font-size: 0.75rem">
@@ -850,10 +936,12 @@ const save = async () => {
               ></textarea>
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t("admin.productModal.tagsLabel") }}
+              <label class="form-label small text-secondary mb-1"
+                >{{ t("admin.productModal.tagsLabel") }}
                 <span class="text-warning small">{{
                   t("admin.productModal.tagsHint")
-                }}</span></label>
+                }}</span></label
+              >
               <div class="d-flex flex-wrap gap-2">
                 <button
                   v-for="opt in PHAN_LOAI_TAG_OPTIONS"
@@ -865,11 +953,7 @@ const save = async () => {
                       ? 'btn-warning text-dark fw-bold'
                       : 'btn-outline-secondary'
                   "
-                  style="
-                    font-size: 0.75rem;
-                    padding: 3px 12px;
-                    border-radius: 999px;
-                  "
+                  style="font-size: 0.75rem; padding: 3px 12px; border-radius: 999px"
                   @click="toggleTag(opt.value)"
                 >
                   {{ opt.label }}
@@ -877,10 +961,12 @@ const save = async () => {
               </div>
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1">{{ t("admin.productModal.tagNameLabel") }}
+              <label class="form-label small text-secondary mb-1"
+                >{{ t("admin.productModal.tagNameLabel") }}
                 <span class="text-muted small">{{
                   t("admin.productModal.tagNameHint")
-                }}</span></label>
+                }}</span></label
+              >
               <input
                 v-model="form.phanLoaiTen"
                 class="form-control form-control-sm"
@@ -905,24 +991,21 @@ const save = async () => {
           </div>
           <div
             class="rounded-3 p-3 mb-3"
-            style="
-              background: var(--bg-input);
-              border: 1px solid var(--border-color);
-            "
+            style="background: var(--bg-input); border: 1px solid var(--border-color)"
           >
             <div class="row g-3">
-              <div
-                v-for="attr in dynamicAttrs"
-                :key="attr.thuocTinhId"
-                class="col-6"
-              >
+              <div v-for="attr in dynamicAttrs" :key="attr.thuocTinhId" class="col-6">
                 <label class="form-label small text-secondary mb-1">
                   {{ attr.tenHienThi }}
                   <span v-if="attr.batBuoc" class="text-danger">*</span>
                 </label>
-                <!-- Select với danh sách giá trị -->
+                <!-- Select khi thuộc tính có kiểu chọn (loaiDuLieu !== 'text') -->
                 <select
-                  v-if="attr.loaiDuLieu === 'select' && attr.giaTriList && attr.giaTriList.length > 0"
+                  v-if="
+                    String(attr.loaiDuLieu || 'select')
+                      .trim()
+                      .toLowerCase() !== 'text'
+                  "
                   v-model="thuocTinhValues[attr.tenTruong]"
                   class="form-select form-select-sm"
                   style="
@@ -932,15 +1015,14 @@ const save = async () => {
                   "
                 >
                   <option value="">-- Chọn {{ attr.tenHienThi }} --</option>
-                  <option
-                    v-for="gv in attr.giaTriList"
-                    :key="gv.giaTriId"
-                    :value="gv.giaTri"
-                  >
+                  <option v-if="!attr.giaTriList || attr.giaTriList.length === 0" value="" disabled>
+                    -- Chưa có giá trị (thêm ở mục Thuộc tính) --
+                  </option>
+                  <option v-for="gv in attr.giaTriList" :key="gv.giaTriId" :value="gv.giaTri">
                     {{ gv.giaTri }}
                   </option>
                 </select>
-                <!-- Input text nếu không có giá trị hoặc loại text -->
+                <!-- Input text chỉ khi thuộc tính được cấu hình kiểu text -->
                 <input
                   v-else
                   v-model="thuocTinhValues[attr.tenTruong]"
@@ -961,23 +1043,17 @@ const save = async () => {
         <div v-if="!(mode === 'edit')">
           <div
             class="text-uppercase fw-bold mb-2"
-            style="
-              font-size: 0.65rem;
-              letter-spacing: 0.1em;
-              color: var(--accent-fg);
-            "
+            style="font-size: 0.65rem; letter-spacing: 0.1em; color: var(--accent-fg)"
           >
             {{ t("admin.productModal.sectionSerial") }}
           </div>
           <div
             class="rounded-3 p-3"
-            style="
-              background: var(--bg-input);
-              border: 1px solid var(--border-color);
-            "
+            style="background: var(--bg-input); border: 1px solid var(--border-color)"
           >
-            <label class="form-label small text-secondary mb-1">{{ t("admin.productModal.serialLabel") }}
-              <span class="text-danger">*</span></label>
+            <label class="form-label small text-secondary mb-1"
+              >{{ t("admin.productModal.serialLabel") }} <span class="text-danger">*</span></label
+            >
             <input
               v-model="soSerialMoi"
               class="form-control form-control-sm"
@@ -1001,22 +1077,15 @@ const save = async () => {
         class="d-flex justify-content-end gap-2 px-4 py-3"
         style="border-top: 1px solid var(--border-color)"
       >
-        <button
-          class="btn btn-sm btn-outline-secondary px-3"
-          @click="close()"
-        >
+        <button class="btn btn-sm btn-outline-secondary px-3" @click="close()">
           {{ t("admin.productModal.cancel") }}
         </button>
         <button
           class="btn btn-sm btn-warning text-dark fw-bold px-4"
-          :disabled="saving"
+          :disabled="saving || !isFormHopLe"
           @click="save"
         >
-          {{
-            (mode === 'edit')
-              ? t("admin.productModal.update")
-              : t("admin.productModal.addNew")
-          }}
+          {{ mode === "edit" ? t("admin.productModal.update") : t("admin.productModal.addNew") }}
         </button>
       </div>
     </div>

@@ -1,5 +1,17 @@
 package com.example.backend.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.backend.entity.ChiTietDonHang;
 import com.example.backend.entity.ChiTietSanPham;
 import com.example.backend.entity.ChiTietTraHang;
@@ -19,19 +31,6 @@ import com.example.backend.request.DongTraRequest;
 import com.example.backend.request.PhieuTraHangRequest;
 import com.example.backend.request.YeuCauTraHangRequest;
 import com.example.backend.response.PhieuTraHangResponse;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Service
 public class PhieuTraHangService {
@@ -52,6 +51,10 @@ public class PhieuTraHangService {
     private TaiKhoanRepository taiKhoanRepository;
     @Autowired
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
+    @Autowired
+    private ChiTietDonHangService chiTietDonHangService;
+    @Autowired
+    private com.example.backend.repository.LichSuTonKhoRepository lichSuTonKhoRepository;
 
     private String ensureMaPhieu(PhieuTraHang phieu) {
         if (phieu.getMaPhieu() != null && !phieu.getMaPhieu().isBlank()) {
@@ -92,8 +95,8 @@ public class PhieuTraHangService {
             entity.setNhanVien(nhanVienRepository.getReferenceById(request.getNhanVienId()));
         PhieuTraHang saved = phieuTraHangRepository.save(entity);
         ensureMaPhieuForSaved(saved);
-        congViNeuVuaHoanTat(null, saved);
-        truHoiDiemNeuVuaHoanTat(null, saved);
+        // Lưu ý: KHÔNG gọi congViNeuVuaHoanTat / truHoiDiemNeuVuaHoanTat ở đây.
+        // Tiền chỉ được hoàn về ví và điểm chỉ bị trừ khi phiếu được DUYỆT (cập nhật sang da_xu_ly) qua update().
         capNhatKhoNeuVuaHoanTat(null, saved);
         capNhatDonHangNeuVuaHoanTat(null, saved);
         return saved;
@@ -158,7 +161,9 @@ public class PhieuTraHangService {
         if (phieu.getSoTienHoan() == null || phieu.getSoTienHoan().signum() <= 0) return;
 
         KhachHang khachHang = phieu.getDonHang().getKhachHang();
-        khachHang.setSoDuVi(khachHang.getSoDuVi().add(phieu.getSoTienHoan()));
+        if (khachHang == null) return;
+        BigDecimal soDuHienTai = khachHang.getSoDuVi() != null ? khachHang.getSoDuVi() : BigDecimal.ZERO;
+        khachHang.setSoDuVi(soDuHienTai.add(phieu.getSoTienHoan()));
         khachHangRepository.save(khachHang);
     }
 
@@ -168,6 +173,7 @@ public class PhieuTraHangService {
         if (phieu.getSoTienHoan() == null || phieu.getSoTienHoan().signum() <= 0) return;
 
         KhachHang khachHang = phieu.getDonHang().getKhachHang();
+        if (khachHang == null) return;
         int diemTru = phieu.getSoTienHoan()
                 .divide(BigDecimal.valueOf(10000), 0, java.math.RoundingMode.FLOOR)
                 .intValue();
@@ -199,10 +205,62 @@ public class PhieuTraHangService {
 
         List<ChiTietTraHang> dongTraHang = chiTietTraHangRepository.findByPhieuTraHang_PhieuTraId(phieu.getPhieuTraId());
         for (ChiTietTraHang dong : dongTraHang) {
-            ChiTietSanPham serial = dong.getChiTietSanPham();
-            if (serial == null || laHangLoi(dong.getTinhTrang())) continue;
-            serial.setTrangThai("trong_kho");
-            chiTietSanPhamRepository.save(serial);
+            hoanKhoChoDongTra(phieu, dong);
+        }
+    }
+
+    @Transactional
+    public void hoanKhoChoDongTra(PhieuTraHang phieu, ChiTietTraHang dong) {
+        if (phieu == null || dong == null) return;
+        int soLuongHoan = dong.getSoLuong() != null && dong.getSoLuong() > 0 ? dong.getSoLuong() : 1;
+        List<ChiTietSanPham> serialsToRestore = new ArrayList<>();
+        java.util.Set<Integer> seenIds = new java.util.HashSet<>();
+
+        if (dong.getChiTietSanPham() != null && seenIds.add(dong.getChiTietSanPham().getChiTietId())) {
+            serialsToRestore.add(dong.getChiTietSanPham());
+        }
+
+        if (serialsToRestore.size() < soLuongHoan && phieu.getDonHang() != null && dong.getBienThe() != null) {
+            Integer bienTheId = dong.getBienThe().getBienTheId();
+            List<ChiTietDonHang> orderLines = chiTietDonHangRepository.findEntityByDonHangId(phieu.getDonHang().getId());
+            for (ChiTietDonHang line : orderLines) {
+                if (line.getBienThe() != null && bienTheId.equals(line.getBienThe().getBienTheId())) {
+                    List<ChiTietSanPham> lineSerials = chiTietDonHangService.ensureAndGetSerialsForOrderLine(line);
+                    for (ChiTietSanPham s : lineSerials) {
+                        if (serialsToRestore.size() >= soLuongHoan) break;
+                        if (seenIds.add(s.getChiTietId())) {
+                            serialsToRestore.add(s);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (dong.getChiTietSanPham() == null && !serialsToRestore.isEmpty()) {
+            dong.setChiTietSanPham(serialsToRestore.get(0));
+            chiTietTraHangRepository.save(dong);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        for (ChiTietSanPham serial : serialsToRestore) {
+            if (!"trong_kho".equals(serial.getTrangThai())) {
+                serial.setTrangThai("trong_kho");
+                serial.setLockedBy(null);
+                serial.setLockedAt(null);
+                serial.setLockSession(null);
+                chiTietSanPhamRepository.save(serial);
+
+                com.example.backend.entity.LichSuTonKho lichSu = new com.example.backend.entity.LichSuTonKho();
+                lichSu.setBienThe(dong.getBienThe());
+                lichSu.setChiTietSanPham(serial);
+                lichSu.setLoaiBienDong("tra_hang");
+                lichSu.setSoLuongThayDoi(1);
+                lichSu.setDonHang(phieu.getDonHang());
+                lichSu.setNhanVien(phieu.getNhanVien());
+                lichSu.setNgayTao(now);
+                lichSu.setGhiChu("Hoàn kho từ phiếu trả hàng " + ensureMaPhieu(phieu));
+                lichSuTonKhoRepository.save(lichSu);
+            }
         }
     }
 

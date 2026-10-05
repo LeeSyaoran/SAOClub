@@ -579,6 +579,20 @@ BEGIN
 END
 GO
 
+-- Bảng liên kết khuyến mãi - khách hàng (áp dụng khuyến mãi cho khách hàng cụ thể)
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'khuyen_mai_khach_hang')
+BEGIN
+    CREATE TABLE khuyen_mai_khach_hang (
+        khuyen_mai_khach_hang_id INT  IDENTITY(1,1) PRIMARY KEY,
+        khuyen_mai_id            INT  NOT NULL,
+        khach_hang_id            INT  NOT NULL,
+        CONSTRAINT FK_kmkh_khuyen_mai FOREIGN KEY (khuyen_mai_id) REFERENCES khuyen_mai(khuyen_mai_id) ON DELETE CASCADE,
+        CONSTRAINT FK_kmkh_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(khach_hang_id) ON DELETE CASCADE,
+        CONSTRAINT UQ_kmkh_km_kh      UNIQUE (khuyen_mai_id, khach_hang_id)
+    );
+END
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'dia_chi_giao_hang')
 BEGIN
     CREATE TABLE dia_chi_giao_hang (
@@ -678,12 +692,34 @@ BEGIN
         ma_van_don           VARCHAR(50)   NULL,
         phuong_thuc_thanh_toan NVARCHAR(30) NULL,
         idempotency_key      VARCHAR(64)   NULL,
+        yeu_cau_huy          BIT           NOT NULL DEFAULT 0,
+        ly_do_huy            NVARCHAR(500) NULL,
+        ngay_yeu_cau_huy     DATETIME      NULL,
 
         CONSTRAINT FK_dh_khach_hang        FOREIGN KEY (khach_hang_id)        REFERENCES khach_hang(khach_hang_id),
         CONSTRAINT FK_dh_nhan_vien         FOREIGN KEY (nhan_vien_id)         REFERENCES nhan_vien(nhan_vien_id),
         CONSTRAINT FK_dh_khuyen_mai        FOREIGN KEY (khuyen_mai_id)        REFERENCES khuyen_mai(khuyen_mai_id),
         CONSTRAINT FK_dh_dia_chi_giao_hang FOREIGN KEY (dia_chi_giao_hang_id) REFERENCES dia_chi_giao_hang(dia_chi_id)
     );
+END
+GO
+
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+GO
+IF COL_LENGTH('don_hang', 'yeu_cau_huy') IS NULL
+BEGIN
+    ALTER TABLE don_hang ADD yeu_cau_huy BIT NOT NULL DEFAULT 0;
+END
+GO
+IF COL_LENGTH('don_hang', 'ly_do_huy') IS NULL
+BEGIN
+    ALTER TABLE don_hang ADD ly_do_huy NVARCHAR(500) NULL;
+END
+GO
+IF COL_LENGTH('don_hang', 'ngay_yeu_cau_huy') IS NULL
+BEGIN
+    ALTER TABLE don_hang ADD ngay_yeu_cau_huy DATETIME NULL;
 END
 GO
 
@@ -908,8 +944,8 @@ BEGIN
         ngay_tra_khach    DATETIME       NULL,
         mo_ta_loi         NVARCHAR(500)  NULL,
         ket_qua_xu_ly     NVARCHAR(500)  NULL,
-        trang_thai        NVARCHAR(30)   NOT NULL DEFAULT N'con_bao_hanh'
-            CONSTRAINT CK_pbh_trangthai CHECK (trang_thai IN (N'con_bao_hanh', N'dang_xu_ly', N'da_xu_ly', N'het_bao_hanh', N'tu_choi')),
+        trang_thai        NVARCHAR(30)   NOT NULL DEFAULT N'cho_xu_ly'
+            CONSTRAINT CK_pbh_trangthai CHECK (trang_thai IN (N'cho_xu_ly', N'con_bao_hanh', N'dang_xu_ly', N'da_xu_ly', N'het_bao_hanh', N'tu_choi', N'huy')),
         da_xoa            BIT            NOT NULL DEFAULT 0,
         chi_phi_phat_sinh DECIMAL(18,0)  NOT NULL DEFAULT 0 CONSTRAINT CK_pbh_chiphi CHECK (chi_phi_phat_sinh >= 0),
         ghi_chu           NVARCHAR(500)  NULL,
@@ -942,6 +978,17 @@ GO
 IF COL_LENGTH('phieu_bao_hanh', 'ly_do_tu_choi') IS NULL
 BEGIN
     ALTER TABLE phieu_bao_hanh ADD ly_do_tu_choi NVARCHAR(500) NULL;
+END
+GO
+
+IF EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_pbh_trangthai'
+      AND definition NOT LIKE '%cho_xu_ly%'
+)
+BEGIN
+    ALTER TABLE phieu_bao_hanh DROP CONSTRAINT CK_pbh_trangthai;
+    ALTER TABLE phieu_bao_hanh ADD CONSTRAINT CK_pbh_trangthai CHECK (trang_thai IN (N'cho_xu_ly', N'con_bao_hanh', N'dang_xu_ly', N'da_xu_ly', N'het_bao_hanh', N'tu_choi', N'huy'));
 END
 GO
 
@@ -1177,6 +1224,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_khuyen_mai_ma')
     CREATE INDEX IX_khuyen_mai_ma ON khuyen_mai(ma_khuyen_mai, trang_thai);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_sppl_phan_loai')
     CREATE INDEX IX_sppl_phan_loai ON san_pham_phan_loai(phan_loai_id);  -- filter nhanh theo phân loại
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_kmkh_km_kh')
+    CREATE INDEX IX_kmkh_km_kh ON khuyen_mai_khach_hang(khuyen_mai_id, khach_hang_id);
 GO
 
 -- ============================================================
@@ -1608,6 +1657,11 @@ GO
     INSERT INTO khuyen_mai_san_pham (khuyen_mai_id, san_pham_id) VALUES
     (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),  -- SUMMER24 áp dụng cho tất cả laptop mẫu
     (3, 1), (3, 2), (3, 3);                   -- LAPTOP20 áp dụng cho sản phẩm 1, 2, 3
+
+    -- Dữ liệu mẫu liên kết khuyến mãi - khách hàng (khuyen_mai_khach_hang)
+    -- VIP500 áp dụng cho khách hàng VIP 1, 2
+    INSERT INTO khuyen_mai_khach_hang (khuyen_mai_id, khach_hang_id) VALUES
+    (4, 1), (4, 2);
 GO
 
     -- Dữ liệu mẫu phiếu nhập kho
@@ -2531,31 +2585,7 @@ LEFT JOIN (
 ) tinh_lai ON tk.bien_the_id = tinh_lai.bien_the_id;
 GO
 
--- Tạo serial mẫu cho linh kiện rời (CPU, RAM, GPU, ổ cứng)
-;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
-INSERT INTO chi_tiet_cpu (cpu_id, so_serial, trang_thai)
-SELECT ((n - 1) % 7) + 1, N'CPU-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
-FROM Seq;
-GO
-
-;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
-INSERT INTO chi_tiet_ram (ram_id, so_serial, trang_thai)
-SELECT ((n - 1) % 5) + 1, N'RAM-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
-FROM Seq;
-GO
-
-;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
-INSERT INTO chi_tiet_gpu (gpu_id, so_serial, trang_thai)
-SELECT ((n - 1) % 5) + 1, N'GPU-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
-FROM Seq;
-GO
-
-;WITH Seq(n) AS (SELECT n FROM (VALUES(1),(2),(3),(4),(5),(6),(7),(8),(9),(10)) v(n))
-INSERT INTO chi_tiet_o_cung (o_cung_id, so_serial, trang_thai)
-SELECT ((n - 1) % 4) + 1, N'OCUNG-' + RIGHT('0' + CAST(n AS VARCHAR(2)), 2), N'trong_kho'
-FROM Seq;
-GO
-
+-- Linh kiện rời (CPU, RAM, GPU, ổ cứng) hiện coi như trường thuộc tính danh mục, không tạo serial mẫu.
 -- ============================================================
 --  CÀI ĐẶT HỆ THỐNG (singleton — luôn đúng 1 dòng, cai_dat_id = 1)
 -- ============================================================

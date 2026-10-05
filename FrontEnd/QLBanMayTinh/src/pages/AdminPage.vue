@@ -4,23 +4,29 @@ import { AuthStore } from "../stores/index.js";
 import { useRoute } from "vue-router";
 import { t, I18nStore, LOCALES, setLocale } from "../i18n/index.js";
 import { orderStatusLabel, orderStatusColor, orderStatusIcon } from "../utils/orderStatus.js";
-import * as NhanVienService  from "../services/NhanVienService.js";
-import * as DonHangService   from "../services/DonHangService.js";
+import * as NhanVienService from "../services/NhanVienService.js";
+import * as DonHangService from "../services/DonHangService.js";
 import * as KhuyenMaiService from "../services/KhuyenMaiService.js";
 import * as VongQuayService from "../services/VongQuayService.js";
-import * as DmService              from "../services/DmService.js";
-import * as DashboardService       from "../services/DashboardService.js";
+import * as DmService from "../services/DmService.js";
+import * as DashboardService from "../services/DashboardService.js";
 import DonutChart from "../components/common/DonutChart.vue";
 import RevenueBarChart from "../components/common/RevenueBarChart.vue";
 import * as CaiDatService from "../services/CaiDatService.js";
 import { SettingsStore } from "../stores/settings.js";
-import BarChart   from "../components/common/BarChart.vue";
+import BarChart from "../components/common/BarChart.vue";
 import TrendChart from "../components/common/TrendChart.vue";
 import ConfirmDialog from "../components/common/ConfirmDialog.vue";
 import { askConfirm } from "../stores/confirm.js";
 import { ThemeStore, toggleTheme } from "../stores/theme.js";
 import { authHeaders } from "../services/api.js";
-import { formatPrice, formatDate, formatDateTime, statusLabel, toLocalDT } from "../utils/adminFormat.js";
+import {
+  formatPrice,
+  formatDate,
+  formatDateTime,
+  statusLabel,
+  toLocalDT,
+} from "../utils/adminFormat.js";
 import { showToast } from "../stores/toast.js";
 import ToastHost from "../components/common/ToastHost.vue";
 import CustomersTable from "../components/admin/CustomersTable.vue";
@@ -33,7 +39,7 @@ import SupplierManager from "../components/admin/SupplierManager.vue";
 import InventoryHistoryPanel from "../components/admin/InventoryHistoryPanel.vue";
 import ReturnsPanel from "../components/admin/ReturnsPanel.vue";
 import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
-import DanhGiaPanel from "../components/admin/DanhGiaPanel.vue";
+
 import SerialManager from "../components/admin/SerialManager.vue";
 import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
 import UserProfileMenu from "../components/admin/UserProfileMenu.vue";
@@ -49,8 +55,18 @@ import HangHoa from "../components/HangHoa.vue";
 import BienTheTable from "../components/admin/BienTheTable.vue";
 import ThuocTinhPanel from "../components/admin/ThuocTinhPanel.vue";
 import { ProductsStore, ensureProducts, refreshProducts } from "../stores/products.js";
-import { OrdersStore, ensureOrders, refreshOrders, connectOrderEvents, disconnectOrderEvents } from "../stores/orders.js";
-import { connectSerialEvents, disconnectSerialEvents } from "../stores/serialEvents.js";
+import {
+  OrdersStore,
+  ensureOrders,
+  refreshOrders,
+  connectOrderEvents,
+  disconnectOrderEvents,
+} from "../stores/orders.js";
+import {
+  connectSerialEvents,
+  disconnectSerialEvents,
+  bumpSerialEvent,
+} from "../stores/serialEvents.js";
 import { CustomersStore, ensureCustomers, refreshCustomers } from "../stores/customers.js";
 import { InventoryStore, ensureInventory, refreshInventory } from "../stores/inventory.js";
 import { StaffStore, ensureStaff, refreshStaff } from "../stores/staff.js";
@@ -59,16 +75,43 @@ import { DoiThuongStore, ensureDoiThuong, refreshDoiThuong } from "../stores/doi
 import { refreshReturns } from "../stores/returns.js";
 import * as DmDoiThuongService from "../services/DmDoiThuongService.js";
 import {
-  BarChart3, Laptop, Receipt, Users, User, Package, Undo2, Star, Tag, Gift,
-  Briefcase, ShoppingCart, TrendingUp, Settings, X, Menu, Moon, Sun, Bell,
-  Shield, Hash, Truck, ScrollText, Cpu, MemoryStick, Monitor, HardDrive, Layers,
-  MessageCircle, Brain, SlidersHorizontal,
-} from '@lucide/vue';
+  BarChart3,
+  Laptop,
+  Receipt,
+  Users,
+  User,
+  Package,
+  Undo2,
+  Star,
+  Tag,
+  Gift,
+  Briefcase,
+  ShoppingCart,
+  TrendingUp,
+  Settings,
+  X,
+  Menu,
+  Moon,
+  Sun,
+  Bell,
+  Shield,
+  Hash,
+  Truck,
+  ScrollText,
+  Cpu,
+  MemoryStick,
+  Monitor,
+  HardDrive,
+  Layers,
+  MessageCircle,
+  Brain,
+  SlidersHorizontal,
+} from "@lucide/vue";
 
 defineOptions({
   inheritAttrs: false,
 });
-defineEmits(['addToCart', 'buyAgainUnavailable', 'goHome', 'toast', 'logout']);
+defineEmits(["addToCart", "buyAgainUnavailable", "goHome", "toast", "logout"]);
 
 // ── Chat ref cho notification badge ─────────────────────────────────────────
 const chatPanelRef = ref(null);
@@ -82,7 +125,9 @@ const savedPage = sessionStorage.getItem(ADMIN_PAGE_STORAGE_KEY);
 const currentPage = ref(
   route.params.id
     ? "san-pham-detail"
-    : (savedPage && !NON_RESTORABLE_PAGES.has(savedPage) ? savedPage : "dashboard"),
+    : savedPage && !NON_RESTORABLE_PAGES.has(savedPage)
+      ? savedPage
+      : "dashboard",
 );
 watch(currentPage, (page) => {
   if (page && !NON_RESTORABLE_PAGES.has(page)) sessionStorage.setItem(ADMIN_PAGE_STORAGE_KEY, page);
@@ -113,7 +158,10 @@ const handleViewOrder = (order) => {
 const navigate = (page) => {
   currentPage.value = page;
   if (window.matchMedia("(max-width: 767.98px)").matches) sidebarOpen.value = false; // chọn xong tự đóng lại trên mobile
-  if (page === "staff") { ensureChucVuList(); ensureStaff(); }
+  if (page === "staff") {
+    ensureChucVuList();
+    ensureStaff();
+  }
   // Làm mới dữ liệu trả hàng khi chuyển tab
   if (page === "tra-hang") refreshReturns();
   if (page === "inventory" || page === "bien-the") {
@@ -123,27 +171,95 @@ const navigate = (page) => {
 };
 // Biểu tượng tương ứng với từng trang quản trị
 const PAGE_META = {
-  dashboard: { titleKey: "admin.pageMeta.dashboard.title", subKey: "admin.pageMeta.dashboard.sub", icon: BarChart3 },
-  products: { titleKey: "admin.pageMeta.products.title", subKey: "admin.pageMeta.products.sub", icon: Laptop },
-  "bien-the": { titleKey: "admin.pageMeta.bienThe.title", subKey: "admin.pageMeta.bienThe.sub", icon: Layers },
-  "thuoc-tinh": { titleKey: "admin.pageMeta.thuocTinh.title", subKey: "admin.pageMeta.thuocTinh.sub", icon: SlidersHorizontal },
-  orders: { titleKey: "admin.pageMeta.orders.title", subKey: "admin.pageMeta.orders.sub", icon: Receipt },
-  customers: { titleKey: "admin.pageMeta.customers.title", subKey: "admin.pageMeta.customers.sub", icon: Users },
-  "customer-detail": { titleKey: "admin.pageMeta.customerDetail.title", subKey: "admin.pageMeta.customerDetail.sub", icon: User },
-  inventory: { titleKey: "admin.pageMeta.inventory.title", subKey: "admin.pageMeta.inventory.sub", icon: Package },
-  "tra-hang": { titleKey: "admin.pageMeta.traHang.title", subKey: "admin.pageMeta.traHang.sub", icon: Undo2 },
-  reviews: { titleKey: "admin.pageMeta.reviews.title", subKey: "admin.pageMeta.reviews.sub", icon: Star },
-  promotions: { titleKey: "admin.pageMeta.promotions.title", subKey: "admin.pageMeta.promotions.sub", icon: Tag },
-  "doi-thuong": { titleKey: "admin.pageMeta.doiThuong.title", subKey: "admin.pageMeta.doiThuong.sub", icon: Gift },
-  staff: { titleKey: "admin.pageMeta.staff.title", subKey: "admin.pageMeta.staff.sub", icon: Briefcase },
-  "ban-hang": { titleKey: "admin.pageMeta.banHang.title", subKey: "admin.pageMeta.banHang.sub", icon: ShoppingCart },
-  reports: { titleKey: "admin.pageMeta.reports.title", subKey: "admin.pageMeta.reports.sub", icon: TrendingUp },
-  settings: { titleKey: "admin.pageMeta.settings.title", subKey: "admin.pageMeta.settings.sub", icon: Settings },
-  chat: { titleKey: "admin.pageMeta.chat.title", subKey: "admin.pageMeta.chat.sub", icon: MessageCircle },
-  "ai-kien-thuc": { titleKey: "admin.pageMeta.aiKienThuc.title", subKey: "admin.pageMeta.aiKienThuc.sub", icon: Brain },
+  dashboard: {
+    titleKey: "admin.pageMeta.dashboard.title",
+    subKey: "admin.pageMeta.dashboard.sub",
+    icon: BarChart3,
+  },
+  products: {
+    titleKey: "admin.pageMeta.products.title",
+    subKey: "admin.pageMeta.products.sub",
+    icon: Laptop,
+  },
+  "bien-the": {
+    titleKey: "admin.pageMeta.bienThe.title",
+    subKey: "admin.pageMeta.bienThe.sub",
+    icon: Layers,
+  },
+  "thuoc-tinh": {
+    titleKey: "admin.pageMeta.thuocTinh.title",
+    subKey: "admin.pageMeta.thuocTinh.sub",
+    icon: SlidersHorizontal,
+  },
+  orders: {
+    titleKey: "admin.pageMeta.orders.title",
+    subKey: "admin.pageMeta.orders.sub",
+    icon: Receipt,
+  },
+  customers: {
+    titleKey: "admin.pageMeta.customers.title",
+    subKey: "admin.pageMeta.customers.sub",
+    icon: Users,
+  },
+  "customer-detail": {
+    titleKey: "admin.pageMeta.customerDetail.title",
+    subKey: "admin.pageMeta.customerDetail.sub",
+    icon: User,
+  },
+  inventory: {
+    titleKey: "admin.pageMeta.inventory.title",
+    subKey: "admin.pageMeta.inventory.sub",
+    icon: Package,
+  },
+  "tra-hang": {
+    titleKey: "admin.pageMeta.traHang.title",
+    subKey: "admin.pageMeta.traHang.sub",
+    icon: Undo2,
+  },
+
+  promotions: {
+    titleKey: "admin.pageMeta.promotions.title",
+    subKey: "admin.pageMeta.promotions.sub",
+    icon: Tag,
+  },
+  "doi-thuong": {
+    titleKey: "admin.pageMeta.doiThuong.title",
+    subKey: "admin.pageMeta.doiThuong.sub",
+    icon: Gift,
+  },
+  staff: {
+    titleKey: "admin.pageMeta.staff.title",
+    subKey: "admin.pageMeta.staff.sub",
+    icon: Briefcase,
+  },
+  "ban-hang": {
+    titleKey: "admin.pageMeta.banHang.title",
+    subKey: "admin.pageMeta.banHang.sub",
+    icon: ShoppingCart,
+  },
+  reports: {
+    titleKey: "admin.pageMeta.reports.title",
+    subKey: "admin.pageMeta.reports.sub",
+    icon: TrendingUp,
+  },
+  settings: {
+    titleKey: "admin.pageMeta.settings.title",
+    subKey: "admin.pageMeta.settings.sub",
+    icon: Settings,
+  },
+  chat: {
+    titleKey: "admin.pageMeta.chat.title",
+    subKey: "admin.pageMeta.chat.sub",
+    icon: MessageCircle,
+  },
+  "ai-kien-thuc": {
+    titleKey: "admin.pageMeta.aiKienThuc.title",
+    subKey: "admin.pageMeta.aiKienThuc.sub",
+    icon: Brain,
+  },
 };
-const topbarTitle = computed(
-  () => t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.dashboard.title"),
+const topbarTitle = computed(() =>
+  t(PAGE_META[currentPage.value]?.titleKey ?? "admin.pageMeta.dashboard.title"),
 );
 const topbarSub = computed(() => t(PAGE_META[currentPage.value]?.subKey ?? ""));
 const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? BarChart3);
@@ -183,8 +299,7 @@ const rewards = computed(() => DoiThuongStore?.items ?? []);
 const inventory = computed(() => InventoryStore?.items ?? []);
 const chucVuList = ref([]);
 
-const chucVuName = (id) =>
-  chucVuList.value.find((c) => c.id === id)?.tenChucVu ?? "—";
+const chucVuName = (id) => chucVuList.value.find((c) => c.id === id)?.tenChucVu ?? "—";
 
 // Đếm số sản phẩm phân biệt
 const totalProducts = computed(() => groupedProducts.value.length);
@@ -219,8 +334,9 @@ const revenueThisYear = computed(() => {
 const revenueThisMonthDelta = computed(() => {
   const now = new Date();
   const cutoffDay = now.getDate();
-  const prevMonth = now.getMonth() - 1, prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  const prevMonthDayCount = new Date(prevYear, (prevMonth + 12) % 12 + 1, 0).getDate();
+  const prevMonth = now.getMonth() - 1,
+    prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const prevMonthDayCount = new Date(prevYear, ((prevMonth + 12) % 12) + 1, 0).getDate();
   const prevCutoffDay = Math.min(cutoffDay, prevMonthDayCount);
 
   const prevMtd = orders.value.reduce((s, o) => {
@@ -245,7 +361,9 @@ const ordersByStatus = computed(() => {
 
 // Thống kê đơn hàng theo ngày đã chọn
 const toDateInputValue = (d) => {
-  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  const y = d.getFullYear(),
+    m = String(d.getMonth() + 1).padStart(2, "0"),
+    day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
 const statusChartDate = ref(toDateInputValue(new Date()));
@@ -269,7 +387,7 @@ const orderStatusChartData = computed(() =>
     label: orderStatusLabel(row.status),
     value: row.count,
     color: orderStatusColor(row.status).text,
-  }))
+  })),
 );
 
 // Thống kê đơn hàng theo tuần (donut)
@@ -286,13 +404,22 @@ const endOfWeek = (d) => {
 };
 // Khoảng ngày trong tuần đã chọn
 const weekChartAnchor = ref(toDateInputValue(new Date()));
-const weekChartFrom = computed(() => toDateInputValue(startOfWeek(new Date(weekChartAnchor.value))));
-const weekChartTo   = computed(() => toDateInputValue(endOfWeek(new Date(weekChartAnchor.value))));
-const isWeekChartCurrentWeek = computed(() => weekChartAnchor.value === toDateInputValue(new Date()));
-const resetToCurrentWeek = () => { weekChartAnchor.value = toDateInputValue(new Date()); };
+const weekChartFrom = computed(() =>
+  toDateInputValue(startOfWeek(new Date(weekChartAnchor.value))),
+);
+const weekChartTo = computed(() => toDateInputValue(endOfWeek(new Date(weekChartAnchor.value))));
+const isWeekChartCurrentWeek = computed(
+  () => weekChartAnchor.value === toDateInputValue(new Date()),
+);
+const resetToCurrentWeek = () => {
+  weekChartAnchor.value = toDateInputValue(new Date());
+};
 // Nhãn hiển thị khoảng ngày trong tuần
 const weekChartRangeLabel = computed(() => {
-  const fmt = (s) => { const [, m, d] = s.split('-'); return `${d}/${m}`; };
+  const fmt = (s) => {
+    const [, m, d] = s.split("-");
+    return `${d}/${m}`;
+  };
   return `${fmt(weekChartFrom.value)} → ${fmt(weekChartTo.value)}`;
 });
 const ordersInWeekRange = computed(() => {
@@ -315,34 +442,39 @@ const weekOrderStatusChartData = computed(() =>
     label: orderStatusLabel(row.status),
     value: row.count,
     color: orderStatusColor(row.status).text,
-  }))
+  })),
 );
 
 // Bộ lọc thời gian cho báo cáo
-const reportsDateRange = ref('week'); // 'today' | 'week' | 'month' | 'custom'
+const reportsDateRange = ref("week"); // 'today' | 'week' | 'month' | 'custom'
 const reportsCustomFrom = ref(toDateInputValue(new Date()));
-const reportsCustomTo   = ref(toDateInputValue(new Date()));
+const reportsCustomTo = ref(toDateInputValue(new Date()));
 
 const reportsDateFrom = computed(() => {
   const now = new Date();
-  if (reportsDateRange.value === 'today') return toDateInputValue(now);
-  if (reportsDateRange.value === 'week') return toDateInputValue(startOfWeek(now));
-  if (reportsDateRange.value === 'month') return toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1));
+  if (reportsDateRange.value === "today") return toDateInputValue(now);
+  if (reportsDateRange.value === "week") return toDateInputValue(startOfWeek(now));
+  if (reportsDateRange.value === "month")
+    return toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1));
   return reportsCustomFrom.value;
 });
 const reportsDateTo = computed(() => {
   const now = new Date();
-  if (reportsDateRange.value === 'today') return toDateInputValue(now);
-  if (reportsDateRange.value === 'week') return toDateInputValue(endOfWeek(now));
-  if (reportsDateRange.value === 'month') return toDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  if (reportsDateRange.value === "today") return toDateInputValue(now);
+  if (reportsDateRange.value === "week") return toDateInputValue(endOfWeek(now));
+  if (reportsDateRange.value === "month")
+    return toDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0));
   return reportsCustomTo.value;
 });
 
 // Top sản phẩm bán chạy trong khoảng đã chọn — tải lại mỗi khi khoảng đổi.
 const reportsTopSelling = ref([]); // [{ tenSanPham, soLuongDaBan }]
 const loadReportsTopSelling = async () => {
-  reportsTopSelling.value = await DashboardService
-    .getTopSelling(5, reportsDateFrom.value, reportsDateTo.value)
+  reportsTopSelling.value = await DashboardService.getTopSelling(
+    5,
+    reportsDateFrom.value,
+    reportsDateTo.value,
+  )
     .then((r) => r ?? [])
     .catch(() => []);
 };
@@ -351,8 +483,7 @@ watch([reportsDateFrom, reportsDateTo], loadReportsTopSelling, { immediate: true
 // Thống kê doanh thu theo ngày đã chọn
 const reportsRevenueByDay = ref([]); // [{ ngay, doanhThu }], liên tục từng ngày trong khoảng
 const loadReportsRevenueByDay = async () => {
-  const raw = await DashboardService
-    .getRevenueByDay(reportsDateFrom.value, reportsDateTo.value)
+  const raw = await DashboardService.getRevenueByDay(reportsDateFrom.value, reportsDateTo.value)
     .then((r) => r ?? [])
     .catch(() => []);
   const byDay = Object.fromEntries(raw.map((r) => [r.ngay, Number(r.doanhThu) || 0]));
@@ -369,13 +500,13 @@ const loadReportsRevenueByDay = async () => {
 watch([reportsDateFrom, reportsDateTo], loadReportsRevenueByDay, { immediate: true });
 
 // Gom nhóm doanh thu theo ngày, tháng hoặc năm
-const reportsGroupBy = ref('day'); // 'day' | 'month' | 'year'
+const reportsGroupBy = ref("day"); // 'day' | 'month' | 'year'
 const reportsRevenueByMonth = computed(() => {
   const map = {};
   orders.value.forEach((o) => {
     if (!o.ngayDat) return;
     const d = new Date(o.ngayDat);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
     map[key] = (map[key] || 0) + (Number(o.thanhTien) || 0);
   });
   return Object.entries(map)
@@ -394,16 +525,19 @@ const reportsRevenueByYear = computed(() => {
     .map(([ngay, doanhThu]) => ({ ngay, doanhThu }));
 });
 const reportsRevenueChartData = computed(() => {
-  if (reportsGroupBy.value === 'month') return reportsRevenueByMonth.value;
-  if (reportsGroupBy.value === 'year') return reportsRevenueByYear.value;
+  if (reportsGroupBy.value === "month") return reportsRevenueByMonth.value;
+  if (reportsGroupBy.value === "year") return reportsRevenueByYear.value;
   return reportsRevenueByDay.value;
 });
 
 // Khách hàng nổi bật (top chi tiêu + tỷ lệ mua lại) trong khoảng đã chọn.
 const reportsCustomerReport = ref({ topKhach: [], tyLeMuaLai: 0, tongSoKhach: 0 });
 const loadReportsCustomerReport = async () => {
-  reportsCustomerReport.value = await DashboardService
-    .getCustomerReport(reportsDateFrom.value, reportsDateTo.value, 5)
+  reportsCustomerReport.value = await DashboardService.getCustomerReport(
+    reportsDateFrom.value,
+    reportsDateTo.value,
+    5,
+  )
     .then((r) => r ?? { topKhach: [], tyLeMuaLai: 0, tongSoKhach: 0 })
     .catch(() => ({ topKhach: [], tyLeMuaLai: 0, tongSoKhach: 0 }));
 };
@@ -413,7 +547,7 @@ const reportsRepeatRateText = computed(() => {
   const c = reportsCustomerReport.value;
   const repeat = Math.round(c.tyLeMuaLai * c.tongSoKhach);
   const pct = Math.round(c.tyLeMuaLai * 100);
-  return t('admin.reports.repeatRateLabel', { repeat, total: c.tongSoKhach, pct });
+  return t("admin.reports.repeatRateLabel", { repeat, total: c.tongSoKhach, pct });
 });
 
 // Thống kê trạng thái đơn hàng trong kỳ báo cáo
@@ -426,7 +560,8 @@ const reportsOrdersByStatus = computed(() => {
     map[o.trangThaiDonHang] = (map[o.trangThaiDonHang] || 0) + 1;
   });
   return Object.entries(map).map(([status, count]) => ({
-    status, count,
+    status,
+    count,
     label: orderStatusLabel(status),
     color: orderStatusColor(status),
   }));
@@ -437,41 +572,58 @@ const topSellingRaw = ref([]); // [{ tenSanPham, soLuongDaBan }]
 const slowSellingRaw = ref([]);
 const fetchProductSales = async () => {
   [topSellingRaw.value, slowSellingRaw.value] = await Promise.all([
-    DashboardService.getTopSelling(5).then((r) => r ?? []).catch(() => []),
-    DashboardService.getSlowSelling(5).then((r) => r ?? []).catch(() => []),
+    DashboardService.getTopSelling(5)
+      .then((r) => r ?? [])
+      .catch(() => []),
+    DashboardService.getSlowSelling(5)
+      .then((r) => r ?? [])
+      .catch(() => []),
   ]);
 };
 
-const imageByProductName = computed(() => new Map(products.value.map((p) => [p.tenSanPham, p.hinhAnhChinh])));
+const imageByProductName = computed(
+  () => new Map(products.value.map((p) => [p.tenSanPham, p.hinhAnhChinh])),
+);
 
 const topSellingChart = computed(() =>
   topSellingRaw.value.map((r) => ({
-    label: r.tenSanPham, value: r.soLuongDaBan, image: imageByProductName.value.get(r.tenSanPham) || '',
-    displayValue: t('admin.dashboard.unitsSold', { count: r.soLuongDaBan }), color: '#22c55e',
-  }))
+    label: r.tenSanPham,
+    value: r.soLuongDaBan,
+    image: imageByProductName.value.get(r.tenSanPham) || "",
+    displayValue: t("admin.dashboard.unitsSold", { count: r.soLuongDaBan }),
+    color: "#22c55e",
+  })),
 );
 
 const slowSellingChart = computed(() =>
   slowSellingRaw.value.map((r) => ({
-    label: r.tenSanPham, value: r.soLuongDaBan, image: imageByProductName.value.get(r.tenSanPham) || '',
-    displayValue: t('admin.dashboard.unitsSold', { count: r.soLuongDaBan }), color: '#f87171',
-  }))
+    label: r.tenSanPham,
+    value: r.soLuongDaBan,
+    image: imageByProductName.value.get(r.tenSanPham) || "",
+    displayValue: t("admin.dashboard.unitsSold", { count: r.soLuongDaBan }),
+    color: "#f87171",
+  })),
 );
 
 // Các chỉ số hiệu suất KPI vận hành
 const orderCompletionRate = computed(() => {
   if (!orders.value.length) return 0;
-  return (orders.value.filter((o) => o.trangThaiDonHang === 'delivered').length / orders.value.length) * 100;
+  return (
+    (orders.value.filter((o) => o.trangThaiDonHang === "delivered").length / orders.value.length) *
+    100
+  );
 });
 const paymentRate = computed(() => {
   if (!orders.value.length) return 0;
-  return (orders.value.filter((o) => o.trangThaiThanhToan === 'paid').length / orders.value.length) * 100;
+  return (
+    (orders.value.filter((o) => o.trangThaiThanhToan === "paid").length / orders.value.length) * 100
+  );
 });
 const stockHealthRate = computed(() => {
   if (!inventory.value.length) return 0;
   const unhealthyIds = new Set([
-    ...lowStockItems.value.map(t => t.tonKhoId),
-    ...outOfStockItems.value.map(t => t.tonKhoId),
+    ...lowStockItems.value.map((t) => t.tonKhoId),
+    ...outOfStockItems.value.map((t) => t.tonKhoId),
   ]);
   return Math.max(0, ((inventory.value.length - unhealthyIds.size) / inventory.value.length) * 100);
 });
@@ -480,14 +632,14 @@ const activeProductRatio = computed(() => {
   const total = groupedProducts.value.length;
   if (!total) return 0;
   const active = new Set(
-    products.value.filter(p => p.trangThai === 'active').map(p => p.sanPhamId)
+    products.value.filter((p) => p.trangThai === "active").map((p) => p.sanPhamId),
   ).size;
   return (active / total) * 100;
 });
 
 // Doanh thu từng ngày trong tuần hiện tại
 const weeklyRevenueChart = computed(() => {
-  const dayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  const dayLabels = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
   const sums = new Array(7).fill(0);
   ordersInWeekRange.value.forEach((o) => {
     if (!o.ngayDat) return;
@@ -512,14 +664,14 @@ const monthlyOrderHeat = computed(() => {
 
 // Tỷ lệ vận hành cho biểu đồ Radar
 const kpiRadarData = computed(() => [
-  { axis: t('admin.dashboard.gaugeCompletion'), value: orderCompletionRate.value },
-  { axis: t('admin.dashboard.gaugePayment'), value: paymentRate.value },
-  { axis: t('admin.dashboard.gaugeStock'), value: stockHealthRate.value },
-  { axis: t('admin.dashboard.activeProducts'), value: activeProductRatio.value },
+  { axis: t("admin.dashboard.gaugeCompletion"), value: orderCompletionRate.value },
+  { axis: t("admin.dashboard.gaugePayment"), value: paymentRate.value },
+  { axis: t("admin.dashboard.gaugeStock"), value: stockHealthRate.value },
+  { axis: t("admin.dashboard.activeProducts"), value: activeProductRatio.value },
 ]);
 
 // Thống kê nhân viên theo chức vụ
-const ROLE_COLORS = ['#7c3aed', '#f43f5e', '#22c55e', '#facc15', '#0e7490'];
+const ROLE_COLORS = ["#7c3aed", "#f43f5e", "#22c55e", "#facc15", "#0e7490"];
 const staffByRole = computed(() => {
   const map = {};
   staff.value.forEach((s) => {
@@ -527,7 +679,9 @@ const staffByRole = computed(() => {
     map[name] = (map[name] || 0) + 1;
   });
   return Object.entries(map).map(([label, value], i) => ({
-    label, value, color: ROLE_COLORS[i % ROLE_COLORS.length],
+    label,
+    value,
+    color: ROLE_COLORS[i % ROLE_COLORS.length],
   }));
 });
 
@@ -537,13 +691,13 @@ const revenueTrendChart = computed(() => {
   orders.value.forEach((o) => {
     if (!o.ngayDat) return;
     const d = new Date(o.ngayDat);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     map[key] = (map[key] || 0) + (Number(o.thanhTien) || 0);
   });
   return Object.entries(map)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => {
-      const [y, m] = key.split('-');
+      const [y, m] = key.split("-");
       return { label: `${m}/${y}`, value };
     });
 });
@@ -553,31 +707,30 @@ const activeProducts = computed(
 );
 const activePromos = computed(() => {
   const now = new Date();
-  return promotions.value.filter(
-    (p) => p.trangThai === "active" && new Date(p.ngayKetThuc) > now,
-  ).length;
+  return promotions.value.filter((p) => p.trangThai === "active" && new Date(p.ngayKetThuc) > now)
+    .length;
 });
 const lowStockItems = computed(() =>
   inventory.value.filter(
     (t) => t.soLuongTon != null && t.tonKhoToiThieu != null && t.soLuongTon <= t.tonKhoToiThieu,
   ),
 );
-const outOfStockItems = computed(() =>
-  inventory.value.filter(t => (t.soLuongTon ?? 0) === 0),
-);
+const outOfStockItems = computed(() => inventory.value.filter((t) => (t.soLuongTon ?? 0) === 0));
 // Pending warranty claims count for sidebar badge
-
 
 // Tab quản lý kho hàng và bảo hành
 const INVENTORY_TAB_STORAGE_KEY = "admin.lastInventoryTab";
-const inventoryMainTab = ref(sessionStorage.getItem(INVENTORY_TAB_STORAGE_KEY) || 'kho');
-watch(inventoryMainTab, (tab) => sessionStorage.setItem(INVENTORY_TAB_STORAGE_KEY, tab));
+const inventoryMainTab = ref(sessionStorage.getItem(INVENTORY_TAB_STORAGE_KEY) || "kho");
+watch(inventoryMainTab, (tab) => {
+  sessionStorage.setItem(INVENTORY_TAB_STORAGE_KEY, tab);
+  bumpSerialEvent();
+});
 
 const selectInventoryTab = (tab) => {
   inventoryMainTab.value = tab;
-  navigate('inventory');
+  navigate("inventory");
+  bumpSerialEvent();
 };
-
 
 // components/admin/InventoryPanel.vue (Task 7).
 
@@ -601,18 +754,25 @@ const fetchAll = async () => {
 let chucVuListPromise = null;
 const ensureChucVuList = () => {
   if (chucVuListPromise) return chucVuListPromise;
-  chucVuListPromise = DmService.getChucVu().catch(() => []).then((list) => {
-    chucVuList.value = list;
-  });
+  chucVuListPromise = DmService.getChucVu()
+    .catch(() => [])
+    .then((list) => {
+      chucVuList.value = list;
+    });
   return chucVuListPromise;
 };
 
 // ── Products: gộp theo sanPhamId cho bảng ─────────────────────────────────────
 const groupedProducts = computed(() => {
   const map = new Map();
-  products.value.forEach(p => {
+  products.value.forEach((p) => {
     if (!map.has(p.sanPhamId)) {
-      map.set(p.sanPhamId, { ...p, variantCount: 1, minPrice: Number(p.giaBan), maxPrice: Number(p.giaBan) });
+      map.set(p.sanPhamId, {
+        ...p,
+        variantCount: 1,
+        minPrice: Number(p.giaBan),
+        maxPrice: Number(p.giaBan),
+      });
     } else {
       const ex = map.get(p.sanPhamId);
       ex.variantCount++;
@@ -623,45 +783,36 @@ const groupedProducts = computed(() => {
   return [...map.values()];
 });
 
-
-
-
 // instance CustomerFormModal riêng của PosPanel.
 
 // ── Staff CRUD ────────────────────────────────────────────────────────────────
 
 // ── Promotions CRUD ───────────────────────────────────────────────────────────
 
-
 // ── Rewards (Đổi thưởng) CRUD ─────────────────────────────────────────────────
 
-
-
-
-
-
 // ── Cài đặt: đổi mật khẩu ──────────────────────────────────────────────────────
-const cdMatKhauCu = ref('');
-const cdMatKhauMoi = ref('');
-const cdMatKhauXacNhan = ref('');
-const cdMatKhauError = ref('');
-const cdMatKhauSuccess = ref('');
+const cdMatKhauCu = ref("");
+const cdMatKhauMoi = ref("");
+const cdMatKhauXacNhan = ref("");
+const cdMatKhauError = ref("");
+const cdMatKhauSuccess = ref("");
 const cdMatKhauLoading = ref(false);
 
 const doiMatKhauSubmit = async () => {
-  cdMatKhauError.value = '';
-  cdMatKhauSuccess.value = '';
+  cdMatKhauError.value = "";
+  cdMatKhauSuccess.value = "";
   if (cdMatKhauMoi.value !== cdMatKhauXacNhan.value) {
-    cdMatKhauError.value = t('admin.settings.passwordMismatch');
+    cdMatKhauError.value = t("admin.settings.passwordMismatch");
     return;
   }
   cdMatKhauLoading.value = true;
   try {
     await CaiDatService.doiMatKhau(cdMatKhauCu.value, cdMatKhauMoi.value);
-    cdMatKhauSuccess.value = t('admin.settings.passwordChanged');
-    cdMatKhauCu.value = '';
-    cdMatKhauMoi.value = '';
-    cdMatKhauXacNhan.value = '';
+    cdMatKhauSuccess.value = t("admin.settings.passwordChanged");
+    cdMatKhauCu.value = "";
+    cdMatKhauMoi.value = "";
+    cdMatKhauXacNhan.value = "";
   } catch (e) {
     cdMatKhauError.value = e.message || String(e);
   } finally {
@@ -671,24 +822,33 @@ const doiMatKhauSubmit = async () => {
 
 // ── Cài đặt: thông tin cửa hàng ─────────────────────────────────────────────────
 const cdForm = reactive({
-  tenCuaHang: '', diaChi: '', soDienThoai: '', email: '', maSoThue: '', logoUrl: '',
+  tenCuaHang: "",
+  diaChi: "",
+  soDienThoai: "",
+  email: "",
+  maSoThue: "",
+  logoUrl: "",
 });
-const cdLogoPreview = ref('');
+const cdLogoPreview = ref("");
 const cdLogoFilePending = ref(null);
 const cdStoreSaving = ref(false);
 const cdStoreSaved = ref(false);
-const cdStoreError = ref('');
+const cdStoreError = ref("");
 
-watch(() => SettingsStore.loaded, (loaded) => {
-  if (!loaded) return;
-  cdForm.tenCuaHang = SettingsStore.tenCuaHang;
-  cdForm.diaChi = SettingsStore.diaChi;
-  cdForm.soDienThoai = SettingsStore.soDienThoai;
-  cdForm.email = SettingsStore.email;
-  cdForm.maSoThue = SettingsStore.maSoThue;
-  cdForm.logoUrl = SettingsStore.logoUrl;
-  cdLogoPreview.value = SettingsStore.logoUrl || '';
-}, { immediate: true });
+watch(
+  () => SettingsStore.loaded,
+  (loaded) => {
+    if (!loaded) return;
+    cdForm.tenCuaHang = SettingsStore.tenCuaHang;
+    cdForm.diaChi = SettingsStore.diaChi;
+    cdForm.soDienThoai = SettingsStore.soDienThoai;
+    cdForm.email = SettingsStore.email;
+    cdForm.maSoThue = SettingsStore.maSoThue;
+    cdForm.logoUrl = SettingsStore.logoUrl;
+    cdLogoPreview.value = SettingsStore.logoUrl || "";
+  },
+  { immediate: true },
+);
 
 const handleLogoFile = (e) => {
   const file = e.target.files[0];
@@ -698,25 +858,34 @@ const handleLogoFile = (e) => {
 };
 
 const saveStoreInfo = async () => {
-  cdStoreError.value = '';
+  cdStoreError.value = "";
   cdStoreSaving.value = true;
   cdStoreSaved.value = false;
   try {
     if (cdLogoFilePending.value) {
       const fd = new FormData();
-      fd.append('file', cdLogoFilePending.value);
-      const upRes = await fetch('/api/upload/image', { method: 'POST', headers: authHeaders(), body: fd });
+      fd.append("file", cdLogoFilePending.value);
+      const upRes = await fetch("/api/upload/image", {
+        method: "POST",
+        headers: authHeaders(),
+        body: fd,
+      });
       if (upRes.ok) {
         const upData = await upRes.json();
         cdForm.logoUrl = upData.url;
       } else {
-        throw new Error('Upload ảnh thất bại: ' + upRes.status);
+        throw new Error("Upload ảnh thất bại: " + upRes.status);
       }
     }
     const updated = await CaiDatService.updateCaiDat({
-      tenCuaHang: cdForm.tenCuaHang, diaChi: cdForm.diaChi, soDienThoai: cdForm.soDienThoai,
-      email: cdForm.email, maSoThue: cdForm.maSoThue, logoUrl: cdForm.logoUrl,
-      ngonNguMacDinh: SettingsStore.ngonNguMacDinh, dinhDangSo: SettingsStore.dinhDangSo,
+      tenCuaHang: cdForm.tenCuaHang,
+      diaChi: cdForm.diaChi,
+      soDienThoai: cdForm.soDienThoai,
+      email: cdForm.email,
+      maSoThue: cdForm.maSoThue,
+      logoUrl: cdForm.logoUrl,
+      ngonNguMacDinh: SettingsStore.ngonNguMacDinh,
+      dinhDangSo: SettingsStore.dinhDangSo,
     });
     Object.assign(SettingsStore, updated);
     cdLogoFilePending.value = null;
@@ -730,14 +899,20 @@ const saveStoreInfo = async () => {
 
 // ── Cài đặt: ngưỡng cảnh báo tồn kho ─────────────────────────────────────────────
 const cdNguongTonKho = ref(5);
-watch(() => SettingsStore.loaded, (loaded) => {
-  if (loaded) cdNguongTonKho.value = SettingsStore.nguongTonKhoMacDinh;
-}, { immediate: true });
+watch(
+  () => SettingsStore.loaded,
+  (loaded) => {
+    if (loaded) cdNguongTonKho.value = SettingsStore.nguongTonKhoMacDinh;
+  },
+  { immediate: true },
+);
 const cdApplyingThreshold = ref(false);
 
 const apDungNguongTonKhoSubmit = async () => {
   const count = inventory.value.length;
-  const ok = await askConfirm(t('admin.settings.applyToAllConfirm', { nguong: cdNguongTonKho.value, count }));
+  const ok = await askConfirm(
+    t("admin.settings.applyToAllConfirm", { nguong: cdNguongTonKho.value, count }),
+  );
   if (!ok) return;
   cdApplyingThreshold.value = true;
   try {
@@ -745,10 +920,10 @@ const apDungNguongTonKhoSubmit = async () => {
     SettingsStore.nguongTonKhoMacDinh = cdNguongTonKho.value;
     // Cập nhật lại dữ liệu tồn kho
     await fetchAll();
-    
-    showToast(t('admin.settings.applyToAllDone', { count: res.soBienTheDaCapNhat }), 'success');
+
+    showToast(t("admin.settings.applyToAllDone", { count: res.soBienTheDaCapNhat }), "success");
   } catch (e) {
-    showToast(e.message || String(e), 'error');
+    showToast(e.message || String(e), "error");
   } finally {
     cdApplyingThreshold.value = false;
   }
@@ -758,14 +933,18 @@ const apDungNguongTonKhoSubmit = async () => {
 const saveAppearancePrefs = async () => {
   try {
     const updated = await CaiDatService.updateCaiDat({
-      tenCuaHang: SettingsStore.tenCuaHang, diaChi: SettingsStore.diaChi,
-      soDienThoai: SettingsStore.soDienThoai, email: SettingsStore.email,
-      maSoThue: SettingsStore.maSoThue, logoUrl: SettingsStore.logoUrl,
-      ngonNguMacDinh: SettingsStore.ngonNguMacDinh, dinhDangSo: SettingsStore.dinhDangSo,
+      tenCuaHang: SettingsStore.tenCuaHang,
+      diaChi: SettingsStore.diaChi,
+      soDienThoai: SettingsStore.soDienThoai,
+      email: SettingsStore.email,
+      maSoThue: SettingsStore.maSoThue,
+      logoUrl: SettingsStore.logoUrl,
+      ngonNguMacDinh: SettingsStore.ngonNguMacDinh,
+      dinhDangSo: SettingsStore.dinhDangSo,
     });
     Object.assign(SettingsStore, updated);
   } catch (e) {
-    showToast(e.message || String(e), 'error');
+    showToast(e.message || String(e), "error");
   }
 };
 
@@ -777,11 +956,13 @@ onMounted(async () => {
     await fetchProductSales();
     await loadWheelConfig();
   } catch (e) {
-    console.error('fetchAll/fetchProductSales lỗi khi vào trang:', e);
+    console.error("fetchAll/fetchProductSales lỗi khi vào trang:", e);
   }
 
   connectOrderEvents(AuthStore.user?.token, {
-    onNewOrder: () => { fetchProductSales(); },
+    onNewOrder: () => {
+      fetchProductSales();
+    },
   });
   connectSerialEvents(AuthStore.user?.token);
 });
@@ -794,11 +975,20 @@ onUnmounted(() => {
 
 <template>
   <!-- Layout chính: sidebar bên trái + main content bên phải -->
-  <div class="d-flex overflow-hidden" style="height:100vh; background:var(--bg-page-alt); color:var(--text-primary); font-family:'Nunito Sans',sans-serif;">
+  <div
+    class="d-flex overflow-hidden"
+    style="
+      height: 100vh;
+      background: var(--bg-page-alt);
+      color: var(--text-primary);
+      font-family: &quot;Nunito Sans&quot;, sans-serif;
+    "
+  >
     <!-- Lớp phủ mờ phía sau sidebar khi mở trên mobile — bấm ra ngoài để đóng -->
     <div
-      v-if="sidebarOpen" class="d-md-none position-fixed top-0 start-0 w-100 h-100"
-      style="background:rgba(0,0,0,0.5); z-index:1039;"
+      v-if="sidebarOpen"
+      class="d-md-none position-fixed top-0 start-0 w-100 h-100"
+      style="background: rgba(0, 0, 0, 0.5); z-index: 1039"
       @click="sidebarOpen = false"
     ></div>
 
@@ -806,165 +996,304 @@ onUnmounted(() => {
     <aside
       class="d-flex flex-column border-end flex-shrink-0 adm-sidebar"
       :class="{ 'adm-sidebar-open': sidebarOpen }"
-      style="background:var(--bg-card-inset); border-color:var(--border-color)!important; overflow-y:auto;"
+      style="
+        background: var(--bg-card-inset);
+        border-color: var(--border-color) !important;
+        overflow-y: auto;
+      "
     >
       <!-- Logo -->
       <div
         class="d-flex align-items-center gap-2 p-3 border-bottom adm-brand-row"
-        style="border-color:var(--border-color-soft)!important;"
+        style="border-color: var(--border-color-soft) !important"
       >
         <!-- Logo: ưu tiên ảnh từ store, fallback circle SAO -->
         <img
           v-if="SettingsStore.logoUrl"
           :src="SettingsStore.logoUrl"
           class="rounded-circle flex-shrink-0"
-          style="width:38px;height:38px;object-fit:contain;"
+          style="width: 38px; height: 38px; object-fit: contain"
         />
         <div
           v-else
           class="rounded-circle d-flex align-items-center justify-content-center fw-black flex-shrink-0"
-          style="width:38px;height:38px;background:var(--gradient-brand);color:var(--accent-text);font-size:0.8rem;"
+          style="
+            width: 38px;
+            height: 38px;
+            background: var(--gradient-brand);
+            color: var(--accent-text);
+            font-size: 0.8rem;
+          "
         >
           SAO
         </div>
         <div class="adm-brand-text">
-          <div class="fw-bold" style="font-size:0.95rem;">{{ SettingsStore.tenCuaHang || t('admin.brand.name') }}</div>
-          <div style="font-size:0.7rem;color:var(--text-muted);">{{ SettingsStore.diaChi || t('admin.brand.tagline') }}</div>
+          <div class="fw-bold" style="font-size: 0.95rem">
+            {{ SettingsStore.tenCuaHang || t("admin.brand.name") }}
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted)">
+            {{ SettingsStore.diaChi || t("admin.brand.tagline") }}
+          </div>
         </div>
       </div>
 
       <!-- Nav admin -->
       <nav class="flex-grow-1 d-flex flex-column px-2 pb-2">
-        <div class="adm-nav" :class="{active: currentPage==='dashboard'}" @click="navigate('dashboard')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zM3 11a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3z" /></svg>
-          {{ t('admin.sidebar.dashboard') }}
+        <div
+          class="adm-nav"
+          :class="{ active: currentPage === 'dashboard' }"
+          @click="navigate('dashboard')"
+        >
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zM3 11a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm7 0a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3z"
+            />
+          </svg>
+          {{ t("admin.sidebar.dashboard") }}
         </div>
 
-        <div class="adm-nav-label">{{ t('admin.sidebar.groupOrders') }}</div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='orders'}" @click="navigate('orders')">
-          <Receipt class="adm-icon" :size="15" /> {{ t('admin.sidebar.orders') }}
-          <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ todayOrdersCount }}</span>
+        <div class="adm-nav-label">{{ t("admin.sidebar.groupOrders") }}</div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'orders' }"
+          @click="navigate('orders')"
+        >
+          <Receipt class="adm-icon" :size="15" /> {{ t("admin.sidebar.orders") }}
+          <span class="badge bg-warning text-dark ms-auto" style="font-size: 0.68rem">{{
+            todayOrdersCount
+          }}</span>
         </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='ban-hang'}" @click="navigate('ban-hang')">
-          <ShoppingCart class="adm-icon" :size="15" /> {{ t('admin.sidebar.banHang') }}
-        </div>
-
-        <div class="adm-nav-label">{{ t('admin.sidebar.products') }}</div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='products'}" @click="navigate('products')">
-          <Laptop class="adm-icon" :size="15" /> {{ t('admin.productsTabs.sanPham') }}
-        </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='bien-the'}" @click="navigate('bien-the')">
-          <Layers class="adm-icon" :size="15" /> {{ t('admin.productsTabs.bienThe') }}
-        </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='thuoc-tinh'}" @click="navigate('thuoc-tinh')">
-          <SlidersHorizontal class="adm-icon" :size="15" /> {{ t('admin.productsTabs.thuocTinh') }}
-        </div>
-
-        <div class="adm-nav-label">{{ t('admin.sidebar.groupCustomers') }}</div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='customers' || currentPage==='customer-detail'}" @click="navigate('customers')">
-          <Users class="adm-icon" :size="15" /> {{ t('admin.sidebar.customers') }}
-          <span class="badge bg-warning text-dark ms-auto" style="font-size:0.68rem;">{{ totalCustomers }}</span>
-        </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='tra-hang'}" @click="navigate('tra-hang')">
-          <Undo2 class="adm-icon" :size="15" /> {{ t('admin.sidebar.traHang') }}
-        </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='reviews'}" @click="navigate('reviews')">
-          <Star class="adm-icon" :size="15" /> {{ t('admin.sidebar.reviews') }}
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'ban-hang' }"
+          @click="navigate('ban-hang')"
+        >
+          <ShoppingCart class="adm-icon" :size="15" /> {{ t("admin.sidebar.banHang") }}
         </div>
 
-        <div class="adm-nav-label">{{ t('admin.sidebar.inventory') }}</div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='kho'}" @click="selectInventoryTab('kho')">
-          <Package class="adm-icon" :size="15" /> {{ t('admin.inventory.tabStock') }} / {{ t('admin.inventory.tabReceipts') }}
-          <span v-if="lowStockItems.length" class="badge bg-danger ms-auto" style="font-size:0.68rem;">{{ lowStockItems.length }}</span>
+        <div class="adm-nav-label">{{ t("admin.sidebar.products") }}</div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'products' }"
+          @click="navigate('products')"
+        >
+          <Laptop class="adm-icon" :size="15" /> {{ t("admin.productsTabs.sanPham") }}
         </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='bao-hanh'}" @click="selectInventoryTab('bao-hanh')">
-          <Shield class="adm-icon" :size="15" /> {{ t('admin.inventory.tabWarranty') }}
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'bien-the' }"
+          @click="navigate('bien-the')"
+        >
+          <Layers class="adm-icon" :size="15" /> {{ t("admin.productsTabs.bienThe") }}
         </div>
-
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='serial'}" @click="selectInventoryTab('serial')">
-          <Hash class="adm-icon" :size="15" /> {{ t('admin.inventory.tabSerial') }}
-        </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='suppliers'}" @click="selectInventoryTab('suppliers')">
-          <Truck class="adm-icon" :size="15" /> {{ t('admin.sidebar.suppliers') }}
-        </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='inventory' && inventoryMainTab==='lich-su'}" @click="selectInventoryTab('lich-su')">
-          <ScrollText class="adm-icon" :size="15" /> {{ t('admin.sidebar.inventoryHistory') }}
-        </div>
-
-        <div class="adm-nav-label">{{ t('admin.sidebar.groupPromotions') }}</div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='promotions'}" @click="navigate('promotions')">
-          <Tag class="adm-icon" :size="15" /> {{ t('admin.sidebar.promotions') }}
-        </div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='doi-thuong'}" @click="navigate('doi-thuong')">
-          <Gift class="adm-icon" :size="15" /> {{ t('admin.sidebar.rewards') }}
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'thuoc-tinh' }"
+          @click="navigate('thuoc-tinh')"
+        >
+          <SlidersHorizontal class="adm-icon" :size="15" /> {{ t("admin.productsTabs.thuocTinh") }}
         </div>
 
-        <div class="adm-nav-label">{{ t('admin.sidebar.groupStaff') }}</div>
-        <div class="adm-nav adm-subnav" :class="{active: currentPage==='staff'}" @click="navigate('staff')">
-          <Briefcase class="adm-icon" :size="15" /> {{ t('admin.sidebar.staff') }}
+        <div class="adm-nav-label">{{ t("admin.sidebar.groupCustomers") }}</div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'customers' || currentPage === 'customer-detail' }"
+          @click="navigate('customers')"
+        >
+          <Users class="adm-icon" :size="15" /> {{ t("admin.sidebar.customers") }}
+          <span class="badge bg-warning text-dark ms-auto" style="font-size: 0.68rem">{{
+            totalCustomers
+          }}</span>
+        </div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'tra-hang' }"
+          @click="navigate('tra-hang')"
+        >
+          <Undo2 class="adm-icon" :size="15" /> {{ t("admin.sidebar.traHang") }}
         </div>
 
-        <div class="adm-nav-label">{{ t('admin.sidebar.groupAnalytics') }}</div>
-        <div class="adm-nav" :class="{active: currentPage==='reports'}" @click="navigate('reports')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
-          {{ t('admin.sidebar.reports') }}
+        <div class="adm-nav-label">{{ t("admin.sidebar.inventory") }}</div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'inventory' && inventoryMainTab === 'kho' }"
+          @click="selectInventoryTab('kho')"
+        >
+          <Package class="adm-icon" :size="15" /> {{ t("admin.inventory.tabStock") }} /
+          {{ t("admin.inventory.tabReceipts") }}
+          <span
+            v-if="lowStockItems.length"
+            class="badge bg-danger ms-auto"
+            style="font-size: 0.68rem"
+            >{{ lowStockItems.length }}</span
+          >
         </div>
-        <div class="adm-nav" :class="{active: currentPage==='settings'}" @click="navigate('settings')">
-          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
-          {{ t('admin.sidebar.settings') }}
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'inventory' && inventoryMainTab === 'bao-hanh' }"
+          @click="selectInventoryTab('bao-hanh')"
+        >
+          <Shield class="adm-icon" :size="15" /> {{ t("admin.inventory.tabWarranty") }}
         </div>
 
-        <div class="adm-nav" :class="{active: currentPage==='chat'}" @click="navigate('chat')">
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'inventory' && inventoryMainTab === 'serial' }"
+          @click="selectInventoryTab('serial')"
+        >
+          <Hash class="adm-icon" :size="15" /> {{ t("admin.inventory.tabSerial") }}
+        </div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'inventory' && inventoryMainTab === 'suppliers' }"
+          @click="selectInventoryTab('suppliers')"
+        >
+          <Truck class="adm-icon" :size="15" /> {{ t("admin.sidebar.suppliers") }}
+        </div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'inventory' && inventoryMainTab === 'lich-su' }"
+          @click="selectInventoryTab('lich-su')"
+        >
+          <ScrollText class="adm-icon" :size="15" /> {{ t("admin.sidebar.inventoryHistory") }}
+        </div>
+
+        <div class="adm-nav-label">{{ t("admin.sidebar.groupPromotions") }}</div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'promotions' }"
+          @click="navigate('promotions')"
+        >
+          <Tag class="adm-icon" :size="15" /> {{ t("admin.sidebar.promotions") }}
+        </div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'doi-thuong' }"
+          @click="navigate('doi-thuong')"
+        >
+          <Gift class="adm-icon" :size="15" /> {{ t("admin.sidebar.rewards") }}
+        </div>
+
+        <div class="adm-nav-label">{{ t("admin.sidebar.groupStaff") }}</div>
+        <div
+          class="adm-nav adm-subnav"
+          :class="{ active: currentPage === 'staff' }"
+          @click="navigate('staff')"
+        >
+          <Briefcase class="adm-icon" :size="15" /> {{ t("admin.sidebar.staff") }}
+        </div>
+
+        <div class="adm-nav-label">{{ t("admin.sidebar.groupAnalytics") }}</div>
+        <div
+          class="adm-nav"
+          :class="{ active: currentPage === 'reports' }"
+          @click="navigate('reports')"
+        >
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"
+            />
+          </svg>
+          {{ t("admin.sidebar.reports") }}
+        </div>
+        <div
+          class="adm-nav"
+          :class="{ active: currentPage === 'settings' }"
+          @click="navigate('settings')"
+        >
+          <svg class="adm-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          {{ t("admin.sidebar.settings") }}
+        </div>
+
+        <div class="adm-nav" :class="{ active: currentPage === 'chat' }" @click="navigate('chat')">
           <MessageCircle class="adm-icon" :size="15" />
           Hỗ trợ khách
-          <span
-            v-if="chatPanelRef?.unreadCount > 0"
-            class="adm-badge"
-          >{{ chatPanelRef.unreadCount > 9 ? '9+' : chatPanelRef.unreadCount }}</span>
+          <span v-if="chatPanelRef?.unreadCount > 0" class="adm-badge">{{
+            chatPanelRef.unreadCount > 9 ? "9+" : chatPanelRef.unreadCount
+          }}</span>
         </div>
 
-        <div class="adm-nav" :class="{active: currentPage==='ai-kien-thuc'}" @click="navigate('ai-kien-thuc')">
+        <div
+          class="adm-nav"
+          :class="{ active: currentPage === 'ai-kien-thuc' }"
+          @click="navigate('ai-kien-thuc')"
+        >
           <Brain class="adm-icon" :size="15" />
           Kiến thức AI
         </div>
       </nav>
-
-    </aside><!-- /sidebar -->
+    </aside>
+    <!-- /sidebar -->
 
     <!-- ══════════ MAIN CONTENT ══════════ -->
     <main class="flex-grow-1 d-flex flex-column overflow-hidden">
       <!-- Topbar: tieu de trang hien tai -->
       <div
         class="d-flex align-items-center justify-content-between p-3 border-bottom"
-        style="background:var(--bg-card-inset); border-color:var(--border-color)!important;"
+        style="background: var(--bg-card-inset); border-color: var(--border-color) !important"
       >
         <div class="d-flex align-items-center gap-2">
           <button
-            type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
-            style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1.1rem;"
-            :aria-label="t('admin.sidebar.toggleMenu')" :title="t('admin.sidebar.toggleMenu')"
+            type="button"
+            class="d-flex align-items-center justify-content-center rounded-2 border-0"
+            style="
+              width: 34px;
+              height: 34px;
+              background: var(--bg-hover);
+              color: var(--text-primary);
+              cursor: pointer;
+              font-size: 1.1rem;
+            "
+            :aria-label="t('admin.sidebar.toggleMenu')"
+            :title="t('admin.sidebar.toggleMenu')"
             @click="sidebarOpen = !sidebarOpen"
           >
             <component :is="sidebarOpen ? X : Menu" :size="20" />
           </button>
           <div>
-            <div class="fw-bold d-flex align-items-center gap-1" style="font-size:1.05rem;"><component :is="topbarIcon" :size="18" /> {{ topbarTitle }}</div>
-            <div style="font-size:0.78rem;color:var(--text-muted);">{{ topbarSub }}</div>
+            <div class="fw-bold d-flex align-items-center gap-1" style="font-size: 1.05rem">
+              <component :is="topbarIcon" :size="18" /> {{ topbarTitle }}
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-muted)">{{ topbarSub }}</div>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
           <button
-            type="button" class="d-flex align-items-center justify-content-center rounded-2 border-0"
-            style="width:34px;height:34px;background:var(--bg-hover);color:var(--text-primary);cursor:pointer;font-size:1rem;"
+            type="button"
+            class="d-flex align-items-center justify-content-center rounded-2 border-0"
+            style="
+              width: 34px;
+              height: 34px;
+              background: var(--bg-hover);
+              color: var(--text-primary);
+              cursor: pointer;
+              font-size: 1rem;
+            "
             :title="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
-            :aria-label="ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')"
+            :aria-label="
+              ThemeStore.mode === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')
+            "
             @click="toggleTheme"
           >
             <component :is="ThemeStore.mode === 'dark' ? Moon : Sun" :size="18" />
           </button>
           <div
             class="d-flex align-items-center justify-content-center rounded-2 position-relative"
-            style="width:34px;height:34px;background:var(--bg-hover);cursor:pointer;display:flex;align-items:center;justify-content:center;"
+            style="
+              width: 34px;
+              height: 34px;
+              background: var(--bg-hover);
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
             title="Hỗ trợ khách hàng"
             @click="navigate('chat')"
           >
@@ -972,8 +1301,18 @@ onUnmounted(() => {
             <span
               v-if="chatPanelRef?.unreadCount > 0"
               class="position-absolute rounded-circle d-flex align-items-center justify-content-center"
-              style="top:-4px;right:-4px;width:16px;height:16px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;"
-            >{{ chatPanelRef.unreadCount > 9 ? '9+' : chatPanelRef.unreadCount }}</span>
+              style="
+                top: -4px;
+                right: -4px;
+                width: 16px;
+                height: 16px;
+                background: #ef4444;
+                color: #fff;
+                font-size: 9px;
+                font-weight: 700;
+              "
+              >{{ chatPanelRef.unreadCount > 9 ? "9+" : chatPanelRef.unreadCount }}</span
+            >
           </div>
           <UserProfileMenu @navigate-settings="navigate('settings')" />
         </div>
@@ -1044,51 +1383,61 @@ onUnmounted(() => {
 
         <!-- ── Khach hang ── -->
         <section v-show="currentPage === 'customers'">
-          <CustomersTable
-            @view-detail="openCustomerDetail"
-            @view-order="handleViewOrder"
-          />
+          <CustomersTable @view-detail="openCustomerDetail" @view-order="handleViewOrder" />
         </section>
 
         <!-- ── Chi tiet khach hang ── -->
         <section v-show="currentPage === 'customer-detail'">
-          <CustomerDetailPage v-if="selectedCustomerId" :key="selectedCustomerId" :customer-id="selectedCustomerId" @back="() => { currentPage = 'customers'; selectedCustomerId = null; }" />
+          <CustomerDetailPage
+            v-if="selectedCustomerId"
+            :key="selectedCustomerId"
+            :customer-id="selectedCustomerId"
+            @back="
+              () => {
+                currentPage = 'customers';
+                selectedCustomerId = null;
+              }
+            "
+          />
         </section>
 
         <!-- ── Chi tiet san pham (mo qua tab moi, xem ProductsTable.vue openDetail) ── -->
         <section v-show="currentPage === 'san-pham-detail'">
-          <SanPhamDetailPage v-if="selectedSanPhamId" :key="selectedSanPhamId" :san-pham-id="selectedSanPhamId" />
+          <SanPhamDetailPage
+            v-if="selectedSanPhamId"
+            :key="selectedSanPhamId"
+            :san-pham-id="selectedSanPhamId"
+          />
         </section>
 
         <!-- ── Kho hang: dieu huong qua submenu sidebar (adm-subnav), khong con thanh tab ngang ── -->
         <section v-show="currentPage === 'inventory'">
-          <div v-show="inventoryMainTab==='kho'">
+          <div v-show="inventoryMainTab === 'kho'">
             <InventoryPanel />
           </div>
 
           <!-- ══ TAB: BAO HANH ══ -->
-          <div v-show="inventoryMainTab==='bao-hanh'">
+          <div v-show="inventoryMainTab === 'bao-hanh'">
             <WarrantyPanel />
           </div>
 
           <!-- ══ TAB: SERIAL ══ -->
-          <div v-show="inventoryMainTab==='serial'">
+          <div v-show="inventoryMainTab === 'serial'">
             <SerialManager />
           </div>
 
           <!-- Quản lý nhà cung cấp, lịch sử tồn kho, linh kiện -->
-          <div v-show="inventoryMainTab==='suppliers'">
+          <div v-show="inventoryMainTab === 'suppliers'">
             <SupplierManager />
           </div>
-          <div v-show="inventoryMainTab==='lich-su'">
+          <div v-show="inventoryMainTab === 'lich-su'">
             <InventoryHistoryPanel />
           </div>
         </section>
 
-        <section v-show="currentPage === 'tra-hang'"><ReturnsPanel :can-pick-staff="true" /></section>
-
-        <!-- ── Danh gia san pham (kiem duyet) ── -->
-        <section v-show="currentPage === 'reviews'"><DanhGiaPanel /></section>
+        <section v-show="currentPage === 'tra-hang'">
+          <ReturnsPanel :can-pick-staff="true" />
+        </section>
 
         <!-- ── Khuyen mai ── -->
         <section v-show="currentPage === 'promotions'">
@@ -1160,18 +1509,15 @@ onUnmounted(() => {
         </section>
 
         <!-- ── Chat ho tro ── -->
-        <AdminChatPanel
-          v-show="currentPage === 'chat'"
-          ref="chatPanelRef"
-        />
+        <AdminChatPanel v-show="currentPage === 'chat'" ref="chatPanelRef" />
 
         <!-- ── Kiến thức AI ── -->
-        <AiKienThucPanel
-          v-show="currentPage === 'ai-kien-thuc'"
-        />
-      </div><!-- /content -->
+        <AiKienThucPanel v-show="currentPage === 'ai-kien-thuc'" />
+      </div>
+      <!-- /content -->
     </main>
-  </div><!-- /dashboard-shell -->
+  </div>
+  <!-- /dashboard-shell -->
 
   <!-- Nhan Vien Modal has been moved to StaffTable.vue -->
 
@@ -1194,18 +1540,36 @@ onUnmounted(() => {
   cursor: pointer;
   font-size: 0.87rem;
   color: var(--text-primary);
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   user-select: none;
 }
-.adm-nav:hover { background: var(--bg-hover); color: var(--text-heading); }
-.adm-nav.active { background: rgba(244,63,94,0.12); color: var(--accent-fg); }
-.adm-nav.active .adm-icon { opacity: 1; }
+.adm-nav:hover {
+  background: var(--bg-hover);
+  color: var(--text-heading);
+}
+.adm-nav.active {
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--accent-fg);
+}
+.adm-nav.active .adm-icon {
+  opacity: 1;
+}
 
 /* Icon trong nav */
-.adm-icon { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.75; }
+.adm-icon {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
 
 /* Mục con trong sidebar */
-.adm-subnav { padding-left: 30px; font-size: 0.82rem; }
+.adm-subnav {
+  padding-left: 30px;
+  font-size: 0.82rem;
+}
 
 /* Tieu de phan nhom trong sidebar */
 .adm-nav-label {
@@ -1224,7 +1588,9 @@ onUnmounted(() => {
   overflow: hidden;
   transition: width 0.2s ease;
 }
-.adm-sidebar:not(.adm-sidebar-open) { width: 60px; }
+.adm-sidebar:not(.adm-sidebar-open) {
+  width: 60px;
+}
 
 /* Trạng thái rail thu gọn thanh bên trên desktop */
 .adm-sidebar:not(.adm-sidebar-open) .adm-nav {
@@ -1258,7 +1624,8 @@ onUnmounted(() => {
     transform: translateX(-100%);
     transition: transform 0.2s ease;
   }
-  .adm-sidebar.adm-sidebar-open { transform: translateX(0); }
+  .adm-sidebar.adm-sidebar-open {
+    transform: translateX(0);
+  }
 }
-
 </style>

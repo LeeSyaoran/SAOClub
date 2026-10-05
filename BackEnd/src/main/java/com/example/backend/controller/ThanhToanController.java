@@ -26,6 +26,7 @@ public class ThanhToanController {
         return thanhToanService.hienThiThanhToan();
     }
 
+    @PreAuthorize("@orderAccessGuard.canView(#donHangId)")
     @GetMapping("/don-hang/{donHangId}")
     public List<ThanhToanResponse> getByDonHang(@PathVariable Integer donHangId) {
         return thanhToanService.hienThiThanhToanTheoDonHang(donHangId);

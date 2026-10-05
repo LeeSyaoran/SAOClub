@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -17,13 +18,24 @@ import java.util.concurrent.TimeUnit;
 @Order(2)
 public class RateLimitingFilter extends OncePerRequestFilter {
 
+    private static final int MAX_REQUESTS_PER_WINDOW = 5;
+    private static final int CLEANUP_THRESHOLD = 1_000;
+
     private final ConcurrentHashMap<String, RateLimitEntry> attempts = new ConcurrentHashMap<>();
+
+    /**
+     * Chỉ bật khi backend đứng sau reverse proxy tin cậy (Nginx, Cloudflare...).
+     * Nếu bật khi không có proxy, kẻ tấn công có thể đổi X-Forwarded-For mỗi request để vượt giới hạn.
+     */
+    @Value("${security.rate-limit.trust-forwarded-header:false}")
+    private boolean trustForwardedHeader;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
         if (canBiGioiHan(request)) {
+            donDepNeuCan();
             String ip = getClientIP(request);
             RateLimitEntry entry = attempts.compute(ip, (key, val) -> {
                 if (val == null || val.isExpired()) {
@@ -33,14 +45,22 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                 return val;
             });
 
-            if (entry.getCount() > 5) {
+            if (entry.getCount() > MAX_REQUESTS_PER_WINDOW) {
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+                response.setContentType("text/plain;charset=UTF-8");
                 response.getWriter().write("Quá nhiều yêu cầu đăng nhập. Vui lòng thử lại sau 1 phút.");
                 return;
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    // Xóa các entry đã hết hạn khi map lớn — tránh rò rỉ bộ nhớ khi chạy lâu dài
+    private void donDepNeuCan() {
+        if (attempts.size() >= CLEANUP_THRESHOLD) {
+            attempts.entrySet().removeIf(e -> e.getValue().isExpired());
+        }
     }
 
     private boolean canBiGioiHan(HttpServletRequest request) {
@@ -51,8 +71,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String getClientIP(HttpServletRequest request) {
-        String xf = request.getHeader("X-Forwarded-For");
-        if (xf != null && !xf.isBlank()) return xf.split(",")[0].trim();
+        if (trustForwardedHeader) {
+            String xf = request.getHeader("X-Forwarded-For");
+            if (xf != null && !xf.isBlank()) return xf.split(",")[0].trim();
+        }
         return request.getRemoteAddr();
     }
 

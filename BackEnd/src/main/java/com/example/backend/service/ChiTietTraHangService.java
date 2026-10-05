@@ -30,14 +30,74 @@ public class ChiTietTraHangService {
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
     @Autowired
     private ChiTietDonHangRepository chiTietDonHangRepository;
+    @Autowired
+    private PhieuTraHangService phieuTraHangService;
+    @Autowired
+    private ChiTietDonHangService chiTietDonHangService;
 
+    @Transactional
     public List<ChiTietTraHangResponse> hienThiChiTietTraHang() {
-        return chiTietTraHangRepository.hienThiChiTietTraHang();
+        List<ChiTietTraHangResponse> list = chiTietTraHangRepository.hienThiChiTietTraHang();
+        boolean hasMissingOrMulti = list.stream()
+                .anyMatch(r -> r.getSoSerial() == null || (r.getSoLuong() != null && r.getSoLuong() > 1));
+        if (!hasMissingOrMulti) {
+            return list;
+        }
+        List<ChiTietTraHang> entities = chiTietTraHangRepository.findAll();
+        java.util.Map<Integer, ChiTietTraHang> entityMap = new java.util.HashMap<>();
+        for (ChiTietTraHang e : entities) {
+            entityMap.put(e.getId(), e);
+        }
+        for (ChiTietTraHangResponse r : list) {
+            if (r.getSoSerial() != null && (r.getSoLuong() == null || r.getSoLuong() <= 1)) {
+                continue;
+            }
+            ChiTietTraHang e = entityMap.get(r.getId());
+            if (e != null && e.getPhieuTraHang() != null && e.getPhieuTraHang().getDonHang() != null && e.getBienThe() != null) {
+                int count = e.getSoLuong() != null && e.getSoLuong() > 0 ? e.getSoLuong() : 1;
+                List<com.example.backend.entity.ChiTietSanPham> matchedSerials = new java.util.ArrayList<>();
+                for (com.example.backend.entity.ChiTietDonHang line : chiTietDonHangRepository.findEntityByDonHangId(e.getPhieuTraHang().getDonHang().getId())) {
+                    if (line.getBienThe() != null && e.getBienThe().getBienTheId().equals(line.getBienThe().getBienTheId())) {
+                        List<com.example.backend.entity.ChiTietSanPham> ls = chiTietDonHangService.ensureAndGetSerialsForOrderLine(line);
+                        for (com.example.backend.entity.ChiTietSanPham s : ls) {
+                            if (matchedSerials.size() < count) {
+                                matchedSerials.add(s);
+                            }
+                        }
+                    }
+                }
+                if (!matchedSerials.isEmpty()) {
+                    if (e.getChiTietSanPham() == null) {
+                        e.setChiTietSanPham(matchedSerials.get(0));
+                        chiTietTraHangRepository.save(e);
+                    }
+                    r.setChiTietId(matchedSerials.get(0).getChiTietId());
+                    r.setSoSerial(matchedSerials.stream()
+                            .map(com.example.backend.entity.ChiTietSanPham::getSoSerial)
+                            .filter(java.util.Objects::nonNull)
+                            .collect(java.util.stream.Collectors.joining(", ")));
+                }
+            }
+        }
+        return list;
     }
 
     public ChiTietTraHang getById(Integer id) {
         return chiTietTraHangRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Chi tiết trả hàng không tồn tại với id: " + id));
+    }
+
+    private com.example.backend.entity.ChiTietSanPham resolveSerialFromOrder(DonHang donHang, Integer bienTheId) {
+        if (donHang == null || bienTheId == null) return null;
+        for (com.example.backend.entity.ChiTietDonHang line : chiTietDonHangRepository.findEntityByDonHangId(donHang.getId())) {
+            if (line.getBienThe() != null && bienTheId.equals(line.getBienThe().getBienTheId())) {
+                List<com.example.backend.entity.ChiTietSanPham> serials = chiTietDonHangService.ensureAndGetSerialsForOrderLine(line);
+                if (!serials.isEmpty()) {
+                    return serials.get(0);
+                }
+            }
+        }
+        return null;
     }
 
     @Transactional
@@ -52,8 +112,14 @@ public class ChiTietTraHangService {
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
         if (request.getChiTietId() != null) {
             entity.setChiTietSanPham(chiTietSanPhamRepository.getReferenceById(request.getChiTietId()));
+        } else {
+            entity.setChiTietSanPham(resolveSerialFromOrder(phieu.getDonHang(), request.getBienTheId()));
         }
-        return chiTietTraHangRepository.save(entity);
+        ChiTietTraHang saved = chiTietTraHangRepository.save(entity);
+        if ("da_xu_ly".equals(phieu.getTrangThai())) {
+            phieuTraHangService.hoanKhoChoDongTra(phieu, saved);
+        }
+        return saved;
     }
 
     private void kiemTraSoLuongTraKhongVuotMua(DonHang donHang, Integer bienTheId, Integer excludeChiTietTraId, Integer soLuongMoi) {
@@ -88,9 +154,16 @@ public class ChiTietTraHangService {
         BeanUtils.copyProperties(request, entity, "id", "phieuTraId", "bienTheId", "chiTietId");
         entity.setPhieuTraHang(phieu);
         entity.setBienThe(bienTheSanPhamRepository.getReferenceById(request.getBienTheId()));
-        entity.setChiTietSanPham(request.getChiTietId() != null
-                ? chiTietSanPhamRepository.getReferenceById(request.getChiTietId()) : null);
-        return chiTietTraHangRepository.save(entity);
+        if (request.getChiTietId() != null) {
+            entity.setChiTietSanPham(chiTietSanPhamRepository.getReferenceById(request.getChiTietId()));
+        } else if (entity.getChiTietSanPham() == null) {
+            entity.setChiTietSanPham(resolveSerialFromOrder(phieu.getDonHang(), request.getBienTheId()));
+        }
+        ChiTietTraHang saved = chiTietTraHangRepository.save(entity);
+        if ("da_xu_ly".equals(phieu.getTrangThai())) {
+            phieuTraHangService.hoanKhoChoDongTra(phieu, saved);
+        }
+        return saved;
     }
 
     public void delete(Integer id) {

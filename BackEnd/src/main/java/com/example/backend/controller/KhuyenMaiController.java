@@ -71,4 +71,10 @@ public class KhuyenMaiController {
     public List<KhuyenMaiResponse.SanPhamSimpleResponse> getSanPhamApDung(@PathVariable Integer id) {
         return khuyenMaiService.getSanPhamApDung(id);
     }
+
+    // Lấy danh sách khách hàng được nhận voucher
+    @GetMapping("/{id}/khach-hang")
+    public List<KhuyenMaiResponse.KhachHangSimpleResponse> getKhachHangNhanVoucher(@PathVariable Integer id) {
+        return khuyenMaiService.getKhachHangNhanVoucher(id);
+    }
 }

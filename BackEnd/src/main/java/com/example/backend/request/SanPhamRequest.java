@@ -1,14 +1,19 @@
 package com.example.backend.request;
 
-import jakarta.validation.constraints.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -70,7 +75,8 @@ public class SanPhamRequest {
     private String heDieuHanh;
     private String pin;
 
-    @PositiveOrZero(message = "Trọng lượng phải lớn hơn hoặc bằng 0")
+    @PositiveOrZero(message = "Trọng lượng (kg) phải lớn hơn hoặc bằng 0")
+    @DecimalMax(value = "5.00", message = "Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)")
     private BigDecimal trongLuongKg;
 
     private String mauSac;

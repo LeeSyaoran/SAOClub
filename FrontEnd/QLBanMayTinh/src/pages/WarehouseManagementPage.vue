@@ -17,7 +17,6 @@ import WarrantyPanel from "../components/admin/WarrantyPanel.vue";
 import SerialManager from "../components/admin/SerialManager.vue";
 import DmCategoryTable from "../components/admin/DmCategoryTable.vue";
 import * as DmService from "../services/DmService.js";
-import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../services/ChiTietLinhKienService.js";
 import { refreshReturns } from "../stores/returns.js";
 import { refreshInventory } from "../stores/inventory.js";
 import { refreshProducts } from "../stores/products.js";
@@ -179,8 +178,6 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? Package)
             :label="t('admin.productsTabs.cpu')"
             :name-label="t('admin.productsTabs.cpu')"
             :header-icon="Cpu"
-            :serial-service="ChiTietCpuService"
-            serial-field-name="cpuId"
             :advanced-filter-config="{
               filters: [
                 { key: 'hang', label: 'Hãng' },
@@ -197,8 +194,6 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? Package)
             :label="t('admin.productsTabs.ram')"
             :name-label="t('admin.productsTabs.ram')"
             :header-icon="MemoryStick"
-            :serial-service="ChiTietRamService"
-            serial-field-name="ramId"
             :advanced-filter-config="{
               filters: [
                 { key: 'loai', label: 'Loại RAM' },
@@ -215,8 +210,6 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? Package)
             :label="t('admin.productsTabs.gpu')"
             :name-label="t('admin.productsTabs.gpu')"
             :header-icon="Monitor"
-            :serial-service="ChiTietGpuService"
-            serial-field-name="gpuId"
             :advanced-filter-config="{
               filters: [
                 { key: 'hang', label: 'Hãng' },
@@ -233,8 +226,6 @@ const topbarIcon = computed(() => PAGE_META[currentPage.value]?.icon ?? Package)
             :label="t('admin.productsTabs.oCung')"
             :name-label="t('admin.productsTabs.oCung')"
             :header-icon="HardDrive"
-            :serial-service="ChiTietOCungService"
-            serial-field-name="oCungId"
             :advanced-filter-config="{
               filters: [
                 { key: 'loai', label: 'Loại ổ cứng' },

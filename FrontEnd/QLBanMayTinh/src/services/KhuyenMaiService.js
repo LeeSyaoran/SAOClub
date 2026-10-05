@@ -12,3 +12,7 @@ export const kiemTra = (maKhuyenMai) =>
 // Lấy danh sách sản phẩm áp dụng cho một khuyến mãi
 export const getSanPhamApDung = (khuyenMaiId) =>
   get(`/api/khuyen-mai/${khuyenMaiId}/san-pham`);
+
+// Lấy danh sách khách hàng được nhận voucher
+export const getKhachHangNhanVoucher = (khuyenMaiId) =>
+  get(`/api/khuyen-mai/${khuyenMaiId}/khach-hang`);

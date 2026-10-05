@@ -1,13 +1,49 @@
 <script setup>
-import { ref, computed, reactive, watch, onMounted } from "vue";
+import { ref, computed, reactive, watch, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { t } from "../../i18n/index.js";
 import {
-  CheckCircle2, XCircle, Clock, Package, ClipboardList, BarChart3, AlertTriangle,
-  Ban, Search, Pencil, Printer, Download, Plus, Check, X, Trash2, Truck,
-  Building2, User, Calendar, FileText, FolderOpen, Filter, ChevronDown, ChevronUp, RefreshCw, ExternalLink, Cpu, MemoryStick, HardDrive, Palette,
-  Tag, Laptop, DollarSign, Coins, Lock, Activity, CalendarCheck, Hash, RotateCcw,
-} from '@lucide/vue';
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Package,
+  ClipboardList,
+  BarChart3,
+  AlertTriangle,
+  Ban,
+  Search,
+  Pencil,
+  Printer,
+  Download,
+  Plus,
+  Check,
+  X,
+  Trash2,
+  Truck,
+  Building2,
+  User,
+  Calendar,
+  FileText,
+  FolderOpen,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  ExternalLink,
+  Cpu,
+  MemoryStick,
+  HardDrive,
+  Palette,
+  Tag,
+  Laptop,
+  DollarSign,
+  Coins,
+  Lock,
+  Activity,
+  CalendarCheck,
+  Hash,
+  RotateCcw,
+} from "@lucide/vue";
 import { nowLocalIso } from "../../utils/datetime.js";
 import { formatPrice, formatDate, statusLabel, toLocalDT } from "../../utils/adminFormat.js";
 import { showToast } from "../../stores/toast.js";
@@ -24,7 +60,7 @@ import { ProductsStore, ensureProducts, refreshProducts } from "../../stores/pro
 import { SuppliersStore, ensureSuppliers } from "../../stores/suppliers.js";
 import { StaffStore, ensureStaff } from "../../stores/staff.js";
 import { AuthStore } from "../../stores/index.js";
-import { posCartCountsByBienThe, posCartChiTietIds, getPosCartItem } from "../../stores/posCart.js";
+import { posCartCountsByBienThe, posCartChiTietIds, getPosCartItem, posCartItems } from "../../stores/posCart.js";
 import { serialEvents } from "../../stores/serialEvents.js";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
@@ -38,33 +74,72 @@ const loadHeldOrders = async () => {
   } catch {}
 };
 
-const activeOrderSerialCountByBienThe = computed(() => {
+// Đếm số lượng serial đang giữ theo bienTheId:
+// 1. Serials trong đơn hàng đang tiến hành / đã lên đơn (online COD, QR, thanh tiến trình)
+// 2. Serials đang giữ trong giỏ hàng POS của nhân viên
+const activeHeldSerialCountByBienThe = computed(() => {
   const map = {};
+  const seenSerialIds = new Set();
+
+  // 1. Serials từ đơn hàng đang tiến hành trên hệ thống
   (heldOrdersList.value || []).forEach((item) => {
-    if (item.bienTheId != null) {
-      map[item.bienTheId] = (map[item.bienTheId] || 0) + 1;
+    if (item.bienTheId != null && item.trangThai !== "loi_bao_hanh") {
+      if (item.chiTietId) {
+        if (!seenSerialIds.has(item.chiTietId)) {
+          seenSerialIds.add(item.chiTietId);
+          map[item.bienTheId] = (map[item.bienTheId] || 0) + 1;
+        }
+      } else {
+        map[item.bienTheId] = (map[item.bienTheId] || 0) + 1;
+      }
     }
   });
+
+  // 2. Serials đang trong giỏ hàng POS (nếu chưa có trong seenSerialIds)
+  (posCartItems.value || []).forEach((item) => {
+    if (item.bienTheId != null && item.trangThai !== "loi_bao_hanh") {
+      if (item.chiTietId) {
+        if (!seenSerialIds.has(item.chiTietId)) {
+          seenSerialIds.add(item.chiTietId);
+          map[item.bienTheId] = (map[item.bienTheId] || 0) + 1;
+        }
+      } else {
+        map[item.bienTheId] = (map[item.bienTheId] || 0) + (item.soLuong ?? 1);
+      }
+    }
+  });
+
   return map;
 });
 
-// Tính tổng số lượng giữ cho biến thể: chỉ những serial có trạng thái đang lên đơn mới làm cột giữ ở tab kho hàng thay đổi, sản phẩm đang bảo hành không được tính
+// Tính tổng số lượng giữ cho biến thể:
+// Serial có trạng thái đã lên đơn trong đơn hàng hoặc đang giữ trong giỏ POS
 const getHeldQty = (item) => {
   if (!item?.bienTheId) return 0;
-  return posCartCountsByBienThe.value[item.bienTheId] || 0;
+  return activeHeldSerialCountByBienThe.value[item.bienTheId] || 0;
 };
 
-// Tải trước danh sách sản phẩm
+// Tải trước danh sách sản phẩm và định kỳ làm mới danh sách đơn giữ hàng
+let invAutoRefreshTimer = null;
 onMounted(() => {
   refreshInventory();
   ensureProducts();
   ensurePhieuNhapData();
   loadHeldOrders();
+  invAutoRefreshTimer = setInterval(() => {
+    loadHeldOrders();
+  }, 15000);
 });
-watch(() => serialEvents.count, () => {
-  loadHeldOrders();
-  refreshInventory();
+onBeforeUnmount(() => {
+  if (invAutoRefreshTimer) clearInterval(invAutoRefreshTimer);
 });
+watch(
+  () => serialEvents.count,
+  () => {
+    loadHeldOrders();
+    refreshInventory();
+  },
+);
 
 // Dịch đa ngôn ngữ
 const tt = (key, fallback) => {
@@ -79,36 +154,36 @@ const staff = computed(() => StaffStore.items ?? []);
 
 // ── Tab noi bo: Ton kho | Phieu nhap kho ──────────────────────────────────────
 const KHO_TAB_STORAGE_KEY = "admin.inventory.khoTab";
-const khoTab = ref(sessionStorage.getItem(KHO_TAB_STORAGE_KEY) || 'ton-kho'); // 'ton-kho' | 'phieu-nhap'
+const khoTab = ref(sessionStorage.getItem(KHO_TAB_STORAGE_KEY) || "ton-kho"); // 'ton-kho' | 'phieu-nhap'
 watch(khoTab, (val) => sessionStorage.setItem(KHO_TAB_STORAGE_KEY, val));
 
-const getVariantInfo = (item) => products.value.find(p => p.bienTheId === item.bienTheId);
+const getVariantInfo = (item) => products.value.find((p) => p.bienTheId === item.bienTheId);
 const maSanPhamCuaItem = (item) => {
   if (item.maSku) return item.maSku;
-  return item.bienTheId != null ? 'SP' + String(item.bienTheId).padStart(4, '0') : '—';
+  return item.bienTheId != null ? "SP" + String(item.bienTheId).padStart(4, "0") : "—";
 };
 
 // Cập nhật thông tin biến thể sản phẩm
 const buildBienTheUpdateBody = (bienThe, overrides = {}) => ({
   sanPhamId: bienThe?.sanPhamId,
-  maSku: bienThe?.maSku ?? '',
-  barcode: bienThe?.barcode ?? '',
+  maSku: bienThe?.maSku ?? "",
+  barcode: bienThe?.barcode ?? "",
   giaNhap: Number(bienThe?.giaNhap ?? 0),
   giaBan: Number(bienThe?.giaBan ?? 0),
   baoHanhThang: Number(bienThe?.baoHanhThang ?? 0),
-  hinhAnhBienThe: bienThe?.hinhAnhChinh ?? '',
-  trangThai: bienThe?.trangThai ?? '',
-  mauSac: bienThe?.mauSac ?? '',
+  hinhAnhBienThe: bienThe?.hinhAnhChinh ?? "",
+  trangThai: bienThe?.trangThai ?? "",
+  mauSac: bienThe?.mauSac ?? "",
   cpuId: bienThe?.cpuId ?? null,
   ramId: bienThe?.ramId ?? null,
   oCungId: bienThe?.oCungId ?? bienThe?.ocungId ?? null,
   ocungId: bienThe?.oCungId ?? bienThe?.ocungId ?? null,
   gpuId: bienThe?.gpuId ?? null,
-  kichThuocManHinh: bienThe?.kichThuocManHinh ?? '',
-  heDieuHanh: bienThe?.heDieuHanh ?? '',
-  pin: bienThe?.pin ?? '',
+  kichThuocManHinh: bienThe?.kichThuocManHinh ?? "",
+  heDieuHanh: bienThe?.heDieuHanh ?? "",
+  pin: bienThe?.pin ?? "",
   trongLuongKg: bienThe?.trongLuongKg != null ? Number(bienThe.trongLuongKg) : 0,
-  moTa: bienThe?.moTa ?? '',
+  moTa: bienThe?.moTa ?? "",
   ...overrides,
 });
 
@@ -119,10 +194,16 @@ const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
     const res = await BienTheSanPhamService.updateGiaNhap(bienTheId, Number(donGia));
     if (!res.ok) {
       const text = await res.text().catch(() => res.statusText);
-      showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho biến thể') + `: ${text}`);
+      showToast(
+        tt("admin.inventory.syncGiaNhapFailed", "Không tự cập nhật được giá nhập cho biến thể") +
+          `: ${text}`,
+      );
     }
   } catch (e) {
-    showToast(tt('admin.inventory.syncGiaNhapFailed', 'Không tự cập nhật được giá nhập cho biến thể') + `: ${e.message}`);
+    showToast(
+      tt("admin.inventory.syncGiaNhapFailed", "Không tự cập nhật được giá nhập cho biến thể") +
+        `: ${e.message}`,
+    );
   }
 };
 
@@ -130,7 +211,7 @@ const syncGiaNhapFromReceipt = async (bienTheId, donGia) => {
 const pendingBienTheIds = computed(() => {
   const ids = new Set();
   for (const pn of phieuNhapList.value) {
-    if (pn.trangThai !== 'cho_duyet') continue;
+    if (pn.trangThai !== "cho_duyet") continue;
     for (const ct of chiTietPhieuNhapList.value) {
       if (ct.phieuNhapId === pn.phieuNhapId && ct.bienTheId != null) {
         ids.add(ct.bienTheId);
@@ -157,127 +238,166 @@ const stockStatusOf = (item, v) => {
   const daTungCoHang = tongSerial > 0 || daBan > 0;
 
   // 1. Đang nằm trong phiếu nhập chờ duyệt hoặc chưa có giá hợp lệ -> Chờ nhập hàng
-  if (isPendingItem(v)) return 'pending';
+  if (isPendingItem(v)) return "pending";
 
   // 2. Nếu có hàng trong kho:
   if (ton > 0) {
-    if (item?.tonKhoToiThieu != null && ton <= item.tonKhoToiThieu) return 'low';
-    return 'ok';
+    if (item?.tonKhoToiThieu != null && ton <= item.tonKhoToiThieu) return "low";
+    return "ok";
   }
 
   // 3. Nếu số lượng tồn = 0:
   // Đã từng có serial / đã từng có giao dịch bán hết -> Hết hàng
   if (daTungCoHang) {
-    return 'out';
+    return "out";
   }
 
   // Mới thêm vào kho, chưa nhập serial nào -> Chờ nhập hàng
-  return 'pending';
+  return "pending";
 };
-const stockStatusLabel = (s) => ({
-  pending: tt('admin.inventory.filterPending', 'Chờ nhập hàng'),
-  out: t('admin.inventory.filterOut'),
-  low: t('admin.inventory.filterLow'),
-  ok: t('admin.inventory.filterOk'),
-}[s] || '—');
-const pendingItems = computed(() => inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === 'pending'));
+const stockStatusLabel = (s) =>
+  ({
+    pending: tt("admin.inventory.filterPending", "Chờ nhập hàng"),
+    out: t("admin.inventory.filterOut"),
+    low: t("admin.inventory.filterLow"),
+    ok: t("admin.inventory.filterOk"),
+  })[s] || "—";
+const pendingItems = computed(() =>
+  inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === "pending"),
+);
 const outOfStockItems = computed(() =>
-  inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === 'out'),
+  inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === "out"),
 );
 // "Sắp hết" (khác Hết hàng): còn hàng nhưng <= tối thiểu
 const lowStockOnlyItems = computed(() =>
-  inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === 'low'),
+  inventory.value.filter((item) => stockStatusOf(item, getVariantInfo(item)) === "low"),
 );
 const totalStockQty = computed(() => inventory.value.reduce((s, i) => s + (i.soLuongTon || 0), 0));
 
 // So sánh cấu hình để làm nổi bật sự khác biệt
-const getFirstVariantOfProduct = (v) => products.value.find(p => p.sanPhamId === v?.sanPhamId && p.bienTheId !== v?.bienTheId);
+const getFirstVariantOfProduct = (v) =>
+  products.value.find((p) => p.sanPhamId === v?.sanPhamId && p.bienTheId !== v?.bienTheId);
 // Diff highlight đã bỏ — mọi chip đều cùng tông hồng nhạt để đồng bộ UI.
 
 // Bảng tồn kho theo từng biến thể sản phẩm
-const inventorySearch = ref('');
+const inventorySearch = ref("");
 const isInvFilterOpen = ref(false);
-const invFilterStatus = ref(''); // '' | 'pending' | 'out' | 'low' | 'ok'
-const invFilterThuongHieu = ref('');
-const invFilterDanhMuc = ref('');
-const invTonMin = ref('');
-const invTonMax = ref('');
+const invFilterStatus = ref(""); // '' | 'pending' | 'out' | 'low' | 'ok'
+const invFilterThuongHieu = ref("");
+const invFilterDanhMuc = ref("");
+const invTonMin = ref("");
+const invTonMax = ref("");
 // Lọc danh sách theo trạng thái tồn kho
-const toggleInvQuickFilter = (status) => { invFilterStatus.value = invFilterStatus.value === status ? '' : status; };
+const toggleInvQuickFilter = (status) => {
+  invFilterStatus.value = invFilterStatus.value === status ? "" : status;
+};
 
 // Danh sách thương hiệu và danh mục phục vụ bộ lọc
 const invBrandOptions = computed(() => {
   const map = new Map();
-  products.value.forEach((p) => { if (p.thuongHieuId != null && !map.has(p.thuongHieuId)) map.set(p.thuongHieuId, p.tenThuongHieu ?? '—'); });
-  return [...map].map(([value, label]) => ({ value, label })).sort((a, b) => String(a.label).localeCompare(String(b.label), 'vi'));
+  products.value.forEach((p) => {
+    if (p.thuongHieuId != null && !map.has(p.thuongHieuId))
+      map.set(p.thuongHieuId, p.tenThuongHieu ?? "—");
+  });
+  return [...map]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => String(a.label).localeCompare(String(b.label), "vi"));
 });
 const invCategoryOptions = computed(() => {
   const map = new Map();
-  products.value.forEach((p) => { if (p.danhMucId != null && !map.has(p.danhMucId)) map.set(p.danhMucId, p.tenDanhMuc ?? '—'); });
-  return [...map].map(([value, label]) => ({ value, label })).sort((a, b) => String(a.label).localeCompare(String(b.label), 'vi'));
+  products.value.forEach((p) => {
+    if (p.danhMucId != null && !map.has(p.danhMucId)) map.set(p.danhMucId, p.tenDanhMuc ?? "—");
+  });
+  return [...map]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => String(a.label).localeCompare(String(b.label), "vi"));
 });
-const invActiveFilterCount = computed(() =>
-  [invFilterStatus.value, invFilterThuongHieu.value, invFilterDanhMuc.value,
-   invTonMin.value !== '' ? invTonMin.value : '', invTonMax.value !== '' ? invTonMax.value : '',
-  ].filter((v) => v !== '').length,
+const invActiveFilterCount = computed(
+  () =>
+    [
+      invFilterStatus.value,
+      invFilterThuongHieu.value,
+      invFilterDanhMuc.value,
+      invTonMin.value !== "" ? invTonMin.value : "",
+      invTonMax.value !== "" ? invTonMax.value : "",
+    ].filter((v) => v !== "").length,
 );
 const clearInvFilters = () => {
-  inventorySearch.value = '';
-  invFilterStatus.value = '';
-  invFilterThuongHieu.value = '';
-  invFilterDanhMuc.value = '';
-  invTonMin.value = '';
-  invTonMax.value = '';
+  inventorySearch.value = "";
+  invFilterStatus.value = "";
+  invFilterThuongHieu.value = "";
+  invFilterDanhMuc.value = "";
+  invTonMin.value = "";
+  invTonMax.value = "";
 };
 
 const flatInventory = computed(() => {
   const q = inventorySearch.value.trim().toLowerCase();
-  return inventory.value
-    .map((item) => {
-      const v = getVariantInfo(item);
-      return { item, v, status: stockStatusOf(item, v) };
-    })
-    .filter(({ item, v, status }) => {
-      if (q) {
-        const hay = [item.maSku, item.tenSanPham, v?.tenSanPham, maSanPhamCuaItem(item)]
-          .filter(Boolean).join(' ').toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      if (invFilterThuongHieu.value && String(v?.thuongHieuId ?? '') !== String(invFilterThuongHieu.value)) return false;
-      if (invFilterDanhMuc.value && String(v?.danhMucId ?? '') !== String(invFilterDanhMuc.value)) return false;
-      // Có chọn lọc rõ ràng (kể cả từ bấm ô thống kê) -> hiện ĐÚNG nhóm đó.
-      if (invFilterStatus.value) return status === invFilterStatus.value;
-      // khoảng số lượng tồn kho
-      const ton = item.soLuongTon ?? 0;
-      if (invTonMin.value !== '' && ton < Number(invTonMin.value)) return false;
-      if (invTonMax.value !== '' && ton > Number(invTonMax.value)) return false;
-      return true;
-    })
-    // Sắp xếp danh sách biến thể theo sản phẩm và biến thể mới nhất
-    .sort((a, b) => {
-      const spDiff = (b.v?.sanPhamId ?? b.item.sanPhamId ?? 0) - (a.v?.sanPhamId ?? a.item.sanPhamId ?? 0);
-      if (spDiff !== 0) return spDiff;
-      return (b.item.bienTheId ?? 0) - (a.item.bienTheId ?? 0);
-    });
+  return (
+    inventory.value
+      .map((item) => {
+        const v = getVariantInfo(item);
+        return { item, v, status: stockStatusOf(item, v) };
+      })
+      .filter(({ item, v, status }) => {
+        if (q) {
+          const hay = [item.maSku, item.tenSanPham, v?.tenSanPham, maSanPhamCuaItem(item)]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        if (
+          invFilterThuongHieu.value &&
+          String(v?.thuongHieuId ?? "") !== String(invFilterThuongHieu.value)
+        )
+          return false;
+        if (invFilterDanhMuc.value && String(v?.danhMucId ?? "") !== String(invFilterDanhMuc.value))
+          return false;
+        // Có chọn lọc rõ ràng (kể cả từ bấm ô thống kê) -> hiện ĐÚNG nhóm đó.
+        if (invFilterStatus.value) return status === invFilterStatus.value;
+        // khoảng số lượng tồn kho
+        const ton = item.soLuongTon ?? 0;
+        if (invTonMin.value !== "" && ton < Number(invTonMin.value)) return false;
+        if (invTonMax.value !== "" && ton > Number(invTonMax.value)) return false;
+        return true;
+      })
+      // Sắp xếp danh sách biến thể theo sản phẩm và biến thể mới nhất
+      .sort((a, b) => {
+        const spDiff =
+          (b.v?.sanPhamId ?? b.item.sanPhamId ?? 0) - (a.v?.sanPhamId ?? a.item.sanPhamId ?? 0);
+        if (spDiff !== 0) return spDiff;
+        return (b.item.bienTheId ?? 0) - (a.item.bienTheId ?? 0);
+      })
+  );
 });
-const { currentPage: invCurrentPage, totalPages: invTotalPages, pagedItems: pagedFlatInventory } = usePagination(flatInventory);
-watch([inventorySearch, invFilterStatus, invFilterThuongHieu, invFilterDanhMuc, invTonMin, invTonMax], () => { invCurrentPage.value = 0; });
+const {
+  currentPage: invCurrentPage,
+  totalPages: invTotalPages,
+  pagedItems: pagedFlatInventory,
+} = usePagination(flatInventory);
+watch(
+  [inventorySearch, invFilterStatus, invFilterThuongHieu, invFilterDanhMuc, invTonMin, invTonMax],
+  () => {
+    invCurrentPage.value = 0;
+  },
+);
 
 // Chi tiết thông tin và danh sách serial của biến thể
 const showDetailModal = ref(false);
 const detailItem = ref(null); // tonKho item đang xem
-const detailTab = ref('serials'); // 'serials' | 'add'
+const detailTab = ref("serials"); // 'serials' | 'add'
 
 // Danh sách serial thuộc biến thể
 const detailSerials = ref([]);
 const detailSerialsLoading = ref(false);
-const detailSerialSearch = ref('');
-const detailSerialStatusFilter = ref('');
+const detailSerialSearch = ref("");
+const detailSerialStatusFilter = ref("");
 // Map serials trong đơn hàng đang tiến hành
 const activeOrderSerialMap = computed(() => {
   const map = new Map();
   (heldOrdersList.value || []).forEach((item) => {
-    if (item.trangThai === 'loi_bao_hanh') return;
+    if (item.trangThai === "loi_bao_hanh") return;
     if (item.chiTietId) map.set(item.chiTietId, item);
     if (item.soSerial) map.set(item.soSerial, item);
   });
@@ -285,33 +405,50 @@ const activeOrderSerialMap = computed(() => {
 });
 
 // Kiểm tra serial có đang trong giỏ POS hiện tại không (không tính sản phẩm lỗi/bảo hành)
-const isInPosCart = (item) => item.trangThai !== 'loi_bao_hanh' && posCartChiTietIds.value.has(item.chiTietId);
+const isInPosCart = (item) =>
+  item.trangThai !== "loi_bao_hanh" && posCartChiTietIds.value.has(item.chiTietId);
 
 // Lấy thông tin đơn hàng đang tiến hành của serial (nếu có, không tính bảo hành)
 const getActiveOrderItem = (item) => {
-  if (item.trangThai === 'loi_bao_hanh') return null;
-  return activeOrderSerialMap.value.get(item.chiTietId) || activeOrderSerialMap.value.get(item.soSerial) || null;
+  if (item.trangThai === "loi_bao_hanh") return null;
+  return (
+    activeOrderSerialMap.value.get(item.chiTietId) ||
+    activeOrderSerialMap.value.get(item.soSerial) ||
+    null
+  );
 };
 
-// Kiểm tra serial có thuộc đơn hàng đang trên thanh tiến trình (chưa hoàn tất giao)
-const isOrderInProgress = (item) => {
-  if (item.trangThai === 'loi_bao_hanh') return false;
+// Kiểm tra serial có thuộc đơn hàng ở giai đoạn chờ xác nhận / đã lên đơn (chưa chuyển sang đóng gói / xuất bán)
+const isOrderPendingPacking = (item) => {
+  if (item.trangThai === "loi_bao_hanh" || item.trangThai === "da_tra_hang") return false;
   const ord = getActiveOrderItem(item);
   if (!ord) return false;
-  return !['delivered', 'cancelled', 'returned'].includes(ord.trangThaiDonHang);
+  return ["pending", "confirmed"].includes(ord.trangThaiDonHang) && item.trangThai !== "da_ban";
+};
+const isOrderInProgress = isOrderPendingPacking;
+
+// Kiểm tra serial đã bán (đã có trạng thái da_ban hoặc đơn hàng đã sang bước đóng gói / giao hàng / hoàn tất)
+const isOrderSold = (item) => {
+  if (item.trangThai === "loi_bao_hanh") return false;
+  if (item.trangThai === "da_ban") return true;
+  const ord = getActiveOrderItem(item);
+  if (!ord) return false;
+  return ["processing", "shipping", "out_for_delivery", "awaiting_confirmation", "delivered"].includes(ord.trangThaiDonHang);
 };
 
 // Xác định người thực hiện: Admin hay Nhân viên tùy vào tài khoản đang login và thực hiện thanh toán hiện tại
 const getSerialPerformer = (item) => {
-  if (item.trangThai === 'loi_bao_hanh') return null;
+  if (item.trangThai === "loi_bao_hanh") return null;
   // 1. Nếu đang trong giỏ POS (thực hiện thanh toán hiện tại):
   if (isInPosCart(item)) {
     const cartItem = getPosCartItem(item.chiTietId);
-    const roleStr = (cartItem?.performerRole || (AuthStore.user?.role === 'admin' ? 'Admin' : 'Nhân viên')).toLowerCase();
-    const isAdmin = roleStr.includes('admin');
+    const roleStr = (
+      cartItem?.performerRole || (AuthStore.user?.role === "admin" ? "Admin" : "Nhân viên")
+    ).toLowerCase();
+    const isAdmin = roleStr.includes("admin");
     return {
-      role: isAdmin ? 'Admin' : 'Nhân viên',
-      name: cartItem?.performerName || AuthStore.user?.hoTen || AuthStore.user?.username || '',
+      role: isAdmin ? "Admin" : "Nhân viên",
+      name: cartItem?.performerName || AuthStore.user?.hoTen || AuthStore.user?.username || "",
       isAdmin,
     };
   }
@@ -320,17 +457,17 @@ const getSerialPerformer = (item) => {
   const ord = getActiveOrderItem(item);
   if (ord) {
     if (ord.nhanVienRole || ord.nhanVienTen) {
-      const isAdmin = (ord.nhanVienRole || '').toLowerCase().includes('admin');
+      const isAdmin = (ord.nhanVienRole || "").toLowerCase().includes("admin");
       return {
-        role: isAdmin ? 'Admin' : 'Nhân viên',
-        name: ord.nhanVienTen || '',
+        role: isAdmin ? "Admin" : "Nhân viên",
+        name: ord.nhanVienTen || "",
         isAdmin,
       };
     }
-    const isAdmin = AuthStore.user?.role === 'admin';
+    const isAdmin = AuthStore.user?.role === "admin";
     return {
-      role: isAdmin ? 'Admin' : 'Nhân viên',
-      name: AuthStore.user?.hoTen || '',
+      role: isAdmin ? "Admin" : "Nhân viên",
+      name: AuthStore.user?.hoTen || "",
       isAdmin,
     };
   }
@@ -338,7 +475,7 @@ const getSerialPerformer = (item) => {
   // 3. Nếu có lock cũ từ POS session
   if (item.lockedBy && item.lockedByTen) {
     return {
-      role: 'Nhân viên',
+      role: "Nhân viên",
       name: item.lockedByTen,
       isAdmin: false,
     };
@@ -348,87 +485,117 @@ const getSerialPerformer = (item) => {
 };
 
 const SERIAL_STATUS_OPTIONS = [
-  { value: 'trong_kho', label: 'Trong kho' },
-  { value: 'dang_len_don_pos', label: 'Đang lên đơn POS' },
-  { value: 'da_len_don', label: 'Đã lên đơn (tiến trình)' },
-  { value: 'da_ban', label: 'Đã bán' },
-  { value: 'loi_bao_hanh', label: 'Lỗi / Bảo hành' },
-  { value: 'da_tra_hang', label: 'Đã trả hàng' },
+  { value: "trong_kho", label: "Trong kho" },
+  { value: "dang_len_don_pos", label: "Đang lên đơn POS" },
+  { value: "da_len_don", label: "Đã lên đơn (tiến trình)" },
+  { value: "da_ban", label: "Đã bán" },
+  { value: "loi_bao_hanh", label: "Lỗi / Bảo hành" },
+  { value: "da_tra_hang", label: "Đã trả hàng" },
 ];
 
 const filteredDetailSerials = computed(() => {
   const q = detailSerialSearch.value.trim().toLowerCase();
   return detailSerials.value.filter((s) => {
-    if (q && !String(s.soSerial ?? '').toLowerCase().includes(q)) return false;
-    if (detailSerialStatusFilter.value === 'dang_len_don_pos' && !isInPosCart(s)) return false;
-    if (detailSerialStatusFilter.value === 'da_len_don' && !isOrderInProgress(s)) return false;
-    if (detailSerialStatusFilter.value === 'trong_kho' && (s.trangThai !== 'trong_kho' || isInPosCart(s) || isOrderInProgress(s))) return false;
-    if (detailSerialStatusFilter.value && !['dang_len_don_pos', 'da_len_don', 'trong_kho'].includes(detailSerialStatusFilter.value) && s.trangThai !== detailSerialStatusFilter.value) return false;
+    if (
+      q &&
+      !String(s.soSerial ?? "")
+        .toLowerCase()
+        .includes(q)
+    )
+      return false;
+    if (detailSerialStatusFilter.value === "dang_len_don_pos" && !isInPosCart(s)) return false;
+    if (detailSerialStatusFilter.value === "da_len_don" && !isOrderPendingPacking(s)) return false;
+    if (detailSerialStatusFilter.value === "da_ban" && !isOrderSold(s)) return false;
+    if (
+      detailSerialStatusFilter.value === "trong_kho" &&
+      (s.trangThai !== "trong_kho" || isInPosCart(s) || isOrderPendingPacking(s) || isOrderSold(s))
+    )
+      return false;
+    if (
+      detailSerialStatusFilter.value &&
+      !["dang_len_don_pos", "da_len_don", "da_ban", "trong_kho"].includes(detailSerialStatusFilter.value) &&
+      s.trangThai !== detailSerialStatusFilter.value
+    )
+      return false;
     return true;
   });
 });
 
 // Xóa bản ghi serial trong kho
 const removeStockSerial = async (chiTietId) => {
-  if (!(await askConfirm(t('admin.confirm.deleteSerial')))) return;
+  if (!(await askConfirm(t("admin.confirm.deleteSerial")))) return;
   const bienTheId = detailItem.value?.bienTheId;
   try {
     const res = await ChiTietSanPhamService.remove(chiTietId);
-    if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteSerialError'))); return; }
+    if (!res.ok) {
+      showToast(await res.text().catch(() => t("admin.errors.deleteSerialError")));
+      return;
+    }
     detailSerials.value = detailSerials.value.filter((s) => s.chiTietId !== chiTietId);
     const updatedStock = await TonKhoService.getByBienThe(bienTheId).catch(() => null);
     if (updatedStock) {
       const idx = inventory.value.findIndex((i) => i.tonKhoId === updatedStock.tonKhoId);
       if (idx !== -1) inventory.value[idx] = updatedStock;
     }
-  } catch (e) { showToast(e.message); }
+  } catch (e) {
+    showToast(e.message);
+  }
 };
 
 // Biểu mẫu nhập thêm hàng và điều chỉnh tồn kho
 const stockSaving = ref(false);
-const stockForm = reactive({ soLuongGiu: 0, tonKhoToiThieu: 0, newSerials: [''], giaBan: 0 });
-const addStockSerialRow = () => stockForm.newSerials.push('');
+const stockForm = reactive({ soLuongGiu: 0, tonKhoToiThieu: 0, newSerials: [""], giaBan: 0 });
+const addStockSerialRow = () => stockForm.newSerials.push("");
 const removeStockSerialRow = (idx) => {
   if (stockForm.newSerials.length > 1) stockForm.newSerials.splice(idx, 1);
-  else stockForm.newSerials[idx] = '';
+  else stockForm.newSerials[idx] = "";
 };
 // Nhập danh sách số serial từ tệp tin
 const importSerialsFromFile = async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-  const ext = file.name.split('.').pop()?.toLowerCase();
+  const ext = file.name.split(".").pop()?.toLowerCase();
   let parsed;
-  if (ext === 'xlsx' || ext === 'xls') {
+  if (ext === "xlsx" || ext === "xls") {
     const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
+    const wb = XLSX.read(buf, { type: "array" });
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-    parsed = rows.flat().map((v) => String(v ?? '').trim()).filter(Boolean);
+    parsed = rows
+      .flat()
+      .map((v) => String(v ?? "").trim())
+      .filter(Boolean);
   } else {
     const text = await file.text();
-    parsed = text.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    parsed = text
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   const existing = stockForm.newSerials.filter(Boolean);
-  stockForm.newSerials = [...existing, ...parsed].length ? [...existing, ...parsed] : [''];
-  e.target.value = '';
+  stockForm.newSerials = [...existing, ...parsed].length ? [...existing, ...parsed] : [""];
+  e.target.value = "";
 };
 
 const loadDetailSerials = async (bienTheId) => {
   detailSerialsLoading.value = true;
-  detailSerials.value = bienTheId ? await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => []) : [];
+  detailSerials.value = bienTheId
+    ? await ChiTietSanPhamService.getByBienThe(bienTheId).catch(() => [])
+    : [];
   detailSerialsLoading.value = false;
 };
 
 const openStockDetail = async (item) => {
   detailItem.value = item;
-  detailTab.value = 'serials';
-  detailSerialSearch.value = '';
-  detailSerialStatusFilter.value = '';
-  stockForm.soLuongGiu = item.soLuongGiu ?? 0;
+  detailTab.value = "serials";
+  detailSerialSearch.value = "";
+  detailSerialStatusFilter.value = "";
+  stockForm.soLuongGiu = getHeldQty(item);
   stockForm.tonKhoToiThieu = item.tonKhoToiThieu ?? 0;
-  stockForm.newSerials = [''];
+  stockForm.newSerials = [""];
   stockForm.giaBan = Number(getVariantInfo(item)?.giaBan ?? 0);
   showDetailModal.value = true;
   await Promise.all([loadDetailSerials(item.bienTheId), loadHeldOrders()]);
+  stockForm.soLuongGiu = getHeldQty(item);
 };
 
 const saveStock = async () => {
@@ -441,31 +608,49 @@ const saveStock = async () => {
     const serials = stockForm.newSerials.map((s) => s.trim()).filter(Boolean);
     for (const soSerial of serials) {
       const res = await ChiTietSanPhamService.create({
-        bienTheId, soSerial, trangThai: 'trong_kho',
+        bienTheId,
+        soSerial,
+        trangThai: "trong_kho",
         ngayNhapKho: nowLocalIso(),
       });
-      if (!res.ok) { showToast(t('admin.errors.addSerialError')); return; }
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        showToast(errText || t("admin.errors.addSerialError"), "error", 5000);
+        return;
+      }
     }
     // Cập nhật ngưỡng tồn kho tối thiểu
     const res = await TonKhoService.update(item.tonKhoId, {
       tonKhoToiThieu: Number(stockForm.tonKhoToiThieu),
     });
-    if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      showToast(errText || t("admin.errors.updateFailed", { status: res.status }), "error", 5000);
+      return;
+    }
     // Cập nhật giá bán biến thể (chỉ cập nhật giá bán, không ghi đè cấu hình)
     const currentGiaBan = Number(getVariantInfo(item)?.giaBan ?? 0);
     if (stockForm.giaBan !== currentGiaBan) {
-      const priceRes = await BienTheSanPhamService.updateGiaBan(bienTheId, Number(stockForm.giaBan) || 0);
-      if (!priceRes.ok) { showToast(t('admin.errors.updateFailed', { status: priceRes.status })); return; }
+      const priceRes = await BienTheSanPhamService.updateGiaBan(
+        bienTheId,
+        Number(stockForm.giaBan) || 0,
+      );
+      if (!priceRes.ok) {
+        const errText = await priceRes.text().catch(() => "");
+        showToast(
+          errText || t("admin.errors.updateFailed", { status: priceRes.status }),
+          "error",
+          5000,
+        );
+        return;
+      }
     }
     // Làm mới dữ liệu tồn kho sau khi chỉnh sửa
-    await Promise.all([
-      refreshInventory(),
-      refreshProducts().catch(() => {}),
-    ]);
-    stockForm.newSerials = [''];
+    await Promise.all([refreshInventory(), refreshProducts().catch(() => {})]);
+    stockForm.newSerials = [""];
     await loadDetailSerials(bienTheId);
-    detailTab.value = 'serials';
-    showToast(tt('admin.stockModal.savedToast', 'Đã cập nhật tồn kho'));
+    detailTab.value = "serials";
+    showToast(tt("admin.stockModal.savedToast", "Đã cập nhật tồn kho"));
   } catch (e) {
     showToast(e.message);
   } finally {
@@ -474,9 +659,9 @@ const saveStock = async () => {
 };
 
 const stockDetailStatusLabel = (s) => {
-  if (s === 'dang_len_don_pos') return 'Đang lên đơn POS';
-  if (s === 'da_len_don') return 'Đã lên đơn';
-  if (s === 'loi_bao_hanh') return 'Lỗi / Bảo hành';
+  if (s === "dang_len_don_pos") return "Đang lên đơn POS";
+  if (s === "da_len_don") return "Đã lên đơn";
+  if (s === "loi_bao_hanh") return "Lỗi / Bảo hành";
   return t(`admin.statusLabel.${s}`);
 };
 
@@ -499,33 +684,35 @@ const ensurePhieuNhapData = () => {
   return phieuNhapDataPromise;
 };
 
-const supplierName = (id) => suppliers.value.find(s => s.nhaCungCapId === id)?.tenNhaCungCap ?? '—';
-const staffName = (id) => staff.value.find(s => s.nhanVienId === id)?.hoTen ?? '—';
+const supplierName = (id) =>
+  suppliers.value.find((s) => s.nhaCungCapId === id)?.tenNhaCungCap ?? "—";
+const staffName = (id) => staff.value.find((s) => s.nhanVienId === id)?.hoTen ?? "—";
 
 // Màu sắc đại diện trạng thái phiếu nhập
 const phieuNhapStatusColor = (s) => {
-  if (s === 'hoan_thanh') return { bg: 'rgba(34,197,94,0.15)',  text: '#22c55e' };
-  if (s === 'huy')        return { bg: 'rgba(239,68,68,0.15)',  text: '#f87171' };
-  return                         { bg: 'rgba(250,204,21,0.15)', text: '#facc15' }; // cho_duyet
+  if (s === "hoan_thanh") return { bg: "rgba(34,197,94,0.15)", text: "#22c55e" };
+  if (s === "huy") return { bg: "rgba(239,68,68,0.15)", text: "#f87171" };
+  return { bg: "rgba(250,204,21,0.15)", text: "#facc15" }; // cho_duyet
 };
-const phieuNhapStatusIcon = (s) => (s === 'hoan_thanh' ? CheckCircle2 : s === 'huy' ? XCircle : Clock);
+const phieuNhapStatusIcon = (s) =>
+  s === "hoan_thanh" ? CheckCircle2 : s === "huy" ? XCircle : Clock;
 
 const phieuNhapCounts = computed(() => ({
   total: phieuNhapList.value.length,
-  choDuyet: phieuNhapList.value.filter(p => p.trangThai === 'cho_duyet').length,
-  hoanThanh: phieuNhapList.value.filter(p => p.trangThai === 'hoan_thanh').length,
-  huy: phieuNhapList.value.filter(p => p.trangThai === 'huy').length,
+  choDuyet: phieuNhapList.value.filter((p) => p.trangThai === "cho_duyet").length,
+  hoanThanh: phieuNhapList.value.filter((p) => p.trangThai === "hoan_thanh").length,
+  huy: phieuNhapList.value.filter((p) => p.trangThai === "huy").length,
 }));
 
-const phieuNhapSearch = ref('');
-const phieuNhapStatusFilter = ref('');
+const phieuNhapSearch = ref("");
+const phieuNhapStatusFilter = ref("");
 const isPnFilterOpen = ref(false);
-const pnFilterDateFrom = ref('');
-const pnFilterDateTo = ref('');
-const pnFilterSupplier = ref('');
-const pnFilterStaff = ref('');
-const pnFilterAmountMin = ref('');
-const pnFilterAmountMax = ref('');
+const pnFilterDateFrom = ref("");
+const pnFilterDateTo = ref("");
+const pnFilterSupplier = ref("");
+const pnFilterStaff = ref("");
+const pnFilterAmountMin = ref("");
+const pnFilterAmountMax = ref("");
 const pnFilterActiveCount = computed(() => {
   let c = 0;
   if (phieuNhapStatusFilter.value) c++;
@@ -540,62 +727,113 @@ const pnFilterActiveCount = computed(() => {
 const pnFilterActiveChips = computed(() => {
   const chips = [];
   if (phieuNhapStatusFilter.value) {
-    const map = { cho_duyet: 'Chờ duyệt', hoan_thanh: 'Hoàn thành', huy: 'Hủy' };
-    chips.push({ label: `Trạng thái: ${map[phieuNhapStatusFilter.value] || phieuNhapStatusFilter.value}`, clear: () => phieuNhapStatusFilter.value = '' });
+    const map = { cho_duyet: "Chờ duyệt", hoan_thanh: "Hoàn thành", huy: "Hủy" };
+    chips.push({
+      label: `Trạng thái: ${map[phieuNhapStatusFilter.value] || phieuNhapStatusFilter.value}`,
+      clear: () => (phieuNhapStatusFilter.value = ""),
+    });
   }
-  if (pnFilterDateFrom.value) chips.push({ label: `Từ: ${pnFilterDateFrom.value}`, clear: () => pnFilterDateFrom.value = '' });
-  if (pnFilterDateTo.value) chips.push({ label: `Đến: ${pnFilterDateTo.value}`, clear: () => pnFilterDateTo.value = '' });
+  if (pnFilterDateFrom.value)
+    chips.push({
+      label: `Từ: ${pnFilterDateFrom.value}`,
+      clear: () => (pnFilterDateFrom.value = ""),
+    });
+  if (pnFilterDateTo.value)
+    chips.push({ label: `Đến: ${pnFilterDateTo.value}`, clear: () => (pnFilterDateTo.value = "") });
   if (pnFilterSupplier.value) {
-    const s = suppliers.value.find(x => String(x.nhaCungCapId) === String(pnFilterSupplier.value));
-    chips.push({ label: `NCC: ${s?.tenNhaCungCap || pnFilterSupplier.value}`, clear: () => pnFilterSupplier.value = '' });
+    const s = suppliers.value.find(
+      (x) => String(x.nhaCungCapId) === String(pnFilterSupplier.value),
+    );
+    chips.push({
+      label: `NCC: ${s?.tenNhaCungCap || pnFilterSupplier.value}`,
+      clear: () => (pnFilterSupplier.value = ""),
+    });
   }
   if (pnFilterStaff.value) {
-    const st = staff.value.find(x => String(x.nhanVienId) === String(pnFilterStaff.value));
-    chips.push({ label: `NV: ${st?.hoTen || pnFilterStaff.value}`, clear: () => pnFilterStaff.value = '' });
+    const st = staff.value.find((x) => String(x.nhanVienId) === String(pnFilterStaff.value));
+    chips.push({
+      label: `NV: ${st?.hoTen || pnFilterStaff.value}`,
+      clear: () => (pnFilterStaff.value = ""),
+    });
   }
-  if (pnFilterAmountMin.value) chips.push({ label: `Giá từ: ${formatPrice(pnFilterAmountMin.value)}`, clear: () => pnFilterAmountMin.value = '' });
-  if (pnFilterAmountMax.value) chips.push({ label: `Giá đến: ${formatPrice(pnFilterAmountMax.value)}`, clear: () => pnFilterAmountMax.value = '' });
+  if (pnFilterAmountMin.value)
+    chips.push({
+      label: `Giá từ: ${formatPrice(pnFilterAmountMin.value)}`,
+      clear: () => (pnFilterAmountMin.value = ""),
+    });
+  if (pnFilterAmountMax.value)
+    chips.push({
+      label: `Giá đến: ${formatPrice(pnFilterAmountMax.value)}`,
+      clear: () => (pnFilterAmountMax.value = ""),
+    });
   return chips;
 });
 const clearAllPnFilters = () => {
-  phieuNhapStatusFilter.value = '';
-  pnFilterDateFrom.value = '';
-  pnFilterDateTo.value = '';
-  pnFilterSupplier.value = '';
-  pnFilterStaff.value = '';
-  pnFilterAmountMin.value = '';
-  pnFilterAmountMax.value = '';
+  phieuNhapStatusFilter.value = "";
+  pnFilterDateFrom.value = "";
+  pnFilterDateTo.value = "";
+  pnFilterSupplier.value = "";
+  pnFilterStaff.value = "";
+  pnFilterAmountMin.value = "";
+  pnFilterAmountMax.value = "";
 };
 const togglePnQuickFilter = (status) => {
   // Click thẻ đang active -> clear; click thẻ khác -> switch filter
-  phieuNhapStatusFilter.value = phieuNhapStatusFilter.value === status ? '' : status;
+  phieuNhapStatusFilter.value = phieuNhapStatusFilter.value === status ? "" : status;
   // Reset về trang 1 để không bị kẹt ở trang trống
   pnCurrentPage.value = 1;
 };
 const filteredPhieuNhap = computed(() => {
   let list = phieuNhapList.value
-    .filter(p => !phieuNhapSearch.value || (p.maPhieuNhap ?? '').toLowerCase().includes(phieuNhapSearch.value.toLowerCase()))
-    .filter(p => !phieuNhapStatusFilter.value || p.trangThai === phieuNhapStatusFilter.value);
-  if (pnFilterSupplier.value) list = list.filter(p => String(p.nhaCungCapId) === String(pnFilterSupplier.value));
-  if (pnFilterStaff.value) list = list.filter(p => String(p.nhanVienId) === String(pnFilterStaff.value));
-  if (pnFilterDateFrom.value) list = list.filter(p => new Date(p.ngayNhap) >= new Date(pnFilterDateFrom.value));
-  if (pnFilterDateTo.value) list = list.filter(p => new Date(p.ngayNhap) <= new Date(pnFilterDateTo.value + 'T23:59:59'));
-  if (pnFilterAmountMin.value) list = list.filter(p => Number(p.tongTien || 0) >= Number(pnFilterAmountMin.value));
-  if (pnFilterAmountMax.value) list = list.filter(p => Number(p.tongTien || 0) <= Number(pnFilterAmountMax.value));
+    .filter(
+      (p) =>
+        !phieuNhapSearch.value ||
+        (p.maPhieuNhap ?? "").toLowerCase().includes(phieuNhapSearch.value.toLowerCase()),
+    )
+    .filter((p) => !phieuNhapStatusFilter.value || p.trangThai === phieuNhapStatusFilter.value);
+  if (pnFilterSupplier.value)
+    list = list.filter((p) => String(p.nhaCungCapId) === String(pnFilterSupplier.value));
+  if (pnFilterStaff.value)
+    list = list.filter((p) => String(p.nhanVienId) === String(pnFilterStaff.value));
+  if (pnFilterDateFrom.value)
+    list = list.filter((p) => new Date(p.ngayNhap) >= new Date(pnFilterDateFrom.value));
+  if (pnFilterDateTo.value)
+    list = list.filter((p) => new Date(p.ngayNhap) <= new Date(pnFilterDateTo.value + "T23:59:59"));
+  if (pnFilterAmountMin.value)
+    list = list.filter((p) => Number(p.tongTien || 0) >= Number(pnFilterAmountMin.value));
+  if (pnFilterAmountMax.value)
+    list = list.filter((p) => Number(p.tongTien || 0) <= Number(pnFilterAmountMax.value));
   return list.sort((a, b) => new Date(b.ngayNhap) - new Date(a.ngayNhap));
 });
 // Reset về trang 1 khi đổi filter
-watch([phieuNhapSearch, phieuNhapStatusFilter, pnFilterDateFrom, pnFilterDateTo, pnFilterSupplier, pnFilterStaff, pnFilterAmountMin, pnFilterAmountMax], () => {
-  pnCurrentPage.value = 1;
-});
-const { currentPage: pnCurrentPage, totalPages: pnTotalPages, pagedItems: pagedPhieuNhap, pageSize: pnPageSize } = usePagination(filteredPhieuNhap);
+watch(
+  [
+    phieuNhapSearch,
+    phieuNhapStatusFilter,
+    pnFilterDateFrom,
+    pnFilterDateTo,
+    pnFilterSupplier,
+    pnFilterStaff,
+    pnFilterAmountMin,
+    pnFilterAmountMax,
+  ],
+  () => {
+    pnCurrentPage.value = 1;
+  },
+);
+const {
+  currentPage: pnCurrentPage,
+  totalPages: pnTotalPages,
+  pagedItems: pagedPhieuNhap,
+  pageSize: pnPageSize,
+} = usePagination(filteredPhieuNhap);
 
 // Danh sách sản phẩm và biến thể để chọn trong phiếu nhập
 const productOptionsForPhieuNhap = computed(() => {
   const map = new Map();
   for (const p of products.value) {
     if (p?.sanPhamId != null && !map.has(p.sanPhamId)) {
-      map.set(p.sanPhamId, { value: p.sanPhamId, label: p.tenSanPham ?? '' });
+      map.set(p.sanPhamId, { value: p.sanPhamId, label: p.tenSanPham ?? "" });
     }
   }
   return [...map.values()];
@@ -607,29 +845,50 @@ const variantOptionsByProduct = computed(() => {
     if (!map.has(bt.sanPhamId)) map.set(bt.sanPhamId, new Map());
     const variants = map.get(bt.sanPhamId);
     if (!variants.has(bt.bienTheId)) {
-      const specs = [bt.mauSac, bt.cpu, bt.ram].filter(Boolean).join(' · ');
-      variants.set(bt.bienTheId, { value: bt.bienTheId, label: specs ? `${bt.maSku} — ${specs}` : bt.maSku });
+      const specs = [bt.mauSac, bt.cpu, bt.ram].filter(Boolean).join(" · ");
+      variants.set(bt.bienTheId, {
+        value: bt.bienTheId,
+        label: specs ? `${bt.maSku} — ${specs}` : bt.maSku,
+      });
     }
   }
   return map;
 });
-const variantsForProduct = (sanPhamId) => [...(variantOptionsByProduct.value.get(Number(sanPhamId)) ?? new Map()).values()];
-const supplierOptions = computed(() => suppliers.value.map(s => ({ value: s.nhaCungCapId, label: s.tenNhaCungCap })));
-const staffOptions = computed(() => staff.value.map(s => ({ value: s.nhanVienId, label: s.hoTen })));
+const variantsForProduct = (sanPhamId) => [
+  ...(variantOptionsByProduct.value.get(Number(sanPhamId)) ?? new Map()).values(),
+];
+const supplierOptions = computed(() =>
+  suppliers.value.map((s) => ({ value: s.nhaCungCapId, label: s.tenNhaCungCap })),
+);
+const staffOptions = computed(() =>
+  staff.value.map((s) => ({ value: s.nhanVienId, label: s.hoTen })),
+);
 
 const showPhieuNhapModal = ref(false);
-const phieuNhapFormError = ref('');
+const phieuNhapFormError = ref("");
 const phieuNhapSaving = ref(false);
-const phieuNhapErrorModal = reactive({ show: false, serialTrung: [], serialTrungFile: [], giaKhongKhop: [] }); // (no longer used — chuyển sang toast)
-const emptyPhieuNhapItem = () => ({ sanPhamId: '', bienTheId: '', soLuong: 0, donGia: 0, serials: [], lockedCount: 0 });
+const phieuNhapErrorModal = reactive({
+  show: false,
+  serialTrung: [],
+  serialTrungFile: [],
+  giaKhongKhop: [],
+}); // (no longer used — chuyển sang toast)
+const emptyPhieuNhapItem = () => ({
+  sanPhamId: "",
+  bienTheId: "",
+  soLuong: 0,
+  donGia: 0,
+  serials: [],
+  lockedCount: 0,
+});
 const emptyPhieuNhapForm = () => {
   const now = new Date();
   const local = nowLocalIso(now).slice(0, 16);
   return {
-    nhaCungCapId: '',
-    nhanVienId: '',
+    nhaCungCapId: "",
+    nhanVienId: "",
     ngayNhap: local,
-    ghiChu: '',
+    ghiChu: "",
     items: [emptyPhieuNhapItem()],
   };
 };
@@ -646,15 +905,15 @@ const closeSerialViewer = () => {
   serialViewerRowIdx.value = -1;
 };
 const serialViewerRow = computed(() =>
-  serialViewerRowIdx.value >= 0 ? phieuNhapForm.items[serialViewerRowIdx.value] : null
+  serialViewerRowIdx.value >= 0 ? phieuNhapForm.items[serialViewerRowIdx.value] : null,
 );
 const serialViewerSerials = computed(() =>
-  serialViewerRow.value ? serialViewerRow.value.serials.filter(s => s && s.trim()) : []
+  serialViewerRow.value ? serialViewerRow.value.serials.filter((s) => s && s.trim()) : [],
 );
 const serialViewerSpName = computed(() => {
-  if (!serialViewerRow.value) return '';
-  const bt = products.value.find(p => p.bienTheId === serialViewerRow.value.bienTheId);
-  return bt ? `${bt.tenSanPham} (${bt.maSku})` : '—';
+  if (!serialViewerRow.value) return "";
+  const bt = products.value.find((p) => p.bienTheId === serialViewerRow.value.bienTheId);
+  return bt ? `${bt.tenSanPham} (${bt.maSku})` : "—";
 });
 const serialViewerDuplicateSet = computed(() => {
   const seen = new Set();
@@ -670,9 +929,9 @@ const phieuNhapItemsTotal = computed(() =>
 );
 const phieuNhapFormValid = computed(() => {
   if (!phieuNhapForm.nhaCungCapId || !phieuNhapForm.nhanVienId) return false;
-  const validItems = phieuNhapForm.items.filter(i => i.bienTheId);
+  const validItems = phieuNhapForm.items.filter((i) => i.bienTheId);
   if (validItems.length === 0) return false;
-  return validItems.every(i => i.soLuong > 0);
+  return validItems.every((i) => i.soLuong > 0);
 });
 const addPhieuNhapItemRow = () => phieuNhapForm.items.push(emptyPhieuNhapItem());
 const removePhieuNhapItemRow = (idx) => {
@@ -683,8 +942,8 @@ const removePhieuNhapItemRow = (idx) => {
   }
 };
 const resetPhieuNhapItem = (row) => {
-  row.sanPhamId = '';
-  row.bienTheId = '';
+  row.sanPhamId = "";
+  row.bienTheId = "";
   row.soLuong = 0;
   row.donGia = 0;
   row.serials = [];
@@ -692,10 +951,29 @@ const resetPhieuNhapItem = (row) => {
 };
 // Kiểm tra dòng tiêu đề trong tệp serial
 const SERIAL_HEADER_KEYWORDS = new Set([
-  'serial', 'serials', 'so serial', 'số serial', 'sn', 's/n',
-  'ma', 'mã', 'ma serial', 'mã serial', 'sku', 'code',
-  'serialnumber', 'serial number', 'serialno', 'serial no',
-  'stt', 'số tt', 'so tt', 'idx', 'index', 'no', 'no.',
+  "serial",
+  "serials",
+  "so serial",
+  "số serial",
+  "sn",
+  "s/n",
+  "ma",
+  "mã",
+  "ma serial",
+  "mã serial",
+  "sku",
+  "code",
+  "serialnumber",
+  "serial number",
+  "serialno",
+  "serial no",
+  "stt",
+  "số tt",
+  "so tt",
+  "idx",
+  "index",
+  "no",
+  "no.",
 ]);
 
 const isLikelyHeaderRow = (serial, hasGiaCell) => {
@@ -711,20 +989,20 @@ const isLikelyHeaderRow = (serial, hasGiaCell) => {
 const importSerialsForRow = async (row, event) => {
   const file = event.target.files?.[0];
   if (!file) return;
-  const ext = file.name.split('.').pop()?.toLowerCase();
+  const ext = file.name.split(".").pop()?.toLowerCase();
   let parsed = [];
   let giaFromFile = null;
-  if (ext === 'xlsx' || ext === 'xls') {
+  if (ext === "xlsx" || ext === "xls") {
     const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
+    const wb = XLSX.read(buf, { type: "array" });
     const sheet = wb.Sheets[wb.SheetNames[0]];
-    const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+    const range = XLSX.utils.decode_range(sheet["!ref"] || "A1");
     // Đọc 2 cột đầu: A=serial, B=donGia (optional)
     const giaSet = new Set();
     for (let R = range.s.r; R <= range.e.r; R++) {
       const serialCell = sheet[XLSX.utils.encode_cell({ r: R, c: 0 })];
       const giaCell = sheet[XLSX.utils.encode_cell({ r: R, c: 1 })];
-      const serial = serialCell ? String(serialCell.v ?? '').trim() : '';
+      const serial = serialCell ? String(serialCell.v ?? "").trim() : "";
       const gia = giaCell ? Number(giaCell.v) : null;
       if (!serial) continue;
       // Bỏ qua dòng tiêu đề tệp Excel
@@ -735,8 +1013,8 @@ const importSerialsForRow = async (row, event) => {
       }
     }
     if (giaSet.size > 1) {
-      showToast('File có nhiều đơn giá khác nhau — vui lòng chỉ dùng 1 đơn giá');
-      event.target.value = '';
+      showToast("File có nhiều đơn giá khác nhau — vui lòng chỉ dùng 1 đơn giá");
+      event.target.value = "";
       return;
     }
     if (giaSet.size === 1) giaFromFile = [...giaSet][0];
@@ -747,7 +1025,7 @@ const importSerialsForRow = async (row, event) => {
     const lines = text.split(/[\n\r]+/);
     for (let i = 0; i < lines.length; i++) {
       const parts = lines[i].split(/[,\t]/);
-      const serial = parts[0]?.trim() ?? '';
+      const serial = parts[0]?.trim() ?? "";
       if (!serial) continue;
       // Bỏ qua dòng tiêu đề tệp CSV hoặc TXT
       if (i === 0 && isLikelyHeaderRow(serial, parts.length > 1)) continue;
@@ -758,22 +1036,22 @@ const importSerialsForRow = async (row, event) => {
       }
     }
     if (giaSet.size > 1) {
-      showToast('File có nhiều đơn giá khác nhau — vui lòng chỉ dùng 1 đơn giá');
-      event.target.value = '';
+      showToast("File có nhiều đơn giá khác nhau — vui lòng chỉ dùng 1 đơn giá");
+      event.target.value = "";
       return;
     }
     if (giaSet.size === 1) giaFromFile = [...giaSet][0];
   }
   if (parsed.length === 0) {
-    showToast('File không có serial nào');
-    event.target.value = '';
+    showToast("File không có serial nào");
+    event.target.value = "";
     return;
   }
   row.soLuong = parsed.length;
   if (giaFromFile != null) row.donGia = giaFromFile;
   // Giữ lockedCount serial cũ, thêm serial mới vào sau
   row.serials = [...row.serials.slice(0, row.lockedCount ?? 0), ...parsed];
-  event.target.value = '';
+  event.target.value = "";
 };
 // Kiểm tra trùng serial trong cùng file (cùng dòng).
 const checkSerialTrungTrongFile = (items) => {
@@ -792,7 +1070,7 @@ const editingPhieuNhapId = ref(null);
 const openAddPhieuNhap = () => {
   editingPhieuNhapId.value = null;
   Object.assign(phieuNhapForm, emptyPhieuNhapForm());
-  phieuNhapFormError.value = '';
+  phieuNhapFormError.value = "";
   expandedSerialRows.clear();
   closeSerialViewer();
   showPhieuNhapModal.value = true;
@@ -800,7 +1078,7 @@ const openAddPhieuNhap = () => {
 // Nạp dữ liệu phiếu nhập để chỉnh sửa
 const openEditPhieuNhap = async (p) => {
   editingPhieuNhapId.value = p.phieuNhapId;
-  const bienTheToSanPham = new Map(products.value.map(pp => [pp.bienTheId, pp.sanPhamId]));
+  const bienTheToSanPham = new Map(products.value.map((pp) => [pp.bienTheId, pp.sanPhamId]));
   const existingSerials = await ChiTietSanPhamService.getByPhieuNhap(p.phieuNhapId).catch(() => []);
   const serialsByBienThe = new Map();
   for (const s of existingSerials) {
@@ -815,7 +1093,7 @@ const openEditPhieuNhap = async (p) => {
         const drafts = JSON.parse(detail.serialDraftJson);
         for (const d of drafts) {
           if (!serialsByBienThe.has(d.bienTheId)) serialsByBienThe.set(d.bienTheId, []);
-          for (const s of (d.serials || [])) {
+          for (const s of d.serials || []) {
             if (s) serialsByBienThe.get(d.bienTheId).push(String(s).trim());
           }
         }
@@ -823,15 +1101,15 @@ const openEditPhieuNhap = async (p) => {
     }
   }
   const items = chiTietPhieuNhapList.value
-    .filter(c => c.phieuNhapId === p.phieuNhapId)
-    .map(c => {
+    .filter((c) => c.phieuNhapId === p.phieuNhapId)
+    .map((c) => {
       const loaded = serialsByBienThe.get(c.bienTheId) ?? [];
       const soLuong = c.soLuong;
       const serials = [...loaded];
-      while (serials.length < soLuong) serials.push('');
+      while (serials.length < soLuong) serials.push("");
       return {
         id: c.id,
-        sanPhamId: bienTheToSanPham.get(c.bienTheId) ?? '',
+        sanPhamId: bienTheToSanPham.get(c.bienTheId) ?? "",
         bienTheId: c.bienTheId,
         soLuong,
         donGia: c.donGiaNhap,
@@ -842,47 +1120,51 @@ const openEditPhieuNhap = async (p) => {
   Object.assign(phieuNhapForm, {
     nhaCungCapId: p.nhaCungCapId,
     nhanVienId: p.nhanVienId,
-    ngayNhap: (p.ngayNhap || '').slice(0, 16),
-    ghiChu: p.ghiChu === '—' ? '' : (p.ghiChu || ''),
+    ngayNhap: (p.ngayNhap || "").slice(0, 16),
+    ghiChu: p.ghiChu === "—" ? "" : p.ghiChu || "",
     items: items.length ? items : [emptyPhieuNhapItem()],
   });
-  phieuNhapFormError.value = '';
+  phieuNhapFormError.value = "";
   showPhieuNhapModal.value = true;
 };
 const savePhieuNhap = async () => {
-  phieuNhapFormError.value = '';
+  phieuNhapFormError.value = "";
   if (!phieuNhapForm.nhaCungCapId || !phieuNhapForm.nhanVienId) {
-    phieuNhapFormError.value = t('admin.phieuNhapModal.missingRequired');
+    phieuNhapFormError.value = t("admin.phieuNhapModal.missingRequired");
     return;
   }
-  const items = phieuNhapForm.items.filter(i => i.bienTheId);
+  const items = phieuNhapForm.items.filter((i) => i.bienTheId);
   if (items.length === 0) {
-    phieuNhapFormError.value = t('admin.phieuNhapModal.missingItems');
+    phieuNhapFormError.value = t("admin.phieuNhapModal.missingItems");
     return;
   }
   // Validate: mỗi dòng phải import serial (không có dòng trống serial).
-  const chuaImport = items.filter(i => !i.serials.some(s => s.trim()));
+  const chuaImport = items.filter((i) => !i.serials.some((s) => s.trim()));
   if (chuaImport.length) {
-    phieuNhapFormError.value = 'Vui lòng import file serial cho tất cả dòng hàng';
+    phieuNhapFormError.value = "Vui lòng import file serial cho tất cả dòng hàng";
     return;
   }
   // 1) Check trùng serial trong file (cùng dòng).
   const trungFile = checkSerialTrungTrongFile(items);
   if (trungFile) {
-    showToast(`Serial trùng trong file: ${trungFile}`, 'error', 5000);
+    showToast(`Serial trùng trong file: ${trungFile}`, "error", 5000);
     return;
   }
   // 1b) Check trùng serial giữa các dòng trong cùng phiếu (cross-row).
   const seenSerials = new Map(); // serial → tên sản phẩm
   for (const i of items) {
     if (!i.bienTheId) continue;
-    const spName = products.value.find(p => p.bienTheId === i.bienTheId)?.tenSanPham || '—';
+    const spName = products.value.find((p) => p.bienTheId === i.bienTheId)?.tenSanPham || "—";
     for (const s of i.serials) {
       const serial = s.trim();
       if (!serial) continue;
       if (seenSerials.has(serial)) {
         const prevName = seenSerials.get(serial);
-        showToast(`Serial "${serial}" xuất hiện ở cả 2 dòng (${prevName} và ${spName}). Vui lòng sửa lại trước khi tạo phiếu.`, 'error', 5000);
+        showToast(
+          `Serial "${serial}" xuất hiện ở cả 2 dòng (${prevName} và ${spName}). Vui lòng sửa lại trước khi tạo phiếu.`,
+          "error",
+          5000,
+        );
         return;
       }
       seenSerials.set(serial, spName);
@@ -898,17 +1180,21 @@ const savePhieuNhap = async () => {
   const giaKhongKhop = [];
   for (const [btId, gias] of giaByBienThe) {
     if (gias.size > 1) {
-      const sku = items.find(i => i.bienTheId === btId)?.sanPhamId;
-      const spName = products.value.find(p => p.bienTheId === btId)?.maSku || btId;
-      giaKhongKhop.push(`${spName} (${[...gias].map(g => formatPrice(g)).join(', ')})`);
+      const sku = items.find((i) => i.bienTheId === btId)?.sanPhamId;
+      const spName = products.value.find((p) => p.bienTheId === btId)?.maSku || btId;
+      giaKhongKhop.push(`${spName} (${[...gias].map((g) => formatPrice(g)).join(", ")})`);
     }
   }
   if (giaKhongKhop.length) {
-    showToast(`Đơn giá không khớp giữa các dòng: ${giaKhongKhop.join('; ')}. Vui lòng sửa lại.`, 'error', 6000);
+    showToast(
+      `Đơn giá không khớp giữa các dòng: ${giaKhongKhop.join("; ")}. Vui lòng sửa lại.`,
+      "error",
+      6000,
+    );
     return;
   }
   // 3) Check trùng serial với DB.
-  const allSerials = items.flatMap(i => i.serials.map(s => s.trim())).filter(Boolean);
+  const allSerials = items.flatMap((i) => i.serials.map((s) => s.trim())).filter(Boolean);
   if (allSerials.length) {
     try {
       const checkRes = await PhieuNhapKhoService.kiemTraSerialDb(allSerials);
@@ -916,65 +1202,93 @@ const savePhieuNhap = async () => {
       const result = await checkRes.json();
       const trungDb = Array.isArray(result) ? result : [];
       if (trungDb.length) {
-        showToast(`Serial đã tồn tại trong kho: ${trungDb.join(', ')}. Vui lòng kiểm tra lại.`, 'error', 6000);
+        showToast(
+          `Serial đã tồn tại trong kho: ${trungDb.join(", ")}. Vui lòng kiểm tra lại.`,
+          "error",
+          6000,
+        );
         return;
       }
     } catch (e) {
       // Nếu API check lỗi, vẫn cho tạo (không chặn vì có thể BE chưa implement).
-      console.warn('kiemTraSerial API error:', e.message);
+      console.warn("kiemTraSerial API error:", e.message);
     }
   }
   if (phieuNhapSaving.value) return;
   phieuNhapSaving.value = true;
   try {
     // Gom serial draft theo bienTheId để gửi BE lưu vào serial_draft_json
-    const serialDrafts = items.map(i => ({
-      bienTheId: Number(i.bienTheId),
-      donGia: Number(i.donGia) || 0,
-      serials: i.serials.slice(i.lockedCount ?? 0).map(s => s.trim()).filter(Boolean),
-    })).filter(s => s.serials.length > 0 || s.donGia > 0);
+    const serialDrafts = items
+      .map((i) => ({
+        bienTheId: Number(i.bienTheId),
+        donGia: Number(i.donGia) || 0,
+        serials: i.serials
+          .slice(i.lockedCount ?? 0)
+          .map((s) => s.trim())
+          .filter(Boolean),
+      }))
+      .filter((s) => s.serials.length > 0 || s.donGia > 0);
 
     const headerBody = {
       nhaCungCapId: Number(phieuNhapForm.nhaCungCapId),
       nhanVienId: Number(phieuNhapForm.nhanVienId),
       ngayNhap: toLocalDT(phieuNhapForm.ngayNhap),
       tongTien: phieuNhapItemsTotal.value,
-      trangThai: 'cho_duyet',
-      ghiChu: phieuNhapForm.ghiChu || '—',
+      trangThai: "cho_duyet",
+      ghiChu: phieuNhapForm.ghiChu || "—",
       serials: serialDrafts,
     };
     const res = await PhieuNhapKhoService.save(editingPhieuNhapId.value, headerBody);
     if (!res.ok) {
-      phieuNhapFormError.value = t('admin.errors.saveFailedWithText', { status: res.status, text: await res.text() });
+      const errText = await res.text().catch(() => "");
+      phieuNhapFormError.value =
+        errText || t("admin.errors.saveFailedWithText", { status: res.status, text: "" });
+      showToast(phieuNhapFormError.value, "error", 5000);
       return;
     }
     let phieuNhapId = editingPhieuNhapId.value;
     if (editingPhieuNhapId.value) {
-// Đối chiếu chi tiết phiếu nhập cũ và mới
+      // Đối chiếu chi tiết phiếu nhập cũ và mới
       const originalIds = chiTietPhieuNhapList.value
-        .filter(c => c.phieuNhapId === phieuNhapId).map(c => c.id);
-      const keptIds = items.filter(i => i.id).map(i => i.id);
-      for (const oldId of originalIds.filter(id => !keptIds.includes(id))) {
+        .filter((c) => c.phieuNhapId === phieuNhapId)
+        .map((c) => c.id);
+      const keptIds = items.filter((i) => i.id).map((i) => i.id);
+      for (const oldId of originalIds.filter((id) => !keptIds.includes(id))) {
         await ChiTietPhieuNhapService.remove(oldId);
       }
       for (const i of items) {
         const body = {
-          phieuNhapId, bienTheId: Number(i.bienTheId),
-          soLuong: Number(i.soLuong) || 0, donGiaNhap: Number(i.donGia) || 0,
+          phieuNhapId,
+          bienTheId: Number(i.bienTheId),
+          soLuong: Number(i.soLuong) || 0,
+          donGiaNhap: Number(i.donGia) || 0,
         };
-        if (i.id) await ChiTietPhieuNhapService.update(i.id, body);
-        else await ChiTietPhieuNhapService.create(body);
+        const lineRes = i.id
+          ? await ChiTietPhieuNhapService.update(i.id, body)
+          : await ChiTietPhieuNhapService.create(body);
+        if (!lineRes.ok) {
+          const lineErr = await lineRes.text().catch(() => `HTTP ${lineRes.status}`);
+          phieuNhapFormError.value = `Lỗi lưu dòng chi tiết phiếu nhập: ${lineErr}`;
+          showToast(phieuNhapFormError.value, "error", 5000);
+          return;
+        }
       }
     } else {
       const created = await res.json();
       phieuNhapId = created.phieuNhapId;
       for (const i of items) {
-        await ChiTietPhieuNhapService.create({
+        const lineRes = await ChiTietPhieuNhapService.create({
           phieuNhapId,
           bienTheId: Number(i.bienTheId),
           soLuong: Number(i.soLuong) || 0,
           donGiaNhap: Number(i.donGia) || 0,
         });
+        if (!lineRes.ok) {
+          const lineErr = await lineRes.text().catch(() => `HTTP ${lineRes.status}`);
+          phieuNhapFormError.value = `Lỗi lưu dòng chi tiết phiếu nhập: ${lineErr}`;
+          showToast(phieuNhapFormError.value, "error", 5000);
+          return;
+        }
       }
     }
     // Cập nhật giá nhập của biến thể theo đơn giá phiếu này.
@@ -991,16 +1305,24 @@ const savePhieuNhap = async () => {
     showPhieuNhapModal.value = false;
   } catch (e) {
     phieuNhapFormError.value = e.message;
+    showToast(phieuNhapFormError.value, "error", 5000);
   } finally {
     phieuNhapSaving.value = false;
   }
 };
 const deletePhieuNhap = async (id) => {
-  if (!(await askConfirm(t('admin.confirm.deletePhieuNhap')))) return;
+  if (!(await askConfirm(t("admin.confirm.deletePhieuNhap")))) return;
   const res = await PhieuNhapKhoService.remove(id);
-  if (!res.ok) { showToast(await res.text().catch(() => t('admin.errors.deleteFailed', { status: res.status }))); return; }
-  phieuNhapList.value = phieuNhapList.value.filter(p => p.phieuNhapId !== id);
-  chiTietPhieuNhapList.value = chiTietPhieuNhapList.value.filter(c => c.phieuNhapId !== id);
+  if (!res.ok) {
+    showToast(
+      await res.text().catch(() => t("admin.errors.deleteFailed", { status: res.status })),
+      "error",
+      5000,
+    );
+    return;
+  }
+  phieuNhapList.value = phieuNhapList.value.filter((p) => p.phieuNhapId !== id);
+  chiTietPhieuNhapList.value = chiTietPhieuNhapList.value.filter((c) => c.phieuNhapId !== id);
 };
 
 const updatePhieuNhapStatus = async (p, trangThai) => {
@@ -1012,35 +1334,44 @@ const updatePhieuNhapStatus = async (p, trangThai) => {
     trangThai,
     ghiChu: p.ghiChu,
   });
-  if (!res.ok) { showToast(t('admin.errors.updateFailed', { status: res.status })); return; }
-  const idx = phieuNhapList.value.findIndex(x => x.phieuNhapId === p.phieuNhapId);
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    showToast(errText || t("admin.errors.updateFailed", { status: res.status }), "error", 5000);
+    return;
+  }
+  const idx = phieuNhapList.value.findIndex((x) => x.phieuNhapId === p.phieuNhapId);
   if (idx !== -1) phieuNhapList.value[idx] = { ...phieuNhapList.value[idx], trangThai };
 };
 
 const approvePhieuNhap = async (p) => {
-  if (!(await askConfirm(t('admin.confirm.approvePhieuNhap') || 'Xác nhận duyệt phiếu nhập này?'))) return;
+  if (!(await askConfirm(t("admin.confirm.approvePhieuNhap") || "Xác nhận duyệt phiếu nhập này?")))
+    return;
   try {
     const res = await PhieuNhapKhoService.duyet(p.phieuNhapId);
     if (!res.ok) {
-      const msg = await res.text().catch(() => t('admin.errors.approveFailed'));
+      const msg = await res.text().catch(() => t("admin.errors.approveFailed"));
       showToast(msg);
       return;
     }
-    showToast(t('admin.success.approveSuccess') || 'Duyệt thành công!');
+    showToast(t("admin.success.approveSuccess") || "Duyệt thành công!");
     showPhieuNhapDetailModal.value = false;
     await Promise.all([
       refreshInventory(),
-      PhieuNhapKhoService.getAll().then(data => phieuNhapList.value = data).catch(() => {}),
+      PhieuNhapKhoService.getAll()
+        .then((data) => (phieuNhapList.value = data))
+        .catch(() => {}),
     ]);
   } catch (e) {
-    showToast(e.message || t('admin.errors.approveFailed'));
+    showToast(e.message || t("admin.errors.approveFailed"));
   }
 };
 
 const showPhieuNhapDetailModal = ref(false);
 const phieuNhapDetailData = ref(null);
 const phieuNhapDetailItems = computed(() =>
-  chiTietPhieuNhapList.value.filter(c => c.phieuNhapId === phieuNhapDetailData.value?.phieuNhapId),
+  chiTietPhieuNhapList.value.filter(
+    (c) => c.phieuNhapId === phieuNhapDetailData.value?.phieuNhapId,
+  ),
 );
 // Mở trang chi tiết phiếu nhập kho
 const openPhieuNhapDetail = (p) => {
@@ -1058,12 +1389,13 @@ const openPhieuNhapSerialTab = (p) => {
 const tonThucTeCuaBienThe = (bienTheId) =>
   inventory.value.find((i) => i.bienTheId === bienTheId)?.soLuongTon ?? 0;
 
-const printEsc = (v) => String(v ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const printEsc = (v) =>
+  String(v ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
 // In tài liệu qua iframe ẩn
 const printHtmlInIframe = (html) => {
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden;';
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;width:0;height:0;border:0;visibility:hidden;";
   document.body.appendChild(iframe);
   iframe.contentDocument.write(html);
   iframe.contentDocument.close();
@@ -1075,10 +1407,14 @@ const printHtmlInIframe = (html) => {
 
 // In danh sách tóm tắt các phiếu nhập kho
 const printPhieuNhapList = () => {
-  const headers = ['Mã', 'Ngày nhập', 'Nhà cung cấp', 'Nhân viên', 'Tổng tiền', 'Trạng thái'];
-  const rows = filteredPhieuNhap.value.map(p => [
-    p.maPhieuNhap, formatDate(p.ngayNhap), supplierName(p.nhaCungCapId),
-    staffName(p.nhanVienId), formatPrice(p.tongTien ?? 0), statusLabel(p.trangThai),
+  const headers = ["Mã", "Ngày nhập", "Nhà cung cấp", "Nhân viên", "Tổng tiền", "Trạng thái"];
+  const rows = filteredPhieuNhap.value.map((p) => [
+    p.maPhieuNhap,
+    formatDate(p.ngayNhap),
+    supplierName(p.nhaCungCapId),
+    staffName(p.nhanVienId),
+    formatPrice(p.tongTien ?? 0),
+    statusLabel(p.trangThai),
   ]);
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Danh sách phiếu nhập</title>
     <style>
@@ -1089,8 +1425,8 @@ const printPhieuNhapList = () => {
       th{background:#eee;}
     </style></head><body>
     <h1>Danh sách phiếu nhập kho</h1>
-    <table><thead><tr>${headers.map(h => `<th>${printEsc(h)}</th>`).join('')}</tr></thead>
-    <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${printEsc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+    <table><thead><tr>${headers.map((h) => `<th>${printEsc(h)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${printEsc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>
     </body></html>`;
   printHtmlInIframe(html);
 };
@@ -1098,14 +1434,19 @@ const printPhieuNhapList = () => {
 // In chi tiết phiếu nhập kho
 const printPhieuNhapDetail = (p) => {
   if (!p) return;
-  const items = chiTietPhieuNhapList.value.filter(c => c.phieuNhapId === p.phieuNhapId);
-  const itemRows = items.map((c, i) => `<tr>
+  const items = chiTietPhieuNhapList.value.filter((c) => c.phieuNhapId === p.phieuNhapId);
+  const itemRows =
+    items
+      .map(
+        (c, i) => `<tr>
       <td class="center">${i + 1}</td>
       <td>${printEsc(c.maSku)}</td>
       <td class="center">${printEsc(c.soLuong)}</td>
       <td class="right">${printEsc(formatPrice(c.donGiaNhap))}</td>
       <td class="right">${printEsc(formatPrice(c.thanhTien))}</td>
-    </tr>`).join('') || `<tr><td colspan="5" class="center muted">Không có hàng</td></tr>`;
+    </tr>`,
+      )
+      .join("") || `<tr><td colspan="5" class="center muted">Không có hàng</td></tr>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Phiếu nhập ${printEsc(p.maPhieuNhap)}</title>
     <style>
       body{font-family:Arial,sans-serif;padding:28px;color:#111;}
@@ -1145,16 +1486,22 @@ const printPhieuNhapDetail = (p) => {
 // Xuất danh sách phiếu nhập ra tệp CSV
 const exportPhieuNhapExcel = () => {
   const rows = [
-    ['Mã', 'Ngày nhập', 'Nhà cung cấp', 'Nhân viên', 'Tổng tiền', 'Trạng thái'],
-    ...filteredPhieuNhap.value.map(p => [
-      p.maPhieuNhap, formatDate(p.ngayNhap), supplierName(p.nhaCungCapId),
-      staffName(p.nhanVienId), p.tongTien ?? 0, statusLabel(p.trangThai),
+    ["Mã", "Ngày nhập", "Nhà cung cấp", "Nhân viên", "Tổng tiền", "Trạng thái"],
+    ...filteredPhieuNhap.value.map((p) => [
+      p.maPhieuNhap,
+      formatDate(p.ngayNhap),
+      supplierName(p.nhaCungCapId),
+      staffName(p.nhanVienId),
+      p.tongTien ?? 0,
+      statusLabel(p.trangThai),
     ]),
   ];
-  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const csv = rows
+    .map((r) => r.map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `phieu-nhap-kho-${Date.now()}.csv`;
   a.click();
@@ -1165,48 +1512,77 @@ const exportPhieuNhapExcel = () => {
 <template>
   <div class="inv">
     <div class="inv-tabs">
-      <button class="inv-btn inv-btn--ghost" :class="{ 'is-on': khoTab==='ton-kho' }" @click="khoTab='ton-kho'">
-        <Package :size="15" /> {{ t('admin.inventory.tabStock') }}
+      <button
+        class="inv-btn inv-btn--ghost"
+        :class="{ 'is-on': khoTab === 'ton-kho' }"
+        @click="khoTab = 'ton-kho'"
+      >
+        <Package :size="15" /> {{ t("admin.inventory.tabStock") }}
       </button>
-      <button class="inv-btn inv-btn--ghost" :class="{ 'is-on': khoTab==='phieu-nhap' }" @click="khoTab='phieu-nhap'; ensurePhieuNhapData()">
-        <ClipboardList :size="15" /> {{ t('admin.inventory.tabReceipts') }}
+      <button
+        class="inv-btn inv-btn--ghost"
+        :class="{ 'is-on': khoTab === 'phieu-nhap' }"
+        @click="
+          khoTab = 'phieu-nhap';
+          ensurePhieuNhapData();
+        "
+      >
+        <ClipboardList :size="15" /> {{ t("admin.inventory.tabReceipts") }}
       </button>
     </div>
 
-    <template v-if="khoTab==='ton-kho'">
+    <template v-if="khoTab === 'ton-kho'">
       <div class="inv-stats">
-        <div class="inv-stat inv-stat--blue" :class="{ 'is-on': !invFilterStatus }" @click="invFilterStatus = ''">
+        <div
+          class="inv-stat inv-stat--blue"
+          :class="{ 'is-on': !invFilterStatus }"
+          @click="invFilterStatus = ''"
+        >
           <div class="inv-stat__icon"><Package :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ t('admin.inventory.statTotalSku') }}</div>
+            <div class="inv-stat__label">{{ t("admin.inventory.statTotalSku") }}</div>
             <div class="inv-stat__value">{{ inventory.length }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--green" style="cursor:default; transition:none;">
+        <div class="inv-stat inv-stat--green" style="cursor: default; transition: none">
           <div class="inv-stat__icon"><BarChart3 :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ t('admin.inventory.statTotalStock') }}</div>
+            <div class="inv-stat__label">{{ t("admin.inventory.statTotalStock") }}</div>
             <div class="inv-stat__value">{{ totalStockQty }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--cyan" :class="{ 'is-on': invFilterStatus === 'pending' }" @click="toggleInvQuickFilter('pending')">
+        <div
+          class="inv-stat inv-stat--cyan"
+          :class="{ 'is-on': invFilterStatus === 'pending' }"
+          @click="toggleInvQuickFilter('pending')"
+        >
           <div class="inv-stat__icon"><Truck :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ tt('admin.inventory.statPending', 'Chờ nhập hàng') }}</div>
+            <div class="inv-stat__label">
+              {{ tt("admin.inventory.statPending", "Chờ nhập hàng") }}
+            </div>
             <div class="inv-stat__value">{{ pendingItems.length }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--amber" :class="{ 'is-on': invFilterStatus === 'low' }" @click="toggleInvQuickFilter('low')">
+        <div
+          class="inv-stat inv-stat--amber"
+          :class="{ 'is-on': invFilterStatus === 'low' }"
+          @click="toggleInvQuickFilter('low')"
+        >
           <div class="inv-stat__icon"><AlertTriangle :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ t('admin.inventory.statLowStock') }}</div>
+            <div class="inv-stat__label">{{ t("admin.inventory.statLowStock") }}</div>
             <div class="inv-stat__value">{{ lowStockOnlyItems.length }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--red" :class="{ 'is-on': invFilterStatus === 'out' }" @click="toggleInvQuickFilter('out')">
+        <div
+          class="inv-stat inv-stat--red"
+          :class="{ 'is-on': invFilterStatus === 'out' }"
+          @click="toggleInvQuickFilter('out')"
+        >
           <div class="inv-stat__icon"><Ban :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ t('admin.inventory.statOutOfStock') }}</div>
+            <div class="inv-stat__label">{{ t("admin.inventory.statOutOfStock") }}</div>
             <div class="inv-stat__value">{{ outOfStockItems.length }}</div>
           </div>
         </div>
@@ -1215,20 +1591,36 @@ const exportPhieuNhapExcel = () => {
       <!-- ══════════ CARD LỚN DUY NHẤT: toolbar + filter + bảng nằm chung ══════════ -->
       <section class="inv-card">
         <p v-if="invFilterStatus" class="inv-quickview-note">
-          {{ tt('admin.inventory.quickViewNote', 'Đang xem') }}: <b>{{ stockStatusLabel(invFilterStatus) }}</b>
-          <button type="button" class="inv-quickview-note__clear" @click="invFilterStatus = ''">{{ tt('admin.inventory.quickViewClear', 'Xem danh sách bình thường') }}</button>
+          {{ tt("admin.inventory.quickViewNote", "Đang xem") }}:
+          <b>{{ stockStatusLabel(invFilterStatus) }}</b>
+          <button type="button" class="inv-quickview-note__clear" @click="invFilterStatus = ''">
+            {{ tt("admin.inventory.quickViewClear", "Xem danh sách bình thường") }}
+          </button>
         </p>
 
         <!-- THANH CÔNG CỤ -->
         <div class="inv-bar">
-          <span class="inv-bar__count">{{ flatInventory.length }}/{{ inventory.length }} {{ t('admin.inventory.colSku') }}</span>
-          <div class="inv-search" style="flex:1; max-width:none;">
+          <span class="inv-bar__count"
+            >{{ flatInventory.length }}/{{ inventory.length }}
+            {{ t("admin.inventory.colSku") }}</span
+          >
+          <div class="inv-search" style="flex: 1; max-width: none">
             <Search :size="14" class="inv-search__icon" />
-            <input v-model="inventorySearch" :placeholder="t('admin.inventory.searchPlaceholder')" />
+            <input
+              v-model="inventorySearch"
+              :placeholder="t('admin.inventory.searchPlaceholder')"
+            />
           </div>
-          <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': isInvFilterOpen }" @click="isInvFilterOpen = !isInvFilterOpen">
-            <Filter :size="14" /> {{ tt('admin.common.filter', 'Bộ lọc') }}
-            <span v-if="invActiveFilterCount" class="inv-chip-badge">{{ invActiveFilterCount }}</span>
+          <button
+            type="button"
+            class="inv-btn inv-btn--ghost"
+            :class="{ 'is-on': isInvFilterOpen }"
+            @click="isInvFilterOpen = !isInvFilterOpen"
+          >
+            <Filter :size="14" /> {{ tt("admin.common.filter", "Bộ lọc") }}
+            <span v-if="invActiveFilterCount" class="inv-chip-badge">{{
+              invActiveFilterCount
+            }}</span>
             <ChevronDown :size="13" class="inv-caret" :class="{ 'is-open': isInvFilterOpen }" />
           </button>
         </div>
@@ -1238,186 +1630,342 @@ const exportPhieuNhapExcel = () => {
           <div class="inv-filter__panel">
             <div class="inv-filter__grid">
               <label class="inv-field">
-                <span>{{ t('admin.inventory.colStock') }}</span>
+                <span>{{ t("admin.inventory.colStock") }}</span>
                 <select v-model="invFilterStatus">
-                  <option value="">{{ t('admin.inventory.filterAll') }}</option>
-                  <option value="pending">{{ tt('admin.inventory.statPending', 'Chờ nhập hàng') }}</option>
-                  <option value="out">{{ t('admin.inventory.filterOut') }}</option>
-                  <option value="low">{{ t('admin.inventory.filterLow') }}</option>
-                  <option value="ok">{{ t('admin.inventory.filterOk') }}</option>
+                  <option value="">{{ t("admin.inventory.filterAll") }}</option>
+                  <option value="pending">
+                    {{ tt("admin.inventory.statPending", "Chờ nhập hàng") }}
+                  </option>
+                  <option value="out">{{ t("admin.inventory.filterOut") }}</option>
+                  <option value="low">{{ t("admin.inventory.filterLow") }}</option>
+                  <option value="ok">{{ t("admin.inventory.filterOk") }}</option>
                 </select>
               </label>
               <label class="inv-field">
-                <span>{{ t('admin.productModal.brandLabel') }}</span>
+                <span>{{ t("admin.productModal.brandLabel") }}</span>
                 <select v-model="invFilterThuongHieu">
-                  <option value="">{{ t('admin.inventory.filterAll') }}</option>
-                  <option v-for="o in invBrandOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+                  <option value="">{{ t("admin.inventory.filterAll") }}</option>
+                  <option v-for="o in invBrandOptions" :key="o.value" :value="o.value">
+                    {{ o.label }}
+                  </option>
                 </select>
               </label>
               <label class="inv-field">
-                <span>{{ t('admin.productModal.categoryLabel') }}</span>
+                <span>{{ t("admin.productModal.categoryLabel") }}</span>
                 <select v-model="invFilterDanhMuc">
-                  <option value="">{{ t('admin.inventory.filterAll') }}</option>
-                  <option v-for="o in invCategoryOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+                  <option value="">{{ t("admin.inventory.filterAll") }}</option>
+                  <option v-for="o in invCategoryOptions" :key="o.value" :value="o.value">
+                    {{ o.label }}
+                  </option>
                 </select>
               </label>
               <label class="inv-field inv-field--range">
                 <span>Tồn kho</span>
                 <div class="inv-range">
-                  <input v-model="invTonMin" type="number" min="0" placeholder="Từ" class="inv-range-input" />
+                  <input
+                    v-model="invTonMin"
+                    type="number"
+                    min="0"
+                    placeholder="Từ"
+                    class="inv-range-input"
+                  />
                   <span class="inv-range-sep">–</span>
-                  <input v-model="invTonMax" type="number" min="0" placeholder="Đến" class="inv-range-input" />
+                  <input
+                    v-model="invTonMax"
+                    type="number"
+                    min="0"
+                    placeholder="Đến"
+                    class="inv-range-input"
+                  />
                 </div>
               </label>
             </div>
             <div class="inv-filter__foot">
               <div class="inv-filter__btns">
-                <button type="button" class="inv-btn inv-btn--ghost" @click="clearInvFilters">{{ tt('admin.variants.clearFilters', 'Xóa lọc') }}</button>
-                <button type="button" class="inv-btn inv-btn--primary" @click="isInvFilterOpen = false">{{ tt('admin.variants.filterDone', 'Xong') }}</button>
+                <button type="button" class="inv-btn inv-btn--ghost" @click="clearInvFilters">
+                  {{ tt("admin.variants.clearFilters", "Xóa lọc") }}
+                </button>
+                <button
+                  type="button"
+                  class="inv-btn inv-btn--primary"
+                  @click="isInvFilterOpen = false"
+                >
+                  {{ tt("admin.variants.filterDone", "Xong") }}
+                </button>
               </div>
             </div>
           </div>
         </div>
 
         <!-- BẢNG -->
-        <div v-if="InventoryStore.loading" class="inv-empty">{{ t('admin.inventory.loading') }}</div>
+        <div v-if="InventoryStore.loading" class="inv-empty">
+          {{ t("admin.inventory.loading") }}
+        </div>
         <div v-else class="inv-table-wrap">
           <table class="inv-table">
             <thead>
               <tr>
-                <th style="width: 12%;"><span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> {{ tt('admin.inventory.colProductCode', 'Mã sản phẩm') }}</span></th>
-                <th style="width: 24%;"><span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> {{ t('admin.variants.colProduct') }}</span></th>
-                <th style="width: 20%;"><span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> {{ t('admin.variants.colConfig') }}</span></th>
-                <th class="ta-r" style="width: 10%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t('admin.variants.colPriceSell') }}</span></th>
-                <th class="ta-r" style="width: 10%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> {{ tt('admin.inventory.colPriceBuy', 'Giá vốn') }}</span></th>
-                <th class="ta-c" style="width: 6%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Package :size="12" /> {{ t('admin.inventory.colStock') }}</span></th>
-                <th class="ta-c" style="width: 5%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Lock :size="12" /> {{ tt('admin.inventory.colHeld', 'Giữ') }}</span></th>
-                <th class="ta-c" style="width: 7%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t('admin.variants.colStatus') }}</span></th>
-                <th class="ta-c" style="width: 6%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><CalendarCheck :size="12" /> {{ tt('admin.inventory.colUpdatedAt', 'Ngày cập nhật') }}</span></th>
+                <th style="width: 12%">
+                  <span class="d-inline-flex align-items-center gap-1.5"
+                    ><Tag :size="12" />
+                    {{ tt("admin.inventory.colProductCode", "Mã sản phẩm") }}</span
+                  >
+                </th>
+                <th style="width: 24%">
+                  <span class="d-inline-flex align-items-center gap-1.5"
+                    ><Laptop :size="12" /> {{ t("admin.variants.colProduct") }}</span
+                  >
+                </th>
+                <th style="width: 20%">
+                  <span class="d-inline-flex align-items-center gap-1.5"
+                    ><Cpu :size="12" /> {{ t("admin.variants.colConfig") }}</span
+                  >
+                </th>
+                <th class="ta-r" style="width: 10%">
+                  <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
+                    ><DollarSign :size="12" /> {{ t("admin.variants.colPriceSell") }}</span
+                  >
+                </th>
+                <th class="ta-r" style="width: 10%">
+                  <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
+                    ><Coins :size="12" /> {{ tt("admin.inventory.colPriceBuy", "Giá vốn") }}</span
+                  >
+                </th>
+                <th class="ta-c" style="width: 6%; text-align: center">
+                  <span
+                    class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                    ><Package :size="12" /> {{ t("admin.inventory.colStock") }}</span
+                  >
+                </th>
+                <th class="ta-c" style="width: 5%; text-align: center">
+                  <span
+                    class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                    ><Lock :size="12" /> {{ tt("admin.inventory.colHeld", "Giữ") }}</span
+                  >
+                </th>
+                <th class="ta-c" style="width: 7%; text-align: center">
+                  <span
+                    class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                    ><Activity :size="12" /> {{ t("admin.variants.colStatus") }}</span
+                  >
+                </th>
+                <th class="ta-c" style="width: 6%; text-align: center">
+                  <span
+                    class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                    ><CalendarCheck :size="12" />
+                    {{ tt("admin.inventory.colUpdatedAt", "Ngày cập nhật") }}</span
+                  >
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="({ item, v, status }) in pagedFlatInventory" :key="item.tonKhoId" class="inv-row" @click="openStockDetail(item)">
+              <tr
+                v-for="{ item, v, status } in pagedFlatInventory"
+                :key="item.tonKhoId"
+                class="inv-row"
+                @click="openStockDetail(item)"
+              >
                 <td class="inv-code">{{ maSanPhamCuaItem(item) }}</td>
                 <td class="inv-td-name">
                   <div class="inv-name">
-                    <img :src="v?.hinhAnhChinh" class="inv-thumb" alt="" @error="$event.target.style.visibility='hidden'" />
+                    <img
+                      :src="v?.hinhAnhChinh"
+                      class="inv-thumb"
+                      alt=""
+                      @error="$event.target.style.visibility = 'hidden'"
+                    />
                     <div class="inv-name__text">
-                      <div class="inv-name__main">{{ v?.tenSanPham || item.tenSanPham || '—' }}</div>
-                      <div class="inv-name__sub">{{ item.maSku || '—' }}</div>
+                      <div class="inv-name__main">
+                        {{ v?.tenSanPham || item.tenSanPham || "—" }}
+                      </div>
+                      <div class="inv-name__sub">{{ item.maSku || "—" }}</div>
                     </div>
                   </div>
                 </td>
                 <td class="inv-muted">
                   <div v-if="v?.cpu || v?.ram || v?.oCung || v?.mauSac" class="inv-config">
                     <span v-if="v.cpu" class="inv-config-chip"><Cpu :size="12" />{{ v.cpu }}</span>
-                    <span v-if="v.ram" class="inv-config-chip"><MemoryStick :size="12" />{{ v.ram }}</span>
-                    <span v-if="v.oCung" class="inv-config-chip"><HardDrive :size="12" />{{ v.oCung }}</span>
-                    <span v-if="v.mauSac" class="inv-config-chip"><Palette :size="12" />{{ v.mauSac }}</span>
+                    <span v-if="v.ram" class="inv-config-chip"
+                      ><MemoryStick :size="12" />{{ v.ram }}</span
+                    >
+                    <span v-if="v.oCung" class="inv-config-chip"
+                      ><HardDrive :size="12" />{{ v.oCung }}</span
+                    >
+                    <span v-if="v.mauSac" class="inv-config-chip"
+                      ><Palette :size="12" />{{ v.mauSac }}</span
+                    >
                   </div>
                   <span v-else>—</span>
                 </td>
                 <td class="ta-r inv-price">{{ formatPrice(v?.giaBan) }}</td>
                 <td class="ta-r inv-muted">{{ formatPrice(v?.giaNhap) }}</td>
-                <td class="ta-c"><span class="inv-ton" :class="{ 'text-danger': status==='out', 'text-warning': status==='low', 'text-success': status==='ok', 'text-info': status==='pending' }">{{ item.soLuongTon ?? '—' }}</span></td>
-                <td class="ta-c"><span class="inv-held" :class="{ 'text-warning fw-bold': getHeldQty(item) > 0 }">{{ getHeldQty(item) }}</span></td>
                 <td class="ta-c">
-                  <span class="inv-tag" :class="'inv-tag--' + status">{{ stockStatusLabel(status) }}</span>
+                  <span
+                    class="inv-ton"
+                    :class="{
+                      'text-danger': status === 'out',
+                      'text-warning': status === 'low',
+                      'text-success': status === 'ok',
+                      'text-info': status === 'pending',
+                    }"
+                    >{{ item.soLuongTon ?? "—" }}</span
+                  >
+                </td>
+                <td class="ta-c">
+                  <span
+                    class="inv-held"
+                    :class="{ 'text-warning fw-bold': getHeldQty(item) > 0 }"
+                    >{{ getHeldQty(item) }}</span
+                  >
+                </td>
+                <td class="ta-c">
+                  <span class="inv-tag" :class="'inv-tag--' + status">{{
+                    stockStatusLabel(status)
+                  }}</span>
                 </td>
                 <td class="ta-c inv-muted">{{ formatDate(v?.ngayCapNhat) }}</td>
               </tr>
-              <tr v-if="flatInventory.length === 0"><td colspan="9" class="inv-empty">{{ t('admin.inventory.empty') }}</td></tr>
+              <tr v-if="flatInventory.length === 0">
+                <td colspan="9" class="inv-empty">{{ t("admin.inventory.empty") }}</td>
+              </tr>
             </tbody>
           </table>
         </div>
         <footer v-if="invTotalPages > 1" class="inv-pager">
-          <Pagination :current-page="invCurrentPage" :total-pages="invTotalPages" @page-change="invCurrentPage = $event" />
+          <Pagination
+            :current-page="invCurrentPage"
+            :total-pages="invTotalPages"
+            @page-change="invCurrentPage = $event"
+          />
         </footer>
       </section>
     </template>
 
     <!-- ══ TAB: PHIEU NHAP ══ -->
-    <template v-else-if="khoTab==='phieu-nhap'">
+    <template v-else-if="khoTab === 'phieu-nhap'">
       <div class="inv-stats">
-        <div class="inv-stat inv-stat--purple" :class="{ 'is-on': !phieuNhapStatusFilter }" @click="togglePnQuickFilter('')">
+        <div
+          class="inv-stat inv-stat--purple"
+          :class="{ 'is-on': !phieuNhapStatusFilter }"
+          @click="togglePnQuickFilter('')"
+        >
           <div class="inv-stat__icon"><ClipboardList :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ t('admin.phieuNhap.statTotal') }}</div>
+            <div class="inv-stat__label">{{ t("admin.phieuNhap.statTotal") }}</div>
             <div class="inv-stat__value">{{ phieuNhapCounts.total }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--amber" :class="{ 'is-on': phieuNhapStatusFilter === 'cho_duyet' }" @click="togglePnQuickFilter('cho_duyet')">
+        <div
+          class="inv-stat inv-stat--amber"
+          :class="{ 'is-on': phieuNhapStatusFilter === 'cho_duyet' }"
+          @click="togglePnQuickFilter('cho_duyet')"
+        >
           <div class="inv-stat__icon"><Clock :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ t('admin.phieuNhap.statPending') }}</div>
+            <div class="inv-stat__label">{{ t("admin.phieuNhap.statPending") }}</div>
             <div class="inv-stat__value">{{ phieuNhapCounts.choDuyet }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--green" :class="{ 'is-on': phieuNhapStatusFilter === 'hoan_thanh' }" @click="togglePnQuickFilter('hoan_thanh')">
+        <div
+          class="inv-stat inv-stat--green"
+          :class="{ 'is-on': phieuNhapStatusFilter === 'hoan_thanh' }"
+          @click="togglePnQuickFilter('hoan_thanh')"
+        >
           <div class="inv-stat__icon"><CheckCircle2 :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ t('admin.phieuNhap.statDone') }}</div>
+            <div class="inv-stat__label">{{ t("admin.phieuNhap.statDone") }}</div>
             <div class="inv-stat__value">{{ phieuNhapCounts.hoanThanh }}</div>
           </div>
         </div>
-        <div class="inv-stat inv-stat--red" :class="{ 'is-on': phieuNhapStatusFilter === 'huy' }" @click="togglePnQuickFilter('huy')">
+        <div
+          class="inv-stat inv-stat--red"
+          :class="{ 'is-on': phieuNhapStatusFilter === 'huy' }"
+          @click="togglePnQuickFilter('huy')"
+        >
           <div class="inv-stat__icon"><XCircle :size="22" /></div>
           <div>
-            <div class="inv-stat__label">{{ t('admin.phieuNhap.statCancelled') }}</div>
+            <div class="inv-stat__label">{{ t("admin.phieuNhap.statCancelled") }}</div>
             <div class="inv-stat__value">{{ phieuNhapCounts.huy }}</div>
           </div>
         </div>
       </div>
 
       <div class="inv-bar">
-        <div class="inv-search" style="flex:1; max-width:none;">
+        <div class="inv-search" style="flex: 1; max-width: none">
           <Search :size="14" class="inv-search__icon" />
           <input v-model="phieuNhapSearch" :placeholder="t('admin.phieuNhap.searchPlaceholder')" />
         </div>
-        <button type="button" class="inv-btn inv-btn--ghost" :class="{ 'is-on': isPnFilterOpen }" @click="isPnFilterOpen = !isPnFilterOpen">
-          <Filter :size="14" /> {{ tt('admin.common.filter', 'Bộ lọc') }}
-          <span v-if="pnFilterActiveCount > 0" class="inv-filter-badge">{{ pnFilterActiveCount }}</span>
+        <button
+          type="button"
+          class="inv-btn inv-btn--ghost"
+          :class="{ 'is-on': isPnFilterOpen }"
+          @click="isPnFilterOpen = !isPnFilterOpen"
+        >
+          <Filter :size="14" /> {{ tt("admin.common.filter", "Bộ lọc") }}
+          <span v-if="pnFilterActiveCount > 0" class="inv-filter-badge">{{
+            pnFilterActiveCount
+          }}</span>
           <ChevronDown :size="13" class="inv-caret" :class="{ 'is-open': isPnFilterOpen }" />
         </button>
         <div class="inv-bar__actions">
-          <button class="inv-btn inv-btn--ghost" @click="printPhieuNhapList"><Printer :size="14" /> {{ t('admin.phieuNhap.printPdf') }}</button>
-          <button class="inv-btn inv-btn--ghost" @click="exportPhieuNhapExcel"><Download :size="14" /> {{ t('admin.phieuNhap.exportExcel') }}</button>
-          <button class="inv-btn inv-btn--primary" @click="openAddPhieuNhap"><Plus :size="14" /> {{ t('admin.phieuNhap.add') }}</button>
+          <button class="inv-btn inv-btn--ghost" @click="printPhieuNhapList">
+            <Printer :size="14" /> {{ t("admin.phieuNhap.printPdf") }}
+          </button>
+          <button class="inv-btn inv-btn--ghost" @click="exportPhieuNhapExcel">
+            <Download :size="14" /> {{ t("admin.phieuNhap.exportExcel") }}
+          </button>
+          <button class="inv-btn inv-btn--primary" @click="openAddPhieuNhap">
+            <Plus :size="14" /> {{ t("admin.phieuNhap.add") }}
+          </button>
         </div>
       </div>
 
       <!-- Chips filter active -->
       <div v-if="pnFilterActiveCount > 0" class="inv-filter-chips">
-        <span v-for="chip in pnFilterActiveChips" :key="chip.label" class="inv-chip" @click="chip.clear()">
+        <span
+          v-for="chip in pnFilterActiveChips"
+          :key="chip.label"
+          class="inv-chip"
+          @click="chip.clear()"
+        >
           {{ chip.label }} <X :size="11" />
         </span>
         <button class="inv-chip inv-chip--clear" @click="clearAllPnFilters">Xóa tất cả</button>
       </div>
 
-      <div v-if="isPnFilterOpen" class="inv-filter" :class="{ 'is-open': isPnFilterOpen }" @click.self="isPnFilterOpen = false">
+      <div
+        v-if="isPnFilterOpen"
+        class="inv-filter"
+        :class="{ 'is-open': isPnFilterOpen }"
+        @click.self="isPnFilterOpen = false"
+      >
         <div class="inv-filter__panel">
-          <div class="inv-filter__grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="inv-filter__grid" style="grid-template-columns: 1fr 1fr">
             <label class="inv-field">
-              <span>{{ tt('admin.common.status', 'Trạng thái') }}</span>
+              <span>{{ tt("admin.common.status", "Trạng thái") }}</span>
               <select v-model="phieuNhapStatusFilter">
-                <option value="">{{ t('admin.inventory.filterAll') }}</option>
-                <option value="cho_duyet">{{ t('admin.statusLabel.cho_duyet') }}</option>
-                <option value="hoan_thanh">{{ t('admin.statusLabel.hoan_thanh') }}</option>
-                <option value="huy">{{ t('admin.statusLabel.huy') }}</option>
+                <option value="">{{ t("admin.inventory.filterAll") }}</option>
+                <option value="cho_duyet">{{ t("admin.statusLabel.cho_duyet") }}</option>
+                <option value="hoan_thanh">{{ t("admin.statusLabel.hoan_thanh") }}</option>
+                <option value="huy">{{ t("admin.statusLabel.huy") }}</option>
               </select>
             </label>
             <label class="inv-field">
-              <span>{{ t('admin.phieuNhap.colSupplier') }}</span>
+              <span>{{ t("admin.phieuNhap.colSupplier") }}</span>
               <select v-model="pnFilterSupplier">
                 <option value="">Tất cả</option>
-                <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">{{ s.tenNhaCungCap }}</option>
+                <option v-for="s in suppliers" :key="s.nhaCungCapId" :value="s.nhaCungCapId">
+                  {{ s.tenNhaCungCap }}
+                </option>
               </select>
             </label>
             <label class="inv-field">
-              <span>{{ t('admin.phieuNhap.colStaff') }}</span>
+              <span>{{ t("admin.phieuNhap.colStaff") }}</span>
               <select v-model="pnFilterStaff">
                 <option value="">Tất cả</option>
-                <option v-for="s in staff" :key="s.nhanVienId" :value="s.nhanVienId">{{ s.hoTen }}</option>
+                <option v-for="s in staff" :key="s.nhanVienId" :value="s.nhanVienId">
+                  {{ s.hoTen }}
+                </option>
               </select>
             </label>
             <label class="inv-field">
@@ -1439,8 +1987,16 @@ const exportPhieuNhapExcel = () => {
           </div>
           <div class="inv-filter__foot">
             <div class="inv-filter__btns">
-              <button type="button" class="inv-btn inv-btn--ghost" @click="clearAllPnFilters">Xóa lọc</button>
-              <button type="button" class="inv-btn inv-btn--primary" @click="isPnFilterOpen = false">Xong</button>
+              <button type="button" class="inv-btn inv-btn--ghost" @click="clearAllPnFilters">
+                Xóa lọc
+              </button>
+              <button
+                type="button"
+                class="inv-btn inv-btn--primary"
+                @click="isPnFilterOpen = false"
+              >
+                Xong
+              </button>
             </div>
           </div>
         </div>
@@ -1451,17 +2007,54 @@ const exportPhieuNhapExcel = () => {
           <table class="inv-table">
             <thead>
               <tr>
-                <th class="ta-c" style="width:5%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Hash :size="12" /> {{ t('admin.common.stt') }}</span></th>
-                <th class="ta-c" style="width:15%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><FileText :size="12" /> {{ t('admin.phieuNhap.colCode') }}</span></th>
-                <th class="ta-c" style="width:12%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> {{ t('admin.phieuNhap.colDate') }}</span></th>
-                <th style="width:23%;"><span class="d-inline-flex align-items-center gap-1.5"><Building2 :size="12" /> {{ t('admin.phieuNhap.colSupplier') }}</span></th>
-                <th style="width:17%;"><span class="d-inline-flex align-items-center gap-1.5"><User :size="12" /> {{ t('admin.phieuNhap.colStaff') }}</span></th>
-                <th class="ta-r" style="width:15%;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t('admin.phieuNhap.colTotal') }}</span></th>
-                <th class="ta-c" style="width:13%; text-align: center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> {{ t('admin.phieuNhap.colStatus') }}</span></th>
+                <th class="ta-c" style="width: 5%; text-align: center">
+                  <span
+                    class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                    ><Hash :size="12" /> {{ t("admin.common.stt") }}</span
+                  >
+                </th>
+                <th class="ta-c" style="width: 15%; text-align: center">
+                  <span
+                    class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                    ><FileText :size="12" /> {{ t("admin.phieuNhap.colCode") }}</span
+                  >
+                </th>
+                <th class="ta-c" style="width: 12%; text-align: center">
+                  <span
+                    class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                    ><Calendar :size="12" /> {{ t("admin.phieuNhap.colDate") }}</span
+                  >
+                </th>
+                <th style="width: 23%">
+                  <span class="d-inline-flex align-items-center gap-1.5"
+                    ><Building2 :size="12" /> {{ t("admin.phieuNhap.colSupplier") }}</span
+                  >
+                </th>
+                <th style="width: 17%">
+                  <span class="d-inline-flex align-items-center gap-1.5"
+                    ><User :size="12" /> {{ t("admin.phieuNhap.colStaff") }}</span
+                  >
+                </th>
+                <th class="ta-r" style="width: 15%">
+                  <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
+                    ><DollarSign :size="12" /> {{ t("admin.phieuNhap.colTotal") }}</span
+                  >
+                </th>
+                <th class="ta-c" style="width: 13%; text-align: center">
+                  <span
+                    class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
+                    ><Activity :size="12" /> {{ t("admin.phieuNhap.colStatus") }}</span
+                  >
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(p, idx) in pagedPhieuNhap" :key="p.phieuNhapId" class="inv-row" @click="openPhieuNhapDetail(p)">
+              <tr
+                v-for="(p, idx) in pagedPhieuNhap"
+                :key="p.phieuNhapId"
+                class="inv-row"
+                @click="openPhieuNhapDetail(p)"
+              >
                 <td class="inv-muted ta-c">{{ pnCurrentPage * pnPageSize + idx + 1 }}</td>
                 <td class="inv-code ta-c">{{ p.maPhieuNhap }}</td>
                 <td class="ta-c">{{ formatDate(p.ngayNhap) }}</td>
@@ -1469,136 +2062,240 @@ const exportPhieuNhapExcel = () => {
                 <td>{{ staffName(p.nhanVienId) }}</td>
                 <td class="ta-r inv-price">{{ formatPrice(p.tongTien) }}</td>
                 <td class="ta-c">
-                  <span class="inv-tag" :style="{ background: phieuNhapStatusColor(p.trangThai).bg, color: phieuNhapStatusColor(p.trangThai).text }">
-                    <component :is="phieuNhapStatusIcon(p.trangThai)" :size="13" /> {{ statusLabel(p.trangThai) }}
+                  <span
+                    class="inv-tag"
+                    :style="{
+                      background: phieuNhapStatusColor(p.trangThai).bg,
+                      color: phieuNhapStatusColor(p.trangThai).text,
+                    }"
+                  >
+                    <component :is="phieuNhapStatusIcon(p.trangThai)" :size="13" />
+                    {{ statusLabel(p.trangThai) }}
                   </span>
                 </td>
               </tr>
-              <tr v-if="filteredPhieuNhap.length===0"><td colspan="7" class="inv-empty">{{ t('admin.phieuNhap.empty') }}</td></tr>
+              <tr v-if="filteredPhieuNhap.length === 0">
+                <td colspan="7" class="inv-empty">{{ t("admin.phieuNhap.empty") }}</td>
+              </tr>
             </tbody>
           </table>
         </div>
         <footer v-if="pnTotalPages > 1" class="inv-pager">
-          <Pagination :current-page="pnCurrentPage" :total-pages="pnTotalPages" @page-change="pnCurrentPage = $event" />
+          <Pagination
+            :current-page="pnCurrentPage"
+            :total-pages="pnTotalPages"
+            @page-change="pnCurrentPage = $event"
+          />
         </footer>
       </section>
     </template>
   </div>
 
   <!-- ══ MODAL TAO PHIEU NHAP ══ -->
-  <div v-if="showPhieuNhapModal" class="inv-modal-mask" @click.self="showPhieuNhapModal=false">
+  <div v-if="showPhieuNhapModal" class="inv-modal-mask" @click.self="showPhieuNhapModal = false">
     <div class="inv-modal">
       <header class="inv-modal__head">
-        <span>{{ editingPhieuNhapId ? t('admin.phieuNhapModal.titleEdit') : t('admin.phieuNhapModal.title') }}</span>
-        <button class="inv-icon-btn" :aria-label="t('common.close')" @click="showPhieuNhapModal=false"><X :size="16" /></button>
+        <span>{{
+          editingPhieuNhapId ? t("admin.phieuNhapModal.titleEdit") : t("admin.phieuNhapModal.title")
+        }}</span>
+        <button
+          class="inv-icon-btn"
+          :aria-label="t('common.close')"
+          @click="showPhieuNhapModal = false"
+        >
+          <X :size="16" />
+        </button>
       </header>
       <div class="inv-modal__body">
         <p v-if="phieuNhapFormError" class="inv-alert">{{ phieuNhapFormError }}</p>
         <div class="inv-grid mb-3">
           <label class="inv-field">
-            <span>{{ t('admin.phieuNhapModal.supplierLabel') }}</span>
-            <SearchSelect v-model="phieuNhapForm.nhaCungCapId" :options="supplierOptions" :placeholder="t('admin.phieuNhapModal.selectPlaceholder')" />
+            <span>{{ t("admin.phieuNhapModal.supplierLabel") }}</span>
+            <SearchSelect
+              v-model="phieuNhapForm.nhaCungCapId"
+              :options="supplierOptions"
+              :placeholder="t('admin.phieuNhapModal.selectPlaceholder')"
+            />
           </label>
           <label class="inv-field">
-            <span>{{ t('admin.phieuNhapModal.staffLabel') }}</span>
-            <SearchSelect v-model="phieuNhapForm.nhanVienId" :options="staffOptions" :placeholder="t('admin.phieuNhapModal.selectPlaceholder')" />
+            <span>{{ t("admin.phieuNhapModal.staffLabel") }}</span>
+            <SearchSelect
+              v-model="phieuNhapForm.nhanVienId"
+              :options="staffOptions"
+              :placeholder="t('admin.phieuNhapModal.selectPlaceholder')"
+            />
           </label>
           <label class="inv-field">
-            <span>{{ t('admin.phieuNhapModal.dateLabel') }}</span>
+            <span>{{ t("admin.phieuNhapModal.dateLabel") }}</span>
             <input v-model="phieuNhapForm.ngayNhap" type="datetime-local" />
           </label>
           <label class="inv-field">
-            <span>{{ t('admin.phieuNhapModal.noteLabel') }}</span>
+            <span>{{ t("admin.phieuNhapModal.noteLabel") }}</span>
             <input v-model="phieuNhapForm.ghiChu" />
           </label>
         </div>
 
-        <div class="inv-section-title"><Package :size="14" /> {{ t('admin.phieuNhapModal.itemsLabel') }}</div>
+        <div class="inv-section-title">
+          <Package :size="14" /> {{ t("admin.phieuNhapModal.itemsLabel") }}
+        </div>
         <div class="inv-item-head">
-          <span style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colProduct') }}</span>
-          <span style="flex:2 1 0;">{{ t('admin.phieuNhapModal.colVariant') }}</span>
-          <span style="flex:0 0 70px;text-align:center;">{{ t('admin.phieuNhapModal.colQty') }}</span>
-          <span style="flex:0 0 110px;text-align:right;">{{ t('admin.phieuNhapModal.colPrice') }}</span>
-          <span style="flex:0 0 72px;"></span>
+          <span style="flex: 2 1 0">{{ t("admin.phieuNhapModal.colProduct") }}</span>
+          <span style="flex: 2 1 0">{{ t("admin.phieuNhapModal.colVariant") }}</span>
+          <span style="flex: 0 0 70px; text-align: center">{{
+            t("admin.phieuNhapModal.colQty")
+          }}</span>
+          <span style="flex: 0 0 110px; text-align: right">{{
+            t("admin.phieuNhapModal.colPrice")
+          }}</span>
+          <span style="flex: 0 0 72px"></span>
         </div>
         <div class="d-flex flex-column gap-2 mb-2">
           <div v-for="(row, idx) in phieuNhapForm.items" :key="idx" class="inv-item-block">
             <div class="inv-item-row">
-              <div style="flex:2 1 0;min-width:0;">
+              <div style="flex: 2 1 0; min-width: 0">
                 <SearchSelect
-                  v-model="row.sanPhamId" :options="productOptionsForPhieuNhap"
+                  v-model="row.sanPhamId"
+                  :options="productOptionsForPhieuNhap"
                   :placeholder="t('admin.phieuNhapModal.selectProductPlaceholder')"
-                  @update:model-value="row.bienTheId=''; row.lockedCount=0; row.serials=['']; row.soLuong=1; row.donGia=0"
+                  @update:model-value="
+                    row.bienTheId = '';
+                    row.lockedCount = 0;
+                    row.serials = [''];
+                    row.soLuong = 1;
+                    row.donGia = 0;
+                  "
                 />
               </div>
-              <div style="flex:2 1 0;min-width:0;">
+              <div style="flex: 2 1 0; min-width: 0">
                 <SearchSelect
-                  v-model="row.bienTheId" :disabled="!row.sanPhamId"
+                  v-model="row.bienTheId"
+                  :disabled="!row.sanPhamId"
                   :options="variantsForProduct(row.sanPhamId)"
                   :placeholder="t('admin.phieuNhapModal.selectVariantPlaceholder')"
-                  @update:model-value="row.lockedCount=0; row.serials=['']; row.soLuong=1; row.donGia=0"
+                  @update:model-value="
+                    row.lockedCount = 0;
+                    row.serials = [''];
+                    row.soLuong = 1;
+                    row.donGia = 0;
+                  "
                 />
               </div>
-              <div class="inv-readonly" style="flex:0 0 70px;text-align:center;font-weight:700;">{{ row.soLuong || 0 }}</div>
-              <div class="inv-readonly" style="flex:0 0 110px;text-align:right;">{{ row.donGia ? formatPrice(row.donGia) : '—' }}</div>
-              <div style="flex:0 0 72px;display:flex;gap:4px;justify-content:flex-end;">
-                <label class="inv-icon-btn" style="cursor:pointer;" :class="{ 'inv-icon-btn--disabled': !row.bienTheId }" :title="!row.bienTheId ? 'Chọn biến thể trước' : 'Import file serial'" aria-label="Import file serial">
+              <div
+                class="inv-readonly"
+                style="flex: 0 0 70px; text-align: center; font-weight: 700"
+              >
+                {{ row.soLuong || 0 }}
+              </div>
+              <div class="inv-readonly" style="flex: 0 0 110px; text-align: right">
+                {{ row.donGia ? formatPrice(row.donGia) : "—" }}
+              </div>
+              <div style="flex: 0 0 72px; display: flex; gap: 4px; justify-content: flex-end">
+                <label
+                  class="inv-icon-btn"
+                  style="cursor: pointer"
+                  :class="{ 'inv-icon-btn--disabled': !row.bienTheId }"
+                  :title="!row.bienTheId ? 'Chọn biến thể trước' : 'Import file serial'"
+                  aria-label="Import file serial"
+                >
                   <FolderOpen :size="14" />
-                  <input type="file" accept=".csv,.txt,.xlsx,.xls" class="d-none" :disabled="!row.bienTheId" @change="importSerialsForRow(row, $event)" />
+                  <input
+                    type="file"
+                    accept=".csv,.txt,.xlsx,.xls"
+                    class="d-none"
+                    :disabled="!row.bienTheId"
+                    @change="importSerialsForRow(row, $event)"
+                  />
                 </label>
-                <button class="inv-icon-btn" style="color:var(--muted);" :title="'Làm mới dòng'" @click="resetPhieuNhapItem(row)">
+                <button
+                  class="inv-icon-btn"
+                  style="color: var(--muted)"
+                  :title="'Làm mới dòng'"
+                  @click="resetPhieuNhapItem(row)"
+                >
                   <RefreshCw :size="14" />
                 </button>
-                <button class="inv-icon-btn inv-icon-btn--danger" :title="'Xóa dòng'" @click="removePhieuNhapItemRow(idx)">
+                <button
+                  class="inv-icon-btn inv-icon-btn--danger"
+                  :title="'Xóa dòng'"
+                  @click="removePhieuNhapItemRow(idx)"
+                >
                   <Trash2 :size="14" />
                 </button>
               </div>
             </div>
             <div v-if="row.bienTheId" class="inv-serial-info">
-              <button v-if="row.serials.filter(s=>s).length > 0"
+              <button
+                v-if="row.serials.filter((s) => s).length > 0"
                 class="inv-serial-toggle"
                 @click="openSerialViewer(idx)"
               >
                 <span class="inv-serial-count">
-                  {{ row.serials.filter(s=>s).length }}/{{ row.soLuong || 0 }} serial đã import
+                  {{ row.serials.filter((s) => s).length }}/{{ row.soLuong || 0 }} serial đã import
                 </span>
-                <ExternalLink :size="12" style="flex-shrink:0;" />
+                <ExternalLink :size="12" style="flex-shrink: 0" />
               </button>
               <span v-else class="inv-hint">
-                {{ row.serials.filter(s=>s).length }}/{{ row.soLuong || 0 }} serial — chưa import
+                {{ row.serials.filter((s) => s).length }}/{{ row.soLuong || 0 }} serial — chưa
+                import
               </span>
             </div>
           </div>
         </div>
-        <button class="inv-btn inv-btn--ghost mb-3" @click="addPhieuNhapItemRow">{{ t('admin.phieuNhapModal.addRow') }}</button>
+        <button class="inv-btn inv-btn--ghost mb-3" @click="addPhieuNhapItemRow">
+          {{ t("admin.phieuNhapModal.addRow") }}
+        </button>
 
-        <div class="inv-total">{{ t('admin.phieuNhapModal.totalLabel') }} {{ formatPrice(phieuNhapItemsTotal) }}</div>
+        <div class="inv-total">
+          {{ t("admin.phieuNhapModal.totalLabel") }} {{ formatPrice(phieuNhapItemsTotal) }}
+        </div>
       </div>
       <footer class="inv-modal__foot inv-modal__foot--end">
-        <button class="inv-btn inv-btn--ghost" @click="showPhieuNhapModal=false">{{ t('admin.phieuNhapModal.cancel') }}</button>
-        <button class="inv-btn inv-btn--primary"
+        <button class="inv-btn inv-btn--ghost" @click="showPhieuNhapModal = false">
+          {{ t("admin.phieuNhapModal.cancel") }}
+        </button>
+        <button
+          class="inv-btn inv-btn--primary"
           :disabled="!phieuNhapFormValid || phieuNhapSaving"
           :title="!phieuNhapFormValid ? 'Vui lòng nhập đầy đủ thông tin' : ''"
-          @click="savePhieuNhap">{{ editingPhieuNhapId ? t('admin.phieuNhapModal.saveEdit') : t('admin.phieuNhapModal.save') }}</button>
+          @click="savePhieuNhap"
+        >
+          {{
+            editingPhieuNhapId ? t("admin.phieuNhapModal.saveEdit") : t("admin.phieuNhapModal.save")
+          }}
+        </button>
       </footer>
     </div>
   </div>
 
   <!-- ══ MODAL XEM SERIAL ĐÃ IMPORT ══ -->
   <div v-if="serialViewerModal" class="inv-modal-mask" @click.self="closeSerialViewer">
-    <div class="inv-modal" style="width:720px; max-height:85vh;">
+    <div class="inv-modal" style="width: 720px; max-height: 85vh">
       <header class="inv-modal__head">
-        <span>Serial đã import — {{ serialViewerSpName }} ({{ serialViewerSerials.length }} serial)</span>
-        <button class="inv-icon-btn" :aria-label="t('common.close')" @click="closeSerialViewer"><X :size="16" /></button>
+        <span
+          >Serial đã import — {{ serialViewerSpName }} ({{
+            serialViewerSerials.length
+          }}
+          serial)</span
+        >
+        <button class="inv-icon-btn" :aria-label="t('common.close')" @click="closeSerialViewer">
+          <X :size="16" />
+        </button>
       </header>
       <div class="inv-modal__body">
-        <div v-if="serialViewerSerials.length === 0" class="inv-hint">Dòng này chưa có serial nào.</div>
+        <div v-if="serialViewerSerials.length === 0" class="inv-hint">
+          Dòng này chưa có serial nào.
+        </div>
         <div v-else class="inv-serial-viewer-grid">
-          <span v-for="(s, i) in serialViewerSerials" :key="i"
+          <span
+            v-for="(s, i) in serialViewerSerials"
+            :key="i"
             class="inv-serial-chip"
-            :class="{ 'inv-serial-chip--dup': serialViewerDuplicateSet.has(s) }">
+            :class="{ 'inv-serial-chip--dup': serialViewerDuplicateSet.has(s) }"
+          >
             {{ i + 1 }}. {{ s }}
-            <span v-if="serialViewerDuplicateSet.has(s)" class="inv-serial-chip__warn">⚠ trùng</span>
+            <span v-if="serialViewerDuplicateSet.has(s)" class="inv-serial-chip__warn"
+              >⚠ trùng</span
+            >
           </span>
         </div>
       </div>
@@ -1609,41 +2306,87 @@ const exportPhieuNhapExcel = () => {
   </div>
 
   <!-- ══ MODAL CHI TIET PHIEU NHAP ══ -->
-  <div v-if="showPhieuNhapDetailModal" class="inv-modal-mask" @click.self="showPhieuNhapDetailModal=false">
+  <div
+    v-if="showPhieuNhapDetailModal"
+    class="inv-modal-mask"
+    @click.self="showPhieuNhapDetailModal = false"
+  >
     <div class="inv-modal inv-modal--hep">
       <header v-if="phieuNhapDetailData" class="inv-modal__head">
         <div class="d-flex align-items-center gap-3">
           <div class="inv-modal__icon"><ClipboardList :size="18" /></div>
           <div>
-            <div style="font-weight:700;font-size:0.95rem;">
-              {{ t('admin.phieuNhapDetailModal.title') }}
-              <span class="inv-mono inv-muted" style="margin-left:4px;font-size:0.8rem;">{{ phieuNhapDetailData.maPhieuNhap }}</span>
+            <div style="font-weight: 700; font-size: 0.95rem">
+              {{ t("admin.phieuNhapDetailModal.title") }}
+              <span class="inv-mono inv-muted" style="margin-left: 4px; font-size: 0.8rem">{{
+                phieuNhapDetailData.maPhieuNhap
+              }}</span>
             </div>
-            <div class="inv-muted" style="font-size:0.78rem;">{{ supplierName(phieuNhapDetailData.nhaCungCapId) }} · {{ formatDate(phieuNhapDetailData.ngayNhap) }}</div>
+            <div class="inv-muted" style="font-size: 0.78rem">
+              {{ supplierName(phieuNhapDetailData.nhaCungCapId) }} ·
+              {{ formatDate(phieuNhapDetailData.ngayNhap) }}
+            </div>
           </div>
         </div>
-        <button class="inv-icon-btn" :aria-label="t('common.close')" @click="showPhieuNhapDetailModal=false"><X :size="16" /></button>
+        <button
+          class="inv-icon-btn"
+          :aria-label="t('common.close')"
+          @click="showPhieuNhapDetailModal = false"
+        >
+          <X :size="16" />
+        </button>
       </header>
 
-      <div v-if="phieuNhapDetailData" class="inv-modal__body" style="padding:0;">
+      <div v-if="phieuNhapDetailData" class="inv-modal__body" style="padding: 0">
         <div class="inv-chips">
-          <span class="inv-chip-info"><Building2 :size="13" /> {{ t('admin.phieuNhap.colSupplier') }}: <b>{{ supplierName(phieuNhapDetailData.nhaCungCapId) }}</b></span>
-          <span class="inv-chip-info"><User :size="13" /> {{ t('admin.phieuNhap.colStaff') }}: <b>{{ staffName(phieuNhapDetailData.nhanVienId) }}</b></span>
-          <span class="inv-chip-info"><Calendar :size="13" /> {{ t('admin.phieuNhap.colDate') }}: <b>{{ formatDate(phieuNhapDetailData.ngayNhap) }}</b></span>
-          <span class="inv-tag" :style="{ background: phieuNhapStatusColor(phieuNhapDetailData.trangThai).bg, color: phieuNhapStatusColor(phieuNhapDetailData.trangThai).text }">
-            <component :is="phieuNhapStatusIcon(phieuNhapDetailData.trangThai)" :size="13" /> {{ statusLabel(phieuNhapDetailData.trangThai) }}
+          <span class="inv-chip-info"
+            ><Building2 :size="13" /> {{ t("admin.phieuNhap.colSupplier") }}:
+            <b>{{ supplierName(phieuNhapDetailData.nhaCungCapId) }}</b></span
+          >
+          <span class="inv-chip-info"
+            ><User :size="13" /> {{ t("admin.phieuNhap.colStaff") }}:
+            <b>{{ staffName(phieuNhapDetailData.nhanVienId) }}</b></span
+          >
+          <span class="inv-chip-info"
+            ><Calendar :size="13" /> {{ t("admin.phieuNhap.colDate") }}:
+            <b>{{ formatDate(phieuNhapDetailData.ngayNhap) }}</b></span
+          >
+          <span
+            class="inv-tag"
+            :style="{
+              background: phieuNhapStatusColor(phieuNhapDetailData.trangThai).bg,
+              color: phieuNhapStatusColor(phieuNhapDetailData.trangThai).text,
+            }"
+          >
+            <component :is="phieuNhapStatusIcon(phieuNhapDetailData.trangThai)" :size="13" />
+            {{ statusLabel(phieuNhapDetailData.trangThai) }}
           </span>
-          <div v-if="phieuNhapDetailData.ghiChu" class="inv-muted" style="width:100%;font-size:0.8rem;font-style:italic;display:flex;align-items:center;gap:4px;"><FileText :size="12" /> {{ phieuNhapDetailData.ghiChu }}</div>
+          <div
+            v-if="phieuNhapDetailData.ghiChu"
+            class="inv-muted"
+            style="
+              width: 100%;
+              font-size: 0.8rem;
+              font-style: italic;
+              display: flex;
+              align-items: center;
+              gap: 4px;
+            "
+          >
+            <FileText :size="12" /> {{ phieuNhapDetailData.ghiChu }}
+          </div>
         </div>
 
-        <div class="inv-table-wrap" style="padding:16px;">
+        <div class="inv-table-wrap" style="padding: 16px">
           <table class="inv-table">
             <thead>
               <tr>
-                <th style="width:36%;">{{ t('admin.inventory.colSku') }}</th>
-                <th class="ta-r" style="width:24%;">{{ t('admin.phieuNhapModal.unitPricePlaceholder') }}</th>
-                <th class="ta-r" style="width:24%;">{{ t('admin.phieuNhapModal.totalLabel') }}</th>
-                <th class="ta-c" style="width:16%;">Thao tác</th>
+                <th style="width: 36%">{{ t("admin.inventory.colSku") }}</th>
+                <th class="ta-r" style="width: 24%">
+                  {{ t("admin.phieuNhapModal.unitPricePlaceholder") }}
+                </th>
+                <th class="ta-r" style="width: 24%">{{ t("admin.phieuNhapModal.totalLabel") }}</th>
+                <th class="ta-c" style="width: 16%">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -1653,120 +2396,221 @@ const exportPhieuNhapExcel = () => {
                   <td class="ta-r inv-muted">{{ formatPrice(c.donGiaNhap) }}</td>
                   <td class="ta-r inv-price">{{ formatPrice(c.thanhTien) }}</td>
                   <td class="ta-c">
-                    <button class="inv-btn inv-btn--ghost" style="padding:4px 10px;font-size:12px;" @click="openPhieuNhapSerialTab(phieuNhapDetailData)">
+                    <button
+                      class="inv-btn inv-btn--ghost"
+                      style="padding: 4px 10px; font-size: 12px"
+                      @click="openPhieuNhapSerialTab(phieuNhapDetailData)"
+                    >
                       # Xem serial
                     </button>
                   </td>
                 </tr>
               </template>
-              <tr v-if="phieuNhapDetailItems.length===0"><td colspan="4" class="inv-empty">{{ t('admin.phieuNhap.empty') }}</td></tr>
+              <tr v-if="phieuNhapDetailItems.length === 0">
+                <td colspan="4" class="inv-empty">{{ t("admin.phieuNhap.empty") }}</td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
 
       <footer v-if="phieuNhapDetailData" class="inv-modal__foot">
-        <span class="inv-muted" style="font-size:0.85rem;">{{ phieuNhapDetailItems.length }} {{ t('admin.inventory.colSku') }}</span>
+        <span class="inv-muted" style="font-size: 0.85rem"
+          >{{ phieuNhapDetailItems.length }} {{ t("admin.inventory.colSku") }}</span
+        >
         <div class="d-flex align-items-center gap-2">
-          <span class="inv-muted" style="font-size:0.85rem;">{{ t('admin.phieuNhapModal.totalLabel') }}</span>
-          <span class="inv-price" style="font-size:1.15rem;">{{ formatPrice(phieuNhapDetailData.tongTien) }}</span>
+          <span class="inv-muted" style="font-size: 0.85rem">{{
+            t("admin.phieuNhapModal.totalLabel")
+          }}</span>
+          <span class="inv-price" style="font-size: 1.15rem">{{
+            formatPrice(phieuNhapDetailData.tongTien)
+          }}</span>
         </div>
       </footer>
-      <footer v-if="phieuNhapDetailData" class="inv-modal__foot inv-modal__foot--end" style="border-top:none;padding-top:0;flex-wrap:wrap;">
-        <template v-if="phieuNhapDetailData.trangThai==='cho_duyet'">
-          <button class="inv-btn inv-btn--ghost inv-btn--ok" @click="approvePhieuNhap(phieuNhapDetailData)"><Check :size="14" /> {{ t('admin.phieuNhap.approve') }}</button>
-          <button class="inv-btn inv-btn--ghost inv-btn--danger" @click="updatePhieuNhapStatus(phieuNhapDetailData,'huy')"><X :size="14" /> {{ t('admin.phieuNhap.cancel') }}</button>
-          <button class="inv-btn inv-btn--ghost" @click="showPhieuNhapDetailModal=false; openEditPhieuNhap(phieuNhapDetailData)"><Pencil :size="14" /> {{ t('admin.phieuNhap.editAction') }}</button>
-          <button class="inv-btn inv-btn--ghost inv-btn--danger" @click="showPhieuNhapDetailModal=false; deletePhieuNhap(phieuNhapDetailData.phieuNhapId)"><Trash2 :size="14" /> {{ t('admin.phieuNhap.deleteAction') }}</button>
+      <footer
+        v-if="phieuNhapDetailData"
+        class="inv-modal__foot inv-modal__foot--end"
+        style="border-top: none; padding-top: 0; flex-wrap: wrap"
+      >
+        <template v-if="phieuNhapDetailData.trangThai === 'cho_duyet'">
+          <button
+            class="inv-btn inv-btn--ghost inv-btn--ok"
+            @click="approvePhieuNhap(phieuNhapDetailData)"
+          >
+            <Check :size="14" /> {{ t("admin.phieuNhap.approve") }}
+          </button>
+          <button
+            class="inv-btn inv-btn--ghost inv-btn--danger"
+            @click="updatePhieuNhapStatus(phieuNhapDetailData, 'huy')"
+          >
+            <X :size="14" /> {{ t("admin.phieuNhap.cancel") }}
+          </button>
+          <button
+            class="inv-btn inv-btn--ghost"
+            @click="
+              showPhieuNhapDetailModal = false;
+              openEditPhieuNhap(phieuNhapDetailData);
+            "
+          >
+            <Pencil :size="14" /> {{ t("admin.phieuNhap.editAction") }}
+          </button>
+          <button
+            class="inv-btn inv-btn--ghost inv-btn--danger"
+            @click="
+              showPhieuNhapDetailModal = false;
+              deletePhieuNhap(phieuNhapDetailData.phieuNhapId);
+            "
+          >
+            <Trash2 :size="14" /> {{ t("admin.phieuNhap.deleteAction") }}
+          </button>
         </template>
-        <button class="inv-btn inv-btn--ghost" @click="openPhieuNhapSerialTab(phieuNhapDetailData)"><ExternalLink :size="14" /> {{ t('admin.phieuNhap.viewSerials') || 'Xem serial' }}</button>
-        <button class="inv-btn inv-btn--ghost" @click="printPhieuNhapDetail(phieuNhapDetailData)"><Printer :size="14" /> {{ t('admin.phieuNhap.printPdf') }}</button>
-        <button class="inv-btn inv-btn--ghost" style="margin-left:auto;" @click="showPhieuNhapDetailModal=false">{{ t('admin.promoModal.cancel') }}</button>
+        <button class="inv-btn inv-btn--ghost" @click="openPhieuNhapSerialTab(phieuNhapDetailData)">
+          <ExternalLink :size="14" /> {{ t("admin.phieuNhap.viewSerials") || "Xem serial" }}
+        </button>
+        <button class="inv-btn inv-btn--ghost" @click="printPhieuNhapDetail(phieuNhapDetailData)">
+          <Printer :size="14" /> {{ t("admin.phieuNhap.printPdf") }}
+        </button>
+        <button
+          class="inv-btn inv-btn--ghost"
+          style="margin-left: auto"
+          @click="showPhieuNhapDetailModal = false"
+        >
+          {{ t("admin.promoModal.cancel") }}
+        </button>
       </footer>
     </div>
   </div>
 
   <!-- ══ MODAL CHI TIET BIEN THE (gop 2 tab: Danh sach serial / Them hang) ══ -->
-  <div v-if="showDetailModal" class="inv-modal-mask" @click.self="showDetailModal=false">
-    <div class="inv-modal" style="width:820px;">
-      <header class="inv-modal__head" style="align-items:flex-start;">
+  <div v-if="showDetailModal" class="inv-modal-mask" @click.self="showDetailModal = false">
+    <div class="inv-modal" style="width: 820px">
+      <header class="inv-modal__head" style="align-items: flex-start">
         <div>
-          <div style="font-weight:700;font-size:0.95rem;">
-            {{ t('admin.stockDetailModal.titlePrefix') }} {{ detailItem?.maSku || '—' }}
+          <div style="font-weight: 700; font-size: 0.95rem">
+            {{ t("admin.stockDetailModal.titlePrefix") }} {{ detailItem?.maSku || "—" }}
           </div>
-          <div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">{{ detailItem?.tenSanPham || '—' }}</div>
+          <div style="font-size: 0.8rem; color: var(--muted); margin-top: 2px">
+            {{ detailItem?.tenSanPham || "—" }}
+          </div>
           <div class="d-flex gap-1 mt-1 flex-wrap">
-            <span v-if="getVariantInfo(detailItem)?.cpu" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).cpu }}</span>
-            <span v-if="getVariantInfo(detailItem)?.ram" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).ram }}</span>
-            <span v-if="getVariantInfo(detailItem)?.oCung" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).oCung }}</span>
-            <span v-if="getVariantInfo(detailItem)?.mauSac" class="inv-tag inv-tag--soft">{{ getVariantInfo(detailItem).mauSac }}</span>
+            <span v-if="getVariantInfo(detailItem)?.cpu" class="inv-tag inv-tag--soft">{{
+              getVariantInfo(detailItem).cpu
+            }}</span>
+            <span v-if="getVariantInfo(detailItem)?.ram" class="inv-tag inv-tag--soft">{{
+              getVariantInfo(detailItem).ram
+            }}</span>
+            <span v-if="getVariantInfo(detailItem)?.oCung" class="inv-tag inv-tag--soft">{{
+              getVariantInfo(detailItem).oCung
+            }}</span>
+            <span v-if="getVariantInfo(detailItem)?.mauSac" class="inv-tag inv-tag--soft">{{
+              getVariantInfo(detailItem).mauSac
+            }}</span>
           </div>
         </div>
-        <button class="inv-icon-btn" :aria-label="t('common.close')" @click="showDetailModal=false"><X :size="16" /></button>
+        <button
+          class="inv-icon-btn"
+          :aria-label="t('common.close')"
+          @click="showDetailModal = false"
+        >
+          <X :size="16" />
+        </button>
       </header>
 
-      <div class="inv-modal__body" style="padding:16px 20px 8px;">
+      <div class="inv-modal__body" style="padding: 16px 20px 8px">
         <div class="d-flex gap-2 flex-wrap">
-          <div class="inv-search" style="flex:1 1 200px;min-width:0;max-width:none;">
+          <div class="inv-search" style="flex: 1 1 200px; min-width: 0; max-width: none">
             <Search :size="14" class="inv-search__icon" />
-            <input v-model="detailSerialSearch" :placeholder="tt('admin.stockDetailModal.searchPlaceholder', 'Tìm serial...')" />
+            <input
+              v-model="detailSerialSearch"
+              :placeholder="tt('admin.stockDetailModal.searchPlaceholder', 'Tìm serial...')"
+            />
           </div>
-          <select v-model="detailSerialStatusFilter" class="inv-select" style="flex:0 0 180px;width:180px;">
-            <option value="">{{ tt('admin.stockDetailModal.allStatus', 'Tất cả trạng thái') }}</option>
-            <option v-for="opt in SERIAL_STATUS_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          <select
+            v-model="detailSerialStatusFilter"
+            class="inv-select"
+            style="flex: 0 0 180px; width: 180px"
+          >
+            <option value="">
+              {{ tt("admin.stockDetailModal.allStatus", "Tất cả trạng thái") }}
+            </option>
+            <option v-for="opt in SERIAL_STATUS_OPTIONS" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
           </select>
         </div>
       </div>
-      <div style="overflow-y:auto;max-height:420px;padding:0 20px;">
-        <div v-if="detailSerialsLoading" class="inv-empty">{{ t('admin.stockDetailModal.loading') }}</div>
-        <div v-else-if="filteredDetailSerials.length === 0" class="inv-empty">{{ t('admin.stockDetailModal.empty') }}</div>
+      <div style="overflow-y: auto; max-height: 420px; padding: 0 20px">
+        <div v-if="detailSerialsLoading" class="inv-empty">
+          {{ t("admin.stockDetailModal.loading") }}
+        </div>
+        <div v-else-if="filteredDetailSerials.length === 0" class="inv-empty">
+          {{ t("admin.stockDetailModal.empty") }}
+        </div>
         <table v-else class="inv-table">
           <thead>
             <tr>
-              <th style="width:40px;">{{ t('admin.stockDetailModal.colIndex') }}</th>
-              <th>{{ t('admin.stockDetailModal.colSerial') }}</th>
-              <th>{{ t('admin.stockDetailModal.colImportDate') }}</th>
-              <th class="text-center">{{ t('admin.stockDetailModal.colStatus') }}</th>
+              <th style="width: 40px">{{ t("admin.stockDetailModal.colIndex") }}</th>
+              <th>{{ t("admin.stockDetailModal.colSerial") }}</th>
+              <th>{{ t("admin.stockDetailModal.colImportDate") }}</th>
+              <th class="text-center">{{ t("admin.stockDetailModal.colStatus") }}</th>
               <th class="text-center">Người thực hiện</th>
-              <th style="width:60px;"></th>
+              <th style="width: 60px"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(s, idx) in filteredDetailSerials" :key="s.chiTietId" class="inv-row">
               <td class="inv-muted">{{ idx + 1 }}</td>
-              <td class="inv-mono" style="font-weight:600;">{{ s.soSerial }}</td>
+              <td class="inv-mono" style="font-weight: 600">{{ s.soSerial }}</td>
               <td class="inv-muted">{{ formatDate(s.ngayNhapKho) }}</td>
               <td class="text-center text-nowrap">
                 <!-- Sản phẩm đang bảo hành / lỗi: không tính đang lên đơn và luôn hiển thị Lỗi / Bảo hành -->
-                <span v-if="s.trangThai === 'loi_bao_hanh'" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
+                <span
+                  v-if="s.trangThai === 'loi_bao_hanh'"
+                  class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                  style="font-size: 11.5px"
+                >
                   <AlertTriangle :size="12" /> Lỗi / Bảo hành
                 </span>
                 <!-- Đang lên đơn trong giỏ POS -->
                 <span
                   v-else-if="isInPosCart(s)"
                   class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
-                  style="font-size:11.5px; font-weight:600;"
+                  style="font-size: 11.5px; font-weight: 600"
                   title="Sản phẩm đang được lên đơn tại quầy POS"
                 >
                   <Clock :size="12" /> Đang lên đơn POS
                 </span>
+                <!-- Đã bán (bao gồm đơn hàng đã sang bước đóng gói / giao hàng / hoàn tất) -->
+                <span
+                  v-else-if="s.trangThai === 'da_ban' || isOrderSold(s)"
+                  class="badge rounded-pill bg-secondary-subtle text-secondary border px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                  style="font-size: 11.5px"
+                  :title="getActiveOrderItem(s) ? `Đơn hàng #${getActiveOrderItem(s)?.maDonHang || getActiveOrderItem(s)?.donHangId} — Đã bán` : 'Đã bán'"
+                >
+                  <Package :size="12" /> Đã bán
+                </span>
                 <!-- Đang ở trạng thái đã lên đơn ở thanh tiến trình -->
                 <span
-                  v-else-if="isOrderInProgress(s)"
+                  v-else-if="isOrderPendingPacking(s)"
                   class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
-                  style="font-size:11.5px; font-weight:600;"
+                  style="font-size: 11.5px; font-weight: 600"
                   :title="`Đơn hàng #${getActiveOrderItem(s)?.maDonHang || getActiveOrderItem(s)?.donHangId} — Đã lên đơn ở thanh tiến trình`"
                 >
                   <FileText :size="12" /> Đã lên đơn
                 </span>
                 <!-- Các trạng thái thông thường -->
-                <span v-else-if="s.trangThai === 'trong_kho'" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
+                <span
+                  v-else-if="s.trangThai === 'trong_kho'"
+                  class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                  style="font-size: 11.5px"
+                >
                   <CheckCircle2 :size="12" /> Trong kho
                 </span>
-                <span v-else-if="s.trangThai === 'da_ban'" class="badge rounded-pill bg-secondary-subtle text-secondary border px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
-                  <Package :size="12" /> Đã bán
-                </span>
-                <span v-else-if="s.trangThai === 'da_tra_hang'" class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
+                <span
+                  v-else-if="s.trangThai === 'da_tra_hang'"
+                  class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                  style="font-size: 11.5px"
+                >
                   <RotateCcw :size="12" /> Đã trả hàng
                 </span>
                 <span v-else class="text-nowrap">
@@ -1778,16 +2622,38 @@ const exportPhieuNhapExcel = () => {
                   <span
                     v-if="getSerialPerformer(s).isAdmin"
                     class="badge px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
-                    style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; font-size: 11px; font-weight: 600; border-radius: 9999px;"
-                    :title="getSerialPerformer(s).name ? `Người thực hiện: ${getSerialPerformer(s).name} (Admin)` : 'Người thực hiện: Admin'"
+                    style="
+                      background: #f3e8ff;
+                      color: #7e22ce;
+                      border: 1px solid #d8b4fe;
+                      font-size: 11px;
+                      font-weight: 600;
+                      border-radius: 9999px;
+                    "
+                    :title="
+                      getSerialPerformer(s).name
+                        ? `Người thực hiện: ${getSerialPerformer(s).name} (Admin)`
+                        : 'Người thực hiện: Admin'
+                    "
                   >
                     <User :size="11" /> Admin
                   </span>
                   <span
                     v-else
                     class="badge px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
-                    style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 11px; font-weight: 600; border-radius: 9999px;"
-                    :title="getSerialPerformer(s).name ? `Người thực hiện: ${getSerialPerformer(s).name} (Nhân viên)` : 'Người thực hiện: Nhân viên'"
+                    style="
+                      background: #e0f2fe;
+                      color: #0284c7;
+                      border: 1px solid #bae6fd;
+                      font-size: 11px;
+                      font-weight: 600;
+                      border-radius: 9999px;
+                    "
+                    :title="
+                      getSerialPerformer(s).name
+                        ? `Người thực hiện: ${getSerialPerformer(s).name} (Nhân viên)`
+                        : 'Người thực hiện: Nhân viên'
+                    "
                   >
                     <User :size="11" /> Nhân viên
                   </span>
@@ -1795,24 +2661,34 @@ const exportPhieuNhapExcel = () => {
                 <span v-else class="text-secondary opacity-75">—</span>
               </td>
               <td>
-                <button v-if="s.trangThai==='trong_kho' && !isInPosCart(s) && !isOrderInProgress(s)" class="inv-icon-btn inv-icon-btn--danger" :title="t('admin.stockDetailModal.deleteSerial')" :aria-label="t('admin.stockDetailModal.deleteSerial')" @click="removeStockSerial(s.chiTietId)"><Trash2 :size="14" /></button>
+                <button
+                  v-if="s.trangThai === 'trong_kho' && !isInPosCart(s) && !isOrderInProgress(s)"
+                  class="inv-icon-btn inv-icon-btn--danger"
+                  :title="t('admin.stockDetailModal.deleteSerial')"
+                  :aria-label="t('admin.stockDetailModal.deleteSerial')"
+                  @click="removeStockSerial(s.chiTietId)"
+                >
+                  <Trash2 :size="14" />
+                </button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
       <footer class="inv-modal__foot inv-modal__foot--end">
-        <button class="inv-btn inv-btn--ghost" @click="showDetailModal=false">{{ t('admin.stockModal.cancel') }}</button>
+        <button class="inv-btn inv-btn--ghost" @click="showDetailModal = false">
+          {{ t("admin.stockModal.cancel") }}
+        </button>
       </footer>
     </div>
   </div>
-
 </template>
 
 <style scoped>
 /* Bảng màu và tỷ lệ giao diện kho hàng */
-.inv, .inv-modal-mask {
-  --pink-50:  #fff5f9;
+.inv,
+.inv-modal-mask {
+  --pink-50: #fff5f9;
   --pink-100: #ffe6f0;
   --pink-200: #ffcfe1;
   --pink-300: #f7a8c8;
@@ -1820,344 +2696,960 @@ const exportPhieuNhapExcel = () => {
   --pink-600: #db2777;
   --pink-700: #a81b5d;
 
-  --ink:   #1f2937;
+  --ink: #1f2937;
   --muted: #6b7280;
-  --line:  #f1dbe6;
+  --line: #f1dbe6;
   --field: #d9b3c6;
   --danger: #dc2626;
-  --ok-bg:   #ecfdf5;
+  --ok-bg: #ecfdf5;
   --ok-text: #047857;
 
   /* 3D Shadow Variables */
-  --sh-1: 0 1px 2px rgba(168, 27, 93, .08), 0 1px 3px rgba(168, 27, 93, .05);
-  --sh-2: 0 4px 6px rgba(168, 27, 93, .1), 0 2px 4px rgba(168, 27, 93, .06);
-  --sh-3: 0 10px 15px rgba(168, 27, 93, .12), 0 4px 6px rgba(168, 27, 93, .08);
+  --sh-1: 0 1px 2px rgba(168, 27, 93, 0.08), 0 1px 3px rgba(168, 27, 93, 0.05);
+  --sh-2: 0 4px 6px rgba(168, 27, 93, 0.1), 0 2px 4px rgba(168, 27, 93, 0.06);
+  --sh-3: 0 10px 15px rgba(168, 27, 93, 0.12), 0 4px 6px rgba(168, 27, 93, 0.08);
 }
-.inv { font-size: 14px; color: var(--ink); }
-.ta-r { text-align: right; }
-.ta-c { text-align: center; }
-.inv-muted { color: var(--muted); }
-.inv-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.inv {
+  font-size: 14px;
+  color: var(--ink);
+}
+.ta-r {
+  text-align: right;
+}
+.ta-c {
+  text-align: center;
+}
+.inv-muted {
+  color: var(--muted);
+}
+.inv-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 
 /* ══════════ TAB TON KHO / PHIEU NHAP ══════════ */
-.inv-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.inv-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
 
 /* ══════════ NÚT ══════════ */
 .inv-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 14px; border-radius: 999px; border: 1px solid transparent;
-  font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
 }
-.inv-btn--sm { padding: 5px 11px; font-size: 12.5px; }
+.inv-btn--sm {
+  padding: 5px 11px;
+  font-size: 12.5px;
+}
 .inv-btn--primary {
-  background: var(--pink-600); color: #fff;
-}
-.inv-btn--ghost { background: #fff; color: var(--pink-700); border-color: var(--pink-200); }
-.inv-btn--ghost:hover:not(:disabled) {
-  background: var(--pink-50); border-color: var(--pink-300);
-}
-.inv-btn--ghost.is-on { background: var(--pink-100); border-color: var(--pink-300); }
-.inv-btn--ok { color: var(--ok-text); border-color: #bbf7d0; }
-.inv-btn--ok:hover:not(:disabled) { background: var(--ok-bg); }
-.inv-btn--danger { color: var(--danger); border-color: #fecaca; }
-.inv-btn--danger:hover:not(:disabled) { background: #fef2f2; }
-.inv-btn:disabled { opacity: .45; cursor: not-allowed; }
-
-.inv-icon-btn {
-  background: #fff; border: 1px solid var(--pink-200); color: var(--pink-700);
-  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
-  display: inline-grid; place-items: center; flex-shrink: 0;
-}
-.inv-icon-btn:hover { background: var(--pink-50); }
-.inv-icon-btn--danger { color: var(--danger); border-color: #fecaca; }
-.inv-icon-btn--danger:hover { background: #fef2f2; }
-.inv-icon-btn--disabled { opacity: 0.35; pointer-events: none; cursor: not-allowed; }
-
-/* Thẻ thống kê số liệu kho hàng */
-.inv-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
-.inv-stat {
-  display: flex; align-items: center; gap: 14px;
-  border-radius: 14px; padding: 16px 18px;
-  color: #fff; cursor: pointer; user-select: none;
-  border: 2px solid transparent; transition: border-color .12s;
-}
-.inv-stat.is-on { border-color: rgba(255, 255, 255, .85); }
-.inv-stat--blue   { background: linear-gradient(135deg, #60a5fa, #2563eb); }
-.inv-stat--green  { background: linear-gradient(135deg, #34d399, #059669); cursor: default; }
-.inv-stat--amber  { background: linear-gradient(135deg, #fbbf24, #d97706); }
-.inv-stat--red    { background: linear-gradient(135deg, #f87171, #dc2626); }
-.inv-stat--purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); transition: transform .15s, box-shadow .15s; }
-.inv-stat--purple:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(124, 58, 237, .25); }
-.inv-stat--amber  { transition: transform .15s, box-shadow .15s; }
-.inv-stat--amber:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(217, 119, 6, .25); }
-.inv-stat--green  { transition: transform .15s, box-shadow .15s; }
-.inv-stat--green:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(5, 150, 105, .25); }
-.inv-stat--red    { transition: transform .15s, box-shadow .15s; }
-.inv-stat--red:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(220, 38, 38, .25); }
-.inv-stat--cyan   { background: linear-gradient(135deg, #22d3ee, #0891b2); }
-.inv-stat__icon {
-  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
-  background: rgba(255, 255, 255, .22);
-  display: flex; align-items: center; justify-content: center;
+  background: var(--pink-600);
   color: #fff;
 }
-.inv-stat__label { font-size: 12.5px; color: rgba(255, 255, 255, .85); margin-bottom: 2px; font-weight: 600; }
-.inv-stat__value { font-size: 1.6rem; font-weight: 800; color: #fff; }
+.inv-btn--ghost {
+  background: #fff;
+  color: var(--pink-700);
+  border-color: var(--pink-200);
+}
+.inv-btn--ghost:hover:not(:disabled) {
+  background: var(--pink-50);
+  border-color: var(--pink-300);
+}
+.inv-btn--ghost.is-on {
+  background: var(--pink-100);
+  border-color: var(--pink-300);
+}
+.inv-btn--ok {
+  color: var(--ok-text);
+  border-color: #bbf7d0;
+}
+.inv-btn--ok:hover:not(:disabled) {
+  background: var(--ok-bg);
+}
+.inv-btn--danger {
+  color: var(--danger);
+  border-color: #fecaca;
+}
+.inv-btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+.inv-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.inv-icon-btn {
+  background: #fff;
+  border: 1px solid var(--pink-200);
+  color: var(--pink-700);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.inv-icon-btn:hover {
+  background: var(--pink-50);
+}
+.inv-icon-btn--danger {
+  color: var(--danger);
+  border-color: #fecaca;
+}
+.inv-icon-btn--danger:hover {
+  background: #fef2f2;
+}
+.inv-icon-btn--disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Thẻ thống kê số liệu kho hàng */
+.inv-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.inv-stat {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-radius: 14px;
+  padding: 16px 18px;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  border: 2px solid transparent;
+  transition: border-color 0.12s;
+}
+.inv-stat.is-on {
+  border-color: rgba(255, 255, 255, 0.85);
+}
+.inv-stat--blue {
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+}
+.inv-stat--green {
+  background: linear-gradient(135deg, #34d399, #059669);
+  cursor: default;
+}
+.inv-stat--amber {
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+}
+.inv-stat--red {
+  background: linear-gradient(135deg, #f87171, #dc2626);
+}
+.inv-stat--purple {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.inv-stat--purple:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.25);
+}
+.inv-stat--amber {
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.inv-stat--amber:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.25);
+}
+.inv-stat--green {
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.inv-stat--green:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.25);
+}
+.inv-stat--red {
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.inv-stat--red:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.25);
+}
+.inv-stat--cyan {
+  background: linear-gradient(135deg, #22d3ee, #0891b2);
+}
+.inv-stat__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.inv-stat__label {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+.inv-stat__value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+}
 
 .inv-quickview-note {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  background: var(--pink-50); border: 1px solid var(--pink-200); border-radius: 10px;
-  padding: 8px 14px; margin: -2px 0 14px; font-size: 13px; color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--pink-50);
+  border: 1px solid var(--pink-200);
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin: -2px 0 14px;
+  font-size: 13px;
+  color: var(--ink);
 }
 .inv-quickview-note__clear {
-  margin-left: auto; background: none; border: none; color: var(--pink-600);
-  font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: underline;
-  font-family: inherit; padding: 0;
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--pink-600);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: inherit;
+  padding: 0;
 }
-.inv-quickview-note__clear:hover { color: var(--pink-700); }
+.inv-quickview-note__clear:hover {
+  color: var(--pink-700);
+}
 
 /* ══════════ THANH CÔNG CỤ ══════════ */
 .inv-bar {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  background: #fff; border: 1px solid var(--line); border-radius: 14px;
-  padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--sh-2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--sh-2);
 }
-.inv-bar__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.inv-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
 
-.inv-search { position: relative; flex: 1 1 240px; min-width: 160px; max-width: none; }
-.inv-search input {
-  width: 100%; padding: 8px 14px 8px 34px;
-  border: 1px solid var(--pink-200); border-radius: 999px;
-  font-size: 13px; background: var(--pink-50); font-family: inherit; color: var(--ink);
+.inv-search {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 160px;
+  max-width: none;
 }
-.inv-search input:focus { outline: none; border-color: var(--pink-500); background: #fff; box-shadow: 0 0 0 3px var(--pink-100); }
-.inv-search__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--pink-500); pointer-events: none; }
+.inv-search input {
+  width: 100%;
+  padding: 8px 14px 8px 34px;
+  border: 1px solid var(--pink-200);
+  border-radius: 999px;
+  font-size: 13px;
+  background: var(--pink-50);
+  font-family: inherit;
+  color: var(--ink);
+}
+.inv-search input:focus {
+  outline: none;
+  border-color: var(--pink-500);
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--pink-100);
+}
+.inv-search__icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pink-500);
+  pointer-events: none;
+}
 
 .inv-select {
-  height: 34px; padding: 0 30px 0 12px; border-radius: 999px;
-  border: 1px solid var(--pink-200); background: var(--pink-50); color: var(--ink);
-  font-size: 13px; font-family: inherit; cursor: pointer; appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-                    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: calc(100% - 15px) 14px, calc(100% - 10px) 14px;
-  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  height: 34px;
+  padding: 0 30px 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--pink-200);
+  background: var(--pink-50);
+  color: var(--ink);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) 14px,
+    calc(100% - 10px) 14px;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
 }
-.inv-select:focus { outline: none; border-color: var(--pink-500); }
+.inv-select:focus {
+  outline: none;
+  border-color: var(--pink-500);
+}
 
 .inv-chip-badge {
-  background: var(--pink-600); color: #fff; border-radius: 999px;
-  padding: 0 6px; font-size: 11px; line-height: 17px; min-width: 17px; text-align: center;
+  background: var(--pink-600);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 17px;
+  min-width: 17px;
+  text-align: center;
 }
-.inv-caret { transition: transform .2s; }
-.inv-caret.is-open { transform: rotate(180deg); }
+.inv-caret {
+  transition: transform 0.2s;
+}
+.inv-caret.is-open {
+  transform: rotate(180deg);
+}
 
 /* ══════════ BỘ LỌC (nằm trong card) ══════════ */
-.inv-filter { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease; }
-.inv-filter.is-open { grid-template-rows: 1fr; }
+.inv-filter {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.22s ease;
+}
+.inv-filter.is-open {
+  grid-template-rows: 1fr;
+}
 .inv-filter__panel {
-  overflow: hidden; background: var(--pink-50);
-  padding: 0 16px; transition: padding .22s ease;
+  overflow: hidden;
+  background: var(--pink-50);
+  padding: 0 16px;
+  transition: padding 0.22s ease;
 }
-.inv-filter.is-open .inv-filter__panel { padding: 14px 16px; }
-.inv-filter__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.inv-filter.is-open .inv-filter__panel {
+  padding: 14px 16px;
+}
+.inv-filter__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
 .inv-filter__foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
 }
-.inv-filter__count { font-size: 12.5px; color: var(--muted); }
-.inv-filter__btns { display: flex; gap: 8px; }
+.inv-filter__count {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.inv-filter__btns {
+  display: flex;
+  gap: 8px;
+}
 .inv-filter-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--pink-600); color: #fff; border-radius: 999px;
-  min-width: 18px; height: 18px; font-size: 10px; font-weight: 700; padding: 0 4px;
-  line-height: 1; margin-left: 4px; vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pink-600);
+  color: #fff;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 4px;
+  line-height: 1;
+  margin-left: 4px;
+  vertical-align: middle;
 }
 .inv-filter-chips {
-  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
   padding: 6px 0 2px;
 }
 .inv-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  background: var(--pink-100); color: var(--pink-700); border: 1px solid var(--pink-300);
-  border-radius: 999px; padding: 2px 8px; font-size: 12px; cursor: pointer;
-  transition: background .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--pink-100);
+  color: var(--pink-700);
+  border: 1px solid var(--pink-300);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
 }
-.inv-chip:hover { background: var(--pink-200); }
-.inv-chip--clear { background: #fef2f2; color: var(--danger); border-color: #fecaca; font-weight: 600; }
-.inv-chip--clear:hover { background: #fee2e2; }
+.inv-chip:hover {
+  background: var(--pink-200);
+}
+.inv-chip--clear {
+  background: #fef2f2;
+  color: var(--danger);
+  border-color: #fecaca;
+  font-weight: 600;
+}
+.inv-chip--clear:hover {
+  background: #fee2e2;
+}
 
 /* ══════════ Ô NHẬP DÙNG CHUNG ══════════ */
-.inv-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.inv-field > span { font-size: 12px; font-weight: 700; color: var(--pink-700); }
-.inv-field input, .inv-field select, .inv-item-row input, .inv-solo-input, .inv-serial-grid input {
-  width: 100%; padding: 9px 11px;
-  border: 1px solid var(--field); border-radius: 9px;
-  font-size: 13px; color: var(--ink); background: #fff; font-family: inherit;
-  transition: border-color .15s, box-shadow .15s;
+.inv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
 }
-.inv-field input:focus, .inv-field select:focus, .inv-item-row input:focus, .inv-solo-input:focus, .inv-serial-grid input:focus {
-  outline: none; border-color: var(--pink-500); box-shadow: 0 0 0 3px var(--pink-100);
+.inv-field > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pink-700);
+}
+.inv-field input,
+.inv-field select,
+.inv-item-row input,
+.inv-solo-input,
+.inv-serial-grid input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--field);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fff;
+  font-family: inherit;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.inv-field input:focus,
+.inv-field select:focus,
+.inv-item-row input:focus,
+.inv-solo-input:focus,
+.inv-serial-grid input:focus {
+  outline: none;
+  border-color: var(--pink-500);
+  box-shadow: 0 0 0 3px var(--pink-100);
 }
 /* range filter tồn kho */
-.inv-field--range > span { margin-bottom: 0; }
-.inv-range { display: flex; align-items: center; gap: 5px; }
+.inv-field--range > span {
+  margin-bottom: 0;
+}
+.inv-range {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 .inv-range-input {
-  flex: 1; min-width: 0; padding: 6px 8px;
-  border: 1px solid var(--pink-200); border-radius: 7px;
-  background: #fff; color: var(--text-primary, #1e293b);
-  font-size: 13px; outline: none; transition: border-color 0.15s;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--pink-200);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text-primary, #1e293b);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
 }
-.inv-range-input:focus { border-color: var(--pink-500); box-shadow: 0 0 0 3px var(--pink-100); }
-.inv-range-sep { color: var(--pink-400); font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.inv-range-input:focus {
+  border-color: var(--pink-500);
+  box-shadow: 0 0 0 3px var(--pink-100);
+}
+.inv-range-sep {
+  color: var(--pink-400);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 .inv-readonly {
-  padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px;
-  font-size: 13px; color: var(--muted); background: var(--pink-50);
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--pink-50);
 }
-.inv-hint { font-size: 11.5px; color: var(--muted); font-style: normal; margin-top: 2px; }
-.inv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-.inv-picked { font-size: 13px; color: var(--muted); background: var(--pink-50); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
-.inv-alert { background: #fef2f2; color: var(--danger); border-radius: 10px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+.inv-hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-style: normal;
+  margin-top: 2px;
+}
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+.inv-picked {
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--pink-50);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+.inv-alert {
+  background: #fef2f2;
+  color: var(--danger);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
 .inv-section-title {
-  display: flex; align-items: center; gap: 6px;
-  text-transform: uppercase; font-weight: 700; font-size: 11.5px; letter-spacing: .06em;
-  color: var(--pink-700); margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--pink-700);
+  margin-bottom: 8px;
 }
-.inv-item-head { display: flex; gap: 8px; margin-bottom: 4px; font-size: 12px; font-weight: 700; color: var(--pink-700); }
-.inv-item-row { display: flex; gap: 8px; align-items: center; }
-.inv-item-block { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: var(--pink-50); }
+.inv-item-head {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pink-700);
+}
+.inv-item-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.inv-item-block {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--pink-50);
+}
 .inv-serial-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px;
-  margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--pink-200);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--pink-200);
 }
-.inv-serial-info { margin-top: 6px; font-size: 12px; }
-.inv-serial-grid input { font-size: 12.5px; padding: 6px 8px; }
-.inv-serial-grid input:disabled { background: var(--pink-100); color: var(--muted); cursor: not-allowed; }
-.inv-serial-chip-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.inv-serial-info {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.inv-serial-grid input {
+  font-size: 12.5px;
+  padding: 6px 8px;
+}
+.inv-serial-grid input:disabled {
+  background: var(--pink-100);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.inv-serial-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
 .inv-serial-toggle {
-  display: flex; align-items: center; gap: 4px; cursor: pointer; background: none; border: none;
-  padding: 2px 4px; border-radius: 4px; font-size: 12px; color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--muted);
 }
-.inv-serial-toggle:hover { background: var(--pink-100); color: var(--pink-700); }
-.inv-serial-count { font-weight: 600; color: var(--pink-700); }
+.inv-serial-toggle:hover {
+  background: var(--pink-100);
+  color: var(--pink-700);
+}
+.inv-serial-count {
+  font-weight: 600;
+  color: var(--pink-700);
+}
 .inv-serial-chips {
-  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; padding-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid var(--pink-200);
 }
 .inv-serial-chip {
-  padding: 2px 7px; border-radius: 4px; font-size: 11.5px; font-family: var(--font-mono, monospace);
-  background: var(--pink-50); color: var(--pink-700); border: 1px solid var(--pink-200);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-family: var(--font-mono, monospace);
+  background: var(--pink-50);
+  color: var(--pink-700);
+  border: 1px solid var(--pink-200);
 }
 .inv-serial-chip--dup {
-  background: #fef2f2; color: var(--danger); border-color: #fecaca;
+  background: #fef2f2;
+  color: var(--danger);
+  border-color: #fecaca;
 }
 .inv-serial-chip__warn {
-  margin-left: 6px; font-size: 10px; font-weight: 700;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
 }
 .inv-serial-viewer-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 6px; max-height: 60vh; overflow-y: auto; padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 4px;
 }
 .inv-serial-viewer-grid .inv-serial-chip {
-  display: inline-flex; align-items: center; justify-content: space-between;
-  padding: 6px 10px; font-size: 12px; border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 6px;
 }
-.inv-total { text-align: right; font-weight: 800; font-size: 1.05rem; color: var(--ink); }
+.inv-total {
+  text-align: right;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
 
 /* ══════════ THẺ + BẢNG ══════════ */
-.inv-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.inv-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
 
 /* THANH CÔNG CỤ (nằm trong card, có border-bottom) */
 .inv-bar {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 12px 16px; background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #fff;
   border-bottom: 1px solid var(--pink-50);
 }
-.inv-bar__count { font-size: 12.5px; color: var(--muted); font-weight: 600; }
-.inv-search { position: relative; flex: 1 1 280px; min-width: 160px; max-width: none; }
+.inv-bar__count {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.inv-search {
+  position: relative;
+  flex: 1 1 280px;
+  min-width: 160px;
+  max-width: none;
+}
 
-.inv-table-wrap { overflow-x: auto; }
-.inv-table { width: 100%; border-collapse: collapse; }
+.inv-table-wrap {
+  overflow-x: auto;
+}
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
 .inv-table th {
-  background: var(--pink-50); color: var(--pink-700);
-  font-size: 11.5px; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: .4px;
-  padding: 11px 12px; white-space: nowrap; border-bottom: none;
+  background: var(--pink-50);
+  color: var(--pink-700);
+  font-size: 11.5px;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 11px 12px;
+  white-space: nowrap;
+  border-bottom: none;
 }
-.inv-table thead th:first-child { border-top-left-radius: 13px; }
-.inv-table thead th:last-child { border-top-right-radius: 13px; }
-.inv-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.inv-table tbody tr:last-child td { border-bottom: none; }
-.inv-row { cursor: pointer; transition: background-color .12s; }
-.inv-row:hover { background: var(--pink-50); }
+.inv-table thead th:first-child {
+  border-top-left-radius: 13px;
+}
+.inv-table thead th:last-child {
+  border-top-right-radius: 13px;
+}
+.inv-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.inv-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.inv-row {
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.inv-row:hover {
+  background: var(--pink-50);
+}
 
-.inv-code { color: var(--pink-700); font-weight: 700; }
-.inv-price { font-weight: 700; font-variant-numeric: tabular-nums; }
-.inv-ton { font-weight: 700; font-variant-numeric: tabular-nums; }
-.inv-held { font-weight: 600; font-variant-numeric: tabular-nums; }
-.text-warning { color: #d97706; }
-.text-danger { color: #dc2626; }
-.text-success { color: #059669; }
-.text-info { color: #2563eb; }
+.inv-code {
+  color: var(--pink-700);
+  font-weight: 700;
+}
+.inv-price {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.inv-ton {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.inv-held {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.text-warning {
+  color: #d97706;
+}
+.text-danger {
+  color: #dc2626;
+}
+.text-success {
+  color: #059669;
+}
+.text-info {
+  color: #2563eb;
+}
 
-.inv-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 9px; border: 1px solid var(--line); background: #fff; flex-shrink: 0; }
-.inv-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.inv-name__text { min-width: 0; }
-.inv-name__main { font-weight: 600; line-height: 1.35; word-break: break-word; }
-.inv-name__sub { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 2px; }
-.inv-config { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; align-items: center; }
+.inv-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #fff;
+  flex-shrink: 0;
+}
+.inv-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.inv-name__text {
+  min-width: 0;
+}
+.inv-name__main {
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.inv-name__sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin-top: 2px;
+}
+.inv-config {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  align-items: center;
+}
 .inv-config-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 9px; border-radius: 999px;
-  background: var(--pink-100); color: var(--pink-700);
-  font-weight: 600; line-height: 1.4;
-  transition: background .15s, transform .12s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--pink-100);
+  color: var(--pink-700);
+  font-weight: 600;
+  line-height: 1.4;
+  transition:
+    background 0.15s,
+    transform 0.12s;
 }
-.inv-config-chip:hover { background: var(--pink-200); transform: translateY(-1px); }
+.inv-config-chip:hover {
+  background: var(--pink-200);
+  transform: translateY(-1px);
+}
 
-.inv-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
-.inv-tag--ok { background: var(--ok-bg); color: var(--ok-text); }
-.inv-tag--low { background: #fff7ed; color: #c2650a; }
-.inv-tag--out { background: #fef2f2; color: var(--danger); }
-.inv-tag--soft { background: var(--pink-100); color: var(--pink-700); }
+.inv-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.inv-tag--ok {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+.inv-tag--low {
+  background: #fff7ed;
+  color: #c2650a;
+}
+.inv-tag--out {
+  background: #fef2f2;
+  color: var(--danger);
+}
+.inv-tag--soft {
+  background: var(--pink-100);
+  color: var(--pink-700);
+}
 
-.inv-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.inv-empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13.5px; }
+.inv-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.inv-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+}
 
-.inv-pager { display: flex; justify-content: flex-end; padding: 10px 16px; background: var(--pink-50); border-top: 1px solid var(--line); }
+.inv-pager {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 16px;
+  background: var(--pink-50);
+  border-top: 1px solid var(--line);
+}
 
-.inv-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.inv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+}
 .inv-chip-info {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--pink-50); border-radius: 999px; padding: 4px 12px;
-  font-size: 12.5px; color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--pink-50);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12.5px;
+  color: var(--muted);
 }
-.inv-chip-info b { color: var(--ink); font-weight: 700; }
+.inv-chip-info b {
+  color: var(--ink);
+  font-weight: 700;
+}
 
 /* ══════════ MODAL ══════════ */
 .inv-modal-mask {
-  position: fixed; inset: 0; z-index: 1050;
-  background: rgba(31,41,55,.5); display: flex; align-items: flex-start; justify-content: center;
-  padding: 0 20px 20px; overflow-y: auto; font-size: 14px; color: var(--ink);
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(31, 41, 55, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 20px 20px;
+  overflow-y: auto;
+  font-size: 14px;
+  color: var(--ink);
 }
 .inv-modal {
-  background: #fff; width: 640px; max-width: 100%; max-height: calc(100vh - 40px);
-  border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;
-  box-shadow: 0 22px 55px rgba(168,27,93,.25);
-  margin-top: 24px; flex-shrink: 0;
+  background: #fff;
+  width: 640px;
+  max-width: 100%;
+  max-height: calc(100vh - 40px);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 22px 55px rgba(168, 27, 93, 0.25);
+  margin-top: 24px;
+  flex-shrink: 0;
 }
-.inv-modal--hep { width: 520px; }
+.inv-modal--hep {
+  width: 520px;
+}
 .inv-modal__head {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 16px 20px 12px; background: var(--pink-50); border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 12px;
+  background: var(--pink-50);
+  border-bottom: 1px solid var(--line);
 }
 .inv-modal__icon {
-  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--pink-100); color: var(--pink-700);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pink-100);
+  color: var(--pink-700);
 }
-.inv-modal__body { padding: 20px; overflow-y: auto; background: #fffafc; }
+.inv-modal__body {
+  padding: 20px;
+  overflow-y: auto;
+  background: #fffafc;
+}
 .inv-modal__foot {
-  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 14px 20px; border-top: 1px solid var(--line); background: var(--pink-50);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--pink-50);
 }
-.inv-modal__foot--end { justify-content: flex-end; }
+.inv-modal__foot--end {
+  justify-content: flex-end;
+}
 </style>

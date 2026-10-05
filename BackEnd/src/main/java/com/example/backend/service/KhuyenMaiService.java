@@ -1,10 +1,14 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.KhuyenMai;
+import com.example.backend.entity.KhuyenMaiKhachHang;
 import com.example.backend.entity.KhuyenMaiSanPham;
+import com.example.backend.entity.KhachHang;
 import com.example.backend.entity.SanPham;
 import com.example.backend.repository.KhuyenMaiRepository;
+import com.example.backend.repository.KhuyenMaiKhachHangRepository;
 import com.example.backend.repository.KhuyenMaiSanPhamRepository;
+import com.example.backend.repository.KhachHangRepository;
 import com.example.backend.repository.SanPhamRepository;
 import com.example.backend.request.KhuyenMaiRequest;
 import com.example.backend.response.KhuyenMaiResponse;
@@ -14,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,7 +32,16 @@ public class KhuyenMaiService {
     private KhuyenMaiSanPhamRepository khuyenMaiSanPhamRepository;
 
     @Autowired
+    private KhuyenMaiKhachHangRepository khuyenMaiKhachHangRepository;
+
+    @Autowired
     private SanPhamRepository sanPhamRepository;
+
+    @Autowired
+    private KhachHangRepository khachHangRepository;
+
+    @Autowired(required = false)
+    private com.example.backend.config.DatabaseInitializer databaseInitializer;
 
     public List<KhuyenMaiResponse> hienThiKhuyenMai() {
         return khuyenMaiRepository.findAll().stream()
@@ -62,13 +76,15 @@ public class KhuyenMaiService {
     @Transactional
     public KhuyenMai create(KhuyenMaiRequest request) {
         KhuyenMai entity = new KhuyenMai();
-        BeanUtils.copyProperties(request, entity, "khuyenMaiId", "ngayTao", "soLanDaDung", "sanPhamIds");
+        BeanUtils.copyProperties(request, entity, "khuyenMaiId", "ngayTao", "soLanDaDung", "sanPhamIds", "khachHangIds");
         entity.setNgayTao(LocalDateTime.now());
         entity.setSoLanDaDung(0);
         KhuyenMai saved = khuyenMaiRepository.save(entity);
 
         // Lưu danh sách sản phẩm áp dụng
         luuSanPhamApDung(saved.getKhuyenMaiId(), request.getSanPhamIds());
+        // Lưu danh sách khách hàng được nhận voucher
+        luuKhachHangNhanVoucher(saved.getKhuyenMaiId(), request.getKhachHangIds());
 
         return saved;
     }
@@ -76,11 +92,13 @@ public class KhuyenMaiService {
     @Transactional
     public KhuyenMai update(Integer id, KhuyenMaiRequest request) {
         KhuyenMai entity = getById(id);
-        BeanUtils.copyProperties(request, entity, "khuyenMaiId", "ngayTao", "soLanDaDung", "sanPhamIds");
+        BeanUtils.copyProperties(request, entity, "khuyenMaiId", "ngayTao", "soLanDaDung", "sanPhamIds", "khachHangIds");
         KhuyenMai saved = khuyenMaiRepository.save(entity);
 
         // Cập nhật danh sách sản phẩm áp dụng
         luuSanPhamApDung(saved.getKhuyenMaiId(), request.getSanPhamIds());
+        // Cập nhật danh sách khách hàng được nhận voucher
+        luuKhachHangNhanVoucher(saved.getKhuyenMaiId(), request.getKhachHangIds());
 
         return saved;
     }
@@ -100,6 +118,31 @@ public class KhuyenMaiService {
                     );
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Lấy danh sách khách hàng được nhận voucher
+     */
+    public List<KhuyenMaiResponse.KhachHangSimpleResponse> getKhachHangNhanVoucher(Integer khuyenMaiId) {
+        try {
+            List<KhuyenMaiKhachHang> list = khuyenMaiKhachHangRepository.findByKhuyenMai_KhuyenMaiId(khuyenMaiId);
+            return list.stream()
+                    .map(kmkh -> {
+                        KhachHang kh = kmkh.getKhachHang();
+                        return new KhuyenMaiResponse.KhachHangSimpleResponse(
+                                kh.getKhachHangId(),
+                                kh.getHoTen(),
+                                kh.getSoDienThoai(),
+                                kh.getEmail()
+                        );
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            if (databaseInitializer != null) {
+                databaseInitializer.ensureSchema();
+            }
+            return Collections.emptyList();
+        }
     }
 
     // Kiểm tra khuyến mãi có áp dụng cho sản phẩm hay không
@@ -125,6 +168,36 @@ public class KhuyenMaiService {
                 kmsp.setKhuyenMai(khuyenMai);
                 kmsp.setSanPham(sanPham);
                 khuyenMaiSanPhamRepository.save(kmsp);
+            }
+        }
+    }
+
+    private void luuKhachHangNhanVoucher(Integer khuyenMaiId, List<Integer> khachHangIds) {
+        try {
+            doLuuKhachHangNhanVoucher(khuyenMaiId, khachHangIds);
+        } catch (Exception e) {
+            if (databaseInitializer != null) {
+                databaseInitializer.ensureSchema();
+                try {
+                    doLuuKhachHangNhanVoucher(khuyenMaiId, khachHangIds);
+                } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    private void doLuuKhachHangNhanVoucher(Integer khuyenMaiId, List<Integer> khachHangIds) {
+        // Xóa tất cả khách hàng cũ
+        khuyenMaiKhachHangRepository.deleteByKhuyenMaiId(khuyenMaiId);
+
+        // Thêm danh sách mới nếu có
+        if (khachHangIds != null && !khachHangIds.isEmpty()) {
+            KhuyenMai khuyenMai = khuyenMaiRepository.getReferenceById(khuyenMaiId);
+            for (Integer khachHangId : khachHangIds) {
+                KhachHang khachHang = khachHangRepository.getReferenceById(khachHangId);
+                KhuyenMaiKhachHang kmkh = new KhuyenMaiKhachHang();
+                kmkh.setKhuyenMai(khuyenMai);
+                kmkh.setKhachHang(khachHang);
+                khuyenMaiKhachHangRepository.save(kmkh);
             }
         }
     }
@@ -161,6 +234,28 @@ public class KhuyenMaiService {
                         );
                     })
                     .collect(Collectors.toList()));
+        }
+
+        // Lấy danh sách khách hàng được nhận voucher
+        try {
+            List<KhuyenMaiKhachHang> khachHangs = khuyenMaiKhachHangRepository.findByKhuyenMai_KhuyenMaiId(km.getKhuyenMaiId());
+            if (!khachHangs.isEmpty()) {
+                resp.setKhachHangs(khachHangs.stream()
+                        .map(kmkh -> {
+                            KhachHang kh = kmkh.getKhachHang();
+                            return new KhuyenMaiResponse.KhachHangSimpleResponse(
+                                    kh.getKhachHangId(),
+                                    kh.getHoTen(),
+                                    kh.getSoDienThoai(),
+                                    kh.getEmail()
+                            );
+                        })
+                        .collect(Collectors.toList()));
+            }
+        } catch (Exception e) {
+            if (databaseInitializer != null) {
+                databaseInitializer.ensureSchema();
+            }
         }
 
         return resp;

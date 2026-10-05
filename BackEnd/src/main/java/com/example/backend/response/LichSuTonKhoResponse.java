@@ -1,11 +1,11 @@
 package com.example.backend.response;
 
+import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,4 +23,7 @@ public class LichSuTonKhoResponse {
     private Integer nhanVienId;
     private String ghiChu;
     private LocalDateTime ngayTao;
+    // Thêm tên sản phẩm và tên nhân viên để hiển thị trên bảng
+    private String tenSanPham;
+    private String tenNhanVien;
 }

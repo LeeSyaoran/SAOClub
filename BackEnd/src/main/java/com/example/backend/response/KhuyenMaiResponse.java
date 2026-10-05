@@ -32,12 +32,15 @@ public class KhuyenMaiResponse {
     // Danh sách sản phẩm áp dụng - null hoặc rỗng = áp dụng cho tất cả
     private List<SanPhamSimpleResponse> sanPhams;
 
+    // Danh sách khách hàng được nhận voucher - null hoặc rỗng = áp dụng cho tất cả
+    private List<KhachHangSimpleResponse> khachHangs;
+
     public KhuyenMaiResponse(Integer khuyenMaiId, String maKhuyenMai, String tenKhuyenMai,
                              String loai, BigDecimal giaTri, BigDecimal giaTriToiDa, BigDecimal donHangToiThieu,
                              LocalDateTime ngayBatDau, LocalDateTime ngayKetThuc, Integer soLuongToiDa,
                              Integer soLanDaDung, Integer soLuotConLai, String trangThai, LocalDateTime ngayTao) {
         this(khuyenMaiId, maKhuyenMai, tenKhuyenMai, loai, giaTri, giaTriToiDa, donHangToiThieu,
-                ngayBatDau, ngayKetThuc, soLuongToiDa, soLanDaDung, soLuotConLai, trangThai, ngayTao, null);
+                ngayBatDau, ngayKetThuc, soLuongToiDa, soLanDaDung, soLuotConLai, trangThai, ngayTao, null, null);
     }
 
     @lombok.Data
@@ -47,5 +50,15 @@ public class KhuyenMaiResponse {
         private Integer sanPhamId;
         private String tenSanPham;
         private String hinhAnhChinh;
+    }
+
+    @lombok.Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class KhachHangSimpleResponse {
+        private Integer khachHangId;
+        private String hoTen;
+        private String soDienThoai;
+        private String email;
     }
 }

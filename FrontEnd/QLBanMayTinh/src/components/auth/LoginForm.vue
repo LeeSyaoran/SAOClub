@@ -112,19 +112,6 @@
         </svg>
         <span>Google</span>
       </button>
-
-      <button
-        type="button"
-        class="btn-social btn-facebook"
-        :disabled="loadingSocial"
-        @click="handleFacebookLogin"
-      >
-        <span v-if="socialLoading === 'facebook'" class="spinner-border spinner-border-sm"></span>
-        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="#1877F2">
-          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-        </svg>
-        <span>Facebook</span>
-      </button>
     </div>
 
     <!-- Register Link -->
@@ -144,7 +131,7 @@ import { toTypedSchema } from '@vee-validate/zod';
 import { loginSchema } from '../../utils/validators.js';
 import { t } from '../../i18n/index.js';
 import { Eye, EyeOff, User, Lock, AlertCircle } from '@lucide/vue';
-import { signInWithGoogle, signInWithFacebook } from '../../firebase.js';
+import { signInWithGoogle } from '../../firebase.js';
 import { showToast } from '../../stores/toast.js';
 
 const emit = defineEmits(["submit", "login-success", "close", "open-register", "social-success"]);
@@ -192,22 +179,7 @@ const handleGoogleLogin = async () => {
   }
 };
 
-// Social Login: Facebook — popup flow
-const handleFacebookLogin = async () => {
-  loadingSocial.value = true;
-  socialLoading.value = 'facebook';
-  error.value = '';
-  try {
-    const result = await signInWithFacebook();
-    emit('social-success', result);
-  } catch (err) {
-    if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
-      error.value = 'Đăng nhập Facebook thất bại. Vui lòng thử lại.';
-    }
-    loadingSocial.value = false;
-    socialLoading.value = '';
-  }
-};
+
 </script>
 
 <style scoped>
@@ -415,7 +387,7 @@ const handleFacebookLogin = async () => {
 /* ── Social Login ─────────────────────────────────────────── */
 .social-login {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 

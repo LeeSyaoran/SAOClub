@@ -1,12 +1,10 @@
 package com.example.backend.service;
 
-import com.example.backend.entity.BienTheSanPham;
-import com.example.backend.entity.NhanVien;
-import com.example.backend.entity.TonKho;
-import com.example.backend.repository.*;
-import com.example.backend.request.BienTheSanPhamRequest;
-import com.example.backend.response.BienTheSanPhamPublicResponse;
-import com.example.backend.response.BienTheSanPhamResponse;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.List;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,10 +12,21 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.List;
+import com.example.backend.entity.BienTheSanPham;
+import com.example.backend.entity.NhanVien;
+import com.example.backend.entity.TonKho;
+import com.example.backend.repository.BienTheSanPhamRepository;
+import com.example.backend.repository.ChiTietPhieuNhapRepository;
+import com.example.backend.repository.DmCpuRepository;
+import com.example.backend.repository.DmGpuRepository;
+import com.example.backend.repository.DmOcungRepository;
+import com.example.backend.repository.DmRamRepository;
+import com.example.backend.repository.LichSuTonKhoRepository;
+import com.example.backend.repository.SanPhamRepository;
+import com.example.backend.repository.TonKhoRepository;
+import com.example.backend.request.BienTheSanPhamRequest;
+import com.example.backend.response.BienTheSanPhamPublicResponse;
+import com.example.backend.response.BienTheSanPhamResponse;
 
 @Service
 public class BienTheSanPhamService {
@@ -72,6 +81,7 @@ public class BienTheSanPhamService {
 
     @Transactional
     public BienTheSanPham create(BienTheSanPhamRequest request) {
+        kiemTraDuLieuTaoMoi(request);
         String barcode = chuanHoa(request.getBarcode());
         kiemTraTrungBarcode(barcode, null);
         kiemTraTrungMaSku(request.getMaSku(), null);
@@ -108,6 +118,44 @@ public class BienTheSanPhamService {
         Integer spId = entity.getSanPham() != null ? entity.getSanPham().getSanPhamId() : request.getSanPhamId();
         lichSuThayDoiSanPhamService.ghiNeuThayDoi(spId, saved.getBienTheId(), "bien_the", "maSku", null, saved.getMaSku(), nguoiSua);
         return saved;
+    }
+
+    private void kiemTraDuLieuTaoMoi(BienTheSanPhamRequest request) {
+        if (request == null || request.getSanPhamId() == null) {
+            throw new IllegalArgumentException("Phiên bản phải thuộc về một sản phẩm");
+        }
+        if (chuanHoa(request.getMauSac()) == null) {
+            throw new IllegalArgumentException("Phiên bản phải có màu sắc");
+        }
+        if (request.getCpuId() == null) {
+            throw new IllegalArgumentException("Phiên bản phải chọn CPU");
+        }
+        if (request.getRamId() == null) {
+            throw new IllegalArgumentException("Phiên bản phải chọn RAM");
+        }
+        if (request.getOCungId() == null) {
+            throw new IllegalArgumentException("Phiên bản phải chọn ổ cứng");
+        }
+        if (request.getGpuId() == null) {
+            throw new IllegalArgumentException("Phiên bản phải chọn GPU");
+        }
+        if (request.getGiaNhap() == null || request.getGiaNhap().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Giá vốn của phiên bản phải lớn hơn 0");
+        }
+        if (request.getGiaBan() == null || request.getGiaBan().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Giá bán của phiên bản phải lớn hơn 0");
+        }
+        if (request.getGiaBan().compareTo(request.getGiaNhap()) < 0) {
+            throw new IllegalArgumentException("Giá bán của phiên bản không được nhỏ hơn giá vốn");
+        }
+        if (request.getTrongLuongKg() != null) {
+            if (request.getTrongLuongKg().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Trọng lượng (kg) phải lớn hơn 0");
+            }
+            if (request.getTrongLuongKg().compareTo(new BigDecimal("5")) > 0) {
+                throw new IllegalArgumentException("Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)");
+            }
+        }
     }
 
     @Transactional
@@ -169,7 +217,15 @@ public class BienTheSanPhamService {
         if (request.getKichThuocManHinh() != null && !request.getKichThuocManHinh().isBlank()) entity.setKichThuocManHinh(request.getKichThuocManHinh());
         if (request.getHeDieuHanh() != null && !request.getHeDieuHanh().isBlank()) entity.setHeDieuHanh(request.getHeDieuHanh());
         if (request.getPin() != null && !request.getPin().isBlank()) entity.setPin(request.getPin());
-        if (request.getTrongLuongKg() != null) entity.setTrongLuongKg(request.getTrongLuongKg());
+        if (request.getTrongLuongKg() != null) {
+            if (request.getTrongLuongKg().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Trọng lượng (kg) phải lớn hơn 0");
+            }
+            if (request.getTrongLuongKg().compareTo(new BigDecimal("5")) > 0) {
+                throw new IllegalArgumentException("Trọng lượng (kg) tối đa của máy tính là 5 kg (vui lòng nhập theo đơn vị kg, VD: 1.7)");
+            }
+            entity.setTrongLuongKg(request.getTrongLuongKg());
+        }
         if (request.getHinhAnhBienThe() != null && !request.getHinhAnhBienThe().isBlank()) entity.setHinhAnhBienThe(request.getHinhAnhBienThe());
         if (request.getTrangThai() != null && !request.getTrangThai().isBlank()) entity.setTrangThai(request.getTrangThai());
         if (request.getMoTa() != null && !request.getMoTa().isBlank()) entity.setMoTa(request.getMoTa());

@@ -45,6 +45,7 @@ public class PaymentWebhookController {
      * Body: { donHangId, soTien, maGiaoDich, phuongThuc }
      */
     @PostMapping("/confirm")
+    @PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN')")
     @Transactional
     public ResponseEntity<?> confirmPayment(@RequestBody Map<String, Object> body) {
         try {

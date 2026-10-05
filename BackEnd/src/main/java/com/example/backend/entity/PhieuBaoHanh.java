@@ -58,10 +58,10 @@ public class PhieuBaoHanh {
     private String ketQuaXuLy;
 
     @Column(name = "trang_thai", length = 30)
-    private String trangThai;
+    private String trangThai = "cho_xu_ly";
 
     @Column(name = "chi_phi_phat_sinh", precision = 18, scale = 2)
-    private BigDecimal chiPhiPhatSinh;
+    private BigDecimal chiPhiPhatSinh = BigDecimal.ZERO;
 
     @Column(name = "ghi_chu", length = 500)
     private String ghiChu;

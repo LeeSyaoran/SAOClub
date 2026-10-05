@@ -33,6 +33,8 @@ const tríchXuatThuocTinhTuMoTa = (moTaStr) => {
   }
   return {};
 };
+const loaiBoMetadataTuMoTa = (moTaStr) =>
+  moTaStr ? String(moTaStr).replace(METADATA_TAG_REGEX, "").trim() : "";
 
 const dynamicCustomAttrsList = ref([]); // Thuộc tính riêng của Biến thể (phamVi === 'bien_the')
 const productCustomAttrsList = ref([]); // Thuộc tính chung của Sản phẩm (phamVi === 'san_pham')
@@ -349,6 +351,11 @@ const detailParentCustomAttrs = computed(() => {
   const rawMoTa = detailParent.value?.moTa || '';
   return tríchXuatThuocTinhTuMoTa(rawMoTa);
 });
+const detailCleanMoTa = computed(() => {
+  const rawMoTa = detailVariant.value?.moTa || detailParent.value?.moTa || '';
+  return loaiBoMetadataTuMoTa(rawMoTa);
+});
+const formSavedMetadata = ref({});
 // ponytail: đang sửa biến thể đã có (không phải tạo mới) → các field thông số chung read-only
 const isEditingExisting = computed(() => !addVariantMode.value && editingId.value != null);
 
@@ -540,6 +547,8 @@ const openEdit = async (p) => {
   // ponytail: thông số chung (màn hình/HĐH/pin/trọng lượng/bảo hành/NCC) lấy từ sản phẩm cha
   // — khớp với modal chi tiết (showRowDetail) và đồng bộ với tab Sản phẩm
   const parent = (ProductsStore.items ?? []).find((it) => it.sanPhamId === p.sanPhamId);
+  const rawMoTa = p.moTa || parent?.moTa || "";
+  formSavedMetadata.value = tríchXuatThuocTinhTuMoTa(rawMoTa);
   Object.assign(form, {
     bienTheId: p.bienTheId,
     tenSanPham: p.tenSanPham,
@@ -566,7 +575,7 @@ const openEdit = async (p) => {
     giaBan: p.giaBan,
     giaNhap: p.giaNhap,
     baoHanhThang: parent?.baoHanhThang ?? p.baoHanhThang,
-    moTa: p.moTa,
+    moTa: loaiBoMetadataTuMoTa(rawMoTa),
     hinhAnhChinh: p.hinhAnhChinh,
     trangThai: p.trangThai,
     phanLoaiTags: p.phanLoaiTags ?? "",
@@ -679,8 +688,14 @@ const saveVariant = async () => {
     return;
   }
 
+  const baseMoTa = form.moTa ? String(form.moTa).trim() : "";
+  const finalMoTa = (formSavedMetadata.value && Object.keys(formSavedMetadata.value).length > 0)
+    ? (baseMoTa ? `${baseMoTa}\n<!--METADATA_THUOC_TINH:${JSON.stringify(formSavedMetadata.value)}-->` : `<!--METADATA_THUOC_TINH:${JSON.stringify(formSavedMetadata.value)}-->`)
+    : baseMoTa;
+
   const body = {
     ...form,
+    moTa: finalMoTa,
     barcodeBienThe: barcode || null,
     barcode: barcode || null, // gửi kèm cả 2 tên trường để khớp dù DTO backend đặt tên nào
     thuongHieuId: Number(form.thuongHieuId),
@@ -973,9 +988,9 @@ const saveVariant = async () => {
           </div>
         </div>
 
-        <div v-if="detailVariant.moTa" class="vt-detail-block">
+        <div v-if="detailCleanMoTa" class="vt-detail-block">
           <div class="vt-section-title">{{ t('admin.productModal.descLabel') }}</div>
-          <p class="vt-desc">{{ detailVariant.moTa }}</p>
+          <p class="vt-desc">{{ detailCleanMoTa }}</p>
         </div>
       </div>
 

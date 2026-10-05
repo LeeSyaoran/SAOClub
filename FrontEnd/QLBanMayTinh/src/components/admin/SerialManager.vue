@@ -8,7 +8,6 @@ import {
 } from "@lucide/vue";
 import { t } from "../../i18n/index.js";
 import * as ChiTietSanPhamService from "../../services/ChiTietSanPhamService.js";
-import { ChiTietCpuService, ChiTietRamService, ChiTietGpuService, ChiTietOCungService } from "../../services/ChiTietLinhKienService.js";
 import * as DmService from "../../services/DmService.js";
 import { formatDate } from "../../utils/adminFormat.js";
 import { nowLocalIso } from "../../utils/datetime.js";
@@ -23,14 +22,6 @@ import ProductDetailModal from "./ProductDetailModal.vue";
 import Pagination from "../common/Pagination.vue";
 import { usePagination } from "../../composables/usePagination.js";
 
-const specLists = reactive({ cpu: [], ram: [], gpu: [], oCung: [] });
-const LINH_KIEN_META = {
-  cpu:   { idField: 'cpuId',   nameField: 'tenCpu',    itemIdField: 'chiTietCpuId',   service: ChiTietCpuService },
-  ram:   { idField: 'ramId',   nameField: 'dungLuong', itemIdField: 'chiTietRamId',   service: ChiTietRamService },
-  gpu:   { idField: 'gpuId',   nameField: 'tenGpu',    itemIdField: 'chiTietGpuId',   service: ChiTietGpuService },
-  oCung: { idField: 'oCungId', nameField: 'loaiOcung', itemIdField: 'chiTietOCungId', service: ChiTietOCungService },
-};
-
 const items = ref([]);
 const heldOrderSerials = ref([]);
 const loading = ref(false);
@@ -39,22 +30,12 @@ const search = ref("");
 const load = async () => {
   loading.value = true;
   try {
-    const [sp, cpu, ram, gpu, oCung, heldOrders] = await Promise.all([
+    const [sp, heldOrders] = await Promise.all([
       ChiTietSanPhamService.getAll().catch(() => []),
-      ChiTietCpuService.getAll().catch(() => []),
-      ChiTietRamService.getAll().catch(() => []),
-      ChiTietGpuService.getAll().catch(() => []),
-      ChiTietOCungService.getAll().catch(() => []),
       ChiTietSanPhamService.getHeldWithOrder().catch(() => []),
     ]);
     heldOrderSerials.value = heldOrders ?? [];
-    items.value = [
-      ...(sp ?? []).map((i) => ({ ...i, loai: 'sanPham', rowId: i.chiTietId })),
-      ...(cpu ?? []).map((i) => ({ ...i, loai: 'cpu', rowId: i.chiTietCpuId })),
-      ...(ram ?? []).map((i) => ({ ...i, loai: 'ram', rowId: i.chiTietRamId })),
-      ...(gpu ?? []).map((i) => ({ ...i, loai: 'gpu', rowId: i.chiTietGpuId })),
-      ...(oCung ?? []).map((i) => ({ ...i, loai: 'oCung', rowId: i.chiTietOCungId })),
-    ];
+    items.value = (sp ?? []).map((i) => ({ ...i, loai: 'sanPham', rowId: i.chiTietId }));
   } finally {
     loading.value = false;
   }
@@ -167,12 +148,22 @@ const getActiveOrderItem = (item) => {
   return activeOrderSerialMap.value.get(item.chiTietId) || activeOrderSerialMap.value.get(item.soSerial) || null;
 };
 
-// Kiểm tra serial có thuộc đơn hàng đang trên thanh tiến trình (chưa hoàn tất giao)
-const isOrderInProgress = (item) => {
-  if (item.trangThai === 'loi_bao_hanh') return false;
+// Kiểm tra serial có thuộc đơn hàng ở giai đoạn chờ xác nhận / đã lên đơn (chưa chuyển sang đóng gói / xuất bán)
+const isOrderPendingPacking = (item) => {
+  if (item.trangThai === 'loi_bao_hanh' || item.trangThai === 'da_tra_hang') return false;
   const ord = getActiveOrderItem(item);
   if (!ord) return false;
-  return !['delivered', 'cancelled', 'returned'].includes(ord.trangThaiDonHang);
+  return ['pending', 'confirmed'].includes(ord.trangThaiDonHang) && item.trangThai !== 'da_ban';
+};
+const isOrderInProgress = isOrderPendingPacking;
+
+// Kiểm tra serial đã bán (đã có trạng thái da_ban hoặc đơn hàng đã sang bước đóng gói / giao hàng / hoàn tất)
+const isOrderSold = (item) => {
+  if (item.trangThai === 'loi_bao_hanh') return false;
+  if (item.trangThai === 'da_ban') return true;
+  const ord = getActiveOrderItem(item);
+  if (!ord) return false;
+  return ['processing', 'shipping', 'out_for_delivery', 'awaiting_confirmation', 'delivered'].includes(ord.trangThaiDonHang);
 };
 
 // Xác định người thực hiện: Admin hay Nhân viên tùy vào tài khoản đang login và thực hiện thanh toán hiện tại
@@ -227,9 +218,10 @@ const filteredItems = computed(() => {
     if (q && ![i.soSerial, rowSpecLabel(i)].some((v) => (v || '').toLowerCase().includes(q))) return false;
     if (filterLoai.value && i.loai !== filterLoai.value) return false;
     if (filterTrangThai.value === 'dang_len_don_pos' && !isInPosCart(i)) return false;
-    if (filterTrangThai.value === 'da_len_don' && !isOrderInProgress(i)) return false;
-    if (filterTrangThai.value === 'trong_kho' && (i.trangThai !== 'trong_kho' || isInPosCart(i) || isOrderInProgress(i))) return false;
-    if (filterTrangThai.value && !['dang_len_don_pos', 'da_len_don', 'trong_kho'].includes(filterTrangThai.value) && i.trangThai !== filterTrangThai.value) return false;
+    if (filterTrangThai.value === 'da_len_don' && !isOrderPendingPacking(i)) return false;
+    if (filterTrangThai.value === 'da_ban' && !isOrderSold(i)) return false;
+    if (filterTrangThai.value === 'trong_kho' && (i.trangThai !== 'trong_kho' || isInPosCart(i) || isOrderPendingPacking(i) || isOrderSold(i))) return false;
+    if (filterTrangThai.value && !['dang_len_don_pos', 'da_len_don', 'da_ban', 'trong_kho'].includes(filterTrangThai.value) && i.trangThai !== filterTrangThai.value) return false;
     if (filterInPosCart.value && !isInPosCart(i)) return false;
     const ngay = (i.ngayNhapKho || '').slice(0, 10);
     if (filterNgayFrom.value && ngay < filterNgayFrom.value) return false;
@@ -261,8 +253,8 @@ const statusLabel = (s) => {
 
 const serialStats = computed(() => {
   const all = items.value ?? [];
-  const trongKho = all.filter((i) => i.trangThai === 'trong_kho' && !isInPosCart(i) && !isOrderInProgress(i)).length;
-  const daBan = all.filter((i) => i.trangThai === 'da_ban' && !isOrderInProgress(i)).length;
+  const trongKho = all.filter((i) => i.trangThai === 'trong_kho' && !isInPosCart(i) && !isOrderPendingPacking(i) && !isOrderSold(i)).length;
+  const daBan = all.filter((i) => isOrderSold(i)).length;
   const loiBaoHanh = all.filter((i) => i.trangThai === 'loi_bao_hanh').length;
   return { total: all.length, trongKho, daBan, loiBaoHanh };
 });
@@ -586,9 +578,18 @@ const deleteSerial = async (item) => {
               >
                 <Clock :size="12" /> Đang lên đơn POS
               </span>
+              <!-- Đã bán (bao gồm đơn hàng đã sang bước đóng gói / giao hàng / hoàn tất) -->
+              <span
+                v-else-if="item.trangThai === 'da_ban' || isOrderSold(item)"
+                class="badge rounded-pill bg-secondary-subtle text-secondary border px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
+                style="font-size:11.5px;"
+                :title="getActiveOrderItem(item) ? `Đơn hàng #${getActiveOrderItem(item)?.maDonHang || getActiveOrderItem(item)?.donHangId} — Đã bán` : 'Đã bán'"
+              >
+                <Package :size="12" /> Đã bán
+              </span>
               <!-- Đang ở trạng thái đã lên đơn ở thanh tiến trình -->
               <span
-                v-else-if="isOrderInProgress(item)"
+                v-else-if="isOrderPendingPacking(item)"
                 class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap"
                 style="font-size:11.5px; font-weight:600;"
                 :title="`Đơn hàng #${getActiveOrderItem(item)?.maDonHang || getActiveOrderItem(item)?.donHangId} — Đã lên đơn ở thanh tiến trình`"
@@ -598,9 +599,6 @@ const deleteSerial = async (item) => {
               <!-- Các trạng thái thông thường -->
               <span v-else-if="item.trangThai === 'trong_kho'" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
                 <CheckCircle2 :size="12" /> {{ statusLabel(item.trangThai) }}
-              </span>
-              <span v-else-if="item.trangThai === 'da_ban'" class="badge rounded-pill bg-secondary-subtle text-secondary border px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
-                <Package :size="12" /> {{ statusLabel(item.trangThai) }}
               </span>
               <span v-else-if="item.trangThai === 'da_tra_hang'" class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2.5 py-1 d-inline-flex align-items-center gap-1 text-nowrap" style="font-size:11.5px;">
                 <RotateCcw :size="12" /> {{ statusLabel(item.trangThai) }}

@@ -157,7 +157,8 @@ public class ChiTietSanPhamService {
         List<WarrantyStatusResponse> list = chiTietSanPhamRepository.timSerialDaBanCoGiaoHang();
         list.forEach(w -> w.setNgayHetBaoHanh(w.getNgayGiaoThucTe().plusMonths(w.getBaoHanhThang() == null ? 0 : w.getBaoHanhThang())));
         list.removeIf(w -> !w.getNgayHetBaoHanh().isAfter(now));
-        list.sort(Comparator.comparing(WarrantyStatusResponse::getNgayHetBaoHanh));
+        list.sort(Comparator.comparing(WarrantyStatusResponse::getNgayGiaoThucTe, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(WarrantyStatusResponse::getDonHangId, Comparator.nullsLast(Comparator.reverseOrder())));
         return list;
     }
 

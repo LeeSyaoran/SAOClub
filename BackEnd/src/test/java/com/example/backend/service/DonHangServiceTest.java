@@ -292,6 +292,47 @@ class DonHangServiceTest {
     }
 
     @Test
+    void update_donOnline_confirmedSangProcessing_chuyenSerialsSangDaBan() {
+        DonHang d = new DonHang();
+        d.setId(1);
+        d.setTrangThaiDonHang("confirmed");
+        d.setKenhBan("online");
+        when(donHangRepository.findById(1)).thenReturn(Optional.of(d));
+        when(khachHangRepository.getReferenceById(1)).thenReturn(new KhachHang());
+        when(donHangRepository.save(d)).thenReturn(d);
+
+        ChiTietSanPham mainSerial = new ChiTietSanPham();
+        mainSerial.setChiTietId(101);
+        mainSerial.setTrangThai("trong_kho");
+
+        ChiTietSanPham extraSerial = new ChiTietSanPham();
+        extraSerial.setChiTietId(102);
+        extraSerial.setTrangThai("trong_kho");
+
+        ChiTietDonHang item = new ChiTietDonHang();
+        item.setId(5);
+        item.setChiTietSanPham(mainSerial);
+        when(chiTietDonHangRepository.findEntityByDonHangId(1)).thenReturn(List.of(item));
+
+        com.example.backend.entity.ChiTietDonHangSerial link = new com.example.backend.entity.ChiTietDonHangSerial();
+        link.setChiTietDonHang(item);
+        link.setChiTietSanPham(extraSerial);
+        when(chiTietDonHangSerialRepository.findByChiTietDonHang_Id(5)).thenReturn(List.of(link));
+        when(chiTietDonHangSerialRepository.existsByChiTietDonHang_IdAndChiTietSanPham_ChiTietId(5, 101)).thenReturn(true);
+
+        com.example.backend.request.DonHangRequest request = new com.example.backend.request.DonHangRequest();
+        request.setKhachHangId(1);
+        request.setTrangThaiDonHang("processing");
+
+        service.update(1, request);
+
+        assertThat(mainSerial.getTrangThai()).isEqualTo("da_ban");
+        assertThat(extraSerial.getTrangThai()).isEqualTo("da_ban");
+        verify(chiTietSanPhamRepository).save(mainSerial);
+        verify(chiTietSanPhamRepository).save(extraSerial);
+    }
+
+    @Test
     void mergeOrders_donNguonChuaXacNhan_biChan() {
         DonHang target = new DonHang();
         target.setId(1);
