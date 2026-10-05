@@ -76,9 +76,10 @@ Cách này sẽ tự động khởi động **SQL Server 2022**, **Ollama AI**, 
 
 1. **Clone dự án về máy**:
    ```bash
-   git clone <URL_REPOSITORY>
+   git clone --depth 1 https://github.com/LeeSyaoran/SAOClub.git
    cd SAOClub
    ```
+   *(Khuyến nghị dùng cờ `--depth 1` để tải nhanh và tránh đứt kết nối mạng giữa chừng do dung lượng repo lớn)*.
 
 2. **Thiết lập file cấu hình môi trường**:
    Tạo file `.env` từ file mẫu `.env.example`:
@@ -339,6 +340,24 @@ npm run lint        # Kiểm tra chuẩn mã nguồn ESLint
 5. **Lỗi `Failed to initialize Firebase Admin SDK` khi khởi động Backend**:
    - Kiểm tra xem file `firebase-service-account.json` đã có trong thư mục `BackEnd/src/main/resources/` chưa.
    - Nếu bạn lưu file ở ngoài source code, kiểm tra lại giá trị biến `FIREBASE_SERVICE_ACCOUNT` trong `.env` xem đường dẫn tệp có chính xác không (ví dụ: `FIREBASE_SERVICE_ACCOUNT=file:C:/secrets/firebase-service-account.json`).
+
+6. **Lỗi `RPC failed; curl 18 transfer closed... fatal: early EOF` khi pull/clone dự án**:
+   - **Nguyên nhân**: Repository chứa tài nguyên và lịch sử commit lớn (trên 12.800 objects), khi đường truyền mạng chập chờn hoặc bộ đệm Git mặc định nhỏ sẽ dẫn tới lỗi ngắt kết nối (`early EOF`).
+   - **Cách 1 (Khuyên dùng - Nhanh nhất 100% thành công)**: Clone nông (`--depth 1`) chỉ lấy commit mới nhất:
+     ```bash
+     git clone --depth 1 https://github.com/LeeSyaoran/SAOClub.git
+     ```
+     *(Nếu sau này cần toàn bộ lịch sử commit, chạy: `cd SAOClub && git fetch --unshallow`)*.
+   - **Cách 2 (Cấu hình tăng buffer cho Git)**: Chạy các lệnh sau rồi clone lại:
+     ```bash
+     git config --global http.postBuffer 524288000
+     git config --global http.maxRequestBuffer 100M
+     git config --global core.compression 0
+     git config --global http.lowSpeedLimit 0
+     git config --global http.lowSpeedTime 999999
+     git clone https://github.com/LeeSyaoran/SAOClub.git
+     ```
+   - **Cách 3 (Tải trực tiếp mã nguồn)**: Truy cập repository trên GitHub: [https://github.com/LeeSyaoran/SAOClub](https://github.com/LeeSyaoran/SAOClub) -> Bấm nút **<> Code** -> Chọn **Download ZIP** rồi giải nén.
 
 ---
 
