@@ -5,7 +5,6 @@ import com.example.backend.request.PhieuBaoHanhRequest;
 import com.example.backend.response.PhieuBaoHanhResponse;
 import com.example.backend.response.WarrantyLookupResponse;
 import com.example.backend.service.PhieuBaoHanhService;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -16,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/phieu-bao-hanh")
