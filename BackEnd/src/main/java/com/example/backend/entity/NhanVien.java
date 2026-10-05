@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Getter
 @Setter
+@EqualsAndHashCode(callSuper = false)
 @Entity
 @Table(name = "nhan_vien")
 public class NhanVien extends BaseEntity {

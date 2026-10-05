@@ -122,6 +122,9 @@ public class AuthService {
 
     @Transactional
     public LoginResponse firebaseLogin(String idToken, String provider) {
+        if (com.google.firebase.FirebaseApp.getApps().isEmpty()) {
+            throw new IllegalStateException("Tính năng đăng nhập Google/Firebase chưa được cấu hình khóa trên máy chủ.");
+        }
         try {
             // Verify Firebase token
             FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);

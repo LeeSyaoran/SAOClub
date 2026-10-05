@@ -23,6 +23,8 @@ import java.io.InputStream;
 @Configuration
 public class FirebaseConfig {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FirebaseConfig.class);
+
     @Value("${firebase.service-account:${FIREBASE_SERVICE_ACCOUNT:classpath:firebase-service-account.json}}")
     private String serviceAccountPath;
 
@@ -36,20 +38,32 @@ public class FirebaseConfig {
     public void initFirebase() {
         if (!FirebaseApp.getApps().isEmpty()) return;
 
-        String location = serviceAccountPath.trim();
+        String location = serviceAccountPath != null ? serviceAccountPath.trim() : "";
+        if (location.isBlank()) {
+            log.info("[Firebase] FIREBASE_SERVICE_ACCOUNT chưa được cấu hình. Đăng nhập Google/Firebase sẽ tạm tắt.");
+            return;
+        }
+
         if (!location.startsWith("classpath:") && !location.startsWith("file:")) {
             location = "file:" + location; // đường dẫn hệ thống tệp thuần
         }
 
-        Resource resource = resourceLoader.getResource(location);
-        try (InputStream serviceAccount = resource.getInputStream()) {
-            FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .build();
-            FirebaseApp.initializeApp(options);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to initialize Firebase Admin SDK from '" + location + "'. "
-                    + "Set FIREBASE_SERVICE_ACCOUNT to the service account JSON path.", e);
+        try {
+            Resource resource = resourceLoader.getResource(location);
+            if (!resource.exists()) {
+                log.warn("[Firebase] File service account không tìm thấy tại '{}'. Backend vẫn khởi động bình thường nhưng đăng nhập Google/Firebase sẽ tắt.", location);
+                return;
+            }
+
+            try (InputStream serviceAccount = resource.getInputStream()) {
+                FirebaseOptions options = FirebaseOptions.builder()
+                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                        .build();
+                FirebaseApp.initializeApp(options);
+                log.info("[Firebase] Khởi tạo Firebase Admin SDK thành công từ '{}'.", location);
+            }
+        } catch (Exception e) {
+            log.warn("[Firebase] Không thể khởi tạo Firebase Admin SDK từ '{}': {}. Backend vẫn chạy bình thường.", location, e.getMessage());
         }
     }
 }

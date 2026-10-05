@@ -49,7 +49,11 @@ public class PaymentWebhookController {
     @Transactional
     public ResponseEntity<?> confirmPayment(@RequestBody Map<String, Object> body) {
         try {
-            Integer donHangId = ((Number) body.get("donHangId")).intValue();
+            Object idObj = body != null ? body.get("donHangId") : null;
+            if (idObj == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Thiếu tham số donHangId"));
+            }
+            Integer donHangId = idObj instanceof Number num ? num.intValue() : Integer.parseInt(idObj.toString());
             DonHang donHang = donHangRepository.findById(donHangId)
                     .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại: " + donHangId));
 
