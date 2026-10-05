@@ -1,27 +1,53 @@
-.worktrees/
-.superpowers/
-.playwright-mcp/
+# Dependencies
+node_modules/
+**/node_modules/
 
-### Secrets — không commit ###
+# Build outputs
+target/
+**/target/
+dist/
+**/dist/
+*.class
+
+# Secrets & Environment
 .env
+*.env.local
 firebase-service-account.json
 **/firebase-service-account.json
 
-
-### Backup database — file .bak nặng + log chạy, không commit, chỉ lưu local ###
+# Database backups (lưu local)
 Database/backups/*.bak
 Database/backups/*.log
 !Database/backups/.gitkeep
+
+# IDEs & Editors
+.idea/
+**/.idea/
+.vscode/
+**/.vscode/
+*.suo
+*.user
+*.workspace
+
+# AI / Agent tools & local junk
+.worktrees/
+.superpowers/
+.playwright-mcp/
+.impeccable/
+**/.impeccable/
+.claude/
+.kilo/
 .aider*
-
-
-### AI Models & Local Junk ###
 ollama-models/
-nul
+scratch_*.json
+[working-dir]*
+
+# Crash dumps & logs
+*.stackdump
 hs_err_*.log
 replay_*.log
-*.stackdump
+nul
 ~$*
 *.bak
 *.bak*
-.kilo/
+*.log

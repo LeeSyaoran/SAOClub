@@ -1,8 +1,0 @@
-{
-  "enabledPlugins": {
-    "postman@claude-plugins-official": true
-  },
-  "worktree": {
-    "baseRef": "head"
-  }
-}
