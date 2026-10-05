@@ -12,6 +12,7 @@ Hệ thống quản lý bán lẻ đa kênh (Omnichannel Retail & E-commerce) ch
 - [4. Hướng dẫn cài đặt & Khởi chạy](#4-hướng-dẫn-cài-đặt--khởi-chạy)
   - [Cách 1: Khởi chạy bằng Docker Compose (Khuyến nghị - Nhanh nhất)](#cách-1-khởi-chạy-bằng-docker-compose-khuyến-nghị---nhanh-nhất)
   - [Cách 2: Khởi chạy thủ công trên máy (Local Development)](#cách-2-khởi-chạy-thủ-công-trên-máy-local-development)
+  - [Cấu hình Firebase Authentication (firebase-service-account.json)](#cấu-hình-firebase-authentication-firebase-service-accountjson)
 - [5. Tài khoản đăng nhập mặc định](#5-tài-khoản-đăng-nhập-mặc-định)
 - [6. Cấu trúc thư mục dự án](#6-cấu-trúc-thư-mục-dự-án)
 - [7. Kiểm thử & Đóng gói](#7-kiểm-thử--đóng-gói)
@@ -175,6 +176,61 @@ Backend sẽ tự động kết nối tới Ollama tại cổng mặc định `1
 
 ---
 
+### Cấu hình Firebase Authentication (firebase-service-account.json)
+
+Tính năng **Đăng nhập nhanh bằng Google / Facebook** sử dụng **Firebase Admin SDK** ở Backend (`FirebaseConfig.java`, `AuthService.java`) để xác thực an toàn `idToken` gửi từ Frontend. 
+
+Để Backend khởi động và xác thực Firebase thành công, bạn cần cung cấp file chứng chỉ quản trị **`firebase-service-account.json`**.
+
+#### Trường hợp A: Sử dụng Project Firebase có sẵn (`saoclub-b9b96`)
+Nếu tài khoản Google của bạn đang có quyền truy cập vào Firebase project của dự án:
+1. Truy cập [Firebase Console](https://console.firebase.google.com/) và đăng nhập tài khoản Google quản trị.
+2. Chọn project: **`saoclub-b9b96`**.
+3. Nhấp vào biểu tượng bánh răng **⚙️ (Project settings - Cài đặt dự án)** ở góc trên thanh menu bên trái.
+4. Chọn tab **Service accounts (Tài khoản dịch vụ)**.
+5. Tại mục **Firebase Admin SDK**, nhấn nút **Generate new private key (Tạo khóa riêng mới)** -> Xác nhận **Generate key**.
+6. Đổi tên file `.json` vừa tải về thành:
+   ```text
+   firebase-service-account.json
+   ```
+7. Đặt file vào đường dẫn:
+   ```text
+   BackEnd/src/main/resources/firebase-service-account.json
+   ```
+   *(Hoặc lưu file ở bất kỳ đâu trên máy tính và khai báo đường dẫn tuyệt đối trong file `.env`: `FIREBASE_SERVICE_ACCOUNT=file:C:/secrets/firebase-service-account.json`)*.
+
+#### Trường hợp B: Tạo mới một Project Firebase độc lập (Tự triển khai riêng)
+Nếu bạn muốn sử dụng tài khoản Firebase riêng của mình:
+1. **Tạo Project mới:**
+   - Truy cập [Firebase Console](https://console.firebase.google.com/) -> Bấm **Add project (Thêm dự án)**.
+   - Đặt tên dự án (ví dụ: `saoclub-shop`) và hoàn thành các bước tạo.
+2. **Bật Authentication:**
+   - Vào menu bên trái: **Build** -> **Authentication** -> Bấm **Get started**.
+   - Tại tab **Sign-in method**, bật nhà cung cấp **Google** (chọn email hỗ trợ) -> Bấm **Save**.
+   - Tại tab **Settings** -> **Authorized domains**, đảm bảo đã có domain `localhost` và `127.0.0.1`.
+3. **Lấy Private Key cho Backend:**
+   - Vào **Project settings (⚙️)** -> tab **Service accounts** -> Bấm **Generate new private key**.
+   - Đổi tên file tải về thành `firebase-service-account.json` và lưu vào thư mục `BackEnd/src/main/resources/`.
+4. **Cập nhật cấu hình sang Frontend:**
+   - Trong **Project settings (⚙️)** -> tab **General** -> Kéo xuống phần **Your apps** -> Nhấp vào biểu tượng Web `</>` để tạo Web App.
+   - Sao chép các thông số trong đoạn mã `firebaseConfig` nhận được:
+     ```javascript
+     const firebaseConfig = {
+       apiKey: "...",
+       authDomain: "...",
+       projectId: "...",
+       storageBucket: "...",
+       messagingSenderId: "...",
+       appId: "..."
+     };
+     ```
+   - Mở file `FrontEnd/QLBanMayTinh/src/firebase.js` và thay thế cụm `firebaseConfig` tương ứng với thông tin project mới của bạn.
+
+> [!WARNING]
+> **Quy định An toàn Bảo mật:** File `firebase-service-account.json` chứa Private Key mang quyền Admin tối cao của project Firebase. File này đã được cấu hình trong `.gitignore` để ngăn chặn việc rò rỉ lên GitHub. Tuyệt đối không xóa dòng `firebase-service-account.json` trong `.gitignore` hoặc chia sẻ công khai file này.
+
+---
+
 ## 5. Tài khoản đăng nhập mặc định
 
 Hệ thống đã nạp sẵn các tài khoản demo sau trong cơ sở dữ liệu:
@@ -279,6 +335,10 @@ npm run lint        # Kiểm tra chuẩn mã nguồn ESLint
    - Kiểm tra xem Ollama đã chạy chưa (`ollama list`).
    - Đảm bảo model `llama3.2` đã được tải: `ollama pull llama3.2`.
    - Nếu không có GPU, model vẫn chạy tốt trên CPU (chỉ phản hồi chậm hơn một chút).
+
+5. **Lỗi `Failed to initialize Firebase Admin SDK` khi khởi động Backend**:
+   - Kiểm tra xem file `firebase-service-account.json` đã có trong thư mục `BackEnd/src/main/resources/` chưa.
+   - Nếu bạn lưu file ở ngoài source code, kiểm tra lại giá trị biến `FIREBASE_SERVICE_ACCOUNT` trong `.env` xem đường dẫn tệp có chính xác không (ví dụ: `FIREBASE_SERVICE_ACCOUNT=file:C:/secrets/firebase-service-account.json`).
 
 ---
 
