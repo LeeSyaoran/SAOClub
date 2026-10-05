@@ -70,7 +70,7 @@ export const paymentStatusIcon = (s) => {
 };
 
 // Danh sách phương thức thanh toán hỗ trợ tại POS
-export const POS_PAYMENT_METHODS = ["tien_mat", "vnpay"];
+export const POS_PAYMENT_METHODS = ["tien_mat", "vnpay", "chuyen_khoan", "the_tin_dung"];
 
 // Nhãn và màu sắc kênh bán hàng
 export const channelLabel = (k) => t(`orderChannel.${k}`);
@@ -295,9 +295,9 @@ export const getQrActiveStepIndex = (order) => {
 
   const s = order.trangThaiDonHang;
   if (s === "pending") return 2; // 'cho_xu_ly' đang sáng
-  if (s === "confirmed") return 3; // 'da_len_don' đang sáng
-  if (s === "processing" || s === "shipping") return 4; // 'dang_dong_goi' đang sáng
-  if (s === "out_for_delivery") return 5; // 'dang_giao_hang' đang sáng
+  if (s === "confirmed") return 4; // 'da_len_don' đã xong, 'dang_dong_goi' đang sáng
+  if (s === "processing" || s === "shipping") return 5; // 'dang_dong_goi' đã xong, 'dang_giao_hang' đang sáng
+  if (s === "out_for_delivery") return 6; // 'dang_giao_hang' đã xong, 'da_giao' đang sáng
   if (s === "awaiting_confirmation") return 6; // 'da_giao' đang sáng
   if (s === "delivered") return 7; // Tất cả 7 bước hoàn tất
   return -1;

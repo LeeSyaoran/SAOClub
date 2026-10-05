@@ -247,8 +247,8 @@ const handleBackdropClick = (e) => {
               </div>
               <div class="status-banner-date">
                 {{ claim.ngayTraKhach ? `Hoàn thành: ${formatDateTime(claim.ngayTraKhach)}` :
-                   claim.ngayBatDauXuLy ? `Bắt đầu: ${formatDateTime(claim.ngayBatDauXuLy)}` :
-                   `Gửi yêu cầu: ${formatDateTime(claim.ngayMua)}` }}
+                  claim.ngayBatDauXuLy ? `Bắt đầu: ${formatDateTime(claim.ngayBatDauXuLy)}` :
+                  `Gửi yêu cầu: ${formatDateTime(claim.ngayMua)}` }}
               </div>
               <div v-if="claim.lyDoTuChoi" class="status-banner-reason">
                 <strong>Lý do từ chối:</strong> {{ claim.lyDoTuChoi }}
@@ -392,8 +392,8 @@ const handleBackdropClick = (e) => {
                     <strong>{{ c.tenNguoiGui || 'Người dùng' }}</strong>
                     <span v-if="c.vaiTro" class="role-pill" :class="`role-pill--${c.vaiTro}`">
                       {{ c.vaiTro === 'khach_hang' ? 'Khách hàng' :
-                         c.vaiTro === 'nhan_vien' ? 'Nhân viên' :
-                         c.vaiTro === 'admin' ? 'Quản trị viên' : c.vaiTro }}
+                        c.vaiTro === 'nhan_vien' ? 'Nhân viên' :
+                        c.vaiTro === 'admin' ? 'Quản trị viên' : c.vaiTro }}
                     </span>
                     <span class="comment-time">{{ formatDateTime(c.ngayGui) }}</span>
                   </div>
@@ -435,8 +435,8 @@ const handleBackdropClick = (e) => {
         <button
           v-if="canKhachHangCancel(claim.trangThai)"
           class="btn-modal btn-modal--danger"
-          @click="cancelClaim"
           :disabled="cancelling"
+          @click="cancelClaim"
         >
           <Loader2 v-if="cancelling" :size="14" class="spin" />
           <Trash2 v-else :size="14" />

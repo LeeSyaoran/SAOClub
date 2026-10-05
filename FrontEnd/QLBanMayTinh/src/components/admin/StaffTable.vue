@@ -179,8 +179,8 @@ const saveStaff = async () => {
             v-if="staffSearch"
             type="button"
             class="alt-search__clear"
-            @click="staffSearch = ''"
             title="Xóa tìm kiếm"
+            @click="staffSearch = ''"
           >
             <X :size="12" />
           </button>

@@ -209,7 +209,6 @@ ${tongDiem.value!==null?`<div class="pr" style="color:#555;margin-top:2px;font-w
   <Teleport to="body">
     <div v-if="show" class="inv-backdrop" @click.self="emit('close')">
       <div class="inv-shell">
-
         <!-- Top bar -->
         <div class="inv-topbar">
           <div>
@@ -225,7 +224,6 @@ ${tongDiem.value!==null?`<div class="pr" style="color:#555;margin-top:2px;font-w
         <div class="inv-scroll">
           <div v-if="loading" class="inv-loading">Đang tải...</div>
           <div v-else class="inv-paper">
-
             <div class="inv-hdr-blk">
               <div class="inv-hdr-main">HÓA ĐƠN BÁN HÀNG</div>
               <div class="inv-hdr-sub">Số: {{ order?.maDonHang ?? `#${order?.donHangId}` }}</div>
@@ -240,14 +238,14 @@ ${tongDiem.value!==null?`<div class="pr" style="color:#555;margin-top:2px;font-w
             <div class="inv-sec-title">THÔNG TIN KHÁCH HÀNG</div>
             <table class="inv-cust">
               <tbody>
-              <tr><td>Khách hàng:</td><td><strong>{{ kh?.hoTen ?? order?.nguoiNhan ?? 'Khách lẻ' }}</strong></td></tr>
-              <tr><td>Điện thoại:</td><td>{{ kh?.soDienThoai ?? order?.sdtNguoiNhan ?? '—' }}</td></tr>
-              <tr v-if="kh?.email"><td>Email:</td><td>{{ kh.email }}</td></tr>
-              <tr v-if="order?.diaChiGiaoHangText||kh?.diaChi"><td>Địa chỉ:</td><td>{{ order?.diaChiGiaoHangText??kh?.diaChi }}</td></tr>
-              <tr>
-                <td>Hình thức:</td>
-                <td><span :class="order?.kenhBan==='in_store'?'inv-badge-s':'inv-badge-o'">{{ order?.kenhBan==='in_store'?'Mua tại quầy':'Mua hàng online' }}</span></td>
-              </tr>
+                <tr><td>Khách hàng:</td><td><strong>{{ kh?.hoTen ?? order?.nguoiNhan ?? 'Khách lẻ' }}</strong></td></tr>
+                <tr><td>Điện thoại:</td><td>{{ kh?.soDienThoai ?? order?.sdtNguoiNhan ?? '—' }}</td></tr>
+                <tr v-if="kh?.email"><td>Email:</td><td>{{ kh.email }}</td></tr>
+                <tr v-if="order?.diaChiGiaoHangText||kh?.diaChi"><td>Địa chỉ:</td><td>{{ order?.diaChiGiaoHangText??kh?.diaChi }}</td></tr>
+                <tr>
+                  <td>Hình thức:</td>
+                  <td><span :class="order?.kenhBan==='in_store'?'inv-badge-s':'inv-badge-o'">{{ order?.kenhBan==='in_store'?'Mua tại quầy':'Mua hàng online' }}</span></td>
+                </tr>
               </tbody>
             </table>
 
@@ -330,7 +328,6 @@ ${tongDiem.value!==null?`<div class="pr" style="color:#555;margin-top:2px;font-w
               Hàng đã mua không đổi/trả trừ lỗi nhà sản xuất<br>
               <strong>Trân trọng cảm ơn quý khách! 🙏</strong>
             </div>
-
           </div>
         </div>
 
@@ -339,7 +336,6 @@ ${tongDiem.value!==null?`<div class="pr" style="color:#555;margin-top:2px;font-w
           <button class="inv-btn-close" @click="emit('close')">Đóng</button>
           <button class="inv-btn-print" @click="printInvoice"><Printer :size="14" style="margin-right:4px;" /> In hóa đơn</button>
         </div>
-
       </div>
     </div>
   </Teleport>

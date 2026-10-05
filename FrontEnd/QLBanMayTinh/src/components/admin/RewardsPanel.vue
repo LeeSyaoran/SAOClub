@@ -210,8 +210,8 @@ const deleteReward = async (id) => {
               v-if="search"
               type="button"
               class="alt-search__clear"
-              @click="search = ''"
               title="Xóa tìm kiếm"
+              @click="search = ''"
             >
               <X :size="12" />
             </button>
@@ -418,16 +418,16 @@ const deleteReward = async (id) => {
                   <button
                     class="alt-btn alt-btn--ghost"
                     style="padding: 4px 10px;"
-                    @click="openEdit(r)"
                     title="Chỉnh sửa"
+                    @click="openEdit(r)"
                   >
                     <Edit2 :size="12" /> {{ t("admin.rewards.edit") }}
                   </button>
                   <button
                     class="alt-btn alt-btn--ghost"
                     style="padding: 4px 10px; color: var(--state-danger); border-color: var(--state-danger);"
-                    @click="deleteReward(r.doiThuongId)"
                     title="Xóa"
+                    @click="deleteReward(r.doiThuongId)"
                   >
                     <Trash2 :size="12" />
                   </button>

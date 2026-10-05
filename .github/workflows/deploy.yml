@@ -11,14 +11,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
       - name: Build Backend
         working-directory: ./BackEnd
         # BackEndApplicationTests can DB thuc, khong co trong CI nen loai rieng no ra
         # (xem ci.yml) — cac test con lai PHAI qua thi moi duoc dong goi de deploy.
         run: mvn clean package -Dtest='!BackEndApplicationTests'
 
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: './FrontEnd/QLBanMayTinh/package-lock.json'
+
       - name: Build Frontend
         working-directory: ./FrontEnd/QLBanMayTinh
         run: |
           npm ci
           npm run build
+

@@ -277,8 +277,8 @@ const showGiftVoucherModal = ref(false);
             class="customer-avatar"
             :src="
               customer.avatarUrl ||
-              customer.hinhAnh ||
-              '/images/Gemini_Generated_Image_kbekzokbekzokbek.png'
+                customer.hinhAnh ||
+                '/images/Gemini_Generated_Image_kbekzokbekzokbek.png'
             "
             :alt="customer.hoTen"
           />
@@ -294,8 +294,7 @@ const showGiftVoucherModal = ref(false);
             <span
               class="badge"
               :class="customer.trangThai === 'active' ? 'bg-success' : 'bg-secondary'"
-              >{{ statusLabel(customer.trangThai) }}</span
-            >
+            >{{ statusLabel(customer.trangThai) }}</span>
             <span class="badge bg-light text-dark ms-2">{{
               isBusiness ? "Doanh nghiệp" : "Cá nhân"
             }}</span>
@@ -383,50 +382,39 @@ const showGiftVoucherModal = ref(false);
           <div class="customer-facts">
             <template v-if="isBusiness">
               <div class="fact-row">
-                <span class="fact-label">Tên công ty</span
-                ><span class="fact-value">{{ customer.tenCongTy || customer.hoTen }}</span>
+                <span class="fact-label">Tên công ty</span><span class="fact-value">{{ customer.tenCongTy || customer.hoTen }}</span>
               </div>
               <div class="fact-row">
-                <span class="fact-label">Mã số thuế</span
-                ><span class="fact-value">{{ customer.maSoThue || "—" }}</span>
+                <span class="fact-label">Mã số thuế</span><span class="fact-value">{{ customer.maSoThue || "—" }}</span>
               </div>
               <div class="fact-row">
-                <span class="fact-label">Người đại diện</span
-                ><span class="fact-value">{{ customer.hoTen || "—" }}</span>
+                <span class="fact-label">Người đại diện</span><span class="fact-value">{{ customer.hoTen || "—" }}</span>
               </div>
               <div class="fact-row">
-                <span class="fact-label">Số điện thoại</span
-                ><span class="fact-value">{{ customer.soDienThoai }}</span>
+                <span class="fact-label">Số điện thoại</span><span class="fact-value">{{ customer.soDienThoai }}</span>
               </div>
               <div class="fact-row">
-                <span class="fact-label">Email</span
-                ><span class="fact-value">{{ customer.email || "—" }}</span>
+                <span class="fact-label">Email</span><span class="fact-value">{{ customer.email || "—" }}</span>
               </div>
               <div class="fact-row">
-                <span class="fact-label">Địa chỉ trụ sở</span
-                ><span class="fact-value">{{ customer.diaChi || "—" }}</span>
+                <span class="fact-label">Địa chỉ trụ sở</span><span class="fact-value">{{ customer.diaChi || "—" }}</span>
               </div>
               <div class="fact-row">
-                <span class="fact-label">Loại khách</span
-                ><span class="fact-value">Doanh nghiệp</span>
+                <span class="fact-label">Loại khách</span><span class="fact-value">Doanh nghiệp</span>
               </div>
             </template>
             <template v-else>
               <div class="fact-row">
-                <span class="fact-label">Họ tên</span
-                ><span class="fact-value">{{ customer.hoTen }}</span>
+                <span class="fact-label">Họ tên</span><span class="fact-value">{{ customer.hoTen }}</span>
               </div>
               <div class="fact-row">
-                <span class="fact-label">Số điện thoại</span
-                ><span class="fact-value">{{ customer.soDienThoai }}</span>
+                <span class="fact-label">Số điện thoại</span><span class="fact-value">{{ customer.soDienThoai }}</span>
               </div>
               <div class="fact-row">
-                <span class="fact-label">Email</span
-                ><span class="fact-value">{{ customer.email || "—" }}</span>
+                <span class="fact-label">Email</span><span class="fact-value">{{ customer.email || "—" }}</span>
               </div>
               <div class="fact-row">
-                <span class="fact-label">Địa chỉ</span
-                ><span class="fact-value">{{ customer.diaChi || "—" }}</span>
+                <span class="fact-label">Địa chỉ</span><span class="fact-value">{{ customer.diaChi || "—" }}</span>
               </div>
               <div class="fact-row">
                 <span class="fact-label">Loại khách</span><span class="fact-value">Cá nhân</span>
@@ -460,8 +448,7 @@ const showGiftVoucherModal = ref(false);
                     background: orderStatusColor(o.trangThaiDonHang).bg,
                     color: orderStatusColor(o.trangThaiDonHang).text,
                   }"
-                  >{{ orderStatusLabel(o.trangThaiDonHang) }}</span
-                >
+                >{{ orderStatusLabel(o.trangThaiDonHang) }}</span>
               </div>
             </div>
           </div>
@@ -522,17 +509,14 @@ const showGiftVoucherModal = ref(false);
             <span
               v-if="item.trangThai === 'inactive'"
               class="wishlist-card__badge badge bg-secondary"
-              >Ngừng bán</span
-            >
+            >Ngừng bán</span>
           </div>
           <div class="wishlist-card__body">
             <div class="wishlist-card__name">{{ item.tenSanPham }}</div>
             <div class="wishlist-card__sku text-secondary small">{{ item.maSku }}</div>
             <div class="wishlist-card__price">{{ formatPrice(item.giaBan) }}</div>
             <div class="wishlist-card__stock">
-              <span v-if="(item.soLuongTon ?? 0) > 0" class="text-success small"
-                >Còn {{ item.soLuongTon }} trong kho</span
-              >
+              <span v-if="(item.soLuongTon ?? 0) > 0" class="text-success small">Còn {{ item.soLuongTon }} trong kho</span>
               <span v-else class="text-danger small">Hết hàng</span>
             </div>
           </div>
@@ -543,13 +527,12 @@ const showGiftVoucherModal = ref(false);
     <div v-else class="customer-chat-panel">
       <div class="chat-window">
         <div class="chat-header">
-          <span class="chat-avatar-mini"
-            ><img
-              :src="
-                customer.avatarUrl ||
+          <span class="chat-avatar-mini"><img
+            :src="
+              customer.avatarUrl ||
                 customer.hinhAnh ||
                 '/images/Gemini_Generated_Image_kbekzokbekzokbek.png'
-              "
+            "
           /></span>
           <span class="chat-title">Chat với {{ customer.hoTen }}</span>
         </div>

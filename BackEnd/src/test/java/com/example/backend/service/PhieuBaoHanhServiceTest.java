@@ -1,6 +1,8 @@
 package com.example.backend.service;
 
+import com.example.backend.entity.BienTheSanPham;
 import com.example.backend.entity.ChiTietSanPham;
+import com.example.backend.entity.DonHang;
 import com.example.backend.entity.PhieuBaoHanh;
 import com.example.backend.repository.*;
 import com.example.backend.request.PhieuBaoHanhRequest;
@@ -12,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +31,24 @@ class PhieuBaoHanhServiceTest {
 
     @InjectMocks
     private PhieuBaoHanhService service;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        org.mockito.Mockito.lenient().when(donHangRepository.findById(any())).thenAnswer(inv -> {
+            Integer id = inv.getArgument(0);
+            if (id == null) return Optional.empty();
+            DonHang dh = new DonHang();
+            dh.setId(id);
+            return Optional.of(dh);
+        });
+        org.mockito.Mockito.lenient().when(bienTheSanPhamRepository.findById(any())).thenAnswer(inv -> {
+            Integer id = inv.getArgument(0);
+            if (id == null) return Optional.empty();
+            BienTheSanPham bt = new BienTheSanPham();
+            bt.setBienTheId(id);
+            return Optional.of(bt);
+        });
+    }
 
     private PhieuBaoHanhRequest requestCoBan() {
         PhieuBaoHanhRequest r = new PhieuBaoHanhRequest();
@@ -49,7 +70,7 @@ class PhieuBaoHanhServiceTest {
         req.setChiTietId(100);
         ChiTietSanPham serialMock = new ChiTietSanPham();
         serialMock.setChiTietId(100);
-        when(chiTietSanPhamRepository.getReferenceById(100)).thenReturn(serialMock);
+        when(chiTietSanPhamRepository.findById(100)).thenReturn(Optional.of(serialMock));
         when(phieuBaoHanhRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         PhieuBaoHanh saved = service.create(req);
@@ -65,7 +86,7 @@ class PhieuBaoHanhServiceTest {
 
         PhieuBaoHanh saved = service.create(req);
 
-        verify(chiTietSanPhamRepository, never()).getReferenceById(any());
+        verify(chiTietSanPhamRepository, never()).findById(any());
         assertThat(saved.getChiTietSanPham()).isNull();
     }
 
@@ -77,7 +98,7 @@ class PhieuBaoHanhServiceTest {
 
         service.create(req);
 
-        verify(bienTheSanPhamRepository).getReferenceById(42);
+        verify(bienTheSanPhamRepository).findById(42);
     }
 
     @Test

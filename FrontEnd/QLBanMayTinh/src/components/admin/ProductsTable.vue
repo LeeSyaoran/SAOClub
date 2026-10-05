@@ -203,7 +203,9 @@ const deleteProduct = async (id) => {
           v-for="opt in sortOptions"
           :key="opt.value"
           :value="opt.value"
-        >{{ opt.label }}</option>
+        >
+          {{ opt.label }}
+        </option>
       </select>
       <button
         v-if="!readonly"
@@ -245,11 +247,13 @@ const deleteProduct = async (id) => {
       </thead>
       <tbody>
         <tr v-for="(p, idx) in pagedProducts" :key="p.sanPhamId">
-          <td class="text-secondary text-center">{{
-            sortKey === 'stt_desc'
-              ? filteredGroupedProducts.length - (currentPage * pageSize + idx)
-              : currentPage * pageSize + idx + 1
-          }}</td>
+          <td class="text-secondary text-center">
+            {{
+              sortKey === 'stt_desc'
+                ? filteredGroupedProducts.length - (currentPage * pageSize + idx)
+                : currentPage * pageSize + idx + 1
+            }}
+          </td>
           <td class="text-secondary" style="font-family: monospace; font-size: 0.8rem">{{ p.maSanPham }}</td>
           <td>
             <div class="d-flex align-items-center gap-2">
@@ -279,10 +283,10 @@ const deleteProduct = async (id) => {
                 productDisplayStatus(p) === 'active'
                   ? 'bg-success'
                   : productDisplayStatus(p) === 'het_hang'
-                  ? 'bg-danger'
-                  : productDisplayStatus(p) === 'cho_nhap_hang'
-                  ? 'bg-warning text-dark'
-                  : 'bg-secondary'
+                    ? 'bg-danger'
+                    : productDisplayStatus(p) === 'cho_nhap_hang'
+                      ? 'bg-warning text-dark'
+                      : 'bg-secondary'
               "
             >{{ statusLabel(productDisplayStatus(p)) }}</span>
           </td>

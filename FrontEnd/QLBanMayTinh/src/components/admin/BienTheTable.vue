@@ -898,12 +898,14 @@ const saveVariant = async () => {
             <td v-if="canViewCost" class="vt-col-price vt-muted">{{ formatPrice(p.giaNhap) }}</td>
             <td class="vt-col-price vt-price">{{ formatPrice(p.giaBan) }}</td>
             <td class="text-center">
-              <span class="vt-tag" :class="{
-                'vt-tag--on': variantDisplayStatus(p) === 'active',
-                'vt-tag--wait': variantDisplayStatus(p) === 'cho_nhap_hang',
-                'vt-tag--out': variantDisplayStatus(p) === 'het_hang',
-                'vt-tag--off': variantDisplayStatus(p) === 'inactive' || variantDisplayStatus(p) === 'ngung_kinh_doanh'
-              }">
+              <span
+                class="vt-tag" :class="{
+                  'vt-tag--on': variantDisplayStatus(p) === 'active',
+                  'vt-tag--wait': variantDisplayStatus(p) === 'cho_nhap_hang',
+                  'vt-tag--out': variantDisplayStatus(p) === 'het_hang',
+                  'vt-tag--off': variantDisplayStatus(p) === 'inactive' || variantDisplayStatus(p) === 'ngung_kinh_doanh'
+                }"
+              >
                 {{ statusLabel(variantDisplayStatus(p)) }}
               </span>
             </td>
@@ -1171,7 +1173,7 @@ const saveVariant = async () => {
               <div v-if="form.kichThuocManHinh" class="vt-picked-tags">
                 <span class="vt-tag-pill">
                   {{ form.kichThuocManHinh }}
-                  <button type="button" aria-label="Bỏ chọn" @click="form.kichThuocManHinh = ''" v-if="!isEditingExisting">&times;</button>
+                  <button v-if="!isEditingExisting" type="button" aria-label="Bỏ chọn" @click="form.kichThuocManHinh = ''">&times;</button>
                 </span>
               </div>
             </div>
@@ -1181,7 +1183,7 @@ const saveVariant = async () => {
               <div v-if="form.heDieuHanh" class="vt-picked-tags">
                 <span class="vt-tag-pill">
                   {{ form.heDieuHanh }}
-                  <button type="button" aria-label="Bỏ chọn" @click="form.heDieuHanh = ''" v-if="!isEditingExisting">&times;</button>
+                  <button v-if="!isEditingExisting" type="button" aria-label="Bỏ chọn" @click="form.heDieuHanh = ''">&times;</button>
                 </span>
               </div>
             </div>
@@ -1191,7 +1193,7 @@ const saveVariant = async () => {
               <div v-if="form.pin" class="vt-picked-tags">
                 <span class="vt-tag-pill">
                   {{ form.pin }}
-                  <button type="button" aria-label="Bỏ chọn" @click="form.pin = ''" v-if="!isEditingExisting">&times;</button>
+                  <button v-if="!isEditingExisting" type="button" aria-label="Bỏ chọn" @click="form.pin = ''">&times;</button>
                 </span>
               </div>
             </div>

@@ -25,20 +25,20 @@
           <li class="breadcrumb-item">
             <a
               href="/"
-              @click.prevent="goHome"
               class="d-inline-flex align-items-center gap-1 text-decoration-none"
               style="color: #777777; cursor: pointer; line-height: 1;"
+              @click.prevent="goHome"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
               <span style="font-weight: 500;">Trang chủ</span>
             </a>
           </li>
           <li v-if="activeVariant.tenThuongHieu" class="breadcrumb-item">
             <a
               href="/"
-              @click.prevent="goHome"
               class="text-decoration-none"
               style="color: #777777; cursor: pointer;"
+              @click.prevent="goHome"
             >{{ activeVariant.tenThuongHieu }}</a>
           </li>
           <li class="breadcrumb-item active" aria-current="page" style="color: #333333; font-weight: 500;">
@@ -64,7 +64,7 @@
               :alt="activeVariant.tenSanPham"
               style="max-width: 100%; max-height: 400px; object-fit: contain;"
             />
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3;"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="2" y1="20" x2="22" y2="20" /></svg>
           </div>
 
           <!-- Gallery carousel ngang -->
@@ -87,7 +87,6 @@
 
         <!-- ════════════ CỘT PHẢI: Thông tin sản phẩm ════════════ -->
         <div class="col-12 col-lg-6 d-flex flex-column">
-
           <!-- Tên sản phẩm -->
           <div class="mb-3">
             <p class="mb-1" style="font-size: 13px; color: #777777; text-transform: uppercase; letter-spacing: 0.03em;">
@@ -101,7 +100,7 @@
           <!-- SKU & Bảo hành -->
           <div class="d-flex gap-3 mb-3" style="font-size: 12px; color: #777777;">
             <span v-if="activeVariant.baoHanhThang">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
               Bảo hành: <strong style="color: #333333;">{{ activeVariant.baoHanhThang }} tháng</strong>
             </span>
           </div>
@@ -205,7 +204,7 @@
               @mouseleave="e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(244,63,94,0.35)'; }"
               @click="$emit('add-to-cart', activeVariant)"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" /></svg>
               THÊM VÀO GIỎ HÀNG
             </button>
             <p v-if="isOutOfStock" class="text-center mt-2 mb-0" style="font-size: 12px; color: #D40F28;">
@@ -223,7 +222,7 @@
         <div class="row g-3">
           <div class="col-md-4">
             <div class="d-flex align-items-start gap-2">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>
               <div>
                 <div class="fw-medium" style="font-size: 13px; color: #333333;">Bộ sản phẩm</div>
                 <div style="font-size: 12px; color: #777777;">Hộp, Sách hướng dẫn, Cáp/Sạc, Máy chính</div>
@@ -232,7 +231,7 @@
           </div>
           <div class="col-md-4">
             <div class="d-flex align-items-start gap-2">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
               <div>
                 <div class="fw-medium" style="font-size: 13px; color: #333333;">Bảo hành chính hãng</div>
                 <div style="font-size: 12px; color: #777777;">{{ activeVariant.baoHanhThang || 12 }} tháng tại trung tâm ủy quyền</div>
@@ -241,7 +240,7 @@
           </div>
           <div class="col-md-4">
             <div class="d-flex align-items-start gap-2">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D40F28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>
               <div>
                 <div class="fw-medium" style="font-size: 13px; color: #333333;">Giao hàng miễn phí</div>
                 <div style="font-size: 12px; color: #777777;">Toàn quốc nhanh chóng</div>
@@ -306,7 +305,7 @@
       <!-- ── Đánh giá sản phẩm ── -->
       <div class="mt-4 p-4 rounded" style="background: #FFFFFF; border: 1px solid #E5E5E7;">
         <h3 class="fw-bold mb-3" style="font-size: 14px; color: #333333;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#D40F28" stroke="#D40F28" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Đánh giá sản phẩm
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#D40F28" stroke="#D40F28" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> Đánh giá sản phẩm
           <span v-if="avgRating != null" style="font-weight: 400; font-size: 13px; color: #777777;">
             · {{ avgRating.toFixed(1) }}/5 ({{ reviews.length }} đánh giá)
           </span>
@@ -323,7 +322,7 @@
               style="background: transparent; border: none;"
               @click="newSoSao = n"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" :fill="n <= newSoSao ? '#D40F28' : 'none'" :stroke="n <= newSoSao ? '#D40F28' : '#CCC'" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" :fill="n <= newSoSao ? '#D40F28' : 'none'" :stroke="n <= newSoSao ? '#D40F28' : '#CCC'" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
             </button>
           </div>
           <textarea
@@ -346,7 +345,7 @@
         </div>
 
         <div v-if="!authUser" class="mb-4" style="font-size: 13px; color: #777777;">
-          Vui lòng <a href="#" @click.prevent="$emit('open-login')" style="color: #0066CC;">đăng nhập</a> để đánh giá sản phẩm.
+          Vui lòng <a href="#" style="color: #0066CC;" @click.prevent="$emit('open-login')">đăng nhập</a> để đánh giá sản phẩm.
         </div>
 
         <!-- Đánh giá của tôi -->
@@ -359,7 +358,7 @@
             <div class="fw-medium mb-1" style="font-size: 13px; color: #333333;">
               Đánh giá của bạn
               <span class="ms-1" style="opacity: 0.7;">
-                <span style="font-size: 14px;" v-for="n in myReview.soSao" :key="n"><svg width="14" height="14" viewBox="0 0 24 24" fill="#D40F28" stroke="#D40F28" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+                <span v-for="n in myReview.soSao" :key="n" style="font-size: 14px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="#D40F28" stroke="#D40F28" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg></span>
               </span>
             </div>
             <div v-if="myReview.noiDung" style="font-size: 12px; color: #555555;">{{ myReview.noiDung }}</div>
@@ -394,7 +393,7 @@
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="fw-medium" style="font-size: 13px; color: #333333;">{{ r.tenKhachHang }}</span>
               <span style="opacity: 0.8;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#D40F28" stroke="#D40F28" stroke-width="2" v-for="n in r.soSao" :key="n"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg v-for="n in r.soSao" :key="n" width="14" height="14" viewBox="0 0 24 24" fill="#D40F28" stroke="#D40F28" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
               </span>
             </div>
             <div v-if="r.noiDung" style="font-size: 12px; color: #555555;">{{ r.noiDung }}</div>

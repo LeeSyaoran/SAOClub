@@ -212,6 +212,7 @@ public class PhieuTraHangService {
     @Transactional
     public void hoanKhoChoDongTra(PhieuTraHang phieu, ChiTietTraHang dong) {
         if (phieu == null || dong == null) return;
+        if (laHangLoi(dong.getTinhTrang())) return;
         int soLuongHoan = dong.getSoLuong() != null && dong.getSoLuong() > 0 ? dong.getSoLuong() : 1;
         List<ChiTietSanPham> serialsToRestore = new ArrayList<>();
         java.util.Set<Integer> seenIds = new java.util.HashSet<>();

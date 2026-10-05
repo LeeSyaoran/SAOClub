@@ -1127,10 +1127,8 @@ const confirmXacNhanSerial = async () => {
           @click="openHistoryDay(d.dateKey)"
         >
           <span class="fw-semibold" style="color: var(--text-primary)">{{ d.label }}</span>
-          <span class="text-secondary small d-flex align-items-center gap-2"
-            >{{ d.count }} {{ t("admin.orders.countSuffix") }}
-            <span style="font-size: 1.1rem">›</span></span
-          >
+          <span class="text-secondary small d-flex align-items-center gap-2">{{ d.count }} {{ t("admin.orders.countSuffix") }}
+            <span style="font-size: 1.1rem">›</span></span>
         </div>
         <div v-if="orderDatesGrouped.length === 0" class="alt-empty">
           {{ t("admin.orders.empty") }}
@@ -1156,7 +1154,7 @@ const confirmXacNhanSerial = async () => {
               v-if="orderViewMode === 'history-day'"
               class="fw-semibold"
               style="color: var(--text-primary)"
-              >{{ formatDateHeading(historySelectedDate) }} ·
+            >{{ formatDateHeading(historySelectedDate) }} ·
             </span>
             {{ filteredOrders.length }}/{{ ordersBaseList.length }}
             {{ t("admin.orders.countSuffix") }}
@@ -1494,8 +1492,7 @@ const confirmXacNhanSerial = async () => {
                   color: var(--accent-fg);
                   font-size: 0.7rem;
                 "
-                >{{ tag.trim() }}</span
-              >
+              >{{ tag.trim() }}</span>
             </div>
           </div>
 
@@ -1834,19 +1831,16 @@ const confirmXacNhanSerial = async () => {
                     class="d-flex align-items-center gap-2 mt-1"
                     style="font-size: 0.72rem; color: var(--text-muted); flex-wrap: wrap"
                   >
-                    <span v-if="item.maSku"
-                      >SKU: <code style="color: var(--text-secondary)">{{ item.maSku }}</code></span
-                    >
+                    <span v-if="item.maSku">SKU: <code style="color: var(--text-secondary)">{{ item.maSku }}</code></span>
                     <span
                       v-if="
                         orderDetailData?.trangThaiDonHang !== 'pending' &&
-                        item.soSerial
+                          item.soSerial
                       "
-                      >· Serial:
+                    >· Serial:
                       <strong style="color: var(--accent-fg); font-family: monospace">{{
                         item.soSerial
-                      }}</strong></span
-                    >
+                      }}</strong></span>
                   </div>
                 </div>
 
@@ -1883,15 +1877,13 @@ const confirmXacNhanSerial = async () => {
             style="border-top: 1px solid var(--border-color-soft); background: var(--bg-card-alt)"
           >
             <div class="d-flex justify-content-between small text-secondary">
-              <span>{{ t("admin.orderDetailModal.subtotal") }}</span
-              ><span>{{ formatPrice(orderDetailData.tongTien) }}</span>
+              <span>{{ t("admin.orderDetailModal.subtotal") }}</span><span>{{ formatPrice(orderDetailData.tongTien) }}</span>
             </div>
             <div
               v-if="orderDetailData.giamGia > 0"
               class="d-flex justify-content-between small text-success"
             >
-              <span>{{ t("admin.orderDetailModal.discount") }}</span
-              ><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
+              <span>{{ t("admin.orderDetailModal.discount") }}</span><span>− {{ formatPrice(orderDetailData.giamGia) }}</span>
             </div>
             <div
               v-if="orderDetailData.kenhBan !== 'in_store'"
@@ -2027,8 +2019,8 @@ const confirmXacNhanSerial = async () => {
                   :style="canJumpToStep(orderDetailData, step.id) ? 'cursor:pointer;' : ''"
                   @click="
                     canJumpToStep(orderDetailData, step.id) &&
-                    !confirmingPayment &&
-                    jumpToStatus(orderDetailData, step.id)
+                      !confirmingPayment &&
+                      jumpToStatus(orderDetailData, step.id)
                   "
                 >
                   <!-- Đường kẻ dọc liền mạch tuyệt đối giữa các bước -->
@@ -2044,7 +2036,7 @@ const confirmXacNhanSerial = async () => {
                     "
                     :style="
                       isStepDoneById(orderDetailData, orderTimelineSteps[index + 1].id) ||
-                      isStepNextById(orderDetailData, orderTimelineSteps[index + 1].id)
+                        isStepNextById(orderDetailData, orderTimelineSteps[index + 1].id)
                         ? 'background:var(--accent);'
                         : 'background:var(--border-color-strong); opacity:0.35;'
                     "
@@ -2070,8 +2062,8 @@ const confirmXacNhanSerial = async () => {
                               ? 'background:var(--bg-hover); border:2.5px solid var(--accent); box-shadow:0 0 0 4px rgba(244,63,94,0.18); cursor:pointer;'
                               : 'background:rgba(251,146,60,0.12); border:2.5px solid #fb923c; box-shadow:0 0 0 4px rgba(251,146,60,0.18); cursor:not-allowed;'
                             : isStepReachedById(orderDetailData, step.id) &&
-                                !isStepDoneById(orderDetailData, step.id) &&
-                                !isStepNextById(orderDetailData, step.id)
+                              !isStepDoneById(orderDetailData, step.id) &&
+                              !isStepNextById(orderDetailData, step.id)
                               ? 'background:rgba(251,146,60,0.12); border:2px solid #fb923c; cursor:not-allowed;'
                               : canJumpToStep(orderDetailData, step.id)
                                 ? 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong); cursor:pointer;'
@@ -2079,8 +2071,8 @@ const confirmXacNhanSerial = async () => {
                       "
                       @click.stop="
                         canJumpToStep(orderDetailData, step.id) &&
-                        !confirmingPayment &&
-                        jumpToStatus(orderDetailData, step.id)
+                          !confirmingPayment &&
+                          jumpToStatus(orderDetailData, step.id)
                       "
                     >
                       <Check
@@ -2091,14 +2083,14 @@ const confirmXacNhanSerial = async () => {
                       <span
                         v-else-if="
                           confirmingPayment &&
-                          (step.id === 'cho_thanh_toan' || step.id === 'cho_xu_ly')
+                            (step.id === 'cho_thanh_toan' || step.id === 'cho_xu_ly')
                         "
                         class="spinner-border spinner-border-sm text-danger"
                         style="width: 14px; height: 14px; border-width: 2px"
                       ></span>
                       <component
-                        v-else
                         :is="step.icon"
+                        v-else
                         :size="14"
                         :style="{
                           opacity:
@@ -2111,7 +2103,7 @@ const confirmXacNhanSerial = async () => {
                           color: isStepNextById(orderDetailData, step.id)
                             ? 'var(--accent-fg)'
                             : isStepReachedById(orderDetailData, step.id) &&
-                                !isStepDoneById(orderDetailData, step.id)
+                              !isStepDoneById(orderDetailData, step.id)
                               ? '#fb923c'
                               : 'inherit',
                         }"
@@ -2131,8 +2123,8 @@ const confirmXacNhanSerial = async () => {
                           : isStepDoneById(orderDetailData, step.id)
                             ? 'color:var(--text-primary);'
                             : isStepReachedById(orderDetailData, step.id) &&
-                                !isStepDoneById(orderDetailData, step.id) &&
-                                !isStepNextById(orderDetailData, step.id)
+                              !isStepDoneById(orderDetailData, step.id) &&
+                              !isStepNextById(orderDetailData, step.id)
                               ? 'color:#fb923c;'
                               : 'color:var(--text-secondary);'
                       "
@@ -2187,8 +2179,7 @@ const confirmXacNhanSerial = async () => {
                     />
                     {{ paymentMethodLabel(g.method)
                     }}<template v-if="g.count > 1">
-                      ×{{ g.count }} ({{ formatPrice(g.total) }})</template
-                    ><span v-if="idx < orderDetailPaymentsSummary.length - 1">, </span>
+                      ×{{ g.count }} ({{ formatPrice(g.total) }})</template><span v-if="idx < orderDetailPaymentsSummary.length - 1">, </span>
                   </template>
                 </span>
               </div>
@@ -2298,7 +2289,7 @@ const confirmXacNhanSerial = async () => {
                   <div
                     v-if="
                       orderDetailData.nguoiNhan &&
-                      orderDetailData.nguoiNhan !== customerName(orderDetailData.khachHangId)
+                        orderDetailData.nguoiNhan !== customerName(orderDetailData.khachHangId)
                     "
                     class="small mb-1"
                     style="font-size: 0.76rem; color: var(--text-secondary)"
@@ -2311,7 +2302,7 @@ const confirmXacNhanSerial = async () => {
                   <div
                     v-if="
                       orderDetailData.sdtNguoiNhan &&
-                      orderDetailData.sdtNguoiNhan !== customerPhone(orderDetailData)
+                        orderDetailData.sdtNguoiNhan !== customerPhone(orderDetailData)
                     "
                     class="small text-secondary mb-1"
                     style="font-size: 0.76rem"
@@ -2349,11 +2340,13 @@ const confirmXacNhanSerial = async () => {
       style="background: var(--bg-card); width: 560px; max-height: 88vh; display: flex; flex-direction: column; border: 1px solid var(--border-color-soft);"
     >
       <!-- Header -->
-      <div class="d-flex align-items-center justify-content-between px-4 py-3"
+      <div
+        class="d-flex align-items-center justify-content-between px-4 py-3"
         style="border-bottom: 1px solid var(--border-color-soft); background: var(--bg-card-alt);"
       >
         <div class="d-flex align-items-center gap-2">
-          <div class="rounded-3 d-flex align-items-center justify-content-center"
+          <div
+            class="rounded-3 d-flex align-items-center justify-content-center"
             style="width:36px; height:36px; background:linear-gradient(135deg,#f97316,#ea580c); color:#fff; flex-shrink:0;"
           >
             <Package :size="18" />
@@ -2399,11 +2392,13 @@ const confirmXacNhanSerial = async () => {
             style="border-color: var(--border-color-soft);"
           >
             <!-- Product header -->
-            <div class="d-flex align-items-center justify-content-between px-3 py-2"
+            <div
+              class="d-flex align-items-center justify-content-between px-3 py-2"
               style="background:var(--bg-card-alt); border-bottom:1px solid var(--border-color-soft);"
             >
               <div class="d-flex align-items-center gap-2">
-                <div class="rounded-2 d-flex align-items-center justify-content-center"
+                <div
+                  class="rounded-2 d-flex align-items-center justify-content-center"
                   style="width:30px;height:30px;background:var(--bg-input);border:1px solid var(--border-color-soft);flex-shrink:0;"
                 >
                   <Laptop :size="14" style="color:var(--text-secondary);" />
@@ -2432,7 +2427,8 @@ const confirmXacNhanSerial = async () => {
 
             <!-- Serial list -->
             <div class="px-3 py-2.5">
-              <div v-if="xacNhanAvailableSerials(line).length === 0"
+              <div
+                v-if="xacNhanAvailableSerials(line).length === 0"
                 class="d-flex align-items-center gap-2 py-2 text-danger small"
               >
                 <AlertCircle :size="14" />
@@ -2451,7 +2447,8 @@ const confirmXacNhanSerial = async () => {
                   <span>{{ s.soSerial }}</span>
                 </button>
               </div>
-              <div v-if="xacNhanAvailableSerials(line).length > 0"
+              <div
+                v-if="xacNhanAvailableSerials(line).length > 0"
                 class="mt-2 text-muted" style="font-size:0.7rem;"
               >
                 Nhấn vào serial để chọn/bỏ chọn. Cần chọn đúng <strong>{{ line.soLuong }}</strong> serial.
@@ -2462,7 +2459,8 @@ const confirmXacNhanSerial = async () => {
       </div>
 
       <!-- Footer -->
-      <div class="d-flex align-items-center justify-content-between gap-2 px-4 py-3"
+      <div
+        class="d-flex align-items-center justify-content-between gap-2 px-4 py-3"
         style="border-top:1px solid var(--border-color-soft); background:var(--bg-card-alt);"
       >
         <div class="small text-secondary">

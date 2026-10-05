@@ -301,8 +301,8 @@ const deleteValue = async (attr, giaTri) => {
       <button
         class="tt-tab-btn"
         :class="{ active: currentTab === 'general' }"
-        @click="setTab('general')"
         type="button"
+        @click="setTab('general')"
       >
         <SlidersHorizontal :size="16" />
         <span>Thuộc tính chung</span>
@@ -312,8 +312,8 @@ const deleteValue = async (attr, giaTri) => {
       <button
         class="tt-tab-btn"
         :class="{ active: currentTab === 'cpu' }"
-        @click="setTab('cpu')"
         type="button"
+        @click="setTab('cpu')"
       >
         <Cpu :size="16" />
         <span>CPU</span>
@@ -322,8 +322,8 @@ const deleteValue = async (attr, giaTri) => {
       <button
         class="tt-tab-btn"
         :class="{ active: currentTab === 'ram' }"
-        @click="setTab('ram')"
         type="button"
+        @click="setTab('ram')"
       >
         <MemoryStick :size="16" />
         <span>RAM</span>
@@ -332,8 +332,8 @@ const deleteValue = async (attr, giaTri) => {
       <button
         class="tt-tab-btn"
         :class="{ active: currentTab === 'gpu' }"
-        @click="setTab('gpu')"
         type="button"
+        @click="setTab('gpu')"
       >
         <Monitor :size="16" />
         <span>Card đồ họa (GPU)</span>
@@ -342,8 +342,8 @@ const deleteValue = async (attr, giaTri) => {
       <button
         class="tt-tab-btn"
         :class="{ active: currentTab === 'oCung' }"
-        @click="setTab('oCung')"
         type="button"
+        @click="setTab('oCung')"
       >
         <HardDrive :size="16" />
         <span>Ổ cứng (Storage)</span>
@@ -462,15 +462,15 @@ const deleteValue = async (attr, giaTri) => {
             <div class="tt-item-actions" @click.stop>
               <button
                 class="tt-btn-icon"
-                @click="openEditModal(attr)"
                 title="Chỉnh sửa thuộc tính"
+                @click="openEditModal(attr)"
               >
                 <Pencil :size="15" />
               </button>
               <button
                 class="tt-btn-icon tt-btn-icon--danger"
-                @click="deleteAttribute(attr)"
                 title="Xóa thuộc tính"
+                @click="deleteAttribute(attr)"
               >
                 <Trash2 :size="15" />
               </button>
@@ -505,8 +505,8 @@ const deleteValue = async (attr, giaTri) => {
                   <span class="tt-chip-text">{{ val.giaTri }}</span>
                   <button
                     class="tt-chip-remove"
-                    @click="deleteValue(attr, val)"
                     title="Xóa giá trị này"
+                    @click="deleteValue(attr, val)"
                   >
                     <X :size="13" />
                   </button>
@@ -528,8 +528,8 @@ const deleteValue = async (attr, giaTri) => {
                   />
                   <button
                     class="tt-btn-quick-add"
-                    @click="handleQuickAdd(attr)"
                     :disabled="addingQuickValue[attr.thuocTinhId] || !quickValueInput[attr.thuocTinhId]?.trim()"
+                    @click="handleQuickAdd(attr)"
                   >
                     <Plus :size="15" />
                     <span>{{ addingQuickValue[attr.thuocTinhId] ? 'Đang thêm...' : 'Thêm' }}</span>
@@ -596,8 +596,8 @@ const deleteValue = async (attr, giaTri) => {
                   :class="{ selected: attrForm.phamVi === 'san_pham' }"
                 >
                   <input
-                    type="radio"
                     v-model="attrForm.phamVi"
+                    type="radio"
                     value="san_pham"
                     class="d-none"
                   />
@@ -616,8 +616,8 @@ const deleteValue = async (attr, giaTri) => {
                   :class="{ 'selected-bt': attrForm.phamVi === 'bien_the' }"
                 >
                   <input
-                    type="radio"
                     v-model="attrForm.phamVi"
+                    type="radio"
                     value="bien_the"
                     class="d-none"
                   />
@@ -642,8 +642,8 @@ const deleteValue = async (attr, giaTri) => {
                   :class="{ selected: attrForm.loaiDuLieu === 'select' }"
                 >
                   <input
-                    type="radio"
                     v-model="attrForm.loaiDuLieu"
+                    type="radio"
                     value="select"
                     class="d-none"
                   />
@@ -659,8 +659,8 @@ const deleteValue = async (attr, giaTri) => {
                   :class="{ selected: attrForm.loaiDuLieu === 'text' }"
                 >
                   <input
-                    type="radio"
                     v-model="attrForm.loaiDuLieu"
+                    type="radio"
                     value="text"
                     class="d-none"
                   />
@@ -713,8 +713,8 @@ const deleteValue = async (attr, giaTri) => {
             <button
               type="button"
               class="tt-btn-primary"
-              @click="saveAttribute"
               :disabled="savingAttr"
+              @click="saveAttribute"
             >
               {{ savingAttr ? 'Đang lưu...' : 'Lưu thuộc tính' }}
             </button>

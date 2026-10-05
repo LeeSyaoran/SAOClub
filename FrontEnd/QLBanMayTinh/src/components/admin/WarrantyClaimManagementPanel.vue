@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted, watch, reactive } from "vue";
-import { Filter, X, ChevronDown, ChevronUp } from '@lucide/vue';
 import * as PhieuBaoHanhService from "../../services/PhieuBaoHanhService.js";
 import * as HinhAnhBaoHanhService from "../../services/HinhAnhBaoHanhService.js";
 import * as BinhLuanBaoHanhService from "../../services/BinhLuanBaoHanhService.js";
@@ -20,7 +19,7 @@ import {
   CheckCircle2, Loader2, AlertCircle, RefreshCw, Filter, ChevronRight,
   Wrench, Image as ImageIcon, MessageCircle, Calendar, Package, User,
   Phone, AlertTriangle, Trash2, Send as SendIcon, Save, Ban,
-  Truck, MapPin, Search,
+  Truck, MapPin, Search, X, ChevronDown, ChevronUp,
 } from '@lucide/vue';
 
 // ── Filters ───────────────────────────────────────────────────────────
@@ -371,18 +370,18 @@ const filterCards = [
         <button
           class="cm-filter-btn"
           :class="{ active: advFilterCount > 0 || isAdvFilterOpen }"
-          @click="isAdvFilterOpen = !isAdvFilterOpen"
           title="Bộ lọc nâng cao"
+          @click="isAdvFilterOpen = !isAdvFilterOpen"
         >
           <Filter :size="13" /> Bộ lọc
           <span v-if="advFilterCount > 0" class="cm-filter-badge">{{ advFilterCount }}</span>
           <ChevronDown v-if="!isAdvFilterOpen" :size="12" />
           <ChevronUp v-else :size="12" />
         </button>
-        <button v-if="advFilterCount > 0" class="cm-reset-btn" @click="resetAdvFilters" title="Xóa bộ lọc">
+        <button v-if="advFilterCount > 0" class="cm-reset-btn" title="Xóa bộ lọc" @click="resetAdvFilters">
           <X :size="13" />
         </button>
-        <button class="cm-refresh-btn" @click="refresh" title="Làm mới">
+        <button class="cm-refresh-btn" title="Làm mới" @click="refresh">
           <RefreshCw :size="14" :class="{ 'spin': BaoHanhStore.loading }" />
         </button>
       </div>
@@ -401,7 +400,7 @@ const filterCards = [
           <div class="cm-adv-group">
             <label class="cm-adv-label">&nbsp;</label>
             <label class="cm-adv-checkbox">
-              <input type="checkbox" v-model="advFilters.onlyOverdue" />
+              <input v-model="advFilters.onlyOverdue" type="checkbox" />
               <span>⚠️ Chỉ quá hạn</span>
             </label>
           </div>
@@ -538,7 +537,7 @@ const filterCards = [
 
             <!-- Actions -->
             <div class="cm-detail-actions">
-              <button v-if="canAdminReceive(detailClaim.trangThai)" class="cm-btn cm-btn--primary" @click="receiveClaim" :disabled="processing">
+              <button v-if="canAdminReceive(detailClaim.trangThai)" class="cm-btn cm-btn--primary" :disabled="processing" @click="receiveClaim">
                 <Loader2 v-if="processing" :size="14" class="spin" />
                 <SendIcon v-else :size="14" />
                 Tiếp nhận
@@ -560,16 +559,16 @@ const filterCards = [
                   </div>
                 </div>
                 <div class="cm-action-btns">
-                  <button class="cm-btn cm-btn--secondary" @click="submitProcessing" :disabled="processing">
+                  <button class="cm-btn cm-btn--secondary" :disabled="processing" @click="submitProcessing">
                     <Save :size="14" /> Lưu
                   </button>
-                  <button class="cm-btn cm-btn--success" @click="completeClaim" :disabled="processing">
+                  <button class="cm-btn cm-btn--success" :disabled="processing" @click="completeClaim">
                     <CheckCircle2 :size="14" /> Hoàn thành
                   </button>
                 </div>
               </div>
 
-              <button v-if="!['da_xu_ly', 'da_huy'].includes(detailClaim.trangThai)" class="cm-btn cm-btn--danger" @click="rejectClaim" :disabled="processing">
+              <button v-if="!['da_xu_ly', 'da_huy'].includes(detailClaim.trangThai)" class="cm-btn cm-btn--danger" :disabled="processing" @click="rejectClaim">
                 <ShieldX :size="14" />
                 Từ chối
               </button>

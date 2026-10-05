@@ -212,18 +212,18 @@ const goToSettingsFromMenu = () => {
         <div style="font-size:0.75rem;color:var(--text-muted); text-transform: uppercase; font-weight: 600; margin-top: 4px; letter-spacing: 0.05em;">{{ userDisplayRole }}</div>
       </div>
       <div class="py-1">
-        <button class="btn btn-sm w-100 text-start rounded-0 px-4 py-2 d-flex align-items-center" style="color:var(--text-primary); font-size:0.95rem; border:none; border-bottom: 1px solid var(--border-color); background:transparent;" @click="openEditProfileModal" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'">
+        <button class="btn btn-sm w-100 text-start rounded-0 px-4 py-2 d-flex align-items-center" style="color:var(--text-primary); font-size:0.95rem; border:none; border-bottom: 1px solid var(--border-color); background:transparent;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'" @click="openEditProfileModal">
           <User class="me-3" style="color:var(--text-secondary);" :size="18" /> {{ t('admin.profileMenu.editProfile') }}
         </button>
-        <button class="btn btn-sm w-100 text-start rounded-0 px-4 py-2 d-flex align-items-center" style="color:var(--text-primary); font-size:0.95rem; border:none; border-bottom: 1px solid var(--border-color); background:transparent;" @click="openQuickPasswordModal" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'">
+        <button class="btn btn-sm w-100 text-start rounded-0 px-4 py-2 d-flex align-items-center" style="color:var(--text-primary); font-size:0.95rem; border:none; border-bottom: 1px solid var(--border-color); background:transparent;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'" @click="openQuickPasswordModal">
           <Key class="me-3" style="color:var(--text-secondary);" :size="18" /> {{ t('admin.settings.changePasswordTitle') }}
         </button>
-        <button v-if="showSettingsLink" class="btn btn-sm w-100 text-start rounded-0 px-4 py-2 d-flex align-items-center" style="color:var(--text-primary); font-size:0.95rem; border:none; border-bottom: 1px solid var(--border-color); background:transparent;" @click="goToSettingsFromMenu" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'">
+        <button v-if="showSettingsLink" class="btn btn-sm w-100 text-start rounded-0 px-4 py-2 d-flex align-items-center" style="color:var(--text-primary); font-size:0.95rem; border:none; border-bottom: 1px solid var(--border-color); background:transparent;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'" @click="goToSettingsFromMenu">
           <Settings class="me-3" style="color:var(--text-secondary);" :size="18" /> {{ t('admin.sidebar.settings') }}
         </button>
       </div>
       <div class="p-3 pt-2">
-        <button class="btn btn-sm w-100 fw-medium d-flex align-items-center justify-content-center" style="color:var(--danger); border: 1px solid var(--danger); background:transparent; padding: 8px 0; font-size: 0.95rem; border-radius: 8px;" @click="logout" onmouseover="this.style.background='var(--danger-light, rgba(220,38,38,0.1))'" onmouseout="this.style.background='transparent'">
+        <button class="btn btn-sm w-100 fw-medium d-flex align-items-center justify-content-center" style="color:var(--danger); border: 1px solid var(--danger); background:transparent; padding: 8px 0; font-size: 0.95rem; border-radius: 8px;" onmouseover="this.style.background='var(--danger-light, rgba(220,38,38,0.1))'" onmouseout="this.style.background='transparent'" @click="logout">
           <LogOut class="me-2" style="color:var(--danger);" :size="18" /> {{ t('admin.sidebar.logout') }}
         </button>
       </div>
@@ -234,7 +234,7 @@ const goToSettingsFromMenu = () => {
     <div class="rounded-4 p-4 shadow-lg" style="background:var(--bg-card);width:420px;max-width:94vw; border: 1px solid var(--border-color);">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="fw-bold fs-5" style="color:var(--text-heading);">{{ t('admin.profileMenu.editProfile') }}</div>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showEditProfileModal=false" style="filter: var(--btn-close-filter, none);"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" style="filter: var(--btn-close-filter, none);" @click="showEditProfileModal=false"></button>
       </div>
 
       <div class="mb-4 d-flex flex-column align-items-center">
@@ -278,7 +278,7 @@ const goToSettingsFromMenu = () => {
     <div class="rounded-4 p-4 shadow-lg" style="background:var(--bg-card);width:420px;max-width:94vw; border: 1px solid var(--border-color);">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="fw-bold fs-5" style="color:var(--text-heading);">{{ t('admin.settings.changePasswordTitle') }}</div>
-        <button class="btn-close btn-sm" :aria-label="t('common.close')" @click="showQuickPasswordModal=false" style="filter: var(--btn-close-filter, none);"></button>
+        <button class="btn-close btn-sm" :aria-label="t('common.close')" style="filter: var(--btn-close-filter, none);" @click="showQuickPasswordModal=false"></button>
       </div>
       
       <div class="mb-3">

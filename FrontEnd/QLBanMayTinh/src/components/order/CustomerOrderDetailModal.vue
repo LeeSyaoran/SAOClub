@@ -206,8 +206,8 @@
           <div
             v-else-if="
               isQrPayment(order) &&
-              order.trangThaiThanhToan === 'paid' &&
-              order.trangThaiDonHang === 'pending'
+                order.trangThaiThanhToan === 'paid' &&
+                order.trangThaiDonHang === 'pending'
             "
             class="rounded-3 p-3 mb-4 d-flex align-items-center gap-3"
             style="background: #f0fdf4; border: 1px solid #bbf7d0"
@@ -233,8 +233,8 @@
           <div
             v-else-if="
               !isQrPayment(order) &&
-              order.trangThaiDonHang !== 'delivered' &&
-              !['cancelled', 'returned'].includes(order.trangThaiDonHang)
+                order.trangThaiDonHang !== 'delivered' &&
+                !['cancelled', 'returned'].includes(order.trangThaiDonHang)
             "
             class="rounded-3 p-3 mb-4 shadow-sm"
             style="background: #f8fafc; border: 1.5px solid #cbd5e1"
@@ -372,8 +372,8 @@
                   <div class="fw-bold text-truncate" style="font-size: 0.88rem; color: #0f172a">
                     {{
                       getProduct(item.bienTheId)?.tenSanPham ||
-                      item.tenSanPham ||
-                      "Sản phẩm SAOClub"
+                        item.tenSanPham ||
+                        "Sản phẩm SAOClub"
                     }}
                   </div>
                   <div
@@ -387,15 +387,11 @@
                     class="d-flex align-items-center gap-2 mt-1"
                     style="font-size: 0.72rem; color: #94a3b8"
                   >
-                    <span v-if="item.maSku"
-                      >SKU: <code style="color: #475569">{{ item.maSku }}</code></span
-                    >
-                    <span v-if="order?.trangThaiDonHang !== 'pending' && item.soSerial"
-                      >· Serial:
+                    <span v-if="item.maSku">SKU: <code style="color: #475569">{{ item.maSku }}</code></span>
+                    <span v-if="order?.trangThaiDonHang !== 'pending' && item.soSerial">· Serial:
                       <strong style="color: #ea580c; font-family: monospace">{{
                         item.soSerial
-                      }}</strong></span
-                    >
+                      }}</strong></span>
                   </div>
                 </div>
 
@@ -552,7 +548,7 @@
                   "
                   :style="
                     isStepDone(orderTimelineSteps[index + 1].id) ||
-                    isStepNext(orderTimelineSteps[index + 1].id)
+                      isStepNext(orderTimelineSteps[index + 1].id)
                       ? 'background:#16a34a;'
                       : 'background:#e2e8f0;'
                   "
@@ -578,8 +574,8 @@
                   >
                     <Check v-if="isStepDone(step.id)" :size="14" stroke-width="3" color="white" />
                     <component
-                      v-else
                       :is="step.icon"
+                      v-else
                       :size="13"
                       :style="{
                         opacity:
@@ -818,7 +814,7 @@
               :style="cancelReasonType === r.id ? 'border-color:#ea580c; background:#fff7ed;' : 'border-color:#e2e8f0; cursor:pointer;'"
               @click="cancelReasonType = r.id"
             >
-              <input type="radio" :value="r.id" v-model="cancelReasonType" style="accent-color:#ea580c;" />
+              <input v-model="cancelReasonType" type="radio" :value="r.id" style="accent-color:#ea580c;" />
               <span style="font-size:0.83rem; color:#0f172a;">{{ r.label }}</span>
             </label>
           </div>

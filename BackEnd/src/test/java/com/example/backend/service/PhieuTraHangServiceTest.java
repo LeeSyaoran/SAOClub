@@ -51,6 +51,8 @@ class PhieuTraHangServiceTest {
     @Mock private ChiTietTraHangRepository chiTietTraHangRepository;
     @Mock private TaiKhoanRepository taiKhoanRepository;
     @Mock private ChiTietSanPhamRepository chiTietSanPhamRepository;
+    @Mock private ChiTietDonHangService chiTietDonHangService;
+    @Mock private com.example.backend.repository.LichSuTonKhoRepository lichSuTonKhoRepository;
 
     @InjectMocks
     private PhieuTraHangService service;

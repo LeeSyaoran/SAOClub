@@ -90,7 +90,7 @@
           </div>
 
           <div class="d-flex flex-column gap-1.5" style="font-size:0.83rem;">
-            <div class="d-flex align-items-center gap-2" v-if="recipientName || recipientPhone">
+            <div v-if="recipientName || recipientPhone" class="d-flex align-items-center gap-2">
               <span class="fw-bold" style="color:#0f172a;">{{ recipientName }}</span>
               <span v-if="recipientPhone" class="text-secondary font-monospace">· {{ recipientPhone }}</span>
             </div>
@@ -204,9 +204,9 @@
           <!-- Logo SePay / VietQR Brand -->
           <div class="d-flex align-items-center gap-1.5 mb-2">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M2 17L12 22L22 17" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M2 12L12 17L22 12" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             <span class="fw-bold" style="font-size:1.05rem; color:#0369a1; letter-spacing:-0.5px;">SePay</span>
           </div>

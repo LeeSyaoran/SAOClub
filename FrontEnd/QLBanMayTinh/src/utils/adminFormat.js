@@ -7,11 +7,6 @@ export const statusLabel = (s) => {
   if (s == null || s === "") return "—";
   const str = String(s);
   const normalized = str.toLowerCase();
-  if (normalized === "cho_nhap_hang" || normalized === "pending") return "Chờ nhập hàng";
-  if (normalized === "active" || normalized === "dang_ban") return "Đang bán";
-  if (normalized === "het_hang" || normalized === "out") return "Hết hàng";
-  if (normalized === "inactive" || normalized === "tam_ngung") return "Tạm ngừng";
-  if (normalized === "ngung_kinh_doanh") return "Ngừng kinh doanh";
   // Tra cứu nhãn trạng thái theo i18n
   const direct = t(`admin.statusLabel.${normalized}`);
   if (direct && direct !== `admin.statusLabel.${normalized}`) return direct;
@@ -21,6 +16,12 @@ export const statusLabel = (s) => {
   if (os && os !== `orderStatus.${normalized}`) return os;
   const rs = t(`admin.returnStatus.${normalized}`);
   if (rs && rs !== `admin.returnStatus.${normalized}`) return rs;
+
+  if (normalized === "dang_ban") return "Đang bán";
+  if (normalized === "het_hang" || normalized === "out") return "Hết hàng";
+  if (normalized === "tam_ngung") return "Tạm ngừng";
+  if (normalized === "ngung_kinh_doanh") return "Ngừng kinh doanh";
+  if (normalized === "cho_nhap_hang") return "Chờ nhập hàng";
   return str;
 };
 

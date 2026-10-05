@@ -159,7 +159,7 @@ watch(() => auth.user?.id, (newId) => {
         <span>{{ tab.label }}</span>
         <span v-if="statusCounts[tab.id]" class="filter-tab-count">{{ statusCounts[tab.id] }}</span>
       </button>
-      <button class="refresh-btn" @click="refresh" :disabled="refreshing" title="Làm mới">
+      <button class="refresh-btn" :disabled="refreshing" title="Làm mới" @click="refresh">
         <RefreshCw :size="14" :class="{ 'spin': refreshing }" />
       </button>
     </div>
@@ -252,8 +252,8 @@ watch(() => auth.user?.id, (newId) => {
             <button
               v-if="canKhachHangCancel(claim.trangThai)"
               class="btn-action-mini btn-action-mini--danger"
-              @click="cancelClaim(claim)"
               :disabled="cancellingId === claim.baoHanhId"
+              @click="cancelClaim(claim)"
             >
               <XCircle :size="12" />
               {{ cancellingId === claim.baoHanhId ? 'Đang hủy...' : 'Hủy phiếu' }}
@@ -276,8 +276,8 @@ watch(() => auth.user?.id, (newId) => {
                     ? idx === 0
                     : false,
               'is-current': (claim.trangThai === 'cho_xu_ly' && idx === 0)
-                          || (claim.trangThai === 'dang_xu_ly' && idx === 1)
-                          || (claim.trangThai === 'da_xu_ly' && idx === 2),
+                || (claim.trangThai === 'dang_xu_ly' && idx === 1)
+                || (claim.trangThai === 'da_xu_ly' && idx === 2),
             }"
           >
             <span class="timeline-dot"></span>

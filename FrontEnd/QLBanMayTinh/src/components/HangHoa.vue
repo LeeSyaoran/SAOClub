@@ -5,9 +5,7 @@
       <!-- ══════════════ TOOLBAR ══════════════ -->
       <div class="hh-toolbar">
         <div class="hh-toolbar__left">
-          <span class="hh-toolbar__count"
-            >{{ groupsDaLoc.length }} sản phẩm · {{ bienTheDaLoc.length }} phiên bản</span
-          >
+          <span class="hh-toolbar__count">{{ groupsDaLoc.length }} sản phẩm · {{ bienTheDaLoc.length }} phiên bản</span>
           <div class="hh-search">
             <Search :size="14" class="hh-search__icon" />
             <input
@@ -195,39 +193,25 @@
           <thead>
             <tr>
               <th class="hh-col-ma" style="width: 12%">
-                <span class="d-inline-flex align-items-center gap-1.5"
-                  ><Tag :size="12" /> Mã sản phẩm</span
-                >
+                <span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã sản phẩm</span>
               </th>
               <th class="hh-col-ten" style="width: 30%">
-                <span class="d-inline-flex align-items-center gap-1.5"
-                  ><Laptop :size="12" /> Tên sản phẩm</span
-                >
+                <span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> Tên sản phẩm</span>
               </th>
               <th class="ta-r" style="width: 13%">
-                <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
-                  ><DollarSign :size="12" /> Giá bán</span
-                >
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> Giá bán</span>
               </th>
               <th class="ta-r" style="width: 13%">
-                <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
-                  ><Coins :size="12" /> Giá vốn</span
-                >
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> Giá vốn</span>
               </th>
               <th class="ta-c" style="width: 10%; text-align: center">
-                <span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                  ><Activity :size="12" /> Trạng thái</span
-                >
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Activity :size="12" /> Trạng thái</span>
               </th>
               <th class="ta-c" style="width: 10%; text-align: center">
-                <span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                  ><Calendar :size="12" /> Ngày tạo</span
-                >
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><Calendar :size="12" /> Ngày tạo</span>
               </th>
               <th class="ta-c" style="width: 10%; text-align: center">
-                <span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                  ><CalendarCheck :size="12" /> Ngày cập nhật</span
-                >
+                <span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><CalendarCheck :size="12" /> Ngày cập nhật</span>
               </th>
               <th class="hh-col-go ta-c" style="width: 2%; text-align: center"></th>
             </tr>
@@ -254,8 +238,8 @@
                     <div class="hh-name__sub">
                       {{ group.tenThuongHieu || "—"
                       }}<template v-if="group.variants.length">
-                        · {{ group.variants.length }} phiên bản</template
-                      >
+                        · {{ group.variants.length }} phiên bản
+                      </template>
                     </div>
                   </div>
                 </div>
@@ -377,8 +361,7 @@
                     <span
                       class="hh-tag"
                       :class="tagClass(chiTiet.trangThaiHienThi || chiTiet.trangThai)"
-                      >{{ nhanTrangThai(chiTiet.trangThaiHienThi || chiTiet.trangThai) }}</span
-                    >
+                    >{{ nhanTrangThai(chiTiet.trangThaiHienThi || chiTiet.trangThai) }}</span>
                     <span class="hh-tag hh-tag--soft">{{
                       nhanLoaiSanPham(chiTiet.loaiSanPham)
                     }}</span>
@@ -481,34 +464,22 @@
                   <thead>
                     <tr>
                       <th>
-                        <span class="d-inline-flex align-items-center gap-1.5"
-                          ><Tag :size="12" /> Mã SKU</span
-                        >
+                        <span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" /> Mã SKU</span>
                       </th>
                       <th>
-                        <span class="d-inline-flex align-items-center gap-1.5"
-                          ><Barcode :size="12" /> Mã vạch</span
-                        >
+                        <span class="d-inline-flex align-items-center gap-1.5"><Barcode :size="12" /> Mã vạch</span>
                       </th>
                       <th>
-                        <span class="d-inline-flex align-items-center gap-1.5"
-                          ><Cpu :size="12" /> Cấu hình</span
-                        >
+                        <span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> Cấu hình</span>
                       </th>
                       <th class="ta-r">
-                        <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
-                          ><Coins :size="12" /> Giá vốn</span
-                        >
+                        <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> Giá vốn</span>
                       </th>
                       <th class="ta-r">
-                        <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
-                          ><DollarSign :size="12" /> Giá bán</span
-                        >
+                        <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> Giá bán</span>
                       </th>
                       <th>
-                        <span class="d-inline-flex align-items-center gap-1.5"
-                          ><Activity :size="12" /> Trạng thái</span
-                        >
+                        <span class="d-inline-flex align-items-center gap-1.5"><Activity :size="12" /> Trạng thái</span>
                       </th>
                     </tr>
                   </thead>
@@ -669,9 +640,7 @@
               </template>
 
               <template v-else-if="tabCT === 'bienthe'">
-                <span v-if="bienTheDangChon" class="hh-foot-hint"
-                  >Đang chọn: <b>{{ bienTheDangChon.maSku }}</b></span
-                >
+                <span v-if="bienTheDangChon" class="hh-foot-hint">Đang chọn: <b>{{ bienTheDangChon.maSku }}</b></span>
                 <span v-else class="hh-foot-hint">Chọn một phiên bản để thao tác</span>
                 <button
                   class="hh-btn hh-btn--ghost"
@@ -697,10 +666,8 @@
               </template>
 
               <template v-else>
-                <span class="hh-foot-hint"
-                  >Nhật ký thay đổi được hệ thống ghi tự động mỗi lần lưu sản phẩm hoặc phiên
-                  bản.</span
-                >
+                <span class="hh-foot-hint">Nhật ký thay đổi được hệ thống ghi tự động mỗi lần lưu sản phẩm hoặc phiên
+                  bản.</span>
               </template>
             </div>
           </footer>
@@ -738,14 +705,12 @@
                 v-if="t.key === 'info' && soLoiTabInfo > 0"
                 class="hh-chip hh-chip--err"
                 :title="soLoiTabInfo + ' mục cần bổ sung'"
-                >!</span
-              >
+              >!</span>
               <span
                 v-if="t.key === 'bienthe' && soPhienBan"
                 class="hh-chip"
                 :class="{ 'hh-chip--err': soLoiTabBienThe > 0 }"
-                >{{ soPhienBan }}</span
-              >
+              >{{ soPhienBan }}</span>
             </button>
           </nav>
 
@@ -761,9 +726,7 @@
                   <label class="hh-field">
                     <span>Mã sản phẩm</span>
                     <input v-model.trim="form.maSanPham" disabled />
-                    <em class="hh-hint"
-                      >Hệ thống tự sinh, không sửa tay. Mã vạch nằm ở từng phiên bản.</em
-                    >
+                    <em class="hh-hint">Hệ thống tự sinh, không sửa tay. Mã vạch nằm ở từng phiên bản.</em>
                   </label>
 
                   <label class="hh-field hh-field--wide">
@@ -909,9 +872,7 @@
                       </label>
                     </div>
                     <em v-if="errors.hinhAnhList" class="hh-err">{{ errors.hinhAnhList }}</em>
-                    <em class="hh-hint"
-                      >Chỉ upload 1 ảnh đại diện. Xóa ảnh hiện tại để thay bằng ảnh khác.</em
-                    >
+                    <em class="hh-hint">Chỉ upload 1 ảnh đại diện. Xóa ảnh hiện tại để thay bằng ảnh khác.</em>
                   </div>
                 </div>
 
@@ -1023,11 +984,11 @@
                   <label class="hh-field">
                     <span>Trọng lượng (kg) <b v-if="modalMode === 'create'">*</b></span>
                     <input
+                      v-model.number="form.trongLuongKg"
                       type="number"
                       step="0.01"
                       min="0"
                       max="5"
-                      v-model.number="form.trongLuongKg"
                       :class="{ 'is-err': errors.trongLuongKg || loiTrongLuongTucThoi }"
                       placeholder="VD: 1.7 (tối đa 5 kg)"
                     />
@@ -1042,10 +1003,8 @@
                     :key="attr.thuocTinhId"
                     class="hh-field"
                   >
-                    <span
-                      >{{ attr.tenHienThi }}
-                      <b v-if="modalMode === 'create' || attr.batBuoc">*</b></span
-                    >
+                    <span>{{ attr.tenHienThi }}
+                      <b v-if="modalMode === 'create' || attr.batBuoc">*</b></span>
                     <select
                       v-if="laKieuChon(attr)"
                       v-model="formThuocTinh[attr.tenTruong]"
@@ -1062,9 +1021,9 @@
                       <option
                         v-if="
                           formThuocTinh[attr.tenTruong] &&
-                          !(attr.giaTriList || []).some(
-                            (g) => g.giaTri === formThuocTinh[attr.tenTruong],
-                          )
+                            !(attr.giaTriList || []).some(
+                              (g) => g.giaTri === formThuocTinh[attr.tenTruong],
+                            )
                         "
                         :value="formThuocTinh[attr.tenTruong]"
                       >
@@ -1224,9 +1183,9 @@
                         <option
                           v-if="
                             formThuocTinhBienThe[attr.tenTruong] &&
-                            !(attr.giaTriList || []).some(
-                              (g) => g.giaTri === formThuocTinhBienThe[attr.tenTruong],
-                            )
+                              !(attr.giaTriList || []).some(
+                                (g) => g.giaTri === formThuocTinhBienThe[attr.tenTruong],
+                              )
                           "
                           :value="formThuocTinhBienThe[attr.tenTruong]"
                         >
@@ -1257,10 +1216,8 @@
                   </legend>
                   <p class="hh-note hh-note--plain">
                     Bắt buộc tối thiểu <b>1 phiên bản</b> với đầy đủ
-                    <b
-                      >Màu sắc, CPU, RAM, Ổ cứng, GPU, Giá vốn (&gt; 0) và Giá bán (&gt;= Giá
-                      vốn)</b
-                    >. Bấm <b>"+ Thêm phiên bản"</b> để tạo thêm.
+                    <b>Màu sắc, CPU, RAM, Ổ cứng, GPU, Giá vốn (&gt; 0) và Giá bán (&gt;= Giá
+                      vốn)</b>. Bấm <b>"+ Thêm phiên bản"</b> để tạo thêm.
                   </p>
 
                   <div
@@ -1505,10 +1462,8 @@
                     <button type="button" class="hh-btn hh-btn--ghost hh-btn--sm" @click="themDong">
                       <Plus :size="14" /> Thêm phiên bản
                     </button>
-                    <span class="hh-muted" style="font-size: 12px"
-                      ><Info :size="13" style="vertical-align: -2px" /> Mã SKU tự sinh theo tên sản
-                      phẩm & cấu hình; mã vạch tự sinh ngẫu nhiên không trùng.</span
-                    >
+                    <span class="hh-muted" style="font-size: 12px"><Info :size="13" style="vertical-align: -2px" /> Mã SKU tự sinh theo tên sản
+                      phẩm & cấu hình; mã vạch tự sinh ngẫu nhiên không trùng.</span>
                   </div>
 
                   <p class="hh-note" style="margin-top: 12px">
@@ -1618,9 +1573,7 @@
               <label class="hh-export-checkall">
                 <input type="checkbox" :checked="allChecked" @change="toggleAll" />
                 <span>Chọn tất cả</span>
-                <span class="hh-export-count"
-                  >{{ selectedIds.length }}/{{ bienTheDaLoc.length }}</span
-                >
+                <span class="hh-export-count">{{ selectedIds.length }}/{{ bienTheDaLoc.length }}</span>
               </label>
               <div class="hh-search hh-export-search">
                 <Search :size="14" class="hh-search__icon" />

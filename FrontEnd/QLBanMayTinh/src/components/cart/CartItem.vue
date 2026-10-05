@@ -18,8 +18,8 @@
       <input
         type="checkbox"
         :checked="selected"
-        @change="$emit('toggle', item)"
         style="width:16px;height:16px;cursor:pointer;"
+        @change="$emit('toggle', item)"
       />
     </div>
 

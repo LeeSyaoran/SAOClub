@@ -100,59 +100,64 @@ onMounted(async () => { await Promise.all([loadOrdersAndProducts(), loadClaims()
 
     <!-- TAB 1: SẢN PHẨM -->
     <div v-if="mainSubTab === 'products'" class="tab-content">
-        <div class="filter-bar">
-          <button v-for="f in [{id:'all',label:'Tất cả'},{id:'active',label:'Còn BH'},{id:'expiring',label:'Sắp hết'},{id:'expired',label:'Hết BH'}]" :key="f.id"
-            class="filter-chip" :class="{ 'is-active': productFilter === f.id }" @click="productFilter = f.id">{{ f.label }}
-            <span v-if="f.id==='active'" class="filter-count">{{ allProducts.filter(p=>!isExpired(p.ngayHetBaoHanh)&&daysUntilWarrantyExpiry(p.ngayHetBaoHanh)>30).length }}</span>
-            <span v-else-if="f.id==='expiring'" class="filter-count filter-count--warning">{{ allProducts.filter(p=>{const d=daysUntilWarrantyExpiry(p.ngayHetBaoHanh);return d>0&&d<=30;}).length }}</span>
-            <span v-else-if="f.id==='expired'" class="filter-count filter-count--expired">{{ allProducts.filter(p=>isExpired(p.ngayHetBaoHanh)).length }}</span>
-          </button>
-        </div>
+      <div class="filter-bar">
+        <button
+          v-for="f in [{id:'all',label:'Tất cả'},{id:'active',label:'Còn BH'},{id:'expiring',label:'Sắp hết'},{id:'expired',label:'Hết BH'}]" :key="f.id"
+          class="filter-chip" :class="{ 'is-active': productFilter === f.id }" @click="productFilter = f.id"
+        >
+          {{ f.label }}
+          <span v-if="f.id==='active'" class="filter-count">{{ allProducts.filter(p=>!isExpired(p.ngayHetBaoHanh)&&daysUntilWarrantyExpiry(p.ngayHetBaoHanh)>30).length }}</span>
+          <span v-else-if="f.id==='expiring'" class="filter-count filter-count--warning">{{ allProducts.filter(p=>{const d=daysUntilWarrantyExpiry(p.ngayHetBaoHanh);return d>0&&d<=30;}).length }}</span>
+          <span v-else-if="f.id==='expired'" class="filter-count filter-count--expired">{{ allProducts.filter(p=>isExpired(p.ngayHetBaoHanh)).length }}</span>
+        </button>
+      </div>
 
-        <div v-if="loadingOrders" class="loading-block"><div v-for="i in 5" :key="i"><Skeleton width="100%" height="64px" radius="10px" /></div></div>
-        <div v-else-if="filterProducts.length === 0" class="empty-block">
-          <Package :size="48" class="empty-icon" />
-          <div class="empty-title">{{ productFilter==='all'?'Chưa có sản phẩm nào':productFilter==='active'?'Không có SP còn bảo hành':productFilter==='expiring'?'Không có SP sắp hết hạn':'Không có SP hết hạn' }}</div>
+      <div v-if="loadingOrders" class="loading-block"><div v-for="i in 5" :key="i"><Skeleton width="100%" height="64px" radius="10px" /></div></div>
+      <div v-else-if="filterProducts.length === 0" class="empty-block">
+        <Package :size="48" class="empty-icon" />
+        <div class="empty-title">{{ productFilter==='all'?'Chưa có sản phẩm nào':productFilter==='active'?'Không có SP còn bảo hành':productFilter==='expiring'?'Không có SP sắp hết hạn':'Không có SP hết hạn' }}</div>
+      </div>
+      <div v-else class="product-table">
+        <div class="product-table-header">
+          <div class="col-thumb">Ảnh</div>
+          <div class="col-info">Sản phẩm</div>
+          <div class="col-order">Đơn hàng</div>
+          <div class="col-bh">Bảo hành</div>
+          <div class="col-action"></div>
         </div>
-        <div v-else class="product-table">
-          <div class="product-table-header">
-            <div class="col-thumb">Ảnh</div>
-            <div class="col-info">Sản phẩm</div>
-            <div class="col-order">Đơn hàng</div>
-            <div class="col-bh">Bảo hành</div>
-            <div class="col-action"></div>
+        <div v-for="item in filterProducts" :key="item.chiTietId" class="product-table-row">
+          <div class="col-thumb" @click="handleViewProduct(item)">
+            <div class="thumb-box"><img v-if="item.hinhAnh" :src="item.hinhAnh" /><Package v-else :size="20" /></div>
           </div>
-          <div v-for="item in filterProducts" :key="item.chiTietId" class="product-table-row">
-            <div class="col-thumb" @click="handleViewProduct(item)">
-              <div class="thumb-box"><img v-if="item.hinhAnh" :src="item.hinhAnh" /><Package v-else :size="20" /></div>
-            </div>
-            <div class="col-info">
-              <div class="table-product-name" @click="handleViewProduct(item)">{{ item.tenSanPham || item.tenBienThe || '—' }}</div>
-              <div class="table-meta"><span v-if="item.maSku">SKU: {{ item.maSku }}</span><span v-if="item.soSerial">Serial: {{ item.soSerial }}</span></div>
-            </div>
-            <div class="col-order">
-              <div class="order-link">#{{ item.maDonHang || item.maDon || item.donHangId }}</div>
-              <div class="order-date">{{ formatDate(item.ngayDat) }}</div>
-            </div>
-            <div class="col-bh">
-              <div class="bh-status-pill" :class="{
+          <div class="col-info">
+            <div class="table-product-name" @click="handleViewProduct(item)">{{ item.tenSanPham || item.tenBienThe || '—' }}</div>
+            <div class="table-meta"><span v-if="item.maSku">SKU: {{ item.maSku }}</span><span v-if="item.soSerial">Serial: {{ item.soSerial }}</span></div>
+          </div>
+          <div class="col-order">
+            <div class="order-link">#{{ item.maDonHang || item.maDon || item.donHangId }}</div>
+            <div class="order-date">{{ formatDate(item.ngayDat) }}</div>
+          </div>
+          <div class="col-bh">
+            <div
+              class="bh-status-pill" :class="{
                 'bh-status-pill--active': !isExpired(item.ngayHetBaoHanh) && daysUntilWarrantyExpiry(item.ngayHetBaoHanh) > 30,
                 'bh-status-pill--expiring': !isExpired(item.ngayHetBaoHanh) && daysUntilWarrantyExpiry(item.ngayHetBaoHanh) <= 30,
                 'bh-status-pill--expired': isExpired(item.ngayHetBaoHanh),
-              }">
-                <component :is="isExpired(item.ngayHetBaoHanh)?ShieldX:daysUntilWarrantyExpiry(item.ngayHetBaoHanh)<=30?ShieldAlert:ShieldCheck" :size="11" />
-                {{ isExpired(item.ngayHetBaoHanh)?'Hết BH':daysUntilWarrantyExpiry(item.ngayHetBaoHanh)<=30?`${daysUntilWarrantyExpiry(item.ngayHetBaoHanh)} ngày`:'Còn BH' }}
-              </div>
-              <div class="bh-expiry">Hết: {{ formatDate(item.ngayHetBaoHanh) }}</div>
+              }"
+            >
+              <component :is="isExpired(item.ngayHetBaoHanh)?ShieldX:daysUntilWarrantyExpiry(item.ngayHetBaoHanh)<=30?ShieldAlert:ShieldCheck" :size="11" />
+              {{ isExpired(item.ngayHetBaoHanh)?'Hết BH':daysUntilWarrantyExpiry(item.ngayHetBaoHanh)<=30?`${daysUntilWarrantyExpiry(item.ngayHetBaoHanh)} ngày`:'Còn BH' }}
             </div>
-            <div class="col-action">
-              <button v-if="canCreateClaim(item)" class="btn-claim-sm" @click="openClaimForm(item)"><Plus :size="12" /> Yêu cầu BH</button>
-              <span v-else-if="isExpired(item.ngayHetBaoHanh)" class="expired-hint-sm">Hết hạn</span>
-              <span v-else-if="hasActiveClaim(item.chiTietId)" class="pending-hint-sm"><Clock :size="10" /> Đang xử lý</span>
-            </div>
+            <div class="bh-expiry">Hết: {{ formatDate(item.ngayHetBaoHanh) }}</div>
           </div>
-          <div class="table-summary">Hiển thị {{ filterProducts.length }} / {{ allProducts.length }} sản phẩm</div>
+          <div class="col-action">
+            <button v-if="canCreateClaim(item)" class="btn-claim-sm" @click="openClaimForm(item)"><Plus :size="12" /> Yêu cầu BH</button>
+            <span v-else-if="isExpired(item.ngayHetBaoHanh)" class="expired-hint-sm">Hết hạn</span>
+            <span v-else-if="hasActiveClaim(item.chiTietId)" class="pending-hint-sm"><Clock :size="10" /> Đang xử lý</span>
+          </div>
         </div>
+        <div class="table-summary">Hiển thị {{ filterProducts.length }} / {{ allProducts.length }} sản phẩm</div>
+      </div>
     </div>
 
     <!-- TAB 2: PHIẾU BẢO HÀNH -->
@@ -161,7 +166,8 @@ onMounted(async () => { await Promise.all([loadOrdersAndProducts(), loadClaims()
     </div>
 
     <!-- Claim Form Modal -->
-    <ClaimFormModal v-if="claimFormOpen && claimFormProduct" :product="claimFormProduct"
+    <ClaimFormModal
+      v-if="claimFormOpen && claimFormProduct" :product="claimFormProduct"
       @close="claimFormOpen=false;claimFormProduct=null"
       @submitted="onClaimSubmitted"
       @toast="(m,t)=>emit('toast',m,t)"

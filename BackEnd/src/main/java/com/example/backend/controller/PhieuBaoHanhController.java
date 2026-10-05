@@ -19,6 +19,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/phieu-bao-hanh")
+@PreAuthorize("hasAnyRole('ADMIN','NHAN_VIEN','QUAN_KHO')")
 public class PhieuBaoHanhController {
 
     @Autowired

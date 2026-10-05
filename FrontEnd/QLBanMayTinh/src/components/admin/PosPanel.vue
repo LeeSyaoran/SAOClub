@@ -895,12 +895,16 @@ const posPlaceOrder = async () => {
                   class="pos-cart-qty-btn"
                   :disabled="g.items.length <= 1"
                   @click="posDecrementGroup(g)"
-                >−</button>
+                >
+                  −
+                </button>
                 <span class="fw-bold text-center" style="min-width:28px;font-size:0.88rem;color:var(--accent-fg);">{{ g.items.length }}</span>
                 <button
                   class="pos-cart-qty-btn pos-cart-qty-btn--add"
                   @click="posOpenSerialPicker(g.items[0], null)"
-                >+</button>
+                >
+                  +
+                </button>
                 <button
                   class="pos-cart-icon-btn"
                   :title="t('admin.pos.showSerials')"
@@ -1065,14 +1069,18 @@ const posPlaceOrder = async () => {
           class="pos-tab"
           :class="{ active: posCatalogCategory === null }"
           @click="posCatalogCategory = null"
-        >Tất cả</button>
+        >
+          Tất cả
+        </button>
         <button
           v-for="cat in posCategories"
           :key="cat.id"
           class="pos-tab"
           :class="{ active: posCatalogCategory === cat.id }"
           @click="posCatalogCategory = cat.id"
-        >{{ cat.tenDanhMuc }}</button>
+        >
+          {{ cat.tenDanhMuc }}
+        </button>
       </div>
 
       <div class="pos-catalog-body">
@@ -1098,7 +1106,7 @@ const posPlaceOrder = async () => {
                   <span v-if="p.oCung"><HardDrive :size="10" />{{ p.oCung }}</span>
                 </div>
                 <div class="pos-product-price">
-                  <span class="pos-price-from" v-if="(posVariantCountMap.get(p.sanPhamId) || 0) > 1">Từ </span>{{ formatPrice(p.giaBan) }}
+                  <span v-if="(posVariantCountMap.get(p.sanPhamId) || 0) > 1" class="pos-price-from">Từ </span>{{ formatPrice(p.giaBan) }}
                 </div>
               </div>
               <!-- Hover actions -->
@@ -1200,7 +1208,7 @@ const posPlaceOrder = async () => {
           class="btn d-flex justify-content-between align-items-center"
           :class="[
             isAlreadyInCart(s.chiTietId) ? 'btn-secondary opacity-50' :
-              (serialPickerSwapChiTietId == null && serialPickerChosenIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-warning')
+            (serialPickerSwapChiTietId == null && serialPickerChosenIds.has(s.chiTietId) ? 'btn-warning text-dark' : 'btn-outline-warning')
           ]"
           :disabled="isAlreadyInCart(s.chiTietId)"
           :title="isAlreadyInCart(s.chiTietId) ? 'Đã có trong giỏ hàng' : ''"
@@ -1251,7 +1259,7 @@ const posPlaceOrder = async () => {
 
 
   <!-- Modal thêm khách hàng nhanh -->
-       CustomersTable.vue vi 2 noi mo modal doc lap nhau ══ -->
+  CustomersTable.vue vi 2 noi mo modal doc lap nhau ══ -->
   <CustomerFormModal ref="quickCustomerModalRef" v-model="showQuickCustomerModal" @saved="onQuickCustomerSaved" />
 
   <!-- ══ PANEL XEM BIEN THE (POS) — thay ProductDetailModal khi bam nut con mat. ══ -->
@@ -1263,7 +1271,7 @@ const posPlaceOrder = async () => {
   />
 
   <!-- Modal danh sách serial -->
-       dạng mã vạch text lớn để nhân viên dễ nhìn/đối chiếu khi giao hàng ══ -->
+  dạng mã vạch text lớn để nhân viên dễ nhìn/đối chiếu khi giao hàng ══ -->
   <div
     v-if="showSerialModal"
     class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"

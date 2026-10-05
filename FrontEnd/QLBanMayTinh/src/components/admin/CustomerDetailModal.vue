@@ -425,83 +425,66 @@ onUnmounted(() => {
               <!-- Hiển thị khi là Doanh nghiệp -->
               <template v-if="isBusiness">
                 <div class="info-row">
-                  <span class="info-label">Tên công ty</span
-                  ><span class="info-value">{{ customer.tenCongTy || customer.hoTen || "—" }}</span>
+                  <span class="info-label">Tên công ty</span><span class="info-value">{{ customer.tenCongTy || customer.hoTen || "—" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Mã số thuế</span
-                  ><span class="info-value">{{ customer.maSoThue || "—" }}</span>
+                  <span class="info-label">Mã số thuế</span><span class="info-value">{{ customer.maSoThue || "—" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Người đại diện</span
-                  ><span class="info-value">{{ customer.hoTen || "—" }}</span>
+                  <span class="info-label">Người đại diện</span><span class="info-value">{{ customer.hoTen || "—" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Số điện thoại</span
-                  ><span class="info-value">{{ customer.soDienThoai || "—" }}</span>
+                  <span class="info-label">Số điện thoại</span><span class="info-value">{{ customer.soDienThoai || "—" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Email</span
-                  ><span class="info-value">{{ customer.email || "—" }}</span>
+                  <span class="info-label">Email</span><span class="info-value">{{ customer.email || "—" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Loại khách</span
-                  ><span class="info-value">Doanh nghiệp</span>
+                  <span class="info-label">Loại khách</span><span class="info-value">Doanh nghiệp</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Địa chỉ trụ sở</span
-                  ><span class="info-value">{{ customer.diaChi || "—" }}</span>
+                  <span class="info-label">Địa chỉ trụ sở</span><span class="info-value">{{ customer.diaChi || "—" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Điểm tích lũy</span
-                  ><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span>
+                  <span class="info-label">Điểm tích lũy</span><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Số dư ví</span
-                  ><span class="info-value">{{
+                  <span class="info-label">Số dư ví</span><span class="info-value">{{
                     customer.soDuVi ? formatPrice(Number(customer.soDuVi)) : "0 ₫"
                   }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Trạng thái</span
-                  ><span class="info-value">{{ statusLabel(customer.trangThai) }}</span>
+                  <span class="info-label">Trạng thái</span><span class="info-value">{{ statusLabel(customer.trangThai) }}</span>
                 </div>
               </template>
 
               <!-- Hiển thị khi là Cá nhân: ẨN hoàn toàn Tên công ty và Mã số thuế -->
               <template v-else>
                 <div class="info-row">
-                  <span class="info-label">Họ tên</span
-                  ><span class="info-value">{{ customer.hoTen || "—" }}</span>
+                  <span class="info-label">Họ tên</span><span class="info-value">{{ customer.hoTen || "—" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Số điện thoại</span
-                  ><span class="info-value">{{ customer.soDienThoai || "—" }}</span>
+                  <span class="info-label">Số điện thoại</span><span class="info-value">{{ customer.soDienThoai || "—" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Email</span
-                  ><span class="info-value">{{ customer.email || "—" }}</span>
+                  <span class="info-label">Email</span><span class="info-value">{{ customer.email || "—" }}</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Loại khách</span><span class="info-value">Cá nhân</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Địa chỉ</span
-                  ><span class="info-value">{{ customer.diaChi || "—" }}</span>
+                  <span class="info-label">Địa chỉ</span><span class="info-value">{{ customer.diaChi || "—" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Điểm tích lũy</span
-                  ><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span>
+                  <span class="info-label">Điểm tích lũy</span><span class="info-value">{{ customer.diemTichLuy ?? 0 }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Số dư ví</span
-                  ><span class="info-value">{{
+                  <span class="info-label">Số dư ví</span><span class="info-value">{{
                     customer.soDuVi ? formatPrice(Number(customer.soDuVi)) : "0 ₫"
                   }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Trạng thái</span
-                  ><span class="info-value">{{ statusLabel(customer.trangThai) }}</span>
+                  <span class="info-label">Trạng thái</span><span class="info-value">{{ statusLabel(customer.trangThai) }}</span>
                 </div>
               </template>
             </div>
@@ -659,20 +642,16 @@ onUnmounted(() => {
                 </div>
                 <div class="order-detail-grid">
                   <div>
-                    <span class="info-label">Phương thức TT</span
-                    ><span class="info-value">{{ o.phuongThucThanhToan || "—" }}</span>
+                    <span class="info-label">Phương thức TT</span><span class="info-value">{{ o.phuongThucThanhToan || "—" }}</span>
                   </div>
                   <div>
-                    <span class="info-label">Địa chỉ giao</span
-                    ><span class="info-value">{{ o.diaChiGiaoHang || "—" }}</span>
+                    <span class="info-label">Địa chỉ giao</span><span class="info-value">{{ o.diaChiGiaoHang || "—" }}</span>
                   </div>
                   <div>
-                    <span class="info-label">Phí ship</span
-                    ><span class="info-value">{{ formatPrice(o.phiVanChuyen || 0) }}</span>
+                    <span class="info-label">Phí ship</span><span class="info-value">{{ formatPrice(o.phiVanChuyen || 0) }}</span>
                   </div>
                   <div>
-                    <span class="info-label">Giảm giá</span
-                    ><span class="info-value">{{ formatPrice(o.giamGia || 0) }}</span>
+                    <span class="info-label">Giảm giá</span><span class="info-value">{{ formatPrice(o.giamGia || 0) }}</span>
                   </div>
                 </div>
                 <div class="order-detail-actions">
@@ -765,7 +744,7 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="chat-composer" v-if="chatConversationId">
+            <div v-if="chatConversationId" class="chat-composer">
               <textarea
                 v-model="chatInput"
                 rows="2"

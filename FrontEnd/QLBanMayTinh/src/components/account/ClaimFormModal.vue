@@ -173,7 +173,7 @@ const submit = async () => {
         <div class="form-group">
           <label class="form-label">Ảnh / Video minh chứng</label>
           <div class="upload-area">
-            <input type="file" accept="image/*,video/*" multiple @change="onFileChange" class="file-input" id="claim-file-input" />
+            <input id="claim-file-input" type="file" accept="image/*,video/*" multiple class="file-input" @change="onFileChange" />
             <label for="claim-file-input" class="upload-trigger">
               <Upload :size="24" class="upload-icon" />
               <div class="upload-text">Click để chọn ảnh/video</div>
@@ -203,7 +203,7 @@ const submit = async () => {
           <label class="form-label">Phương thức gửi <span class="required">*</span></label>
           <div class="method-options">
             <label class="method-option" :class="{ 'is-active': phuongThuc === 'tai_cua_hang' }">
-              <input type="radio" v-model="phuongThuc" value="tai_cua_hang" />
+              <input v-model="phuongThuc" type="radio" value="tai_cua_hang" />
               <div class="method-icon"><Store :size="20" /></div>
               <div class="method-text">
                 <div class="method-name">Mang đến cửa hàng</div>
@@ -212,7 +212,7 @@ const submit = async () => {
               <CheckCircle2 v-if="phuongThuc === 'tai_cua_hang'" :size="18" class="method-check" />
             </label>
             <label class="method-option" :class="{ 'is-active': phuongThuc === 'giao_tan_noi' }">
-              <input type="radio" v-model="phuongThuc" value="giao_tan_noi" />
+              <input v-model="phuongThuc" type="radio" value="giao_tan_noi" />
               <div class="method-icon"><Truck :size="20" /></div>
               <div class="method-text">
                 <div class="method-name">Nhân viên đến lấy</div>
@@ -246,8 +246,8 @@ const submit = async () => {
       </div>
 
       <div class="modal-footer">
-        <button class="btn-cancel" @click="emit('close')" :disabled="submitting">Hủy</button>
-        <button class="btn-submit" @click="submit" :disabled="!canSubmit || submitting">
+        <button class="btn-cancel" :disabled="submitting" @click="emit('close')">Hủy</button>
+        <button class="btn-submit" :disabled="!canSubmit || submitting" @click="submit">
           <Loader2 v-if="submitting" :size="15" class="spin" />
           <Send v-else :size="15" />
           {{ submitting ? 'Đang gửi...' : 'Gửi yêu cầu' }}

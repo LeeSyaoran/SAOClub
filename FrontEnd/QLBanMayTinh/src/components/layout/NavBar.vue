@@ -240,65 +240,6 @@
   </div>
 </template>
 
-<style scoped>
-/* ── Logo 3D hover effect ── */
-.logo-3d:hover img {
-  transform: translateY(-3px) scale(1.05);
-  filter: drop-shadow(0 8px 16px rgba(233, 30, 99, 0.5));
-}
-
-/* ── Hiệu ứng nút 3D trong NavBar ── */
-.btn-nav-3d {
-  border: none;
-  border-radius: 12px;
-  padding: 10px 18px;
-  font-size: 1em;
-  font-weight: 800;
-  cursor: pointer;
-  background: linear-gradient(180deg, #fde047 0%, #facc15 50%, #f59e0b 100%);
-  color: #7c2d12;
-  box-shadow: 0 3px 0 #b45309, 0 4px 10px rgba(245, 158, 11, 0.4);
-  border-bottom: 3px solid #b45309;
-  transition: all 0.15s ease;
-  font-family: inherit;
-}
-.btn-nav-3d:hover:not(:disabled) {
-  background: linear-gradient(180deg, #fef08a 0%, #fde047 50%, #facc15 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 0 #b45309, 0 6px 14px rgba(245, 158, 11, 0.5);
-}
-.btn-nav-3d:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
-  border-bottom-width: 0;
-  padding-bottom: 13px;
-}
-.btn-nav-3d:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ── Mega dropdown text overrides ── */
-.navbar-mega .mega-item { color: #1e293b !important; font-weight:700; }
-.navbar-mega .mega-item:hover { color: #be185d !important; }
-.navbar-mega .mega-heading { color: #be185d !important; font-weight:800; }
-.navbar-mega .mega-tag { color: #1e293b !important; font-weight:700; }
-.navbar-mega .mega-category { color: #1e293b !important; font-weight:700; }
-.navbar-mega .mega-category.active { color: #dc2626 !important; font-weight:800; }
-
-/* ── Animation chạy ngang từ phải sang trái liên tục ── */
-.marquee-track {
-  display: flex;
-  width: max-content;
-  animation: marquee 30s linear infinite;
-}
-
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-</style>
-
 <script setup>
 import { ref, computed } from 'vue';
 import { Moon, Sun, Menu, Search, ShoppingCart, ShieldCheck, Truck, RefreshCw, Tag, Sparkles } from '@lucide/vue';
@@ -398,3 +339,62 @@ const onBrandClick = (brand) => {
   isMenuOpen.value = false;
 };
 </script>
+
+<style scoped>
+/* ── Logo 3D hover effect ── */
+.logo-3d:hover img {
+  transform: translateY(-3px) scale(1.05);
+  filter: drop-shadow(0 8px 16px rgba(233, 30, 99, 0.5));
+}
+
+/* ── Hiệu ứng nút 3D trong NavBar ── */
+.btn-nav-3d {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-size: 1em;
+  font-weight: 800;
+  cursor: pointer;
+  background: linear-gradient(180deg, #fde047 0%, #facc15 50%, #f59e0b 100%);
+  color: #7c2d12;
+  box-shadow: 0 3px 0 #b45309, 0 4px 10px rgba(245, 158, 11, 0.4);
+  border-bottom: 3px solid #b45309;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.btn-nav-3d:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fef08a 0%, #fde047 50%, #facc15 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #b45309, 0 6px 14px rgba(245, 158, 11, 0.5);
+}
+.btn-nav-3d:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+  border-bottom-width: 0;
+  padding-bottom: 13px;
+}
+.btn-nav-3d:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Mega dropdown text overrides ── */
+.navbar-mega .mega-item { color: #1e293b !important; font-weight:700; }
+.navbar-mega .mega-item:hover { color: #be185d !important; }
+.navbar-mega .mega-heading { color: #be185d !important; font-weight:800; }
+.navbar-mega .mega-tag { color: #1e293b !important; font-weight:700; }
+.navbar-mega .mega-category { color: #1e293b !important; font-weight:700; }
+.navbar-mega .mega-category.active { color: #dc2626 !important; font-weight:800; }
+
+/* ── Animation chạy ngang từ phải sang trái liên tục ── */
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+</style>

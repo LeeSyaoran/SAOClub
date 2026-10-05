@@ -547,7 +547,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Composer -->
-      <div class="chat-popup-composer" v-if="trangThai !== 'DA_DONG'">
+      <div v-if="trangThai !== 'DA_DONG'" class="chat-popup-composer">
         <textarea
           v-model="input"
           rows="1"

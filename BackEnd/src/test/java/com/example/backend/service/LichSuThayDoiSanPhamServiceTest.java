@@ -93,6 +93,7 @@ class LichSuThayDoiSanPhamServiceTest {
     @Test
     void nguoiSuaHienTai_taiKhoanCoNhanVien_traVeNhanVien() {
         Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
         when(auth.getName()).thenReturn("nv1");
         when(SecurityContextHolder.getContext().getAuthentication()).thenReturn(auth);
         NhanVien nv = new NhanVien();
@@ -107,6 +108,7 @@ class LichSuThayDoiSanPhamServiceTest {
     @Test
     void nguoiSuaHienTai_taiKhoanKhongTonTai_traVeNull() {
         Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
         when(auth.getName()).thenReturn("ghost");
         when(SecurityContextHolder.getContext().getAuthentication()).thenReturn(auth);
         when(taiKhoanRepository.findByUsername("ghost")).thenReturn(Optional.empty());

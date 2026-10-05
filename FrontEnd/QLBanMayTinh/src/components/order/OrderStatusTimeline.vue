@@ -24,7 +24,7 @@
               : 'background:var(--bg-card-alt); border:2px solid var(--border-color-strong);'"
         >
           <Check v-if="isStepCompleted(step, index)" :size="14" color="white" />
-          <component v-else :is="step.icon" :size="13" :style="{ opacity: isStepActive(step, index) ? 1 : 0.4, color: isStepActive(step, index) ? 'var(--accent-fg)' : 'inherit' }" />
+          <component :is="step.icon" v-else :size="13" :style="{ opacity: isStepActive(step, index) ? 1 : 0.4, color: isStepActive(step, index) ? 'var(--accent-fg)' : 'inherit' }" />
         </div>
       </div>
 

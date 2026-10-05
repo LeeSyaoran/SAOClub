@@ -757,10 +757,10 @@ const handleOutsideClick = (e) => {
             <button class="mobile-menu-btn d-lg-none" @click.stop="sidebarOpen = !sidebarOpen">
               <Menu :size="18" />
             </button>
-            <button class="btn-back" @click="goHome" title="Về trang chủ">
+            <button class="btn-back" title="Về trang chủ" @click="goHome">
               <ArrowLeft :size="16" />
             </button>
-            <div class="brand-text" style="cursor:pointer;" @click="goHome" title="Về trang chủ">SAOClub</div>
+            <div class="brand-text" style="cursor:pointer;" title="Về trang chủ" @click="goHome">SAOClub</div>
 
             <div class="header-stats-compact d-none d-md-flex">
               <div class="stat-chip">
@@ -826,8 +826,7 @@ const handleOutsideClick = (e) => {
         <main class="col-lg-9">
           <Transition name="panel-fade" mode="out-in">
             <div :key="activeTab" class="account-panel">
-
-                            <!-- ══════════════ TAB: TỔNG QUAN ══════════════ -->
+              <!-- ══════════════ TAB: TỔNG QUAN ══════════════ -->
               <div v-if="activeTab === 'overview'" class="panel-section">
                 <!-- Recent orders -->
                 <div class="overview-card">
@@ -1396,8 +1395,8 @@ const handleOutsideClick = (e) => {
                               type="button"
                               class="btn-ticket-copy"
                               :class="{ 'is-copied': copiedCode === v.maPhieu }"
-                              @click="copyVoucherCode(v.maPhieu)"
                               title="Sao chép mã"
+                              @click="copyVoucherCode(v.maPhieu)"
                             >
                               <Check v-if="copiedCode === v.maPhieu" :size="13" />
                               <Copy v-else :size="13" />
@@ -1407,8 +1406,8 @@ const handleOutsideClick = (e) => {
                             <button
                               type="button"
                               class="btn-ticket-use"
-                              @click="useVoucherNow(v)"
                               title="Sao chép và đi tới cửa hàng"
+                              @click="useVoucherNow(v)"
                             >
                               <span>Dùng ngay</span>
                               <ChevronRight :size="13" />
@@ -1696,7 +1695,6 @@ const handleOutsideClick = (e) => {
                   </div>
                 </div>
               </div>
-
             </div>
           </Transition>
         </main>
@@ -1716,14 +1714,16 @@ const handleOutsideClick = (e) => {
       @order-updated="handleOrderUpdated"
     />
 
-    <ProductDetail v-if="selectedProductDetail" :key="selectedProductDetail.bienTheId" :product="selectedProductDetail" :products="products" :wishlist-ids="wishlistIdSet" :auth-user="auth.user"
+    <ProductDetail
+      v-if="selectedProductDetail" :key="selectedProductDetail.bienTheId" :product="selectedProductDetail" :products="products" :wishlist-ids="wishlistIdSet" :auth-user="auth.user"
       @close="selectedProductDetail = null"
       @add-to-cart="p => { emit('add-to-cart', p); selectedProductDetail = null; }"
       @open-product="p => selectedProductDetail = p"
       @toggle-wishlist="toggleWishlistInDetail"
     />
 
-    <ReturnRequestModal v-if="returnModalOrder" :order="returnModalOrder" :items="itemsByOrder[returnModalOrder.donHangId] || []"
+    <ReturnRequestModal
+      v-if="returnModalOrder" :order="returnModalOrder" :items="itemsByOrder[returnModalOrder.donHangId] || []"
       @close="returnModalOrder = null"
       @submitted="returnModalOrder = null; fetchData();"
     />
@@ -1772,7 +1772,7 @@ const handleOutsideClick = (e) => {
               :style="cancelReasonType === r.id ? 'border-color:#ea580c; background:#fff7ed;' : 'border-color:#e2e8f0; cursor:pointer;'"
               @click="cancelReasonType = r.id"
             >
-              <input type="radio" :value="r.id" v-model="cancelReasonType" style="accent-color:#ea580c;" />
+              <input v-model="cancelReasonType" type="radio" :value="r.id" style="accent-color:#ea580c;" />
               <span style="font-size:0.83rem; color:#0f172a;">{{ r.label }}</span>
             </label>
           </div>

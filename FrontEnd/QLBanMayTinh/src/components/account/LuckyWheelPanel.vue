@@ -342,8 +342,8 @@ const spinAgain = () => {
                   type="button"
                   class="btn-copy-code"
                   :class="{ 'is-copied': copied }"
-                  @click="copyCode(lastResult.phieuGiamGia.maPhieu)"
                   title="Sao chép mã"
+                  @click="copyCode(lastResult.phieuGiamGia.maPhieu)"
                 >
                   <Check v-if="copied" :size="12" />
                   <Copy v-else :size="12" />

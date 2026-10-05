@@ -128,7 +128,7 @@ const closeDetailModal = () => {
           <ChevronDown v-if="!isFilterOpen" :size="13" style="margin-left:2px" />
           <ChevronUp v-else :size="13" style="margin-left:2px" />
         </button>
-        <button v-if="activeFilterCount > 0" class="alt-btn alt-btn--ghost-sm" @click="resetFilters" title="Xóa bộ lọc">
+        <button v-if="activeFilterCount > 0" class="alt-btn alt-btn--ghost-sm" title="Xóa bộ lọc" @click="resetFilters">
           <X :size="13" /> Xóa lọc
         </button>
         <button class="alt-btn alt-btn--primary" @click="showCustomerForm = true; customerFormModalRef?.openForCreate()">{{ t('admin.customers.add') }}</button>

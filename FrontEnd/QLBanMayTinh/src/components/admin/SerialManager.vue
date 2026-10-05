@@ -493,7 +493,7 @@ const deleteSerial = async (item) => {
         <div class="adv-filter-group" style="justify-content: flex-end">
           <label class="adv-filter-label">&nbsp;</label>
           <label class="adv-filter-checkbox">
-            <input type="checkbox" v-model="filterInPosCart" />
+            <input v-model="filterInPosCart" type="checkbox" />
             <span>Trong giỏ POS</span>
           </label>
         </div>

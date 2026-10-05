@@ -1600,10 +1600,8 @@ const exportPhieuNhapExcel = () => {
 
         <!-- THANH CÔNG CỤ -->
         <div class="inv-bar">
-          <span class="inv-bar__count"
-            >{{ flatInventory.length }}/{{ inventory.length }}
-            {{ t("admin.inventory.colSku") }}</span
-          >
+          <span class="inv-bar__count">{{ flatInventory.length }}/{{ inventory.length }}
+            {{ t("admin.inventory.colSku") }}</span>
           <div class="inv-search" style="flex: 1; max-width: none">
             <Search :size="14" class="inv-search__icon" />
             <input
@@ -1706,55 +1704,41 @@ const exportPhieuNhapExcel = () => {
             <thead>
               <tr>
                 <th style="width: 12%">
-                  <span class="d-inline-flex align-items-center gap-1.5"
-                    ><Tag :size="12" />
-                    {{ tt("admin.inventory.colProductCode", "Mã sản phẩm") }}</span
-                  >
+                  <span class="d-inline-flex align-items-center gap-1.5"><Tag :size="12" />
+                    {{ tt("admin.inventory.colProductCode", "Mã sản phẩm") }}</span>
                 </th>
                 <th style="width: 24%">
-                  <span class="d-inline-flex align-items-center gap-1.5"
-                    ><Laptop :size="12" /> {{ t("admin.variants.colProduct") }}</span
-                  >
+                  <span class="d-inline-flex align-items-center gap-1.5"><Laptop :size="12" /> {{ t("admin.variants.colProduct") }}</span>
                 </th>
                 <th style="width: 20%">
-                  <span class="d-inline-flex align-items-center gap-1.5"
-                    ><Cpu :size="12" /> {{ t("admin.variants.colConfig") }}</span
-                  >
+                  <span class="d-inline-flex align-items-center gap-1.5"><Cpu :size="12" /> {{ t("admin.variants.colConfig") }}</span>
                 </th>
                 <th class="ta-r" style="width: 10%">
-                  <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
-                    ><DollarSign :size="12" /> {{ t("admin.variants.colPriceSell") }}</span
-                  >
+                  <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t("admin.variants.colPriceSell") }}</span>
                 </th>
                 <th class="ta-r" style="width: 10%">
-                  <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
-                    ><Coins :size="12" /> {{ tt("admin.inventory.colPriceBuy", "Giá vốn") }}</span
-                  >
+                  <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><Coins :size="12" /> {{ tt("admin.inventory.colPriceBuy", "Giá vốn") }}</span>
                 </th>
                 <th class="ta-c" style="width: 6%; text-align: center">
                   <span
                     class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                    ><Package :size="12" /> {{ t("admin.inventory.colStock") }}</span
-                  >
+                  ><Package :size="12" /> {{ t("admin.inventory.colStock") }}</span>
                 </th>
                 <th class="ta-c" style="width: 5%; text-align: center">
                   <span
                     class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                    ><Lock :size="12" /> {{ tt("admin.inventory.colHeld", "Giữ") }}</span
-                  >
+                  ><Lock :size="12" /> {{ tt("admin.inventory.colHeld", "Giữ") }}</span>
                 </th>
                 <th class="ta-c" style="width: 7%; text-align: center">
                   <span
                     class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                    ><Activity :size="12" /> {{ t("admin.variants.colStatus") }}</span
-                  >
+                  ><Activity :size="12" /> {{ t("admin.variants.colStatus") }}</span>
                 </th>
                 <th class="ta-c" style="width: 6%; text-align: center">
                   <span
                     class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                    ><CalendarCheck :size="12" />
-                    {{ tt("admin.inventory.colUpdatedAt", "Ngày cập nhật") }}</span
-                  >
+                  ><CalendarCheck :size="12" />
+                    {{ tt("admin.inventory.colUpdatedAt", "Ngày cập nhật") }}</span>
                 </th>
               </tr>
             </thead>
@@ -1785,15 +1769,9 @@ const exportPhieuNhapExcel = () => {
                 <td class="inv-muted">
                   <div v-if="v?.cpu || v?.ram || v?.oCung || v?.mauSac" class="inv-config">
                     <span v-if="v.cpu" class="inv-config-chip"><Cpu :size="12" />{{ v.cpu }}</span>
-                    <span v-if="v.ram" class="inv-config-chip"
-                      ><MemoryStick :size="12" />{{ v.ram }}</span
-                    >
-                    <span v-if="v.oCung" class="inv-config-chip"
-                      ><HardDrive :size="12" />{{ v.oCung }}</span
-                    >
-                    <span v-if="v.mauSac" class="inv-config-chip"
-                      ><Palette :size="12" />{{ v.mauSac }}</span
-                    >
+                    <span v-if="v.ram" class="inv-config-chip"><MemoryStick :size="12" />{{ v.ram }}</span>
+                    <span v-if="v.oCung" class="inv-config-chip"><HardDrive :size="12" />{{ v.oCung }}</span>
+                    <span v-if="v.mauSac" class="inv-config-chip"><Palette :size="12" />{{ v.mauSac }}</span>
                   </div>
                   <span v-else>—</span>
                 </td>
@@ -1808,15 +1786,13 @@ const exportPhieuNhapExcel = () => {
                       'text-success': status === 'ok',
                       'text-info': status === 'pending',
                     }"
-                    >{{ item.soLuongTon ?? "—" }}</span
-                  >
+                  >{{ item.soLuongTon ?? "—" }}</span>
                 </td>
                 <td class="ta-c">
                   <span
                     class="inv-held"
                     :class="{ 'text-warning fw-bold': getHeldQty(item) > 0 }"
-                    >{{ getHeldQty(item) }}</span
-                  >
+                  >{{ getHeldQty(item) }}</span>
                 </td>
                 <td class="ta-c">
                   <span class="inv-tag" :class="'inv-tag--' + status">{{
@@ -2010,41 +1986,31 @@ const exportPhieuNhapExcel = () => {
                 <th class="ta-c" style="width: 5%; text-align: center">
                   <span
                     class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                    ><Hash :size="12" /> {{ t("admin.common.stt") }}</span
-                  >
+                  ><Hash :size="12" /> {{ t("admin.common.stt") }}</span>
                 </th>
                 <th class="ta-c" style="width: 15%; text-align: center">
                   <span
                     class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                    ><FileText :size="12" /> {{ t("admin.phieuNhap.colCode") }}</span
-                  >
+                  ><FileText :size="12" /> {{ t("admin.phieuNhap.colCode") }}</span>
                 </th>
                 <th class="ta-c" style="width: 12%; text-align: center">
                   <span
                     class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                    ><Calendar :size="12" /> {{ t("admin.phieuNhap.colDate") }}</span
-                  >
+                  ><Calendar :size="12" /> {{ t("admin.phieuNhap.colDate") }}</span>
                 </th>
                 <th style="width: 23%">
-                  <span class="d-inline-flex align-items-center gap-1.5"
-                    ><Building2 :size="12" /> {{ t("admin.phieuNhap.colSupplier") }}</span
-                  >
+                  <span class="d-inline-flex align-items-center gap-1.5"><Building2 :size="12" /> {{ t("admin.phieuNhap.colSupplier") }}</span>
                 </th>
                 <th style="width: 17%">
-                  <span class="d-inline-flex align-items-center gap-1.5"
-                    ><User :size="12" /> {{ t("admin.phieuNhap.colStaff") }}</span
-                  >
+                  <span class="d-inline-flex align-items-center gap-1.5"><User :size="12" /> {{ t("admin.phieuNhap.colStaff") }}</span>
                 </th>
                 <th class="ta-r" style="width: 15%">
-                  <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"
-                    ><DollarSign :size="12" /> {{ t("admin.phieuNhap.colTotal") }}</span
-                  >
+                  <span class="d-inline-flex align-items-center gap-1.5 justify-content-end"><DollarSign :size="12" /> {{ t("admin.phieuNhap.colTotal") }}</span>
                 </th>
                 <th class="ta-c" style="width: 13%; text-align: center">
                   <span
                     class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"
-                    ><Activity :size="12" /> {{ t("admin.phieuNhap.colStatus") }}</span
-                  >
+                  ><Activity :size="12" /> {{ t("admin.phieuNhap.colStatus") }}</span>
                 </th>
               </tr>
             </thead>
@@ -2271,12 +2237,10 @@ const exportPhieuNhapExcel = () => {
   <div v-if="serialViewerModal" class="inv-modal-mask" @click.self="closeSerialViewer">
     <div class="inv-modal" style="width: 720px; max-height: 85vh">
       <header class="inv-modal__head">
-        <span
-          >Serial đã import — {{ serialViewerSpName }} ({{
-            serialViewerSerials.length
-          }}
-          serial)</span
-        >
+        <span>Serial đã import — {{ serialViewerSpName }} ({{
+          serialViewerSerials.length
+        }}
+          serial)</span>
         <button class="inv-icon-btn" :aria-label="t('common.close')" @click="closeSerialViewer">
           <X :size="16" />
         </button>
@@ -2293,9 +2257,7 @@ const exportPhieuNhapExcel = () => {
             :class="{ 'inv-serial-chip--dup': serialViewerDuplicateSet.has(s) }"
           >
             {{ i + 1 }}. {{ s }}
-            <span v-if="serialViewerDuplicateSet.has(s)" class="inv-serial-chip__warn"
-              >⚠ trùng</span
-            >
+            <span v-if="serialViewerDuplicateSet.has(s)" class="inv-serial-chip__warn">⚠ trùng</span>
           </span>
         </div>
       </div>
@@ -2339,18 +2301,12 @@ const exportPhieuNhapExcel = () => {
 
       <div v-if="phieuNhapDetailData" class="inv-modal__body" style="padding: 0">
         <div class="inv-chips">
-          <span class="inv-chip-info"
-            ><Building2 :size="13" /> {{ t("admin.phieuNhap.colSupplier") }}:
-            <b>{{ supplierName(phieuNhapDetailData.nhaCungCapId) }}</b></span
-          >
-          <span class="inv-chip-info"
-            ><User :size="13" /> {{ t("admin.phieuNhap.colStaff") }}:
-            <b>{{ staffName(phieuNhapDetailData.nhanVienId) }}</b></span
-          >
-          <span class="inv-chip-info"
-            ><Calendar :size="13" /> {{ t("admin.phieuNhap.colDate") }}:
-            <b>{{ formatDate(phieuNhapDetailData.ngayNhap) }}</b></span
-          >
+          <span class="inv-chip-info"><Building2 :size="13" /> {{ t("admin.phieuNhap.colSupplier") }}:
+            <b>{{ supplierName(phieuNhapDetailData.nhaCungCapId) }}</b></span>
+          <span class="inv-chip-info"><User :size="13" /> {{ t("admin.phieuNhap.colStaff") }}:
+            <b>{{ staffName(phieuNhapDetailData.nhanVienId) }}</b></span>
+          <span class="inv-chip-info"><Calendar :size="13" /> {{ t("admin.phieuNhap.colDate") }}:
+            <b>{{ formatDate(phieuNhapDetailData.ngayNhap) }}</b></span>
           <span
             class="inv-tag"
             :style="{
@@ -2415,9 +2371,7 @@ const exportPhieuNhapExcel = () => {
       </div>
 
       <footer v-if="phieuNhapDetailData" class="inv-modal__foot">
-        <span class="inv-muted" style="font-size: 0.85rem"
-          >{{ phieuNhapDetailItems.length }} {{ t("admin.inventory.colSku") }}</span
-        >
+        <span class="inv-muted" style="font-size: 0.85rem">{{ phieuNhapDetailItems.length }} {{ t("admin.inventory.colSku") }}</span>
         <div class="d-flex align-items-center gap-2">
           <span class="inv-muted" style="font-size: 0.85rem">{{
             t("admin.phieuNhapModal.totalLabel")

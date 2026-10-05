@@ -24,6 +24,13 @@ export default [
       "vue/html-self-closing": "off",
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
       "no-console": "warn",
+      "no-empty": ["warn", { allowEmptyCatch: true }],
+      "no-useless-escape": "warn",
+      "no-dupe-keys": "warn",
+      "no-undef": "off",
+      "vue/require-default-prop": "off",
+      "vue/no-template-shadow": "warn",
+      "vue/no-unused-vars": "warn",
     },
   },
 ];

@@ -288,7 +288,7 @@ const saveItem = async () => {
     <!-- Header icon + title -->
     <div v-if="props.headerIcon" class="dm-header">
       <div class="dm-header__icon">
-        <component v-if="typeof props.headerIcon === 'object' || typeof props.headerIcon === 'function'" :is="props.headerIcon" :size="32" />
+        <component :is="props.headerIcon" v-if="typeof props.headerIcon === 'object' || typeof props.headerIcon === 'function'" :size="32" />
         <i v-else :class="props.headerIcon" style="font-size: 32px;"></i>
       </div>
       <div class="dm-header__text">
@@ -347,7 +347,9 @@ const saveItem = async () => {
               v-for="opt in getFilterOptions(filterDef)"
               :key="opt.value"
               :value="opt.value"
-            >{{ opt.label }}</option>
+            >
+              {{ opt.label }}
+            </option>
           </select>
         </div>
 
@@ -367,7 +369,7 @@ const saveItem = async () => {
             <th style="width:10%; text-align:center;"><span class="d-inline-flex align-items-center gap-1.5 justify-content-center w-100"><ImageIcon :size="12" /> Hình ảnh</span></th>
             <th style="width:66%;">
               <span class="d-inline-flex align-items-center gap-1.5">
-                <component v-if="props.headerIcon && (typeof props.headerIcon === 'object' || typeof props.headerIcon === 'function')" :is="props.headerIcon" :size="12" />
+                <component :is="props.headerIcon" v-if="props.headerIcon && (typeof props.headerIcon === 'object' || typeof props.headerIcon === 'function')" :size="12" />
                 <Layers v-else :size="12" />
                 {{ nameLabel }}
               </span>
@@ -380,7 +382,7 @@ const saveItem = async () => {
             <td class="dm-stt text-center">{{ currentPage * pageSize + idx + 1 }}</td>
             <td class="text-center">
               <div class="mx-auto" style="width: 40px; height: 40px; border-radius: 6px; overflow: hidden; background: var(--bg-input); display: flex; align-items: center; justify-content: center;">
-                <img v-if="item.hinhAnh && !item.imgError" :src="item.hinhAnh" @error="item.imgError = true" style="width: 100%; height: 100%; object-fit: contain;" />
+                <img v-if="item.hinhAnh && !item.imgError" :src="item.hinhAnh" style="width: 100%; height: 100%; object-fit: contain;" @error="item.imgError = true" />
                 <ImageIcon v-else class="text-secondary" :size="20" />
               </div>
             </td>
@@ -438,7 +440,7 @@ const saveItem = async () => {
         </label>
         <div class="d-flex gap-3 align-items-start">
           <div style="width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: var(--bg-input); flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-            <img v-if="formValue?.hinhAnh && !formValue.imgError" :src="formValue.hinhAnh" @error="formValue.imgError = true" style="width:100%; height:100%; object-fit: contain;" />
+            <img v-if="formValue?.hinhAnh && !formValue.imgError" :src="formValue.hinhAnh" style="width:100%; height:100%; object-fit: contain;" @error="formValue.imgError = true" />
             <ImageIcon v-else class="text-secondary" :size="28" />
           </div>
           <div class="flex-grow-1 d-flex flex-column gap-2">

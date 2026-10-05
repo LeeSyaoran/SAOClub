@@ -348,7 +348,7 @@ const backToList = () => {
           >
             <Check :size="14" /> Duyệt phiếu
           </button>
-          <button class="pnser-btn pnser-btn--primary" @click="printSerials" :disabled="!phieu">
+          <button class="pnser-btn pnser-btn--primary" :disabled="!phieu" @click="printSerials">
             <Printer :size="14" /> In danh sách serial
           </button>
         </div>
@@ -382,135 +382,135 @@ const backToList = () => {
           </span>
         </div>
 
-      <!-- ══ BẢNG CHI TIẾT HÀNG HÓA ══ -->
-      <section class="pnser-card">
-        <table class="pnser-table">
-          <thead>
-            <tr>
-              <th class="col-sku">SKU</th>
-              <th class="col-qty ta-c">SL SERIAL</th>
-              <th class="col-price ta-r">ĐƠN GIÁ</th>
-              <th class="col-total ta-r">THÀNH TIỀN</th>
-              <th class="col-action ta-c">THAO TÁC</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="c in itemsWithSerials" :key="c.id">
-              <td class="col-sku pnser-code">{{ c.maSku }}</td>
-              <td class="col-qty ta-c">
-                <span class="pnser-qty-num">{{ c.serials.length }}</span>
-              </td>
-              <td class="col-price ta-r pnser-muted">{{ formatPrice(c.donGiaNhap) }}</td>
-              <td class="col-total ta-r pnser-price">{{ formatPrice(c.thanhTien) }}</td>
-              <td class="col-action ta-c">
-                <button class="pnser-action-btn" @click="openSerialModal(c)">
-                  <Hash :size="12" /> Xem serial
-                </button>
-              </td>
-            </tr>
-            <tr v-if="itemsWithSerials.length === 0">
-              <td colspan="5" class="pnser-empty">Phiếu chưa có dòng hàng.</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="3" class="ta-r pnser-foot-label">Tổng tiền</td>
-              <td class="ta-r pnser-foot-value">{{ formatPrice(phieu.tongTien) }}</td>
-              <td class="col-action"></td>
-            </tr>
-          </tfoot>
-        </table>
-      </section>
+        <!-- ══ BẢNG CHI TIẾT HÀNG HÓA ══ -->
+        <section class="pnser-card">
+          <table class="pnser-table">
+            <thead>
+              <tr>
+                <th class="col-sku">SKU</th>
+                <th class="col-qty ta-c">SL SERIAL</th>
+                <th class="col-price ta-r">ĐƠN GIÁ</th>
+                <th class="col-total ta-r">THÀNH TIỀN</th>
+                <th class="col-action ta-c">THAO TÁC</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in itemsWithSerials" :key="c.id">
+                <td class="col-sku pnser-code">{{ c.maSku }}</td>
+                <td class="col-qty ta-c">
+                  <span class="pnser-qty-num">{{ c.serials.length }}</span>
+                </td>
+                <td class="col-price ta-r pnser-muted">{{ formatPrice(c.donGiaNhap) }}</td>
+                <td class="col-total ta-r pnser-price">{{ formatPrice(c.thanhTien) }}</td>
+                <td class="col-action ta-c">
+                  <button class="pnser-action-btn" @click="openSerialModal(c)">
+                    <Hash :size="12" /> Xem serial
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="itemsWithSerials.length === 0">
+                <td colspan="5" class="pnser-empty">Phiếu chưa có dòng hàng.</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" class="ta-r pnser-foot-label">Tổng tiền</td>
+                <td class="ta-r pnser-foot-value">{{ formatPrice(phieu.tongTien) }}</td>
+                <td class="col-action"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </section>
 
-      <!-- ══ KHUNG GHI CHÚ ══ -->
-      <div class="pnser-note-card">
-        <span class="pnser-note-label">GHI CHÚ</span>
-        <span class="pnser-note-content">{{ phieu.ghiChu || "—" }}</span>
-      </div>
-
-      <!-- ══ TAB CON: MODAL XEM CHI TIẾT SERIAL ══ -->
-      <div
-        v-if="showSerialModal"
-        class="pnser-modal-mask"
-        @click.self="closeSerialModal"
-      >
-        <div class="pnser-modal">
-          <header class="pnser-modal__head">
-            <div>
-              <div class="pnser-modal__title">
-                <span class="pnser-modal__hash">#</span> Chi tiết serial —
-                <span class="pnser-mono">{{ phieu?.maPhieuNhap }}</span>
-              </div>
-              <div class="pnser-modal__sub" v-if="selectedItem">
-                {{ selectedItem.maSku }} · {{ selectedItem.serials.length }} serial
-              </div>
-            </div>
-            <button
-              class="pnser-close-btn"
-              @click="closeSerialModal"
-              aria-label="Đóng"
-            >
-              <X :size="16" />
-            </button>
-          </header>
-
-          <div class="pnser-modal__body">
-            <div
-              v-if="!selectedItem || selectedItem.serials.length === 0"
-              class="pnser-modal-empty"
-            >
-              Chưa có serial nào cho sản phẩm này.
-            </div>
-            <div v-else class="pnser-modal-table-wrap">
-              <table class="pnser-modal-table">
-                <thead>
-                  <tr>
-                    <th class="modal-col-idx ta-c">#</th>
-                    <th class="modal-col-serial ta-c">SỐ SERIAL</th>
-                    <th class="modal-col-date ta-c">NGÀY NHẬP</th>
-                    <th class="modal-col-status ta-c">TRẠNG THÁI</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(s, idx) in selectedItem.serials"
-                    :key="s.chiTietId || idx"
-                  >
-                    <td class="modal-col-idx ta-c pnser-muted">{{ idx + 1 }}</td>
-                    <td class="modal-col-serial ta-c pnser-serial-text">{{ s.soSerial }}</td>
-                    <td class="modal-col-date ta-c pnser-muted">
-                      {{ formatDate(s.ngayNhapKho || phieu?.ngayNhap) }}
-                    </td>
-                    <td class="modal-col-status ta-c">
-                      <span
-                        class="pnser-status-badge"
-                        :class="serialStatusClass(s.trangThai)"
-                      >
-                        {{ serialStatusText(s.trangThai) }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <footer class="pnser-modal__foot">
-            <button
-              class="pnser-btn pnser-btn--ghost pnser-btn--close"
-              @click="closeSerialModal"
-            >
-              Đóng
-            </button>
-          </footer>
+        <!-- ══ KHUNG GHI CHÚ ══ -->
+        <div class="pnser-note-card">
+          <span class="pnser-note-label">GHI CHÚ</span>
+          <span class="pnser-note-content">{{ phieu.ghiChu || "—" }}</span>
         </div>
-      </div>
-    </template>
 
-    <!-- Dialog xác nhận hiển thị ngay tại trang chi tiết phiếu nhập -->
-    <ConfirmDialog />
+        <!-- ══ TAB CON: MODAL XEM CHI TIẾT SERIAL ══ -->
+        <div
+          v-if="showSerialModal"
+          class="pnser-modal-mask"
+          @click.self="closeSerialModal"
+        >
+          <div class="pnser-modal">
+            <header class="pnser-modal__head">
+              <div>
+                <div class="pnser-modal__title">
+                  <span class="pnser-modal__hash">#</span> Chi tiết serial —
+                  <span class="pnser-mono">{{ phieu?.maPhieuNhap }}</span>
+                </div>
+                <div v-if="selectedItem" class="pnser-modal__sub">
+                  {{ selectedItem.maSku }} · {{ selectedItem.serials.length }} serial
+                </div>
+              </div>
+              <button
+                class="pnser-close-btn"
+                aria-label="Đóng"
+                @click="closeSerialModal"
+              >
+                <X :size="16" />
+              </button>
+            </header>
+
+            <div class="pnser-modal__body">
+              <div
+                v-if="!selectedItem || selectedItem.serials.length === 0"
+                class="pnser-modal-empty"
+              >
+                Chưa có serial nào cho sản phẩm này.
+              </div>
+              <div v-else class="pnser-modal-table-wrap">
+                <table class="pnser-modal-table">
+                  <thead>
+                    <tr>
+                      <th class="modal-col-idx ta-c">#</th>
+                      <th class="modal-col-serial ta-c">SỐ SERIAL</th>
+                      <th class="modal-col-date ta-c">NGÀY NHẬP</th>
+                      <th class="modal-col-status ta-c">TRẠNG THÁI</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(s, idx) in selectedItem.serials"
+                      :key="s.chiTietId || idx"
+                    >
+                      <td class="modal-col-idx ta-c pnser-muted">{{ idx + 1 }}</td>
+                      <td class="modal-col-serial ta-c pnser-serial-text">{{ s.soSerial }}</td>
+                      <td class="modal-col-date ta-c pnser-muted">
+                        {{ formatDate(s.ngayNhapKho || phieu?.ngayNhap) }}
+                      </td>
+                      <td class="modal-col-status ta-c">
+                        <span
+                          class="pnser-status-badge"
+                          :class="serialStatusClass(s.trangThai)"
+                        >
+                          {{ serialStatusText(s.trangThai) }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <footer class="pnser-modal__foot">
+              <button
+                class="pnser-btn pnser-btn--ghost pnser-btn--close"
+                @click="closeSerialModal"
+              >
+                Đóng
+              </button>
+            </footer>
+          </div>
+        </div>
+      </template>
+
+      <!-- Dialog xác nhận hiển thị ngay tại trang chi tiết phiếu nhập -->
+      <ConfirmDialog />
+    </div>
   </div>
-</div>
 </template>
 
 <style scoped>

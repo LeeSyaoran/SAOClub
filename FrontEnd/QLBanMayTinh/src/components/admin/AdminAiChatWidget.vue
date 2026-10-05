@@ -141,10 +141,10 @@ onMounted(() => init());
 
 <template>
   <div class="admin-ai-widget">
-    <button class="admin-ai-fab" :class="{ open }" @click="open = !open" title="AI Analytics (Admin Only)">
+    <button class="admin-ai-fab" :class="{ open }" title="AI Analytics (Admin Only)" @click="open = !open">
       <span v-if="!open">🤖<br><small>AI</small></span>
       <span v-else>✕</span>
-      <span class="fab-crown" v-if="!open">👑</span>
+      <span v-if="!open" class="fab-crown">👑</span>
     </button>
     <Transition name="slide-up">
       <div v-if="open" class="admin-ai-panel">
@@ -157,11 +157,11 @@ onMounted(() => init());
             </div>
           </div>
           <div class="header-actions">
-            <button class="btn-icon" @click="clearChat" title="Xoa lich su">🗑</button>
+            <button class="btn-icon" title="Xoa lich su" @click="clearChat">🗑</button>
             <button class="btn-icon" @click="open = false">✕</button>
           </div>
         </div>
-        <div class="quick-prompts" v-if="messages.length <= 1">
+        <div v-if="messages.length <= 1" class="quick-prompts">
           <div class="qp-label">Gợi ý câu hỏi:</div>
           <div class="qp-list">
             <button v-for="p in quickPrompts" :key="p" class="qp-btn" @click="useQuickPrompt(p)">{{ p }}</button>
@@ -188,7 +188,7 @@ onMounted(() => init());
           </div>
         </div>
         <div class="panel-composer">
-          <textarea v-model="input" placeholder="Hỏi về doanh thu, đơn hàng, tồn kho..." :disabled="thinking" @keydown="handleKeydown" rows="1"></textarea>
+          <textarea v-model="input" placeholder="Hỏi về doanh thu, đơn hàng, tồn kho..." :disabled="thinking" rows="1" @keydown="handleKeydown"></textarea>
           <button class="btn-send" :disabled="!input.trim() || thinking" @click="send">
             <span v-if="!thinking">➤</span><span v-else class="spinner"></span>
           </button>

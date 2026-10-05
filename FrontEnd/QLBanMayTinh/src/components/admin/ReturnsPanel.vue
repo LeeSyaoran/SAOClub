@@ -727,10 +727,8 @@ const saveReturn = async () => {
     <div class="alt-toolbar">
       <div class="d-flex align-items-center gap-2">
         <RotateCcw :size="16" class="text-secondary" />
-        <span class="alt-toolbar__count"
-          >{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
-          {{ t("admin.returns.countSuffix") }}</span
-        >
+        <span class="alt-toolbar__count">{{ filteredReturns.length }}/{{ (ReturnsStore?.items ?? []).length }}
+          {{ t("admin.returns.countSuffix") }}</span>
       </div>
       <div class="alt-toolbar__actions">
         <div class="alt-search">
@@ -827,9 +825,7 @@ const saveReturn = async () => {
         <thead>
           <tr>
             <th style="width: 45px">
-              <span class="d-inline-flex align-items-center gap-1"
-                ><Hash :size="12" /> {{ t("admin.common.stt") }}</span
-              >
+              <span class="d-inline-flex align-items-center gap-1"><Hash :size="12" /> {{ t("admin.common.stt") }}</span>
             </th>
             <th style="width: 90px">
               <span class="d-inline-flex align-items-center gap-1">{{
@@ -842,29 +838,19 @@ const saveReturn = async () => {
               }}</span>
             </th>
             <th>
-              <span class="d-inline-flex align-items-center gap-1"
-                ><User :size="12" /> {{ t("admin.returns.colCustomer") }}</span
-              >
+              <span class="d-inline-flex align-items-center gap-1"><User :size="12" /> {{ t("admin.returns.colCustomer") }}</span>
             </th>
             <th>
-              <span class="d-inline-flex align-items-center gap-1"
-                ><DollarSign :size="12" /> {{ t("admin.returns.colAmount") }}</span
-              >
+              <span class="d-inline-flex align-items-center gap-1"><DollarSign :size="12" /> {{ t("admin.returns.colAmount") }}</span>
             </th>
             <th>
-              <span class="d-inline-flex align-items-center gap-1"
-                ><CreditCard :size="12" /> {{ t("admin.returns.colHinhThucHoan") }}</span
-              >
+              <span class="d-inline-flex align-items-center gap-1"><CreditCard :size="12" /> {{ t("admin.returns.colHinhThucHoan") }}</span>
             </th>
             <th>
-              <span class="d-inline-flex align-items-center gap-1"
-                ><Activity :size="12" /> {{ t("admin.returns.colStatus") }}</span
-              >
+              <span class="d-inline-flex align-items-center gap-1"><Activity :size="12" /> {{ t("admin.returns.colStatus") }}</span>
             </th>
             <th style="width: 100px">
-              <span class="d-inline-flex align-items-center gap-1"
-                ><SlidersHorizontal :size="12" /> {{ t("admin.returns.colAction") }}</span
-              >
+              <span class="d-inline-flex align-items-center gap-1"><SlidersHorizontal :size="12" /> {{ t("admin.returns.colAction") }}</span>
             </th>
           </tr>
         </thead>
@@ -964,8 +950,7 @@ const saveReturn = async () => {
                   background: statusColor(p.trangThai).bg,
                   color: statusColor(p.trangThai).text,
                 }"
-                >{{ statusLabel(p.trangThai) }}</span
-              >
+              >{{ statusLabel(p.trangThai) }}</span>
             </td>
             <td>
               <div class="d-flex gap-1">
@@ -1058,10 +1043,8 @@ const saveReturn = async () => {
           "
         >
           <CheckCircle2 :size="16" class="flex-shrink-0 text-success" />
-          <span
-            >Phiếu trả hàng này ở trạng thái <strong>Đã xử lý</strong> nên không thể chỉnh sửa. Bạn
-            chỉ có thể xem chi tiết.</span
-          >
+          <span>Phiếu trả hàng này ở trạng thái <strong>Đã xử lý</strong> nên không thể chỉnh sửa. Bạn
+            chỉ có thể xem chi tiết.</span>
         </div>
 
         <!-- Section 1: Đơn hàng & Sản phẩm trả -->
@@ -1101,8 +1084,7 @@ const saveReturn = async () => {
                       formatPrice(selectedOrder.tongTien)
                     }}</span>
                     <span v-if="selectedOrder.ngayTao">
-                      · {{ selectedOrder.ngayTao.slice(0, 10) }}</span
-                    >
+                      · {{ selectedOrder.ngayTao.slice(0, 10) }}</span>
                   </div>
                 </div>
               </div>

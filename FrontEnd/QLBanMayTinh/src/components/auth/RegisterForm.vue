@@ -117,7 +117,7 @@
         <template #default="{ errors: fieldErr }">
           <div class="form-check small" :class="{ 'is-invalid': fieldErr }">
             <input
-              v-model="terms" type="checkbox" class="form-check-input" id="register-terms"
+              id="register-terms" v-model="terms" type="checkbox" class="form-check-input"
             />
             <label class="form-check-label" for="register-terms" style="color:var(--text-secondary);">
               {{ t('register.termsPrefix') }}

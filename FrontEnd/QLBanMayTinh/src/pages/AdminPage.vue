@@ -1125,8 +1125,7 @@ onUnmounted(() => {
             v-if="lowStockItems.length"
             class="badge bg-danger ms-auto"
             style="font-size: 0.68rem"
-            >{{ lowStockItems.length }}</span
-          >
+          >{{ lowStockItems.length }}</span>
         </div>
         <div
           class="adm-nav adm-subnav"
@@ -1311,8 +1310,7 @@ onUnmounted(() => {
                 font-size: 9px;
                 font-weight: 700;
               "
-              >{{ chatPanelRef.unreadCount > 9 ? "9+" : chatPanelRef.unreadCount }}</span
-            >
+            >{{ chatPanelRef.unreadCount > 9 ? "9+" : chatPanelRef.unreadCount }}</span>
           </div>
           <UserProfileMenu @navigate-settings="navigate('settings')" />
         </div>

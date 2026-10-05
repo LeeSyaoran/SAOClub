@@ -936,12 +936,10 @@ const save = async () => {
               ></textarea>
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1"
-                >{{ t("admin.productModal.tagsLabel") }}
+              <label class="form-label small text-secondary mb-1">{{ t("admin.productModal.tagsLabel") }}
                 <span class="text-warning small">{{
                   t("admin.productModal.tagsHint")
-                }}</span></label
-              >
+                }}</span></label>
               <div class="d-flex flex-wrap gap-2">
                 <button
                   v-for="opt in PHAN_LOAI_TAG_OPTIONS"
@@ -961,12 +959,10 @@ const save = async () => {
               </div>
             </div>
             <div class="col-6">
-              <label class="form-label small text-secondary mb-1"
-                >{{ t("admin.productModal.tagNameLabel") }}
+              <label class="form-label small text-secondary mb-1">{{ t("admin.productModal.tagNameLabel") }}
                 <span class="text-muted small">{{
                   t("admin.productModal.tagNameHint")
-                }}</span></label
-              >
+                }}</span></label>
               <input
                 v-model="form.phanLoaiTen"
                 class="form-control form-control-sm"
@@ -1051,9 +1047,7 @@ const save = async () => {
             class="rounded-3 p-3"
             style="background: var(--bg-input); border: 1px solid var(--border-color)"
           >
-            <label class="form-label small text-secondary mb-1"
-              >{{ t("admin.productModal.serialLabel") }} <span class="text-danger">*</span></label
-            >
+            <label class="form-label small text-secondary mb-1">{{ t("admin.productModal.serialLabel") }} <span class="text-danger">*</span></label>
             <input
               v-model="soSerialMoi"
               class="form-control form-control-sm"

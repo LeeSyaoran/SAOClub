@@ -415,8 +415,8 @@ onMounted(() => {
           </div>
 
           <div class="modal-footer">
-            <button class="btn-ghost" @click="closeRegister" :disabled="sending">Hủy</button>
-            <button class="btn-primary" @click="submitRegistration" :disabled="sending">
+            <button class="btn-ghost" :disabled="sending" @click="closeRegister">Hủy</button>
+            <button class="btn-primary" :disabled="sending" @click="submitRegistration">
               <RefreshCw v-if="sending" :size="14" class="spin" />
               <ShieldPlus v-else :size="14" />
               {{ sending ? 'Đang gửi yêu cầu...' : 'Xác nhận đăng ký' }}

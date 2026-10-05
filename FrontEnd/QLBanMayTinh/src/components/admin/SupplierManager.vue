@@ -182,12 +182,12 @@ const saveSupplier = async () => {
 
         <div class="sup-filter-group">
           <label class="sup-filter-label">Từ ngày</label>
-          <input type="date" v-model="filterDateFrom" class="sup-filter-select" />
+          <input v-model="filterDateFrom" type="date" class="sup-filter-select" />
         </div>
         
         <div class="sup-filter-group">
           <label class="sup-filter-label">Đến ngày</label>
-          <input type="date" v-model="filterDateTo" class="sup-filter-select" />
+          <input v-model="filterDateTo" type="date" class="sup-filter-select" />
         </div>
 
         <button v-if="activeFilterCount > 0" class="sup-filter-clear" @click="clearFilters">

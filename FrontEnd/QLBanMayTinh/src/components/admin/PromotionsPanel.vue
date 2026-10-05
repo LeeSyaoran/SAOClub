@@ -329,7 +329,7 @@ const savePromo = async () => {
           <div class="alt-search">
             <Search class="alt-search__icon" :size="14" />
             <input v-model="search" placeholder="Tìm theo mã, tên khuyến mại..." />
-            <button v-if="search" type="button" class="alt-search__clear" @click="search = ''" title="Xóa tìm kiếm">
+            <button v-if="search" type="button" class="alt-search__clear" title="Xóa tìm kiếm" @click="search = ''">
               <X :size="12" />
             </button>
           </div>
@@ -389,11 +389,11 @@ const savePromo = async () => {
             </div>
             <div class="sm-filter-field">
               <label>Bắt đầu từ ngày</label>
-              <input type="date" v-model="filters.dateStartFrom" class="alt-input" />
+              <input v-model="filters.dateStartFrom" type="date" class="alt-input" />
             </div>
             <div class="sm-filter-field">
               <label>Kết thúc đến ngày</label>
-              <input type="date" v-model="filters.dateEndTo" class="alt-input" />
+              <input v-model="filters.dateEndTo" type="date" class="alt-input" />
             </div>
           </div>
           <div class="sm-filter-foot">
@@ -523,12 +523,14 @@ const savePromo = async () => {
 
               <!-- Chips sản phẩm đã chọn -->
               <div v-if="selectedSanPhams.length > 0" class="d-flex flex-wrap gap-1 mb-2">
-                <span v-for="sp in selectedSanPhams" :key="sp.sanPhamId"
+                <span
+                  v-for="sp in selectedSanPhams" :key="sp.sanPhamId"
                   class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
-                  style="background:rgba(236,72,153,0.12);color:#db2777;font-size:11px;">
+                  style="background:rgba(236,72,153,0.12);color:#db2777;font-size:11px;"
+                >
                   <img v-if="sp.hinhAnhChinh" :src="sp.hinhAnhChinh" style="width:16px;height:16px;object-fit:cover;border-radius:2px;" />
                   <span>{{ sp.tenSanPham }}</span>
-                  <button type="button" @click="removeSanPham(sp.sanPhamId)" style="background:none;border:none;padding:0;cursor:pointer;color:#db2777;display:flex;">
+                  <button type="button" style="background:none;border:none;padding:0;cursor:pointer;color:#db2777;display:flex;" @click="removeSanPham(sp.sanPhamId)">
                     <X :size="10" />
                   </button>
                 </span>
@@ -541,12 +543,14 @@ const savePromo = async () => {
                 </div>
                 <div v-if="sanPhamSearch.trim()" class="position-absolute bg-white shadow rounded border overflow-y-auto" style="max-height:200px;min-width:350px;z-index:100;top:100%;left:0;">
                   <div v-if="filteredSanPhams.length === 0" class="p-2 text-secondary small">Không tìm thấy sản phẩm</div>
-                  <div v-for="sp in filteredSanPhams" :key="sp.sanPhamId"
+                  <div
+                    v-for="sp in filteredSanPhams" :key="sp.sanPhamId"
                     class="d-flex align-items-center gap-2 px-2 py-1-5 cursor-pointer"
                     :class="form.sanPhamIds.includes(sp.sanPhamId) ? 'bg-pink-50' : ''"
                     :style="form.sanPhamIds.includes(sp.sanPhamId) ? 'background:rgba(236,72,153,0.12)' : ''"
                     style="cursor:pointer;"
-                    @click="toggleSanPham(sp.sanPhamId)">
+                    @click="toggleSanPham(sp.sanPhamId)"
+                  >
                     <img v-if="sp.hinhAnhChinh" :src="sp.hinhAnhChinh" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" />
                     <div v-else class="bg-light rounded d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
                       <Gift :size="16" class="text-secondary" />
@@ -578,13 +582,15 @@ const savePromo = async () => {
 
               <!-- Chips khách hàng đã chọn -->
               <div v-if="selectedKhachHangs.length > 0" class="d-flex flex-wrap gap-1 mb-2">
-                <span v-for="kh in selectedKhachHangs" :key="kh.khachHangId"
+                <span
+                  v-for="kh in selectedKhachHangs" :key="kh.khachHangId"
                   class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
-                  style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:11px;">
+                  style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:11px;"
+                >
                   <User :size="11" />
                   <span>{{ kh.hoTen }}</span>
                   <span class="text-muted" style="font-size:10px;">({{ kh.soDienThoai }})</span>
-                  <button type="button" @click="removeKhachHang(kh.khachHangId)" style="background:none;border:none;padding:0;cursor:pointer;color:#2563eb;display:flex;">
+                  <button type="button" style="background:none;border:none;padding:0;cursor:pointer;color:#2563eb;display:flex;" @click="removeKhachHang(kh.khachHangId)">
                     <X :size="10" />
                   </button>
                 </span>
@@ -597,11 +603,13 @@ const savePromo = async () => {
                 </div>
                 <div v-if="khachHangSearch.trim()" class="position-absolute bg-white shadow rounded border overflow-y-auto" style="max-height:200px;min-width:380px;z-index:100;top:100%;left:0;">
                   <div v-if="filteredKhachHangs.length === 0" class="p-2 text-secondary small">Không tìm thấy khách hàng</div>
-                  <div v-for="kh in filteredKhachHangs" :key="kh.khachHangId"
+                  <div
+                    v-for="kh in filteredKhachHangs" :key="kh.khachHangId"
                     class="d-flex align-items-center gap-2 px-2 py-1"
                     :style="form.khachHangIds.includes(kh.khachHangId) ? 'background:rgba(59,130,246,0.12)' : ''"
                     style="cursor:pointer;"
-                    @click="toggleKhachHang(kh.khachHangId)">
+                    @click="toggleKhachHang(kh.khachHangId)"
+                  >
                     <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;background:var(--bg-input);">
                       <User :size="15" class="text-secondary" />
                     </div>

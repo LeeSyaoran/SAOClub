@@ -33,6 +33,8 @@ class ChiTietTraHangServiceTest {
     @Mock private BienTheSanPhamRepository bienTheSanPhamRepository;
     @Mock private ChiTietSanPhamRepository chiTietSanPhamRepository;
     @Mock private ChiTietDonHangRepository chiTietDonHangRepository;
+    @Mock private PhieuTraHangService phieuTraHangService;
+    @Mock private ChiTietDonHangService chiTietDonHangService;
 
     @InjectMocks
     private ChiTietTraHangService service;
