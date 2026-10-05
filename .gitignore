@@ -40,7 +40,7 @@ Database/backups/*.log
 .aider*
 ollama-models/
 scratch_*.json
-[working-dir]*
+\[working-dir\]*
 
 # Crash dumps & logs
 *.stackdump
